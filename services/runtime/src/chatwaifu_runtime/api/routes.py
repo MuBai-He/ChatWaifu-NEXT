@@ -1,5 +1,6 @@
 """Loopback Runtime HTTP and WebSocket routes."""
 
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
@@ -198,8 +199,21 @@ async def runtime_events(websocket: WebSocket) -> None:
     )
     try:
         while True:
-            await websocket.send_json(await subscription.receive())
-    except WebSocketDisconnect:
+            event_task = asyncio.create_task(subscription.receive())
+            disconnect_task = asyncio.create_task(websocket.receive())
+            completed, pending = await asyncio.wait(
+                {event_task, disconnect_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+            if disconnect_task in completed:
+                message = disconnect_task.result()
+                if message["type"] == "websocket.disconnect":
+                    break
+                continue
+            await websocket.send_json(event_task.result())
+    except (WebSocketDisconnect, asyncio.CancelledError):
         pass
     finally:
         container.event_hub.unsubscribe(subscription)

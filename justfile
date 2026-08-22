@@ -3,6 +3,9 @@ set shell := ["sh", "-cu"]
 bootstrap:
     make bootstrap
 
+demo:
+    make demo
+
 format:
     make format
 

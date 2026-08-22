@@ -15,13 +15,16 @@ zero-shot voice cloning.
 Use a tiered `TtsProvider` interface. Provider objects and model-specific settings remain inside
 adapters.
 
-1. `fake`: deterministic CI and cancellation tests; never presented as real speech quality.
-2. `sherpa_onnx_kokoro`: default local demo provider using the external
+1. `auto`: zero-download bootstrap. It selects cancellable macOS `say` on the validated target and
+   falls back to `fake` elsewhere. This is the current basic Demo path, not the target character
+   voice quality.
+2. `fake`: deterministic CI and cancellation tests; never presented as real speech quality.
+3. `sherpa_onnx_kokoro`: preferred downloadable local distribution target using the external
    `kokoro-multi-lang-v1_1` or quantized model bundle. It supports Chinese and English, 103 speaker
    embeddings, and 24 kHz output without a PyTorch runtime.
-3. `cosyvoice_http`: optional higher-quality, zero-shot/cross-lingual voice-cloning worker using
+4. `cosyvoice_http`: optional higher-quality, zero-shot/cross-lingual voice-cloning worker using
    Fun-CosyVoice 3 0.5B. It runs out of process and is not installed by the default bootstrap.
-4. `gpt_sovits_http`: compatibility adapter may be added for an existing user-managed server, but
+5. `gpt_sovits_http`: compatibility adapter may be added for an existing user-managed server, but
    GPT-SoVITS is not a default dependency or managed worker.
 
 The Runtime owns synthesis requests, cancellation, segmentation, cache lifetime, and normalized

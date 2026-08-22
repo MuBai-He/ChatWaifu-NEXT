@@ -1,97 +1,93 @@
 # ChatWaifu NEXT
 
-ChatWaifu NEXT（ChatWaifuV2）是一次从空仓库开始的、local-first 的 AI
-角色运行时重建。当前仓库完成了 **Phase 0（工程地基）**、**Phase 1（领域协议和
-代码生成）**，并交付 **Phase 2 Avatar Lab 的 Fake/CI 完整路径**。专有 Cubism Core、
-有授权的 Live2D 模型和真实渲染桥仍由开发者在本地提供，因此真实 Live2D 路径尚未验收。
+ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当前包含一个可直接
+运行的基础 Demo：文字对话、增量回复、本地中文 TTS、语义 Avatar、抢话打断、SQLite
+会话历史、明确记忆与只读 Runtime Skill 已接通。
 
-## 当前交付
+## 直接运行 Demo
 
-- Python、TypeScript、Rust 三套可执行质量门和 lockfile
-- Pydantic 领域协议及版本感知解析器
-- 可重复生成的 JSON Schema 和 TypeScript 类型
-- Zod 运行时输入校验
-- Python ↔ TypeScript golden contract fixtures/tests
-- 独立 `/avatar-lab` 路由、语义 Cue 控制台和 FakeAvatarRenderer
-- 分层 Cue 调度、generation invalidation、口型源、命中事件和性能遥测
-- 官方 Cubism Web Framework 的固定版本 vendor 脚本与专有 Core 缺失诊断
-- Vitest 单元测试与 Chromium Playwright 验收路径
-- 10 份基础 ADR、CI workflows、项目级 Codex Development Skills
-
-明确不在本轮范围：Pipecat、WebRTC、仓库内分发 Live2D Core/角色模型、Tauri
-sidecar、AI 模型 SDK/权重、Fake Cascade、Runtime server、数据库业务表，以及
-Postgres/Redis/Kafka/Kubernetes。
-
-## 环境要求
-
-- Python 3.12
-- [uv](https://docs.astral.sh/uv/)
-- Node.js 22+
-- pnpm 11.19+
-- Rust 1.98（`rust-toolchain.toml` 会固定版本）
-- GNU Make
-- `just`（可选；`justfile` 将命令委托给同一套 Make targets）
-
-## 初始化
+环境要求：Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22+、pnpm 11.19+、
+GNU Make。首次检出先安装依赖：
 
 ```bash
 cp .env.example .env
 make bootstrap
 ```
 
-`make bootstrap` 会安装 Python/Node/Rust 依赖并重新生成协议产物。仓库不需要
-Docker、数据库、模型或专有 SDK 就能运行 Fake Avatar Lab 和默认质量门。
-
-## 常用命令
+以后只需一个命令：
 
 ```bash
-make format             # 格式化 Python、TypeScript、Rust
+make demo
+```
+
+命令会监督启动 Runtime 与 Web、等待两者健康后打开
+<http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止两个进程。若不想自动打开浏览器：
+
+```bash
+uv run python tools/run_demo.py --no-open
+```
+
+Demo 默认使用明确标注的离线 Demo LLM。在 macOS 上，`tts.provider=auto` 会选择系统
+`say` 的 `Tingting` 中文语音；CI 或缺少系统语音工具的平台回退到 `fake` 测试音。真实本地
+模型可通过 `.env` 切换到 OpenAI-compatible 端点，例如 Ollama、LM Studio 或 vLLM：
+
+```bash
+CHATWAIFU_LLM__PROVIDER=openai_compatible
+CHATWAIFU_LLM__MODEL=qwen3:8b
+CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
+```
+
+## Demo 能做什么
+
+- WebSocket 增量文本和 SQLite append-only 事件流
+- 分段生成本地 WAV，并按 generation 排队播放
+- “打断”立即取消 LLM/TTS、丢弃迟到输出、清空浏览器播放队列
+- `AvatarCue` 驱动 thinking、speaking、idle 与口型状态
+- 角色人格来自 `characters/default/character.json`
+- 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone
+- `runtime.status` Runtime Skill 通过 manifest 注册，只读返回实际 LLM/TTS/provider 状态
+- `/avatar-lab` 保留 Fake/CI 完整路径和可选 Live2D vendor 接入口
+
+数据默认写入 `.local/data/chatwaifu.db` 与 `.local/data/audio/`，两者都不会提交到 Git。
+
+## TTS 选择
+
+默认 Demo 没有采用 GPT-SoVITS。它适合作为已有角色音色训练/推理服务，但不适合作为基础
+安装依赖。当前分层策略是：
+
+1. macOS 系统语音：零下载、立即可用，用于当前 Demo 验收。
+2. sherpa-onnx + Kokoro v1.1-zh：推荐的轻量本地发行目标；中英双语、103 个 speaker、
+   24 kHz，不依赖 PyTorch，但不等于音色克隆。
+3. CosyVoice 3 0.5B worker：需要零样本音色克隆时优先评估的独立服务。
+4. GPT-SoVITS：保留为用户自行管理的外部 HTTP provider，不塞进主 Runtime。
+
+完整依据和边界见 [ADR 0012](docs/adr/0012-tiered-local-tts.md)。
+
+## 常用开发命令
+
+```bash
+make demo               # 一次启动 Runtime + Web
+make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
+make dev-web            # 只启动 Web（127.0.0.1:5173）
+make test-runtime       # Runtime/API/取消/记忆专项测试
+make test-avatar        # Avatar SDK 与 Web 单元测试
+make test-e2e           # Chromium Avatar Lab 验收
+make format             # Python、TypeScript、Rust 格式化
 make lint               # Ruff、ESLint、Clippy
 make typecheck          # Pyright、tsc、cargo check
-make generate-protocol  # Pydantic -> JSON Schema -> TypeScript
-make check-generated    # 生成后检查受控产物是否有 diff
 make test               # Python、TypeScript、Rust 测试
-make test-contract      # Python/TypeScript 跨语言协议测试
-make test-avatar        # Avatar SDK 与 Web 单元测试
-make test-e2e           # Chromium Avatar Lab 交互 smoke test
-make dev-web            # 启动 Web 应用
-make dev-avatar-lab     # 直接打开独立 Avatar Lab
-make setup-live2d-framework # 拉取固定版本的官方公开 Framework
-make check-live2d-vendor    # 检查本地 Core、bridge 和授权模型
-make dev-runtime        # 提示 Runtime 尚未进入实现阶段
-make dev-desktop        # 提示 Desktop 尚未进入实现阶段
-make clean              # 清理可重建的本地产物
+make check-generated    # 协议受控产物无漂移检查
 ```
 
-Web 首页默认位于 <http://127.0.0.1:5173>，Avatar Lab 位于
-<http://127.0.0.1:5173/avatar-lab>。首次运行浏览器测试前执行：
+协议以 `packages/protocol-python/src/chatwaifu_protocol/` 为源；不要手工编辑
+`schemas/domain/v1/` 或生成的 TypeScript domain 文件。专有 Cubism Core 与有授权的角色模型
+不进入仓库，缺失时 Fake avatar 仍然完整可用。
 
-```bash
-pnpm --filter @chatwaifu/web exec playwright install chromium
-```
+## 当前边界
 
-真实 Live2D 本地接入步骤和许可证边界见 `vendor/live2d/README.md`。缺少专有文件时，
-选择 Live2D renderer 会显示可操作错误，Fake/CI renderer 仍可完整运行。
+这是基础可用 Demo，不声称已经完成：真实 Live2D vendor 验收、全双工 WebRTC/Pipecat、
+VAD/STT 语音输入、生产级插件沙箱、训练后的自定义音色、完整 Tauri 安装包或远端 CI 矩阵。
+这些能力都有独立边界，不会伪装成已经交付。
 
-## 协议工作流
-
-1. 在 `packages/protocol-python/src/chatwaifu_protocol/` 修改协议源。
-2. 运行 `make generate-protocol`。
-3. 不要手工编辑 `schemas/domain/v1/` 或
-   `packages/protocol-typescript/src/generated/domain.ts`。
-4. 运行 `make test-contract` 和 `make check-generated`。
-
-同一 major version 会忽略新增可选字段；未知 major、未知消息类型和非法 payload
-会被明确拒绝。高频音视频正文不会伪装成持久化领域事件，协议只定义有界媒体头。
-
-## 开发入口
-
-在改代码前依次阅读：
-
-1. `CODEX_HANDOFF.md`
-2. `CHATWAIFU_NEXT_ARCHITECTURE.md`
-3. `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`
-4. `docs/implementation-status.yaml`
-5. 相关 `docs/adr/` 与 `.agents/skills/`
-
-贡献规则见 `CONTRIBUTING.md`，安全边界见 `SECURITY.md`。
+架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
+`CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。

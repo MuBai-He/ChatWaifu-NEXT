@@ -14,6 +14,7 @@ dependencies = [
   "fastapi>=0.116,<1",
   "httpx2>=2.12,<3",
   "pydantic-settings>=2.10,<3",
+  "python-dotenv>=1.1,<2",
   "structlog>=25,<27",
   "uvicorn[standard]>=0.35,<1",
 ]

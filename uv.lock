@@ -94,6 +94,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx2" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -106,6 +107,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "httpx2", specifier = ">=2.12,<3" },
     { name = "pydantic-settings", specifier = ">=2.10,<3" },
+    { name = "python-dotenv", specifier = ">=1.1,<2" },
     { name = "structlog", specifier = ">=25,<27" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35,<1" },
 ]

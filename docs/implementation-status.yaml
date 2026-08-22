@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-08-23"
-current_phase: 2
-next_phase: 3
+current_phase: 4
+next_phase: 5
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -21,9 +21,12 @@ validation:
     - make test-contract
     - make test-avatar
     - make test-e2e
+    - make test-runtime
     - make check-generated
     - make setup-live2d-framework
     - pnpm build
+    - uv run python tools/run_demo.py --no-open
+    - browser live text, TTS event, memory, skill, and interruption smoke
   deterministic_generation: byte_identical_on_repeat
   generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
   expected_vendor_diagnostic:
@@ -71,15 +74,26 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: not_started
+    status: deferred_non_blocking_for_web_demo
   - id: 4
     name: runtime-core
-    status: not_started
+    status: basic_demo_implemented_pending_remote_ci
+    evidence:
+      - FastAPI loopback Runtime exposes health, session, event, audio, character, memory, and skill APIs
+      - SQLite WAL migrations persist sessions, turns, generations, outbox events, memory, and FTS5
+      - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
+      - macOS say generates verified 24 kHz WAV while fake TTS keeps CI deterministic
+      - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
+      - Interrupt cancels Runtime work and clears stale browser playback and avatar state
+      - Explicit memory survives sessions and forget uses auditable tombstones
+      - Manifest-driven runtime.status skill reports actual providers with read-only side effect
+      - make demo supervises Runtime and Web and leaves both loopback ports closed after Ctrl+C
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
   - Real Live2D rendering requires locally supplied Cubism Core, a bridge build, and a licensed model
+  - Voice input STT/VAD, full-duplex Pipecat/WebRTC, and packaged Tauri delivery are not in the basic Demo
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
@@ -87,6 +101,6 @@ constraints:
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: false
   pipecat_dependency_added: false
-  runtime_server_implemented: false
-  database_business_tables_implemented: false
+  runtime_server_implemented: true
+  database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5

@@ -3,10 +3,12 @@
 import json
 import os
 import tomllib
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 from typing import Self, cast
 
+from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -105,18 +107,20 @@ class Settings(BaseSettings):
         return public
 
 
-def load_settings(config_path: Path | None = None) -> Settings:
+def load_settings(config_path: Path | None = None, env_path: Path | None = None) -> Settings:
     path = config_path or DEFAULT_CONFIG_PATH
     data: dict[str, object] = {}
     if path.exists():
         with path.open("rb") as config_file:
             loaded = tomllib.load(config_file)
         data = deepcopy(loaded)
-    _merge_environment(data)
+    dotenv = dotenv_values(env_path or PROJECT_ROOT / ".env")
+    _merge_environment(data, {key: value for key, value in dotenv.items() if value is not None})
+    _merge_environment(data, os.environ)
     return Settings.model_validate(data)
 
 
-def _merge_environment(data: dict[str, object]) -> None:
+def _merge_environment(data: dict[str, object], environment: Mapping[str, str]) -> None:
     prefix = "CHATWAIFU_"
     aliases = {
         "CONFIG_DIR": ["config_dir"],
@@ -124,7 +128,7 @@ def _merge_environment(data: dict[str, object]) -> None:
         "ENVIRONMENT": ["environment"],
         "LOG_LEVEL": ["log_level"],
     }
-    for name, raw_value in os.environ.items():
+    for name, raw_value in environment.items():
         if not name.startswith(prefix):
             continue
         suffix = name[len(prefix) :]

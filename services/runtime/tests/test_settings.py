@@ -15,6 +15,20 @@ def test_environment_overrides_toml(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert settings.runtime.port == 9001
 
 
+def test_dotenv_is_loaded_but_process_environment_wins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    config = tmp_path / "default.toml"
+    config.write_text('[runtime]\nport = 8123\n[storage]\nkind = "sqlite"\n', encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("CHATWAIFU_RUNTIME__PORT=8333\n", encoding="utf-8")
+    monkeypatch.setenv("CHATWAIFU_RUNTIME__PORT", "8444")
+
+    settings = load_settings(config, env_file)
+
+    assert settings.runtime.port == 8444
+
+
 def test_public_config_omits_secrets() -> None:
     settings = Settings(security=SecurityConfig(admin_token=SecretStr("never-log-me")))
     serialized = str(settings.public_dict())
