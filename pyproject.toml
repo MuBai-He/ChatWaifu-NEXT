@@ -9,7 +9,7 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/protocol-python"]
+members = ["packages/protocol-python", "services/runtime"]
 
 [dependency-groups]
 dev = [
@@ -22,12 +22,18 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
-pythonpath = ["packages/protocol-python/src"]
-testpaths = ["packages/protocol-python/tests", "tests/contract"]
+pythonpath = ["packages/protocol-python/src", "services/runtime/src"]
+testpaths = ["packages/protocol-python/tests", "services/runtime/tests", "tests/contract"]
 
 [tool.pyright]
-include = ["packages/protocol-python/src", "packages/protocol-python/tests", "tools"]
-extraPaths = ["packages/protocol-python/src"]
+include = [
+  "packages/protocol-python/src",
+  "packages/protocol-python/tests",
+  "services/runtime/src",
+  "services/runtime/tests",
+  "tools",
+]
+extraPaths = ["packages/protocol-python/src", "services/runtime/src"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."

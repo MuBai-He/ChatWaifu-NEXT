@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chatwaifu-runtime"
+version = "0.1.0"
+description = "Local-first ChatWaifu NEXT application runtime"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "aiosqlite>=0.21,<1",
+  "anyio>=4.10,<5",
+  "chatwaifu-protocol",
+  "fastapi>=0.116,<1",
+  "pydantic-settings>=2.10,<3",
+  "structlog>=25,<27",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.scripts]
+chatwaifu-runtime = "chatwaifu_runtime.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chatwaifu_runtime"]
+
+[tool.uv.sources]
+chatwaifu-protocol = { workspace = true }
+
+[dependency-groups]
+dev = ["httpx2>=2.12,<3"]

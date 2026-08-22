@@ -1,0 +1,125 @@
+"""Validated TOML configuration with environment overrides."""
+
+import json
+import os
+import tomllib
+from copy import deepcopy
+from pathlib import Path
+from typing import Self, cast
+
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PROJECT_ROOT = Path(__file__).resolve().parents[5]
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
+
+
+class RuntimeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    host: str = "127.0.0.1"
+    port: int = Field(default=8765, ge=0, le=65_535)
+    web_origin: str = "http://127.0.0.1:5173"
+    event_queue_size: int = Field(default=128, ge=8, le=4096)
+
+
+class StorageConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: str = "sqlite"
+    database_path: Path | None = None
+    journal_mode: str = "wal"
+    foreign_keys: bool = True
+    busy_timeout_ms: int = Field(default=5000, ge=100, le=60_000)
+
+
+class PrivacyConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    cloud_egress: str = "ask"
+
+
+class SecurityConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    admin_token: SecretStr | None = None
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="CHATWAIFU_",
+        env_nested_delimiter="__",
+        extra="ignore",
+        frozen=True,
+    )
+
+    environment: str = "development"
+    log_level: str = "INFO"
+    config_dir: Path = Path(".local/config")
+    data_dir: Path = Path(".local/data")
+    runtime: RuntimeConfig = RuntimeConfig()
+    storage: StorageConfig = StorageConfig()
+    privacy: PrivacyConfig = PrivacyConfig()
+    security: SecurityConfig = SecurityConfig()
+
+    @model_validator(mode="after")
+    def validate_local_bind(self) -> Self:
+        if self.runtime.host not in {"127.0.0.1", "localhost", "::1"}:
+            raise ValueError("basic demo Runtime must bind to a loopback address")
+        if self.storage.kind != "sqlite":
+            raise ValueError("basic demo supports only SQLite persistence")
+        return self
+
+    @property
+    def database_path(self) -> Path:
+        return self.storage.database_path or self.data_dir / "chatwaifu.db"
+
+    def public_dict(self) -> dict[str, object]:
+        return self.model_dump(mode="json", exclude={"security"})
+
+
+def load_settings(config_path: Path | None = None) -> Settings:
+    path = config_path or DEFAULT_CONFIG_PATH
+    data: dict[str, object] = {}
+    if path.exists():
+        with path.open("rb") as config_file:
+            loaded = tomllib.load(config_file)
+        data = deepcopy(loaded)
+    _merge_environment(data)
+    return Settings.model_validate(data)
+
+
+def _merge_environment(data: dict[str, object]) -> None:
+    prefix = "CHATWAIFU_"
+    aliases = {
+        "CONFIG_DIR": ["config_dir"],
+        "DATA_DIR": ["data_dir"],
+        "ENVIRONMENT": ["environment"],
+        "LOG_LEVEL": ["log_level"],
+    }
+    for name, raw_value in os.environ.items():
+        if not name.startswith(prefix):
+            continue
+        suffix = name[len(prefix) :]
+        path = aliases.get(suffix, [part.lower() for part in suffix.split("__")])
+        _set_nested(data, path, _parse_env_value(raw_value))
+
+
+def _set_nested(target: dict[str, object], path: list[str], value: object) -> None:
+    cursor = target
+    for part in path[:-1]:
+        child_object = cursor.get(part)
+        if isinstance(child_object, dict):
+            child = cast(dict[str, object], child_object)
+        else:
+            child = {}
+            cursor[part] = child
+        cursor = child
+    cursor[path[-1]] = value
+
+
+def _parse_env_value(value: str) -> object:
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value

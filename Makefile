@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= pnpm
 CARGO ?= cargo
 
-.PHONY: bootstrap format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar setup-live2d-framework check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-live2d-framework check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -52,6 +52,9 @@ test-avatar:
 	$(PNPM) --filter @chatwaifu/avatar-sdk test
 	$(PNPM) --filter @chatwaifu/web test
 
+test-runtime:
+	$(UV) run pytest services/runtime/tests
+
 setup-live2d-framework:
 	bash tools/setup_live2d_framework.sh
 
@@ -59,7 +62,7 @@ check-live2d-vendor:
 	node tools/check_live2d_vendor.mjs
 
 dev-runtime:
-	@echo "Runtime starts in Phase 4; Phase 0/1 intentionally contains no server."
+	$(UV) run python tools/run_runtime.py
 
 dev-web:
 	$(PNPM) --filter @chatwaifu/web dev

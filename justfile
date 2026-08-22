@@ -27,6 +27,9 @@ test-e2e:
 test-avatar:
     make test-avatar
 
+test-runtime:
+    make test-runtime
+
 setup-live2d-framework:
     make setup-live2d-framework
 
