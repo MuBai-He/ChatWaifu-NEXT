@@ -1,7 +1,10 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
+import time
 from typing import Protocol, cast
 
+from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.main import create_app
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
@@ -20,6 +23,7 @@ def test_health_session_persistence_and_event_stream(client: TestClient) -> None
     assert health.status_code == 200
     health_json = cast(dict[str, object], health.json())
     assert health_json["status"] == "ok"
+    assert health_json["providers"] == {"llm": "demo", "tts": "fake"}
 
     created = http.post("/v1/sessions", json={"character_id": "default"})
     assert created.status_code == 201
@@ -48,3 +52,84 @@ def test_websocket_announces_runtime(client: TestClient) -> None:
     with client.websocket_connect("/v1/events") as websocket:
         event = cast(dict[str, object], websocket.receive_json())
     assert event["event_type"] == "system.runtime_started"
+
+
+def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    created = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(created["session_id"])
+
+    accepted = http.post(
+        f"/v1/sessions/{session_id}/turns", json={"text": "你好，介绍一下你自己。"}
+    )
+    assert accepted.status_code == 202
+    generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
+
+    events: list[dict[str, object]] = []
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        response = http.get(f"/v1/sessions/{session_id}/events")
+        events = cast(list[dict[str, object]], cast(dict[str, object], response.json())["items"])
+        if any(item["event_type"] == "assistant.generation_completed" for item in events):
+            break
+        time.sleep(0.01)
+
+    generation_events = [item for item in events if str(item.get("generation_id")) == generation_id]
+    assert any(item["event_type"] == "assistant.text_delta" for item in generation_events)
+    completed = next(
+        item for item in generation_events if item["event_type"] == "assistant.generation_completed"
+    )
+    completed_text = str(cast(dict[str, object], completed["payload"])["text"])
+    deltas = "".join(
+        str(cast(dict[str, object], item["payload"])["text"])
+        for item in generation_events
+        if item["event_type"] == "assistant.text_delta"
+    )
+    assert deltas == completed_text
+    assert "ChatWaifu NEXT" in completed_text
+    assert "你好，介绍一下你自己。" in completed_text
+    audio_event = next(
+        item for item in generation_events if item["event_type"] == "assistant.audio_chunk_queued"
+    )
+    payload = cast(dict[str, object], audio_event["payload"])
+    audio = http.get(str(payload["url"]))
+    assert audio.status_code == 200
+    assert audio.headers["content-type"].startswith("audio/wav")
+    assert audio.content.startswith(b"RIFF")
+
+    messages = cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())
+    roles = [item["role"] for item in cast(list[dict[str, object]], messages["items"])]
+    assert roles == ["user", "assistant"]
+
+
+def test_interrupt_cancels_generation_and_rejects_late_output(
+    runtime_settings: Settings,
+) -> None:
+    slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1000})
+    settings = runtime_settings.model_copy(update={"llm": slow_llm})
+    with TestClient(create_app(settings)) as client:
+        http = cast(RuntimeHttpClient, client)
+        session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+        session_id = str(session["session_id"])
+        accepted = http.post(
+            f"/v1/sessions/{session_id}/turns", json={"text": "这条回复要被打断。"}
+        )
+        assert accepted.status_code == 202
+        interrupted = http.post(
+            f"/v1/sessions/{session_id}/interrupt",
+            json={"reason": "acceptance_test"},
+        )
+        assert interrupted.json()["interrupted"] is True
+
+        events = cast(
+            list[dict[str, object]],
+            cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
+        )
+        event_types = [str(event["event_type"]) for event in events]
+        assert "assistant.generation_cancelled" in event_types
+        assert "conversation.interrupted" in event_types
+        assert "assistant.generation_completed" not in event_types
+        cancelled = next(
+            event for event in events if event["event_type"] == "assistant.generation_cancelled"
+        )
+        assert cast(dict[str, object], cancelled["payload"])["reason"] == "acceptance_test"

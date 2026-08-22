@@ -92,14 +92,10 @@ dependencies = [
     { name = "anyio" },
     { name = "chatwaifu-protocol" },
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "pydantic-settings" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "httpx2" },
 ]
 
 [package.metadata]
@@ -108,13 +104,14 @@ requires-dist = [
     { name = "anyio", specifier = ">=4.10,<5" },
     { name = "chatwaifu-protocol", editable = "packages/protocol-python" },
     { name = "fastapi", specifier = ">=0.116,<1" },
+    { name = "httpx2", specifier = ">=2.12,<3" },
     { name = "pydantic-settings", specifier = ">=2.10,<3" },
     { name = "structlog", specifier = ">=25,<27" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35,<1" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "httpx2", specifier = ">=2.12,<3" }]
+dev = []
 
 [[package]]
 name = "click"

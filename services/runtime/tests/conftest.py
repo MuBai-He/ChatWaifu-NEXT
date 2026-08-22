@@ -11,9 +11,13 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def runtime_settings(tmp_path: Path) -> Settings:
-    return Settings(
-        data_dir=tmp_path,
-        storage=StorageConfig(database_path=tmp_path / "runtime.db"),
+    return Settings.model_validate(
+        {
+            "data_dir": tmp_path,
+            "storage": StorageConfig(database_path=tmp_path / "runtime.db"),
+            "llm": {"provider": "demo", "demo_chunk_delay_ms": 0},
+            "tts": {"provider": "fake"},
+        }
     )
 
 

@@ -12,6 +12,7 @@ dependencies = [
   "anyio>=4.10,<5",
   "chatwaifu-protocol",
   "fastapi>=0.116,<1",
+  "httpx2>=2.12,<3",
   "pydantic-settings>=2.10,<3",
   "structlog>=25,<27",
   "uvicorn[standard]>=0.35,<1",
@@ -27,4 +28,4 @@ packages = ["src/chatwaifu_runtime"]
 chatwaifu-protocol = { workspace = true }
 
 [dependency-groups]
-dev = ["httpx2>=2.12,<3"]
+dev = []

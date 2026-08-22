@@ -10,3 +10,16 @@ busy_timeout_ms = 5000
 
 [privacy]
 cloud_egress = "ask"
+
+[llm]
+provider = "demo"
+model = "chatwaifu-demo"
+base_url = "http://127.0.0.1:11434/v1"
+timeout_seconds = 60
+
+[tts]
+provider = "auto"
+voice = "Tingting"
+sample_rate = 24000
+rate = 190
+timeout_seconds = 30

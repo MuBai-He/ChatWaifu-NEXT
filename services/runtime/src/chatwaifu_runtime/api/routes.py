@@ -3,9 +3,15 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
+from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
-from chatwaifu_runtime.api.models import CreateSessionRequest, RuntimeHealth
+from chatwaifu_runtime.api.models import (
+    CreateSessionRequest,
+    InterruptRequest,
+    RuntimeHealth,
+    SubmitTextRequest,
+)
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 
 router = APIRouter(prefix="/v1")
@@ -24,6 +30,7 @@ async def runtime_health(request: Request) -> RuntimeHealth:
         database="ready",
         subscribers=container.event_hub.subscriber_count,
         dropped_events=container.event_hub.dropped_events,
+        providers=container.providers.public_status(),
     )
 
 
@@ -54,6 +61,7 @@ async def get_session(request: Request, session_id: UUID) -> dict[str, object]:
 @router.delete("/sessions/{session_id}")
 async def close_session(request: Request, session_id: UUID) -> dict[str, object]:
     try:
+        await _container(request).conversation.cancel(session_id, "session_closing")
         snapshot = await _container(request).sessions.close_session(session_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="session not found") from error
@@ -71,6 +79,53 @@ async def read_session_events(
         session_id, after_sequence=after_sequence, limit=limit
     )
     return {"items": events, "count": len(events)}
+
+
+@router.post("/sessions/{session_id}/turns", status_code=status.HTTP_202_ACCEPTED)
+async def submit_text_turn(
+    request: Request, session_id: UUID, body: SubmitTextRequest
+) -> dict[str, object]:
+    try:
+        accepted = await _container(request).conversation.submit_text(session_id, body.text)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="session not found") from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "session_id": str(accepted.session_id),
+        "turn_id": str(accepted.turn_id),
+        "generation_id": str(accepted.generation_id),
+        "state": accepted.state.value,
+    }
+
+
+@router.post("/sessions/{session_id}/interrupt")
+async def interrupt_generation(
+    request: Request, session_id: UUID, body: InterruptRequest
+) -> dict[str, object]:
+    interrupted = await _container(request).conversation.cancel(session_id, body.reason)
+    return {"session_id": str(session_id), "interrupted": interrupted}
+
+
+@router.get("/sessions/{session_id}/messages")
+async def read_session_messages(
+    request: Request,
+    session_id: UUID,
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict[str, object]:
+    session = await _container(request).sessions.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    messages = await _container(request).conversation.list_messages(session_id, limit)
+    return {"items": messages, "count": len(messages)}
+
+
+@router.get("/audio/{asset_id}.wav", response_class=FileResponse)
+async def read_audio_asset(request: Request, asset_id: UUID) -> FileResponse:
+    path = _container(request).audio_assets.resolve(asset_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail="audio asset not found")
+    return FileResponse(path, media_type="audio/wav", filename=f"{asset_id}.wav")
 
 
 @router.websocket("/events")

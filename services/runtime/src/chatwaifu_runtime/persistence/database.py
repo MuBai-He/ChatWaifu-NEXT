@@ -1,7 +1,7 @@
 """Single-process SQLite lifecycle and transaction boundary."""
 
 import asyncio
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -61,14 +61,19 @@ class Database:
     async def transaction(self) -> AsyncGenerator[aiosqlite.Connection]:
         connection = self._require_connection()
         async with self._lock:
-            await connection.execute("BEGIN IMMEDIATE")
+            try:
+                cursor = await _finish_before_cancelling(connection.execute("BEGIN IMMEDIATE"))
+            except asyncio.CancelledError:
+                await _finish_before_cancelling(connection.rollback())
+                raise
+            await cursor.close()
             try:
                 yield connection
             except BaseException:
-                await connection.rollback()
+                await _finish_before_cancelling(connection.rollback())
                 raise
             else:
-                await connection.commit()
+                await _finish_before_cancelling(connection.commit())
 
     async def fetchone(self, query: str, parameters: Sequence[object] = ()) -> aiosqlite.Row | None:
         connection = self._require_connection()
@@ -90,3 +95,14 @@ class Database:
         if self._connection is None:
             raise RuntimeError("database is not open")
         return self._connection
+
+
+async def _finish_before_cancelling[ResultT](awaitable: Awaitable[ResultT]) -> ResultT:
+    """Finish a queued SQLite operation before propagating task cancellation."""
+
+    task = asyncio.ensure_future(awaitable)
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        await task
+        raise

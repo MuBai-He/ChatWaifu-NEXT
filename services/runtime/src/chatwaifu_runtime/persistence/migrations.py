@@ -62,4 +62,13 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         CREATE INDEX turns_session_created_idx ON turns(session_id, created_at);
         """,
     ),
+    (
+        2,
+        """
+        ALTER TABLE generations ADD COLUMN output_text TEXT;
+        ALTER TABLE generations ADD COLUMN error_code TEXT;
+        CREATE INDEX generations_session_started_idx
+            ON generations(session_id, started_at);
+        """,
+    ),
 )

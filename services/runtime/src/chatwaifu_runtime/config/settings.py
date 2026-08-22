@@ -45,6 +45,27 @@ class SecurityConfig(BaseModel):
     admin_token: SecretStr | None = None
 
 
+class LlmConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    provider: str = "demo"
+    model: str = "chatwaifu-demo"
+    base_url: str = "http://127.0.0.1:11434/v1"
+    api_key: SecretStr | None = None
+    timeout_seconds: float = Field(default=60.0, gt=0, le=600)
+    demo_chunk_delay_ms: int = Field(default=25, ge=0, le=1000)
+
+
+class TtsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    provider: str = "auto"
+    voice: str = "Tingting"
+    sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
+    rate: int = Field(default=190, ge=80, le=500)
+    timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -61,6 +82,8 @@ class Settings(BaseSettings):
     storage: StorageConfig = StorageConfig()
     privacy: PrivacyConfig = PrivacyConfig()
     security: SecurityConfig = SecurityConfig()
+    llm: LlmConfig = LlmConfig()
+    tts: TtsConfig = TtsConfig()
 
     @model_validator(mode="after")
     def validate_local_bind(self) -> Self:
@@ -75,7 +98,9 @@ class Settings(BaseSettings):
         return self.storage.database_path or self.data_dir / "chatwaifu.db"
 
     def public_dict(self) -> dict[str, object]:
-        return self.model_dump(mode="json", exclude={"security"})
+        public = self.model_dump(mode="json", exclude={"security", "llm"})
+        public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
+        return public
 
 
 def load_settings(config_path: Path | None = None) -> Settings:

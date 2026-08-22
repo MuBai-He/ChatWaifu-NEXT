@@ -15,13 +15,13 @@ class EventStore:
     def __init__(self, database: Database) -> None:
         self._database = database
 
-    async def append(self, event: EventModel) -> EventModel:
+    async def append[EventT: EventModel](self, event: EventT) -> EventT:
         async with self._database.transaction() as connection:
             return await self.append_in_transaction(connection, event)
 
-    async def append_in_transaction(
-        self, connection: aiosqlite.Connection, event: EventModel
-    ) -> EventModel:
+    async def append_in_transaction[EventT: EventModel](
+        self, connection: aiosqlite.Connection, event: EventT
+    ) -> EventT:
         if event.session_id is None:
             raise ValueError("persisted Runtime events require a session_id")
         cursor = await connection.execute(
