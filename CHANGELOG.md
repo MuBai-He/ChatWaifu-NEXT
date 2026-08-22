@@ -10,3 +10,4 @@
 - Pin the public Cubism Web Framework 5-r.5 vendor boundary and add actionable missing-Core
   diagnostics without committing proprietary SDK or model assets.
 - Add deterministic Avatar SDK tests and Chromium Playwright interaction coverage.
+- Accept the continuous basic-demo delivery scope and tiered local TTS architecture.

@@ -3,7 +3,8 @@ updated_at: "2026-08-23"
 current_phase: 2
 next_phase: 3
 phase_2_entry_allowed: true
-phase_3_entry_allowed: false
+phase_3_entry_allowed: true
+continuous_demo_delivery_authorized: true
 
 validation:
   local_platform: macos-arm64
@@ -79,7 +80,6 @@ entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
   - Real Live2D rendering requires locally supplied Cubism Core, a bridge build, and a licensed model
-  - Phase 3 requires explicit user authorization after Phase 2 review
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
