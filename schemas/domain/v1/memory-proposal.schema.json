@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "MemoryRecordDraft": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "importance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Importance",
+          "type": "number"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "namespace": {
+          "title": "Namespace",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "predicate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicate"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "namespace",
+        "kind",
+        "text",
+        "observed_at",
+        "confidence",
+        "importance"
+      ],
+      "title": "MemoryRecordDraft",
+      "type": "object"
+    },
+    "PrivacyLevel": {
+      "enum": [
+        "public",
+        "local",
+        "private",
+        "sensitive"
+      ],
+      "title": "PrivacyLevel",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/memory-proposal.schema.json",
+  "properties": {
+    "candidate": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MemoryRecordDraft"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "evidence_event_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Event Ids",
+      "type": "array"
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "update",
+        "supersede",
+        "contradict",
+        "forget",
+        "ignore"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "proposal_id": {
+      "format": "uuid",
+      "title": "Proposal Id",
+      "type": "string"
+    },
+    "rationale": {
+      "title": "Rationale",
+      "type": "string"
+    },
+    "target_memory_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Memory Id"
+    }
+  },
+  "required": [
+    "proposal_id",
+    "operation",
+    "evidence_event_ids",
+    "confidence",
+    "rationale"
+  ],
+  "title": "MemoryProposal",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

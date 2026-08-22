@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/avatar-interaction-event.schema.json",
+  "properties": {
+    "avatar_id": {
+      "title": "Avatar Id",
+      "type": "string"
+    },
+    "interaction_id": {
+      "format": "uuid",
+      "title": "Interaction Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "pointer",
+        "touch",
+        "gaze",
+        "drag",
+        "system"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "target": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target"
+    },
+    "x": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "X"
+    },
+    "y": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Y"
+    }
+  },
+  "required": [
+    "interaction_id",
+    "avatar_id",
+    "kind"
+  ],
+  "title": "AvatarInteractionEvent",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "ConversationState": {
+      "enum": [
+        "idle",
+        "listening",
+        "committing_user_turn",
+        "planning",
+        "generating",
+        "speaking",
+        "interrupting",
+        "recovering"
+      ],
+      "title": "ConversationState",
+      "type": "string"
+    },
+    "SessionState": {
+      "enum": [
+        "created",
+        "connecting",
+        "ready",
+        "degraded",
+        "recovering",
+        "closing",
+        "closed"
+      ],
+      "title": "SessionState",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/session-snapshot.schema.json",
+  "properties": {
+    "character_id": {
+      "title": "Character Id",
+      "type": "string"
+    },
+    "conversation_state": {
+      "$ref": "#/$defs/ConversationState"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/SessionState"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "character_id",
+    "state",
+    "conversation_state",
+    "revision",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "SessionSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

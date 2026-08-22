@@ -1,0 +1,43 @@
+:root {
+  --ink: #21192b;
+  --muted: #71677c;
+  --faint: #aaa1b1;
+  --accent: #7c3aed;
+  --surface: rgb(255 255 255 / 76%);
+  --line: #e8e0ed;
+  --line-strong: #cabcd2;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 82% 8%, rgb(209 180 255 / 34%), transparent 34%),
+    radial-gradient(circle at 12% 52%, rgb(255 214 230 / 28%), transparent 28%),
+    #f8f5f9;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

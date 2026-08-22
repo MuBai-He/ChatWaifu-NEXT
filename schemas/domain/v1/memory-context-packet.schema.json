@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "MemoryExcerpt": {
+      "properties": {
+        "memory_id": {
+          "format": "uuid",
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "relevance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Relevance",
+          "type": "number"
+        },
+        "source_event_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Event Ids",
+          "type": "array"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "text",
+        "source_event_ids",
+        "relevance"
+      ],
+      "title": "MemoryExcerpt",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/memory-context-packet.schema.json",
+  "properties": {
+    "open_commitments": {
+      "items": {
+        "$ref": "#/$defs/MemoryExcerpt"
+      },
+      "title": "Open Commitments",
+      "type": "array"
+    },
+    "pinned_facts": {
+      "items": {
+        "$ref": "#/$defs/MemoryExcerpt"
+      },
+      "title": "Pinned Facts",
+      "type": "array"
+    },
+    "provenance_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Provenance Ids",
+      "type": "array"
+    },
+    "recent_episodes": {
+      "items": {
+        "$ref": "#/$defs/MemoryExcerpt"
+      },
+      "title": "Recent Episodes",
+      "type": "array"
+    },
+    "relationship_context": {
+      "items": {
+        "$ref": "#/$defs/MemoryExcerpt"
+      },
+      "title": "Relationship Context",
+      "type": "array"
+    },
+    "relevant_memories": {
+      "items": {
+        "$ref": "#/$defs/MemoryExcerpt"
+      },
+      "title": "Relevant Memories",
+      "type": "array"
+    },
+    "token_budget_used": {
+      "minimum": 0,
+      "title": "Token Budget Used",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "token_budget_used"
+  ],
+  "title": "MemoryContextPacket",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

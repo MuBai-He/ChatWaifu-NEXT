@@ -1,0 +1,3 @@
+interface:
+  display_name: "Realtime Voice"
+  short_description: "Engineer cancellation-safe realtime voice"

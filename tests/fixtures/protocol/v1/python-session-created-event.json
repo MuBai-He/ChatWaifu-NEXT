@@ -1,0 +1,18 @@
+{
+  "causation_id": null,
+  "correlation_id": "00000000-0000-4000-8000-000000000301",
+  "event_id": "00000000-0000-4000-8000-000000000101",
+  "event_type": "session.created",
+  "generation_id": null,
+  "occurred_at": "2026-08-23T08:00:00Z",
+  "payload": {
+    "character_id": "default-character"
+  },
+  "privacy": "private",
+  "schema_version": "1.0",
+  "sequence": 1,
+  "session_id": "00000000-0000-4000-8000-000000000201",
+  "skill_run_id": null,
+  "source": "protocol-python",
+  "turn_id": null
+}

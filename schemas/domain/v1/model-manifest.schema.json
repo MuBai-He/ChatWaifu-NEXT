@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "ModelLicense": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "review_required": {
+          "default": true,
+          "title": "Review Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ModelLicense",
+      "type": "object"
+    },
+    "ModelResourceProfile": {
+      "properties": {
+        "devices": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Devices",
+          "type": "array"
+        },
+        "estimated_ram_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Ram Mb"
+        },
+        "estimated_vram_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Vram Mb"
+        },
+        "exclusive_gpu": {
+          "default": false,
+          "title": "Exclusive Gpu",
+          "type": "boolean"
+        }
+      },
+      "title": "ModelResourceProfile",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/model-manifest.schema.json",
+  "properties": {
+    "adapter_version": {
+      "title": "Adapter Version",
+      "type": "string"
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "input_modalities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Input Modalities",
+      "type": "array"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "languages": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Languages",
+      "type": "array"
+    },
+    "license": {
+      "$ref": "#/$defs/ModelLicense"
+    },
+    "local": {
+      "title": "Local",
+      "type": "boolean"
+    },
+    "model_id": {
+      "title": "Model Id",
+      "type": "string"
+    },
+    "output_modalities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Output Modalities",
+      "type": "array"
+    },
+    "resource": {
+      "$ref": "#/$defs/ModelResourceProfile"
+    },
+    "stores_input": {
+      "default": false,
+      "title": "Stores Input",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "model_id",
+    "kind",
+    "adapter_version",
+    "local",
+    "license"
+  ],
+  "title": "ModelManifest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

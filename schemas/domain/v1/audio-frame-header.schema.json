@@ -1,0 +1,83 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/audio-frame-header.schema.json",
+  "properties": {
+    "byte_length": {
+      "exclusiveMinimum": 0,
+      "maximum": 16777216,
+      "title": "Byte Length",
+      "type": "integer"
+    },
+    "channels": {
+      "exclusiveMinimum": 0,
+      "maximum": 8,
+      "title": "Channels",
+      "type": "integer"
+    },
+    "codec": {
+      "enum": [
+        "pcm_s16le",
+        "opus"
+      ],
+      "title": "Codec",
+      "type": "string"
+    },
+    "duration_ms": {
+      "exclusiveMinimum": 0,
+      "maximum": 10000,
+      "title": "Duration Ms",
+      "type": "integer"
+    },
+    "end_of_stream": {
+      "default": false,
+      "title": "End Of Stream",
+      "type": "boolean"
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "pts_ms": {
+      "minimum": 0,
+      "title": "Pts Ms",
+      "type": "integer"
+    },
+    "sample_rate": {
+      "exclusiveMinimum": 0,
+      "maximum": 384000,
+      "title": "Sample Rate",
+      "type": "integer"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "stream_id": {
+      "format": "uuid",
+      "title": "Stream Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "stream_id",
+    "sequence",
+    "pts_ms",
+    "duration_ms",
+    "codec",
+    "sample_rate",
+    "channels",
+    "byte_length"
+  ],
+  "title": "AudioFrameHeader",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

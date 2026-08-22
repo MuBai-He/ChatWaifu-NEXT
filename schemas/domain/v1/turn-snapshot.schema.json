@@ -1,0 +1,67 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/turn-snapshot.schema.json",
+  "properties": {
+    "active_skill_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Active Skill Ids",
+      "type": "array"
+    },
+    "committed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Committed At"
+    },
+    "committed_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Committed Text"
+    },
+    "scene_snapshot_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scene Snapshot Id"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "turn_id": {
+      "format": "uuid",
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "session_id"
+  ],
+  "title": "TurnSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

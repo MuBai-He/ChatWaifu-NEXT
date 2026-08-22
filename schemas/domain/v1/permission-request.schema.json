@@ -1,0 +1,99 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "SideEffect": {
+      "enum": [
+        "read",
+        "write",
+        "destructive",
+        "external_communication",
+        "device_control"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/permission-request.schema.json",
+  "properties": {
+    "capability": {
+      "title": "Capability",
+      "type": "string"
+    },
+    "context": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "permission": {
+      "title": "Permission",
+      "type": "string"
+    },
+    "principal": {
+      "title": "Principal",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "side_effect": {
+      "$ref": "#/$defs/SideEffect"
+    }
+  },
+  "required": [
+    "request_id",
+    "principal",
+    "capability",
+    "permission",
+    "side_effect",
+    "reason",
+    "requested_at"
+  ],
+  "title": "PermissionRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

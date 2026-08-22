@@ -1,0 +1,145 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "SideEffect": {
+      "enum": [
+        "read",
+        "write",
+        "destructive",
+        "external_communication",
+        "device_control"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    },
+    "SkillCapability": {
+      "properties": {
+        "confirmation_required": {
+          "default": false,
+          "title": "Confirmation Required",
+          "type": "boolean"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "input_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "required_permissions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Permissions",
+          "type": "array"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect",
+          "default": "read"
+        },
+        "timeout_seconds": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "input_schema",
+        "output_schema"
+      ],
+      "title": "SkillCapability",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/skill-definition.schema.json",
+  "properties": {
+    "background_allowed": {
+      "default": false,
+      "title": "Background Allowed",
+      "type": "boolean"
+    },
+    "capabilities": {
+      "items": {
+        "$ref": "#/$defs/SkillCapability"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "interruptible": {
+      "default": true,
+      "title": "Interruptible",
+      "type": "boolean"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "skill_id": {
+      "title": "Skill Id",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "skill_id",
+    "version",
+    "name",
+    "description"
+  ],
+  "title": "SkillDefinition",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

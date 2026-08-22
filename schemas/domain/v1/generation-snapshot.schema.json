@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "GenerationState": {
+      "enum": [
+        "created",
+        "running",
+        "cancelling",
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "title": "GenerationState",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/generation-snapshot.schema.json",
+  "properties": {
+    "backend_kind": {
+      "title": "Backend Kind",
+      "type": "string"
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
+    "generation_id": {
+      "format": "uuid",
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "invalidated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Invalidated At"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "state": {
+      "$ref": "#/$defs/GenerationState"
+    },
+    "turn_id": {
+      "format": "uuid",
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "generation_id",
+    "session_id",
+    "turn_id",
+    "state",
+    "backend_kind"
+  ],
+  "title": "GenerationSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,0 +1,152 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { LIVE2D_LAB_MANIFEST } from "../src/default-manifest";
+import type {
+  CubismBridgeHit,
+  OfficialCubismBridge,
+} from "../src/live2d/live2d-model-loader";
+import { Live2DModelLoader } from "../src/live2d/live2d-model-loader";
+import { Live2DAvatarRenderer } from "../src/live2d/live2d-renderer";
+import type { AvatarManifest, AvatarRuntimeState } from "../src/types";
+import { cue } from "./fixtures";
+
+class StubBridge implements OfficialCubismBridge {
+  readonly deltas: number[] = [];
+  readonly motions: string[] = [];
+  readonly expressions: Array<[string, number]> = [];
+  readonly gazes: string[] = [];
+  readonly mouthValues: number[] = [];
+  readonly sizes: Array<[number, number, number]> = [];
+  draws = 0;
+  unloaded = false;
+  disposed = false;
+  private motionComplete: (() => void) | null = null;
+
+  async load(): Promise<void> {}
+
+  update(deltaSeconds: number): void {
+    this.deltas.push(deltaSeconds);
+  }
+
+  draw(): void {
+    this.draws += 1;
+  }
+
+  playMotion(name: string, _priority: number, onComplete: () => void): void {
+    this.motions.push(name);
+    this.motionComplete = onComplete;
+  }
+
+  setExpression(name: string, intensity: number): void {
+    this.expressions.push([name, intensity]);
+  }
+
+  setGaze(target: string): void {
+    this.gazes.push(target);
+  }
+
+  setMouthOpen(value: number): void {
+    this.mouthValues.push(value);
+  }
+
+  hitTest(): CubismBridgeHit[] {
+    return [{ areaId: "head", modelX: 0.1, modelY: 0.2 }];
+  }
+
+  resize(width: number, height: number, dpr: number): void {
+    this.sizes.push([width, height, dpr]);
+  }
+
+  async unload(): Promise<void> {
+    this.unloaded = true;
+  }
+
+  dispose(): void {
+    this.disposed = true;
+  }
+
+  resourceCount(): number {
+    return 4;
+  }
+
+  completeMotion(): void {
+    this.motionComplete?.();
+  }
+}
+
+class StubLoader extends Live2DModelLoader {
+  constructor(private readonly bridge: OfficialCubismBridge) {
+    super();
+  }
+
+  override async load(
+    canvas: HTMLCanvasElement,
+    manifest: AvatarManifest,
+  ): Promise<OfficialCubismBridge> {
+    void canvas;
+    void manifest;
+    return this.bridge;
+  }
+}
+
+function stubCanvas(): HTMLCanvasElement {
+  return {
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  } as unknown as HTMLCanvasElement;
+}
+
+describe("Live2DAvatarRenderer adapter", () => {
+  it("maps semantic state to the bridge and maps hits back to semantic events", async () => {
+    const bridge = new StubBridge();
+    const onMotionEnded = vi.fn();
+    const renderer = new Live2DAvatarRenderer(stubCanvas(), {
+      modelLoader: new StubLoader(bridge),
+      onMotionEnded,
+    });
+    await renderer.load(LIVE2D_LAB_MANIFEST);
+
+    const motion = cue("motion", "nod");
+    const expression = cue("expression", "happy", { intensity: 0.7 });
+    const state: AvatarRuntimeState = {
+      revision: 1,
+      state: "speaking",
+      expression: "happy",
+      motion: "nod",
+      gaze: "pointer",
+      speaking: true,
+      interrupted: false,
+      mouthOpen: 0.6,
+      activeCues: { gesture: motion, emotion: expression },
+    };
+
+    renderer.resize(800, 600, 2);
+    renderer.render(state, 100);
+    renderer.render(state, 116);
+    bridge.completeMotion();
+
+    expect(bridge.sizes).toEqual([[800, 600, 2]]);
+    expect(bridge.motions).toEqual(["nod"]);
+    expect(bridge.expressions).toEqual([["happy", 0.7]]);
+    expect(bridge.gazes).toEqual(["pointer"]);
+    expect(bridge.mouthValues).toEqual([0.6]);
+    expect(bridge.deltas).toEqual([0, 0.016]);
+    expect(bridge.draws).toBe(2);
+    expect(onMotionEnded).toHaveBeenCalledWith(motion.cue_id);
+    expect(renderer.hitTest(10, 20)[0]).toMatchObject({
+      areaId: "head",
+      semanticTarget: "touched_head",
+      modelX: 0.1,
+      modelY: 0.2,
+    });
+    expect(renderer.diagnostics().resourceCount).toBe(4);
+
+    await renderer.unload();
+    expect(bridge.unloaded).toBe(true);
+    expect(renderer.diagnostics()).toMatchObject({
+      status: "idle",
+      resourceCount: 0,
+    });
+    renderer.dispose();
+  });
+});

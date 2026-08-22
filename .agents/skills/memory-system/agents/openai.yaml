@@ -1,0 +1,3 @@
+interface:
+  display_name: "Memory System"
+  short_description: "Build provenance-aware character memory"

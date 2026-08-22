@@ -1,0 +1,146 @@
+main {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 88px 0 56px;
+}
+
+.hero {
+  max-width: 780px;
+}
+
+.eyebrow,
+.contract-note p {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 14px 0 18px;
+  color: var(--ink);
+  font-size: clamp(3rem, 9vw, 6.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.summary {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  line-height: 1.65;
+}
+
+.phase-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.phase-row span {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 72px;
+}
+
+.status-card {
+  min-height: 260px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: 0 20px 70px rgb(28 20 45 / 7%);
+}
+
+.status-card h2 {
+  margin: 0 0 20px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.status-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-card li {
+  position: relative;
+  padding: 12px 0 12px 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.status-card li::before {
+  position: absolute;
+  left: 2px;
+  color: var(--accent);
+  content: "◆";
+  font-size: 0.55rem;
+}
+
+.deferred li::before {
+  color: var(--faint);
+  content: "○";
+  font-size: 0.8rem;
+}
+
+.contract-note {
+  margin-top: 18px;
+  padding: 24px 28px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 18px;
+}
+
+.contract-note p {
+  margin: 0 0 8px;
+}
+
+.contract-note strong {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: clamp(0.82rem, 2vw, 1rem);
+}
+
+.lab-link {
+  display: block;
+  width: fit-content;
+  margin-top: 18px;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lab-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  main {
+    padding-top: 56px;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+    margin-top: 48px;
+  }
+
+  .status-card {
+    min-height: 0;
+  }
+}

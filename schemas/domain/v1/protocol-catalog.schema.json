@@ -1,0 +1,3090 @@
+{
+  "$defs": {
+    "AssistantGenerationStartedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "assistant.generation_started",
+          "default": "assistant.generation_started",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AssistantGenerationStartedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AssistantGenerationStartedEvent",
+      "type": "object"
+    },
+    "AssistantGenerationStartedPayload": {
+      "properties": {
+        "backend_kind": {
+          "minLength": 1,
+          "title": "Backend Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "backend_kind"
+      ],
+      "title": "AssistantGenerationStartedPayload",
+      "type": "object"
+    },
+    "AudioFrameHeader": {
+      "properties": {
+        "byte_length": {
+          "exclusiveMinimum": 0,
+          "maximum": 16777216,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "channels": {
+          "exclusiveMinimum": 0,
+          "maximum": 8,
+          "title": "Channels",
+          "type": "integer"
+        },
+        "codec": {
+          "enum": [
+            "pcm_s16le",
+            "opus"
+          ],
+          "title": "Codec",
+          "type": "string"
+        },
+        "duration_ms": {
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "end_of_stream": {
+          "default": false,
+          "title": "End Of Stream",
+          "type": "boolean"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "pts_ms": {
+          "minimum": 0,
+          "title": "Pts Ms",
+          "type": "integer"
+        },
+        "sample_rate": {
+          "exclusiveMinimum": 0,
+          "maximum": 384000,
+          "title": "Sample Rate",
+          "type": "integer"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_id",
+        "sequence",
+        "pts_ms",
+        "duration_ms",
+        "codec",
+        "sample_rate",
+        "channels",
+        "byte_length"
+      ],
+      "title": "AudioFrameHeader",
+      "type": "object"
+    },
+    "AvatarCapabilityManifest": {
+      "properties": {
+        "avatar_id": {
+          "minLength": 1,
+          "title": "Avatar Id",
+          "type": "string"
+        },
+        "expressions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Expressions",
+          "type": "array"
+        },
+        "gaze_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaze Targets",
+          "type": "array"
+        },
+        "hit_areas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hit Areas",
+          "type": "array"
+        },
+        "motions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Motions",
+          "type": "array"
+        },
+        "renderer_kind": {
+          "minLength": 1,
+          "title": "Renderer Kind",
+          "type": "string"
+        },
+        "states": {
+          "items": {
+            "type": "string"
+          },
+          "title": "States",
+          "type": "array"
+        },
+        "supports_lipsync": {
+          "default": false,
+          "title": "Supports Lipsync",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "avatar_id",
+        "renderer_kind"
+      ],
+      "title": "AvatarCapabilityManifest",
+      "type": "object"
+    },
+    "AvatarCue": {
+      "properties": {
+        "cue_id": {
+          "format": "uuid",
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "intensity": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Intensity",
+          "type": "number"
+        },
+        "interruptible": {
+          "default": true,
+          "title": "Interruptible",
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "state",
+            "expression",
+            "motion",
+            "gaze",
+            "speech",
+            "override"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "priority": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "start_anchor": {
+          "default": "immediate",
+          "title": "Start Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "kind",
+        "name"
+      ],
+      "title": "AvatarCue",
+      "type": "object"
+    },
+    "AvatarCueEmittedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "avatar.cue_emitted",
+          "default": "avatar.cue_emitted",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AvatarCueEmittedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AvatarCueEmittedEvent",
+      "type": "object"
+    },
+    "AvatarCueEmittedPayload": {
+      "properties": {
+        "cue": {
+          "$ref": "#/$defs/AvatarCue"
+        }
+      },
+      "required": [
+        "cue"
+      ],
+      "title": "AvatarCueEmittedPayload",
+      "type": "object"
+    },
+    "AvatarInteractionEvent": {
+      "properties": {
+        "avatar_id": {
+          "title": "Avatar Id",
+          "type": "string"
+        },
+        "interaction_id": {
+          "format": "uuid",
+          "title": "Interaction Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "pointer",
+            "touch",
+            "gaze",
+            "drag",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Y"
+        }
+      },
+      "required": [
+        "interaction_id",
+        "avatar_id",
+        "kind"
+      ],
+      "title": "AvatarInteractionEvent",
+      "type": "object"
+    },
+    "ConversationInterruptCommand": {
+      "properties": {
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "command_type": {
+          "const": "cmd.conversation.interrupt",
+          "default": "cmd.conversation.interrupt",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Revision"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "issuer": {
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ConversationInterruptPayload"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "command_id",
+        "issued_at",
+        "issuer",
+        "payload"
+      ],
+      "title": "ConversationInterruptCommand",
+      "type": "object"
+    },
+    "ConversationInterruptPayload": {
+      "properties": {
+        "reason": {
+          "default": "user_interruption",
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "title": "ConversationInterruptPayload",
+      "type": "object"
+    },
+    "ConversationInterruption": {
+      "properties": {
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "initiated_by": {
+          "$ref": "#/$defs/InterruptionInitiator"
+        },
+        "interruption_id": {
+          "format": "uuid",
+          "title": "Interruption Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "requested_at": {
+          "format": "date-time",
+          "title": "Requested At",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "interruption_id",
+        "session_id",
+        "generation_id",
+        "initiated_by",
+        "reason",
+        "requested_at"
+      ],
+      "title": "ConversationInterruption",
+      "type": "object"
+    },
+    "ConversationState": {
+      "enum": [
+        "idle",
+        "listening",
+        "committing_user_turn",
+        "planning",
+        "generating",
+        "speaking",
+        "interrupting",
+        "recovering"
+      ],
+      "title": "ConversationState",
+      "type": "string"
+    },
+    "ErrorRaisedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "system.error_raised",
+          "default": "system.error_raised",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ErrorRaisedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "ErrorRaisedEvent",
+      "type": "object"
+    },
+    "ErrorRaisedPayload": {
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/StructuredError"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "ErrorRaisedPayload",
+      "type": "object"
+    },
+    "EventModel": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SessionCreatedEvent"
+        },
+        {
+          "$ref": "#/$defs/UserTurnCommittedEvent"
+        },
+        {
+          "$ref": "#/$defs/AssistantGenerationStartedEvent"
+        },
+        {
+          "$ref": "#/$defs/AvatarCueEmittedEvent"
+        },
+        {
+          "$ref": "#/$defs/ErrorRaisedEvent"
+        },
+        {
+          "$ref": "#/$defs/GenericCoreEvent"
+        }
+      ]
+    },
+    "GenerationSnapshot": {
+      "properties": {
+        "backend_kind": {
+          "title": "Backend Kind",
+          "type": "string"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "invalidated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Invalidated At"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "state": {
+          "$ref": "#/$defs/GenerationState"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generation_id",
+        "session_id",
+        "turn_id",
+        "state",
+        "backend_kind"
+      ],
+      "title": "GenerationSnapshot",
+      "type": "object"
+    },
+    "GenerationState": {
+      "enum": [
+        "created",
+        "running",
+        "cancelling",
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "title": "GenerationState",
+      "type": "string"
+    },
+    "GenericCoreEvent": {
+      "description": "Known lower-value v1 event whose payload will be specialized before its phase begins.",
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "$ref": "#/$defs/GenericCoreEventType"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "GenericCoreEvent",
+      "type": "object"
+    },
+    "GenericCoreEventType": {
+      "enum": [
+        "system.runtime_started",
+        "system.runtime_stopping",
+        "system.component_health_changed",
+        "session.closed",
+        "session.state_changed",
+        "user.speech_started",
+        "user.speech_progress",
+        "user.speech_stopped",
+        "user.transcript_partial",
+        "user.transcript_final",
+        "assistant.text_delta",
+        "assistant.text_segment_committed",
+        "assistant.generation_cancelled",
+        "assistant.generation_completed",
+        "assistant.audio_stream_started",
+        "assistant.audio_chunk_queued",
+        "assistant.playback_started",
+        "assistant.playback_progress",
+        "assistant.playback_stopped",
+        "assistant.spoken_text_committed",
+        "conversation.interruption_requested",
+        "conversation.interrupted",
+        "conversation.recovered",
+        "skill.discovered",
+        "skill.activated",
+        "skill.run_started",
+        "skill.progress",
+        "skill.confirmation_requested",
+        "skill.run_completed",
+        "skill.run_failed",
+        "skill.run_cancelled",
+        "tool.call_started",
+        "tool.call_completed",
+        "tool.call_failed",
+        "memory.proposed",
+        "memory.committed",
+        "memory.superseded",
+        "memory.tombstoned",
+        "memory.recalled",
+        "character.state_changed",
+        "relationship.state_changed",
+        "avatar.interaction_received",
+        "model.route_selected",
+        "model.worker_loaded",
+        "model.worker_unloaded",
+        "model.fallback_triggered"
+      ],
+      "type": "string"
+    },
+    "InterruptionInitiator": {
+      "enum": [
+        "user",
+        "system",
+        "skill"
+      ],
+      "title": "InterruptionInitiator",
+      "type": "string"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "MemoryContextPacket": {
+      "properties": {
+        "open_commitments": {
+          "items": {
+            "$ref": "#/$defs/MemoryExcerpt"
+          },
+          "title": "Open Commitments",
+          "type": "array"
+        },
+        "pinned_facts": {
+          "items": {
+            "$ref": "#/$defs/MemoryExcerpt"
+          },
+          "title": "Pinned Facts",
+          "type": "array"
+        },
+        "provenance_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Provenance Ids",
+          "type": "array"
+        },
+        "recent_episodes": {
+          "items": {
+            "$ref": "#/$defs/MemoryExcerpt"
+          },
+          "title": "Recent Episodes",
+          "type": "array"
+        },
+        "relationship_context": {
+          "items": {
+            "$ref": "#/$defs/MemoryExcerpt"
+          },
+          "title": "Relationship Context",
+          "type": "array"
+        },
+        "relevant_memories": {
+          "items": {
+            "$ref": "#/$defs/MemoryExcerpt"
+          },
+          "title": "Relevant Memories",
+          "type": "array"
+        },
+        "token_budget_used": {
+          "minimum": 0,
+          "title": "Token Budget Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token_budget_used"
+      ],
+      "title": "MemoryContextPacket",
+      "type": "object"
+    },
+    "MemoryExcerpt": {
+      "properties": {
+        "memory_id": {
+          "format": "uuid",
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "relevance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Relevance",
+          "type": "number"
+        },
+        "source_event_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Event Ids",
+          "type": "array"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id",
+        "text",
+        "source_event_ids",
+        "relevance"
+      ],
+      "title": "MemoryExcerpt",
+      "type": "object"
+    },
+    "MemoryProposal": {
+      "properties": {
+        "candidate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MemoryRecordDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_event_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Event Ids",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "add",
+            "update",
+            "supersede",
+            "contradict",
+            "forget",
+            "ignore"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "proposal_id": {
+          "format": "uuid",
+          "title": "Proposal Id",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "target_memory_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Memory Id"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "operation",
+        "evidence_event_ids",
+        "confidence",
+        "rationale"
+      ],
+      "title": "MemoryProposal",
+      "type": "object"
+    },
+    "MemoryRecord": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "importance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Importance",
+          "type": "number"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "memory_id": {
+          "format": "uuid",
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "namespace": {
+          "title": "Namespace",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "predicate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicate"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "source_event_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Event Ids",
+          "type": "array"
+        },
+        "state": {
+          "default": "active",
+          "enum": [
+            "active",
+            "superseded",
+            "contradicted",
+            "tombstoned"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "supersedes": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid To"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "namespace",
+        "kind",
+        "text",
+        "observed_at",
+        "confidence",
+        "importance",
+        "memory_id",
+        "source_event_ids",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "MemoryRecord",
+      "type": "object"
+    },
+    "MemoryRecordDraft": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "importance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Importance",
+          "type": "number"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "namespace": {
+          "title": "Namespace",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "predicate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicate"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "namespace",
+        "kind",
+        "text",
+        "observed_at",
+        "confidence",
+        "importance"
+      ],
+      "title": "MemoryRecordDraft",
+      "type": "object"
+    },
+    "ModelLicense": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "review_required": {
+          "default": true,
+          "title": "Review Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ModelLicense",
+      "type": "object"
+    },
+    "ModelManifest": {
+      "properties": {
+        "adapter_version": {
+          "title": "Adapter Version",
+          "type": "string"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "input_modalities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Modalities",
+          "type": "array"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "license": {
+          "$ref": "#/$defs/ModelLicense"
+        },
+        "local": {
+          "title": "Local",
+          "type": "boolean"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "output_modalities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Output Modalities",
+          "type": "array"
+        },
+        "resource": {
+          "$ref": "#/$defs/ModelResourceProfile"
+        },
+        "stores_input": {
+          "default": false,
+          "title": "Stores Input",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "kind",
+        "adapter_version",
+        "local",
+        "license"
+      ],
+      "title": "ModelManifest",
+      "type": "object"
+    },
+    "ModelResourceProfile": {
+      "properties": {
+        "devices": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Devices",
+          "type": "array"
+        },
+        "estimated_ram_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Ram Mb"
+        },
+        "estimated_vram_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Vram Mb"
+        },
+        "exclusive_gpu": {
+          "default": false,
+          "title": "Exclusive Gpu",
+          "type": "boolean"
+        }
+      },
+      "title": "ModelResourceProfile",
+      "type": "object"
+    },
+    "PermissionDecision": {
+      "properties": {
+        "decided_at": {
+          "format": "date-time",
+          "title": "Decided At",
+          "type": "string"
+        },
+        "decided_by": {
+          "title": "Decided By",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "allow_once",
+            "allow_session",
+            "allow_always",
+            "deny"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "decision",
+        "decided_by",
+        "decided_at"
+      ],
+      "title": "PermissionDecision",
+      "type": "object"
+    },
+    "PermissionRequest": {
+      "properties": {
+        "capability": {
+          "title": "Capability",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "permission": {
+          "title": "Permission",
+          "type": "string"
+        },
+        "principal": {
+          "title": "Principal",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "requested_at": {
+          "format": "date-time",
+          "title": "Requested At",
+          "type": "string"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect"
+        }
+      },
+      "required": [
+        "request_id",
+        "principal",
+        "capability",
+        "permission",
+        "side_effect",
+        "reason",
+        "requested_at"
+      ],
+      "title": "PermissionRequest",
+      "type": "object"
+    },
+    "PrivacyLevel": {
+      "enum": [
+        "public",
+        "local",
+        "private",
+        "sensitive"
+      ],
+      "title": "PrivacyLevel",
+      "type": "string"
+    },
+    "RouteDecision": {
+      "properties": {
+        "backend_kind": {
+          "title": "Backend Kind",
+          "type": "string"
+        },
+        "cloud_context_policy": {
+          "title": "Cloud Context Policy",
+          "type": "string"
+        },
+        "estimated_cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Cost"
+        },
+        "fallback_chain": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fallback Chain",
+          "type": "array"
+        },
+        "model_id": {
+          "title": "Model Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provider_id",
+        "model_id",
+        "backend_kind",
+        "cloud_context_policy"
+      ],
+      "title": "RouteDecision",
+      "type": "object"
+    },
+    "SessionCreatedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "session.created",
+          "default": "session.created",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/SessionCreatedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "SessionCreatedEvent",
+      "type": "object"
+    },
+    "SessionCreatedPayload": {
+      "properties": {
+        "character_id": {
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "character_id"
+      ],
+      "title": "SessionCreatedPayload",
+      "type": "object"
+    },
+    "SessionSnapshot": {
+      "properties": {
+        "character_id": {
+          "title": "Character Id",
+          "type": "string"
+        },
+        "conversation_state": {
+          "$ref": "#/$defs/ConversationState"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/SessionState"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "character_id",
+        "state",
+        "conversation_state",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "SessionSnapshot",
+      "type": "object"
+    },
+    "SessionStartCommand": {
+      "properties": {
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "command_type": {
+          "const": "cmd.session.start",
+          "default": "cmd.session.start",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Revision"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "issuer": {
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/SessionStartPayload"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "command_id",
+        "issued_at",
+        "issuer",
+        "payload"
+      ],
+      "title": "SessionStartCommand",
+      "type": "object"
+    },
+    "SessionStartPayload": {
+      "properties": {
+        "character_id": {
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "character_id"
+      ],
+      "title": "SessionStartPayload",
+      "type": "object"
+    },
+    "SessionState": {
+      "enum": [
+        "created",
+        "connecting",
+        "ready",
+        "degraded",
+        "recovering",
+        "closing",
+        "closed"
+      ],
+      "title": "SessionState",
+      "type": "string"
+    },
+    "SideEffect": {
+      "enum": [
+        "read",
+        "write",
+        "destructive",
+        "external_communication",
+        "device_control"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    },
+    "SkillCapability": {
+      "properties": {
+        "confirmation_required": {
+          "default": false,
+          "title": "Confirmation Required",
+          "type": "boolean"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "input_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "required_permissions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Permissions",
+          "type": "array"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect",
+          "default": "read"
+        },
+        "timeout_seconds": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "input_schema",
+        "output_schema"
+      ],
+      "title": "SkillCapability",
+      "type": "object"
+    },
+    "SkillDefinition": {
+      "properties": {
+        "background_allowed": {
+          "default": false,
+          "title": "Background Allowed",
+          "type": "boolean"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/SkillCapability"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "interruptible": {
+          "default": true,
+          "title": "Interruptible",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "skill_id": {
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "version",
+        "name",
+        "description"
+      ],
+      "title": "SkillDefinition",
+      "type": "object"
+    },
+    "SkillResult": {
+      "properties": {
+        "avatar_cues": {
+          "items": {
+            "$ref": "#/$defs/AvatarCue"
+          },
+          "title": "Avatar Cues",
+          "type": "array"
+        },
+        "data": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        },
+        "memory_proposal_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Memory Proposal Ids",
+          "type": "array"
+        },
+        "prospective_task_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Prospective Task Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "spoken_summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spoken Summary"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "ui_cards": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "title": "Ui Cards",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "SkillResult",
+      "type": "object"
+    },
+    "SkillRunSnapshot": {
+      "properties": {
+        "progress": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Progress"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "skill_id": {
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "skill_run_id": {
+          "format": "uuid",
+          "title": "Skill Run Id",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "state": {
+          "$ref": "#/$defs/SkillRunState"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_run_id",
+        "skill_id",
+        "session_id",
+        "state",
+        "updated_at"
+      ],
+      "title": "SkillRunSnapshot",
+      "type": "object"
+    },
+    "SkillRunState": {
+      "enum": [
+        "created",
+        "activating",
+        "running",
+        "waiting_for_tool",
+        "waiting_for_confirmation",
+        "paused",
+        "succeeded",
+        "failed",
+        "cancelling",
+        "cancelled",
+        "expired"
+      ],
+      "title": "SkillRunState",
+      "type": "string"
+    },
+    "StructuredError": {
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "component": {
+          "minLength": 1,
+          "title": "Component",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "details": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "component"
+      ],
+      "title": "StructuredError",
+      "type": "object"
+    },
+    "TextSendCommand": {
+      "properties": {
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "command_type": {
+          "const": "cmd.text.send",
+          "default": "cmd.text.send",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Revision"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "issuer": {
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/TextSendPayload"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "command_id",
+        "issued_at",
+        "issuer",
+        "payload"
+      ],
+      "title": "TextSendCommand",
+      "type": "object"
+    },
+    "TextSendPayload": {
+      "properties": {
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "TextSendPayload",
+      "type": "object"
+    },
+    "TurnSnapshot": {
+      "properties": {
+        "active_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Active Skill Ids",
+          "type": "array"
+        },
+        "committed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Committed At"
+        },
+        "committed_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Committed Text"
+        },
+        "scene_snapshot_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Snapshot Id"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "turn_id",
+        "session_id"
+      ],
+      "title": "TurnSnapshot",
+      "type": "object"
+    },
+    "UserTurnCommittedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "user.turn_committed",
+          "default": "user.turn_committed",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/UserTurnCommittedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "UserTurnCommittedEvent",
+      "type": "object"
+    },
+    "UserTurnCommittedPayload": {
+      "properties": {
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "UserTurnCommittedPayload",
+      "type": "object"
+    },
+    "VideoFrameHeader": {
+      "properties": {
+        "byte_length": {
+          "exclusiveMinimum": 0,
+          "maximum": 67108864,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "codec": {
+          "enum": [
+            "jpeg",
+            "png",
+            "h264",
+            "vp8"
+          ],
+          "title": "Codec",
+          "type": "string"
+        },
+        "end_of_stream": {
+          "default": false,
+          "title": "End Of Stream",
+          "type": "boolean"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 16384,
+          "title": "Height",
+          "type": "integer"
+        },
+        "pts_ms": {
+          "minimum": 0,
+          "title": "Pts Ms",
+          "type": "integer"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 16384,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stream_id",
+        "sequence",
+        "pts_ms",
+        "codec",
+        "width",
+        "height",
+        "byte_length"
+      ],
+      "title": "VideoFrameHeader",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/protocol-catalog.schema.json",
+  "description": "Schema-only catalog used to generate a single conflict-free TypeScript module.",
+  "properties": {
+    "audio_frame": {
+      "$ref": "#/$defs/AudioFrameHeader"
+    },
+    "avatar_capabilities": {
+      "$ref": "#/$defs/AvatarCapabilityManifest"
+    },
+    "avatar_cue": {
+      "$ref": "#/$defs/AvatarCue"
+    },
+    "avatar_interaction": {
+      "$ref": "#/$defs/AvatarInteractionEvent"
+    },
+    "command": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SessionStartCommand"
+        },
+        {
+          "$ref": "#/$defs/TextSendCommand"
+        },
+        {
+          "$ref": "#/$defs/ConversationInterruptCommand"
+        }
+      ],
+      "title": "Command"
+    },
+    "conversation_interruption": {
+      "$ref": "#/$defs/ConversationInterruption"
+    },
+    "error": {
+      "$ref": "#/$defs/StructuredError"
+    },
+    "event": {
+      "$ref": "#/$defs/EventModel"
+    },
+    "generation": {
+      "$ref": "#/$defs/GenerationSnapshot"
+    },
+    "memory": {
+      "$ref": "#/$defs/MemoryRecord"
+    },
+    "memory_context": {
+      "$ref": "#/$defs/MemoryContextPacket"
+    },
+    "memory_proposal": {
+      "$ref": "#/$defs/MemoryProposal"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelManifest"
+    },
+    "permission_decision": {
+      "$ref": "#/$defs/PermissionDecision"
+    },
+    "permission_request": {
+      "$ref": "#/$defs/PermissionRequest"
+    },
+    "route": {
+      "$ref": "#/$defs/RouteDecision"
+    },
+    "session": {
+      "$ref": "#/$defs/SessionSnapshot"
+    },
+    "skill": {
+      "$ref": "#/$defs/SkillDefinition"
+    },
+    "skill_result": {
+      "$ref": "#/$defs/SkillResult"
+    },
+    "skill_run": {
+      "$ref": "#/$defs/SkillRunSnapshot"
+    },
+    "turn": {
+      "$ref": "#/$defs/TurnSnapshot"
+    },
+    "video_frame": {
+      "$ref": "#/$defs/VideoFrameHeader"
+    }
+  },
+  "required": [
+    "event",
+    "command",
+    "conversation_interruption",
+    "audio_frame",
+    "video_frame",
+    "session",
+    "turn",
+    "generation",
+    "avatar_cue",
+    "avatar_capabilities",
+    "avatar_interaction",
+    "skill",
+    "skill_run",
+    "skill_result",
+    "memory",
+    "memory_proposal",
+    "memory_context",
+    "model",
+    "route",
+    "permission_request",
+    "permission_decision",
+    "error"
+  ],
+  "title": "ProtocolCatalog",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

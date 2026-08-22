@@ -1,0 +1,78 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/video-frame-header.schema.json",
+  "properties": {
+    "byte_length": {
+      "exclusiveMinimum": 0,
+      "maximum": 67108864,
+      "title": "Byte Length",
+      "type": "integer"
+    },
+    "codec": {
+      "enum": [
+        "jpeg",
+        "png",
+        "h264",
+        "vp8"
+      ],
+      "title": "Codec",
+      "type": "string"
+    },
+    "end_of_stream": {
+      "default": false,
+      "title": "End Of Stream",
+      "type": "boolean"
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "height": {
+      "exclusiveMinimum": 0,
+      "maximum": 16384,
+      "title": "Height",
+      "type": "integer"
+    },
+    "pts_ms": {
+      "minimum": 0,
+      "title": "Pts Ms",
+      "type": "integer"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "stream_id": {
+      "format": "uuid",
+      "title": "Stream Id",
+      "type": "string"
+    },
+    "width": {
+      "exclusiveMinimum": 0,
+      "maximum": 16384,
+      "title": "Width",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "stream_id",
+    "sequence",
+    "pts_ms",
+    "codec",
+    "width",
+    "height",
+    "byte_length"
+  ],
+  "title": "VideoFrameHeader",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

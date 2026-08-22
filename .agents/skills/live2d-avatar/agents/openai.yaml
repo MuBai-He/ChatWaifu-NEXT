@@ -1,0 +1,3 @@
+interface:
+  display_name: "Live2d Avatar"
+  short_description: "Keep avatar behavior semantic and replaceable"

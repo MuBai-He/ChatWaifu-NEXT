@@ -1,0 +1,62 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/avatar-capability-manifest.schema.json",
+  "properties": {
+    "avatar_id": {
+      "minLength": 1,
+      "title": "Avatar Id",
+      "type": "string"
+    },
+    "expressions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Expressions",
+      "type": "array"
+    },
+    "gaze_targets": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Gaze Targets",
+      "type": "array"
+    },
+    "hit_areas": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Hit Areas",
+      "type": "array"
+    },
+    "motions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Motions",
+      "type": "array"
+    },
+    "renderer_kind": {
+      "minLength": 1,
+      "title": "Renderer Kind",
+      "type": "string"
+    },
+    "states": {
+      "items": {
+        "type": "string"
+      },
+      "title": "States",
+      "type": "array"
+    },
+    "supports_lipsync": {
+      "default": false,
+      "title": "Supports Lipsync",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "avatar_id",
+    "renderer_kind"
+  ],
+  "title": "AvatarCapabilityManifest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

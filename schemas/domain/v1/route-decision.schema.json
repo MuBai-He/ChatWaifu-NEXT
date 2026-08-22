@@ -1,0 +1,57 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/route-decision.schema.json",
+  "properties": {
+    "backend_kind": {
+      "title": "Backend Kind",
+      "type": "string"
+    },
+    "cloud_context_policy": {
+      "title": "Cloud Context Policy",
+      "type": "string"
+    },
+    "estimated_cost": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Estimated Cost"
+    },
+    "fallback_chain": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Fallback Chain",
+      "type": "array"
+    },
+    "model_id": {
+      "title": "Model Id",
+      "type": "string"
+    },
+    "provider_id": {
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "reason_codes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reason Codes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "provider_id",
+    "model_id",
+    "backend_kind",
+    "cloud_context_policy"
+  ],
+  "title": "RouteDecision",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

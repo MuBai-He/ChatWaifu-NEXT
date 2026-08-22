@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "InterruptionInitiator": {
+      "enum": [
+        "user",
+        "system",
+        "skill"
+      ],
+      "title": "InterruptionInitiator",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/conversation-interruption.schema.json",
+  "properties": {
+    "generation_id": {
+      "format": "uuid",
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "initiated_by": {
+      "$ref": "#/$defs/InterruptionInitiator"
+    },
+    "interruption_id": {
+      "format": "uuid",
+      "title": "Interruption Id",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "interruption_id",
+    "session_id",
+    "generation_id",
+    "initiated_by",
+    "reason",
+    "requested_at"
+  ],
+  "title": "ConversationInterruption",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

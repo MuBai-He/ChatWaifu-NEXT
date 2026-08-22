@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "SkillRunState": {
+      "enum": [
+        "created",
+        "activating",
+        "running",
+        "waiting_for_tool",
+        "waiting_for_confirmation",
+        "paused",
+        "succeeded",
+        "failed",
+        "cancelling",
+        "cancelled",
+        "expired"
+      ],
+      "title": "SkillRunState",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/skill-run-snapshot.schema.json",
+  "properties": {
+    "progress": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Progress"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "skill_id": {
+      "title": "Skill Id",
+      "type": "string"
+    },
+    "skill_run_id": {
+      "format": "uuid",
+      "title": "Skill Run Id",
+      "type": "string"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "state": {
+      "$ref": "#/$defs/SkillRunState"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "skill_run_id",
+    "skill_id",
+    "session_id",
+    "state",
+    "updated_at"
+  ],
+  "title": "SkillRunSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

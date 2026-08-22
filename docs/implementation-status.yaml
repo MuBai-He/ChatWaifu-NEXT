@@ -1,0 +1,92 @@
+schema_version: "1.0"
+updated_at: "2026-08-23"
+current_phase: 2
+next_phase: 3
+phase_2_entry_allowed: true
+phase_3_entry_allowed: false
+
+validation:
+  local_platform: macos-arm64
+  python: "3.12.14"
+  node: "26.0.0"
+  pnpm: "11.19.0"
+  rust: "1.98.0"
+  commands_passed:
+    - make bootstrap
+    - make format-check
+    - make lint
+    - make typecheck
+    - make test
+    - make test-contract
+    - make test-avatar
+    - make test-e2e
+    - make check-generated
+    - make setup-live2d-framework
+    - pnpm build
+  deterministic_generation: byte_identical_on_repeat
+  generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
+  expected_vendor_diagnostic:
+    command: make check-live2d-vendor
+    status: incomplete
+    missing:
+      - proprietary Cubism Core
+      - ChatWaifu Cubism bridge build
+      - licensed avatar model
+  remote_ci_matrix: pending_first_remote_run
+
+phases:
+  - id: 0
+    name: repository-foundation
+    status: implemented_pending_ci
+    evidence:
+      - Python, TypeScript, and Rust lockfiles exist
+      - Six GitHub Actions workflows are configured
+      - Ten accepted ADRs exist
+      - Seven project Codex Development Skills pass quick validation
+      - Local bootstrap, lint, typecheck, test, and build gates pass
+  - id: 1
+    name: protocol-and-code-generation
+    status: implemented_pending_ci
+    evidence:
+      - Pydantic protocol source covers all required Phase 1 model families
+      - 23 versioned JSON Schemas are generated deterministically
+      - Generated TypeScript declarations and Zod runtime parsers are present
+      - 13 Python tests and 7 TypeScript contract tests pass
+      - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
+      - Unknown major versions, unknown types, and invalid payloads are rejected
+      - Same-major optional fields are accepted
+      - Audio control headers round-trip as bounded UTF-8 bytes
+  - id: 2
+    name: live2d-avatar-lab
+    status: implemented_fake_path_pending_vendor_validation_and_ci
+    evidence:
+      - AvatarCue is reduced through a bounded layered scheduler into an AvatarRenderer
+      - AvatarController owns the requestAnimationFrame loop outside React state
+      - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
+      - 15 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
+      - 50 consecutive Fake renderer load and unload cycles leave zero resources
+      - 2 Chromium Playwright scenarios cover the full cue sequence and actionable vendor failure
+      - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
+      - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
+  - id: 3
+    name: tauri-desktop-host
+    status: not_started
+  - id: 4
+    name: runtime-core
+    status: not_started
+
+entry_blockers:
+  - Windows and Linux CI results have not run on a remote repository
+  - macOS Tauri compile smoke is configured but has not run remotely
+  - Real Live2D rendering requires locally supplied Cubism Core, a bridge build, and a licensed model
+  - Phase 3 requires explicit user authorization after Phase 2 review
+
+constraints:
+  real_model_sdks: forbidden_before_phase_8
+  live2d_core_committed: false
+  live2d_framework_release: "5-r.5"
+  live2d_real_renderer_validated: false
+  pipecat_dependency_added: false
+  runtime_server_implemented: false
+  database_business_tables_implemented: false
+  persistence_target: sqlite-wal-fts5

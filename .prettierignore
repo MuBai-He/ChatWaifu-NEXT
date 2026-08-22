@@ -1,0 +1,8 @@
+CHATWAIFU_NEXT_ARCHITECTURE.md
+CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md
+CODEX_HANDOFF.md
+schemas/domain/v1/
+packages/protocol-typescript/src/generated/
+tests/fixtures/protocol/v1/
+pnpm-lock.yaml
+uv.lock

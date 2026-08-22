@@ -1,0 +1,3 @@
+interface:
+  display_name: "Agent Skills"
+  short_description: "Build the product Runtime Skill system"

@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "AvatarCue": {
+      "properties": {
+        "cue_id": {
+          "format": "uuid",
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "intensity": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Intensity",
+          "type": "number"
+        },
+        "interruptible": {
+          "default": true,
+          "title": "Interruptible",
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "state",
+            "expression",
+            "motion",
+            "gaze",
+            "speech",
+            "override"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "priority": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "start_anchor": {
+          "default": "immediate",
+          "title": "Start Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "kind",
+        "name"
+      ],
+      "title": "AvatarCue",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/skill-result.schema.json",
+  "properties": {
+    "avatar_cues": {
+      "items": {
+        "$ref": "#/$defs/AvatarCue"
+      },
+      "title": "Avatar Cues",
+      "type": "array"
+    },
+    "data": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "memory_proposal_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Memory Proposal Ids",
+      "type": "array"
+    },
+    "prospective_task_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Prospective Task Ids",
+      "type": "array"
+    },
+    "provenance": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Provenance",
+      "type": "array"
+    },
+    "spoken_summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Spoken Summary"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "ui_cards": {
+      "items": {
+        "$ref": "#/$defs/JsonObject"
+      },
+      "title": "Ui Cards",
+      "type": "array"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "SkillResult",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

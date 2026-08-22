@@ -1,0 +1,12 @@
+{
+  "byte_length": 640,
+  "channels": 1,
+  "codec": "pcm_s16le",
+  "duration_ms": 20,
+  "end_of_stream": false,
+  "generation_id": "00000000-0000-4000-8000-000000000501",
+  "pts_ms": 140,
+  "sample_rate": 16000,
+  "sequence": 7,
+  "stream_id": "00000000-0000-4000-8000-000000000401"
+}

@@ -1,0 +1,15 @@
+{
+  "command_id": "00000000-0000-4000-8000-000000000102",
+  "command_type": "cmd.text.send",
+  "correlation_id": "00000000-0000-4000-8000-000000000302",
+  "expected_revision": 3,
+  "generation_id": null,
+  "issued_at": "2026-08-23T08:00:00Z",
+  "issuer": "protocol-typescript",
+  "payload": {
+    "text": "你好，Hikari"
+  },
+  "schema_version": "1.0",
+  "session_id": "00000000-0000-4000-8000-000000000202",
+  "turn_id": "00000000-0000-4000-8000-000000000402"
+}

@@ -1,0 +1,13 @@
+{
+  "framework": {
+    "name": "Live2D Cubism Web Framework",
+    "repository": "https://github.com/Live2D/CubismWebFramework",
+    "tag": "5-r.5",
+    "commit": "198a3769c26ca3d7b600e932590433badd392edd",
+    "release": "Cubism 5 SDK for Web R5"
+  },
+  "core": {
+    "committed": false,
+    "source": "developer-supplied official Cubism SDK for Web download"
+  }
+}

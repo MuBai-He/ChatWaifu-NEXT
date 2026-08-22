@@ -1,0 +1,50 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/permission-decision.schema.json",
+  "properties": {
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "decided_by": {
+      "title": "Decided By",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "allow_once",
+        "allow_session",
+        "allow_always",
+        "deny"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "decision",
+    "decided_by",
+    "decided_at"
+  ],
+  "title": "PermissionDecision",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,0 +1,47 @@
+[project]
+name = "chatwaifu-next-workspace"
+version = "0.1.0"
+description = "ChatWaifu NEXT monorepo tooling"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/protocol-python"]
+
+[dependency-groups]
+dev = [
+  "pyright>=1.1.404,<2",
+  "pytest>=8.4,<10",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+pythonpath = ["packages/protocol-python/src"]
+testpaths = ["packages/protocol-python/tests", "tests/contract"]
+
+[tool.pyright]
+include = ["packages/protocol-python/src", "packages/protocol-python/tests", "tools"]
+extraPaths = ["packages/protocol-python/src"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+  "CHATWAIFU_NEXT_ARCHITECTURE.md",
+  "CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md",
+  "CODEX_HANDOFF.md",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+allowed-confusables = ["，"]
