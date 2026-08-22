@@ -133,3 +133,69 @@ def test_interrupt_cancels_generation_and_rejects_late_output(
             event for event in events if event["event_type"] == "assistant.generation_cancelled"
         )
         assert cast(dict[str, object], cancelled["payload"])["reason"] == "acceptance_test"
+
+
+def test_explicit_memory_survives_sessions_and_forget_tombstones(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    first_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    _submit_and_wait(http, str(first_session["session_id"]), "请记住我喜欢蓝色")
+
+    active = cast(dict[str, object], http.get("/v1/memory").json())
+    active_items = cast(list[dict[str, object]], active["items"])
+    assert [item["content"] for item in active_items] == ["我喜欢蓝色"]
+
+    second_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    second_session_id = str(second_session["session_id"])
+    recalled_reply = _submit_and_wait(http, second_session_id, "你还记得我的喜好吗?")
+    assert "记忆:" in recalled_reply
+    assert "我喜欢蓝色" in recalled_reply
+
+    _submit_and_wait(http, second_session_id, "请忘记我喜欢蓝色")
+    assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 0
+    history = cast(dict[str, object], http.get("/v1/memory?include_tombstoned=true").json())
+    history_items = cast(list[dict[str, object]], history["items"])
+    assert history_items[0]["state"] == "tombstoned"
+
+
+def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    characters = cast(dict[str, object], http.get("/v1/characters").json())
+    profile = cast(list[dict[str, object]], characters["items"])[0]
+    assert profile["display_name"] == "小雾"
+    assert "system_prompt" not in profile
+
+    skills = cast(dict[str, object], http.get("/v1/skills").json())
+    skill = cast(list[dict[str, object]], skills["items"])[0]
+    assert skill["skill_id"] == "runtime.status"
+    capability = cast(list[dict[str, object]], skill["capabilities"])[0]
+    assert capability["side_effect"] == "read"
+    assert capability["confirmation_required"] is False
+
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    result = http.post(f"/v1/sessions/{session['session_id']}/skills/runtime.status", json={})
+    assert result.status_code == 200
+    result_json = cast(dict[str, object], result.json())
+    assert result_json["status"] == "succeeded"
+    data = cast(dict[str, object], result_json["data"])
+    assert data["llm_provider"] == "demo"
+    assert data["tts_provider"] == "fake"
+
+
+def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str:
+    accepted = http.post(f"/v1/sessions/{session_id}/turns", json={"text": text})
+    assert accepted.status_code == 202
+    generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        events_response = http.get(f"/v1/sessions/{session_id}/events")
+        events = cast(
+            list[dict[str, object]], cast(dict[str, object], events_response.json())["items"]
+        )
+        for event in events:
+            if (
+                event["event_type"] == "assistant.generation_completed"
+                and str(event.get("generation_id")) == generation_id
+            ):
+                return str(cast(dict[str, object], event["payload"])["text"])
+        time.sleep(0.01)
+    raise AssertionError(f"generation {generation_id} did not complete")

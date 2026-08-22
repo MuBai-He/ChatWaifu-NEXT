@@ -78,6 +78,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     config_dir: Path = Path(".local/config")
     data_dir: Path = Path(".local/data")
+    characters_dir: Path = PROJECT_ROOT / "characters"
+    skills_dir: Path = PROJECT_ROOT / "skills"
     runtime: RuntimeConfig = RuntimeConfig()
     storage: StorageConfig = StorageConfig()
     privacy: PrivacyConfig = PrivacyConfig()

@@ -71,4 +71,47 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON generations(session_id, started_at);
         """,
     ),
+    (
+        3,
+        """
+        CREATE TABLE memory_items (
+            memory_id TEXT PRIMARY KEY,
+            content TEXT NOT NULL,
+            normalized_content TEXT NOT NULL,
+            state TEXT NOT NULL,
+            source_session_id TEXT NOT NULL,
+            source_turn_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            tombstoned_at TEXT
+        );
+
+        CREATE INDEX memory_items_state_created_idx
+            ON memory_items(state, created_at DESC);
+
+        CREATE VIRTUAL TABLE memory_fts USING fts5(
+            memory_id UNINDEXED,
+            content,
+            tokenize = 'unicode61'
+        );
+
+        CREATE TRIGGER memory_items_after_insert AFTER INSERT ON memory_items
+        WHEN new.state = 'active'
+        BEGIN
+            INSERT INTO memory_fts(memory_id, content) VALUES (new.memory_id, new.content);
+        END;
+
+        CREATE TRIGGER memory_items_after_update AFTER UPDATE ON memory_items
+        BEGIN
+            DELETE FROM memory_fts WHERE memory_id = old.memory_id;
+            INSERT INTO memory_fts(memory_id, content)
+                SELECT new.memory_id, new.content WHERE new.state = 'active';
+        END;
+
+        CREATE TRIGGER memory_items_after_delete AFTER DELETE ON memory_items
+        BEGIN
+            DELETE FROM memory_fts WHERE memory_id = old.memory_id;
+        END;
+        """,
+    ),
 )

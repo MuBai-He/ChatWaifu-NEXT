@@ -23,7 +23,9 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.memory.service import MemoryItem, MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.providers.contracts import LlmRequest
@@ -56,6 +58,8 @@ class ConversationService:
         sessions: SessionService,
         providers: ProviderSet,
         audio_assets: AudioAssetStore,
+        characters: CharacterService,
+        memory: MemoryService,
     ) -> None:
         self._database = database
         self._event_store = event_store
@@ -63,6 +67,8 @@ class ConversationService:
         self._sessions = sessions
         self._providers = providers
         self._audio_assets = audio_assets
+        self._characters = characters
+        self._memory = memory
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
 
@@ -80,8 +86,13 @@ class ConversationService:
             accepted, events = await self._commit_user_turn(session_id, normalized)
             for event in events:
                 await self._publisher.publish_persisted(event)
+            await self._memory.apply_explicit_command(session_id, accepted.turn_id, normalized)
+            memories = await self._memory.recall(session_id, accepted.turn_id)
+            character = self._characters.get(session.character_id)
+            if character is None:
+                raise RuntimeError(f"character is not installed: {session.character_id}")
             task = asyncio.create_task(
-                self._run_generation(accepted, normalized),
+                self._run_generation(accepted, normalized, character, memories),
                 name=f"generation-{accepted.generation_id}",
             )
             self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
@@ -188,7 +199,13 @@ class ConversationService:
             (user_event, generation_event),
         )
 
-    async def _run_generation(self, accepted: GenerationAccepted, user_text: str) -> None:
+    async def _run_generation(
+        self,
+        accepted: GenerationAccepted,
+        user_text: str,
+        character: CharacterProfile,
+        memories: list[MemoryItem],
+    ) -> None:
         output = ""
         segment = ""
         try:
@@ -196,7 +213,9 @@ class ConversationService:
             request = LlmRequest(
                 generation_id=accepted.generation_id,
                 user_text=user_text,
-                system_prompt="你是亲切、简洁的 ChatWaifu NEXT 演示角色，请使用用户的语言回复。",
+                system_prompt=character.system_prompt,
+                character_name=character.display_name,
+                context=_memory_context(memories),
             )
             async for delta in self._providers.llm.stream(request):
                 self._ensure_current(accepted)
@@ -417,3 +436,10 @@ class ConversationService:
 def _segment_ready(text: str) -> bool:
     stripped = text.rstrip()
     return len(text) >= 90 or bool(stripped and stripped[-1] in _SEGMENT_ENDINGS)
+
+
+def _memory_context(memories: list[MemoryItem]) -> tuple[tuple[str, str], ...]:
+    if not memories:
+        return ()
+    content = "; ".join(item.content for item in memories)
+    return (("system", f"记忆: 用户明确要求记住以下内容: {content}"),)

@@ -1,13 +1,17 @@
 """Composition root and ordered Runtime lifecycle."""
 
+from chatwaifu_runtime import __version__
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.providers.factory import build_providers
+from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
 
 
@@ -21,6 +25,11 @@ class RuntimeContainer:
         self.sessions = SessionService(self.database, self.event_store, self.event_hub)
         self.providers = build_providers(settings)
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
+        self.characters = CharacterService(settings.characters_dir)
+        self.memory = MemoryService(self.database, self.event_publisher)
+        self.runtime_skills = RuntimeSkillService(
+            settings.skills_dir, self.event_publisher, self.providers, __version__
+        )
         self.conversation = ConversationService(
             self.database,
             self.event_store,
@@ -28,12 +37,16 @@ class RuntimeContainer:
             self.sessions,
             self.providers,
             self.audio_assets,
+            self.characters,
+            self.memory,
         )
         self._started = False
 
     async def start(self) -> None:
         if self._started:
             return
+        self.characters.start()
+        self.runtime_skills.start()
         self.audio_assets.start()
         await self.database.open()
         self._started = True

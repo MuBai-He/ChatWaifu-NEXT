@@ -46,7 +46,10 @@ async def runtime_config(request: Request) -> dict[str, object]:
 
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)
 async def create_session(request: Request, body: CreateSessionRequest) -> dict[str, object]:
-    snapshot = await _container(request).sessions.create_session(body.character_id)
+    container = _container(request)
+    if container.characters.get(body.character_id) is None:
+        raise HTTPException(status_code=404, detail="character not found")
+    snapshot = await container.sessions.create_session(body.character_id)
     return snapshot.model_dump(mode="json")
 
 
@@ -126,6 +129,54 @@ async def read_audio_asset(request: Request, asset_id: UUID) -> FileResponse:
     if path is None:
         raise HTTPException(status_code=404, detail="audio asset not found")
     return FileResponse(path, media_type="audio/wav", filename=f"{asset_id}.wav")
+
+
+@router.get("/characters")
+async def read_characters(request: Request) -> dict[str, object]:
+    profiles = [
+        profile.model_dump(mode="json", exclude={"system_prompt"})
+        for profile in _container(request).characters.list()
+    ]
+    return {"items": profiles, "count": len(profiles)}
+
+
+@router.get("/memory")
+async def read_memory(
+    request: Request, include_tombstoned: bool = Query(default=False)
+) -> dict[str, object]:
+    items = await _container(request).memory.list(include_tombstoned=include_tombstoned)
+    serialized = [
+        {
+            "memory_id": str(item.memory_id),
+            "content": item.content,
+            "state": item.state,
+            "source_session_id": str(item.source_session_id),
+            "source_turn_id": str(item.source_turn_id),
+            "created_at": item.created_at.isoformat(),
+            "updated_at": item.updated_at.isoformat(),
+            "tombstoned_at": item.tombstoned_at.isoformat() if item.tombstoned_at else None,
+        }
+        for item in items
+    ]
+    return {"items": serialized, "count": len(serialized)}
+
+
+@router.get("/skills")
+async def read_runtime_skills(request: Request) -> dict[str, object]:
+    definitions = [
+        definition.model_dump(mode="json")
+        for definition in _container(request).runtime_skills.list()
+    ]
+    return {"items": definitions, "count": len(definitions)}
+
+
+@router.post("/sessions/{session_id}/skills/runtime.status")
+async def run_runtime_status_skill(request: Request, session_id: UUID) -> dict[str, object]:
+    session = await _container(request).sessions.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    result = await _container(request).runtime_skills.run_status(session_id)
+    return result.model_dump(mode="json")
 
 
 @router.websocket("/events")

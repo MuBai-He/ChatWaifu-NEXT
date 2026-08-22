@@ -13,11 +13,20 @@ class DemoLlmProvider:
         self._delay_seconds = chunk_delay_ms / 1000
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[str]:
+        remembered = next(
+            (
+                text
+                for role, text in request.context
+                if role == "system" and text.startswith("记忆:")
+            ),
+            None,
+        )
+        memory_note = f" {remembered}" if remembered else ""
         response = (
-            "你好，我是 ChatWaifu NEXT 的本地演示角色。"
+            f"你好，我是{request.character_name}，ChatWaifu NEXT 的本地演示角色。"
             f"我收到你说的: “{request.user_text.strip()}”。"
             "现在使用的是可离线运行的 Demo 模型; 配置 OpenAI 兼容接口后，"
-            "我就能换成真正的大语言模型继续聊天。"
+            f"我就能换成真正的大语言模型继续聊天。{memory_note}"
         )
         for chunk in _chunks(response):
             if self._delay_seconds:

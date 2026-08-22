@@ -12,6 +12,7 @@ class LlmRequest:
     generation_id: UUID
     user_text: str
     system_prompt: str
+    character_name: str = "ChatWaifu"
     context: tuple[tuple[str, str], ...] = ()
 
 
