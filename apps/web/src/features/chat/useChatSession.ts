@@ -1,0 +1,334 @@
+import { parseEventEnvelope } from "@chatwaifu/protocol";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  RUNTIME_URL,
+  RUNTIME_WS_URL,
+  createSession,
+  getCharacters,
+  getHealth,
+  getMemory,
+  getMessages,
+  getSession,
+  interrupt,
+  runStatusSkill,
+  submitText,
+} from "./runtimeClient";
+import type {
+  AudioPayload,
+  AvatarCuePayload,
+  CharacterProfile,
+  ChatMessage,
+  MemoryItem,
+  RuntimeEvent,
+  RuntimeHealth,
+} from "./types";
+import { useChatAvatar } from "./useChatAvatar";
+
+const SESSION_KEY = "chatwaifu.next.session_id";
+
+export function useChatSession() {
+  const avatar = useChatAvatar();
+  const { applyCue, invalidateGeneration, startLipSync, stopLipSync } = avatar;
+  const [health, setHealth] = useState<RuntimeHealth | null>(null);
+  const [character, setCharacter] = useState<CharacterProfile | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [connection, setConnection] = useState<
+    "connecting" | "connected" | "offline"
+  >("connecting");
+  const [error, setError] = useState<string | null>(null);
+  const [skillSummary, setSkillSummary] = useState<string | null>(null);
+  const activeGeneration = useRef<string | null>(null);
+  const audioQueue = useRef<
+    Array<{ generationId: string; payload: AudioPayload }>
+  >([]);
+  const activeAudio = useRef<HTMLAudioElement | null>(null);
+  const playNextRef = useRef<() => void>(() => undefined);
+
+  const stopAudio = useCallback(
+    (generationId?: string) => {
+      audioQueue.current = [];
+      const audio = activeAudio.current;
+      activeAudio.current = null;
+      if (audio) {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+      }
+      stopLipSync();
+      if (generationId) invalidateGeneration(generationId);
+    },
+    [invalidateGeneration, stopLipSync],
+  );
+
+  const playNext = useCallback(() => {
+    if (activeAudio.current || typeof Audio === "undefined") return;
+    const next = audioQueue.current.shift();
+    if (!next || next.generationId !== activeGeneration.current) return;
+    const audio = new Audio(`${RUNTIME_URL}${next.payload.url}`);
+    activeAudio.current = audio;
+    audio.onplay = startLipSync;
+    audio.onended = () => {
+      activeAudio.current = null;
+      stopLipSync();
+      playNextRef.current();
+    };
+    audio.onerror = () => {
+      activeAudio.current = null;
+      stopLipSync();
+      setError("语音播放失败，文字回复仍然可用。");
+      playNextRef.current();
+    };
+    void audio.play().catch(() => {
+      activeAudio.current = null;
+      stopLipSync();
+      setError("浏览器阻止了自动播放，请再次发送消息或允许声音播放。");
+    });
+  }, [startLipSync, stopLipSync]);
+  useEffect(() => {
+    playNextRef.current = playNext;
+  }, [playNext]);
+
+  const handleEvent = useCallback(
+    (event: RuntimeEvent) => {
+      const generationId = event.generation_id ?? undefined;
+      switch (event.event_type) {
+        case "user.turn_committed": {
+          setMessages((current) => [
+            ...current,
+            {
+              id: event.turn_id ?? event.event_id,
+              role: "user",
+              text: payloadText(event.payload.text),
+            },
+          ]);
+          break;
+        }
+        case "assistant.generation_started": {
+          if (!generationId) break;
+          activeGeneration.current = generationId;
+          setMessages((current) => [
+            ...current,
+            {
+              id: generationId,
+              role: "assistant",
+              text: "",
+              generationId,
+              pending: true,
+            },
+          ]);
+          break;
+        }
+        case "assistant.text_delta": {
+          if (!generationId || generationId !== activeGeneration.current) break;
+          setMessages((current) =>
+            current.map((message) =>
+              message.generationId === generationId
+                ? {
+                    ...message,
+                    text: message.text + payloadText(event.payload.text),
+                  }
+                : message,
+            ),
+          );
+          break;
+        }
+        case "assistant.audio_chunk_queued": {
+          if (!generationId || generationId !== activeGeneration.current) break;
+          audioQueue.current.push({
+            generationId,
+            payload: event.payload as unknown as AudioPayload,
+          });
+          playNext();
+          break;
+        }
+        case "avatar.cue_emitted": {
+          const payload = event.payload as unknown as AvatarCuePayload;
+          if (!generationId || generationId === activeGeneration.current)
+            applyCue(payload.cue);
+          break;
+        }
+        case "assistant.generation_completed": {
+          if (!generationId || generationId !== activeGeneration.current) break;
+          setMessages((current) =>
+            current.map((message) =>
+              message.generationId === generationId
+                ? { ...message, pending: false }
+                : message,
+            ),
+          );
+          void getMemory().then(setMemories);
+          break;
+        }
+        case "assistant.generation_cancelled":
+        case "conversation.interrupted": {
+          if (generationId) stopAudio(generationId);
+          setMessages((current) =>
+            current.filter(
+              (message) =>
+                message.generationId !== generationId ||
+                message.text.length > 0,
+            ),
+          );
+          activeGeneration.current = null;
+          break;
+        }
+        case "system.error_raised": {
+          const nested = event.payload.error as
+            { message?: string } | undefined;
+          setError(nested?.message ?? "Runtime 生成失败。");
+          break;
+        }
+      }
+    },
+    [applyCue, playNext, stopAudio],
+  );
+
+  useEffect(() => {
+    let disposed = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | null = null;
+
+    const connect = (resolvedSessionId: string) => {
+      if (disposed) return;
+      socket = new WebSocket(
+        `${RUNTIME_WS_URL}/v1/events?session_id=${resolvedSessionId}`,
+      );
+      socket.onopen = () => setConnection("connected");
+      socket.onmessage = (message) => {
+        const raw = JSON.parse(String(message.data)) as unknown;
+        if (typeof raw !== "object" || raw === null || !("event_id" in raw))
+          return;
+        try {
+          handleEvent(parseEventEnvelope(raw) as RuntimeEvent);
+        } catch {
+          setError("收到无法识别的 Runtime 事件，已安全忽略。");
+        }
+      };
+      socket.onclose = () => {
+        if (disposed) return;
+        setConnection("connecting");
+        reconnectTimer = window.setTimeout(
+          () => connect(resolvedSessionId),
+          1200,
+        );
+      };
+      socket.onerror = () => setConnection("offline");
+    };
+
+    const initialize = async () => {
+      try {
+        const [resolvedHealth, characters] = await Promise.all([
+          getHealth(),
+          getCharacters(),
+        ]);
+        if (disposed) return;
+        setHealth(resolvedHealth);
+        const selected = characters[0];
+        if (!selected) throw new Error("没有安装角色 manifest。");
+        setCharacter(selected);
+        let session = null;
+        const saved = localStorage.getItem(SESSION_KEY);
+        if (saved) session = await getSession(saved).catch(() => null);
+        if (!session || session.state !== "ready")
+          session = await createSession(selected.character_id);
+        if (disposed) return;
+        localStorage.setItem(SESSION_KEY, session.session_id);
+        setSessionId(session.session_id);
+        const [history, savedMemories] = await Promise.all([
+          getMessages(session.session_id),
+          getMemory(),
+        ]);
+        if (disposed) return;
+        setMessages(
+          history.map((message) => ({
+            id: message.turn_id,
+            role: message.role,
+            text: message.committed_text,
+          })),
+        );
+        setMemories(savedMemories);
+        connect(session.session_id);
+      } catch (runtimeError: unknown) {
+        if (disposed) return;
+        setConnection("offline");
+        setError(
+          runtimeError instanceof Error
+            ? runtimeError.message
+            : "Runtime 不可用",
+        );
+      }
+    };
+    void initialize();
+    return () => {
+      disposed = true;
+      socket?.close();
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      stopAudio(activeGeneration.current ?? undefined);
+    };
+  }, [handleEvent, stopAudio]);
+
+  const send = useCallback(
+    async (text: string) => {
+      if (!sessionId || !text.trim()) return;
+      if (connection !== "connected") {
+        setError("Runtime 事件通道尚未连接，请稍等片刻再发送。");
+        return;
+      }
+      setError(null);
+      const previousGeneration = activeGeneration.current;
+      if (previousGeneration) stopAudio(previousGeneration);
+      try {
+        await submitText(sessionId, text.trim());
+      } catch (sendError: unknown) {
+        setError(
+          sendError instanceof Error ? sendError.message : "消息发送失败",
+        );
+      }
+    },
+    [connection, sessionId, stopAudio],
+  );
+
+  const interruptActive = useCallback(async () => {
+    if (!sessionId) return;
+    const generationId = activeGeneration.current;
+    if (generationId) stopAudio(generationId);
+    activeGeneration.current = null;
+    await interrupt(sessionId).catch((interruptError: unknown) => {
+      setError(
+        interruptError instanceof Error ? interruptError.message : "打断失败",
+      );
+    });
+  }, [sessionId, stopAudio]);
+
+  const checkStatus = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      setSkillSummary(await runStatusSkill(sessionId));
+    } catch (skillError: unknown) {
+      setError(
+        skillError instanceof Error ? skillError.message : "Skill 执行失败",
+      );
+    }
+  }, [sessionId]);
+
+  return {
+    ...avatar,
+    health,
+    character,
+    sessionId,
+    messages,
+    memories,
+    connection,
+    error,
+    skillSummary,
+    send,
+    interruptActive,
+    checkStatus,
+  };
+}
+
+function payloadText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}

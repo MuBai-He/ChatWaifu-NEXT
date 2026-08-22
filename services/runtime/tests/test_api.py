@@ -88,6 +88,14 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     assert deltas == completed_text
     assert "ChatWaifu NEXT" in completed_text
     assert "你好，介绍一下你自己。" in completed_text
+    avatar_events = [
+        item for item in generation_events if item["event_type"] == "avatar.cue_emitted"
+    ]
+    final_cue = cast(
+        dict[str, object], cast(dict[str, object], avatar_events[-1]["payload"])["cue"]
+    )
+    assert final_cue["name"] == "idle"
+    assert final_cue["priority"] == 90
     audio_event = next(
         item for item in generation_events if item["event_type"] == "assistant.audio_chunk_queued"
     )

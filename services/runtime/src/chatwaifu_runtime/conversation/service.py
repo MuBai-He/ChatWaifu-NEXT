@@ -304,7 +304,7 @@ class ConversationService:
             "assistant.generation_completed",
             {"text": output, "assistant_turn_id": str(assistant_turn_id)},
         )
-        await self._emit_avatar(accepted, "state", "idle", priority=40)
+        await self._emit_avatar(accepted, "state", "idle", priority=90)
 
     async def _cancelled(self, accepted: GenerationAccepted, reason: str) -> None:
         now = datetime.now(UTC)

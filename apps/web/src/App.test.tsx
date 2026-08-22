@@ -1,16 +1,57 @@
+import { createRef } from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 
-describe("Phase 0 status page", () => {
-  it("states the implemented and deferred boundaries", () => {
+const session = {
+  canvasRef: createRef<HTMLCanvasElement>(),
+  snapshot: null,
+  touch: vi.fn(),
+  health: {
+    status: "ok" as const,
+    version: "0.1.0",
+    providers: { llm: "demo", tts: "fake" },
+  },
+  character: {
+    character_id: "default",
+    display_name: "小雾",
+    tagline: "住在你设备里的本地 AI 伙伴",
+    greeting: "你好呀，我是小雾。",
+    accent_color: "#8b5cf6",
+  },
+  sessionId: "00000000-0000-4000-8000-000000000001",
+  messages: [],
+  memories: [],
+  connection: "connected" as const,
+  error: null,
+  skillSummary: null,
+  send: vi.fn(),
+  interruptActive: vi.fn(),
+  checkStatus: vi.fn(),
+};
+
+vi.mock("./features/chat/useChatSession", () => ({
+  useChatSession: () => session,
+}));
+
+describe("ChatWaifu usable demo", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("renders the connected character conversation surface", () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("heading", { name: "ChatWaifu NEXT" }),
-    ).toBeTruthy();
-    expect(screen.getByText("Versioned domain protocol")).toBeTruthy();
-    expect(screen.getByText("Runtime / Pipecat / WebRTC")).toBeTruthy();
+    expect(screen.getByText("ChatWaifu NEXT")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "小雾" })).toBeTruthy();
+    expect(screen.getByText("Runtime online")).toBeTruthy();
+    expect(screen.getByText("LLM · demo")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
+    const sendButton = screen.getByRole("button", { name: "Send message" });
+    expect(sendButton).toBeInstanceOf(HTMLButtonElement);
+    if (!(sendButton instanceof HTMLButtonElement))
+      throw new Error("expected send button");
+    expect(sendButton.disabled).toBe(true);
   });
 });
