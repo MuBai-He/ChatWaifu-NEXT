@@ -23,6 +23,7 @@ import type {
   RuntimeEvent,
   RuntimeHealth,
 } from "./types";
+import { GenerationAudioPlayer } from "./audioPlayer";
 import { useChatAvatar } from "./useChatAvatar";
 
 const SESSION_KEY = "chatwaifu.next.session_id";
@@ -48,55 +49,29 @@ export function useChatSession() {
   const [skillSummary, setSkillSummary] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const activeGeneration = useRef<string | null>(null);
-  const audioQueue = useRef<
-    Array<{ generationId: string; payload: AudioPayload }>
-  >([]);
-  const activeAudio = useRef<HTMLAudioElement | null>(null);
-  const playNextRef = useRef<() => void>(() => undefined);
+  const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
+
+  const getAudioPlayer = useCallback(() => {
+    if (!audioPlayer.current && typeof Audio !== "undefined") {
+      audioPlayer.current = new GenerationAudioPlayer((url) => new Audio(url), {
+        isGenerationActive: (generationId) =>
+          generationId === activeGeneration.current,
+        onPlaybackStart: startLipSync,
+        onPlaybackStop: stopLipSync,
+        onPlaybackError: setError,
+      });
+    }
+    return audioPlayer.current;
+  }, [startLipSync, stopLipSync]);
 
   const stopAudio = useCallback(
     (generationId?: string) => {
-      audioQueue.current = [];
-      const audio = activeAudio.current;
-      activeAudio.current = null;
-      if (audio) {
-        audio.pause();
-        audio.removeAttribute("src");
-        audio.load();
-      }
+      audioPlayer.current?.stop();
       stopLipSync();
       if (generationId) invalidateGeneration(generationId);
     },
     [invalidateGeneration, stopLipSync],
   );
-
-  const playNext = useCallback(() => {
-    if (activeAudio.current || typeof Audio === "undefined") return;
-    const next = audioQueue.current.shift();
-    if (!next || next.generationId !== activeGeneration.current) return;
-    const audio = new Audio(`${RUNTIME_URL}${next.payload.url}`);
-    activeAudio.current = audio;
-    audio.onplay = startLipSync;
-    audio.onended = () => {
-      activeAudio.current = null;
-      stopLipSync();
-      playNextRef.current();
-    };
-    audio.onerror = () => {
-      activeAudio.current = null;
-      stopLipSync();
-      setError("语音播放失败，文字回复仍然可用。");
-      playNextRef.current();
-    };
-    void audio.play().catch(() => {
-      activeAudio.current = null;
-      stopLipSync();
-      setError("浏览器阻止了自动播放，请再次发送消息或允许声音播放。");
-    });
-  }, [startLipSync, stopLipSync]);
-  useEffect(() => {
-    playNextRef.current = playNext;
-  }, [playNext]);
 
   const handleEvent = useCallback(
     (event: RuntimeEvent) => {
@@ -144,11 +119,11 @@ export function useChatSession() {
         }
         case "assistant.audio_chunk_queued": {
           if (!generationId || generationId !== activeGeneration.current) break;
-          audioQueue.current.push({
+          const payload = event.payload as unknown as AudioPayload;
+          getAudioPlayer()?.enqueue({
             generationId,
-            payload: event.payload as unknown as AudioPayload,
+            url: `${RUNTIME_URL}${payload.url}`,
           });
-          playNext();
           break;
         }
         case "avatar.cue_emitted": {
@@ -190,7 +165,7 @@ export function useChatSession() {
         }
       }
     },
-    [applyCue, playNext, stopAudio],
+    [applyCue, getAudioPlayer, stopAudio],
   );
 
   useEffect(() => {
@@ -274,12 +249,15 @@ export function useChatSession() {
       socket?.close();
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       stopAudio(activeGeneration.current ?? undefined);
+      audioPlayer.current?.dispose();
+      audioPlayer.current = null;
     };
   }, [handleEvent, stopAudio]);
 
   const send = useCallback(
     async (text: string) => {
       if (!sessionId || !text.trim()) return;
+      getAudioPlayer()?.prime();
       if (connection !== "connected") {
         setError("Runtime 事件通道尚未连接，请稍等片刻再发送。");
         return;
@@ -295,7 +273,7 @@ export function useChatSession() {
         );
       }
     },
-    [connection, sessionId, stopAudio],
+    [connection, getAudioPlayer, sessionId, stopAudio],
   );
 
   const interruptActive = useCallback(async () => {
