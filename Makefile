@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-stt-worker setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -57,6 +57,9 @@ test-avatar:
 
 test-runtime:
 	$(UV) run pytest services/runtime/tests
+
+setup-stt-worker:
+	$(UV) run python tools/setup_stt_worker.py
 
 setup-live2d-framework:
 	bash tools/setup_live2d_framework.sh
