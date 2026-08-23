@@ -113,6 +113,11 @@ export function useChatAvatar() {
     });
   }, []);
 
+  const resetAvatar = useCallback(() => {
+    controllerRef.current?.setLipSyncSource(new SilentLipSyncSource());
+    controllerRef.current?.reset();
+  }, []);
+
   return {
     canvasRef,
     snapshot,
@@ -123,5 +128,6 @@ export function useChatAvatar() {
     stopLipSync,
     invalidateGeneration,
     touch,
+    resetAvatar,
   };
 }

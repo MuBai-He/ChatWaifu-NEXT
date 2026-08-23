@@ -16,13 +16,17 @@ export function ChatDemoPage() {
     connection,
     error,
     skillSummary,
+    resetting,
     send: sendMessage,
     interruptActive,
     checkStatus,
+    resetAll,
   } = useChatSession();
   const [draft, setDraft] = useState("");
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const canSend = Boolean(sessionId && connection === "connected");
+  const canSend = Boolean(
+    sessionId && connection === "connected" && !resetting,
+  );
 
   useEffect(() => {
     const transcript = transcriptRef.current;
@@ -34,6 +38,14 @@ export function ChatDemoPage() {
     if (!text) return;
     setDraft("");
     void sendMessage(text);
+  };
+
+  const reset = async () => {
+    const confirmed = window.confirm(
+      "确定要重置吗？这会永久清空当前对话、全部明确记忆和本地生成语音，且无法撤销。",
+    );
+    if (!confirmed) return;
+    if (await resetAll()) setDraft("");
   };
 
   return (
@@ -125,13 +137,25 @@ export function ChatDemoPage() {
                 {sessionId ? sessionId.slice(0, 8) : "connecting"}
               </strong>
             </div>
-            <button
-              className="interrupt-button"
-              type="button"
-              onClick={() => void interruptActive()}
-            >
-              ■ 打断
-            </button>
+            <div className="conversation-actions">
+              <button
+                className="reset-button"
+                type="button"
+                onClick={() => void reset()}
+                disabled={!sessionId || resetting}
+                aria-label="重置对话和记忆"
+              >
+                {resetting ? "重置中…" : "↻ 重置"}
+              </button>
+              <button
+                className="interrupt-button"
+                type="button"
+                onClick={() => void interruptActive()}
+                disabled={!sessionId || resetting}
+              >
+                ■ 打断
+              </button>
+            </div>
           </div>
 
           <div className="transcript" ref={transcriptRef} aria-live="polite">

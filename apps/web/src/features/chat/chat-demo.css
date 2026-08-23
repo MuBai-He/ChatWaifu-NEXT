@@ -1,8 +1,13 @@
 .chat-shell {
+  display: grid;
   width: min(1480px, calc(100% - 48px));
-  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0 auto;
-  padding: 22px 0 32px;
+  padding: 22px 0;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
 }
 
 .topbar {
@@ -10,7 +15,7 @@
   align-items: center;
   justify-content: space-between;
   min-height: 62px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
 .brand {
@@ -89,7 +94,7 @@
 .demo-grid {
   display: grid;
   grid-template-columns: minmax(350px, 0.82fr) minmax(520px, 1.38fr);
-  min-height: calc(100vh - 118px);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 76%);
   border-radius: 30px;
@@ -101,7 +106,7 @@
 .character-panel {
   position: relative;
   display: flex;
-  min-height: 720px;
+  min-height: 0;
   flex-direction: column;
   padding: 34px;
   overflow: hidden;
@@ -151,7 +156,8 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  min-height: 390px;
+  min-height: 220px;
+  flex: 1 1 390px;
   margin: 14px 0 4px;
   padding: 0;
   overflow: hidden;
@@ -163,7 +169,7 @@
 .avatar-frame canvas {
   display: block;
   width: 100%;
-  height: 390px;
+  height: 100%;
 }
 
 .avatar-state {
@@ -220,7 +226,9 @@
   position: relative;
   z-index: 2;
   margin-top: auto;
+  max-height: 150px;
   padding: 16px;
+  overflow-y: auto;
   border: 1px solid rgb(255 255 255 / 78%);
   border-radius: 18px;
   background: rgb(255 255 255 / 56%);
@@ -260,8 +268,10 @@
 
 .conversation-panel {
   display: grid;
-  min-height: 720px;
-  grid-template-rows: auto minmax(340px, 1fr) auto auto auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   padding: 30px 34px 22px;
   background: rgb(255 255 255 / 52%);
 }
@@ -281,6 +291,13 @@
   font: 0.7rem var(--mono);
 }
 
+.conversation-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reset-button,
 .interrupt-button {
   padding: 8px 12px;
   border: 1px solid rgb(239 68 68 / 16%);
@@ -291,9 +308,24 @@
   cursor: pointer;
 }
 
+.reset-button {
+  border-color: var(--line);
+  color: var(--muted);
+  background: rgb(255 255 255 / 68%);
+}
+
+.reset-button:disabled,
+.interrupt-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .transcript {
+  min-height: 0;
   padding: 28px 4px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
 
@@ -471,16 +503,23 @@
 
 @media (max-width: 920px) {
   .chat-shell {
+    display: block;
     width: min(100% - 24px, 720px);
+    height: auto;
+    max-height: none;
+    min-height: 100dvh;
+    overflow: visible;
   }
   .topbar {
     align-items: flex-start;
     gap: 14px;
+    margin-bottom: 18px;
   }
   .runtime-badges .provider-pill {
     display: none;
   }
   .demo-grid {
+    min-height: auto;
     grid-template-columns: 1fr;
     overflow: visible;
   }
@@ -494,11 +533,15 @@
     height: 280px;
     min-height: 280px;
   }
+  .avatar-frame {
+    flex-basis: 280px;
+  }
   .memory-card {
     margin-top: 18px;
   }
   .conversation-panel {
     min-height: 690px;
+    overflow: visible;
   }
 }
 

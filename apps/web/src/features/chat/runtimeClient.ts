@@ -2,6 +2,7 @@ import type {
   CharacterProfile,
   MemoryItem,
   RuntimeHealth,
+  SessionResetResult,
   SessionSnapshot,
 } from "./types";
 
@@ -80,6 +81,15 @@ export async function interrupt(sessionId: string): Promise<void> {
   await request(`/v1/sessions/${sessionId}/interrupt`, {
     method: "POST",
     body: JSON.stringify({ reason: "user_interruption" }),
+  });
+}
+
+export async function resetSession(
+  sessionId: string,
+): Promise<SessionResetResult> {
+  return request<SessionResetResult>(`/v1/sessions/${sessionId}/reset`, {
+    method: "POST",
+    body: JSON.stringify({ confirm: true }),
   });
 }
 

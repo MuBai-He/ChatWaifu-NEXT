@@ -10,6 +10,7 @@ import {
   getMessages,
   getSession,
   interrupt,
+  resetSession,
   runStatusSkill,
   submitText,
 } from "./runtimeClient";
@@ -28,7 +29,13 @@ const SESSION_KEY = "chatwaifu.next.session_id";
 
 export function useChatSession() {
   const avatar = useChatAvatar();
-  const { applyCue, invalidateGeneration, startLipSync, stopLipSync } = avatar;
+  const {
+    applyCue,
+    invalidateGeneration,
+    resetAvatar,
+    startLipSync,
+    stopLipSync,
+  } = avatar;
   const [health, setHealth] = useState<RuntimeHealth | null>(null);
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -39,6 +46,7 @@ export function useChatSession() {
   >("connecting");
   const [error, setError] = useState<string | null>(null);
   const [skillSummary, setSkillSummary] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const activeGeneration = useRef<string | null>(null);
   const audioQueue = useRef<
     Array<{ generationId: string; payload: AudioPayload }>
@@ -313,6 +321,28 @@ export function useChatSession() {
     }
   }, [sessionId]);
 
+  const resetAll = useCallback(async (): Promise<boolean> => {
+    if (!sessionId || resetting) return false;
+    setResetting(true);
+    setError(null);
+    const generationId = activeGeneration.current;
+    stopAudio(generationId ?? undefined);
+    activeGeneration.current = null;
+    try {
+      await resetSession(sessionId);
+      setMessages([]);
+      setMemories([]);
+      setSkillSummary(null);
+      resetAvatar();
+      return true;
+    } catch (resetError: unknown) {
+      setError(resetError instanceof Error ? resetError.message : "重置失败");
+      return false;
+    } finally {
+      setResetting(false);
+    }
+  }, [resetAvatar, resetting, sessionId, stopAudio]);
+
   return {
     ...avatar,
     health,
@@ -323,9 +353,11 @@ export function useChatSession() {
     connection,
     error,
     skillSummary,
+    resetting,
     send,
     interruptActive,
     checkStatus,
+    resetAll,
   };
 }
 

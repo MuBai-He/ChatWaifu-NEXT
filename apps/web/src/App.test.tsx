@@ -1,6 +1,12 @@
 import { createRef } from "react";
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 
@@ -28,9 +34,11 @@ const session = {
   connection: "connected" as const,
   error: null,
   skillSummary: null,
+  resetting: false,
   send: vi.fn(),
   interruptActive: vi.fn(),
   checkStatus: vi.fn(),
+  resetAll: vi.fn().mockResolvedValue(true),
 };
 
 vi.mock("./features/chat/useChatSession", () => ({
@@ -40,6 +48,12 @@ vi.mock("./features/chat/useChatSession", () => ({
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
+    session.resetAll.mockClear();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it("renders the connected character conversation surface", () => {
@@ -55,5 +69,15 @@ describe("ChatWaifu usable demo", () => {
     if (!(sendButton instanceof HTMLButtonElement))
       throw new Error("expected send button");
     expect(sendButton.disabled).toBe(true);
+  });
+
+  it("confirms before resetting conversation and memory", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "重置对话和记忆" }));
+
+    await waitFor(() => expect(session.resetAll).toHaveBeenCalledOnce());
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("无法撤销"));
   });
 });

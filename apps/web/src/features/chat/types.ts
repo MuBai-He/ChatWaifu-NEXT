@@ -20,6 +20,14 @@ export interface SessionSnapshot {
   state: string;
 }
 
+export interface SessionResetResult {
+  session_id: string;
+  turns_deleted: number;
+  events_deleted: number;
+  memories_deleted: number;
+  audio_assets_deleted: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
