@@ -9,6 +9,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import type {
+  VoiceActivationMode,
+  VoiceConnectionState,
+} from "./features/chat/voiceClient";
 
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
@@ -35,14 +39,19 @@ const session = {
   error: null,
   skillSummary: null,
   resetting: false,
-  voiceState: "disconnected" as const,
+  voiceState: "disconnected" as VoiceConnectionState,
   voiceConnected: false,
   voiceDevices: [],
   voiceDeviceId: "",
   voiceInputLevel: 0,
+  voiceActivationMode: "push_to_talk" as VoiceActivationMode,
+  voiceTransmitting: false,
   voiceActivity: "idle" as const,
   voiceTranscript: null,
   setVoiceDeviceId: vi.fn(),
+  setVoiceActivationMode: vi.fn(),
+  beginPushToTalk: vi.fn(),
+  endPushToTalk: vi.fn(),
   refreshVoiceDevices: vi.fn(),
   toggleVoice: vi.fn(),
   send: vi.fn(),
@@ -58,7 +67,11 @@ vi.mock("./features/chat/useChatSession", () => ({
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
-    session.resetAll.mockClear();
+    session.voiceState = "disconnected";
+    session.voiceConnected = false;
+    session.voiceActivationMode = "push_to_talk";
+    session.voiceTransmitting = false;
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -89,5 +102,37 @@ describe("ChatWaifu usable demo", () => {
 
     await waitFor(() => expect(session.resetAll).toHaveBeenCalledOnce());
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("无法撤销"));
+  });
+
+  it("defaults to intentional push-to-talk capture", () => {
+    render(<App />);
+
+    const activationMode = screen.getByRole("combobox", {
+      name: "语音响应方式",
+    });
+    expect(activationMode).toBeInstanceOf(HTMLSelectElement);
+    if (!(activationMode instanceof HTMLSelectElement)) {
+      throw new Error("expected activation mode select");
+    }
+    expect(activationMode.value).toBe("push_to_talk");
+    expect(screen.getByText("连接后按住说话，旁边聊天不会触发")).toBeTruthy();
+
+    fireEvent.change(activationMode, {
+      target: { value: "open_mic" },
+    });
+    expect(session.setVoiceActivationMode).toHaveBeenCalledWith("open_mic");
+  });
+
+  it("only transmits while the push-to-talk control is held", () => {
+    session.voiceState = "connected";
+    session.voiceConnected = true;
+    render(<App />);
+
+    const pushToTalk = screen.getByRole("button", { name: "按住说话" });
+    fireEvent.pointerDown(pushToTalk, { pointerId: 7 });
+    expect(session.beginPushToTalk).toHaveBeenCalledOnce();
+
+    fireEvent.pointerUp(pushToTalk, { pointerId: 7 });
+    expect(session.endPushToTalk).toHaveBeenCalledOnce();
   });
 });

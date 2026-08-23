@@ -8,6 +8,8 @@ export type VoiceConnectionState =
   | "connected"
   | "failed";
 
+export type VoiceActivationMode = "push_to_talk" | "open_mic";
+
 export interface VoiceDevice {
   deviceId: string;
   label: string;
@@ -25,6 +27,7 @@ export class BrowserVoiceClient {
   private output: HTMLAudioElement | null = null;
   private audioContext: AudioContext | null = null;
   private meterFrame: number | null = null;
+  private captureEnabled = false;
   private disposed = false;
 
   constructor(private readonly callbacks: VoiceClientCallbacks) {}
@@ -72,6 +75,7 @@ export class BrowserVoiceClient {
         return;
       }
       this.stream = stream;
+      this.applyCaptureState();
       this.startInputMeter(stream);
 
       const output = document.createElement("audio");
@@ -168,6 +172,15 @@ export class BrowserVoiceClient {
     await this.disconnect(sessionId);
   }
 
+  setCaptureEnabled(enabled: boolean): void {
+    this.captureEnabled = enabled;
+    this.applyCaptureState();
+  }
+
+  private applyCaptureState(): void {
+    setStreamCaptureEnabled(this.stream, this.captureEnabled);
+  }
+
   private startInputMeter(stream: MediaStream): void {
     const context = new AudioContext();
     const source = context.createMediaStreamSource(stream);
@@ -190,6 +203,13 @@ export class BrowserVoiceClient {
     void context.resume();
     update();
   }
+}
+
+export function setStreamCaptureEnabled(
+  stream: Pick<MediaStream, "getAudioTracks"> | null,
+  enabled: boolean,
+): void {
+  for (const track of stream?.getAudioTracks() ?? []) track.enabled = enabled;
 }
 
 export function waitForIceGathering(

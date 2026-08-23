@@ -271,7 +271,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
   padding: 30px 34px 22px;
   background: rgb(255 255 255 / 52%);
 }
@@ -299,11 +299,38 @@
 
 .voice-bar {
   display: grid;
-  grid-template-columns: auto minmax(68px, 0.7fr) minmax(120px, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 16px;
   align-items: center;
   padding: 10px 0 12px;
   border-bottom: 1px solid var(--line);
+}
+
+.voice-controls {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto auto minmax(68px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.voice-options {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.voice-options label {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.voice-options label > span {
+  padding-left: 3px;
+  color: var(--faint);
+  font: 0.55rem var(--mono);
 }
 
 .microphone-button {
@@ -322,6 +349,26 @@
   border-color: rgb(139 92 246 / 30%);
   color: #6d28d9;
   background: rgb(245 240 255 / 92%);
+}
+
+.push-to-talk-button {
+  min-width: 86px;
+  padding: 8px 11px;
+  border: 1px solid rgb(139 92 246 / 22%);
+  border-radius: 11px;
+  color: #6d28d9;
+  background: rgb(245 240 255 / 86%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.push-to-talk-button:active,
+.push-to-talk-button.transmitting {
+  color: white;
+  background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+  cursor: grabbing;
+  box-shadow: 0 8px 20px rgb(109 40 217 / 22%);
 }
 
 .microphone-button:disabled {
@@ -346,8 +393,9 @@
   transition: transform 60ms linear;
 }
 
-.voice-bar select {
+.voice-options select {
   min-width: 0;
+  max-width: 210px;
   padding: 7px 9px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -357,7 +405,7 @@
   text-overflow: ellipsis;
 }
 
-.voice-bar small {
+.voice-controls small {
   color: var(--faint);
   font: 0.61rem var(--mono);
   white-space: nowrap;
@@ -476,7 +524,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  margin-bottom: 10px;
+  margin: 0;
   padding: 10px 12px;
   border: 1px solid rgb(239 68 68 / 15%);
   border-radius: 12px;
@@ -498,13 +546,23 @@
 .voice-transcript {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0;
   padding: 8px 11px;
   border: 1px solid rgb(139 92 246 / 15%);
   border-radius: 11px;
   color: var(--muted);
   background: rgb(247 244 255 / 72%);
   font-size: 0.72rem;
+}
+
+.conversation-notices {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.conversation-notices:empty {
+  display: none;
 }
 
 .voice-transcript span {
@@ -584,6 +642,16 @@
   }
 }
 
+@media (max-width: 1180px) {
+  .voice-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-options {
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 920px) {
   .chat-shell {
     display: block;
@@ -602,13 +670,26 @@
     display: none;
   }
 
-  .voice-bar {
-    grid-template-columns: auto 1fr;
+  .voice-controls {
+    grid-template-columns: auto auto minmax(60px, 1fr);
   }
 
-  .voice-bar select,
-  .voice-bar small {
-    grid-column: span 1;
+  .voice-controls small {
+    grid-column: 1 / -1;
+  }
+
+  .voice-options {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .voice-options label {
+    flex: 1 1 180px;
+  }
+
+  .voice-options select {
+    width: 100%;
+    max-width: none;
   }
   .demo-grid {
     min-height: auto;

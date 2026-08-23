@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BrowserVoiceClient,
+  type VoiceActivationMode,
   type VoiceConnectionState,
   type VoiceDevice,
 } from "./voiceClient";
@@ -23,6 +24,9 @@ export function useVoiceInput({
   const [devices, setDevices] = useState<VoiceDevice[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const [inputLevel, setInputLevel] = useState(0);
+  const [activationMode, setActivationModeState] =
+    useState<VoiceActivationMode>("push_to_talk");
+  const [transmitting, setTransmitting] = useState(false);
 
   useEffect(() => {
     const client = new BrowserVoiceClient({
@@ -53,15 +57,36 @@ export function useVoiceInput({
 
   const connect = useCallback(async () => {
     if (!sessionId || !clientRef.current) return;
+    clientRef.current.setCaptureEnabled(activationMode === "open_mic");
     await clientRef.current
       .connect(sessionId, deviceId || undefined)
       .then(refreshDevices)
       .catch(() => undefined);
-  }, [deviceId, refreshDevices, sessionId]);
+  }, [activationMode, deviceId, refreshDevices, sessionId]);
 
   const disconnect = useCallback(async () => {
+    setTransmitting(false);
+    clientRef.current?.setCaptureEnabled(false);
     await clientRef.current?.disconnect(sessionId ?? undefined);
   }, [sessionId]);
+
+  const setActivationMode = useCallback((next: VoiceActivationMode) => {
+    setActivationModeState(next);
+    setTransmitting(false);
+    clientRef.current?.setCaptureEnabled(next === "open_mic");
+  }, []);
+
+  const beginPushToTalk = useCallback(() => {
+    if (state !== "connected" || activationMode !== "push_to_talk") return;
+    clientRef.current?.setCaptureEnabled(true);
+    setTransmitting(true);
+  }, [activationMode, state]);
+
+  const endPushToTalk = useCallback(() => {
+    if (activationMode !== "push_to_talk") return;
+    clientRef.current?.setCaptureEnabled(false);
+    setTransmitting(false);
+  }, [activationMode]);
 
   const toggle = useCallback(async () => {
     if (
@@ -81,7 +106,12 @@ export function useVoiceInput({
     devices,
     deviceId,
     inputLevel,
+    activationMode,
+    transmitting,
     setDeviceId,
+    setActivationMode,
+    beginPushToTalk,
+    endPushToTalk,
     refreshDevices,
     toggle,
     disconnect,

@@ -127,14 +127,36 @@ test("desktop chat keeps the avatar visible while only the transcript scrolls", 
   );
   const avatar = await page.locator(".avatar-frame").boundingBox();
   const grid = await page.locator(".demo-grid").boundingBox();
-  if (!avatar || !grid) throw new Error("chat layout is incomplete");
+  const voiceBar = await page.locator(".voice-bar").boundingBox();
+  const transcript = await page.locator(".transcript").boundingBox();
+  const microphoneButton = await page
+    .locator(".microphone-button")
+    .boundingBox();
+  if (!avatar || !grid || !voiceBar || !transcript || !microphoneButton) {
+    throw new Error("chat layout is incomplete");
+  }
   const viewportHeight = page.viewportSize()?.height ?? 0;
+  const microphoneHitTarget = await page.evaluate<boolean>(`
+    (() => {
+      const button = document.querySelector(".microphone-button");
+      if (!button) return false;
+      const bounds = button.getBoundingClientRect();
+      return document
+        .elementFromPoint(
+          bounds.x + bounds.width / 2,
+          bounds.y + bounds.height / 2,
+        )
+        ?.closest("button") === button;
+    })()
+  `);
 
   expect(pageHeight).toBeLessThanOrEqual(viewportHeight + 1);
   expect(transcriptMetrics.transcriptScrollHeight).toBeGreaterThan(
     transcriptMetrics.transcriptClientHeight,
   );
   expect(transcriptMetrics.transcriptOverflow).toBe("auto");
+  expect(voiceBar.y + voiceBar.height).toBeLessThanOrEqual(transcript.y + 1);
+  expect(microphoneHitTarget).toBe(true);
   expect(avatar.y + avatar.height).toBeLessThanOrEqual(viewportHeight);
   expect(grid.y + grid.height).toBeLessThanOrEqual(viewportHeight);
 });

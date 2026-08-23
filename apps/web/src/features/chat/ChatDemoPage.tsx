@@ -22,9 +22,14 @@ export function ChatDemoPage() {
     voiceDevices,
     voiceDeviceId,
     voiceInputLevel,
+    voiceActivationMode,
+    voiceTransmitting,
     voiceActivity,
     voiceTranscript,
     setVoiceDeviceId,
+    setVoiceActivationMode,
+    beginPushToTalk,
+    endPushToTalk,
     refreshVoiceDevices,
     toggleVoice,
     send: sendMessage,
@@ -172,43 +177,104 @@ export function ChatDemoPage() {
           </div>
 
           <div className={`voice-bar ${voiceConnected ? "active" : ""}`}>
-            <button
-              className="microphone-button"
-              type="button"
-              onClick={() => void toggleVoice()}
-              disabled={
-                !sessionId ||
-                connection !== "connected" ||
-                resetting ||
-                voiceState === "unsupported"
-              }
-              aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
-              aria-pressed={voiceConnected}
-            >
-              <span>{voiceConnected ? "●" : "◉"}</span>
-              {voiceConnected ? "语音已连接" : "开启语音"}
-            </button>
-            <div className="input-meter" aria-label="麦克风音量">
-              <i style={{ transform: `scaleX(${voiceInputLevel})` }} />
+            <div className="voice-controls">
+              <button
+                className="microphone-button"
+                type="button"
+                onClick={() => void toggleVoice()}
+                disabled={
+                  !sessionId ||
+                  connection !== "connected" ||
+                  resetting ||
+                  voiceState === "unsupported"
+                }
+                aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
+                aria-pressed={voiceConnected}
+              >
+                <span>{voiceConnected ? "●" : "◉"}</span>
+                {voiceConnected ? "断开语音" : "开启语音"}
+              </button>
+              {voiceConnected && voiceActivationMode === "push_to_talk" ? (
+                <button
+                  className={`push-to-talk-button ${voiceTransmitting ? "transmitting" : ""}`}
+                  type="button"
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture?.(event.pointerId);
+                    beginPushToTalk();
+                  }}
+                  onPointerUp={endPushToTalk}
+                  onPointerCancel={endPushToTalk}
+                  onKeyDown={(event) => {
+                    if (
+                      !event.repeat &&
+                      (event.key === " " || event.key === "Enter")
+                    ) {
+                      event.preventDefault();
+                      beginPushToTalk();
+                    }
+                  }}
+                  onKeyUp={(event) => {
+                    if (event.key === " " || event.key === "Enter") {
+                      event.preventDefault();
+                      endPushToTalk();
+                    }
+                  }}
+                  onBlur={endPushToTalk}
+                  aria-label="按住说话"
+                  aria-pressed={voiceTransmitting}
+                >
+                  {voiceTransmitting ? "松开发送" : "按住说话"}
+                </button>
+              ) : null}
+              <div className="input-meter" aria-label="麦克风音量">
+                <i style={{ transform: `scaleX(${voiceInputLevel})` }} />
+              </div>
+              <small>
+                {voiceStatusLabel(
+                  voiceState,
+                  voiceActivity,
+                  voiceActivationMode,
+                  voiceTransmitting,
+                )}
+              </small>
             </div>
-            <select
-              value={voiceDeviceId}
-              onFocus={() => void refreshVoiceDevices()}
-              onChange={(event) => setVoiceDeviceId(event.target.value)}
-              disabled={voiceConnected || voiceState === "unsupported"}
-              aria-label="选择麦克风"
-            >
-              {voiceDevices.length === 0 ? (
-                <option value="">默认麦克风</option>
-              ) : (
-                voiceDevices.map((device) => (
-                  <option value={device.deviceId} key={device.deviceId}>
-                    {device.label}
-                  </option>
-                ))
-              )}
-            </select>
-            <small>{voiceStatusLabel(voiceState, voiceActivity)}</small>
+            <div className="voice-options">
+              <label>
+                <span>响应方式</span>
+                <select
+                  value={voiceActivationMode}
+                  onChange={(event) =>
+                    setVoiceActivationMode(
+                      event.target.value as "push_to_talk" | "open_mic",
+                    )
+                  }
+                  aria-label="语音响应方式"
+                >
+                  <option value="push_to_talk">按住说话（推荐）</option>
+                  <option value="open_mic">自由对话（会听到附近人声）</option>
+                </select>
+              </label>
+              <label>
+                <span>输入设备</span>
+                <select
+                  value={voiceDeviceId}
+                  onFocus={() => void refreshVoiceDevices()}
+                  onChange={(event) => setVoiceDeviceId(event.target.value)}
+                  disabled={voiceConnected || voiceState === "unsupported"}
+                  aria-label="选择麦克风"
+                >
+                  {voiceDevices.length === 0 ? (
+                    <option value="">默认麦克风</option>
+                  ) : (
+                    voiceDevices.map((device) => (
+                      <option value={device.deviceId} key={device.deviceId}>
+                        {device.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="transcript" ref={transcriptRef} aria-live="polite">
@@ -244,22 +310,24 @@ export function ChatDemoPage() {
             ))}
           </div>
 
-          {error && (
-            <div className="runtime-error" role="alert">
-              <strong>连接提示</strong>
-              <span>{error}</span>
-              {connection === "offline" && <code>make demo</code>}
-            </div>
-          )}
+          <div className="conversation-notices">
+            {error && (
+              <div className="runtime-error" role="alert">
+                <strong>连接提示</strong>
+                <span>{error}</span>
+                {connection === "offline" && <code>make demo</code>}
+              </div>
+            )}
 
-          {voiceTranscript && voiceActivity !== "idle" ? (
-            <div className="voice-transcript" aria-live="polite">
-              <span>
-                {voiceActivity === "transcribing" ? "转写中" : "听到"}
-              </span>
-              {voiceTranscript}
-            </div>
-          ) : null}
+            {voiceTranscript && voiceActivity !== "idle" ? (
+              <div className="voice-transcript" aria-live="polite">
+                <span>
+                  {voiceActivity === "transcribing" ? "转写中" : "听到"}
+                </span>
+                {voiceTranscript}
+              </div>
+            ) : null}
+          </div>
 
           <form
             className="composer"
@@ -310,14 +378,23 @@ function voiceStatusLabel(
     | "connected"
     | "failed",
   activity: "idle" | "listening" | "transcribing" | "thinking",
+  activationMode: "push_to_talk" | "open_mic",
+  transmitting: boolean,
 ): string {
   if (state === "unsupported") return "当前浏览器不支持 WebRTC 麦克风";
   if (state === "requesting") return "等待麦克风权限";
   if (state === "connecting") return "正在建立本地 WebRTC";
   if (state === "failed") return "连接失败，可再次尝试";
-  if (state !== "connected") return "点击后允许麦克风权限";
+  if (state !== "connected") {
+    return activationMode === "push_to_talk"
+      ? "连接后按住说话，旁边聊天不会触发"
+      : "自由监听会响应附近人声";
+  }
+  if (activationMode === "push_to_talk" && transmitting)
+    return "正在发送；松开后由 VAD 自动结束";
   if (activity === "listening") return "正在聆听…";
   if (activity === "transcribing") return "本地转写中…";
   if (activity === "thinking") return "已自动结束回合";
-  return "VAD 已就绪，可直接说话";
+  if (activationMode === "push_to_talk") return "按住“说话”时才会送入 VAD";
+  return "自由监听中；附近人声也可能触发";
 }
