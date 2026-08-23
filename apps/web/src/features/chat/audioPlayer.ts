@@ -12,6 +12,7 @@ export interface AudioPlaybackItem {
 }
 
 export interface PlayableAudio {
+  src: string;
   preload: string;
   onplay: ((event: Event) => void) | null;
   onended: ((event: Event) => void) | null;
@@ -32,6 +33,7 @@ interface AudioPlayerCallbacks {
 interface ActivePlayback {
   audio: PlayableAudio;
   epoch: number;
+  reusable: boolean;
 }
 
 type AudioFactory = (url: string) => PlayableAudio;
@@ -41,7 +43,8 @@ export class GenerationAudioPlayer {
   private active: ActivePlayback | null = null;
   private epoch = 0;
   private disposed = false;
-  private priming = false;
+  private primingAudio: PlayableAudio | null = null;
+  private standbyAudio: PlayableAudio | null = null;
   private unlocked = false;
 
   constructor(
@@ -70,7 +73,7 @@ export class GenerationAudioPlayer {
     const active = this.active;
     this.active = null;
     if (!active) return;
-    cleanupAudio(active.audio);
+    this.recycle(active.audio, active.reusable);
     this.callbacks.onPlaybackStop();
   }
 
@@ -78,6 +81,10 @@ export class GenerationAudioPlayer {
     if (this.disposed) return;
     this.stop();
     this.disposed = true;
+    if (this.standbyAudio) cleanupAudio(this.standbyAudio);
+    this.standbyAudio = null;
+    if (this.primingAudio) cleanupAudio(this.primingAudio);
+    this.primingAudio = null;
   }
 
   /**
@@ -85,16 +92,21 @@ export class GenerationAudioPlayer {
    * opportunity to use audible media after the asynchronous Runtime reply.
    */
   prime(): void {
-    if (this.disposed || this.unlocked || this.priming) return;
-    this.priming = true;
+    if (
+      this.disposed ||
+      this.unlocked ||
+      this.primingAudio ||
+      this.standbyAudio
+    )
+      return;
     const probe = this.createAudio(SILENT_WAV_URL);
+    this.primingAudio = probe;
     probe.preload = "auto";
     let playResult: Promise<void>;
     try {
       playResult = probe.play();
     } catch {
-      this.priming = false;
-      cleanupAudio(probe);
+      this.finishPriming(probe);
       return;
     }
     void playResult
@@ -103,13 +115,12 @@ export class GenerationAudioPlayer {
       })
       .catch(() => undefined)
       .finally(() => {
-        this.priming = false;
-        cleanupAudio(probe);
+        this.finishPriming(probe);
       });
   }
 
   private playNext(): void {
-    if (this.disposed || this.active) return;
+    if (this.disposed || this.active || this.primingAudio) return;
 
     let next = this.queue.shift();
     while (next && !this.callbacks.isGenerationActive(next.generationId)) {
@@ -117,10 +128,17 @@ export class GenerationAudioPlayer {
     }
     if (!next) return;
 
-    const audio = this.createAudio(next.url);
+    const standby = this.standbyAudio;
+    const reusable = standby !== null;
+    const audio = standby ?? this.createAudio(next.url);
+    if (reusable) {
+      this.standbyAudio = null;
+      audio.src = next.url;
+      audio.load();
+    }
     audio.preload = "auto";
     const epoch = ++this.epoch;
-    this.active = { audio, epoch };
+    this.active = { audio, epoch, reusable };
 
     audio.onplay = () => {
       if (!this.isCurrent(audio, epoch)) return;
@@ -157,6 +175,11 @@ export class GenerationAudioPlayer {
     error: unknown,
   ): void {
     if (!this.release(audio, epoch)) return;
+    if (isAbortRejection(error)) {
+      this.callbacks.onPlaybackStop();
+      this.playNext();
+      return;
+    }
     this.queue.length = 0;
     this.callbacks.onPlaybackStop();
     this.callbacks.onPlaybackError(
@@ -172,9 +195,24 @@ export class GenerationAudioPlayer {
 
   private release(audio: PlayableAudio, epoch: number): boolean {
     if (!this.isCurrent(audio, epoch)) return false;
+    const reusable = this.active?.reusable ?? false;
     this.active = null;
-    cleanupAudio(audio);
+    this.recycle(audio, reusable);
     return true;
+  }
+
+  private finishPriming(audio: PlayableAudio): void {
+    if (this.primingAudio !== audio) return;
+    this.primingAudio = null;
+    cleanupAudio(audio);
+    if (!this.disposed && !this.standbyAudio) this.standbyAudio = audio;
+    this.playNext();
+  }
+
+  private recycle(audio: PlayableAudio, reusable: boolean): void {
+    cleanupAudio(audio);
+    if (reusable && !this.disposed && !this.standbyAudio)
+      this.standbyAudio = audio;
   }
 }
 
@@ -193,5 +231,14 @@ function isAutoplayRejection(error: unknown): boolean {
     error !== null &&
     "name" in error &&
     error.name === "NotAllowedError"
+  );
+}
+
+function isAbortRejection(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError"
   );
 }

@@ -8,6 +8,7 @@ import {
 import type { PlayableAudio } from "./audioPlayer";
 
 class FakeAudio implements PlayableAudio {
+  src: string;
   preload = "";
   onplay: ((event: Event) => void) | null = null;
   onended: ((event: Event) => void) | null = null;
@@ -18,7 +19,9 @@ class FakeAudio implements PlayableAudio {
   readonly load = vi.fn();
   private readonly playback = deferred<void>();
 
-  constructor(readonly url: string) {}
+  constructor(url: string) {
+    this.src = url;
+  }
 
   resolvePlay(): void {
     this.onplay?.(new Event("play"));
@@ -66,7 +69,7 @@ describe("GenerationAudioPlayer", () => {
     expect(harness.onPlaybackStop).toHaveBeenCalledOnce();
 
     second?.finish();
-    expect(harness.audios.map((audio) => audio.url)).toEqual([
+    expect(harness.audios.map((audio) => audio.src)).toEqual([
       "/one.wav",
       "/two.wav",
       "/three.wav",
@@ -93,6 +96,37 @@ describe("GenerationAudioPlayer", () => {
     harness.audios[0]?.fail();
 
     expect(harness.errors).toEqual([AUDIO_PLAYBACK_FAILED_MESSAGE]);
+  });
+
+  it("treats an interrupted play promise as cancellation", async () => {
+    const harness = createHarness(() => "generation-1");
+    harness.player.enqueue({ generationId: "generation-1", url: "/one.wav" });
+    harness.player.enqueue({ generationId: "generation-1", url: "/two.wav" });
+
+    const error = new Error("play() was interrupted by pause()");
+    error.name = "AbortError";
+    harness.audios[0]?.rejectPlay(error);
+    await flushPromises();
+
+    expect(harness.errors).toEqual([]);
+    expect(harness.audios.map((audio) => audio.src)).toEqual([
+      "/one.wav",
+      "/two.wav",
+    ]);
+  });
+
+  it("reuses the user-gesture audio element for queued speech", async () => {
+    const harness = createHarness(() => "generation-1");
+
+    harness.player.prime();
+    const probe = harness.audios[0];
+    probe?.resolvePlay();
+    await flushPromises();
+    harness.player.enqueue({ generationId: "generation-1", url: "/one.wav" });
+
+    expect(harness.audios).toHaveLength(1);
+    expect(probe?.src).toBe("/one.wav");
+    expect(probe?.play).toHaveBeenCalledTimes(2);
   });
 
   it("drops stale generation chunks before creating audio", () => {
