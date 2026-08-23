@@ -9,6 +9,12 @@ const realVendorReady = [
   "public/vendor/live2d/model/avatar.model3.json",
 ].every((relativePath) => existsSync(path.resolve(relativePath)));
 
+interface TranscriptMetrics {
+  transcriptClientHeight: number;
+  transcriptScrollHeight: number;
+  transcriptOverflow?: string;
+}
+
 test("Avatar Lab runs independently with semantic cues, hit testing, and screenshots", async ({
   page,
 }, testInfo) => {
@@ -85,35 +91,40 @@ test("desktop chat keeps the avatar visible while only the transcript scrolls", 
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.locator(".conversation-panel")).toBeVisible();
-  await page.locator(".transcript").evaluate((transcript) => {
-    for (let index = 0; index < 40; index += 1) {
-      const message = transcript.ownerDocument.createElement("article");
-      message.className = `message ${index % 2 ? "user" : "assistant"}`;
-      const avatar = transcript.ownerDocument.createElement("div");
-      avatar.className = "message-avatar";
-      avatar.textContent = index % 2 ? "你" : "雾";
-      const body = transcript.ownerDocument.createElement("div");
-      const text = transcript.ownerDocument.createElement("p");
-      text.textContent = `用于滚动边界验收的第 ${index + 1} 条消息。`;
-      body.append(text);
-      message.append(avatar, body);
-      transcript.append(message);
-    }
-  });
+  await page.evaluate(`
+    (() => {
+      const transcript = document.querySelector(".transcript");
+      if (!transcript) throw new Error("transcript is missing");
+      for (let index = 0; index < 40; index += 1) {
+        const message = document.createElement("article");
+        message.className = index % 2 ? "message user" : "message assistant";
+        const avatar = document.createElement("div");
+        avatar.className = "message-avatar";
+        avatar.textContent = index % 2 ? "你" : "雾";
+        const body = document.createElement("div");
+        const text = document.createElement("p");
+        text.textContent = "用于滚动边界验收的第 " + (index + 1) + " 条消息。";
+        body.append(text);
+        message.append(avatar, body);
+        transcript.append(message);
+      }
+    })()
+  `);
 
-  const transcriptMetrics = await page
-    .locator(".transcript")
-    .evaluate((transcript) => {
-      const view = transcript.ownerDocument.defaultView;
+  const transcriptMetrics = await page.evaluate<TranscriptMetrics>(`
+    (() => {
+      const transcript = document.querySelector(".transcript");
+      if (!transcript) throw new Error("transcript is missing");
       return {
         transcriptClientHeight: transcript.clientHeight,
         transcriptScrollHeight: transcript.scrollHeight,
-        transcriptOverflow: view?.getComputedStyle(transcript).overflowY,
+        transcriptOverflow: getComputedStyle(transcript).overflowY,
       };
-    });
-  const pageHeight = await page
-    .locator("html")
-    .evaluate((html) => html.scrollHeight);
+    })()
+  `);
+  const pageHeight = await page.evaluate<number>(
+    "document.documentElement.scrollHeight",
+  );
   const avatar = await page.locator(".avatar-frame").boundingBox();
   const grid = await page.locator(".demo-grid").boundingBox();
   if (!avatar || !grid) throw new Error("chat layout is incomplete");
