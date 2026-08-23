@@ -1,7 +1,7 @@
 schema_version: "1.0"
-updated_at: "2026-08-23"
-current_phase: 4
-next_phase: 5
+updated_at: "2026-08-24"
+current_phase: 8
+next_phase: 9
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -29,6 +29,9 @@ validation:
     - make check-live2d-vendor
     - pnpm build
     - uv run python tools/run_demo.py --no-open
+    - real aiortc Chinese audio through Pipecat VAD, faster-whisper STT, generation, and WebRTC TTS
+    - two-utterance barge-in cancels the first generation and completes the second generation
+    - browser DOM verifies Runtime, STT provider badge, enabled microphone UI, and fixed viewport
     - browser live text, TTS event, memory, skill, and interruption smoke
     - Chromium real Live2D renders in Avatar Lab and main chat
   deterministic_generation: byte_identical_on_repeat
@@ -98,12 +101,46 @@ phases:
       - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
       - Manifest-driven runtime.status skill reports actual providers with read-only side effect
       - make demo supervises Runtime and Web and leaves both loopback ports closed after Ctrl+C
+  - id: 5
+    name: pipecat-realtime-transport
+    status: basic_web_voice_path_implemented_pending_hardening
+    evidence:
+      - Pipecat 1.7 is pinned behind a ChatWaifu-owned SmallWebRTC adapter
+      - Browser getUserMedia provides device selection, input meter, echo cancellation, and one audio peer
+      - Silero VAD emits typed speech lifecycle events and bounds utterance buffering with pre-roll
+      - Remote Runtime TTS is generation-gated and delivered through the WebRTC audio track
+      - Real aiortc validation received non-silent remote audio after a local microphone-equivalent input
+  - id: 6
+    name: cascade-vertical-slice
+    status: basic_real_stt_slice_implemented_pending_long_run
+    evidence:
+      - Final STT text enters the same conversation command as typed text with preallocated turn identity
+      - Browser speech state covers listening, transcribing, thinking, and final committed messages
+      - Local STT, configured LLM, local TTS, AvatarCue, event store, and WebRTC audio run end to end
+  - id: 7
+    name: interruption-and-generation-semantics
+    status: core_invalidation_implemented_playback_ack_pending
+    evidence:
+      - Speech start pushes Pipecat interruption before cancelling the active conversation generation
+      - STT jobs and Runtime generations carry session, turn, and generation identity
+      - Superseded STT results and stale Runtime audio are rejected before playback
+      - Two-utterance real audio validation cancelled the first generation and completed only the second
+  - id: 8
+    name: isolated-model-workers
+    status: stt_worker_slice_implemented_other_workers_pending
+    evidence:
+      - Versioned model-worker SDK defines authenticated STT request, result, health, and identity contracts
+      - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
+      - make demo provisions an ephemeral token, selects a free port, supervises the worker, and reuses model cache
+      - Public multilingual base model completed a real Chinese transcription on macOS arm64 CPU int8
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
   - Live2D release packaging and a custom character require an explicit asset-license review
-  - Voice input STT/VAD, full-duplex Pipecat/WebRTC, and packaged Tauri delivery are not in the basic Demo
+  - Packaged Tauri delivery is not in the basic Demo
+  - RTVI control/data channels, public-network TURN, reconnect policy, and device-loss recovery remain pending
+  - Playback progress acknowledgements and long-running multi-turn voice stress tests remain pending
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
@@ -111,7 +148,10 @@ constraints:
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: true
   live2d_real_renderer_validation_scope: local_chromium_natori
-  pipecat_dependency_added: false
+  pipecat_dependency_added: true
+  pipecat_version: "1.7.0"
+  browser_microphone_validated: backend_equivalent_audio_and_ui_entry
+  local_stt_worker: faster-whisper-base-cpu-int8
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5
