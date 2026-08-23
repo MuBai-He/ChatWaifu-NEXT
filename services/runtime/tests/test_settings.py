@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from chatwaifu_runtime.config.settings import SecurityConfig, Settings, load_settings
+from chatwaifu_runtime.config.settings import SecurityConfig, Settings, SttConfig, load_settings
 from pydantic import SecretStr
 
 
@@ -30,7 +30,11 @@ def test_dotenv_is_loaded_but_process_environment_wins(
 
 
 def test_public_config_omits_secrets() -> None:
-    settings = Settings(security=SecurityConfig(admin_token=SecretStr("never-log-me")))
+    settings = Settings(
+        security=SecurityConfig(admin_token=SecretStr("never-log-me")),
+        stt=SttConfig(worker_token=SecretStr("never-log-worker-token")),
+    )
     serialized = str(settings.public_dict())
     assert "never-log-me" not in serialized
+    assert "never-log-worker-token" not in serialized
     assert "security" not in settings.public_dict()

@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
   "aiosqlite>=0.21,<1",
   "anyio>=4.10,<5",
+  "chatwaifu-model-worker-sdk",
   "chatwaifu-protocol",
   "fastapi>=0.116,<1",
   "httpx2>=2.12,<3",
@@ -27,6 +28,7 @@ chatwaifu-runtime = "chatwaifu_runtime.main:run"
 packages = ["src/chatwaifu_runtime"]
 
 [tool.uv.sources]
+chatwaifu-model-worker-sdk = { workspace = true }
 chatwaifu-protocol = { workspace = true }
 
 [dependency-groups]

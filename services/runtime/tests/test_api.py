@@ -23,7 +23,11 @@ def test_health_session_persistence_and_event_stream(client: TestClient) -> None
     assert health.status_code == 200
     health_json = cast(dict[str, object], health.json())
     assert health_json["status"] == "ok"
-    assert health_json["providers"] == {"llm": "demo", "tts": "fake"}
+    assert health_json["providers"] == {
+        "llm": "demo",
+        "tts": "fake",
+        "stt": "disabled",
+    }
 
     created = http.post("/v1/sessions", json={"character_id": "default"})
     assert created.status_code == 201

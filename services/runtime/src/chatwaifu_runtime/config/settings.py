@@ -82,6 +82,16 @@ class RealtimeConfig(BaseModel):
     echo_enabled: bool = False
 
 
+class SttConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    provider: str = "disabled"
+    worker_url: str = "http://127.0.0.1:8766"
+    worker_token: SecretStr | None = None
+    language: str = Field(default="zh", min_length=2, max_length=32)
+    timeout_seconds: float = Field(default=60.0, gt=0, le=300)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -103,6 +113,7 @@ class Settings(BaseSettings):
     llm: LlmConfig = LlmConfig()
     tts: TtsConfig = TtsConfig()
     realtime: RealtimeConfig = RealtimeConfig()
+    stt: SttConfig = SttConfig()
 
     @model_validator(mode="after")
     def validate_local_bind(self) -> Self:
@@ -117,8 +128,9 @@ class Settings(BaseSettings):
         return self.storage.database_path or self.data_dir / "chatwaifu.db"
 
     def public_dict(self) -> dict[str, object]:
-        public = self.model_dump(mode="json", exclude={"security", "llm"})
+        public = self.model_dump(mode="json", exclude={"security", "llm", "stt"})
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
+        public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         return public
 
 

@@ -78,6 +78,9 @@ export function ChatDemoPage() {
           <span className="provider-pill">
             TTS · {health?.providers.tts ?? "—"}
           </span>
+          <span className="provider-pill">
+            STT · {health?.providers.stt ?? "—"}
+          </span>
         </div>
       </header>
 

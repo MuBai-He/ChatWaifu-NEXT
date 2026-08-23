@@ -2,7 +2,9 @@
 
 import argparse
 import os
+import secrets
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -16,6 +18,7 @@ from pnpm_tool import PnpmToolError, environment_with_pnpm, resolve_pnpm
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_HEALTH = "http://127.0.0.1:8765/v1/runtime/health"
 WEB_URL = "http://127.0.0.1:5173/"
+STT_WORKER = ROOT / "workers" / "asr-faster-whisper"
 
 
 def main() -> int:
@@ -39,12 +42,65 @@ def main() -> int:
     if dependency_install.returncode != 0:
         return dependency_install.returncode
 
+    print("Checking isolated local STT worker...", flush=True)
+    worker_install = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "setup_stt_worker.py")],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+    )
+    if worker_install.returncode != 0:
+        return worker_install.returncode
+
+    stt_port = _find_free_loopback_port()
+    stt_token = secrets.token_urlsafe(32)
+    worker_environment = environment.copy()
+    worker_environment.update(
+        {
+            "CHATWAIFU_STT_WORKER_HOST": "127.0.0.1",
+            "CHATWAIFU_STT_WORKER_PORT": str(stt_port),
+            "CHATWAIFU_STT_WORKER_TOKEN": stt_token,
+            "CHATWAIFU_STT_WORKER_MODEL": "base",
+            "CHATWAIFU_STT_WORKER_MODEL_DIR": str(ROOT / ".local" / "models" / "faster-whisper"),
+            "CHATWAIFU_STT_WORKER_DEVICE": "cpu",
+            "CHATWAIFU_STT_WORKER_COMPUTE_TYPE": "int8",
+            "CHATWAIFU_STT_WORKER_PRELOAD": "true",
+        }
+    )
+    runtime_environment = environment.copy()
+    runtime_environment.update(
+        {
+            "CHATWAIFU_STT__PROVIDER": "faster_whisper_worker",
+            "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
+            "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
+            "CHATWAIFU_STT__LANGUAGE": "zh",
+        }
+    )
+
     processes: list[subprocess.Popen[bytes]] = []
     try:
+        print(
+            "Loading faster-whisper base (the first run downloads about 150 MB)...",
+            flush=True,
+        )
+        stt_worker = subprocess.Popen(
+            [str(_stt_worker_python()), "-m", "chatwaifu_asr_worker.main"],
+            cwd=ROOT,
+            env=worker_environment,
+            start_new_session=True,
+        )
+        processes.append(stt_worker)
+        _wait_for_url(
+            f"http://127.0.0.1:{stt_port}/v1/health",
+            stt_worker,
+            "Local STT worker",
+            timeout_seconds=180,
+            headers={"Authorization": f"Bearer {stt_token}"},
+        )
         runtime = subprocess.Popen(
             [sys.executable, str(ROOT / "tools" / "run_runtime.py")],
             cwd=ROOT,
-            env=environment,
+            env=runtime_environment,
             start_new_session=True,
         )
         processes.append(runtime)
@@ -82,7 +138,11 @@ def main() -> int:
 
 
 def _wait_for_url(
-    url: str, process: subprocess.Popen[bytes], label: str, timeout_seconds: float = 20
+    url: str,
+    process: subprocess.Popen[bytes],
+    label: str,
+    timeout_seconds: float = 20,
+    headers: dict[str, str] | None = None,
 ) -> None:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
@@ -90,12 +150,28 @@ def _wait_for_url(
         if return_code is not None:
             raise RuntimeError(f"{label} exited during startup with code {return_code}")
         try:
-            with urllib.request.urlopen(url, timeout=0.5) as response:
+            request = urllib.request.Request(url, headers=headers or {})
+            with urllib.request.urlopen(request, timeout=0.5) as response:
                 if 200 <= response.status < 500:
                     return
         except (urllib.error.URLError, TimeoutError):
             time.sleep(0.1)
     raise TimeoutError(f"{label} did not become ready at {url}")
+
+
+def _find_free_loopback_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        return int(listener.getsockname()[1])
+
+
+def _stt_worker_python() -> Path:
+    directory = "Scripts" if os.name == "nt" else "bin"
+    executable = "python.exe" if os.name == "nt" else "python"
+    path = STT_WORKER / ".venv" / directory / executable
+    if not path.exists():
+        raise RuntimeError(f"Local STT worker interpreter is missing: {path}")
+    return path
 
 
 def _stop_processes(processes: list[subprocess.Popen[bytes]]) -> None:

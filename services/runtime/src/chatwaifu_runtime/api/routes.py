@@ -28,13 +28,15 @@ def _container(request: Request) -> RuntimeContainer:
 @router.get("/runtime/health", response_model=RuntimeHealth)
 async def runtime_health(request: Request) -> RuntimeHealth:
     container = _container(request)
+    providers = container.providers.public_status()
+    providers["stt"] = container.stt.kind
     return RuntimeHealth(
         status="ok",
         version=__version__,
         database="ready",
         subscribers=container.event_hub.subscriber_count,
         dropped_events=container.event_hub.dropped_events,
-        providers=container.providers.public_status(),
+        providers=providers,
     )
 
 

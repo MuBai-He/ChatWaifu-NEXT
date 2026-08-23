@@ -13,7 +13,7 @@ from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
-from chatwaifu_runtime.realtime.stt import DisabledSttBackend
+from chatwaifu_runtime.realtime.stt import build_stt_backend
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -43,7 +43,7 @@ class RuntimeContainer:
             self.characters,
             self.memory,
         )
-        self.stt = DisabledSttBackend()
+        self.stt = build_stt_backend(settings)
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,

@@ -14,7 +14,7 @@ def main() -> int:
     if uv is None:
         raise RuntimeError("uv is required to install the local STT worker")
     result = subprocess.run(
-        [uv, "sync", "--project", str(WORKER), "--all-groups"],
+        [uv, "sync", "--project", str(WORKER), "--all-groups", "--no-editable"],
         cwd=ROOT,
         check=False,
     )

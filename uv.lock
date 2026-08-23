@@ -343,6 +343,7 @@ source = { editable = "services/runtime" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "anyio" },
+    { name = "chatwaifu-model-worker-sdk" },
     { name = "chatwaifu-protocol" },
     { name = "fastapi" },
     { name = "httpx2" },
@@ -357,6 +358,7 @@ dependencies = [
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21,<1" },
     { name = "anyio", specifier = ">=4.10,<5" },
+    { name = "chatwaifu-model-worker-sdk", editable = "packages/model-worker-sdk-python" },
     { name = "chatwaifu-protocol", editable = "packages/protocol-python" },
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "httpx2", specifier = ">=2.12,<3" },

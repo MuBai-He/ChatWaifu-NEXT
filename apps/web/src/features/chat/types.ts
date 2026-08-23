@@ -3,7 +3,7 @@ import type { AvatarCue } from "@chatwaifu/protocol";
 export interface RuntimeHealth {
   status: "ok" | "degraded";
   version: string;
-  providers: { llm: string; tts: string };
+  providers: { llm: string; tts: string; stt?: string };
 }
 
 export interface CharacterProfile {

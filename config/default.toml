@@ -34,3 +34,9 @@ vad_stop_ms = 650
 pre_roll_ms = 320
 max_utterance_seconds = 30
 echo_enabled = false
+
+[stt]
+provider = "disabled"
+worker_url = "http://127.0.0.1:8766"
+language = "zh"
+timeout_seconds = 60

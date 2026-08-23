@@ -19,7 +19,7 @@ const session = {
   health: {
     status: "ok" as const,
     version: "0.1.0",
-    providers: { llm: "demo", tts: "fake" },
+    providers: { llm: "demo", tts: "fake", stt: "disabled" },
   },
   character: {
     character_id: "default",

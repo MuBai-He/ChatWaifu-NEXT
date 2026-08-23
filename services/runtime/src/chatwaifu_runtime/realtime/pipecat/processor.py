@@ -5,6 +5,7 @@
 # pyright: reportUnknownMemberType=false
 
 import asyncio
+import logging
 import wave
 from collections import deque
 from dataclasses import dataclass, field
@@ -14,7 +15,10 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import (
+    ErrorRaisedEvent,
+    ErrorRaisedPayload,
     UserSpeechStartedEvent,
     UserSpeechStartedPayload,
     UserSpeechStoppedEvent,
@@ -44,6 +48,8 @@ from chatwaifu_runtime.realtime.contracts import (
     SttRequest,
     VoiceTurnIdentity,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -194,7 +200,14 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         if self._stt_task is not None:
             identity = self._identity
             if identity is not None:
-                await self._stt.cancel(identity.generation_id)
+                try:
+                    await self._stt.cancel(identity.generation_id)
+                except Exception:
+                    _LOGGER.warning(
+                        "failed to cancel STT generation %s during teardown",
+                        identity.generation_id,
+                        exc_info=True,
+                    )
             await self.cancel_task(self._stt_task)
             self._stt_task = None
         if self._event_task is not None:
@@ -209,7 +222,14 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         if self._stt_task is not None:
             previous = self._identity
             if previous is not None:
-                await self._stt.cancel(previous.generation_id)
+                try:
+                    await self._stt.cancel(previous.generation_id)
+                except Exception:
+                    _LOGGER.warning(
+                        "failed to cancel superseded STT generation %s",
+                        previous.generation_id,
+                        exc_info=True,
+                    )
             await self.cancel_task(self._stt_task)
             self._stt_task = None
 
@@ -317,6 +337,28 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
             )
         except asyncio.CancelledError:
             raise
+        except Exception:
+            if self._identity == identity:
+                await self._publisher.emit(
+                    ErrorRaisedEvent(
+                        event_id=uuid4(),
+                        session_id=identity.session_id,
+                        turn_id=identity.turn_id,
+                        generation_id=identity.generation_id,
+                        occurred_at=datetime.now(UTC),
+                        source="runtime.realtime",
+                        privacy=PrivacyLevel.LOCAL,
+                        payload=ErrorRaisedPayload(
+                            error=StructuredError(
+                                code="stt_worker_error",
+                                message="本地语音转写失败，文字输入仍然可用。",
+                                retryable=True,
+                                component="realtime.stt",
+                                details={"provider": self._stt.kind},
+                            )
+                        ),
+                    )
+                )
         finally:
             current = asyncio.current_task()
             if self._stt_task is current:

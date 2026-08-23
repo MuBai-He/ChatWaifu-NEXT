@@ -208,6 +208,7 @@ export function useChatSession() {
           const nested = event.payload.error as
             { message?: string } | undefined;
           setError(nested?.message ?? "Runtime 生成失败。");
+          if (nested?.message?.includes("语音转写")) setVoiceActivity("idle");
           break;
         }
       }
