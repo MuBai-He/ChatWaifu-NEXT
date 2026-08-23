@@ -2,7 +2,8 @@
 
 ## Start and stop
 
-Run `make demo`. The supervisor starts Runtime first, waits for
+Run `make demo`. The command prepares the repository-pinned pnpm under `.local/tooling/` when a
+global pnpm is unavailable, validates Web dependencies, then starts Runtime first and waits for
 `GET http://127.0.0.1:8765/v1/runtime/health`, then starts Web and waits for
 `http://127.0.0.1:5173`. `Ctrl+C` terminates both process groups and Runtime drains active
 generation cancellation before closing SQLite.

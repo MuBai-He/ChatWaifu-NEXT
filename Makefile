@@ -1,17 +1,17 @@
 UV ?= uv
-PNPM ?= pnpm
+PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
 .PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-live2d-framework check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
-	$(PNPM) install
+	$(PNPM) install --frozen-lockfile
 	$(CARGO) fetch --locked
 	$(MAKE) generate-protocol
 
 demo:
-	$(UV) run python tools/run_demo.py
+	$(UV) run python tools/run_demo.py $(DEMO_ARGS)
 
 format:
 	$(UV) run ruff format .

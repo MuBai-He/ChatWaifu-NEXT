@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -11,6 +10,8 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
+
+from pnpm_tool import PnpmToolError, environment_with_pnpm, resolve_pnpm
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_HEALTH = "http://127.0.0.1:8765/v1/runtime/health"
@@ -21,12 +22,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run ChatWaifu NEXT basic demo")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser")
     args = parser.parse_args()
-    pnpm = shutil.which("pnpm")
-    if pnpm is None:
-        parser.error("pnpm is required; run `make bootstrap` first")
+    try:
+        pnpm = resolve_pnpm()
+    except PnpmToolError as error:
+        parser.error(str(error))
 
-    environment = os.environ.copy()
+    environment = environment_with_pnpm(pnpm)
     environment["PYTHONUNBUFFERED"] = "1"
+    print("Checking Web dependencies...", flush=True)
+    dependency_install = subprocess.run(
+        [str(pnpm), "install", "--frozen-lockfile"],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+    )
+    if dependency_install.returncode != 0:
+        return dependency_install.returncode
+
     processes: list[subprocess.Popen[bytes]] = []
     try:
         runtime = subprocess.Popen(
@@ -40,7 +52,7 @@ def main() -> int:
 
         web = subprocess.Popen(
             [
-                pnpm,
+                str(pnpm),
                 "--filter",
                 "@chatwaifu/web",
                 "dev",

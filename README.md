@@ -6,25 +6,24 @@ ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当
 
 ## 直接运行 Demo
 
-环境要求：Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22+、pnpm 11.19+、
-GNU Make。首次检出先安装依赖：
-
-```bash
-cp .env.example .env
-make bootstrap
-```
-
-以后只需一个命令：
+环境要求：Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22+（含 npm）、
+GNU Make。项目会自动在 `.local/tooling/` 准备固定版本的 pnpm，无需全局安装。首次检出可直接运行：
 
 ```bash
 make demo
+```
+
+命令也会自动安装或校验前端依赖；`.env` 是可选配置，只有需要覆盖默认 provider 时才创建：
+
+```bash
+cp .env.example .env
 ```
 
 命令会监督启动 Runtime 与 Web、等待两者健康后打开
 <http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止两个进程。若不想自动打开浏览器：
 
 ```bash
-uv run python tools/run_demo.py --no-open
+make demo DEMO_ARGS=--no-open
 ```
 
 Demo 默认使用明确标注的离线 Demo LLM。在 macOS 上，`tts.provider=auto` 会选择系统

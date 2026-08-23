@@ -22,8 +22,13 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
-pythonpath = ["packages/protocol-python/src", "services/runtime/src"]
-testpaths = ["packages/protocol-python/tests", "services/runtime/tests", "tests/contract"]
+pythonpath = [".", "packages/protocol-python/src", "services/runtime/src"]
+testpaths = [
+  "packages/protocol-python/tests",
+  "services/runtime/tests",
+  "tests/contract",
+  "tools/tests",
+]
 
 [tool.pyright]
 include = [
