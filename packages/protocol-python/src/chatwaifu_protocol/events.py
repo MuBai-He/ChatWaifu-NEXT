@@ -36,6 +36,28 @@ class UserTurnCommittedPayload(ProtocolModel):
     text: str = Field(min_length=1, max_length=20_000)
 
 
+class UserSpeechStartedPayload(ProtocolModel):
+    utterance_id: UUID
+    audio_stream_id: UUID
+    sample_rate: int = Field(ge=8_000, le=48_000)
+    channels: int = Field(ge=1, le=2)
+
+
+class UserSpeechStoppedPayload(ProtocolModel):
+    utterance_id: UUID
+    audio_stream_id: UUID
+    duration_ms: int = Field(ge=0)
+    audio_bytes: int = Field(ge=0)
+
+
+class UserTranscriptPayload(ProtocolModel):
+    utterance_id: UUID
+    text: str = Field(min_length=1, max_length=20_000)
+    language: str | None = Field(default=None, min_length=2, max_length=32)
+    provider: str = Field(min_length=1, max_length=128)
+    is_final: bool
+
+
 class AssistantGenerationStartedPayload(ProtocolModel):
     backend_kind: str = Field(min_length=1)
 
@@ -58,6 +80,30 @@ class UserTurnCommittedEvent(
     event_type: Literal["user.turn_committed"] = "user.turn_committed"
 
 
+class UserSpeechStartedEvent(
+    EventEnvelope[Literal["user.speech_started"], UserSpeechStartedPayload]
+):
+    event_type: Literal["user.speech_started"] = "user.speech_started"
+
+
+class UserSpeechStoppedEvent(
+    EventEnvelope[Literal["user.speech_stopped"], UserSpeechStoppedPayload]
+):
+    event_type: Literal["user.speech_stopped"] = "user.speech_stopped"
+
+
+class UserTranscriptPartialEvent(
+    EventEnvelope[Literal["user.transcript_partial"], UserTranscriptPayload]
+):
+    event_type: Literal["user.transcript_partial"] = "user.transcript_partial"
+
+
+class UserTranscriptFinalEvent(
+    EventEnvelope[Literal["user.transcript_final"], UserTranscriptPayload]
+):
+    event_type: Literal["user.transcript_final"] = "user.transcript_final"
+
+
 class AssistantGenerationStartedEvent(
     EventEnvelope[Literal["assistant.generation_started"], AssistantGenerationStartedPayload]
 ):
@@ -78,11 +124,7 @@ type GenericCoreEventType = Literal[
     "system.component_health_changed",
     "session.closed",
     "session.state_changed",
-    "user.speech_started",
     "user.speech_progress",
-    "user.speech_stopped",
-    "user.transcript_partial",
-    "user.transcript_final",
     "assistant.text_delta",
     "assistant.text_segment_committed",
     "assistant.generation_cancelled",
@@ -127,11 +169,7 @@ GENERIC_CORE_EVENT_TYPES: tuple[GenericCoreEventType, ...] = (
     "system.component_health_changed",
     "session.closed",
     "session.state_changed",
-    "user.speech_started",
     "user.speech_progress",
-    "user.speech_stopped",
-    "user.transcript_partial",
-    "user.transcript_final",
     "assistant.text_delta",
     "assistant.text_segment_committed",
     "assistant.generation_cancelled",
@@ -180,6 +218,10 @@ class GenericCoreEvent(EventEnvelope[GenericCoreEventType, JsonObject]):
 type EventModel = (
     SessionCreatedEvent
     | UserTurnCommittedEvent
+    | UserSpeechStartedEvent
+    | UserSpeechStoppedEvent
+    | UserTranscriptPartialEvent
+    | UserTranscriptFinalEvent
     | AssistantGenerationStartedEvent
     | AvatarCueEmittedEvent
     | ErrorRaisedEvent

@@ -102,6 +102,49 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
   z
     .object({
       ...eventBase,
+      event_type: z.literal("user.speech_started"),
+      payload: z
+        .object({
+          utterance_id: uuid,
+          audio_stream_id: uuid,
+          sample_rate: z.number().int().min(8_000).max(48_000),
+          channels: z.number().int().min(1).max(2),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("user.speech_stopped"),
+      payload: z
+        .object({
+          utterance_id: uuid,
+          audio_stream_id: uuid,
+          duration_ms: z.number().int().nonnegative(),
+          audio_bytes: z.number().int().nonnegative(),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.enum(["user.transcript_partial", "user.transcript_final"]),
+      payload: z
+        .object({
+          utterance_id: uuid,
+          text: z.string().min(1).max(20_000),
+          language: z.string().min(2).max(32).nullish(),
+          provider: z.string().min(1).max(128),
+          is_final: z.boolean(),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
       event_type: z.literal("assistant.generation_started"),
       payload: z.object({ backend_kind: z.string().min(1) }).passthrough(),
     })
@@ -141,11 +184,7 @@ const genericCoreEventTypes = [
   "system.component_health_changed",
   "session.closed",
   "session.state_changed",
-  "user.speech_started",
   "user.speech_progress",
-  "user.speech_stopped",
-  "user.transcript_partial",
-  "user.transcript_final",
   "assistant.text_delta",
   "assistant.text_segment_committed",
   "assistant.generation_cancelled",

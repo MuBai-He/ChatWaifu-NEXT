@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.avatar import AvatarCue
+from chatwaifu_protocol.events import UserSpeechStartedEvent, UserSpeechStartedPayload
 from chatwaifu_protocol.media import (
     AudioFrameHeader,
     decode_audio_frame_header,
@@ -74,3 +75,24 @@ def test_audio_frame_header_round_trips_with_generation_identity() -> None:
     assert parsed == header
     assert parsed.generation_id == generation_id
     assert isinstance(encoded, bytes)
+
+
+def test_speech_started_event_carries_future_generation_identity() -> None:
+    event = UserSpeechStartedEvent(
+        event_id=UUID("00000000-0000-4000-8000-000000000101"),
+        session_id=UUID("00000000-0000-4000-8000-000000000201"),
+        turn_id=UUID("00000000-0000-4000-8000-000000000301"),
+        generation_id=UUID("00000000-0000-4000-8000-000000000401"),
+        occurred_at=datetime(2026, 8, 24, 8, 0, tzinfo=UTC),
+        source="runtime.realtime",
+        payload=UserSpeechStartedPayload(
+            utterance_id=UUID("00000000-0000-4000-8000-000000000501"),
+            audio_stream_id=UUID("00000000-0000-4000-8000-000000000601"),
+            sample_rate=16_000,
+            channels=1,
+        ),
+    )
+
+    assert event.payload.sample_rate == 16_000
+    assert event.turn_id is not None
+    assert event.generation_id is not None
