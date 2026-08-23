@@ -104,6 +104,7 @@ describe("Live2DAvatarRenderer adapter", () => {
       modelLoader: new StubLoader(bridge),
       onMotionEnded,
     });
+    renderer.resize(800, 600, 2);
     await renderer.load(LIVE2D_LAB_MANIFEST);
 
     const motion = cue("motion", "nod");
@@ -120,7 +121,6 @@ describe("Live2DAvatarRenderer adapter", () => {
       activeCues: { gesture: motion, emotion: expression },
     };
 
-    renderer.resize(800, 600, 2);
     renderer.render(state, 100);
     renderer.render(state, 116);
     bridge.completeMotion();
@@ -143,10 +143,35 @@ describe("Live2DAvatarRenderer adapter", () => {
 
     await renderer.unload();
     expect(bridge.unloaded).toBe(true);
+    expect(bridge.disposed).toBe(true);
     expect(renderer.diagnostics()).toMatchObject({
       status: "idle",
       resourceCount: 0,
     });
     renderer.dispose();
+  });
+
+  it("releases a bridge that finishes loading after the renderer is disposed", async () => {
+    const bridge = new StubBridge();
+    let finishLoading: (value: OfficialCubismBridge) => void = () => undefined;
+    const loading = new Promise<OfficialCubismBridge>((resolve) => {
+      finishLoading = resolve;
+    });
+    const loader = new (class extends Live2DModelLoader {
+      override async load(): Promise<OfficialCubismBridge> {
+        return loading;
+      }
+    })();
+    const renderer = new Live2DAvatarRenderer(stubCanvas(), {
+      modelLoader: loader,
+    });
+
+    const pending = renderer.load(LIVE2D_LAB_MANIFEST);
+    renderer.dispose();
+    finishLoading(bridge);
+
+    await expect(pending).rejects.toThrow("disposed during model loading");
+    expect(bridge.disposed).toBe(true);
+    expect(renderer.diagnostics().status).toBe("disposed");
   });
 });

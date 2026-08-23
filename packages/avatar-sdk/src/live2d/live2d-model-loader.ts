@@ -34,6 +34,9 @@ interface CubismBridgeModule {
   }): OfficialCubismBridge;
 }
 
+const BRIDGE_REGISTRY_KEY = "__chatwaifuCubismBridgeModule";
+const bridgeModuleLoads = new Map<string, Promise<void>>();
+
 export class Live2DModelLoader {
   async load(
     canvas: HTMLCanvasElement,
@@ -58,8 +61,13 @@ export class Live2DModelLoader {
       canvas,
       frameworkVersion: LIVE2D_FRAMEWORK_VERSION,
     });
-    await bridge.load(source.modelJsonUrl);
-    return bridge;
+    try {
+      await bridge.load(source.modelJsonUrl);
+      return bridge;
+    } catch (error: unknown) {
+      bridge.dispose();
+      throw error;
+    }
   }
 }
 
@@ -108,10 +116,36 @@ async function ensureCubismCore(scriptUrl: string): Promise<void> {
 async function importBridgeModule(
   moduleUrl: string,
 ): Promise<CubismBridgeModule> {
-  let imported: unknown;
+  const registered = Reflect.get(globalThis, BRIDGE_REGISTRY_KEY) as unknown;
+  if (isCubismBridgeModule(registered)) return registered;
+  if (typeof document === "undefined") throw bridgeMissingError(moduleUrl);
+
+  let pending = bridgeModuleLoads.get(moduleUrl);
+  if (!pending) {
+    pending = new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.type = "module";
+      script.src = moduleUrl;
+      script.dataset.chatwaifuLive2dBridge = moduleUrl;
+      script.addEventListener("load", () => resolve(), { once: true });
+      script.addEventListener(
+        "error",
+        () => {
+          script.remove();
+          reject(bridgeMissingError(moduleUrl));
+        },
+        { once: true },
+      );
+      document.head.append(script);
+    });
+    bridgeModuleLoads.set(moduleUrl, pending);
+  }
+
   try {
-    imported = (await import(/* @vite-ignore */ moduleUrl)) as unknown;
+    await pending;
   } catch (error: unknown) {
+    bridgeModuleLoads.delete(moduleUrl);
+    if (error instanceof AvatarRendererError) throw error;
     throw new AvatarRendererError(
       "avatar.live2d_bridge_missing",
       `The official Cubism bridge could not be loaded from ${moduleUrl}.`,
@@ -119,6 +153,7 @@ async function importBridgeModule(
       { cause: error },
     );
   }
+  const imported = Reflect.get(globalThis, BRIDGE_REGISTRY_KEY) as unknown;
   if (!isCubismBridgeModule(imported)) {
     throw new AvatarRendererError(
       "avatar.live2d_bridge_invalid",
@@ -127,6 +162,14 @@ async function importBridgeModule(
     );
   }
   return imported;
+}
+
+function bridgeMissingError(moduleUrl: string): AvatarRendererError {
+  return new AvatarRendererError(
+    "avatar.live2d_bridge_missing",
+    `The official Cubism bridge could not be loaded from ${moduleUrl}.`,
+    "Run make setup-live2d-vendor, then reload Avatar Lab.",
+  );
 }
 
 function isCubismBridgeModule(value: unknown): value is CubismBridgeModule {

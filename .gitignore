@@ -19,6 +19,7 @@ apps/web/playwright-report/
 apps/web/test-results/
 apps/web/blob-report/
 vendor/live2d/CubismWebFramework/
+vendor/live2d/CubismWebSamples/
 vendor/live2d/Core/
 vendor/live2d/model/
 apps/web/public/vendor/live2d/

@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-live2d-framework check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -60,6 +60,14 @@ test-runtime:
 
 setup-live2d-framework:
 	bash tools/setup_live2d_framework.sh
+
+setup-live2d-vendor: setup-live2d-framework
+	$(UV) run python tools/setup_live2d_vendor.py $(LIVE2D_SETUP_ARGS)
+	$(MAKE) build-live2d-bridge
+	$(MAKE) check-live2d-vendor
+
+build-live2d-bridge:
+	$(PNPM) --filter @chatwaifu/web exec vite build --config ../../tools/live2d_bridge/vite.config.mts
 
 check-live2d-vendor:
 	node tools/check_live2d_vendor.mjs

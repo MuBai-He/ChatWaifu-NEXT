@@ -37,6 +37,8 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
   private contextLosses = 0;
   private lastFrameAt: number | null = null;
   private lastError: AvatarWarning | undefined;
+  private requestedSize: [number, number, number] | null = null;
+  private disposed = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -50,10 +52,17 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
   }
 
   async load(manifest: AvatarManifest): Promise<void> {
+    if (this.disposed) throw new Error("Live2D renderer is disposed.");
     this.status = "loading";
     this.manifest = manifest;
     try {
-      this.bridge = await this.modelLoader.load(this.canvas, manifest);
+      const bridge = await this.modelLoader.load(this.canvas, manifest);
+      if (this.disposed) {
+        bridge.dispose();
+        throw new Error("Live2D renderer was disposed during model loading.");
+      }
+      this.bridge = bridge;
+      if (this.requestedSize) this.bridge.resize(...this.requestedSize);
       this.motionLayer = new Live2DMotionLayer(this.bridge, this.onMotionEnded);
       this.expressionMixer = new Live2DExpressionMixer(this.bridge);
       this.gazeController = new Live2DGazeController(this.bridge);
@@ -61,7 +70,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
       this.lastFrameAt = null;
       this.status = "ready";
     } catch (error: unknown) {
-      this.status = "error";
+      if (!this.disposed) this.status = "error";
       throw error;
     }
   }
@@ -70,6 +79,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
     this.lipSyncDriver?.reset();
     this.motionLayer?.reset();
     await this.bridge?.unload();
+    this.bridge?.dispose();
     this.clearBridge();
     this.status = "idle";
   }
@@ -95,6 +105,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
   }
 
   resize(width: number, height: number, dpr: number): void {
+    this.requestedSize = [width, height, dpr];
     this.bridge?.resize(width, height, dpr);
   }
 
@@ -108,6 +119,8 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     this.lipSyncDriver?.reset();
     this.bridge?.dispose();
     this.clearBridge();
