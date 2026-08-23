@@ -1,7 +1,9 @@
 import {
   AVATAR_LAB_MANIFEST,
+  LIVE2D_LAB_MANIFEST,
   AvatarController,
   FakeAvatarRenderer,
+  Live2DAvatarRenderer,
   SilentLipSyncSource,
   SyntheticLipSyncSource,
   type AvatarControllerSnapshot,
@@ -15,19 +17,50 @@ export function useChatAvatar() {
   const [snapshot, setSnapshot] = useState<AvatarControllerSnapshot | null>(
     null,
   );
+  const [rendererKind, setRendererKind] = useState<"live2d" | "fake">("live2d");
+  const [avatarWarning, setAvatarWarning] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const renderer = new FakeAvatarRenderer(canvas);
-    const controller = new AvatarController(renderer, AVATAR_LAB_MANIFEST);
+    let disposed = false;
+    setSnapshot(null);
+    const manifest =
+      rendererKind === "live2d" ? LIVE2D_LAB_MANIFEST : AVATAR_LAB_MANIFEST;
+    const renderer =
+      rendererKind === "live2d"
+        ? new Live2DAvatarRenderer(canvas)
+        : new FakeAvatarRenderer(canvas);
+    const controller = new AvatarController(renderer, manifest);
     controllerRef.current = controller;
     const unsubscribe = controller.subscribe(setSnapshot);
-    void controller.load();
+
+    void controller.load().then(
+      () => {
+        if (!disposed && rendererKind === "live2d") setAvatarWarning(null);
+      },
+      (error: unknown) => {
+        if (disposed) return;
+        if (rendererKind === "live2d") {
+          setAvatarWarning(
+            error instanceof Error
+              ? error.message
+              : "Live2D unavailable; using the deterministic fallback.",
+          );
+          setRendererKind("fake");
+          return;
+        }
+        setAvatarWarning(
+          error instanceof Error
+            ? error.message
+            : "The fallback avatar renderer could not be loaded.",
+        );
+      },
+    );
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
-      controller.resize(
+      controllerRef.current?.resize(
         bounds.width || 420,
         bounds.height || 420,
         window.devicePixelRatio || 1,
@@ -38,12 +71,13 @@ export function useChatAvatar() {
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
     observer?.observe(canvas);
     return () => {
+      disposed = true;
       observer?.disconnect();
       unsubscribe();
       controller.dispose();
-      controllerRef.current = null;
+      if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, []);
+  }, [rendererKind]);
 
   const applyCue = useCallback((cue: AvatarCue) => {
     controllerRef.current?.applyCue(cue);
@@ -82,6 +116,8 @@ export function useChatAvatar() {
   return {
     canvasRef,
     snapshot,
+    rendererKind,
+    avatarWarning,
     applyCue,
     startLipSync,
     stopLipSync,

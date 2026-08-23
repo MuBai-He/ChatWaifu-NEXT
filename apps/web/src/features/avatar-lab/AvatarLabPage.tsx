@@ -37,6 +37,7 @@ export function AvatarLabPage() {
 
       <div className="lab-layout">
         <AvatarViewport
+          key={rendererKind}
           canvasRef={lab.canvasRef}
           snapshot={lab.snapshot}
           onResize={lab.resize}

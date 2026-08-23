@@ -1,4 +1,13 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 import { expect, test } from "@playwright/test";
+
+const realVendorReady = [
+  "public/vendor/live2d/live2dcubismcore.min.js",
+  "public/vendor/live2d/chatwaifu-live2d-bridge.js",
+  "public/vendor/live2d/model/avatar.model3.json",
+].every((relativePath) => existsSync(path.resolve(relativePath)));
 
 test("Avatar Lab runs independently with semantic cues, hit testing, and screenshots", async ({
   page,
@@ -56,6 +65,9 @@ test("Avatar Lab runs independently with semantic cues, hit testing, and screens
 test("missing proprietary Cubism Core produces an actionable error", async ({
   page,
 }) => {
+  await page.route("**/vendor/live2d/live2dcubismcore.min.js", (route) =>
+    route.abort(),
+  );
   await page.goto("/avatar-lab");
   await page.getByLabel("Renderer").selectOption("live2d");
 
@@ -65,4 +77,51 @@ test("missing proprietary Cubism Core produces an actionable error", async ({
   await expect(page.getByTestId("renderer-error")).toContainText(
     "vendor/live2d/README.md",
   );
+});
+
+test("official bridge renders the locally supplied Live2D model", async ({
+  page,
+}, testInfo) => {
+  test.skip(!realVendorReady, "local licensed Live2D vendor assets are absent");
+
+  await page.goto("/avatar-lab");
+  await page.getByLabel("Renderer").selectOption("live2d");
+  await expect(page.getByTestId("renderer-status")).toContainText("ready", {
+    timeout: 25_000,
+  });
+  await expect(
+    page
+      .locator(".telemetry-grid > div")
+      .filter({ hasText: "Resources" })
+      .locator("strong"),
+  ).not.toHaveText("0");
+
+  await page.getByRole("button", { name: "happy" }).click();
+  await page.getByRole("button", { name: "nod" }).click();
+  await expect(page.getByTestId("semantic-state")).toContainText("happy");
+
+  const screenshot = await page.getByTestId("avatar-canvas").screenshot({
+    animations: "disabled",
+    path: testInfo.outputPath("live2d-natori.png"),
+  });
+  expect(screenshot.byteLength).toBeGreaterThan(20_000);
+});
+
+test("main chat uses the installed Live2D renderer", async ({
+  page,
+}, testInfo) => {
+  test.skip(!realVendorReady, "local licensed Live2D vendor assets are absent");
+
+  await page.goto("/");
+  await expect(page.locator(".avatar-state")).toContainText("Live2D · idle", {
+    timeout: 25_000,
+  });
+  await page.getByRole("button", { name: "Touch avatar" }).click();
+  await expect(page.locator(".avatar-state")).toContainText("happy");
+
+  const screenshot = await page.locator(".avatar-frame canvas").screenshot({
+    animations: "disabled",
+    path: testInfo.outputPath("chat-live2d-natori.png"),
+  });
+  expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });

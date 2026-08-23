@@ -7,6 +7,8 @@ import App from "./App";
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
   snapshot: null,
+  rendererKind: "fake" as const,
+  avatarWarning: null,
   touch: vi.fn(),
   health: {
     status: "ok" as const,

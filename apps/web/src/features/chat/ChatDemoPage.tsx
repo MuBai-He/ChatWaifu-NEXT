@@ -5,6 +5,8 @@ export function ChatDemoPage() {
   const {
     canvasRef,
     snapshot,
+    rendererKind,
+    avatarWarning,
     touch,
     health,
     character,
@@ -71,12 +73,19 @@ export function ChatDemoPage() {
             onClick={touch}
             aria-label="Touch avatar"
           >
-            <canvas ref={canvasRef} />
+            <canvas key={rendererKind} ref={canvasRef} />
             <span className="avatar-state">
+              {rendererKind === "live2d" ? "Live2D" : "Fallback"} ·{" "}
               {snapshot?.runtime.state ?? "loading"} ·{" "}
               {snapshot?.runtime.expression ?? "neutral"}
             </span>
           </button>
+
+          {avatarWarning ? (
+            <p className="avatar-warning" title={avatarWarning}>
+              Live2D 未就绪，当前使用安全回退
+            </p>
+          ) : null}
 
           <div className="character-actions">
             <button

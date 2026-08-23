@@ -180,6 +180,13 @@
   backdrop-filter: blur(12px);
 }
 
+.avatar-warning {
+  margin: -0.55rem 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
 .character-actions {
   position: relative;
   z-index: 2;
