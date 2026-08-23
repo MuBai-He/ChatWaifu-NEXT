@@ -29,8 +29,9 @@ make demo DEMO_ARGS=--no-open
 
 首次启动会下载公开的多语言 `faster-whisper base` 模型（约 150 MB），之后复用
 `.local/models/faster-whisper/` 缓存。模型推理在独立 worker 中运行，麦克风音频不会发往
-云端。页面就绪后点击“开启语音”并允许麦克风；说完约 650 ms 后自动结束回合，不需要再按
-发送。
+云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
+VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式
+也会听到旁边人的话，适合安静、独处的环境。
 
 Demo 默认使用明确标注的离线 Demo LLM。在 macOS 上，`tts.provider=auto` 会选择系统
 `say` 的 `Tingting` 中文语音；CI 或缺少系统语音工具的平台回退到 `fake` 测试音。真实本地
@@ -45,9 +46,10 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 ## Demo 能做什么
 
 - WebSocket 增量文本和 SQLite append-only 事件流
-- 浏览器麦克风与输入设备选择、实时音量计、Silero VAD 和本地 faster-whisper 转写
+- 浏览器麦克风与输入设备选择、默认按住说话、可选自由对话、Silero VAD 和本地
+  faster-whisper 转写
 - Pipecat SmallWebRTC 双向音频；分段生成本地 WAV 后通过远端音轨播放
-- 开口抢话或点击“打断”会取消旧 generation、丢弃迟到输出并清空播放队列
+- 按住说话时开口抢话，或点击“打断”，会取消旧 generation、丢弃迟到输出并清空播放队列
 - 桌面页面固定为显示区域高度，右侧历史独立滚动，左侧 Live2D 始终留在视口内
 - “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
 - `AvatarCue` 驱动 thinking、speaking、idle 与口型状态

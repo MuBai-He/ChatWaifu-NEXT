@@ -4,6 +4,7 @@
 
 ```text
 browser getUserMedia (mono, EC/NS/AGC)
+  -> browser activation gate (push-to-talk by default; open mic is explicit)
   -> WebRTC offer/answer on loopback
   -> Pipecat SmallWebRTC input
   -> Silero VAD
@@ -18,6 +19,23 @@ browser getUserMedia (mono, EC/NS/AGC)
 The browser never calls STT, LLM, or TTS providers. Pipecat owns media transport, VAD frames,
 interruption frames, and transport teardown; it does not own sessions, character policy, memory,
 skills, or generation truth.
+
+## Activation and VAD boundary
+
+VAD answers “is this audio speech?” and “where did this utterance end?” It cannot answer “was this
+speech addressed to ChatWaifu?” Threshold tuning alone therefore cannot distinguish a command from
+a conversation with another person nearby.
+
+The browser defaults to `push_to_talk`. Its outbound audio track is disabled before and after a
+press and enabled only while the control is held; releasing it produces silence so Runtime VAD can
+close the current utterance normally. `open_mic` is an explicit opt-in for quiet, single-user rooms
+and warns that nearby speech may start a turn or interrupt current output. Both modes retain the
+same WebRTC, VAD, STT, identity, and cancellation contracts.
+
+A later hands-free attention layer may combine a local wake word, a short armed-conversation window,
+and optional enrolled-speaker verification. Semantic addressee classification can be an additional
+signal after STT, but it must not be the sole privacy or interruption gate. This attention layer is
+not claimed as implemented in the current demo.
 
 ## Identity and cancellation
 

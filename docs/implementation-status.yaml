@@ -107,6 +107,7 @@ phases:
     evidence:
       - Pipecat 1.7 is pinned behind a ChatWaifu-owned SmallWebRTC adapter
       - Browser getUserMedia provides device selection, input meter, echo cancellation, and one audio peer
+      - Browser push-to-talk is the safe default capture gate; continuous open mic is an explicit warned opt-in
       - Silero VAD emits typed speech lifecycle events and bounds utterance buffering with pre-roll
       - Remote Runtime TTS is generation-gated and delivered through the WebRTC audio track
       - Real aiortc validation received non-silent remote audio after a local microphone-equivalent input

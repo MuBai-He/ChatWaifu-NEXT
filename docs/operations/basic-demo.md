@@ -39,10 +39,12 @@ session and WebSocket so the user can start again immediately.
 
 1. Confirm header says `Runtime online`.
 2. Confirm the header reports `STT · faster_whisper_worker`.
-3. Click `开启语音`, allow microphone access, speak one sentence, and stop speaking. Confirm the UI
-   moves through listening, transcription, thinking, then shows a final user message and remote TTS.
-4. Speak again while the character is responding; confirm old audio stops and only the new reply
-   continues. The explicit `打断` button must produce the same no-stale-output result.
+3. Click `开启语音`, allow microphone access, hold `按住说话`, speak one sentence, then release it.
+   Confirm the UI moves through listening, transcription, thinking, then shows a final user message
+   and remote TTS. Confirm nearby speech does not move the meter or start a turn while the button is
+   not held.
+4. Hold `按住说话` and speak while the character is responding; confirm old audio stops and only the
+   new reply continues. The explicit `打断` button must produce the same no-stale-output result.
 5. Send `请记住我喜欢蓝色`, reload or create another session, and ask what it remembers.
 6. Send `请忘记我喜欢蓝色` and confirm the active memory card becomes empty.
 7. Run `运行状态 Skill` and compare provider names with the header.
@@ -50,6 +52,10 @@ session and WebSocket so the user can start again immediately.
    the transcript moves.
 9. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
    can be sent in the same session.
+
+`按住说话` is the safe default. `自由对话（会听到附近人声）` keeps the outbound track enabled and
+is intended for quiet, single-user environments. Silero VAD detects speech boundaries, not whether
+speech is addressed to the character, so open-mic behavior must not be described as addressee-aware.
 
 `make dev-runtime` intentionally keeps STT disabled unless a separately managed authenticated worker
 and `CHATWAIFU_STT__*` environment values are supplied. Use `make demo` for the supported voice path.
