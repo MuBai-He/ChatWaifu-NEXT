@@ -25,6 +25,7 @@ import type {
 } from "./types";
 import { GenerationAudioPlayer } from "./audioPlayer";
 import { useChatAvatar } from "./useChatAvatar";
+import { useVoiceInput } from "./useVoiceInput";
 
 const SESSION_KEY = "chatwaifu.next.session_id";
 
@@ -48,8 +49,23 @@ export function useChatSession() {
   const [error, setError] = useState<string | null>(null);
   const [skillSummary, setSkillSummary] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [voiceActivity, setVoiceActivity] = useState<
+    "idle" | "listening" | "transcribing" | "thinking"
+  >("idle");
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const activeGeneration = useRef<string | null>(null);
+  const voiceConnected = useRef(false);
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
+
+  const onVoiceConnectionChange = useCallback((connected: boolean) => {
+    voiceConnected.current = connected;
+    if (!connected) setVoiceActivity("idle");
+  }, []);
+  const voice = useVoiceInput({
+    sessionId,
+    onError: setError,
+    onConnectionChange: onVoiceConnectionChange,
+  });
 
   const getAudioPlayer = useCallback(() => {
     if (!audioPlayer.current && typeof Audio !== "undefined") {
@@ -77,6 +93,26 @@ export function useChatSession() {
     (event: RuntimeEvent) => {
       const generationId = event.generation_id ?? undefined;
       switch (event.event_type) {
+        case "user.speech_started": {
+          const previousGeneration = activeGeneration.current;
+          if (previousGeneration) stopAudio(previousGeneration);
+          setVoiceActivity("listening");
+          setVoiceTranscript(null);
+          break;
+        }
+        case "user.speech_stopped": {
+          setVoiceActivity("transcribing");
+          break;
+        }
+        case "user.transcript_partial": {
+          setVoiceTranscript(payloadText(event.payload.text));
+          break;
+        }
+        case "user.transcript_final": {
+          setVoiceTranscript(payloadText(event.payload.text));
+          setVoiceActivity("thinking");
+          break;
+        }
         case "user.turn_committed": {
           setMessages((current) => [
             ...current,
@@ -90,6 +126,7 @@ export function useChatSession() {
         }
         case "assistant.generation_started": {
           if (!generationId) break;
+          setVoiceActivity("thinking");
           activeGeneration.current = generationId;
           setMessages((current) => [
             ...current,
@@ -120,6 +157,10 @@ export function useChatSession() {
         case "assistant.audio_chunk_queued": {
           if (!generationId || generationId !== activeGeneration.current) break;
           const payload = event.payload as unknown as AudioPayload;
+          if (voiceConnected.current) {
+            startLipSync();
+            break;
+          }
           getAudioPlayer()?.enqueue({
             generationId,
             url: `${RUNTIME_URL}${payload.url}`,
@@ -142,6 +183,11 @@ export function useChatSession() {
             ),
           );
           void getMemory().then(setMemories);
+          setVoiceActivity("idle");
+          setVoiceTranscript(null);
+          if (voiceConnected.current) {
+            window.setTimeout(stopLipSync, 450);
+          }
           break;
         }
         case "assistant.generation_cancelled":
@@ -155,6 +201,7 @@ export function useChatSession() {
             ),
           );
           activeGeneration.current = null;
+          setVoiceActivity("idle");
           break;
         }
         case "system.error_raised": {
@@ -165,7 +212,7 @@ export function useChatSession() {
         }
       }
     },
-    [applyCue, getAudioPlayer, stopAudio],
+    [applyCue, getAudioPlayer, startLipSync, stopAudio, stopLipSync],
   );
 
   useEffect(() => {
@@ -332,6 +379,16 @@ export function useChatSession() {
     error,
     skillSummary,
     resetting,
+    voiceState: voice.state,
+    voiceConnected: voice.connected,
+    voiceDevices: voice.devices,
+    voiceDeviceId: voice.deviceId,
+    voiceInputLevel: voice.inputLevel,
+    voiceActivity,
+    voiceTranscript,
+    setVoiceDeviceId: voice.setDeviceId,
+    refreshVoiceDevices: voice.refreshDevices,
+    toggleVoice: voice.toggle,
     send,
     interruptActive,
     checkStatus,

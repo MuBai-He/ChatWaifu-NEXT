@@ -11,6 +11,9 @@ from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.providers.factory import build_providers
+from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
+from chatwaifu_runtime.realtime.service import VoiceMediaService
+from chatwaifu_runtime.realtime.stt import DisabledSttBackend
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -40,6 +43,17 @@ class RuntimeContainer:
             self.characters,
             self.memory,
         )
+        self.stt = DisabledSttBackend()
+        self.voice_media = VoiceMediaService(
+            PipecatMediaAdapter(
+                config=settings.realtime,
+                publisher=self.event_publisher,
+                event_hub=self.event_hub,
+                conversation=self.conversation,
+                audio_assets=self.audio_assets,
+                stt=self.stt,
+            )
+        )
         self._started = False
 
     async def start(self) -> None:
@@ -60,6 +74,8 @@ class RuntimeContainer:
         if not self._started:
             return
         self._started = False
+        await self.voice_media.close()
+        await self.stt.close()
         await self.conversation.stop()
         await self.event_hub.close()
         await self.database.close()

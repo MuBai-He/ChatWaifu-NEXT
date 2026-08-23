@@ -36,3 +36,29 @@ class ResetSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     confirm: Literal[True]
+
+
+class WebRtcOfferRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sdp: str = Field(min_length=1, max_length=1_000_000)
+    type: Literal["offer"] = "offer"
+    pc_id: str | None = Field(default=None, min_length=1, max_length=256)
+    restart_pc: bool = False
+
+
+class WebRtcIceCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candidate: str = Field(max_length=16_384)
+    sdp_mid: str = Field(min_length=1, max_length=64)
+    sdp_mline_index: int = Field(ge=0, le=64)
+
+
+class WebRtcPatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pc_id: str = Field(min_length=1, max_length=256)
+    candidates: list[WebRtcIceCandidate] = Field(
+        default_factory=lambda: list[WebRtcIceCandidate](), max_length=32
+    )

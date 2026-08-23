@@ -68,6 +68,20 @@ class TtsConfig(BaseModel):
     timeout_seconds: float = Field(default=30.0, gt=0, le=300)
 
 
+class RealtimeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enabled: bool = True
+    input_sample_rate: int = Field(default=16_000, ge=8_000, le=48_000)
+    output_sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
+    vad_confidence: float = Field(default=0.7, ge=0, le=1)
+    vad_start_ms: int = Field(default=160, ge=0, le=2_000)
+    vad_stop_ms: int = Field(default=650, ge=50, le=5_000)
+    pre_roll_ms: int = Field(default=320, ge=0, le=2_000)
+    max_utterance_seconds: int = Field(default=30, ge=1, le=120)
+    echo_enabled: bool = False
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -88,6 +102,7 @@ class Settings(BaseSettings):
     security: SecurityConfig = SecurityConfig()
     llm: LlmConfig = LlmConfig()
     tts: TtsConfig = TtsConfig()
+    realtime: RealtimeConfig = RealtimeConfig()
 
     @model_validator(mode="after")
     def validate_local_bind(self) -> Self:

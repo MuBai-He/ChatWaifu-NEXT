@@ -13,6 +13,8 @@ from chatwaifu_runtime.api.models import (
     ResetSessionRequest,
     RuntimeHealth,
     SubmitTextRequest,
+    WebRtcOfferRequest,
+    WebRtcPatchRequest,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 
@@ -66,11 +68,53 @@ async def get_session(request: Request, session_id: UUID) -> dict[str, object]:
 @router.delete("/sessions/{session_id}")
 async def close_session(request: Request, session_id: UUID) -> dict[str, object]:
     try:
+        await _container(request).voice_media.close_session(session_id)
         await _container(request).conversation.cancel(session_id, "session_closing")
         snapshot = await _container(request).sessions.close_session(session_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="session not found") from error
     return snapshot.model_dump(mode="json")
+
+
+@router.post("/sessions/{session_id}/webrtc/offer")
+async def create_webrtc_offer(
+    request: Request,
+    session_id: UUID,
+    body: WebRtcOfferRequest,
+) -> dict[str, str]:
+    container = _container(request)
+    session = await container.sessions.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    if not container.settings.realtime.enabled:
+        raise HTTPException(status_code=503, detail="realtime media is disabled")
+    try:
+        return await container.voice_media.offer(
+            session_id,
+            sdp=body.sdp,
+            type=body.type,
+            pc_id=body.pc_id,
+            restart_pc=body.restart_pc,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.patch("/webrtc/offer")
+async def patch_webrtc_offer(request: Request, body: WebRtcPatchRequest) -> dict[str, str]:
+    await _container(request).voice_media.patch(
+        pc_id=body.pc_id,
+        candidates=[
+            (item.candidate, item.sdp_mid, item.sdp_mline_index) for item in body.candidates
+        ],
+    )
+    return {"status": "accepted"}
+
+
+@router.delete("/sessions/{session_id}/webrtc")
+async def close_webrtc_session(request: Request, session_id: UUID) -> dict[str, object]:
+    closed = await _container(request).voice_media.close_session(session_id)
+    return {"session_id": str(session_id), "connections_closed": closed}
 
 
 @router.get("/sessions/{session_id}/events")

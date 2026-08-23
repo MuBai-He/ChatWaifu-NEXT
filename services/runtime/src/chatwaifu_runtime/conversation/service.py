@@ -82,6 +82,33 @@ class ConversationService:
         self._start_lock = asyncio.Lock()
 
     async def submit_text(self, session_id: UUID, text: str) -> GenerationAccepted:
+        return await self._submit(session_id, text, turn_id=uuid4(), generation_id=uuid4())
+
+    async def submit_voice_transcript(
+        self,
+        session_id: UUID,
+        text: str,
+        *,
+        turn_id: UUID,
+        generation_id: UUID,
+    ) -> GenerationAccepted:
+        """Commit a VAD/STT turn using the identity allocated at speech start."""
+
+        return await self._submit(
+            session_id,
+            text,
+            turn_id=turn_id,
+            generation_id=generation_id,
+        )
+
+    async def _submit(
+        self,
+        session_id: UUID,
+        text: str,
+        *,
+        turn_id: UUID,
+        generation_id: UUID,
+    ) -> GenerationAccepted:
         normalized = text.strip()
         if not normalized:
             raise ValueError("message text must not be blank")
@@ -92,7 +119,12 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
-            accepted, events = await self._commit_user_turn(session_id, normalized)
+            accepted, events = await self._commit_user_turn(
+                session_id,
+                normalized,
+                turn_id=turn_id,
+                generation_id=generation_id,
+            )
             for event in events:
                 await self._publisher.publish_persisted(event)
             await self._memory.apply_explicit_command(session_id, accepted.turn_id, normalized)
@@ -117,6 +149,12 @@ class ConversationService:
         except asyncio.CancelledError:
             pass
         return True
+
+    def active_generation_id(self, session_id: UUID) -> UUID | None:
+        active = self._active.get(session_id)
+        if active is None or active.task.done():
+            return None
+        return active.generation_id
 
     async def reset(self, session_id: UUID) -> SessionDataReset:
         """Return a ready session to a clean local-demo state."""
@@ -180,11 +218,14 @@ class ConversationService:
         return [dict(row) for row in rows]
 
     async def _commit_user_turn(
-        self, session_id: UUID, text: str
+        self,
+        session_id: UUID,
+        text: str,
+        *,
+        turn_id: UUID,
+        generation_id: UUID,
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
-        turn_id = uuid4()
-        generation_id = uuid4()
         async with self._database.transaction() as connection:
             await connection.execute(
                 """

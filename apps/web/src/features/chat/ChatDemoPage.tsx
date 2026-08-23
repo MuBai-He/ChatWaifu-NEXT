@@ -17,6 +17,16 @@ export function ChatDemoPage() {
     error,
     skillSummary,
     resetting,
+    voiceState,
+    voiceConnected,
+    voiceDevices,
+    voiceDeviceId,
+    voiceInputLevel,
+    voiceActivity,
+    voiceTranscript,
+    setVoiceDeviceId,
+    refreshVoiceDevices,
+    toggleVoice,
     send: sendMessage,
     interruptActive,
     checkStatus,
@@ -158,6 +168,46 @@ export function ChatDemoPage() {
             </div>
           </div>
 
+          <div className={`voice-bar ${voiceConnected ? "active" : ""}`}>
+            <button
+              className="microphone-button"
+              type="button"
+              onClick={() => void toggleVoice()}
+              disabled={
+                !sessionId ||
+                connection !== "connected" ||
+                resetting ||
+                voiceState === "unsupported"
+              }
+              aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
+              aria-pressed={voiceConnected}
+            >
+              <span>{voiceConnected ? "●" : "◉"}</span>
+              {voiceConnected ? "语音已连接" : "开启语音"}
+            </button>
+            <div className="input-meter" aria-label="麦克风音量">
+              <i style={{ transform: `scaleX(${voiceInputLevel})` }} />
+            </div>
+            <select
+              value={voiceDeviceId}
+              onFocus={() => void refreshVoiceDevices()}
+              onChange={(event) => setVoiceDeviceId(event.target.value)}
+              disabled={voiceConnected || voiceState === "unsupported"}
+              aria-label="选择麦克风"
+            >
+              {voiceDevices.length === 0 ? (
+                <option value="">默认麦克风</option>
+              ) : (
+                voiceDevices.map((device) => (
+                  <option value={device.deviceId} key={device.deviceId}>
+                    {device.label}
+                  </option>
+                ))
+              )}
+            </select>
+            <small>{voiceStatusLabel(voiceState, voiceActivity)}</small>
+          </div>
+
           <div className="transcript" ref={transcriptRef} aria-live="polite">
             {messages.length === 0 && (
               <article className="message assistant welcome-message">
@@ -199,6 +249,15 @@ export function ChatDemoPage() {
             </div>
           )}
 
+          {voiceTranscript && voiceActivity !== "idle" ? (
+            <div className="voice-transcript" aria-live="polite">
+              <span>
+                {voiceActivity === "transcribing" ? "转写中" : "听到"}
+              </span>
+              {voiceTranscript}
+            </div>
+          ) : null}
+
           <form
             className="composer"
             onSubmit={(event) => {
@@ -237,4 +296,25 @@ export function ChatDemoPage() {
       </div>
     </main>
   );
+}
+
+function voiceStatusLabel(
+  state:
+    | "unsupported"
+    | "disconnected"
+    | "requesting"
+    | "connecting"
+    | "connected"
+    | "failed",
+  activity: "idle" | "listening" | "transcribing" | "thinking",
+): string {
+  if (state === "unsupported") return "当前浏览器不支持 WebRTC 麦克风";
+  if (state === "requesting") return "等待麦克风权限";
+  if (state === "connecting") return "正在建立本地 WebRTC";
+  if (state === "failed") return "连接失败，可再次尝试";
+  if (state !== "connected") return "点击后允许麦克风权限";
+  if (activity === "listening") return "正在聆听…";
+  if (activity === "transcribing") return "本地转写中…";
+  if (activity === "thinking") return "已自动结束回合";
+  return "VAD 已就绪，可直接说话";
 }

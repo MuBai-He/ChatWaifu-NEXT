@@ -24,7 +24,7 @@ async def test_concurrent_append_assigns_unique_monotonic_sequences(
             event = await container.event_store.append(
                 GenericCoreEvent(
                     event_id=uuid4(),
-                    event_type="user.transcript_final",
+                    event_type="assistant.text_delta",
                     session_id=session.session_id,
                     occurred_at=datetime.now(UTC),
                     source="test",

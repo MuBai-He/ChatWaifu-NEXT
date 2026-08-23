@@ -23,3 +23,14 @@ voice = "Tingting"
 sample_rate = 24000
 rate = 190
 timeout_seconds = 30
+
+[realtime]
+enabled = true
+input_sample_rate = 16000
+output_sample_rate = 24000
+vad_confidence = 0.7
+vad_start_ms = 160
+vad_stop_ms = 650
+pre_roll_ms = 320
+max_utterance_seconds = 30
+echo_enabled = false
