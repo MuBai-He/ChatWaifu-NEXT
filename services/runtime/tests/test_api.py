@@ -165,6 +165,77 @@ def test_explicit_memory_survives_sessions_and_forget_tombstones(client: TestCli
     assert history_items[0]["state"] == "tombstoned"
 
 
+def test_reset_clears_conversation_memory_events_and_audio(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "请记住我喜欢蓝色")
+    _submit_and_wait(http, session_id, "请忘记我喜欢蓝色")
+    _submit_and_wait(http, session_id, "请记住我喜欢紫色")
+
+    assert (
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
+        == 6
+    )
+    assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 1
+    assert len(list((runtime_settings.data_dir / "audio").glob("*.wav"))) > 0
+    rejected = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": False})
+    assert rejected.status_code == 422
+
+    reset = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
+    assert reset.status_code == 200
+    result = cast(dict[str, object], reset.json())
+    assert result["turns_deleted"] == 6
+    assert int(str(result["events_deleted"])) > 0
+    assert result["memories_deleted"] == 2
+    assert int(str(result["audio_assets_deleted"])) > 0
+    assert (
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
+        == 0
+    )
+    assert (
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["count"] == 0
+    )
+    assert (
+        cast(dict[str, object], http.get("/v1/memory?include_tombstoned=true").json())["count"] == 0
+    )
+    assert list((runtime_settings.data_dir / "audio").glob("*.wav")) == []
+
+    _submit_and_wait(http, session_id, "重新开始")
+    fresh_events = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
+    )
+    assert fresh_events[0]["sequence"] == 1
+
+
+def test_reset_cancels_an_active_generation(runtime_settings: Settings) -> None:
+    slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1000})
+    settings = runtime_settings.model_copy(update={"llm": slow_llm})
+    with TestClient(create_app(settings)) as client:
+        http = cast(RuntimeHttpClient, client)
+        session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+        session_id = str(session["session_id"])
+        accepted = http.post(
+            f"/v1/sessions/{session_id}/turns", json={"text": "重置这条进行中的回复"}
+        )
+        assert accepted.status_code == 202
+
+        reset = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
+        assert reset.status_code == 200
+        assert cast(dict[str, object], reset.json())["turns_deleted"] == 1
+        assert (
+            cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
+            == 0
+        )
+        assert (
+            cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["count"]
+            == 0
+        )
+
+
 def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)
     characters = cast(dict[str, object], http.get("/v1/characters").json())
@@ -195,7 +266,7 @@ def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str
     generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
     deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
-        events_response = http.get(f"/v1/sessions/{session_id}/events")
+        events_response = http.get(f"/v1/sessions/{session_id}/events?limit=500")
         events = cast(
             list[dict[str, object]], cast(dict[str, object], events_response.json())["items"]
         )

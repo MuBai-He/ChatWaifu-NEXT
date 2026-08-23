@@ -30,3 +30,9 @@ class InterruptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     reason: str = Field(default="user_interruption", min_length=1, max_length=200)
+
+
+class ResetSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirm: Literal[True]

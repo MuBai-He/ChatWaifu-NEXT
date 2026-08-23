@@ -29,3 +29,10 @@ class AudioAssetStore:
     def resolve(self, asset_id: UUID) -> Path | None:
         path = self._root / f"{asset_id}.wav"
         return path if path.is_file() else None
+
+    def clear(self) -> int:
+        removed = 0
+        for path in self._root.glob("*.wav"):
+            path.unlink(missing_ok=True)
+            removed += 1
+        return removed

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
+import aiosqlite
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.events import GenericCoreEvent
 
@@ -183,6 +184,14 @@ class MemoryService:
             f"SELECT * FROM memory_items {where} ORDER BY created_at DESC LIMIT 200"
         )
         return [_item_from_row(dict(row)) for row in rows]
+
+    async def clear_all_in_transaction(self, connection: aiosqlite.Connection) -> int:
+        """Delete active and tombstoned memories inside an owning transaction."""
+
+        cursor = await connection.execute("DELETE FROM memory_items")
+        removed = max(cursor.rowcount, 0)
+        await cursor.close()
+        return removed
 
     async def _emit(
         self,

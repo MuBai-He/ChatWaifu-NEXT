@@ -10,6 +10,7 @@ from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
     CreateSessionRequest,
     InterruptRequest,
+    ResetSessionRequest,
     RuntimeHealth,
     SubmitTextRequest,
 )
@@ -109,6 +110,25 @@ async def interrupt_generation(
 ) -> dict[str, object]:
     interrupted = await _container(request).conversation.cancel(session_id, body.reason)
     return {"session_id": str(session_id), "interrupted": interrupted}
+
+
+@router.post("/sessions/{session_id}/reset")
+async def reset_session_data(
+    request: Request, session_id: UUID, body: ResetSessionRequest
+) -> dict[str, object]:
+    try:
+        result = await _container(request).conversation.reset(session_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="session not found") from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "session_id": str(result.session_id),
+        "turns_deleted": result.turns_deleted,
+        "events_deleted": result.events_deleted,
+        "memories_deleted": result.memories_deleted,
+        "audio_assets_deleted": result.audio_assets_deleted,
+    }
 
 
 @router.get("/sessions/{session_id}/messages")

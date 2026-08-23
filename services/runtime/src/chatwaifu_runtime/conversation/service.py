@@ -43,6 +43,15 @@ class GenerationAccepted:
     state: GenerationState
 
 
+@dataclass(frozen=True, slots=True)
+class SessionDataReset:
+    session_id: UUID
+    turns_deleted: int
+    events_deleted: int
+    memories_deleted: int
+    audio_assets_deleted: int
+
+
 @dataclass(slots=True)
 class _ActiveGeneration:
     generation_id: UUID
@@ -108,6 +117,48 @@ class ConversationService:
         except asyncio.CancelledError:
             pass
         return True
+
+    async def reset(self, session_id: UUID) -> SessionDataReset:
+        """Return a ready session to a clean local-demo state."""
+
+        async with self._start_lock:
+            session = await self._sessions.get_session(session_id)
+            if session is None:
+                raise KeyError(f"unknown session {session_id}")
+            if session.state is not SessionState.READY:
+                raise RuntimeError(f"session is not ready: {session.state}")
+            await self.cancel(session_id, "session_data_reset")
+            self._active.pop(session_id, None)
+            now = datetime.now(UTC)
+            async with self._database.transaction() as connection:
+                memories_deleted = await self._memory.clear_all_in_transaction(connection)
+                events_cursor = await connection.execute(
+                    "DELETE FROM events WHERE session_id = ?", (str(session_id),)
+                )
+                events_deleted = max(events_cursor.rowcount, 0)
+                await events_cursor.close()
+                turns_cursor = await connection.execute(
+                    "DELETE FROM turns WHERE session_id = ?", (str(session_id),)
+                )
+                turns_deleted = max(turns_cursor.rowcount, 0)
+                await turns_cursor.close()
+                await connection.execute(
+                    """
+                    UPDATE sessions
+                    SET conversation_state = 'idle', revision = revision + 1,
+                        next_sequence = 1, updated_at = ?
+                    WHERE session_id = ?
+                    """,
+                    (now.isoformat(), str(session_id)),
+                )
+            audio_assets_deleted = self._audio_assets.clear()
+            return SessionDataReset(
+                session_id=session_id,
+                turns_deleted=turns_deleted,
+                events_deleted=events_deleted,
+                memories_deleted=memories_deleted,
+                audio_assets_deleted=audio_assets_deleted,
+            )
 
     async def stop(self) -> None:
         active = tuple(self._active.values())
