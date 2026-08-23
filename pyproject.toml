@@ -9,7 +9,12 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/protocol-python", "services/runtime"]
+members = [
+  "packages/model-worker-sdk-python",
+  "packages/protocol-python",
+  "services/runtime",
+]
+exclude = ["workers/asr-faster-whisper"]
 
 [dependency-groups]
 dev = [
@@ -22,8 +27,14 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
-pythonpath = [".", "packages/protocol-python/src", "services/runtime/src"]
+pythonpath = [
+  ".",
+  "packages/model-worker-sdk-python/src",
+  "packages/protocol-python/src",
+  "services/runtime/src",
+]
 testpaths = [
+  "packages/model-worker-sdk-python/tests",
   "packages/protocol-python/tests",
   "services/runtime/tests",
   "tests/contract",
@@ -32,13 +43,19 @@ testpaths = [
 
 [tool.pyright]
 include = [
+  "packages/model-worker-sdk-python/src",
+  "packages/model-worker-sdk-python/tests",
   "packages/protocol-python/src",
   "packages/protocol-python/tests",
   "services/runtime/src",
   "services/runtime/tests",
   "tools",
 ]
-extraPaths = ["packages/protocol-python/src", "services/runtime/src"]
+extraPaths = [
+  "packages/model-worker-sdk-python/src",
+  "packages/protocol-python/src",
+  "services/runtime/src",
+]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."

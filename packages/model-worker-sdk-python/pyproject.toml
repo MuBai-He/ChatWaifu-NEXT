@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chatwaifu-model-worker-sdk"
+version = "0.1.0"
+description = "Versioned process protocol for isolated ChatWaifu model workers"
+requires-python = ">=3.12,<3.14"
+dependencies = ["pydantic>=2.11,<3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chatwaifu_model_worker"]
+
+[dependency-groups]
+dev = []

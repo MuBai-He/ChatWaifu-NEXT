@@ -8,6 +8,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "chatwaifu-model-worker-sdk",
     "chatwaifu-next-workspace",
     "chatwaifu-protocol",
     "chatwaifu-runtime",
@@ -286,6 +287,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/60/a6/8b149b2c3f2e11aaa1618ef64500b45f50f22c57a977a4dff1aff1f91042/cffi-2.1.1-cp313-cp313-win_amd64.whl", hash = "sha256:1aa5645c30469b09530c4ebca77ebf8f17618293c58f8549cb1a543a50236e7d", size = 185688, upload-time = "2026-08-03T21:20:14.69Z" },
     { url = "https://files.pythonhosted.org/packages/01/9a/11f687cb39d6a3504060d5242f04f48c735afb4d3d533958a20594890cb2/cffi-2.1.1-cp313-cp313-win_arm64.whl", hash = "sha256:63bbfd5ded17c4840ac07cd8f1c21ba9d9708141f840b324f422f41b207e3973", size = 180078, upload-time = "2026-08-03T21:20:15.917Z" },
 ]
+
+[[package]]
+name = "chatwaifu-model-worker-sdk"
+version = "0.1.0"
+source = { editable = "packages/model-worker-sdk-python" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.11,<3" }]
+
+[package.metadata.requires-dev]
+dev = []
 
 [[package]]
 name = "chatwaifu-next-workspace"
