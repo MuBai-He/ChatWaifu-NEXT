@@ -24,18 +24,23 @@ validation:
     - make test-runtime
     - make check-generated
     - make setup-live2d-framework
+    - make setup-live2d-vendor
+    - make build-live2d-bridge
+    - make check-live2d-vendor
     - pnpm build
     - uv run python tools/run_demo.py --no-open
     - browser live text, TTS event, memory, skill, and interruption smoke
+    - Chromium real Live2D renders in Avatar Lab and main chat
   deterministic_generation: byte_identical_on_repeat
   generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
   expected_vendor_diagnostic:
     command: make check-live2d-vendor
-    status: incomplete
-    missing:
-      - proprietary Cubism Core
-      - ChatWaifu Cubism bridge build
-      - licensed avatar model
+    status: ready_local_only
+    ready:
+      - official Framework 5-r.5
+      - locally supplied Cubism Core
+      - generated ChatWaifu Cubism bridge
+      - official Natori sample model
   remote_ci_matrix: pending_first_remote_run
 
 phases:
@@ -62,15 +67,17 @@ phases:
       - Audio control headers round-trip as bounded UTF-8 bytes
   - id: 2
     name: live2d-avatar-lab
-    status: implemented_fake_path_pending_vendor_validation_and_ci
+    status: implemented_real_local_path_pending_remote_ci
     evidence:
       - AvatarCue is reduced through a bounded layered scheduler into an AvatarRenderer
       - AvatarController owns the requestAnimationFrame loop outside React state
       - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
-      - 15 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
+      - 16 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
-      - 2 Chromium Playwright scenarios cover the full cue sequence and actionable vendor failure
+      - 4 Chromium Playwright scenarios cover cues, vendor failure, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
+      - Official Natori loads through the generated bridge with expression, motion, and hit mapping
+      - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
@@ -92,14 +99,15 @@ phases:
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
-  - Real Live2D rendering requires locally supplied Cubism Core, a bridge build, and a licensed model
+  - Live2D release packaging and a custom character require an explicit asset-license review
   - Voice input STT/VAD, full-duplex Pipecat/WebRTC, and packaged Tauri delivery are not in the basic Demo
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
   live2d_core_committed: false
   live2d_framework_release: "5-r.5"
-  live2d_real_renderer_validated: false
+  live2d_real_renderer_validated: true
+  live2d_real_renderer_validation_scope: local_chromium_natori
   pipecat_dependency_added: false
   runtime_server_implemented: true
   database_business_tables_implemented: true

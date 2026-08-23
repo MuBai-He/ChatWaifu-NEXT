@@ -6,9 +6,9 @@ Phase 2 adds an isolated browser laboratory at `/avatar-lab`. It proves the sema
 contract, deterministic scheduling, renderer lifecycle, audio-driven mouth input, semantic hit
 events, and observability without starting Runtime, Pipecat, Tauri, or an AI model SDK.
 
-The Fake/CI path is implemented and locally validated. The real Cubism path has an official-SDK
-adapter boundary and vendor diagnostics, but cannot be claimed as rendered until the owner supplies
-Cubism Core, a bridge build, and a licensed model.
+The Fake/CI path and the real Cubism path are both implemented and locally validated. The real path
+uses the user-supplied Cubism SDK for Web 5 R5 and its Natori sample model; all licensed inputs and
+generated artifacts remain Git-ignored and are not remote-CI inputs.
 
 ## Ownership
 
@@ -53,10 +53,11 @@ versioned semantic `AvatarInteractionEvent`; business code never receives raw Cu
 ## Live2D vendor boundary
 
 The repository pins the official public Cubism Web Framework `5-r.5` at commit
-`198a3769c26ca3d7b600e932590433badd392edd`. `make setup-live2d-framework` fetches it into an ignored
-directory and verifies the commit. Cubism Core, the browser bridge build, and character assets are
-not committed. `make check-live2d-vendor` reports each missing item and the Web UI surfaces the same
-condition without crashing.
+`198a3769c26ca3d7b600e932590433badd392edd`. `make setup-live2d-vendor` detects the SDK in Downloads,
+fetches and verifies the Framework, stages Core/sample inputs in ignored directories, builds the
+browser bridge, installs Natori, and verifies the result. The bridge maps semantic emotions,
+motions, gaze, mouth openness, and hit areas to the official SDK Demo adapter without exposing
+model-specific parameters to React.
 
 Setup details and official source links are in `vendor/live2d/README.md`.
 
@@ -66,7 +67,8 @@ Setup details and official source links are in `vendor/live2d/README.md`.
   controller pre-ready behavior, lip-sync clamping, official bridge mapping, hit mapping, missing
   Core, and 50 renderer load/unload cycles.
 - Playwright covers the complete semantic acceptance sequence, hit interaction, screenshot output,
-  and the missing-Core error path in Chromium.
-- CI installs Chromium and uses only `FakeAvatarRenderer`; proprietary artifacts are not CI inputs.
-- The real Live2D renderer remains `pending_vendor_validation` until all three local artifacts are
-  supplied and an actual model load/render/unload cycle is recorded.
+  the missing-Core error path, a real Natori render in Avatar Lab, and a real render in main chat.
+- CI installs Chromium and uses only `FakeAvatarRenderer`; licensed vendor artifacts are not CI
+  inputs, so real-render scenarios skip when those files are absent.
+- Local Chromium records actual Natori model load, expression/motion changes, draw output, resource
+  accounting, fallback canvas remounting, and renderer cleanup. Remote OS validation remains pending.

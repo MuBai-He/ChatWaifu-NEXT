@@ -45,7 +45,7 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 - 角色人格来自 `characters/default/character.json`
 - 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone
 - `runtime.status` Runtime Skill 通过 manifest 注册，只读返回实际 LLM/TTS/provider 状态
-- `/avatar-lab` 保留 Fake/CI 完整路径和可选 Live2D vendor 接入口
+- 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
 
 数据默认写入 `.local/data/chatwaifu.db` 与 `.local/data/audio/`，两者都不会提交到 Git。
 
@@ -62,6 +62,20 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 
 完整依据和边界见 [ADR 0012](docs/adr/0012-tiered-local-tts.md)。
 
+## Live2D 安装
+
+已解压官方 Cubism SDK for Web 5 R5 到 `~/Downloads/CubismSdkForWeb-5-r.5` 时，运行：
+
+```bash
+make setup-live2d-vendor
+make demo
+```
+
+命令会使用 SDK 内公开测试模型 Natori，构建官方 Framework 适配桥，并把 Core、桥接产物和
+模型放进 Git 忽略目录。主聊天会自动显示 Live2D；也可打开 `/avatar-lab` 验证表情、动作、
+口型与点击命中。换 SDK 路径或样例模型的方法见
+[Live2D vendor 说明](vendor/live2d/README.md)。发布或商用前仍需单独复核 Core 与模型许可。
+
 ## 常用开发命令
 
 ```bash
@@ -71,6 +85,8 @@ make dev-web            # 只启动 Web（127.0.0.1:5173）
 make test-runtime       # Runtime/API/取消/记忆专项测试
 make test-avatar        # Avatar SDK 与 Web 单元测试
 make test-e2e           # Chromium Avatar Lab 验收
+make setup-live2d-vendor # 从 Downloads 安装并构建本地 Live2D vendor
+make check-live2d-vendor # 检查 Framework/Core/桥接/模型是否齐全
 make format             # Python、TypeScript、Rust 格式化
 make lint               # Ruff、ESLint、Clippy
 make typecheck          # Pyright、tsc、cargo check
@@ -84,9 +100,9 @@ make check-generated    # 协议受控产物无漂移检查
 
 ## 当前边界
 
-这是基础可用 Demo，不声称已经完成：真实 Live2D vendor 验收、全双工 WebRTC/Pipecat、
-VAD/STT 语音输入、生产级插件沙箱、训练后的自定义音色、完整 Tauri 安装包或远端 CI 矩阵。
-这些能力都有独立边界，不会伪装成已经交付。
+这是基础可用 Demo，不声称已经完成：可再发行的 Live2D 资产包与自定义角色模型、全双工
+WebRTC/Pipecat、VAD/STT 语音输入、生产级插件沙箱、训练后的自定义音色、完整 Tauri
+安装包或远端 CI 矩阵。这些能力都有独立边界，不会伪装成已经交付。
 
 架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
 `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。

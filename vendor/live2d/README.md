@@ -1,67 +1,61 @@
 # Live2D vendor boundary
 
 ChatWaifu NEXT pins the public **Live2D Cubism Web Framework 5-r.5**. Cubism Core,
-MotionSync Core and character models are not committed because their distribution and commercial
-terms require separate review.
+official sample sources, generated bridge output, and character models remain in ignored local
+directories because their distribution terms require a separate release review.
 
-## 1. Fetch the public Framework
+## Install from the official Web SDK
+
+The default command detects the extracted SDK at
+`~/Downloads/CubismSdkForWeb-5-r.5`, installs the official Natori sample as the local test model,
+builds the ChatWaifu bridge, and checks every required artifact:
 
 ```bash
-make setup-live2d-framework
+make setup-live2d-vendor
 ```
 
-This clones the official Framework at tag `5-r.5` into
-`vendor/live2d/CubismWebFramework/`. The directory is ignored by Git.
+Use an explicit SDK path or another official sample model when needed:
 
-## 2. Supply Cubism Core
-
-Download the official Cubism SDK for Web from Live2D. Copy the Web Core file to:
-
-```text
-apps/web/public/vendor/live2d/live2dcubismcore.min.js
+```bash
+make setup-live2d-vendor \
+  LIVE2D_SETUP_ARGS="--sdk-dir /absolute/path/to/CubismSdkForWeb-5-r.5 --model Natori"
 ```
 
-Do not copy the entire SDK or proprietary license bundle into this repository.
+The installer performs these local-only steps:
 
-## 3. Build the bridge
+- clones and verifies the official Framework `5-r.5` checkout;
+- copies the redistributable Web Core file into `apps/web/public/vendor/live2d/`;
+- copies the official Demo sources needed to build the adapter;
+- builds `chatwaifu-live2d-bridge.js` against the pinned Framework;
+- copies the selected sample model and aliases its model file to `avatar.model3.json`.
 
-Build a browser ES module against the pinned official Framework and export:
+All generated/vendor paths are ignored by Git. Do not force-add the SDK, Core, sample source,
+generated bridge, or model files to this repository.
+
+## Architecture boundary
+
+The browser bridge exports:
 
 ```ts
 createChatWaifuCubismBridge({ canvas, frameworkVersion });
 ```
 
-The returned object must satisfy `OfficialCubismBridge` from
-`@chatwaifu/avatar-sdk/live2d-model-loader`. Put the output at:
-
-```text
-apps/web/public/vendor/live2d/chatwaifu-live2d-bridge.js
-```
-
 The bridge is the only layer allowed to know Cubism parameter IDs, motion groups, expression files,
 textures and WebGL model objects. Product and React code continue to use semantic `AvatarCue` values.
 
-## 4. Supply a licensed test model
-
-Place a model and its referenced files under:
-
-```text
-apps/web/public/vendor/live2d/model/
-```
-
-The default lab manifest expects `avatar.model3.json`. Confirm the model's redistribution terms
-before committing or distributing it.
-
-## 5. Verify
+## Verify and run
 
 ```bash
 make check-live2d-vendor
-make dev-avatar-lab
+make demo
 ```
 
-Without these files, Avatar Lab remains fully usable through `FakeAvatarRenderer`; selecting the
-Live2D renderer shows an actionable `avatar.live2d_core_missing` or
-`avatar.live2d_bridge_missing` error instead of crashing.
+The main chat selects Live2D automatically when the local vendor set is ready and remounts a safe
+Fake renderer when it is unavailable. `/avatar-lab` can exercise both renderers explicitly.
+
+Natori is an official SDK sample model used here only for local testing. Its files retain Live2D's
+sample-model and Free Material License terms. Review the current SDK license files before any
+redistribution or commercial release.
 
 Official sources:
 
