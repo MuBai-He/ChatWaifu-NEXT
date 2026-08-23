@@ -74,10 +74,11 @@ phases:
       - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
       - 16 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
-      - 4 Chromium Playwright scenarios cover cues, vendor failure, real Avatar Lab, and real main chat
+      - 5 Chromium Playwright scenarios cover cues, vendor failure, viewport scrolling, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
       - Official Natori loads through the generated bridge with expression, motion, and hit mapping
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
+      - Desktop chat remains bounded to the viewport while only the transcript scrolls
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
@@ -93,6 +94,8 @@ phases:
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
       - Explicit memory survives sessions and forget uses auditable tombstones
+      - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
+      - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
       - Manifest-driven runtime.status skill reports actual providers with read-only side effect
       - make demo supervises Runtime and Web and leaves both loopback ports closed after Ctrl+C
 

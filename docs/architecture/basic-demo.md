@@ -12,6 +12,9 @@
    and returns the avatar to listening.
 7. Explicit remember/forget requests persist with provenance and affect a later session.
 8. A read-only system-status Runtime Skill reports active providers and health truthfully.
+9. Desktop history scrolls inside the conversation pane without moving the avatar off-screen.
+10. A confirmed reset cancels active work and returns conversation, memory, event, audio, and
+    avatar state to a clean demo baseline while keeping the ready session connected.
 
 ## Domain responsibilities
 

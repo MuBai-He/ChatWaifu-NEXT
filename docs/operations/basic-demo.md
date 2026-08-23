@@ -25,7 +25,10 @@ valid WAV test tone and must not be described as character-quality speech.
 - Environment example: `.env.example`
 
 Deleting local data is deliberately not part of the startup command. Explicit “forget” commands
-tombstone memory without erasing provenance; generated audio can be pruned by a later retention job.
+tombstone one matched memory without erasing provenance. The destructive `重置` button requires a
+browser confirmation, cancels active generation, then clears the current session's turns/events,
+all explicit memories including tombstones, and all generated WAV files. It keeps the same ready
+session and WebSocket so the user can start again immediately.
 
 ## Smoke test
 
@@ -35,3 +38,7 @@ tombstone memory without erasing provenance; generated audio can be pruned by a 
 4. Send `请记住我喜欢蓝色`, reload or create another session, and ask what it remembers.
 5. Send `请忘记我喜欢蓝色` and confirm the active memory card becomes empty.
 6. Run `运行状态 Skill` and compare provider names with the header.
+7. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
+   the transcript moves.
+8. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+   can be sent in the same session.

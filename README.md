@@ -41,6 +41,8 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 - WebSocket 增量文本和 SQLite append-only 事件流
 - 分段生成本地 WAV，并按 generation 排队播放
 - “打断”立即取消 LLM/TTS、丢弃迟到输出、清空浏览器播放队列
+- 桌面页面固定为显示区域高度，右侧历史独立滚动，左侧 Live2D 始终留在视口内
+- “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
 - `AvatarCue` 驱动 thinking、speaking、idle 与口型状态
 - 角色人格来自 `characters/default/character.json`
 - 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone

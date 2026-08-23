@@ -12,4 +12,6 @@
 - Add deterministic Avatar SDK tests and Chromium Playwright interaction coverage.
 - Build a local official Cubism bridge from SDK 5 R5, install the Natori sample, and render Live2D
   in Avatar Lab and the main chat with a safe Fake fallback.
+- Bound the desktop chat to the display viewport, make transcript history independently scrollable,
+  and add a confirmed reset for conversation, memory, events, generated audio, and avatar state.
 - Accept the continuous basic-demo delivery scope and tiered local TTS architecture.
