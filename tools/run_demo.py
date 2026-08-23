@@ -3,6 +3,7 @@
 import argparse
 import os
 import secrets
+import shutil
 import signal
 import socket
 import subprocess
@@ -25,6 +26,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run ChatWaifu NEXT basic demo")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser")
     args = parser.parse_args()
+    uv = shutil.which("uv")
+    if uv is None:
+        parser.error("uv is required; install uv and run `make demo` again")
     try:
         pnpm = resolve_pnpm()
     except PnpmToolError as error:
@@ -32,6 +36,15 @@ def main() -> int:
 
     environment = environment_with_pnpm(pnpm)
     environment["PYTHONUNBUFFERED"] = "1"
+    print("Checking Python workspace dependencies...", flush=True)
+    python_install = subprocess.run(
+        [uv, "sync", "--all-packages", "--all-groups"],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+    )
+    if python_install.returncode != 0:
+        return python_install.returncode
     print("Checking Web dependencies...", flush=True)
     dependency_install = subprocess.run(
         [str(pnpm), "install", "--frozen-lockfile"],

@@ -1,5 +1,6 @@
 """Create/update the isolated faster-whisper worker environment."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -13,9 +14,12 @@ def main() -> int:
     uv = shutil.which("uv")
     if uv is None:
         raise RuntimeError("uv is required to install the local STT worker")
+    environment = os.environ.copy()
+    environment.pop("VIRTUAL_ENV", None)
     result = subprocess.run(
         [uv, "sync", "--project", str(WORKER), "--all-groups", "--no-editable"],
         cwd=ROOT,
+        env=environment,
         check=False,
     )
     if result.returncode == 0:

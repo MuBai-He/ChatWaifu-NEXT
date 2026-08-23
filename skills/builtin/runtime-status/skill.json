@@ -1,6 +1,6 @@
 {
   "skill_id": "runtime.status",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Runtime Status",
   "description": "Read-only report of active ChatWaifu Runtime components and providers.",
   "capabilities": [
@@ -18,7 +18,9 @@
         "properties": {
           "runtime_version": { "type": "string" },
           "llm_provider": { "type": "string" },
-          "tts_provider": { "type": "string" }
+          "tts_provider": { "type": "string" },
+          "stt_provider": { "type": "string" },
+          "transport": { "type": "string" }
         }
       },
       "side_effect": "read",

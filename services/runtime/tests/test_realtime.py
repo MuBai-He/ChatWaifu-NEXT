@@ -51,6 +51,9 @@ async def test_stt_worker_adapter_preserves_generation_identity_and_auth() -> No
 
     async def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.headers["Authorization"] == "Bearer secret-token"
+        if request.url.path.endswith("/cancel"):
+            assert request.url.path.endswith(f"/{identity.generation_id}/cancel")
+            return httpx2.Response(200, json={"cancelled": True})
         body = json.loads(request.content)
         assert body["generation_id"] == str(identity.generation_id)
         return httpx2.Response(
@@ -87,9 +90,59 @@ async def test_stt_worker_adapter_preserves_generation_identity_and_auth() -> No
                 language="zh",
             )
         )
+        await backend.cancel(identity.generation_id)
     finally:
         await backend.close()
 
     assert result is not None
     assert result.text == "真实语音输入"
     assert result.provider == "faster-whisper"
+
+
+@pytest.mark.asyncio
+async def test_stt_worker_adapter_rejects_a_stale_generation_result() -> None:
+    identity = VoiceTurnIdentity(
+        session_id=uuid4(),
+        utterance_id=uuid4(),
+        audio_stream_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+    )
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        body.update(
+            {
+                "generation_id": str(uuid4()),
+                "text": "过期结果",
+                "language": "zh",
+                "confidence": None,
+                "duration_ms": 20,
+                "provider": "faster-whisper",
+            }
+        )
+        body.pop("audio_base64")
+        body.pop("sample_rate")
+        body.pop("channels")
+        return httpx2.Response(200, json=body)
+
+    client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
+    backend = FasterWhisperWorkerSttBackend(
+        base_url="http://worker.local",
+        token="secret-token",
+        timeout_seconds=5,
+        client=client,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="mismatched generation_id"):
+            await backend.transcribe(
+                SttRequest(
+                    identity=identity,
+                    audio=b"\x00\x00" * 320,
+                    sample_rate=16_000,
+                    channels=1,
+                    language="zh",
+                )
+            )
+    finally:
+        await backend.close()

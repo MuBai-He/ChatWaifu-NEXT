@@ -30,8 +30,13 @@ class RuntimeContainer:
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
         self.characters = CharacterService(settings.characters_dir)
         self.memory = MemoryService(self.database, self.event_publisher)
+        self.stt = build_stt_backend(settings)
         self.runtime_skills = RuntimeSkillService(
-            settings.skills_dir, self.event_publisher, self.providers, __version__
+            settings.skills_dir,
+            self.event_publisher,
+            self.providers,
+            self.stt.kind,
+            __version__,
         )
         self.conversation = ConversationService(
             self.database,
@@ -43,7 +48,6 @@ class RuntimeContainer:
             self.characters,
             self.memory,
         )
-        self.stt = build_stt_backend(settings)
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,

@@ -262,6 +262,8 @@ def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) 
     data = cast(dict[str, object], result_json["data"])
     assert data["llm_provider"] == "demo"
     assert data["tts_provider"] == "fake"
+    assert data["stt_provider"] == "disabled"
+    assert data["transport"] == "pipecat_smallwebrtc"
 
 
 def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str:

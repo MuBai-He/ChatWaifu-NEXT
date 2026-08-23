@@ -14,11 +14,17 @@ from chatwaifu_runtime.providers.factory import ProviderSet
 
 class RuntimeSkillService:
     def __init__(
-        self, root: Path, publisher: EventPublisher, providers: ProviderSet, version: str
+        self,
+        root: Path,
+        publisher: EventPublisher,
+        providers: ProviderSet,
+        stt_provider: str,
+        version: str,
     ) -> None:
         self._root = root
         self._publisher = publisher
         self._providers = providers
+        self._stt_provider = stt_provider
         self._version = version
         self._definitions: dict[str, SkillDefinition] = {}
 
@@ -52,12 +58,13 @@ class RuntimeSkillService:
                 "runtime_version": self._version,
                 "llm_provider": providers["llm"],
                 "tts_provider": providers["tts"],
-                "transport": "loopback_http_websocket",
+                "stt_provider": self._stt_provider,
+                "transport": "pipecat_smallwebrtc",
                 "persistence": "sqlite_wal",
             },
             spoken_summary=(
                 f"Runtime {self._version} 正常，语言模型使用 {providers['llm']}，"
-                f"语音使用 {providers['tts']}。"
+                f"语音合成使用 {providers['tts']}，语音识别使用 {self._stt_provider}。"
             ),
             provenance=["runtime.composition_root"],
         )
