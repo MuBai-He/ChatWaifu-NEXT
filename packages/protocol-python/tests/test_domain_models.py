@@ -22,7 +22,7 @@ def test_memory_proposal_requires_existing_source_evidence() -> None:
             operation="add",
             candidate=MemoryRecordDraft(
                 namespace="user/test/global",
-                kind="semantic",
+                kind="semantic.fact",
                 text="User prefers Chinese responses",
                 observed_at=NOW,
                 confidence=0.9,
@@ -31,6 +31,7 @@ def test_memory_proposal_requires_existing_source_evidence() -> None:
             evidence_event_ids=[],
             confidence=0.9,
             rationale="Explicit preference",
+            created_at=NOW,
         )
 
 
@@ -42,6 +43,7 @@ def test_memory_update_requires_target_memory() -> None:
             evidence_event_ids=[uuid4()],
             confidence=0.8,
             rationale="Correction",
+            created_at=NOW,
         )
 
 

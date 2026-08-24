@@ -203,4 +203,121 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON skill_tool_calls(skill_run_id, started_at);
         """,
     ),
+    (
+        5,
+        """
+        CREATE TABLE memory_records (
+            memory_id TEXT PRIMARY KEY,
+            namespace TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            subject_id TEXT,
+            predicate TEXT,
+            value_json TEXT,
+            text TEXT NOT NULL,
+            normalized_text TEXT NOT NULL,
+            search_terms TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            valid_from TEXT,
+            valid_to TEXT,
+            confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+            importance REAL NOT NULL CHECK(importance >= 0 AND importance <= 1),
+            sensitivity TEXT NOT NULL,
+            state TEXT NOT NULL,
+            supersedes TEXT REFERENCES memory_records(memory_id) ON DELETE SET NULL,
+            pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            tombstoned_at TEXT
+        );
+
+        CREATE TABLE memory_sources (
+            source_id TEXT PRIMARY KEY,
+            memory_id TEXT NOT NULL REFERENCES memory_records(memory_id) ON DELETE CASCADE,
+            source_event_id TEXT NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+            turn_id TEXT REFERENCES turns(turn_id) ON DELETE SET NULL,
+            source_kind TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(memory_id, source_event_id)
+        );
+
+        CREATE TABLE memory_proposals (
+            proposal_id TEXT PRIMARY KEY,
+            operation TEXT NOT NULL,
+            candidate_json TEXT,
+            target_memory_id TEXT REFERENCES memory_records(memory_id) ON DELETE SET NULL,
+            evidence_event_ids_json TEXT NOT NULL,
+            confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+            rationale TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            decided_at TEXT
+        );
+
+        CREATE VIRTUAL TABLE memory_records_fts USING fts5(
+            memory_id UNINDEXED,
+            text,
+            search_terms,
+            tokenize = 'unicode61'
+        );
+
+        CREATE TRIGGER memory_records_after_insert AFTER INSERT ON memory_records
+        WHEN new.state = 'active'
+        BEGIN
+            INSERT INTO memory_records_fts(memory_id, text, search_terms)
+            VALUES (new.memory_id, new.text, new.search_terms);
+        END;
+
+        CREATE TRIGGER memory_records_after_update AFTER UPDATE ON memory_records
+        BEGIN
+            DELETE FROM memory_records_fts WHERE memory_id = old.memory_id;
+            INSERT INTO memory_records_fts(memory_id, text, search_terms)
+                SELECT new.memory_id, new.text, new.search_terms WHERE new.state = 'active';
+        END;
+
+        CREATE TRIGGER memory_records_after_delete AFTER DELETE ON memory_records
+        BEGIN
+            DELETE FROM memory_records_fts WHERE memory_id = old.memory_id;
+        END;
+
+        CREATE INDEX memory_records_active_created_idx
+            ON memory_records(state, pinned DESC, created_at DESC);
+        CREATE INDEX memory_records_identity_idx
+            ON memory_records(namespace, subject_id, predicate, state);
+        CREATE UNIQUE INDEX memory_records_active_text_unique_idx
+            ON memory_records(namespace, normalized_text) WHERE state = 'active';
+        CREATE INDEX memory_sources_memory_idx ON memory_sources(memory_id, created_at);
+        CREATE INDEX memory_proposals_status_created_idx
+            ON memory_proposals(status, created_at DESC);
+
+        INSERT INTO memory_records(
+            memory_id, namespace, kind, subject_id, predicate, value_json,
+            text, normalized_text, search_terms, observed_at, confidence,
+            importance, sensitivity, state, pinned, created_at, updated_at,
+            tombstoned_at
+        )
+        SELECT
+            memory_id, 'user/local/global', 'semantic.fact', 'user', NULL,
+            json_quote(content), content, normalized_content, normalized_content,
+            created_at, 1.0, 0.7, 'private', state, 0, created_at, updated_at,
+            tombstoned_at
+        FROM memory_items;
+
+        INSERT INTO memory_sources(
+            source_id, memory_id, source_event_id, session_id, turn_id,
+            source_kind, created_at
+        )
+        SELECT
+            lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' ||
+            substr(lower(hex(randomblob(2))), 2) || '-' ||
+            substr('89ab', abs(random()) % 4 + 1, 1) ||
+            substr(lower(hex(randomblob(2))), 2) || '-' || lower(hex(randomblob(6))),
+            item.memory_id, event.event_id, item.source_session_id,
+            item.source_turn_id, 'migration', item.created_at
+        FROM memory_items AS item
+        JOIN events AS event
+          ON json_extract(event.envelope_json, '$.turn_id') = item.source_turn_id
+        WHERE event.event_type = 'user.turn_committed';
+        """,
+    ),
 )

@@ -297,29 +297,43 @@ export type TurnId13 = string
 export type Confidence = number
 export type CreatedAt = string
 export type Importance = number
-export type Kind2 = string
+export type MemoryKind =
+  | 'core'
+  | 'semantic.fact'
+  | 'semantic.preference'
+  | 'episodic.shared_event'
+  | 'procedural.preference'
+  | 'relationship.signal'
+  | 'prospective.commitment'
+  | 'character.self'
 export type MemoryId = string
 export type Namespace = string
 export type ObservedAt = string
+export type Pinned = boolean
 export type Predicate = string | null
 export type PrivacyLevel10 = 'public' | 'local' | 'private' | 'sensitive'
 /**
  * @minItems 1
  */
 export type SourceEventIds = [string, ...string[]]
-export type State = 'active' | 'superseded' | 'contradicted' | 'tombstoned'
 export type SubjectId = string | null
 export type Supersedes = string | null
 export type Text3 = string
 export type UpdatedAt = string
 export type ValidFrom = string | null
 export type ValidTo = string | null
+export type EntityRelevance = number
+export type LexicalRelevance = number
 export type MemoryId1 = string
 export type Relevance = number
+export type MemoryRetrievalSource = 'pinned' | 'fts' | 'semantic' | 'temporal' | 'recent'
+export type RetrievalSources = MemoryRetrievalSource[]
+export type SemanticRelevance = number
 /**
  * @minItems 1
  */
 export type SourceEventIds1 = [string, ...string[]]
+export type TemporalRelevance = number
 export type Text4 = string
 export type OpenCommitments = MemoryExcerpt[]
 export type PinnedFacts = MemoryExcerpt[]
@@ -330,7 +344,6 @@ export type RelevantMemories = MemoryExcerpt[]
 export type TokenBudgetUsed = number
 export type Confidence1 = number
 export type Importance1 = number
-export type Kind3 = string
 export type Namespace1 = string
 export type ObservedAt1 = string
 export type Predicate1 = string | null
@@ -338,18 +351,27 @@ export type PrivacyLevel11 = 'public' | 'local' | 'private' | 'sensitive'
 export type SubjectId1 = string | null
 export type Text5 = string
 export type Confidence2 = number
+export type CreatedAt1 = string
+export type DecidedAt = string | null
 /**
  * @minItems 1
  */
 export type EvidenceEventIds = [string, ...string[]]
-export type Operation = 'add' | 'update' | 'supersede' | 'contradict' | 'forget' | 'ignore'
+export type MemoryOperation = 'add' | 'update' | 'supersede' | 'contradict' | 'forget' | 'ignore'
 export type ProposalId = string
 export type Rationale = string
 export type TargetMemoryId = string | null
+export type CreatedAt2 = string
+export type MemoryId2 = string
+export type SessionId15 = string
+export type SourceEventId = string
+export type SourceId = string
+export type SourceKind = 'user_turn' | 'memory_management' | 'migration'
+export type TurnId14 = string | null
 export type AdapterVersion = string
 export type Capabilities = string[]
 export type InputModalities = string[]
-export type Kind4 = string
+export type Kind2 = string
 export type Languages = string[]
 export type Id = string
 export type ReviewRequired = boolean
@@ -361,20 +383,20 @@ export type EstimatedRamMb = number | null
 export type EstimatedVramMb = number | null
 export type ExclusiveGpu = boolean
 export type StoresInput = boolean
-export type DecidedAt = string
+export type DecidedAt1 = string
 export type DecidedBy = string
 export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason2 = string | null
 export type RequestId = string
 export type Capability = string
-export type CreatedAt1 = string
+export type CreatedAt3 = string
 export type ExpiresAt = string | null
 export type GrantId = string
 export type Permission = string
 export type Principal = string
 export type RevokedAt = string | null
 export type Scope = 'once' | 'session' | 'always'
-export type SessionId15 = string | null
+export type SessionId16 = string | null
 export type SkillId = string
 export type Capability1 = string
 export type Permission1 = string
@@ -413,7 +435,7 @@ export type Command1 =
   | [string, string, string, string, string, string]
   | [string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string]
-export type Kind5 = 'stdio'
+export type Kind3 = 'stdio'
 export type Version1 = string
 export type BackendKind2 = string
 export type CloudContextPolicy = string
@@ -425,9 +447,9 @@ export type ReasonCodes = string[]
 export type CharacterId2 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt2 = string
+export type CreatedAt4 = string
 export type Revision = number
-export type SessionId16 = string
+export type SessionId17 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
 export type UpdatedAt2 = string
 export type BackgroundAllowed = boolean
@@ -459,10 +481,10 @@ export type UiCards = JsonObject[]
 export type Capability3 = string
 export type CompletedAt1 = string | null
 export type ConfirmationRequestId = string | null
-export type CreatedAt3 = string
+export type CreatedAt5 = string
 export type PluginId3 = string | null
 export type Progress = number | null
-export type SessionId17 = string
+export type SessionId18 = string
 export type SkillId3 = string
 export type SkillRunId10 = string
 export type SkillVersion = string
@@ -484,8 +506,8 @@ export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
 export type SceneSnapshotId = string | null
-export type SessionId18 = string
-export type TurnId14 = string
+export type SessionId19 = string
+export type TurnId15 = string
 export type ByteLength1 = number
 export type Codec1 = 'jpeg' | 'png' | 'h264' | 'vp8'
 export type EndOfStream1 = boolean
@@ -512,6 +534,7 @@ export interface ProtocolCatalog {
   memory: MemoryRecord
   memory_context: MemoryContextPacket
   memory_proposal: MemoryProposal
+  memory_source: MemorySource
   model: ModelManifest
   permission_decision: PermissionDecision
   permission_grant: PermissionGrant
@@ -880,14 +903,15 @@ export interface MemoryRecord {
   confidence: Confidence
   created_at: CreatedAt
   importance: Importance
-  kind: Kind2
+  kind: MemoryKind
   memory_id: MemoryId
   namespace: Namespace
   observed_at: ObservedAt
+  pinned?: Pinned
   predicate?: Predicate
   sensitivity?: PrivacyLevel10
   source_event_ids: SourceEventIds
-  state?: State
+  state?: 'active' | 'superseded' | 'contradicted' | 'tombstoned'
   subject_id?: SubjectId
   supersedes?: Supersedes
   text: Text3
@@ -916,26 +940,34 @@ export interface MemoryContextPacket {
   [k: string]: unknown
 }
 export interface MemoryExcerpt {
+  entity_relevance?: EntityRelevance
+  lexical_relevance?: LexicalRelevance
   memory_id: MemoryId1
   relevance: Relevance
+  retrieval_sources?: RetrievalSources
+  semantic_relevance?: SemanticRelevance
   source_event_ids: SourceEventIds1
+  temporal_relevance?: TemporalRelevance
   text: Text4
   [k: string]: unknown
 }
 export interface MemoryProposal {
   candidate?: MemoryRecordDraft | null
   confidence: Confidence2
+  created_at: CreatedAt1
+  decided_at?: DecidedAt
   evidence_event_ids: EvidenceEventIds
-  operation: Operation
+  operation: MemoryOperation
   proposal_id: ProposalId
   rationale: Rationale
+  status?: 'pending' | 'accepted' | 'rejected' | 'ignored'
   target_memory_id?: TargetMemoryId
   [k: string]: unknown
 }
 export interface MemoryRecordDraft {
   confidence: Confidence1
   importance: Importance1
-  kind: Kind3
+  kind: MemoryKind
   namespace: Namespace1
   observed_at: ObservedAt1
   predicate?: Predicate1
@@ -953,11 +985,21 @@ export interface MemoryRecordDraft {
     | null
   [k: string]: unknown
 }
+export interface MemorySource {
+  created_at: CreatedAt2
+  memory_id: MemoryId2
+  session_id: SessionId15
+  source_event_id: SourceEventId
+  source_id: SourceId
+  source_kind: SourceKind
+  turn_id?: TurnId14
+  [k: string]: unknown
+}
 export interface ModelManifest {
   adapter_version: AdapterVersion
   capabilities?: Capabilities
   input_modalities?: InputModalities
-  kind: Kind4
+  kind: Kind2
   languages?: Languages
   license: ModelLicense
   local: Local
@@ -980,7 +1022,7 @@ export interface ModelResourceProfile {
   [k: string]: unknown
 }
 export interface PermissionDecision {
-  decided_at: DecidedAt
+  decided_at: DecidedAt1
   decided_by: DecidedBy
   decision: Decision
   reason?: Reason2
@@ -989,14 +1031,14 @@ export interface PermissionDecision {
 }
 export interface PermissionGrant {
   capability: Capability
-  created_at: CreatedAt1
+  created_at: CreatedAt3
   expires_at?: ExpiresAt
   grant_id: GrantId
   permission: Permission
   principal: Principal
   revoked_at?: RevokedAt
   scope: Scope
-  session_id?: SessionId15
+  session_id?: SessionId16
   skill_id: SkillId
   [k: string]: unknown
 }
@@ -1034,7 +1076,7 @@ export interface PluginManifest {
 }
 export interface PluginTransport {
   command: Command1
-  kind?: Kind5
+  kind?: Kind3
   [k: string]: unknown
 }
 export interface RouteDecision {
@@ -1050,9 +1092,9 @@ export interface RouteDecision {
 export interface SessionSnapshot {
   character_id: CharacterId2
   conversation_state: ConversationState
-  created_at: CreatedAt2
+  created_at: CreatedAt4
   revision: Revision
-  session_id: SessionId16
+  session_id: SessionId17
   state: SessionState
   updated_at: UpdatedAt2
   [k: string]: unknown
@@ -1111,12 +1153,12 @@ export interface SkillRunSnapshot {
   capability: Capability3
   completed_at?: CompletedAt1
   confirmation_request_id?: ConfirmationRequestId
-  created_at: CreatedAt3
+  created_at: CreatedAt5
   error?: StructuredError | null
   plugin_id?: PluginId3
   progress?: Progress
   result?: SkillResult | null
-  session_id: SessionId17
+  session_id: SessionId18
   skill_id: SkillId3
   skill_run_id: SkillRunId10
   skill_version: SkillVersion
@@ -1130,8 +1172,8 @@ export interface TurnSnapshot {
   committed_at?: CommittedAt
   committed_text?: CommittedText
   scene_snapshot_id?: SceneSnapshotId
-  session_id: SessionId18
-  turn_id: TurnId14
+  session_id: SessionId19
+  turn_id: TurnId15
   [k: string]: unknown
 }
 export interface VideoFrameHeader {

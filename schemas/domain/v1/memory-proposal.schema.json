@@ -31,6 +31,39 @@
         }
       ]
     },
+    "MemoryKind": {
+      "enum": [
+        "core",
+        "semantic.fact",
+        "semantic.preference",
+        "episodic.shared_event",
+        "procedural.preference",
+        "relationship.signal",
+        "prospective.commitment",
+        "character.self"
+      ],
+      "type": "string"
+    },
+    "MemoryOperation": {
+      "enum": [
+        "add",
+        "update",
+        "supersede",
+        "contradict",
+        "forget",
+        "ignore"
+      ],
+      "type": "string"
+    },
+    "MemoryProposalStatus": {
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "ignored"
+      ],
+      "type": "string"
+    },
     "MemoryRecordDraft": {
       "properties": {
         "confidence": {
@@ -46,10 +79,11 @@
           "type": "number"
         },
         "kind": {
-          "title": "Kind",
-          "type": "string"
+          "$ref": "#/$defs/MemoryKind"
         },
         "namespace": {
+          "maxLength": 256,
+          "minLength": 1,
           "title": "Namespace",
           "type": "string"
         },
@@ -136,6 +170,24 @@
       "title": "Confidence",
       "type": "number"
     },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "decided_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decided At"
+    },
     "evidence_event_ids": {
       "items": {
         "format": "uuid",
@@ -146,16 +198,7 @@
       "type": "array"
     },
     "operation": {
-      "enum": [
-        "add",
-        "update",
-        "supersede",
-        "contradict",
-        "forget",
-        "ignore"
-      ],
-      "title": "Operation",
-      "type": "string"
+      "$ref": "#/$defs/MemoryOperation"
     },
     "proposal_id": {
       "format": "uuid",
@@ -165,6 +208,10 @@
     "rationale": {
       "title": "Rationale",
       "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/MemoryProposalStatus",
+      "default": "pending"
     },
     "target_memory_id": {
       "anyOf": [
@@ -185,7 +232,8 @@
     "operation",
     "evidence_event_ids",
     "confidence",
-    "rationale"
+    "rationale",
+    "created_at"
   ],
   "title": "MemoryProposal",
   "type": "object",

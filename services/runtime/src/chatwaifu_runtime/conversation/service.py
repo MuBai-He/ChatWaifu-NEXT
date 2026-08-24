@@ -20,6 +20,7 @@ from chatwaifu_protocol.events import (
     UserTurnCommittedEvent,
     UserTurnCommittedPayload,
 )
+from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
@@ -30,7 +31,7 @@ from chatwaifu_runtime.characters.service import (
     CharacterVoiceProfile,
 )
 from chatwaifu_runtime.eventing.publisher import EventPublisher
-from chatwaifu_runtime.memory.service import MemoryItem, MemoryService
+from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.providers.contracts import LlmRequest, SynthesisRequest
@@ -133,14 +134,25 @@ class ConversationService:
             )
             for event in events:
                 await self._publisher.publish_persisted(event)
-            await self._memory.apply_explicit_command(session_id, accepted.turn_id, normalized)
-            memories = await self._memory.recall(session_id, accepted.turn_id)
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
+            await self._memory.observe_user_turn(
+                session_id,
+                accepted.turn_id,
+                events[0].event_id,
+                character.character_id,
+                normalized,
+            )
+            memory_context = await self._memory.retrieve_context(
+                session_id,
+                accepted.turn_id,
+                character.character_id,
+                normalized,
+            )
             history = await self._recent_history(session_id, accepted.turn_id)
             task = asyncio.create_task(
-                self._run_generation(accepted, normalized, character, memories, history),
+                self._run_generation(accepted, normalized, character, memory_context, history),
                 name=f"generation-{accepted.generation_id}",
             )
             self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
@@ -175,8 +187,8 @@ class ConversationService:
             await self.cancel(session_id, "session_data_reset")
             self._active.pop(session_id, None)
             now = datetime.now(UTC)
+            memories_deleted = await self._memory.clear_all()
             async with self._database.transaction() as connection:
-                memories_deleted = await self._memory.clear_all_in_transaction(connection)
                 events_cursor = await connection.execute(
                     "DELETE FROM events WHERE session_id = ?", (str(session_id),)
                 )
@@ -303,7 +315,7 @@ class ConversationService:
         accepted: GenerationAccepted,
         user_text: str,
         character: CharacterProfile,
-        memories: list[MemoryItem],
+        memory_context: MemoryContextPacket,
         history: tuple[tuple[str, str], ...],
     ) -> None:
         output = ""
@@ -323,7 +335,7 @@ class ConversationService:
                 user_text=user_text,
                 system_prompt=character.system_prompt,
                 character_name=character.display_name,
-                context=_memory_context(memories),
+                context=_memory_context(memory_context),
                 history=history,
             )
             async for delta in self._providers.llm.stream(request):
@@ -582,8 +594,15 @@ def _segment_ready(text: str) -> bool:
     return len(text) >= 90 or bool(stripped and stripped[-1] in _SEGMENT_ENDINGS)
 
 
-def _memory_context(memories: list[MemoryItem]) -> tuple[tuple[str, str], ...]:
-    if not memories:
+def _memory_context(packet: MemoryContextPacket) -> tuple[tuple[str, str], ...]:
+    excerpts = (
+        packet.pinned_facts
+        + packet.recent_episodes
+        + packet.relevant_memories
+        + packet.open_commitments
+        + packet.relationship_context
+    )
+    if not excerpts:
         return ()
-    content = "; ".join(item.content for item in memories)
-    return (("system", f"记忆: 用户明确要求记住以下内容: {content}"),)
+    content = "; ".join(item.text for item in excerpts)
+    return (("system", f"记忆: 仅使用以下经过策略允许且带来源的内容: {content}"),)

@@ -1325,6 +1325,20 @@
     },
     "MemoryExcerpt": {
       "properties": {
+        "entity_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Entity Relevance",
+          "type": "number"
+        },
+        "lexical_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Lexical Relevance",
+          "type": "number"
+        },
         "memory_id": {
           "format": "uuid",
           "title": "Memory Id",
@@ -1336,6 +1350,20 @@
           "title": "Relevance",
           "type": "number"
         },
+        "retrieval_sources": {
+          "items": {
+            "$ref": "#/$defs/MemoryRetrievalSource"
+          },
+          "title": "Retrieval Sources",
+          "type": "array"
+        },
+        "semantic_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Semantic Relevance",
+          "type": "number"
+        },
         "source_event_ids": {
           "items": {
             "format": "uuid",
@@ -1344,6 +1372,13 @@
           "minItems": 1,
           "title": "Source Event Ids",
           "type": "array"
+        },
+        "temporal_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Temporal Relevance",
+          "type": "number"
         },
         "text": {
           "title": "Text",
@@ -1358,6 +1393,30 @@
       ],
       "title": "MemoryExcerpt",
       "type": "object"
+    },
+    "MemoryKind": {
+      "enum": [
+        "core",
+        "semantic.fact",
+        "semantic.preference",
+        "episodic.shared_event",
+        "procedural.preference",
+        "relationship.signal",
+        "prospective.commitment",
+        "character.self"
+      ],
+      "type": "string"
+    },
+    "MemoryOperation": {
+      "enum": [
+        "add",
+        "update",
+        "supersede",
+        "contradict",
+        "forget",
+        "ignore"
+      ],
+      "type": "string"
     },
     "MemoryProposal": {
       "properties": {
@@ -1378,6 +1437,24 @@
           "title": "Confidence",
           "type": "number"
         },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        },
         "evidence_event_ids": {
           "items": {
             "format": "uuid",
@@ -1388,16 +1465,7 @@
           "type": "array"
         },
         "operation": {
-          "enum": [
-            "add",
-            "update",
-            "supersede",
-            "contradict",
-            "forget",
-            "ignore"
-          ],
-          "title": "Operation",
-          "type": "string"
+          "$ref": "#/$defs/MemoryOperation"
         },
         "proposal_id": {
           "format": "uuid",
@@ -1407,6 +1475,10 @@
         "rationale": {
           "title": "Rationale",
           "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/MemoryProposalStatus",
+          "default": "pending"
         },
         "target_memory_id": {
           "anyOf": [
@@ -1427,10 +1499,20 @@
         "operation",
         "evidence_event_ids",
         "confidence",
-        "rationale"
+        "rationale",
+        "created_at"
       ],
       "title": "MemoryProposal",
       "type": "object"
+    },
+    "MemoryProposalStatus": {
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected",
+        "ignored"
+      ],
+      "type": "string"
     },
     "MemoryRecord": {
       "properties": {
@@ -1452,8 +1534,7 @@
           "type": "number"
         },
         "kind": {
-          "title": "Kind",
-          "type": "string"
+          "$ref": "#/$defs/MemoryKind"
         },
         "memory_id": {
           "format": "uuid",
@@ -1461,6 +1542,8 @@
           "type": "string"
         },
         "namespace": {
+          "maxLength": 256,
+          "minLength": 1,
           "title": "Namespace",
           "type": "string"
         },
@@ -1468,6 +1551,11 @@
           "format": "date-time",
           "title": "Observed At",
           "type": "string"
+        },
+        "pinned": {
+          "default": false,
+          "title": "Pinned",
+          "type": "boolean"
         },
         "predicate": {
           "anyOf": [
@@ -1495,15 +1583,8 @@
           "type": "array"
         },
         "state": {
-          "default": "active",
-          "enum": [
-            "active",
-            "superseded",
-            "contradicted",
-            "tombstoned"
-          ],
-          "title": "State",
-          "type": "string"
+          "$ref": "#/$defs/MemoryState",
+          "default": "active"
         },
         "subject_id": {
           "anyOf": [
@@ -1600,10 +1681,11 @@
           "type": "number"
         },
         "kind": {
-          "title": "Kind",
-          "type": "string"
+          "$ref": "#/$defs/MemoryKind"
         },
         "namespace": {
+          "maxLength": 256,
+          "minLength": 1,
           "title": "Namespace",
           "type": "string"
         },
@@ -1659,6 +1741,86 @@
       ],
       "title": "MemoryRecordDraft",
       "type": "object"
+    },
+    "MemoryRetrievalSource": {
+      "enum": [
+        "pinned",
+        "fts",
+        "semantic",
+        "temporal",
+        "recent"
+      ],
+      "type": "string"
+    },
+    "MemorySource": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "memory_id": {
+          "format": "uuid",
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_event_id": {
+          "format": "uuid",
+          "title": "Source Event Id",
+          "type": "string"
+        },
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "user_turn",
+            "memory_management",
+            "migration"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "source_id",
+        "memory_id",
+        "source_event_id",
+        "session_id",
+        "source_kind",
+        "created_at"
+      ],
+      "title": "MemorySource",
+      "type": "object"
+    },
+    "MemoryState": {
+      "enum": [
+        "active",
+        "superseded",
+        "contradicted",
+        "tombstoned"
+      ],
+      "type": "string"
     },
     "ModelLicense": {
       "properties": {
@@ -4052,6 +4214,9 @@
     "memory_proposal": {
       "$ref": "#/$defs/MemoryProposal"
     },
+    "memory_source": {
+      "$ref": "#/$defs/MemorySource"
+    },
     "model": {
       "$ref": "#/$defs/ModelManifest"
     },
@@ -4113,6 +4278,7 @@
     "memory",
     "memory_proposal",
     "memory_context",
+    "memory_source",
     "model",
     "route",
     "permission_request",

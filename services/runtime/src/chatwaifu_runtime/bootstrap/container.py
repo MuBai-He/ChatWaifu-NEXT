@@ -10,6 +10,7 @@ from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
@@ -29,7 +30,8 @@ class RuntimeContainer:
         self.providers = build_providers(settings)
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
         self.characters = CharacterService(settings.characters_dir)
-        self.memory = MemoryService(self.database, self.event_publisher)
+        self.memory_repository = SQLiteMemoryRepository(self.database)
+        self.memory = MemoryService(self.memory_repository, self.event_publisher)
         self.stt = build_stt_backend(settings)
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,

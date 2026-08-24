@@ -2,6 +2,20 @@
   "$defs": {
     "MemoryExcerpt": {
       "properties": {
+        "entity_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Entity Relevance",
+          "type": "number"
+        },
+        "lexical_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Lexical Relevance",
+          "type": "number"
+        },
         "memory_id": {
           "format": "uuid",
           "title": "Memory Id",
@@ -13,6 +27,20 @@
           "title": "Relevance",
           "type": "number"
         },
+        "retrieval_sources": {
+          "items": {
+            "$ref": "#/$defs/MemoryRetrievalSource"
+          },
+          "title": "Retrieval Sources",
+          "type": "array"
+        },
+        "semantic_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Semantic Relevance",
+          "type": "number"
+        },
         "source_event_ids": {
           "items": {
             "format": "uuid",
@@ -21,6 +49,13 @@
           "minItems": 1,
           "title": "Source Event Ids",
           "type": "array"
+        },
+        "temporal_relevance": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Temporal Relevance",
+          "type": "number"
         },
         "text": {
           "title": "Text",
@@ -35,6 +70,16 @@
       ],
       "title": "MemoryExcerpt",
       "type": "object"
+    },
+    "MemoryRetrievalSource": {
+      "enum": [
+        "pinned",
+        "fts",
+        "semantic",
+        "temporal",
+        "recent"
+      ],
+      "type": "string"
     }
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/memory-context-packet.schema.json",

@@ -14,6 +14,9 @@ from chatwaifu_runtime.api.models import (
     ExamplePluginRequest,
     InstallPluginRequest,
     InterruptRequest,
+    MemoryCorrectionRequest,
+    MemoryPinnedRequest,
+    MemoryProposalDecisionRequest,
     PluginEnabledRequest,
     ResetSessionRequest,
     RuntimeHealth,
@@ -215,23 +218,102 @@ async def read_characters(request: Request) -> dict[str, object]:
 
 @router.get("/memory")
 async def read_memory(
-    request: Request, include_tombstoned: bool = Query(default=False)
+    request: Request,
+    include_tombstoned: bool = Query(default=False),
+    namespace: str | None = Query(default=None, max_length=256),
+    kind: str | None = Query(default=None, max_length=64),
+    sensitivity: str | None = Query(default=None, max_length=32),
 ) -> dict[str, object]:
-    items = await _container(request).memory.list(include_tombstoned=include_tombstoned)
-    serialized = [
-        {
-            "memory_id": str(item.memory_id),
-            "content": item.content,
-            "state": item.state,
-            "source_session_id": str(item.source_session_id),
-            "source_turn_id": str(item.source_turn_id),
-            "created_at": item.created_at.isoformat(),
-            "updated_at": item.updated_at.isoformat(),
-            "tombstoned_at": item.tombstoned_at.isoformat() if item.tombstoned_at else None,
-        }
-        for item in items
-    ]
+    items = await _container(request).memory.list(
+        include_tombstoned=include_tombstoned,
+        namespace=namespace,
+        kind=kind,
+        sensitivity=sensitivity,
+    )
+    serialized: list[dict[str, object]] = []
+    for item in items:
+        value = item.model_dump(mode="json")
+        value["content"] = item.text
+        serialized.append(value)
     return {"items": serialized, "count": len(serialized)}
+
+
+@router.get("/memory/proposals")
+async def read_memory_proposals(
+    request: Request, status_filter: str | None = Query(default=None, alias="status")
+) -> dict[str, object]:
+    items = await _container(request).memory.list_proposals(status=status_filter)
+    return {
+        "items": [item.model_dump(mode="json") for item in items],
+        "count": len(items),
+    }
+
+
+@router.post("/sessions/{session_id}/memory/proposals/{proposal_id}/decision")
+async def decide_memory_proposal(
+    request: Request,
+    session_id: UUID,
+    proposal_id: UUID,
+    body: MemoryProposalDecisionRequest,
+) -> dict[str, object]:
+    if await _container(request).sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    try:
+        proposal = await _container(request).memory.decide_proposal(
+            session_id, proposal_id, body.decision
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return proposal.model_dump(mode="json")
+
+
+@router.get("/memory/{memory_id}/sources")
+async def read_memory_sources(request: Request, memory_id: UUID) -> dict[str, object]:
+    items = await _container(request).memory.list_sources(memory_id)
+    return {
+        "items": [item.model_dump(mode="json") for item in items],
+        "count": len(items),
+    }
+
+
+@router.patch("/sessions/{session_id}/memory/{memory_id}")
+async def correct_memory(
+    request: Request,
+    session_id: UUID,
+    memory_id: UUID,
+    body: MemoryCorrectionRequest,
+) -> dict[str, object]:
+    try:
+        record = await _container(request).memory.correct(session_id, memory_id, body.text)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return record.model_dump(mode="json")
+
+
+@router.put("/sessions/{session_id}/memory/{memory_id}/pinned")
+async def set_memory_pinned(
+    request: Request,
+    session_id: UUID,
+    memory_id: UUID,
+    body: MemoryPinnedRequest,
+) -> dict[str, object]:
+    try:
+        record = await _container(request).memory.set_pinned(session_id, memory_id, body.pinned)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return record.model_dump(mode="json")
+
+
+@router.delete("/sessions/{session_id}/memory/{memory_id}")
+async def forget_memory(request: Request, session_id: UUID, memory_id: UUID) -> dict[str, object]:
+    changed = await _container(request).memory.forget(session_id, memory_id)
+    if not changed:
+        raise HTTPException(status_code=404, detail="active memory not found")
+    return {"memory_id": str(memory_id), "state": "tombstoned"}
 
 
 @router.get("/skills")

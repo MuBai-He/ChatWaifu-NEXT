@@ -1,4 +1,4 @@
-"""Provenance-preserving memory proposal and retrieval contracts."""
+"""Provenance-preserving structured memory and retrieval contracts."""
 
 from typing import Literal
 from uuid import UUID
@@ -7,10 +7,25 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from chatwaifu_protocol.base import JsonValue, PrivacyLevel, ProtocolModel
 
+type MemoryKind = Literal[
+    "core",
+    "semantic.fact",
+    "semantic.preference",
+    "episodic.shared_event",
+    "procedural.preference",
+    "relationship.signal",
+    "prospective.commitment",
+    "character.self",
+]
+type MemoryState = Literal["active", "superseded", "contradicted", "tombstoned"]
+type MemoryOperation = Literal["add", "update", "supersede", "contradict", "forget", "ignore"]
+type MemoryProposalStatus = Literal["pending", "accepted", "rejected", "ignored"]
+type MemoryRetrievalSource = Literal["pinned", "fts", "semantic", "temporal", "recent"]
+
 
 class MemoryRecordDraft(ProtocolModel):
-    namespace: str
-    kind: str
+    namespace: str = Field(min_length=1, max_length=256)
+    kind: MemoryKind
     subject_id: str | None = None
     predicate: str | None = None
     value: JsonValue = None
@@ -26,20 +41,24 @@ class MemoryRecord(MemoryRecordDraft):
     source_event_ids: list[UUID] = Field(min_length=1)
     valid_from: AwareDatetime | None = None
     valid_to: AwareDatetime | None = None
-    state: Literal["active", "superseded", "contradicted", "tombstoned"] = "active"
+    state: MemoryState = "active"
     supersedes: UUID | None = None
+    pinned: bool = False
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
 
 class MemoryProposal(ProtocolModel):
     proposal_id: UUID
-    operation: Literal["add", "update", "supersede", "contradict", "forget", "ignore"]
+    operation: MemoryOperation
     candidate: MemoryRecordDraft | None = None
     target_memory_id: UUID | None = None
     evidence_event_ids: list[UUID] = Field(min_length=1)
     confidence: float = Field(ge=0, le=1)
     rationale: str
+    status: MemoryProposalStatus = "pending"
+    created_at: AwareDatetime
+    decided_at: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def require_operation_target(self) -> "MemoryProposal":
@@ -57,6 +76,23 @@ class MemoryExcerpt(ProtocolModel):
     text: str
     source_event_ids: list[UUID] = Field(min_length=1)
     relevance: float = Field(ge=0, le=1)
+    lexical_relevance: float = Field(default=0, ge=0, le=1)
+    semantic_relevance: float = Field(default=0, ge=0, le=1)
+    entity_relevance: float = Field(default=0, ge=0, le=1)
+    temporal_relevance: float = Field(default=0, ge=0, le=1)
+    retrieval_sources: list[MemoryRetrievalSource] = Field(
+        default_factory=lambda: list[MemoryRetrievalSource]()
+    )
+
+
+class MemorySource(ProtocolModel):
+    source_id: UUID
+    memory_id: UUID
+    source_event_id: UUID
+    session_id: UUID
+    turn_id: UUID | None = None
+    source_kind: Literal["user_turn", "memory_management", "migration"]
+    created_at: AwareDatetime
 
 
 class MemoryContextPacket(ProtocolModel):

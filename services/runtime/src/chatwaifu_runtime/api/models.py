@@ -86,3 +86,21 @@ class SkillConfirmationDecisionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: Literal["allow_once", "allow_session", "allow_always", "deny"]
+
+
+class MemoryProposalDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["accept", "reject"]
+
+
+class MemoryCorrectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=2_000)
+
+
+class MemoryPinnedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pinned: bool

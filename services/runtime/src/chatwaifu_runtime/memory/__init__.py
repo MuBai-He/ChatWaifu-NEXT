@@ -1,4 +1,4 @@
-"""Explicit, provenance-preserving user memory."""
+"""Policy-governed structured memory projection and retrieval."""
 
 from chatwaifu_runtime.memory.service import ExplicitMemoryCommand, MemoryItem, MemoryService
 

@@ -1,0 +1,63 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/memory-source.schema.json",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "memory_id": {
+      "format": "uuid",
+      "title": "Memory Id",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "source_event_id": {
+      "format": "uuid",
+      "title": "Source Event Id",
+      "type": "string"
+    },
+    "source_id": {
+      "format": "uuid",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "source_kind": {
+      "enum": [
+        "user_turn",
+        "memory_management",
+        "migration"
+      ],
+      "title": "Source Kind",
+      "type": "string"
+    },
+    "turn_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Turn Id"
+    }
+  },
+  "required": [
+    "source_id",
+    "memory_id",
+    "source_event_id",
+    "session_id",
+    "source_kind",
+    "created_at"
+  ],
+  "title": "MemorySource",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

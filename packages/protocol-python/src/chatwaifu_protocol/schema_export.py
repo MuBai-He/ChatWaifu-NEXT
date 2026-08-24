@@ -13,7 +13,12 @@ from chatwaifu_protocol.conversation import ConversationInterruption
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import EventModel
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
-from chatwaifu_protocol.memory import MemoryContextPacket, MemoryProposal, MemoryRecord
+from chatwaifu_protocol.memory import (
+    MemoryContextPacket,
+    MemoryProposal,
+    MemoryRecord,
+    MemorySource,
+)
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
 from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
@@ -47,6 +52,7 @@ class ProtocolCatalog(ProtocolModel):
     memory: MemoryRecord
     memory_proposal: MemoryProposal
     memory_context: MemoryContextPacket
+    memory_source: MemorySource
     model: ModelManifest
     route: RouteDecision
     permission_request: PermissionRequest
@@ -70,6 +76,7 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "memory-context-packet": MemoryContextPacket,
     "memory-proposal": MemoryProposal,
     "memory-record": MemoryRecord,
+    "memory-source": MemorySource,
     "model-manifest": ModelManifest,
     "permission-decision": PermissionDecision,
     "permission-grant": PermissionGrant,

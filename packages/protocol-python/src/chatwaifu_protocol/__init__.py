@@ -11,7 +11,12 @@ from chatwaifu_protocol.media import (
     decode_audio_frame_header,
     encode_audio_frame_header,
 )
-from chatwaifu_protocol.memory import MemoryContextPacket, MemoryProposal, MemoryRecord
+from chatwaifu_protocol.memory import (
+    MemoryContextPacket,
+    MemoryProposal,
+    MemoryRecord,
+    MemorySource,
+)
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
 from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
 from chatwaifu_protocol.registry import SchemaRegistry, create_default_registry
@@ -40,6 +45,7 @@ __all__ = [
     "MemoryContextPacket",
     "MemoryProposal",
     "MemoryRecord",
+    "MemorySource",
     "ModelManifest",
     "PermissionDecision",
     "PermissionGrant",

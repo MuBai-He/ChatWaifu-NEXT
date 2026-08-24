@@ -31,6 +31,28 @@
         }
       ]
     },
+    "MemoryKind": {
+      "enum": [
+        "core",
+        "semantic.fact",
+        "semantic.preference",
+        "episodic.shared_event",
+        "procedural.preference",
+        "relationship.signal",
+        "prospective.commitment",
+        "character.self"
+      ],
+      "type": "string"
+    },
+    "MemoryState": {
+      "enum": [
+        "active",
+        "superseded",
+        "contradicted",
+        "tombstoned"
+      ],
+      "type": "string"
+    },
     "PrivacyLevel": {
       "enum": [
         "public",
@@ -62,8 +84,7 @@
       "type": "number"
     },
     "kind": {
-      "title": "Kind",
-      "type": "string"
+      "$ref": "#/$defs/MemoryKind"
     },
     "memory_id": {
       "format": "uuid",
@@ -71,6 +92,8 @@
       "type": "string"
     },
     "namespace": {
+      "maxLength": 256,
+      "minLength": 1,
       "title": "Namespace",
       "type": "string"
     },
@@ -78,6 +101,11 @@
       "format": "date-time",
       "title": "Observed At",
       "type": "string"
+    },
+    "pinned": {
+      "default": false,
+      "title": "Pinned",
+      "type": "boolean"
     },
     "predicate": {
       "anyOf": [
@@ -105,15 +133,8 @@
       "type": "array"
     },
     "state": {
-      "default": "active",
-      "enum": [
-        "active",
-        "superseded",
-        "contradicted",
-        "tombstoned"
-      ],
-      "title": "State",
-      "type": "string"
+      "$ref": "#/$defs/MemoryState",
+      "default": "active"
     },
     "subject_id": {
       "anyOf": [
