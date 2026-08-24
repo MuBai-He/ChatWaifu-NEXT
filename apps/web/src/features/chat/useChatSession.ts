@@ -24,6 +24,7 @@ import type {
   RuntimeHealth,
 } from "./types";
 import { GenerationAudioPlayer } from "./audioPlayer";
+import { StreamingTextProjector } from "./streamingTextProjector";
 import { useChatAvatar } from "./useChatAvatar";
 import { useVoiceInput } from "./useVoiceInput";
 
@@ -56,6 +57,7 @@ export function useChatSession() {
   const activeGeneration = useRef<string | null>(null);
   const voiceConnected = useRef(false);
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
+  const textProjector = useRef<StreamingTextProjector | null>(null);
 
   const onVoiceConnectionChange = useCallback((connected: boolean) => {
     voiceConnected.current = connected;
@@ -89,13 +91,56 @@ export function useChatSession() {
     [invalidateGeneration, stopLipSync],
   );
 
+  const getTextProjector = useCallback(() => {
+    if (!textProjector.current) {
+      textProjector.current = new StreamingTextProjector({
+        onReveal: (generationId, text) => {
+          if (generationId !== activeGeneration.current) return;
+          setMessages((current) =>
+            current.map((message) =>
+              message.generationId === generationId
+                ? { ...message, text: message.text + text }
+                : message,
+            ),
+          );
+        },
+        onComplete: (generationId) => {
+          if (generationId !== activeGeneration.current) return;
+          setMessages((current) =>
+            current.map((message) =>
+              message.generationId === generationId
+                ? { ...message, pending: false }
+                : message,
+            ),
+          );
+        },
+      });
+    }
+    return textProjector.current;
+  }, []);
+
+  const stopText = useCallback((generationId?: string) => {
+    if (!generationId) return;
+    textProjector.current?.cancel(generationId);
+    setMessages((current) =>
+      current.map((message) =>
+        message.generationId === generationId
+          ? { ...message, pending: false }
+          : message,
+      ),
+    );
+  }, []);
+
   const handleEvent = useCallback(
     (event: RuntimeEvent) => {
       const generationId = event.generation_id ?? undefined;
       switch (event.event_type) {
         case "user.speech_started": {
           const previousGeneration = activeGeneration.current;
-          if (previousGeneration) stopAudio(previousGeneration);
+          if (previousGeneration) {
+            stopText(previousGeneration);
+            stopAudio(previousGeneration);
+          }
           setVoiceActivity("listening");
           setVoiceTranscript(null);
           break;
@@ -128,6 +173,7 @@ export function useChatSession() {
           if (!generationId) break;
           setVoiceActivity("thinking");
           activeGeneration.current = generationId;
+          getTextProjector().start(generationId);
           setMessages((current) => [
             ...current,
             {
@@ -142,15 +188,9 @@ export function useChatSession() {
         }
         case "assistant.text_delta": {
           if (!generationId || generationId !== activeGeneration.current) break;
-          setMessages((current) =>
-            current.map((message) =>
-              message.generationId === generationId
-                ? {
-                    ...message,
-                    text: message.text + payloadText(event.payload.text),
-                  }
-                : message,
-            ),
+          getTextProjector().push(
+            generationId,
+            payloadText(event.payload.text),
           );
           break;
         }
@@ -175,13 +215,7 @@ export function useChatSession() {
         }
         case "assistant.generation_completed": {
           if (!generationId || generationId !== activeGeneration.current) break;
-          setMessages((current) =>
-            current.map((message) =>
-              message.generationId === generationId
-                ? { ...message, pending: false }
-                : message,
-            ),
-          );
+          getTextProjector().complete(generationId);
           void getMemory().then(setMemories);
           setVoiceActivity("idle");
           setVoiceTranscript(null);
@@ -192,7 +226,10 @@ export function useChatSession() {
         }
         case "assistant.generation_cancelled":
         case "conversation.interrupted": {
-          if (generationId) stopAudio(generationId);
+          if (generationId) {
+            stopText(generationId);
+            stopAudio(generationId);
+          }
           setMessages((current) =>
             current.filter(
               (message) =>
@@ -213,7 +250,15 @@ export function useChatSession() {
         }
       }
     },
-    [applyCue, getAudioPlayer, startLipSync, stopAudio, stopLipSync],
+    [
+      applyCue,
+      getAudioPlayer,
+      getTextProjector,
+      startLipSync,
+      stopAudio,
+      stopLipSync,
+      stopText,
+    ],
   );
 
   useEffect(() => {
@@ -299,6 +344,8 @@ export function useChatSession() {
       stopAudio(activeGeneration.current ?? undefined);
       audioPlayer.current?.dispose();
       audioPlayer.current = null;
+      textProjector.current?.dispose();
+      textProjector.current = null;
     };
   }, [handleEvent, stopAudio]);
 
@@ -312,7 +359,10 @@ export function useChatSession() {
       }
       setError(null);
       const previousGeneration = activeGeneration.current;
-      if (previousGeneration) stopAudio(previousGeneration);
+      if (previousGeneration) {
+        stopText(previousGeneration);
+        stopAudio(previousGeneration);
+      }
       try {
         await submitText(sessionId, text.trim());
       } catch (sendError: unknown) {
@@ -321,20 +371,23 @@ export function useChatSession() {
         );
       }
     },
-    [connection, getAudioPlayer, sessionId, stopAudio],
+    [connection, getAudioPlayer, sessionId, stopAudio, stopText],
   );
 
   const interruptActive = useCallback(async () => {
     if (!sessionId) return;
     const generationId = activeGeneration.current;
-    if (generationId) stopAudio(generationId);
+    if (generationId) {
+      stopText(generationId);
+      stopAudio(generationId);
+    }
     activeGeneration.current = null;
     await interrupt(sessionId).catch((interruptError: unknown) => {
       setError(
         interruptError instanceof Error ? interruptError.message : "打断失败",
       );
     });
-  }, [sessionId, stopAudio]);
+  }, [sessionId, stopAudio, stopText]);
 
   const checkStatus = useCallback(async () => {
     if (!sessionId) return;
@@ -352,6 +405,7 @@ export function useChatSession() {
     setResetting(true);
     setError(null);
     const generationId = activeGeneration.current;
+    stopText(generationId ?? undefined);
     stopAudio(generationId ?? undefined);
     activeGeneration.current = null;
     try {
@@ -367,7 +421,7 @@ export function useChatSession() {
     } finally {
       setResetting(false);
     }
-  }, [resetAvatar, resetting, sessionId, stopAudio]);
+  }, [resetAvatar, resetting, sessionId, stopAudio, stopText]);
 
   const refreshMemories = useCallback(async () => {
     setMemories(await getMemory());
