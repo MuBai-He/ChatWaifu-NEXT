@@ -349,7 +349,7 @@ export function ChatDemoPage() {
                   send();
                 }
               }}
-              placeholder="和小雾说点什么…  Enter 发送 / Shift+Enter 换行"
+              placeholder={`和${character?.display_name ?? "绫地宁宁"}说点什么…  Enter 发送 / Shift+Enter 换行`}
               aria-label="Message"
               rows={2}
               disabled={!canSend}

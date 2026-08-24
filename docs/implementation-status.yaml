@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-08-24"
-current_phase: 8
-next_phase: 9
+current_phase: 9
+next_phase: 10
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -25,6 +25,7 @@ validation:
     - make check-generated
     - make setup-live2d-framework
     - make setup-live2d-vendor
+    - make setup-tts-worker
     - make build-live2d-bridge
     - make check-live2d-vendor
     - pnpm build
@@ -34,6 +35,8 @@ validation:
     - browser DOM verifies Runtime, STT provider badge, enabled microphone UI, and fixed viewport
     - browser live text, TTS event, memory, skill, and interruption smoke
     - Chromium real Live2D renders in Avatar Lab and main chat
+    - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
+    - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
   deterministic_generation: byte_identical_on_repeat
   generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
   expected_vendor_diagnostic:
@@ -53,7 +56,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Six GitHub Actions workflows are configured
-      - Ten accepted ADRs exist
+      - Twelve accepted ADRs exist
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -93,7 +96,7 @@ phases:
       - FastAPI loopback Runtime exposes health, session, event, audio, character, memory, and skill APIs
       - SQLite WAL migrations persist sessions, turns, generations, outbox events, memory, and FTS5
       - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
-      - macOS say generates verified 24 kHz WAV while fake TTS keeps CI deterministic
+      - Kokoro worker generates verified 24 kHz WAV while macOS say and fake remain fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
       - Explicit memory survives sessions and forget uses auditable tombstones
@@ -128,12 +131,23 @@ phases:
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
-    status: stt_worker_slice_implemented_other_workers_pending
+    status: stt_and_tts_worker_slices_implemented_other_workers_pending
     evidence:
-      - Versioned model-worker SDK defines authenticated STT request, result, health, and identity contracts
+      - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
-      - make demo provisions an ephemeral token, selects a free port, supervises the worker, and reuses model cache
+      - sherpa-onnx Kokoro v1.1 runs in its own locked environment and loopback-authenticated process
+      - make demo provisions ephemeral tokens, selects free ports, supervises both workers, and reuses model caches
       - Public multilingual base model completed a real Chinese transcription on macOS arm64 CPU int8
+      - Public Kokoro model completed real Chinese 24 kHz synthesis on macOS arm64 CPU
+  - id: 9
+    name: real-cascade-models
+    status: real_llm_and_character_tts_demo_implemented_pending_long_run
+    evidence:
+      - OpenAI-compatible adapter receives character prompt, allowed memory context, recent committed dialogue, and current turn
+      - Default character is an explicitly labeled unofficial Ayachi Nene themed profile with short visual-novel conversation rules
+      - Character voice manifest selects generic Kokoro female speaker 3 without claiming voice-actor cloning
+      - A real two-turn dialogue recalled the preceding invitation to sit down and rest
+      - Three generation-scoped Kokoro WAV segments were emitted for one real model response
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -153,6 +167,7 @@ constraints:
   pipecat_version: "1.7.0"
   browser_microphone_validated: backend_equivalent_audio_and_ui_entry
   local_stt_worker: faster-whisper-base-cpu-int8
+  local_tts_worker: sherpa-onnx-kokoro-multi-lang-v1_1-speaker-3
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5

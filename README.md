@@ -1,7 +1,7 @@
 # ChatWaifu NEXT
 
 ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当前包含一个可直接
-运行的基础 Demo：文字与真实麦克风对话、VAD 自动回合、本地 STT/中文 TTS、Pipecat
+运行的绫地宁宁主题基础 Demo：文字与真实麦克风对话、VAD 自动回合、本地 STT/角色 TTS、Pipecat
 SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、明确记忆与只读
 Runtime Skill 已接通。
 
@@ -20,28 +20,32 @@ make demo
 cp .env.example .env
 ```
 
-命令会监督启动隔离的 faster-whisper worker、Runtime 与 Web，等待三者健康后打开
-<http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止三个进程。若不想自动打开浏览器：
+命令会监督启动隔离的 faster-whisper worker、Kokoro TTS worker、Runtime 与 Web，等待全部
+健康后打开 <http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止全部进程。若不想自动打开浏览器：
 
 ```bash
 make demo DEMO_ARGS=--no-open
 ```
 
-首次启动会下载公开的多语言 `faster-whisper base` 模型（约 150 MB），之后复用
-`.local/models/faster-whisper/` 缓存。模型推理在独立 worker 中运行，麦克风音频不会发往
+首次启动会下载公开的多语言 `faster-whisper base`（约 150 MB）和 Kokoro v1.1（约 365 MB），
+之后复用 `.local/models/` 缓存。STT/TTS 推理都在独立本地 worker 中运行，麦克风音频不会发往
 云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
 VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式
 也会听到旁边人的话，适合安静、独处的环境。
 
-Demo 默认使用明确标注的离线 Demo LLM。在 macOS 上，`tts.provider=auto` 会选择系统
-`say` 的 `Tingting` 中文语音；CI 或缺少系统语音工具的平台回退到 `fake` 测试音。真实本地
-模型可通过 `.env` 切换到 OpenAI-compatible 端点，例如 Ollama、LM Studio 或 vLLM：
+Demo 默认使用明确标注的离线 Demo LLM；若 `.env` 已配置 OpenAI-compatible 服务，启动器会
+直接使用真实模型。模型可以是本机 Ollama、LM Studio、vLLM，也可以是用户明确选择的兼容云
+端点。API Key 只保存在本机 `.env`，不会进入 Web 或公开配置接口：
 
 ```bash
 CHATWAIFU_LLM__PROVIDER=openai_compatible
 CHATWAIFU_LLM__MODEL=qwen3:8b
 CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
+# CHATWAIFU_LLM__API_KEY=仅在服务要求时填写
 ```
+
+默认角色为绫地宁宁主题人格，近期已提交对话会作为下一轮上下文。角色提示词约束为日常
+Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Runtime 记忆的内容当成事实。
 
 ## Demo 能做什么
 
@@ -53,7 +57,7 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 - 桌面页面固定为显示区域高度，右侧历史独立滚动，左侧 Live2D 始终留在视口内
 - “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
 - `AvatarCue` 驱动 thinking、speaking、idle 与口型状态
-- 角色人格来自 `characters/default/character.json`
+- 绫地宁宁主题人格、开场白、角色声线与内容声明来自 `characters/default/character.json`
 - 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone
 - `runtime.status` Runtime Skill 通过 manifest 注册，只读返回实际 LLM/TTS/provider 状态
 - 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
@@ -62,12 +66,12 @@ CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
 
 ## TTS 选择
 
-默认 Demo 没有采用 GPT-SoVITS。它适合作为已有角色音色训练/推理服务，但不适合作为基础
-安装依赖。当前分层策略是：
+默认 Demo 没有采用 GPT-SoVITS。它适合作为已有且已获授权的角色音色训练/推理服务，但不适合
+成为基础安装依赖。当前分层策略是：
 
-1. macOS 系统语音：零下载、立即可用，用于当前 Demo 验收。
-2. sherpa-onnx + Kokoro v1.1-zh：推荐的轻量本地发行目标；中英双语、103 个 speaker、
-   24 kHz，不依赖 PyTorch，但不等于音色克隆。
+1. sherpa-onnx + Kokoro v1.1：当前 `make demo` 的角色语音；中英双语、103 个 speaker、
+   24 kHz，不依赖 PyTorch。当前 speaker 是普通合成女声，不是原作声优克隆。
+2. macOS 系统语音：零下载的手动回退路径，直接运行 Runtime 且选择 `auto` 时可用。
 3. CosyVoice 3 0.5B worker：需要零样本音色克隆时优先评估的独立服务。
 4. GPT-SoVITS：保留为用户自行管理的外部 HTTP provider，不塞进主 Runtime。
 
@@ -95,6 +99,7 @@ make demo
 ```bash
 make demo               # 一次启动 Runtime + Web
 make setup-stt-worker   # 只准备隔离的 faster-whisper worker 环境
+make setup-tts-worker   # 只准备 Kokoro worker 并校验/下载公开模型
 make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
 make dev-web            # 只启动 Web（127.0.0.1:5173）
 make test-runtime       # Runtime/API/取消/记忆专项测试

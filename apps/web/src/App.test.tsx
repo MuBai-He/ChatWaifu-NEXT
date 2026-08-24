@@ -97,7 +97,10 @@ describe("ChatWaifu usable demo", () => {
     expect(screen.getByRole("heading", { name: "绫地宁宁" })).toBeTruthy();
     expect(screen.getByText("Runtime online")).toBeTruthy();
     expect(screen.getByText("LLM · demo")).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
+    const messageBox = screen.getByRole("textbox", { name: "Message" });
+    expect(messageBox.getAttribute("placeholder")).toContain(
+      "和绫地宁宁说点什么",
+    );
     const sendButton = screen.getByRole("button", { name: "Send message" });
     expect(sendButton).toBeInstanceOf(HTMLButtonElement);
     if (!(sendButton instanceof HTMLButtonElement))

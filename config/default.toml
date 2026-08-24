@@ -23,6 +23,7 @@ voice = "Tingting"
 sample_rate = 24000
 rate = 190
 timeout_seconds = 30
+worker_url = "http://127.0.0.1:8767"
 
 [realtime]
 enabled = true
