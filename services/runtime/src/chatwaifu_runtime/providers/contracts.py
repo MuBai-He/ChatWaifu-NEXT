@@ -14,6 +14,7 @@ class LlmRequest:
     system_prompt: str
     character_name: str = "ChatWaifu"
     context: tuple[tuple[str, str], ...] = ()
+    history: tuple[tuple[str, str], ...] = ()
 
 
 class LlmProvider(Protocol):

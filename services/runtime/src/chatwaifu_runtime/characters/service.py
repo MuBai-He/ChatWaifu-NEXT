@@ -6,6 +6,19 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class CharacterVoiceProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    voice_id: str = Field(min_length=1, max_length=128)
+    display_name: str = Field(min_length=1, max_length=128)
+    language: str = Field(min_length=2, max_length=32)
+    provider: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    speaker_id: int = Field(ge=0, le=1024)
+    speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    license: str = Field(min_length=1, max_length=128)
+
+
 class CharacterProfile(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -15,6 +28,8 @@ class CharacterProfile(BaseModel):
     greeting: str = Field(min_length=1, max_length=1000)
     system_prompt: str = Field(min_length=1, max_length=10_000)
     accent_color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    voice_profile: CharacterVoiceProfile
+    content_notice: str = Field(min_length=1, max_length=1000)
 
 
 class CharacterService:

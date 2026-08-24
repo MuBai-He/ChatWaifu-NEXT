@@ -93,7 +93,7 @@ export function ChatDemoPage() {
         <section className="character-panel" aria-label="Character">
           <div className="character-heading">
             <p>YOUR LOCAL COMPANION</p>
-            <h1>{character?.display_name ?? "小雾"}</h1>
+            <h1>{character?.display_name ?? "绫地宁宁"}</h1>
             <span>{character?.tagline ?? "正在连接角色 Runtime…"}</span>
           </div>
 
@@ -280,9 +280,11 @@ export function ChatDemoPage() {
           <div className="transcript" ref={transcriptRef} aria-live="polite">
             {messages.length === 0 && (
               <article className="message assistant welcome-message">
-                <div className="message-avatar">雾</div>
+                <div className="message-avatar">
+                  {character?.display_name.slice(0, 1) ?? "宁"}
+                </div>
                 <div>
-                  <span>小雾</span>
+                  <span>{character?.display_name ?? "绫地宁宁"}</span>
                   <p>
                     {character?.greeting ??
                       "你好呀，Runtime 准备好后我们就可以聊天。"}
@@ -293,13 +295,15 @@ export function ChatDemoPage() {
             {messages.map((message) => (
               <article className={`message ${message.role}`} key={message.id}>
                 <div className="message-avatar">
-                  {message.role === "user" ? "你" : "雾"}
+                  {message.role === "user"
+                    ? "你"
+                    : (character?.display_name.slice(0, 1) ?? "宁")}
                 </div>
                 <div>
                   <span>
                     {message.role === "user"
                       ? "你"
-                      : (character?.display_name ?? "小雾")}
+                      : (character?.display_name ?? "绫地宁宁")}
                   </span>
                   <p>
                     {message.text}
@@ -360,8 +364,8 @@ export function ChatDemoPage() {
             </button>
           </form>
           <p className="demo-disclosure">
-            Demo LLM 会明确标注自己；语音与记忆均在本机处理。可在配置中切换本地
-            OpenAI 兼容模型。
+            {character?.content_notice ??
+              "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
           </p>
         </section>
       </div>

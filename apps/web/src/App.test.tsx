@@ -27,10 +27,21 @@ const session = {
   },
   character: {
     character_id: "default",
-    display_name: "小雾",
-    tagline: "住在你设备里的本地 AI 伙伴",
-    greeting: "你好呀，我是小雾。",
-    accent_color: "#8b5cf6",
+    display_name: "绫地宁宁",
+    tagline: "《サノバウィッチ》主题的非官方本地角色 Demo",
+    greeting: "欢迎回来。那个……今天也要在这里陪我聊一会儿吗？",
+    accent_color: "#d96b96",
+    voice_profile: {
+      voice_id: "ayachi-nene-demo-zh",
+      display_name: "宁宁 Demo 合成女声",
+      language: "zh",
+      provider: "sherpa_kokoro_worker",
+      model: "kokoro-multi-lang-v1_1",
+      speaker_id: 3,
+      speed: 1.04,
+      license: "Apache-2.0",
+    },
+    content_notice: "非官方同人技术 Demo。",
   },
   sessionId: "00000000-0000-4000-8000-000000000001",
   messages: [],
@@ -83,7 +94,7 @@ describe("ChatWaifu usable demo", () => {
     render(<App />);
 
     expect(screen.getByText("ChatWaifu NEXT")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "小雾" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "绫地宁宁" })).toBeTruthy();
     expect(screen.getByText("Runtime online")).toBeTruthy();
     expect(screen.getByText("LLM · demo")).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();

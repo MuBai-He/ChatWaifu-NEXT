@@ -20,9 +20,7 @@ class OpenAiCompatibleLlmProvider:
         self._timeout = timeout_seconds
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[str]:
-        messages = [{"role": "system", "content": request.system_prompt}]
-        messages.extend({"role": role, "content": text} for role, text in request.context)
-        messages.append({"role": "user", "content": request.user_text})
+        messages = build_messages(request)
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
@@ -47,3 +45,11 @@ class OpenAiCompatibleLlmProvider:
                     content = choices[0].get("delta", {}).get("content")
                     if isinstance(content, str) and content:
                         yield content
+
+
+def build_messages(request: LlmRequest) -> list[dict[str, str]]:
+    messages = [{"role": "system", "content": request.system_prompt}]
+    messages.extend({"role": role, "content": text} for role, text in request.context)
+    messages.extend({"role": role, "content": text} for role, text in request.history)
+    messages.append({"role": "user", "content": request.user_text})
+    return messages

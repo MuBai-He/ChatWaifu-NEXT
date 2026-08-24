@@ -132,8 +132,9 @@ class ConversationService:
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
+            history = await self._recent_history(session_id, accepted.turn_id)
             task = asyncio.create_task(
-                self._run_generation(accepted, normalized, character, memories),
+                self._run_generation(accepted, normalized, character, memories, history),
                 name=f"generation-{accepted.generation_id}",
             )
             self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
@@ -297,6 +298,7 @@ class ConversationService:
         user_text: str,
         character: CharacterProfile,
         memories: list[MemoryItem],
+        history: tuple[tuple[str, str], ...],
     ) -> None:
         output = ""
         segment = ""
@@ -308,6 +310,7 @@ class ConversationService:
                 system_prompt=character.system_prompt,
                 character_name=character.display_name,
                 context=_memory_context(memories),
+                history=history,
             )
             async for delta in self._providers.llm.stream(request):
                 self._ensure_current(accepted)
@@ -331,6 +334,21 @@ class ConversationService:
             current = self._active.get(accepted.session_id)
             if current and current.generation_id == accepted.generation_id:
                 self._active.pop(accepted.session_id, None)
+
+    async def _recent_history(
+        self, session_id: UUID, current_turn_id: UUID, limit: int = 16
+    ) -> tuple[tuple[str, str], ...]:
+        rows = await self._database.fetchall(
+            """
+            SELECT role, committed_text
+            FROM turns
+            WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (str(session_id), str(current_turn_id), limit),
+        )
+        return tuple((str(row["role"]), str(row["committed_text"])) for row in reversed(rows))
 
     async def _synthesize_segment(self, accepted: GenerationAccepted, text: str) -> None:
         self._ensure_current(accepted)

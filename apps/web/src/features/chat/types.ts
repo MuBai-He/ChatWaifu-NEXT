@@ -12,6 +12,17 @@ export interface CharacterProfile {
   tagline: string;
   greeting: string;
   accent_color: string;
+  voice_profile: {
+    voice_id: string;
+    display_name: string;
+    language: string;
+    provider: string;
+    model: string;
+    speaker_id: number;
+    speed: number;
+    license: string;
+  };
+  content_notice: string;
 }
 
 export interface SessionSnapshot {
