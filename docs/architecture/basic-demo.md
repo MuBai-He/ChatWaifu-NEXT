@@ -13,9 +13,11 @@
 6. Interrupt immediately invalidates the generation, stops synthesis/playback, clears stale output,
    and returns the avatar to listening.
 7. Explicit remember/forget requests persist with provenance and affect a later session.
-8. A read-only system-status Runtime Skill reports active providers and health truthfully.
-9. Desktop history scrolls inside the conversation pane without moving the avatar off-screen.
-10. A confirmed reset cancels active work and returns conversation, memory, event, audio, and
+8. Runtime Skills and local MCP plugins share schema validation, permissions, confirmation,
+   cancellation, timeout, normalized error, and audit boundaries.
+9. A read-only system-status Runtime Skill reports active providers and health truthfully.
+10. Desktop history scrolls inside the conversation pane without moving the avatar off-screen.
+11. A confirmed reset cancels active work and returns conversation, memory, event, audio, and
     avatar state to a clean demo baseline while keeping the ready session connected.
 
 ## Domain responsibilities
@@ -29,7 +31,7 @@
 | Providers      | LLM/STT/TTS-specific I/O                                        | sessions, memory truth, UI state                 | normalized streaming interfaces                     | timeout, cancellation, late-output rejection, health diagnostics |
 | Persistence    | SQLite WAL migrations, repositories, event/outbox atomicity     | prompt construction and model routing            | domain records and page queries                     | transactions, busy timeout, startup recovery                     |
 | Memory         | proposals, explicit policy, FTS retrieval, provenance, deletion | transcript-as-memory and direct SQL use by agent | policy-filtered context packets                     | no write on ambiguity; forget is durable                         |
-| Runtime Skills | registry, schema, permission, execution, status skill           | Codex Development Skills and name-based dispatch | typed calls/results                                 | timeout, cancellation, normalized denial/errors                  |
+| Runtime Skills | registry, policy broker, job executor, MCP adapter, audit       | Codex Development Skills and provider internals  | typed calls/results and confirmations               | timeout, process-group cancellation, normalized denial/errors    |
 | Character      | persona, prompt budgets, response/Avatar planning               | provider and renderer identifiers                | context in; provider prompt and semantic cues out   | safe neutral/default persona fallback                            |
 
 ## Demo dependencies and migration path
@@ -40,6 +42,7 @@
 - Pipecat 1.7 SmallWebRTC owns full-duplex transport and Silero VAD behind ChatWaifu contracts.
 - faster-whisper runs in an independently locked worker environment and returns versioned SDK models.
 - `sherpa-onnx` and all model bundles are optional worker/runtime dependencies, never base CI inputs.
+- MCP plugins run in fresh stdio child processes; the packaged OS sandbox remains future hardening.
 - Tauri remains a thin host for Runtime lifecycle and shared Web assets.
 
 ## Release exclusions

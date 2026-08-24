@@ -25,6 +25,8 @@ not be described as character-quality speech.
 
 - SQLite: `.local/data/chatwaifu.db`
 - Generated speech: `.local/data/audio/*.wav`
+- Installed plugins: `.local/data/plugins/`
+- Recoverable plugin removals: `.local/data/plugin-trash/`
 - Local STT model cache: `.local/models/faster-whisper/`
 - Configuration defaults: `config/default.toml`
 - Environment example: `.env.example`
@@ -47,11 +49,17 @@ session and WebSocket so the user can start again immediately.
    new reply continues. The explicit `打断` button must produce the same no-stale-output result.
 5. Send `请记住我喜欢蓝色`, reload or create another session, and ask what it remembers.
 6. Send `请忘记我喜欢蓝色` and confirm the active memory card becomes empty.
-7. Run `运行状态 Skill` and compare provider names with the header.
-8. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
-   the transcript moves.
-9. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
-   can be sent in the same session.
+7. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
+8. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
+   explicit decision and that `拒绝` produces a failed run without writing the note.
+9. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
+10. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
+    the transcript moves.
+11. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+    can be sent in the same session.
+
+Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft
+child-process boundary, not an OS sandbox; only install trusted local plugins in the current Demo.
 
 `按住说话` is the safe default. `自由对话（会听到附近人声）` keeps the outbound track enabled and
 is intended for quiet, single-user environments. Silero VAD detects speech boundaries, not whether

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-08-24"
-current_phase: 9
-next_phase: 10
+current_phase: 10
+next_phase: 11
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -34,6 +34,7 @@ validation:
     - two-utterance barge-in cancels the first generation and completes the second generation
     - browser DOM verifies Runtime, STT provider badge, enabled microphone UI, and fixed viewport
     - browser live text, TTS event, memory, skill, and interruption smoke
+    - browser Skills control center, MCP echo, progressive instructions, and denial smoke
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -56,7 +57,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Six GitHub Actions workflows are configured
-      - Twelve accepted ADRs exist
+      - Thirteen accepted ADRs exist
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -64,7 +65,7 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Pydantic protocol source covers all required Phase 1 model families
-      - 23 versioned JSON Schemas are generated deterministically
+      - 27 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
       - 13 Python tests and 7 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
@@ -148,12 +149,25 @@ phases:
       - Character voice manifest selects generic Kokoro female speaker 3 without claiming voice-actor cloning
       - A real two-turn dialogue recalled the preceding invitation to sit down and rest
       - Three generation-scoped Kokoro WAV segments were emitted for one real model response
+  - id: 10
+    name: runtime-skills-and-plugins
+    status: basic_permissioned_mcp_slice_implemented_pending_os_sandbox
+    evidence:
+      - SKILL.md and chatwaifu.yaml discovery validates ids, versions, schemas, paths, and duplicates
+      - SQLite persists plugins, runs, permission requests, grants, and audited tool calls
+      - Permission grants remain separate from per-invocation side-effect confirmation
+      - MCP 2025-11-25 stdio tools run in fresh Python child processes with cleaned environments
+      - Input/output schema validation, normalized errors, timeout, cancellation, and restart expiry pass tests
+      - Local Echo example covers read, confirmed write, timeout, cancellation, disable, and recoverable uninstall
+      - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, and plugin controls
+      - Real browser smoke completed MCP echo and denied a pending write without executing it
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
   - Live2D release packaging and a custom character require an explicit asset-license review
   - Packaged Tauri delivery is not in the basic Demo
+  - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
   - RTVI control/data channels, public-network TURN, reconnect policy, and device-loss recovery remain pending
   - Playback progress acknowledgements and long-running multi-turn voice stress tests remain pending
 

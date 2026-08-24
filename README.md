@@ -2,8 +2,8 @@
 
 ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当前包含一个可直接
 运行的绫地宁宁主题基础 Demo：文字与真实麦克风对话、VAD 自动回合、本地 STT/角色 TTS、Pipecat
-SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、明确记忆与只读
-Runtime Skill 已接通。
+SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、明确记忆，以及带权限与
+确认的 Runtime Skills/MCP 插件链路已接通。
 
 ## 直接运行 Demo
 
@@ -59,10 +59,27 @@ Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Ru
 - `AvatarCue` 驱动 thinking、speaking、idle 与口型状态
 - 绫地宁宁主题人格、开场白、角色声线与内容声明来自 `characters/default/character.json`
 - 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone
-- `runtime.status` Runtime Skill 通过 manifest 注册，只读返回实际 LLM/TTS/provider 状态
+- `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
+- “Skills & 插件”控制中心支持按需加载说明、运行记录、权限确认、取消、启停和可恢复卸载
+- 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；可从控制中心安装
 - 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
 
 数据默认写入 `.local/data/chatwaifu.db` 与 `.local/data/audio/`，两者都不会提交到 Git。
+
+## Runtime Skills 与本地插件
+
+产品 Runtime Skills 位于 `skills/`，Codex 开发技能位于 `.agents/skills/`，两者不会互相加载。
+页面左侧打开“Skills & 插件”，可安装仓库内 Local Echo 测试插件，或填写一个本地插件目录的
+绝对路径。插件需要 `plugin.json`、`SKILL.md` 与 `chatwaifu.yaml`；安装时拒绝 symlink、越界
+路径和过大文件。
+
+插件通过 MCP stdio 在逐次创建的 Python 子进程中运行，使用独立工作目录、清理后的环境、
+Schema 校验、统一错误、超时与取消。写入、破坏、外部通信和设备控制不会因为安装插件就自动
+获得授权；权限 grant 与每次操作确认是两个独立步骤。当前是软隔离，不是 OS 沙箱，只应安装
+信任的本地插件。具体边界见 [ADR 0013](docs/adr/0013-permissioned-stdio-mcp-plugins.md)。
+
+完整长期记忆尚未按某个第三方框架直接落地；候选方案、隐私策略与推荐顺序见
+[记忆系统方案调研](docs/research/memory-system-options.md)。
 
 ## TTS 选择
 
