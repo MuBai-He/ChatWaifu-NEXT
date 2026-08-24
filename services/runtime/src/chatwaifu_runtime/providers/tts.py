@@ -64,7 +64,9 @@ class MacOsSayTtsProvider:
                 str(self._rate),
                 "-o",
                 str(source),
-                text,
+                "-f",
+                "-",
+                input_text=text,
             )
             await self._run(
                 "afconvert",
@@ -80,12 +82,20 @@ class MacOsSayTtsProvider:
         finally:
             source.unlink(missing_ok=True)
 
-    async def _run(self, *command: str) -> None:
+    async def _run(self, *command: str, input_text: str | None = None) -> None:
         process = await asyncio.create_subprocess_exec(
-            *command, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE
+            *command,
+            stdin=(
+                asyncio.subprocess.PIPE if input_text is not None else asyncio.subprocess.DEVNULL
+            ),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
         )
         try:
-            _, stderr = await asyncio.wait_for(process.communicate(), timeout=self._timeout_seconds)
+            stdin = input_text.encode("utf-8") if input_text is not None else None
+            _, stderr = await asyncio.wait_for(
+                process.communicate(stdin), timeout=self._timeout_seconds
+            )
         except BaseException:
             if process.returncode is None:
                 process.terminate()
