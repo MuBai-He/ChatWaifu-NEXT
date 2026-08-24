@@ -7,7 +7,8 @@
 3. The browser sends microphone audio over WebRTC; Pipecat and Silero VAD create a bounded utterance,
    and the isolated local STT worker supplies the same final-text command used by typed input.
 4. The character responds incrementally through a real configured LLM or the clearly labelled demo
-   provider.
+   provider. The Web client smooths bursty delta delivery through a bounded, generation-scoped reveal
+   queue so text remains visibly progressive without delaying Runtime generation or TTS.
 5. The response is synthesized locally, returned over the WebRTC audio track, and drives
    speaking/lipsync Avatar state.
 6. Interrupt immediately invalidates the generation, stops synthesis/playback, clears stale output,

@@ -21,3 +21,6 @@
   retrieval, dedupe, supersede, correction, pinning, tombstones, and a Web memory center.
 - Reserve null `SemanticMemoryIndex` and `TemporalMemoryGraph` ports for optional Scheme B/C retrieval
   without changing SQLite Scheme A truth ownership.
+- Center the structured-memory dialog close icon with geometry-stable SVG rendering.
+- Smooth bursty assistant deltas through a bounded generation-scoped Web reveal queue while preserving
+  lossless text, interruption, and stale-generation rejection.

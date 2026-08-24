@@ -37,6 +37,7 @@ validation:
     - browser Skills control center, MCP echo, progressive instructions, and denial smoke
     - browser structured memory proposal, acceptance, provenance, correction, and pin smoke plus exact test-record Runtime tombstone cleanup
     - browser Ayachi Nene semantic expression and bounded action-motion smoke
+    - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -101,6 +102,7 @@ phases:
       - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
       - Kokoro worker generates verified 24 kHz WAV while macOS say and fake remain fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
+      - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
       - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
