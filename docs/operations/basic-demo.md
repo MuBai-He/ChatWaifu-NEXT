@@ -3,12 +3,13 @@
 ## Start and stop
 
 Run `make demo`. The command synchronizes the Python workspace, prepares the repository-pinned pnpm
-under `.local/tooling/`, and validates Web dependencies. It then creates an ephemeral loopback token,
-starts the isolated faster-whisper worker on a free loopback port, waits for the authenticated worker
-health response, starts Runtime, and finally starts Web at `http://127.0.0.1:5173`. `Ctrl+C`
-terminates all three process groups and Runtime drains active generation cancellation before closing
-SQLite. The first run downloads the public multilingual `base` model (about 150 MB); later runs reuse
-`.local/models/faster-whisper/`.
+under `.local/tooling/`, and validates Web dependencies. It then creates ephemeral loopback tokens,
+starts the isolated faster-whisper, Qwen3-TTS MLX, and GPT-SoVITS workers on free loopback ports,
+waits for their authenticated health responses, starts Runtime, and finally starts Web at
+`http://127.0.0.1:5173`. `Ctrl+C` terminates every supervised process group and Runtime drains active
+generation cancellation before closing SQLite. The first STT run downloads the public multilingual
+`base` model (about 150 MB); later runs reuse `.local/models/faster-whisper/`. Neural TTS uses the
+local-only profile described in `docs/operations/neural-tts.md`.
 
 If either port is already occupied, stop the old process or run the two services separately with
 `make dev-runtime` and `make dev-web`.
@@ -18,8 +19,9 @@ If either port is already occupied, stop the old process or run the two services
 The header and `runtime.status` Skill show the resolved LLM, STT, and TTS provider names plus the
 Pipecat SmallWebRTC transport. `demo` means deterministic Demo LLM, not a hidden real model.
 `faster_whisper_worker` means microphone PCM stays on loopback and inference runs in the isolated
-worker. `macos_say` is the zero-download speech adapter. `fake` TTS is a valid WAV test tone and must
-not be described as character-quality speech.
+worker. `qwen3_tts_mlx` is the neural TTS default and `gpt_sovits` is selectable under `输出声音`.
+`macos_say` remains a zero-download adapter and `fake` is a valid WAV test tone; neither may be
+described as character-quality voice cloning.
 
 ## Local data
 
@@ -28,6 +30,8 @@ not be described as character-quality speech.
 - Installed plugins: `.local/data/plugins/`
 - Recoverable plugin removals: `.local/data/plugin-trash/`
 - Local STT model cache: `.local/models/faster-whisper/`
+- Local TTS profile: `.local/config/tts-profiles.toml`
+- Local Qwen/GPT-SoVITS environments, vendors, and model caches: `.local/`
 - Configuration defaults: `config/default.toml`
 - Environment example: `.env.example`
 
@@ -42,23 +46,25 @@ session and WebSocket so the user can start again immediately.
 
 1. Confirm header says `Runtime online`.
 2. Confirm the header reports `STT · faster_whisper_worker`.
-3. Click `开启语音`, allow microphone access, hold `按住说话`, speak one sentence, then release it.
+3. Confirm `输出声音` defaults to Qwen3-TTS, send one short turn, switch to GPT-SoVITS, and send a
+   second turn. Confirm both play and the header follows the session selection.
+4. Click `开启语音`, allow microphone access, hold `按住说话`, speak one sentence, then release it.
    Confirm the UI moves through listening, transcription, thinking, then shows a final user message
    and remote TTS. Confirm nearby speech does not move the meter or start a turn while the button is
    not held.
-4. Hold `按住说话` and speak while the character is responding; confirm old audio stops and only the
+5. Hold `按住说话` and speak while the character is responding; confirm old audio stops and only the
    new reply continues. The explicit `打断` button must produce the same no-stale-output result.
-5. Send `我喜欢蓝色`, open `记忆中心`, inspect the pending preference and its rationale, then accept it.
-6. View its source event, pin it, reload or create another session, and ask `你记得我的喜好吗？`.
-7. Correct the accepted record to `我喜欢紫色`; confirm the old record is superseded and only the new
+6. Send `我喜欢蓝色`, open `记忆中心`, inspect the pending preference and its rationale, then accept it.
+7. View its source event, pin it, reload or create another session, and ask `你记得我的喜好吗？`.
+8. Correct the accepted record to `我喜欢紫色`; confirm the old record is superseded and only the new
    active record is recalled. Then forget the test record and confirm it is tombstoned.
-8. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
-9. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
-   explicit decision and that `拒绝` produces a failed run without writing the note.
-10. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
-11. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
+9. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
+10. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
+    explicit decision and that `拒绝` produces a failed run without writing the note.
+11. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
+12. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
     the transcript moves.
-12. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+13. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
     can be sent in the same session.
 
 Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft

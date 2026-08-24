@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-24"
+updated_at: "2026-08-25"
 current_phase: 11
 next_phase: 12
 phase_2_entry_allowed: true
@@ -26,6 +26,7 @@ validation:
     - make setup-live2d-framework
     - make setup-live2d-vendor
     - make setup-tts-worker
+    - make setup-neural-tts-workers
     - make build-live2d-bridge
     - make check-live2d-vendor
     - pnpm build
@@ -41,6 +42,9 @@ validation:
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
+    - real Qwen3-TTS MLX worker produces generation-scoped 24 kHz WAV from the official 0.6B Base model
+    - real GPT-SoVITS CPUFast v2ProPlus worker produces non-silent generation-scoped 32 kHz WAV
+    - Runtime session route switches Qwen to GPT-SoVITS and unloads each inactive model
   deterministic_generation: byte_identical_on_repeat
   generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
   expected_vendor_diagnostic:
@@ -60,7 +64,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Six GitHub Actions workflows are configured
-      - Thirteen accepted ADRs exist
+      - Fourteen ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -100,7 +104,7 @@ phases:
       - FastAPI loopback Runtime exposes health, session, event, audio, character, memory, and skill APIs
       - SQLite WAL migrations persist sessions, turns, generations, outbox events, memory, and FTS5
       - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
-      - Kokoro worker generates verified 24 kHz WAV while macOS say and fake remain fallback paths
+      - Session-scoped TtsRouter selects normalized Qwen or GPT-SoVITS workers while macOS say and fake remain test/fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
@@ -136,23 +140,28 @@ phases:
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
-    status: stt_and_tts_worker_slices_implemented_other_workers_pending
+    status: stt_and_dual_neural_tts_worker_slices_implemented_other_workers_pending
     evidence:
       - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
       - sherpa-onnx Kokoro v1.1 runs in its own locked environment and loopback-authenticated process
-      - make demo provisions ephemeral tokens, selects free ports, supervises both workers, and reuses model caches
+      - One authenticated worker protocol covers Qwen3-TTS MLX and GPT-SoVITS CPUFast capabilities, synthesis, cancellation, and unload
+      - make demo provisions ephemeral tokens, selects free ports, supervises STT plus both lazy TTS workers, and reuses model caches
       - Public multilingual base model completed a real Chinese transcription on macOS arm64 CPU int8
       - Public Kokoro model completed real Chinese 24 kHz synthesis on macOS arm64 CPU
+      - Qwen3-TTS 0.6B Base completed real Chinese and Japanese MLX synthesis on Apple Silicon
+      - GPT-SoVITS Roxy v2ProPlus completed real Chinese and Japanese CPUFast synthesis as a local integration model
   - id: 9
     name: real-cascade-models
-    status: real_llm_and_character_tts_demo_implemented_pending_long_run
+    status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset
     evidence:
       - OpenAI-compatible adapter receives character prompt, allowed memory context, recent committed dialogue, and current turn
       - Default character is an explicitly labeled unofficial Ayachi Nene themed profile with short visual-novel conversation rules
-      - Character voice manifest selects generic Kokoro female speaker 3 without claiming voice-actor cloning
+      - Character voice manifest defaults to the provider-neutral local reference-clone profile without claiming original voice-actor identity
       - A real two-turn dialogue recalled the preceding invitation to sit down and rest
       - Three generation-scoped Kokoro WAV segments were emitted for one real model response
+      - Web exposes session-scoped Qwen/GPT-SoVITS selection and Runtime cancels before rerouting
+      - Qwen and GPT-SoVITS remain local-only evaluation paths until a licensed Ningning voice dataset/model is supplied
   - id: 10
     name: runtime-skills-and-plugins
     status: basic_permissioned_mcp_slice_implemented_pending_os_sandbox
@@ -180,6 +189,7 @@ entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
   - macOS Tauri compile smoke is configured but has not run remotely
   - Live2D release packaging and a custom character require an explicit asset-license review
+  - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - Packaged Tauri delivery is not in the basic Demo
   - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
   - RTVI control/data channels, public-network TURN, reconnect policy, and device-loss recovery remain pending
@@ -195,7 +205,7 @@ constraints:
   pipecat_version: "1.7.0"
   browser_microphone_validated: backend_equivalent_audio_and_ui_entry
   local_stt_worker: faster-whisper-base-cpu-int8
-  local_tts_worker: sherpa-onnx-kokoro-multi-lang-v1_1-speaker-3
+  local_tts_worker: selectable-qwen3-tts-mlx-default-and-gpt-sovits-cpufast
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5

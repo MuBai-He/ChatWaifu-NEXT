@@ -1,6 +1,6 @@
 # ADR 0012: Tiered local TTS providers
 
-- Status: Accepted
+- Status: Superseded by ADR 0014
 - Date: 2026-08-23
 
 ## Context
