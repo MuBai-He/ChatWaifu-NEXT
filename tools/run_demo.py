@@ -1,6 +1,7 @@
 """Run the loopback Runtime and Web client as one supervised local demo."""
 
 import argparse
+import json
 import os
 import secrets
 import shutil
@@ -9,6 +10,7 @@ import socket
 import subprocess
 import sys
 import time
+import tomllib
 import urllib.error
 import urllib.request
 import webbrowser
@@ -20,7 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_HEALTH = "http://127.0.0.1:8765/v1/runtime/health"
 WEB_URL = "http://127.0.0.1:5173/"
 STT_WORKER = ROOT / "workers" / "asr-faster-whisper"
-TTS_WORKER = ROOT / "workers" / "tts-sherpa-kokoro"
+NEURAL_TTS_SETUP = ROOT / "tools" / "setup_neural_tts_workers.py"
+TTS_PROFILE_PATH = ROOT / ".local" / "config" / "tts-profiles.toml"
 
 
 def main() -> int:
@@ -65,22 +68,29 @@ def main() -> int:
     )
     if worker_install.returncode != 0:
         return worker_install.returncode
-    print("Checking isolated local Kokoro TTS worker...", flush=True)
+    print("Checking isolated Qwen/GPT-SoVITS workers...", flush=True)
     tts_install = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "setup_tts_worker.py")],
+        [sys.executable, str(NEURAL_TTS_SETUP)],
         cwd=ROOT,
         env=environment,
         check=False,
     )
     if tts_install.returncode != 0:
         return tts_install.returncode
+    tts_profiles = _load_tts_profiles()
 
     stt_port = _find_free_loopback_port()
     stt_token = secrets.token_urlsafe(32)
-    tts_port = _find_free_loopback_port()
-    while tts_port == stt_port:
-        tts_port = _find_free_loopback_port()
-    tts_token = secrets.token_urlsafe(32)
+    tts_ports: dict[str, int] = {}
+    tts_tokens: dict[str, str] = {}
+    allocated_ports = {stt_port}
+    for provider_id in ("qwen3_tts_mlx", "gpt_sovits"):
+        port = _find_free_loopback_port()
+        while port in allocated_ports:
+            port = _find_free_loopback_port()
+        allocated_ports.add(port)
+        tts_ports[provider_id] = port
+        tts_tokens[provider_id] = secrets.token_urlsafe(32)
     worker_environment = environment.copy()
     worker_environment.update(
         {
@@ -101,23 +111,25 @@ def main() -> int:
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
             "CHATWAIFU_STT__LANGUAGE": "zh",
-            "CHATWAIFU_TTS__PROVIDER": "sherpa_kokoro_worker",
-            "CHATWAIFU_TTS__WORKER_URL": f"http://127.0.0.1:{tts_port}",
-            "CHATWAIFU_TTS__WORKER_TOKEN": tts_token,
-        }
-    )
-    tts_environment = environment.copy()
-    tts_environment.update(
-        {
-            "CHATWAIFU_TTS_WORKER_HOST": "127.0.0.1",
-            "CHATWAIFU_TTS_WORKER_PORT": str(tts_port),
-            "CHATWAIFU_TTS_WORKER_TOKEN": tts_token,
-            "CHATWAIFU_TTS_WORKER_MODEL": "kokoro-multi-lang-v1_1",
-            "CHATWAIFU_TTS_WORKER_MODEL_DIR": str(
-                ROOT / ".local" / "models" / "kokoro" / "kokoro-multi-lang-v1_1"
+            "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx",
+            "CHATWAIFU_TTS__WORKERS": json.dumps(
+                {
+                    provider_id: {
+                        "url": f"http://127.0.0.1:{tts_ports[provider_id]}",
+                        "token": tts_tokens[provider_id],
+                        "display_name": str(profile["display_name"]),
+                        "model": str(profile["model"]),
+                        "languages": ["zh", "ja", "en"],
+                        "supports_voice_cloning": True,
+                        "supports_style": False,
+                        "supports_speed": True,
+                        "supports_pitch": False,
+                        "native_streaming": True,
+                    }
+                    for provider_id, profile in tts_profiles.items()
+                },
+                ensure_ascii=False,
             ),
-            "CHATWAIFU_TTS_WORKER_NUM_THREADS": "2",
-            "CHATWAIFU_TTS_WORKER_PRELOAD": "true",
         }
     )
 
@@ -141,21 +153,32 @@ def main() -> int:
             timeout_seconds=180,
             headers={"Authorization": f"Bearer {stt_token}"},
         )
-        print("Loading Kokoro v1.1 character voice...", flush=True)
-        tts_worker = subprocess.Popen(
-            [str(_tts_worker_python()), "-m", "chatwaifu_tts_worker.main"],
-            cwd=ROOT,
-            env=tts_environment,
-            start_new_session=True,
-        )
-        processes.append(tts_worker)
-        _wait_for_url(
-            f"http://127.0.0.1:{tts_port}/v1/health",
-            tts_worker,
-            "Local TTS worker",
-            timeout_seconds=180,
-            headers={"Authorization": f"Bearer {tts_token}"},
-        )
+        for provider_id, profile in tts_profiles.items():
+            print(f"Starting {profile['display_name']} worker (lazy model load)...", flush=True)
+            tts_worker = subprocess.Popen(
+                [
+                    str(_profile_python(profile)),
+                    "-m",
+                    "chatwaifu_tts_neural_worker.main",
+                ],
+                cwd=ROOT,
+                env=_tts_worker_environment(
+                    environment,
+                    provider_id,
+                    profile,
+                    tts_ports[provider_id],
+                    tts_tokens[provider_id],
+                ),
+                start_new_session=True,
+            )
+            processes.append(tts_worker)
+            _wait_for_url(
+                f"http://127.0.0.1:{tts_ports[provider_id]}/v1/health",
+                tts_worker,
+                str(profile["display_name"]),
+                timeout_seconds=30,
+                headers={"Authorization": f"Bearer {tts_tokens[provider_id]}"},
+            )
         runtime = subprocess.Popen(
             [sys.executable, str(ROOT / "tools" / "run_runtime.py")],
             cwd=ROOT,
@@ -237,8 +260,106 @@ def _stt_worker_python() -> Path:
     return _worker_python(STT_WORKER)
 
 
-def _tts_worker_python() -> Path:
-    return _worker_python(TTS_WORKER)
+def _load_tts_profiles() -> dict[str, dict[str, object]]:
+    if not TTS_PROFILE_PATH.exists():
+        raise RuntimeError(
+            f"Local neural TTS profile is missing: {TTS_PROFILE_PATH}. "
+            "Copy config/tts-profiles.example.toml and fill local model/reference paths."
+        )
+    with TTS_PROFILE_PATH.open("rb") as profile_file:
+        loaded = tomllib.load(profile_file)
+    profiles: dict[str, dict[str, object]] = {}
+    required_common = {
+        "environment",
+        "display_name",
+        "model",
+        "vendor_dir",
+        "reference_audio",
+        "reference_text",
+        "reference_language",
+    }
+    for provider_id in ("qwen3_tts_mlx", "gpt_sovits"):
+        raw = loaded.get(provider_id)
+        if not isinstance(raw, dict):
+            raise RuntimeError(f"TTS profile [{provider_id}] is missing")
+        missing = required_common - raw.keys()
+        if provider_id == "qwen3_tts_mlx":
+            missing |= {"model_dir"} - raw.keys()
+        else:
+            missing |= {"gpt_weights", "sovits_weights"} - raw.keys()
+        if missing:
+            raise RuntimeError(
+                f"TTS profile [{provider_id}] is missing: {', '.join(sorted(missing))}"
+            )
+        profile = dict(raw)
+        for key in (
+            "environment",
+            "vendor_dir",
+            "model_dir",
+            "gpt_weights",
+            "sovits_weights",
+            "reference_audio",
+        ):
+            value = profile.get(key)
+            if isinstance(value, str):
+                path = Path(value).expanduser()
+                profile[key] = path if path.is_absolute() else ROOT / path
+        for key in ("environment", "vendor_dir", "reference_audio"):
+            _require_path(provider_id, key, profile[key])
+        for key in ("model_dir", "gpt_weights", "sovits_weights"):
+            if key in profile:
+                _require_path(provider_id, key, profile[key])
+        profiles[provider_id] = profile
+    return profiles
+
+
+def _require_path(provider_id: str, key: str, value: object) -> None:
+    if not isinstance(value, Path) or not value.exists():
+        raise RuntimeError(f"TTS profile [{provider_id}] {key} does not exist: {value}")
+
+
+def _profile_python(profile: dict[str, object]) -> Path:
+    environment_root = profile["environment"]
+    if not isinstance(environment_root, Path):
+        raise RuntimeError("TTS profile environment must resolve to a local path")
+    executable = environment_root / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not executable.exists():
+        raise RuntimeError(f"TTS environment interpreter is missing: {executable}")
+    return executable
+
+
+def _tts_worker_environment(
+    base: dict[str, str],
+    provider_id: str,
+    profile: dict[str, object],
+    port: int,
+    token: str,
+) -> dict[str, str]:
+    environment = base.copy()
+    values: dict[str, object] = {
+        "HOST": "127.0.0.1",
+        "PORT": port,
+        "TOKEN": token,
+        "BACKEND": provider_id,
+        "PROVIDER_ID": provider_id,
+        "DISPLAY_NAME": profile["display_name"],
+        "WORKER_ID": f"tts-{provider_id}",
+        "MODEL": profile["model"],
+        "VENDOR_DIR": profile["vendor_dir"],
+        "REFERENCE_AUDIO": profile["reference_audio"],
+        "REFERENCE_TEXT": profile["reference_text"],
+        "REFERENCE_LANGUAGE": profile["reference_language"],
+        "DEVICE": profile.get("device", "mlx" if provider_id == "qwen3_tts_mlx" else "cpu"),
+        "PRELOAD": "false",
+        "STREAMING_INTERVAL": profile.get("streaming_interval", 0.5),
+        "TEMPERATURE": profile.get("temperature", 0.7),
+    }
+    for key in ("model_dir", "gpt_weights", "sovits_weights"):
+        if key in profile:
+            values[key.upper()] = profile[key]
+    prefix = "CHATWAIFU_NEURAL_TTS_WORKER_"
+    environment.update({f"{prefix}{key}": str(value) for key, value in values.items()})
+    return environment
 
 
 def _stop_processes(processes: list[subprocess.Popen[bytes]]) -> None:

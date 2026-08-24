@@ -1,0 +1,29 @@
+# Copy this file to `.local/config/tts-profiles.toml` and replace every local
+# path. The copied file is ignored by Git; voice weights and reference audio
+# must remain local.
+
+[qwen3_tts_mlx]
+environment = ".local/envs/qwen3-tts-mlx"
+display_name = "Qwen3-TTS · MLX（默认）"
+model = "Qwen3-TTS-12Hz-0.6B-Base-8bit"
+vendor_dir = ".local/vendors/mlx-audio"
+model_dir = ".local/models/qwen3-tts-mlx/Qwen3-TTS-12Hz-0.6B-Base-8bit"
+reference_audio = "/absolute/path/to/qwen-reference.wav"
+reference_text = "参考音频对应的准确文本。"
+reference_language = "ja"
+device = "mlx"
+streaming_interval = 0.5
+temperature = 0.7
+
+[gpt_sovits]
+environment = ".local/envs/gpt-sovits-cpufast"
+display_name = "GPT-SoVITS · 本地角色模型"
+model = "local-character-v2ProPlus"
+vendor_dir = ".local/vendors/GPT-SoVITS-CPUFast"
+gpt_weights = "/absolute/path/to/character.ckpt"
+sovits_weights = "/absolute/path/to/character.pth"
+reference_audio = "/absolute/path/to/gpt-sovits-reference.wav"
+reference_text = "参考音频对应的准确文本。"
+reference_language = "ja"
+device = "cpu"
+temperature = 0.7
