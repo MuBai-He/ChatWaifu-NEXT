@@ -2,7 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // Real Cubism/WebGL cases are intentionally serialized in this shared local
+  // server: parallel contexts can starve requestAnimationFrame long enough to
+  // hide short semantic cues and create machine-load-dependent results.
+  fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {

@@ -111,6 +111,7 @@ export function ChatDemoPage() {
               {rendererKind === "live2d" ? "Live2D" : "Fallback"} ·{" "}
               {snapshot?.runtime.state ?? "loading"} ·{" "}
               {snapshot?.runtime.expression ?? "neutral"}
+              {snapshot?.runtime.motion ? ` · ${snapshot.runtime.motion}` : ""}
             </span>
           </button>
 

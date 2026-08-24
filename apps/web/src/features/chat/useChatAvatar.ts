@@ -108,7 +108,7 @@ export function useChatAvatar() {
       cue_id: crypto.randomUUID(),
       kind: "expression",
       name: "happy",
-      duration_ms: 1500,
+      duration_ms: 6_000,
       priority: 55,
     });
     controllerRef.current?.applyCue({

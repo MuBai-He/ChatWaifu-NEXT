@@ -184,7 +184,7 @@ test("official bridge renders the locally supplied Live2D model", async ({
 
   const screenshot = await page.getByTestId("avatar-canvas").screenshot({
     animations: "disabled",
-    path: testInfo.outputPath("live2d-natori.png"),
+    path: testInfo.outputPath("live2d-local-model.png"),
   });
   expect(screenshot.byteLength).toBeGreaterThan(20_000);
 });
@@ -200,10 +200,11 @@ test("main chat uses the installed Live2D renderer", async ({
   });
   await page.getByRole("button", { name: "Touch avatar" }).click();
   await expect(page.locator(".avatar-state")).toContainText("happy");
+  await expect(page.locator(".avatar-state")).toContainText("headpat");
 
   const screenshot = await page.locator(".avatar-frame canvas").screenshot({
     animations: "disabled",
-    path: testInfo.outputPath("chat-live2d-natori.png"),
+    path: testInfo.outputPath("chat-live2d-nene.png"),
   });
   expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });
