@@ -11,6 +11,17 @@ export interface Live2DSource {
   modelJsonUrl: string;
   coreScriptUrl?: string;
   bridgeModuleUrl?: string;
+  semanticMapping?: Live2DSemanticMapping;
+}
+
+export interface Live2DMotionTarget {
+  group: string;
+  index: number;
+}
+
+export interface Live2DSemanticMapping {
+  expressions: Record<string, string>;
+  motions: Record<string, Live2DMotionTarget>;
 }
 
 export interface AvatarHitAreaDefinition {

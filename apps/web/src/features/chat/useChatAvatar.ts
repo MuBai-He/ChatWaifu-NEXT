@@ -111,6 +111,13 @@ export function useChatAvatar() {
       duration_ms: 1500,
       priority: 55,
     });
+    controllerRef.current?.applyCue({
+      cue_id: crypto.randomUUID(),
+      kind: "motion",
+      name: "headpat",
+      duration_ms: 4_500,
+      priority: 60,
+    });
   }, []);
 
   const resetAvatar = useCallback(() => {

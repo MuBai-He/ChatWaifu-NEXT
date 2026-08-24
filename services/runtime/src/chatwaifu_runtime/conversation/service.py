@@ -23,6 +23,7 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
 from chatwaifu_runtime.characters.service import (
     CharacterProfile,
     CharacterService,
@@ -82,6 +83,7 @@ class ConversationService:
         self._audio_assets = audio_assets
         self._characters = characters
         self._memory = memory
+        self._avatar_planner = SemanticAvatarCuePlanner()
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
 
@@ -307,6 +309,14 @@ class ConversationService:
         output = ""
         segment = ""
         try:
+            for planned in self._avatar_planner.plan_user_turn(user_text):
+                await self._emit_avatar(
+                    accepted,
+                    planned.kind,
+                    planned.name,
+                    priority=planned.priority,
+                    duration_ms=planned.duration_ms,
+                )
             await self._emit_avatar(accepted, "state", "thinking", priority=60)
             request = LlmRequest(
                 generation_id=accepted.generation_id,
@@ -533,6 +543,7 @@ class ConversationService:
         name: str,
         *,
         priority: int,
+        duration_ms: int | None = None,
     ) -> None:
         event = AvatarCueEmittedEvent.model_validate(
             {
@@ -550,6 +561,7 @@ class ConversationService:
                         kind=kind,
                         name=name,
                         priority=priority,
+                        duration_ms=duration_ms,
                     )
                 },
             }

@@ -11,7 +11,15 @@ export class Live2DMotionLayer {
   ) {}
 
   apply(cue: AvatarCue | undefined): void {
-    if (!cue || cue.cue_id === this.activeCueId) return;
+    if (!cue) {
+      if (this.activeCueId !== null) {
+        this.activeCueId = null;
+        this.bridge.stopMotion();
+      }
+      return;
+    }
+    if (cue.cue_id === this.activeCueId) return;
+    if (this.activeCueId !== null) this.bridge.stopMotion();
     this.activeCueId = cue.cue_id;
     this.bridge.playMotion(cue.name, cue.priority ?? 50, () => {
       if (this.activeCueId !== cue.cue_id) return;
@@ -21,6 +29,7 @@ export class Live2DMotionLayer {
   }
 
   reset(): void {
+    if (this.activeCueId !== null) this.bridge.stopMotion();
     this.activeCueId = null;
   }
 }

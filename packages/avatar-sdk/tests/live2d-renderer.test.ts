@@ -20,6 +20,7 @@ class StubBridge implements OfficialCubismBridge {
   draws = 0;
   unloaded = false;
   disposed = false;
+  stoppedMotions = 0;
   private motionComplete: (() => void) | null = null;
 
   async load(): Promise<void> {}
@@ -35,6 +36,10 @@ class StubBridge implements OfficialCubismBridge {
   playMotion(name: string, _priority: number, onComplete: () => void): void {
     this.motions.push(name);
     this.motionComplete = onComplete;
+  }
+
+  stopMotion(): void {
+    this.stoppedMotions += 1;
   }
 
   setExpression(name: string, intensity: number): void {
@@ -107,13 +112,13 @@ describe("Live2DAvatarRenderer adapter", () => {
     renderer.resize(800, 600, 2);
     await renderer.load(LIVE2D_LAB_MANIFEST);
 
-    const motion = cue("motion", "nod");
+    const motion = cue("motion", "headpat");
     const expression = cue("expression", "happy", { intensity: 0.7 });
     const state: AvatarRuntimeState = {
       revision: 1,
       state: "speaking",
       expression: "happy",
-      motion: "nod",
+      motion: "headpat",
       gaze: "pointer",
       speaking: true,
       interrupted: false,
@@ -126,7 +131,7 @@ describe("Live2DAvatarRenderer adapter", () => {
     bridge.completeMotion();
 
     expect(bridge.sizes).toEqual([[800, 600, 2]]);
-    expect(bridge.motions).toEqual(["nod"]);
+    expect(bridge.motions).toEqual(["headpat"]);
     expect(bridge.expressions).toEqual([["happy", 0.7]]);
     expect(bridge.gazes).toEqual(["pointer"]);
     expect(bridge.mouthValues).toEqual([0.6]);
@@ -148,6 +153,32 @@ describe("Live2DAvatarRenderer adapter", () => {
       status: "idle",
       resourceCount: 0,
     });
+    renderer.dispose();
+  });
+
+  it("stops a bounded Cubism motion when its semantic cue expires", async () => {
+    const bridge = new StubBridge();
+    const renderer = new Live2DAvatarRenderer(stubCanvas(), {
+      modelLoader: new StubLoader(bridge),
+    });
+    await renderer.load(LIVE2D_LAB_MANIFEST);
+    const motion = cue("motion", "sing");
+    const active: AvatarRuntimeState = {
+      revision: 1,
+      state: "idle",
+      expression: "neutral",
+      motion: "sing",
+      gaze: "center",
+      speaking: false,
+      interrupted: false,
+      mouthOpen: 0,
+      activeCues: { gesture: motion },
+    };
+    renderer.render(active, 0);
+    renderer.render({ ...active, motion: null, activeCues: {} }, 1_000);
+
+    expect(bridge.motions).toEqual(["sing"]);
+    expect(bridge.stoppedMotions).toBe(1);
     renderer.dispose();
   });
 

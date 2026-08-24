@@ -62,3 +62,18 @@ Official sources:
 - <https://github.com/Live2D/CubismWebFramework/releases/tag/5-r.5>
 - <https://docs.live2d.com/en/cubism-sdk-manual/cubism-sdk-for-web/>
 - <https://www.live2d.com/download/cubism-sdk/download-web/>
+
+## Local Ayachi Nene demo model
+
+The demo can adapt a user-supplied `AYACHI NENE.7z` without committing or redistributing any
+character asset:
+
+```bash
+uv run python tools/setup_ayachi_nene_model.py
+make build-live2d-bridge
+```
+
+The installer copies only model resources into the ignored vendor directory, creates bounded
+semantic motions (`headpat`, `stare`, `flustered`, `sing`), and creates renderer-local facial
+expressions. Runtime and agent code continue to emit semantic AvatarCue names only. Review the
+archive's license before any distribution.

@@ -1,5 +1,5 @@
 import { AvatarRendererError } from "../renderer";
-import type { AvatarManifest } from "../types";
+import type { AvatarManifest, Live2DSemanticMapping } from "../types";
 
 export const LIVE2D_FRAMEWORK_VERSION = "5-r.5";
 export const LIVE2D_FRAMEWORK_REPOSITORY =
@@ -13,10 +13,14 @@ export interface CubismBridgeHit {
 }
 
 export interface OfficialCubismBridge {
-  load(modelJsonUrl: string): Promise<void>;
+  load(
+    modelJsonUrl: string,
+    semanticMapping?: Live2DSemanticMapping,
+  ): Promise<void>;
   update(deltaSeconds: number): void;
   draw(): void;
   playMotion(name: string, priority: number, onComplete: () => void): void;
+  stopMotion(): void;
   setExpression(name: string, intensity: number): void;
   setGaze(target: string): void;
   setMouthOpen(value: number): void;
@@ -62,7 +66,7 @@ export class Live2DModelLoader {
       frameworkVersion: LIVE2D_FRAMEWORK_VERSION,
     });
     try {
-      await bridge.load(source.modelJsonUrl);
+      await bridge.load(source.modelJsonUrl, source.semanticMapping);
       return bridge;
     } catch (error: unknown) {
       bridge.dispose();

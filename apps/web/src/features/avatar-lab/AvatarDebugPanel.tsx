@@ -19,8 +19,14 @@ const CUES: Array<{ kind: AvatarCue["kind"]; name: string }> = [
   { kind: "state", name: "speaking" },
   { kind: "expression", name: "happy" },
   { kind: "expression", name: "curious" },
-  { kind: "motion", name: "nod" },
-  { kind: "motion", name: "wave" },
+  { kind: "expression", name: "shy" },
+  { kind: "expression", name: "sad" },
+  { kind: "expression", name: "angry" },
+  { kind: "expression", name: "surprised" },
+  { kind: "motion", name: "headpat" },
+  { kind: "motion", name: "stare" },
+  { kind: "motion", name: "flustered" },
+  { kind: "motion", name: "sing" },
   { kind: "gaze", name: "pointer" },
 ];
 

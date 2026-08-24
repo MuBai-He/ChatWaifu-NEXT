@@ -13,19 +13,28 @@ import { CubismWebGLOffscreenManager } from "@framework/rendering/cubismoffscree
 
 const FRAMEWORK_VERSION = "5-r.5";
 const LOAD_TIMEOUT_MS = 20_000;
-const MOTION_GROUP = "TapBody";
 const FORCE_MOTION_PRIORITY = 3;
 
-const EXPRESSION_MAP: Record<string, string> = {
+const DEFAULT_EXPRESSION_MAP: Record<string, string> = {
   neutral: "Normal",
   happy: "Smile",
   curious: "Surprised",
 };
 
-const MOTION_MAP: Record<string, number> = {
-  nod: 0,
-  wave: 1,
+const DEFAULT_MOTION_MAP: Record<string, MotionTarget> = {
+  headpat: { group: "TapBody", index: 0 },
+  stare: { group: "TapBody", index: 1 },
 };
+
+interface MotionTarget {
+  group: string;
+  index: number;
+}
+
+interface SemanticMapping {
+  expressions: Record<string, string>;
+  motions: Record<string, MotionTarget>;
+}
 
 interface BridgeOptions {
   canvas: HTMLCanvasElement;
@@ -41,6 +50,7 @@ interface BridgeHit {
 
 interface ModelInternals {
   _lipSyncIds: CubismIdHandle[];
+  _motionManager: { stopAllMotions(): void };
   _modelSetting: { getTextureCount(): number } | null;
   _textureCount: number;
 }
@@ -88,6 +98,8 @@ class ChatWaifuCubismBridge {
   private disposed = false;
   private mouthOpen = 0;
   private gazeTarget = "center";
+  private expressionMap = DEFAULT_EXPRESSION_MAP;
+  private motionMap = DEFAULT_MOTION_MAP;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     acquireFramework();
@@ -99,7 +111,10 @@ class ChatWaifuCubismBridge {
     }
   }
 
-  async load(modelJsonUrl: string): Promise<void> {
+  async load(
+    modelJsonUrl: string,
+    semanticMapping?: SemanticMapping,
+  ): Promise<void> {
     this.assertUsable();
     if (this.model) await this.unloadModel();
 
@@ -112,6 +127,8 @@ class ChatWaifuCubismBridge {
       this.subdelegate as unknown as Parameters<LAppModel["setSubdelegate"]>[0],
     );
     this.model = model;
+    this.expressionMap = semanticMapping?.expressions ?? DEFAULT_EXPRESSION_MAP;
+    this.motionMap = semanticMapping?.motions ?? DEFAULT_MOTION_MAP;
     LAppPal.updateTime();
     model.loadAssets(new URL(".", modelUrl).href, fileName);
     await waitForModel(model, LOAD_TIMEOUT_MS);
@@ -169,19 +186,28 @@ class ChatWaifuCubismBridge {
 
   playMotion(name: string, _priority: number, onComplete: () => void): void {
     if (!this.loaded || !this.model) return;
-    const index = MOTION_MAP[name];
-    if (index === undefined) {
+    const target = this.motionMap[name];
+    if (target === undefined) {
       queueMicrotask(onComplete);
       return;
     }
-    this.model.startMotion(MOTION_GROUP, index, FORCE_MOTION_PRIORITY, () =>
-      onComplete(),
+    this.model.startMotion(
+      target.group,
+      target.index,
+      FORCE_MOTION_PRIORITY,
+      () => onComplete(),
     );
+  }
+
+  stopMotion(): void {
+    if (!this.loaded || !this.model) return;
+    (this.model as unknown as ModelInternals)._motionManager.stopAllMotions();
   }
 
   setExpression(name: string, _intensity: number): void {
     if (!this.loaded || !this.model) return;
-    this.model.setExpression(EXPRESSION_MAP[name] ?? EXPRESSION_MAP.neutral);
+    const fallback = this.expressionMap.neutral ?? "Normal";
+    this.model.setExpression(this.expressionMap[name] ?? fallback);
   }
 
   setGaze(target: string): void {

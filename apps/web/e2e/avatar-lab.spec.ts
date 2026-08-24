@@ -31,10 +31,10 @@ test("Avatar Lab runs independently with semantic cues, hit testing, and screens
   await page.getByRole("button", { name: "pointer" }).click();
   await expect(page.locator(".timeline-layers")).toContainText("pointer");
   await page.getByRole("button", { name: "happy" }).click();
-  await page.getByRole("button", { name: "nod" }).click();
+  await page.getByRole("button", { name: "headpat" }).click();
   await expect(page.getByTestId("semantic-state")).toContainText("happy");
-  await page.getByRole("button", { name: "wave" }).click();
-  await expect(page.getByTestId("semantic-state")).toContainText("wave");
+  await page.getByRole("button", { name: "stare" }).click();
+  await expect(page.getByTestId("semantic-state")).toContainText("stare");
 
   const canvas = page.getByTestId("avatar-canvas");
   const bounds = await canvas.boundingBox();
@@ -179,7 +179,7 @@ test("official bridge renders the locally supplied Live2D model", async ({
   ).not.toHaveText("0");
 
   await page.getByRole("button", { name: "happy" }).click();
-  await page.getByRole("button", { name: "nod" }).click();
+  await page.getByRole("button", { name: "headpat" }).click();
   await expect(page.getByTestId("semantic-state")).toContainText("happy");
 
   const screenshot = await page.getByTestId("avatar-canvas").screenshot({
