@@ -25,3 +25,16 @@ class PermissionDecision(ProtocolModel):
     decided_by: str
     decided_at: AwareDatetime
     reason: str | None = None
+
+
+class PermissionGrant(ProtocolModel):
+    grant_id: UUID
+    principal: str
+    skill_id: str
+    capability: str
+    permission: str
+    scope: Literal["once", "session", "always"]
+    session_id: UUID | None = None
+    created_at: AwareDatetime
+    expires_at: AwareDatetime | None = None
+    revoked_at: AwareDatetime | None = None

@@ -367,12 +367,54 @@ export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason2 = string | null
 export type RequestId = string
 export type Capability = string
+export type CreatedAt1 = string
+export type ExpiresAt = string | null
+export type GrantId = string
 export type Permission = string
 export type Principal = string
+export type RevokedAt = string | null
+export type Scope = 'once' | 'session' | 'always'
+export type SessionId15 = string | null
+export type SkillId = string
+export type Capability1 = string
+export type Permission1 = string
+export type Principal1 = string
 export type Reason3 = string
 export type RequestId1 = string
 export type RequestedAt1 = string
 export type SideEffect = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
+export type Description = string
+export type Enabled = boolean
+export type InstallPath = string
+export type InstalledAt = string
+export type Name1 = string
+export type PluginId = string
+export type UpdatedAt1 = string
+export type Version = string
+export type Description1 = string
+export type Name2 = string
+export type PluginId1 = string
+export type SchemaVersion13 = '1.0'
+/**
+ * @minItems 1
+ * @maxItems 32
+ */
+export type Skills = [string, ...string[]]
+/**
+ * @minItems 1
+ * @maxItems 8
+ */
+export type Command1 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+export type Kind5 = 'stdio'
+export type Version1 = string
 export type BackendKind2 = string
 export type CloudContextPolicy = string
 export type EstimatedCost = number | null
@@ -383,24 +425,30 @@ export type ReasonCodes = string[]
 export type CharacterId2 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt1 = string
+export type CreatedAt2 = string
 export type Revision = number
-export type SessionId15 = string
+export type SessionId16 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
-export type UpdatedAt1 = string
+export type UpdatedAt2 = string
 export type BackgroundAllowed = boolean
+export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
-export type Description = string
-export type Name1 = string
+export type Description2 = string
+export type Name3 = string
 export type RequiredPermissions = string[]
 export type SideEffect1 = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
 export type TimeoutSeconds = number
 export type Capabilities1 = SkillCapability[]
-export type Description1 = string
+export type Description3 = string
+export type Enabled1 = boolean
 export type Interruptible1 = boolean
-export type Name2 = string
-export type SkillId = string
-export type Version = string
+export type Name4 = string
+export type PluginId2 = string | null
+export type SkillId1 = string
+export type Source10 = 'builtin' | 'plugin'
+export type Version2 = string
+export type Capability2 = string
+export type SkillId2 = string
 export type AvatarCues = AvatarCue[]
 export type MemoryProposalIds = string[]
 export type ProspectiveTaskIds = string[]
@@ -408,10 +456,16 @@ export type Provenance = string[]
 export type SpokenSummary = string | null
 export type Status = string
 export type UiCards = JsonObject[]
+export type Capability3 = string
+export type CompletedAt1 = string | null
+export type ConfirmationRequestId = string | null
+export type CreatedAt3 = string
+export type PluginId3 = string | null
 export type Progress = number | null
-export type SessionId16 = string
-export type SkillId1 = string
+export type SessionId17 = string
+export type SkillId3 = string
 export type SkillRunId10 = string
+export type SkillVersion = string
 export type StartedAt1 = string | null
 export type SkillRunState =
   | 'created'
@@ -425,12 +479,12 @@ export type SkillRunState =
   | 'cancelling'
   | 'cancelled'
   | 'expired'
-export type UpdatedAt2 = string
+export type UpdatedAt3 = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
 export type SceneSnapshotId = string | null
-export type SessionId17 = string
+export type SessionId18 = string
 export type TurnId14 = string
 export type ByteLength1 = number
 export type Codec1 = 'jpeg' | 'png' | 'h264' | 'vp8'
@@ -460,10 +514,14 @@ export interface ProtocolCatalog {
   memory_proposal: MemoryProposal
   model: ModelManifest
   permission_decision: PermissionDecision
+  permission_grant: PermissionGrant
   permission_request: PermissionRequest
+  plugin: PluginSnapshot
+  plugin_manifest: PluginManifest
   route: RouteDecision
   session: SessionSnapshot
   skill: SkillDefinition
+  skill_invocation: SkillInvocation
   skill_result: SkillResult
   skill_run: SkillRunSnapshot
   turn: TurnSnapshot
@@ -929,15 +987,54 @@ export interface PermissionDecision {
   request_id: RequestId
   [k: string]: unknown
 }
-export interface PermissionRequest {
+export interface PermissionGrant {
   capability: Capability
-  context?: JsonObject
+  created_at: CreatedAt1
+  expires_at?: ExpiresAt
+  grant_id: GrantId
   permission: Permission
   principal: Principal
+  revoked_at?: RevokedAt
+  scope: Scope
+  session_id?: SessionId15
+  skill_id: SkillId
+  [k: string]: unknown
+}
+export interface PermissionRequest {
+  capability: Capability1
+  context?: JsonObject
+  permission: Permission1
+  principal: Principal1
   reason: Reason3
   request_id: RequestId1
   requested_at: RequestedAt1
   side_effect: SideEffect
+  [k: string]: unknown
+}
+export interface PluginSnapshot {
+  description: Description
+  enabled: Enabled
+  install_path: InstallPath
+  installed_at: InstalledAt
+  name: Name1
+  plugin_id: PluginId
+  updated_at: UpdatedAt1
+  version: Version
+  [k: string]: unknown
+}
+export interface PluginManifest {
+  description: Description1
+  name: Name2
+  plugin_id: PluginId1
+  schema_version?: SchemaVersion13
+  skills: Skills
+  transport: PluginTransport
+  version: Version1
+  [k: string]: unknown
+}
+export interface PluginTransport {
+  command: Command1
+  kind?: Kind5
   [k: string]: unknown
 }
 export interface RouteDecision {
@@ -953,32 +1050,42 @@ export interface RouteDecision {
 export interface SessionSnapshot {
   character_id: CharacterId2
   conversation_state: ConversationState
-  created_at: CreatedAt1
+  created_at: CreatedAt2
   revision: Revision
-  session_id: SessionId15
+  session_id: SessionId16
   state: SessionState
-  updated_at: UpdatedAt1
+  updated_at: UpdatedAt2
   [k: string]: unknown
 }
 export interface SkillDefinition {
   background_allowed?: BackgroundAllowed
   capabilities?: Capabilities1
-  description: Description1
+  description: Description3
+  enabled?: Enabled1
   interruptible?: Interruptible1
-  name: Name2
-  skill_id: SkillId
-  version: Version
+  name: Name4
+  plugin_id?: PluginId2
+  skill_id: SkillId1
+  source?: Source10
+  version: Version2
   [k: string]: unknown
 }
 export interface SkillCapability {
+  adapter_tool?: AdapterTool
   confirmation_required?: ConfirmationRequired
-  description: Description
+  description: Description2
   input_schema: JsonObject
-  name: Name1
+  name: Name3
   output_schema: JsonObject
   required_permissions?: RequiredPermissions
   side_effect?: SideEffect1
   timeout_seconds?: TimeoutSeconds
+  [k: string]: unknown
+}
+export interface SkillInvocation {
+  arguments?: JsonObject
+  capability: Capability2
+  skill_id: SkillId2
   [k: string]: unknown
 }
 export interface SkillResult {
@@ -1001,13 +1108,21 @@ export interface SkillResult {
   [k: string]: unknown
 }
 export interface SkillRunSnapshot {
+  capability: Capability3
+  completed_at?: CompletedAt1
+  confirmation_request_id?: ConfirmationRequestId
+  created_at: CreatedAt3
+  error?: StructuredError | null
+  plugin_id?: PluginId3
   progress?: Progress
-  session_id: SessionId16
-  skill_id: SkillId1
+  result?: SkillResult | null
+  session_id: SessionId17
+  skill_id: SkillId3
   skill_run_id: SkillRunId10
+  skill_version: SkillVersion
   started_at?: StartedAt1
   state: SkillRunState
-  updated_at: UpdatedAt2
+  updated_at: UpdatedAt3
   [k: string]: unknown
 }
 export interface TurnSnapshot {
@@ -1015,7 +1130,7 @@ export interface TurnSnapshot {
   committed_at?: CommittedAt
   committed_text?: CommittedText
   scene_snapshot_id?: SceneSnapshotId
-  session_id: SessionId17
+  session_id: SessionId18
   turn_id: TurnId14
   [k: string]: unknown
 }

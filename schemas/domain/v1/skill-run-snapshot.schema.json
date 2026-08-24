@@ -1,5 +1,195 @@
 {
   "$defs": {
+    "AvatarCue": {
+      "properties": {
+        "cue_id": {
+          "format": "uuid",
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "intensity": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Intensity",
+          "type": "number"
+        },
+        "interruptible": {
+          "default": true,
+          "title": "Interruptible",
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "state",
+            "expression",
+            "motion",
+            "gaze",
+            "speech",
+            "override"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "priority": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "start_anchor": {
+          "default": "immediate",
+          "title": "Start Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "kind",
+        "name"
+      ],
+      "title": "AvatarCue",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "SkillResult": {
+      "properties": {
+        "avatar_cues": {
+          "items": {
+            "$ref": "#/$defs/AvatarCue"
+          },
+          "title": "Avatar Cues",
+          "type": "array"
+        },
+        "data": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        },
+        "memory_proposal_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Memory Proposal Ids",
+          "type": "array"
+        },
+        "prospective_task_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Prospective Task Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "spoken_summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spoken Summary"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "ui_cards": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "title": "Ui Cards",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "SkillResult",
+      "type": "object"
+    },
     "SkillRunState": {
       "enum": [
         "created",
@@ -16,10 +206,114 @@
       ],
       "title": "SkillRunState",
       "type": "string"
+    },
+    "StructuredError": {
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "component": {
+          "minLength": 1,
+          "title": "Component",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "details": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "component"
+      ],
+      "title": "StructuredError",
+      "type": "object"
     }
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/skill-run-snapshot.schema.json",
   "properties": {
+    "capability": {
+      "title": "Capability",
+      "type": "string"
+    },
+    "completed_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
+    "confirmation_request_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confirmation Request Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StructuredError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "plugin_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plugin Id"
+    },
     "progress": {
       "anyOf": [
         {
@@ -34,6 +328,17 @@
       "default": null,
       "title": "Progress"
     },
+    "result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SkillResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "session_id": {
       "format": "uuid",
       "title": "Session Id",
@@ -46,6 +351,10 @@
     "skill_run_id": {
       "format": "uuid",
       "title": "Skill Run Id",
+      "type": "string"
+    },
+    "skill_version": {
+      "title": "Skill Version",
       "type": "string"
     },
     "started_at": {
@@ -73,8 +382,11 @@
   "required": [
     "skill_run_id",
     "skill_id",
+    "skill_version",
+    "capability",
     "session_id",
     "state",
+    "created_at",
     "updated_at"
   ],
   "title": "SkillRunSnapshot",

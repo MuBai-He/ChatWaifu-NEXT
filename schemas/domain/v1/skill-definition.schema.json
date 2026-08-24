@@ -50,6 +50,20 @@
     },
     "SkillCapability": {
       "properties": {
+        "adapter_tool": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adapter Tool"
+        },
         "confirmation_required": {
           "default": false,
           "title": "Confirmation Required",
@@ -115,6 +129,11 @@
       "title": "Description",
       "type": "string"
     },
+    "enabled": {
+      "default": true,
+      "title": "Enabled",
+      "type": "boolean"
+    },
     "interruptible": {
       "default": true,
       "title": "Interruptible",
@@ -124,8 +143,29 @@
       "title": "Name",
       "type": "string"
     },
+    "plugin_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plugin Id"
+    },
     "skill_id": {
       "title": "Skill Id",
+      "type": "string"
+    },
+    "source": {
+      "default": "builtin",
+      "enum": [
+        "builtin",
+        "plugin"
+      ],
+      "title": "Source",
       "type": "string"
     },
     "version": {

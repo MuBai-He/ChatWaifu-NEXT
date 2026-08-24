@@ -1838,6 +1838,95 @@
       "title": "PermissionDecision",
       "type": "object"
     },
+    "PermissionGrant": {
+      "properties": {
+        "capability": {
+          "title": "Capability",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "grant_id": {
+          "format": "uuid",
+          "title": "Grant Id",
+          "type": "string"
+        },
+        "permission": {
+          "title": "Permission",
+          "type": "string"
+        },
+        "principal": {
+          "title": "Principal",
+          "type": "string"
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revoked At"
+        },
+        "scope": {
+          "enum": [
+            "once",
+            "session",
+            "always"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_id": {
+          "title": "Skill Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "grant_id",
+        "principal",
+        "skill_id",
+        "capability",
+        "permission",
+        "scope",
+        "created_at"
+      ],
+      "title": "PermissionGrant",
+      "type": "object"
+    },
     "PermissionRequest": {
       "properties": {
         "capability": {
@@ -1883,6 +1972,134 @@
         "requested_at"
       ],
       "title": "PermissionRequest",
+      "type": "object"
+    },
+    "PluginManifest": {
+      "properties": {
+        "description": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "plugin_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "skills": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Skills",
+          "type": "array"
+        },
+        "transport": {
+          "$ref": "#/$defs/PluginTransport"
+        },
+        "version": {
+          "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin_id",
+        "version",
+        "name",
+        "description",
+        "transport",
+        "skills"
+      ],
+      "title": "PluginManifest",
+      "type": "object"
+    },
+    "PluginSnapshot": {
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "install_path": {
+          "title": "Install Path",
+          "type": "string"
+        },
+        "installed_at": {
+          "format": "date-time",
+          "title": "Installed At",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "plugin_id": {
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin_id",
+        "version",
+        "name",
+        "description",
+        "enabled",
+        "install_path",
+        "installed_at",
+        "updated_at"
+      ],
+      "title": "PluginSnapshot",
+      "type": "object"
+    },
+    "PluginTransport": {
+      "properties": {
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Command",
+          "type": "array"
+        },
+        "kind": {
+          "const": "stdio",
+          "default": "stdio",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "PluginTransport",
       "type": "object"
     },
     "PrivacyLevel": {
@@ -2291,6 +2508,20 @@
     },
     "SkillCapability": {
       "properties": {
+        "adapter_tool": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adapter Tool"
+        },
         "confirmation_required": {
           "default": false,
           "title": "Confirmation Required",
@@ -2355,6 +2586,11 @@
           "title": "Description",
           "type": "string"
         },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
         "interruptible": {
           "default": true,
           "title": "Interruptible",
@@ -2364,8 +2600,29 @@
           "title": "Name",
           "type": "string"
         },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plugin Id"
+        },
         "skill_id": {
           "title": "Skill Id",
+          "type": "string"
+        },
+        "source": {
+          "default": "builtin",
+          "enum": [
+            "builtin",
+            "plugin"
+          ],
+          "title": "Source",
           "type": "string"
         },
         "version": {
@@ -2380,6 +2637,31 @@
         "description"
       ],
       "title": "SkillDefinition",
+      "type": "object"
+    },
+    "SkillInvocation": {
+      "properties": {
+        "arguments": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "capability": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Capability",
+          "type": "string"
+        },
+        "skill_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Skill Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "capability"
+      ],
+      "title": "SkillInvocation",
       "type": "object"
     },
     "SkillResult": {
@@ -2450,6 +2732,64 @@
     },
     "SkillRunSnapshot": {
       "properties": {
+        "capability": {
+          "title": "Capability",
+          "type": "string"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "confirmation_request_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmation Request Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plugin Id"
+        },
         "progress": {
           "anyOf": [
             {
@@ -2464,6 +2804,17 @@
           "default": null,
           "title": "Progress"
         },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SkillResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "session_id": {
           "format": "uuid",
           "title": "Session Id",
@@ -2476,6 +2827,10 @@
         "skill_run_id": {
           "format": "uuid",
           "title": "Skill Run Id",
+          "type": "string"
+        },
+        "skill_version": {
+          "title": "Skill Version",
           "type": "string"
         },
         "started_at": {
@@ -2503,8 +2858,11 @@
       "required": [
         "skill_run_id",
         "skill_id",
+        "skill_version",
+        "capability",
         "session_id",
         "state",
+        "created_at",
         "updated_at"
       ],
       "title": "SkillRunSnapshot",
@@ -3700,8 +4058,17 @@
     "permission_decision": {
       "$ref": "#/$defs/PermissionDecision"
     },
+    "permission_grant": {
+      "$ref": "#/$defs/PermissionGrant"
+    },
     "permission_request": {
       "$ref": "#/$defs/PermissionRequest"
+    },
+    "plugin": {
+      "$ref": "#/$defs/PluginSnapshot"
+    },
+    "plugin_manifest": {
+      "$ref": "#/$defs/PluginManifest"
     },
     "route": {
       "$ref": "#/$defs/RouteDecision"
@@ -3711,6 +4078,9 @@
     },
     "skill": {
       "$ref": "#/$defs/SkillDefinition"
+    },
+    "skill_invocation": {
+      "$ref": "#/$defs/SkillInvocation"
     },
     "skill_result": {
       "$ref": "#/$defs/SkillResult"
@@ -3747,6 +4117,10 @@
     "route",
     "permission_request",
     "permission_decision",
+    "permission_grant",
+    "plugin_manifest",
+    "plugin",
+    "skill_invocation",
     "error"
   ],
   "title": "ProtocolCatalog",

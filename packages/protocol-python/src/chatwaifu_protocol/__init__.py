@@ -13,10 +13,17 @@ from chatwaifu_protocol.media import (
 )
 from chatwaifu_protocol.memory import MemoryContextPacket, MemoryProposal, MemoryRecord
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
-from chatwaifu_protocol.permissions import PermissionDecision, PermissionRequest
+from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
 from chatwaifu_protocol.registry import SchemaRegistry, create_default_registry
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
-from chatwaifu_protocol.skills import SkillDefinition, SkillResult, SkillRunSnapshot
+from chatwaifu_protocol.skills import (
+    PluginManifest,
+    PluginSnapshot,
+    SkillDefinition,
+    SkillInvocation,
+    SkillResult,
+    SkillRunSnapshot,
+)
 from chatwaifu_protocol.version import PACKAGE_VERSION, SCHEMA_VERSION
 
 __all__ = [
@@ -35,11 +42,15 @@ __all__ = [
     "MemoryRecord",
     "ModelManifest",
     "PermissionDecision",
+    "PermissionGrant",
     "PermissionRequest",
+    "PluginManifest",
+    "PluginSnapshot",
     "RouteDecision",
     "SchemaRegistry",
     "SessionSnapshot",
     "SkillDefinition",
+    "SkillInvocation",
     "SkillResult",
     "SkillRunSnapshot",
     "StructuredError",

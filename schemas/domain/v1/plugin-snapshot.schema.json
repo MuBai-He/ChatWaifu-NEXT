@@ -1,0 +1,52 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/plugin-snapshot.schema.json",
+  "properties": {
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "install_path": {
+      "title": "Install Path",
+      "type": "string"
+    },
+    "installed_at": {
+      "format": "date-time",
+      "title": "Installed At",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "plugin_id": {
+      "title": "Plugin Id",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "plugin_id",
+    "version",
+    "name",
+    "description",
+    "enabled",
+    "install_path",
+    "installed_at",
+    "updated_at"
+  ],
+  "title": "PluginSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

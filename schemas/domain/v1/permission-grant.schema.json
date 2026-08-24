@@ -1,0 +1,91 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/permission-grant.schema.json",
+  "properties": {
+    "capability": {
+      "title": "Capability",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "grant_id": {
+      "format": "uuid",
+      "title": "Grant Id",
+      "type": "string"
+    },
+    "permission": {
+      "title": "Permission",
+      "type": "string"
+    },
+    "principal": {
+      "title": "Principal",
+      "type": "string"
+    },
+    "revoked_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revoked At"
+    },
+    "scope": {
+      "enum": [
+        "once",
+        "session",
+        "always"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Session Id"
+    },
+    "skill_id": {
+      "title": "Skill Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "grant_id",
+    "principal",
+    "skill_id",
+    "capability",
+    "permission",
+    "scope",
+    "created_at"
+  ],
+  "title": "PermissionGrant",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

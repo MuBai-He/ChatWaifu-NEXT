@@ -1,0 +1,66 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/skill-invocation.schema.json",
+  "properties": {
+    "arguments": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "capability": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Capability",
+      "type": "string"
+    },
+    "skill_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Skill Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "skill_id",
+    "capability"
+  ],
+  "title": "SkillInvocation",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

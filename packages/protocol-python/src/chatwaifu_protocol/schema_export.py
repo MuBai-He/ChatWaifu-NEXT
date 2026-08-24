@@ -15,9 +15,16 @@ from chatwaifu_protocol.events import EventModel
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
 from chatwaifu_protocol.memory import MemoryContextPacket, MemoryProposal, MemoryRecord
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
-from chatwaifu_protocol.permissions import PermissionDecision, PermissionRequest
+from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
-from chatwaifu_protocol.skills import SkillDefinition, SkillResult, SkillRunSnapshot
+from chatwaifu_protocol.skills import (
+    PluginManifest,
+    PluginSnapshot,
+    SkillDefinition,
+    SkillInvocation,
+    SkillResult,
+    SkillRunSnapshot,
+)
 
 
 class ProtocolCatalog(ProtocolModel):
@@ -44,6 +51,10 @@ class ProtocolCatalog(ProtocolModel):
     route: RouteDecision
     permission_request: PermissionRequest
     permission_decision: PermissionDecision
+    permission_grant: PermissionGrant
+    plugin_manifest: PluginManifest
+    plugin: PluginSnapshot
+    skill_invocation: SkillInvocation
     error: StructuredError
 
 
@@ -61,11 +72,15 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "memory-record": MemoryRecord,
     "model-manifest": ModelManifest,
     "permission-decision": PermissionDecision,
+    "permission-grant": PermissionGrant,
     "permission-request": PermissionRequest,
+    "plugin-manifest": PluginManifest,
+    "plugin-snapshot": PluginSnapshot,
     "protocol-catalog": ProtocolCatalog,
     "route-decision": RouteDecision,
     "session-snapshot": SessionSnapshot,
     "skill-definition": SkillDefinition,
+    "skill-invocation": SkillInvocation,
     "skill-result": SkillResult,
     "skill-run-snapshot": SkillRunSnapshot,
     "structured-error": StructuredError,

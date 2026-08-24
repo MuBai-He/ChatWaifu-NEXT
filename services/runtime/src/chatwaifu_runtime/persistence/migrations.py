@@ -114,4 +114,93 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         END;
         """,
     ),
+    (
+        4,
+        """
+        CREATE TABLE skill_plugins (
+            plugin_id TEXT PRIMARY KEY,
+            version TEXT NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            install_path TEXT NOT NULL UNIQUE,
+            manifest_json TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+            installed_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE skill_runs (
+            skill_run_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+            skill_id TEXT NOT NULL,
+            skill_version TEXT NOT NULL,
+            capability TEXT NOT NULL,
+            plugin_id TEXT REFERENCES skill_plugins(plugin_id) ON DELETE SET NULL,
+            state TEXT NOT NULL,
+            arguments_json TEXT NOT NULL,
+            result_json TEXT,
+            error_json TEXT,
+            progress REAL,
+            confirmation_request_id TEXT,
+            cancel_requested INTEGER NOT NULL DEFAULT 0 CHECK(cancel_requested IN (0, 1)),
+            created_at TEXT NOT NULL,
+            started_at TEXT,
+            updated_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+
+        CREATE TABLE permission_requests (
+            request_id TEXT PRIMARY KEY,
+            skill_run_id TEXT NOT NULL UNIQUE
+                REFERENCES skill_runs(skill_run_id) ON DELETE CASCADE,
+            principal TEXT NOT NULL,
+            skill_id TEXT NOT NULL,
+            capability TEXT NOT NULL,
+            permissions_json TEXT NOT NULL,
+            side_effect TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            state TEXT NOT NULL,
+            decision TEXT,
+            decided_by TEXT,
+            requested_at TEXT NOT NULL,
+            decided_at TEXT
+        );
+
+        CREATE TABLE permission_grants (
+            grant_id TEXT PRIMARY KEY,
+            principal TEXT NOT NULL,
+            skill_id TEXT NOT NULL,
+            capability TEXT NOT NULL,
+            permission TEXT NOT NULL,
+            scope TEXT NOT NULL CHECK(scope IN ('once', 'session', 'always')),
+            session_id TEXT REFERENCES sessions(session_id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            expires_at TEXT,
+            revoked_at TEXT
+        );
+
+        CREATE TABLE skill_tool_calls (
+            tool_call_id TEXT PRIMARY KEY,
+            skill_run_id TEXT NOT NULL
+                REFERENCES skill_runs(skill_run_id) ON DELETE CASCADE,
+            adapter TEXT NOT NULL,
+            method TEXT NOT NULL,
+            request_json TEXT NOT NULL,
+            response_json TEXT,
+            error_json TEXT,
+            status TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+
+        CREATE INDEX skill_runs_session_created_idx
+            ON skill_runs(session_id, created_at DESC);
+        CREATE INDEX skill_runs_state_updated_idx
+            ON skill_runs(state, updated_at DESC);
+        CREATE INDEX permission_grants_lookup_idx
+            ON permission_grants(principal, skill_id, capability, permission, revoked_at);
+        CREATE INDEX skill_tool_calls_run_started_idx
+            ON skill_tool_calls(skill_run_id, started_at);
+        """,
+    ),
 )
