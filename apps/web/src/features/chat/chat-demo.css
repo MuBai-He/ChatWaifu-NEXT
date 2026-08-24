@@ -222,6 +222,322 @@
   line-height: 1.5;
 }
 
+.skills-center-overlay {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  padding: 24px;
+  background: rgb(34 22 45 / 32%);
+  inset: 0;
+  place-items: center;
+  backdrop-filter: blur(12px);
+}
+
+.skills-center {
+  display: grid;
+  width: min(1120px, 100%);
+  max-height: min(860px, calc(100dvh - 48px));
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 24px;
+  background: rgb(252 249 255 / 96%);
+  box-shadow: 0 30px 100px rgb(38 19 55 / 28%);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.skills-center > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 2px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.skills-center > header p {
+  margin: 0 0 5px;
+  color: var(--accent);
+  font: 700 0.64rem var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.skills-center > header h2 {
+  margin: 0;
+  font-size: 1.65rem;
+  letter-spacing: -0.04em;
+}
+
+.skills-center > header span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.skills-center > header button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: white;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.skills-notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgb(244 114 182 / 25%);
+  border-radius: 10px;
+  color: #9d174d;
+  background: rgb(253 242 248 / 92%);
+  font-size: 0.76rem;
+}
+
+.skills-center-grid {
+  display: grid;
+  min-height: 0;
+  padding-top: 18px;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+}
+
+.skills-column {
+  min-height: 0;
+  padding-right: 5px;
+  overflow: auto;
+}
+
+.skills-section-title,
+.skill-card-heading,
+.plugin-card > div:first-child,
+.run-stack article > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skills-section-title {
+  margin: 0 0 10px;
+}
+
+.skills-section-title strong {
+  font-size: 0.78rem;
+}
+
+.skills-section-title small {
+  color: var(--faint);
+  font: 0.62rem var(--mono);
+}
+
+.skill-card,
+.plugin-card,
+.confirmation-stack article,
+.run-stack article,
+.skill-invoker {
+  margin-bottom: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 72%);
+}
+
+.skill-card.disabled {
+  opacity: 0.58;
+}
+
+.skill-card-heading > div,
+.plugin-card > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.skill-card-heading strong,
+.plugin-card strong,
+.confirmation-stack strong,
+.run-stack strong {
+  font-size: 0.78rem;
+}
+
+.skill-card-heading code,
+.plugin-card code,
+.confirmation-stack code {
+  color: var(--faint);
+  font: 0.58rem var(--mono);
+}
+
+.skill-card-heading > span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgb(139 92 246 / 9%);
+  font: 0.56rem var(--mono);
+}
+
+.skill-card > p,
+.plugin-card > p,
+.confirmation-stack p,
+.run-stack p {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.capability-list button,
+.instructions-toggle,
+.plugin-card button,
+.confirmation-stack button,
+.run-stack button,
+.install-example,
+.local-plugin-install button,
+.skill-invoker button {
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--ink);
+  background: white;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.capability-list button {
+  display: flex;
+  gap: 7px;
+}
+
+.capability-list button small {
+  color: var(--faint);
+  font: 0.56rem var(--mono);
+}
+
+.capability-list button.selected,
+.skill-invoker > button {
+  border-color: rgb(124 58 237 / 35%);
+  color: white;
+  background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+}
+
+.instructions-toggle {
+  margin-top: 9px;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+}
+
+.skill-card pre {
+  max-height: 150px;
+  margin: 8px 0 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 9px;
+  color: #51465b;
+  background: #f7f2fa;
+  font: 0.6rem/1.5 var(--mono);
+  white-space: pre-wrap;
+}
+
+.skill-invoker > div {
+  display: grid;
+  gap: 4px;
+}
+
+.skill-invoker > div small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.skill-invoker textarea,
+.local-plugin-install input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 9px 0;
+  padding: 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--ink);
+  background: white;
+  font: 0.65rem/1.5 var(--mono);
+  resize: vertical;
+}
+
+.install-example {
+  width: 100%;
+  margin-bottom: 9px;
+  border-style: dashed;
+  color: var(--accent);
+}
+
+.local-plugin-install {
+  display: grid;
+  margin-bottom: 10px;
+  gap: 7px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.local-plugin-install input {
+  margin: 0;
+}
+
+.plugin-card > div:last-child,
+.confirmation-stack article > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plugin-card button.danger,
+.confirmation-stack button.danger {
+  color: #be123c;
+}
+
+.confirmation-stack,
+.run-stack {
+  margin-top: 18px;
+}
+
+.run-state {
+  color: var(--muted);
+  font: 0.58rem var(--mono);
+}
+
+.run-state.succeeded {
+  color: #15803d;
+}
+
+.run-state.failed,
+.run-state.cancelled {
+  color: #be123c;
+}
+
+@media (max-width: 760px) {
+  .skills-center-overlay {
+    padding: 10px;
+  }
+
+  .skills-center {
+    max-height: calc(100dvh - 20px);
+    padding: 18px;
+  }
+
+  .skills-center-grid {
+    overflow: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .skills-column {
+    overflow: visible;
+  }
+}
+
 .memory-card {
   position: relative;
   z-index: 2;

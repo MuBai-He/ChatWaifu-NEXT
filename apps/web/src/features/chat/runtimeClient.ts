@@ -1,4 +1,10 @@
 import type {
+  PluginSnapshot,
+  SkillDefinition,
+  SkillRunSnapshot,
+} from "@chatwaifu/protocol";
+
+import type {
   CharacterProfile,
   MemoryItem,
   RuntimeHealth,
@@ -104,4 +110,121 @@ export async function runStatusSkill(sessionId: string): Promise<string> {
     { method: "POST", body: "{}" },
   );
   return response.spoken_summary ?? "Runtime status is available.";
+}
+
+export interface SkillConfirmation {
+  request_id: string;
+  skill_run_id: string;
+  skill_id: string;
+  capability: string;
+  permissions: string[];
+  side_effect: string;
+  reason: string;
+  requested_at: string;
+}
+
+export async function getSkills(): Promise<SkillDefinition[]> {
+  return (await request<{ items: SkillDefinition[] }>("/v1/skills")).items;
+}
+
+export async function getSkillInstructions(skillId: string): Promise<string> {
+  return (
+    await request<{ instructions: string }>(
+      `/v1/skills/${encodeURIComponent(skillId)}/instructions`,
+    )
+  ).instructions;
+}
+
+export async function getPlugins(): Promise<PluginSnapshot[]> {
+  return (await request<{ items: PluginSnapshot[] }>("/v1/plugins")).items;
+}
+
+export async function installExamplePlugin(): Promise<PluginSnapshot> {
+  return request<PluginSnapshot>("/v1/plugins/install-example", {
+    method: "POST",
+    body: JSON.stringify({ example_id: "local-echo" }),
+  });
+}
+
+export async function installLocalPlugin(
+  sourcePath: string,
+): Promise<PluginSnapshot> {
+  return request<PluginSnapshot>("/v1/plugins/install", {
+    method: "POST",
+    body: JSON.stringify({ source_path: sourcePath }),
+  });
+}
+
+export async function setPluginEnabled(
+  pluginId: string,
+  enabled: boolean,
+): Promise<PluginSnapshot> {
+  return request<PluginSnapshot>(
+    `/v1/plugins/${encodeURIComponent(pluginId)}/enabled`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    },
+  );
+}
+
+export async function uninstallPlugin(pluginId: string): Promise<void> {
+  await request(`/v1/plugins/${encodeURIComponent(pluginId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function invokeSkill(
+  sessionId: string,
+  skillId: string,
+  capability: string,
+  args: Record<string, unknown>,
+): Promise<SkillRunSnapshot> {
+  return request<SkillRunSnapshot>(`/v1/sessions/${sessionId}/skill-runs`, {
+    method: "POST",
+    body: JSON.stringify({
+      skill_id: skillId,
+      capability,
+      arguments: args,
+    }),
+  });
+}
+
+export async function getSkillRuns(
+  sessionId: string,
+): Promise<SkillRunSnapshot[]> {
+  return (
+    await request<{ items: SkillRunSnapshot[] }>(
+      `/v1/sessions/${sessionId}/skill-runs`,
+    )
+  ).items;
+}
+
+export async function getSkillConfirmations(
+  sessionId: string,
+): Promise<SkillConfirmation[]> {
+  return (
+    await request<{ items: SkillConfirmation[] }>(
+      `/v1/sessions/${sessionId}/skill-confirmations`,
+    )
+  ).items;
+}
+
+export async function decideSkillConfirmation(
+  requestId: string,
+  decision: "allow_once" | "allow_session" | "allow_always" | "deny",
+): Promise<SkillRunSnapshot> {
+  return request<SkillRunSnapshot>(`/v1/skill-confirmations/${requestId}`, {
+    method: "POST",
+    body: JSON.stringify({ decision }),
+  });
+}
+
+export async function cancelSkillRun(
+  skillRunId: string,
+): Promise<SkillRunSnapshot> {
+  return request<SkillRunSnapshot>(`/v1/skill-runs/${skillRunId}/cancel`, {
+    method: "POST",
+    body: "{}",
+  });
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { SkillsControlCenter } from "./SkillsControlCenter";
 import { useChatSession } from "./useChatSession";
 
 export function ChatDemoPage() {
@@ -118,6 +119,7 @@ export function ChatDemoPage() {
           ) : null}
 
           <div className="character-actions">
+            <SkillsControlCenter sessionId={sessionId} />
             <button
               type="button"
               onClick={() => void checkStatus()}
