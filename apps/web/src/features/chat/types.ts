@@ -1,4 +1,4 @@
-import type { AvatarCue } from "@chatwaifu/protocol";
+import type { AvatarCue, MemoryRecord } from "@chatwaifu/protocol";
 
 export interface RuntimeHealth {
   status: "ok" | "degraded";
@@ -47,11 +47,7 @@ export interface ChatMessage {
   pending?: boolean;
 }
 
-export interface MemoryItem {
-  memory_id: string;
-  content: string;
-  state: string;
-}
+export type MemoryItem = MemoryRecord & { content: string };
 
 export interface RuntimeEvent {
   event_id: string;

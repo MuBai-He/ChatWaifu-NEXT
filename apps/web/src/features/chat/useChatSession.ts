@@ -369,6 +369,10 @@ export function useChatSession() {
     }
   }, [resetAvatar, resetting, sessionId, stopAudio]);
 
+  const refreshMemories = useCallback(async () => {
+    setMemories(await getMemory());
+  }, []);
+
   return {
     ...avatar,
     health,
@@ -399,6 +403,7 @@ export function useChatSession() {
     interruptActive,
     checkStatus,
     resetAll,
+    refreshMemories,
   };
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SkillsControlCenter } from "./SkillsControlCenter";
+import { MemoryControlCenter } from "./MemoryControlCenter";
 import { useChatSession } from "./useChatSession";
 
 export function ChatDemoPage() {
@@ -37,6 +38,7 @@ export function ChatDemoPage() {
     interruptActive,
     checkStatus,
     resetAll,
+    refreshMemories,
   } = useChatSession();
   const [draft, setDraft] = useState("");
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,10 @@ export function ChatDemoPage() {
 
           <div className="character-actions">
             <SkillsControlCenter sessionId={sessionId} />
+            <MemoryControlCenter
+              sessionId={sessionId}
+              onChanged={refreshMemories}
+            />
             <button
               type="button"
               onClick={() => void checkStatus()}
@@ -134,17 +140,20 @@ export function ChatDemoPage() {
 
           <div className="memory-card">
             <div className="memory-title">
-              <span>明确记忆</span>
+              <span>结构化记忆</span>
               <small>{memories.length}</small>
             </div>
             {memories.length ? (
               <ul>
                 {memories.slice(0, 4).map((memory) => (
-                  <li key={memory.memory_id}>{memory.content}</li>
+                  <li key={memory.memory_id}>
+                    {memory.pinned ? "★ " : ""}
+                    {memory.text}
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p>试试说：“请记住我喜欢蓝色”</p>
+              <p>普通陈述会生成建议；“请记住…”会直接保存。</p>
             )}
           </div>
         </section>

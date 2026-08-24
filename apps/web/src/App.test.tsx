@@ -69,6 +69,7 @@ const session = {
   interruptActive: vi.fn(),
   checkStatus: vi.fn(),
   resetAll: vi.fn().mockResolvedValue(true),
+  refreshMemories: vi.fn().mockResolvedValue(undefined),
 };
 
 vi.mock("./features/chat/useChatSession", () => ({

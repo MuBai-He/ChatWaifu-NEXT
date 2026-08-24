@@ -1,4 +1,7 @@
 import type {
+  MemoryProposal,
+  MemoryRecord,
+  MemorySource,
   PluginSnapshot,
   SkillDefinition,
   SkillRunSnapshot,
@@ -102,6 +105,79 @@ export async function resetSession(
 export async function getMemory(): Promise<MemoryItem[]> {
   const response = await request<{ items: MemoryItem[] }>("/v1/memory");
   return response.items;
+}
+
+export async function getMemoryRecords(filters?: {
+  includeTombstoned?: boolean;
+  kind?: string;
+  sensitivity?: string;
+}): Promise<MemoryItem[]> {
+  const query = new URLSearchParams();
+  if (filters?.includeTombstoned) query.set("include_tombstoned", "true");
+  if (filters?.kind) query.set("kind", filters.kind);
+  if (filters?.sensitivity) query.set("sensitivity", filters.sensitivity);
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return (await request<{ items: MemoryItem[] }>(`/v1/memory${suffix}`)).items;
+}
+
+export async function getMemoryProposals(
+  status = "pending",
+): Promise<MemoryProposal[]> {
+  return (
+    await request<{ items: MemoryProposal[] }>(
+      `/v1/memory/proposals?status=${encodeURIComponent(status)}`,
+    )
+  ).items;
+}
+
+export async function decideMemoryProposal(
+  sessionId: string,
+  proposalId: string,
+  decision: "accept" | "reject",
+): Promise<MemoryProposal> {
+  return request<MemoryProposal>(
+    `/v1/sessions/${sessionId}/memory/proposals/${proposalId}/decision`,
+    { method: "POST", body: JSON.stringify({ decision }) },
+  );
+}
+
+export async function getMemorySources(
+  memoryId: string,
+): Promise<MemorySource[]> {
+  return (
+    await request<{ items: MemorySource[] }>(`/v1/memory/${memoryId}/sources`)
+  ).items;
+}
+
+export async function correctMemory(
+  sessionId: string,
+  memoryId: string,
+  text: string,
+): Promise<MemoryRecord> {
+  return request<MemoryRecord>(`/v1/sessions/${sessionId}/memory/${memoryId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ text }),
+  });
+}
+
+export async function setMemoryPinned(
+  sessionId: string,
+  memoryId: string,
+  pinned: boolean,
+): Promise<MemoryRecord> {
+  return request<MemoryRecord>(
+    `/v1/sessions/${sessionId}/memory/${memoryId}/pinned`,
+    { method: "PUT", body: JSON.stringify({ pinned }) },
+  );
+}
+
+export async function forgetMemory(
+  sessionId: string,
+  memoryId: string,
+): Promise<void> {
+  await request(`/v1/sessions/${sessionId}/memory/${memoryId}`, {
+    method: "DELETE",
+  });
 }
 
 export async function runStatusSkill(sessionId: string): Promise<string> {
