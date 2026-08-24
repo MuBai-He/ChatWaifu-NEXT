@@ -351,6 +351,7 @@ dependencies = [
     { name = "pipecat-ai", extra = ["webrtc"] },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -367,6 +368,7 @@ requires-dist = [
     { name = "pipecat-ai", extras = ["webrtc"], specifier = "==1.7.0" },
     { name = "pydantic-settings", specifier = ">=2.10,<3" },
     { name = "python-dotenv", specifier = ">=1.1,<2" },
+    { name = "pyyaml", specifier = ">=6.0.2,<7" },
     { name = "structlog", specifier = ">=25,<27" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35,<1" },
 ]

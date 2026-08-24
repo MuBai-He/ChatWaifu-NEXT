@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+import yaml  # pyright: ignore[reportMissingTypeStubs]
 from chatwaifu_protocol.skills import PluginManifest, SkillDefinition
 
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
@@ -85,7 +85,7 @@ def _load_skill(
     plugin_root: Path | None = None,
     enabled: bool = True,
 ) -> RegistryEntry:
-    loaded: object = json.loads(_read_bounded(path, MAX_MANIFEST_BYTES))
+    loaded: object = yaml.safe_load(_read_bounded(path, MAX_MANIFEST_BYTES))
     if not isinstance(loaded, dict):
         raise SkillExecutionError("invalid_manifest", f"Invalid skill manifest: {path}")
     raw = cast(dict[str, object], loaded)
