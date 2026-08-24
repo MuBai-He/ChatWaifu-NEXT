@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
+from typing import cast
 
 from pnpm_tool import PnpmToolError, environment_with_pnpm, resolve_pnpm
 
@@ -111,6 +112,8 @@ def main() -> int:
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
             "CHATWAIFU_STT__LANGUAGE": "zh",
+            # Clear the legacy single-provider override from an older local .env.
+            "CHATWAIFU_TTS__PROVIDER": "null",
             "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx",
             "CHATWAIFU_TTS__WORKERS": json.dumps(
                 {
@@ -122,9 +125,9 @@ def main() -> int:
                         "languages": ["zh", "ja", "en"],
                         "supports_voice_cloning": True,
                         "supports_style": False,
-                        "supports_speed": True,
+                        "supports_speed": False,
                         "supports_pitch": False,
-                        "native_streaming": True,
+                        "native_streaming": provider_id == "qwen3_tts_mlx",
                     }
                     for provider_id, profile in tts_profiles.items()
                 },
@@ -282,16 +285,17 @@ def _load_tts_profiles() -> dict[str, dict[str, object]]:
         raw = loaded.get(provider_id)
         if not isinstance(raw, dict):
             raise RuntimeError(f"TTS profile [{provider_id}] is missing")
-        missing = required_common - raw.keys()
+        raw_profile = cast(dict[str, object], raw)
+        missing = required_common - raw_profile.keys()
         if provider_id == "qwen3_tts_mlx":
-            missing |= {"model_dir"} - raw.keys()
+            missing |= {"model_dir"} - raw_profile.keys()
         else:
-            missing |= {"gpt_weights", "sovits_weights"} - raw.keys()
+            missing |= {"gpt_weights", "sovits_weights"} - raw_profile.keys()
         if missing:
             raise RuntimeError(
                 f"TTS profile [{provider_id}] is missing: {', '.join(sorted(missing))}"
             )
-        profile = dict(raw)
+        profile = dict(raw_profile)
         for key in (
             "environment",
             "vendor_dir",

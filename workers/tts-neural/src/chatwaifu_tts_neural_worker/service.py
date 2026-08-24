@@ -120,9 +120,9 @@ class SynthesisService:
             languages=["zh", "ja", "en"],
             supports_voice_cloning=True,
             supports_style=False,
-            supports_speed=True,
+            supports_speed=False,
             supports_pitch=False,
-            native_streaming=qwen or self._settings.backend == "gpt_sovits",
+            native_streaming=qwen,
             local_only=True,
         )
 

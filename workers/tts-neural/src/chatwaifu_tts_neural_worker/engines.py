@@ -70,7 +70,9 @@ class QwenMlxEngine:
             lang_code=language,
             ref_audio=str(self._settings.reference_audio),
             ref_text=self._settings.reference_text,
-            speed=request.speed,
+            # MLX-Audio accepts this argument, but the selected Qwen checkpoint
+            # does not provide a stable duration-control contract.
+            speed=1.0,
             temperature=self._settings.temperature,
             stream=True,
             streaming_interval=self._settings.streaming_interval,
@@ -164,8 +166,11 @@ class GptSovitsEngine:
                 "text_split_method": "cut5",
                 "batch_size": 1,
                 "batch_threshold": 0.75,
-                "split_bucket": request.speed == 1.0,
-                "speed_factor": request.speed,
+                "split_bucket": True,
+                # The CPUFast v2ProPlus branch returns a silent fallback for
+                # non-1.0 speed because its latent lengths diverge. The worker
+                # advertises speed as unsupported and preserves valid audio.
+                "speed_factor": 1.0,
                 "fragment_interval": 0.3,
                 "seed": -1,
                 "parallel_infer": True,
@@ -181,7 +186,10 @@ class GptSovitsEngine:
                 raise SynthesisCancelled
         finally:
             generator.close()
-        audio, duration_ms = wave_bytes(np.asarray(samples), int(sample_rate))
+        samples_array = np.asarray(samples)
+        if samples_array.size == 0 or float(np.max(np.abs(samples_array))) == 0:
+            raise RuntimeError("GPT-SoVITS returned silent fallback audio")
+        audio, duration_ms = wave_bytes(samples_array, int(sample_rate))
         return audio, int(sample_rate), duration_ms
 
     def cancel(self) -> None:

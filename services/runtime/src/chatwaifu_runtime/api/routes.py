@@ -98,7 +98,7 @@ async def read_tts_providers(
     container = _container(request)
     if session_id is not None and await container.sessions.get_session(session_id) is None:
         raise HTTPException(status_code=404, detail="session not found")
-    items = []
+    items: list[dict[str, object]] = []
     for snapshot in await container.providers.tts.snapshots(session_id):
         descriptor = snapshot.descriptor
         health = snapshot.health

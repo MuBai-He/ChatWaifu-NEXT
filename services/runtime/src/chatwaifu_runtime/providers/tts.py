@@ -270,6 +270,7 @@ class WorkerTtsProvider:
             response = await self._client.get(
                 f"{self._base_url}/v1/health",
                 headers=self._headers,
+                timeout=2.0,
             )
             response.raise_for_status()
             result = WorkerHealth.model_validate(response.json())
@@ -320,6 +321,7 @@ class WorkerTtsProvider:
             response = await self._client.post(
                 f"{self._base_url}/v1/model/unload",
                 headers=self._headers,
+                timeout=15.0,
             )
             if response.status_code == 404:
                 return

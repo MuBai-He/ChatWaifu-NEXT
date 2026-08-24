@@ -32,7 +32,7 @@ model = "Qwen3-TTS-12Hz-0.6B-Base-8bit"
 languages = ["zh", "ja", "en"]
 supports_voice_cloning = true
 supports_style = false
-supports_speed = true
+supports_speed = false
 supports_pitch = false
 native_streaming = true
 
@@ -43,9 +43,9 @@ model = "local-character-voice"
 languages = ["zh", "ja", "en"]
 supports_voice_cloning = true
 supports_style = false
-supports_speed = true
+supports_speed = false
 supports_pitch = false
-native_streaming = true
+native_streaming = false
 
 [realtime]
 enabled = true

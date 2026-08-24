@@ -90,6 +90,8 @@ def test_worker_discovers_one_standard_provider(client: TestClient) -> None:
     assert capabilities["provider_id"] == "qwen3_tts_mlx"
     assert capabilities["languages"] == ["zh", "ja", "en"]
     assert capabilities["supports_voice_cloning"] is True
+    assert capabilities["supports_speed"] is False
+    assert capabilities["native_streaming"] is True
 
 
 def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> None:

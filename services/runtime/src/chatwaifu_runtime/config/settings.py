@@ -93,6 +93,7 @@ class TtsConfig(BaseModel):
                 languages=["zh", "ja", "en"],
                 supports_voice_cloning=True,
                 supports_style=False,
+                supports_speed=False,
                 native_streaming=True,
             ),
             "gpt_sovits": TtsWorkerEndpointConfig(
@@ -102,7 +103,8 @@ class TtsConfig(BaseModel):
                 languages=["zh", "ja", "en"],
                 supports_voice_cloning=True,
                 supports_style=False,
-                native_streaming=True,
+                supports_speed=False,
+                native_streaming=False,
             ),
         }
     )

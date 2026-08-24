@@ -282,7 +282,9 @@ def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) 
     characters = cast(dict[str, object], http.get("/v1/characters").json())
     profile = cast(list[dict[str, object]], characters["items"])[0]
     assert profile["display_name"] == "绫地宁宁"
-    assert cast(dict[str, object], profile["voice_profile"])["voice_id"] == ("ayachi-nene-demo-zh")
+    assert cast(dict[str, object], profile["voice_profile"])["voice_id"] == (
+        "local-reference-clone"
+    )
     assert "非官方" in str(profile["content_notice"])
     assert "system_prompt" not in profile
 
