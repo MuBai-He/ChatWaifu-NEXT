@@ -14,6 +14,8 @@ class RuntimeHttpClient(Protocol):
 
     def post(self, url: str, *, json: object) -> Response: ...
 
+    def put(self, url: str, *, json: object) -> Response: ...
+
     def delete(self, url: str) -> Response: ...
 
     def options(self, url: str, *, headers: dict[str, str]) -> Response: ...
@@ -55,6 +57,20 @@ def test_health_session_persistence_and_event_stream(client: TestClient) -> None
     session = cast(dict[str, object], created.json())
     assert session["state"] == "ready"
     session_id = str(session["session_id"])
+
+    tts_providers = cast(
+        dict[str, object], http.get(f"/v1/tts/providers?session_id={session_id}").json()
+    )
+    assert tts_providers["schema_version"] == "1.0"
+    tts_items = cast(list[dict[str, object]], tts_providers["items"])
+    assert tts_items[0]["provider_id"] == "fake"
+    assert tts_items[0]["selected"] is True
+    selected_tts = http.put(
+        f"/v1/sessions/{session_id}/tts/provider",
+        json={"provider_id": "fake"},
+    )
+    assert selected_tts.status_code == 200
+    assert cast(dict[str, object], selected_tts.json())["provider_id"] == "fake"
 
     fetched = http.get(f"/v1/sessions/{session_id}")
     assert fetched.status_code == 200

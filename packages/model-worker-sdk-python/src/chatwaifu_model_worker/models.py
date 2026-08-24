@@ -62,6 +62,9 @@ class TtsSynthesisRequest(WorkerRequest):
     voice_id: str = Field(min_length=1, max_length=128)
     speaker_id: int = Field(ge=0, le=1024)
     speed: float = Field(ge=0.5, le=2.0)
+    style: str | None = Field(default=None, max_length=500)
+    pitch: float | None = Field(default=None, ge=0.5, le=2.0)
+    output_format: Literal["wav"] = "wav"
 
 
 class TtsSynthesisResult(WorkerModel):
@@ -91,6 +94,23 @@ class TtsSynthesisResult(WorkerModel):
             return base64.b64decode(self.audio_base64, validate=True)
         except ValueError as error:
             raise ValueError("audio_base64 is not valid base64") from error
+
+
+class TtsWorkerCapabilities(WorkerModel):
+    """Provider-neutral discovery metadata exposed by every TTS worker."""
+
+    schema_version: Literal["1.0"] = WORKER_SCHEMA_VERSION
+    provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
+    display_name: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    languages: list[str] = Field(min_length=1, max_length=32)
+    supports_voice_cloning: bool = False
+    supports_style: bool = False
+    supports_speed: bool = True
+    supports_pitch: bool = False
+    native_streaming: bool = False
+    output_formats: list[Literal["wav"]] = Field(default_factory=lambda: ["wav"])
+    local_only: bool = True
 
 
 class WorkerHealth(WorkerModel):

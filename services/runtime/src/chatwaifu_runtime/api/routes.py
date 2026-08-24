@@ -22,6 +22,7 @@ from chatwaifu_runtime.api.models import (
     RuntimeHealth,
     SkillConfirmationDecisionRequest,
     SubmitTextRequest,
+    TtsProviderSelectionRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
 )
@@ -65,6 +66,7 @@ async def create_session(request: Request, body: CreateSessionRequest) -> dict[s
     if container.characters.get(body.character_id) is None:
         raise HTTPException(status_code=404, detail="character not found")
     snapshot = await container.sessions.create_session(body.character_id)
+    container.providers.tts.bind_session(snapshot.session_id)
     return snapshot.model_dump(mode="json")
 
 
@@ -82,9 +84,71 @@ async def close_session(request: Request, session_id: UUID) -> dict[str, object]
         await _container(request).voice_media.close_session(session_id)
         await _container(request).conversation.cancel(session_id, "session_closing")
         snapshot = await _container(request).sessions.close_session(session_id)
+        await _container(request).providers.tts.release_session(session_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail="session not found") from error
     return snapshot.model_dump(mode="json")
+
+
+@router.get("/tts/providers")
+async def read_tts_providers(
+    request: Request,
+    session_id: UUID | None = None,
+) -> dict[str, object]:
+    container = _container(request)
+    if session_id is not None and await container.sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    items = []
+    for snapshot in await container.providers.tts.snapshots(session_id):
+        descriptor = snapshot.descriptor
+        health = snapshot.health
+        items.append(
+            {
+                "provider_id": descriptor.provider_id,
+                "display_name": descriptor.display_name,
+                "model": descriptor.model,
+                "languages": list(descriptor.languages),
+                "supports_voice_cloning": descriptor.supports_voice_cloning,
+                "supports_style": descriptor.supports_style,
+                "supports_speed": descriptor.supports_speed,
+                "supports_pitch": descriptor.supports_pitch,
+                "native_streaming": descriptor.native_streaming,
+                "local_only": descriptor.local_only,
+                "status": health.status,
+                "model_loaded": health.model_loaded,
+                "queue_depth": health.queue_depth,
+                "device": health.device,
+                "detail": health.detail,
+                "selected": snapshot.selected,
+            }
+        )
+    return {
+        "schema_version": "1.0",
+        "default_provider": container.providers.tts.kind,
+        "items": items,
+        "count": len(items),
+    }
+
+
+@router.put("/sessions/{session_id}/tts/provider")
+async def select_tts_provider(
+    request: Request,
+    session_id: UUID,
+    body: TtsProviderSelectionRequest,
+) -> dict[str, object]:
+    container = _container(request)
+    if await container.sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    await container.conversation.cancel(session_id, "tts_provider_changed")
+    try:
+        selected = await container.providers.tts.select(session_id, body.provider_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="TTS provider not found") from error
+    return {
+        "schema_version": "1.0",
+        "session_id": str(session_id),
+        "provider_id": selected,
+    }
 
 
 @router.post("/sessions/{session_id}/webrtc/offer")

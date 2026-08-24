@@ -6,6 +6,7 @@ from chatwaifu_model_worker.models import (
     SttTranscriptionResult,
     TtsSynthesisRequest,
     TtsSynthesisResult,
+    TtsWorkerCapabilities,
     WorkerHealth,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "SttTranscriptionResult",
     "TtsSynthesisRequest",
     "TtsSynthesisResult",
+    "TtsWorkerCapabilities",
     "WorkerHealth",
 ]

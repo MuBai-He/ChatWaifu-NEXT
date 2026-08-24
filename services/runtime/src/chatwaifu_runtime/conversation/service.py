@@ -417,7 +417,8 @@ class ConversationService:
                 "media_type": result.media_type,
                 "sample_rate": result.sample_rate,
                 "duration_ms": result.duration_ms,
-                "tts_provider": self._providers.tts.kind,
+                "tts_provider": result.provider_id,
+                "tts_model": result.model,
             },
         )
 

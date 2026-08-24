@@ -58,16 +58,58 @@ class LlmConfig(BaseModel):
     demo_chunk_delay_ms: int = Field(default=25, ge=0, le=1000)
 
 
+class TtsWorkerEndpointConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    url: str
+    token: SecretStr | None = None
+    display_name: str
+    model: str
+    languages: list[str] = Field(min_length=1, max_length=32)
+    supports_voice_cloning: bool = False
+    supports_style: bool = False
+    supports_speed: bool = True
+    supports_pitch: bool = False
+    native_streaming: bool = False
+
+
 class TtsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    provider: str = "auto"
+    default_provider: str = "qwen3_tts_mlx"
+    provider: str | None = None
     voice: str = "Tingting"
     sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     rate: int = Field(default=190, ge=80, le=500)
     timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     worker_url: str = "http://127.0.0.1:8767"
     worker_token: SecretStr | None = None
+    workers: dict[str, TtsWorkerEndpointConfig] = Field(
+        default_factory=lambda: {
+            "qwen3_tts_mlx": TtsWorkerEndpointConfig(
+                url="http://127.0.0.1:8767",
+                display_name="Qwen3-TTS · MLX",
+                model="Qwen3-TTS-12Hz-0.6B-Base-8bit",
+                languages=["zh", "ja", "en"],
+                supports_voice_cloning=True,
+                supports_style=False,
+                native_streaming=True,
+            ),
+            "gpt_sovits": TtsWorkerEndpointConfig(
+                url="http://127.0.0.1:8768",
+                display_name="GPT-SoVITS",
+                model="local-character-voice",
+                languages=["zh", "ja", "en"],
+                supports_voice_cloning=True,
+                supports_style=False,
+                native_streaming=True,
+            ),
+        }
+    )
+
+    @property
+    def selected_provider(self) -> str:
+        return self.provider or self.default_provider
 
 
 class RealtimeConfig(BaseModel):

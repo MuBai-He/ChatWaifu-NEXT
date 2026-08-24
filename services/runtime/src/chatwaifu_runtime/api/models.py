@@ -38,6 +38,12 @@ class ResetSessionRequest(BaseModel):
     confirm: Literal[True]
 
 
+class TtsProviderSelectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
+
+
 class WebRtcOfferRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

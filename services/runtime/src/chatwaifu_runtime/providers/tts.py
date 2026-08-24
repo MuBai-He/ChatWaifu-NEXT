@@ -11,9 +11,19 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import httpx2
-from chatwaifu_model_worker import TtsSynthesisRequest, TtsSynthesisResult
+from chatwaifu_model_worker import (
+    TtsSynthesisRequest,
+    TtsSynthesisResult,
+    TtsWorkerCapabilities,
+    WorkerHealth,
+)
 
-from chatwaifu_runtime.providers.contracts import SynthesisRequest, SynthesisResult
+from chatwaifu_runtime.providers.contracts import (
+    SynthesisRequest,
+    SynthesisResult,
+    TtsProviderDescriptor,
+    TtsProviderHealth,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +32,17 @@ class FakeTtsProvider:
     """Generate a short valid WAV tone for CI and non-macOS fallback."""
 
     kind = "fake"
+    descriptor = TtsProviderDescriptor(
+        provider_id=kind,
+        display_name="测试提示音",
+        model="generated-tone",
+        languages=("zh", "ja", "en"),
+        supports_voice_cloning=False,
+        supports_style=False,
+        supports_speed=False,
+        supports_pitch=False,
+        native_streaming=False,
+    )
 
     def __init__(self, sample_rate: int = 24_000) -> None:
         self._sample_rate = sample_rate
@@ -29,7 +50,20 @@ class FakeTtsProvider:
     async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
         duration_ms = min(max(len(request.text) * 55, 250), 2500)
         await asyncio.to_thread(self._write_tone, request.destination, duration_ms)
-        return SynthesisResult(request.destination, "audio/wav", self._sample_rate, duration_ms)
+        return SynthesisResult(
+            request.destination,
+            "audio/wav",
+            self._sample_rate,
+            duration_ms,
+            self.kind,
+            self.descriptor.model,
+        )
+
+    async def health(self) -> TtsProviderHealth:
+        return TtsProviderHealth(status="ready", model_loaded=True, device="cpu")
+
+    async def deactivate(self) -> None:
+        return None
 
     async def close(self) -> None:
         return None
@@ -53,6 +87,17 @@ class FakeTtsProvider:
 
 class MacOsSayTtsProvider:
     kind = "macos_say"
+    descriptor = TtsProviderDescriptor(
+        provider_id=kind,
+        display_name="macOS 系统语音",
+        model="say",
+        languages=("zh", "ja", "en"),
+        supports_voice_cloning=False,
+        supports_style=False,
+        supports_speed=True,
+        supports_pitch=False,
+        native_streaming=False,
+    )
 
     def __init__(self, *, voice: str, sample_rate: int, rate: int, timeout_seconds: float) -> None:
         if sys.platform != "darwin" or not shutil.which("say") or not shutil.which("afconvert"):
@@ -88,11 +133,24 @@ class MacOsSayTtsProvider:
                 str(request.destination),
             )
             duration_ms = await asyncio.to_thread(_wave_duration_ms, request.destination)
-            return SynthesisResult(request.destination, "audio/wav", self._sample_rate, duration_ms)
+            return SynthesisResult(
+                request.destination,
+                "audio/wav",
+                self._sample_rate,
+                duration_ms,
+                self.kind,
+                self.descriptor.model,
+            )
         finally:
             source.unlink(missing_ok=True)
 
     async def close(self) -> None:
+        return None
+
+    async def health(self) -> TtsProviderHealth:
+        return TtsProviderHealth(status="ready", model_loaded=True, device="cpu")
+
+    async def deactivate(self) -> None:
         return None
 
     async def _run(self, *command: str, input_text: str | None = None) -> None:
@@ -119,20 +177,30 @@ class MacOsSayTtsProvider:
             raise RuntimeError(f"speech command failed ({process.returncode}): {detail}")
 
 
-class SherpaKokoroWorkerTtsProvider:
-    kind = "sherpa_kokoro_worker"
+class WorkerTtsProvider:
+    """Adapter for the versioned, provider-neutral local TTS worker API."""
 
     def __init__(
         self,
         *,
+        descriptor: TtsProviderDescriptor,
         base_url: str,
-        token: str,
+        token: str | None,
         timeout_seconds: float,
         client: httpx2.AsyncClient | None = None,
     ) -> None:
+        self._descriptor = descriptor
         self._base_url = base_url.rstrip("/")
-        self._headers = {"Authorization": f"Bearer {token}"}
+        self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._client = client or httpx2.AsyncClient(timeout=timeout_seconds)
+
+    @property
+    def kind(self) -> str:
+        return self._descriptor.provider_id
+
+    @property
+    def descriptor(self) -> TtsProviderDescriptor:
+        return self._descriptor
 
     async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
         body = TtsSynthesisRequest(
@@ -146,6 +214,8 @@ class SherpaKokoroWorkerTtsProvider:
             voice_id=request.voice_id,
             speaker_id=request.speaker_id,
             speed=request.speed,
+            style=request.style,
+            pitch=request.pitch,
         )
         try:
             response = await self._client.post(
@@ -191,6 +261,51 @@ class SherpaKokoroWorkerTtsProvider:
             result.media_type,
             result.sample_rate,
             result.duration_ms,
+            self.kind,
+            result.model,
+        )
+
+    async def health(self) -> TtsProviderHealth:
+        try:
+            response = await self._client.get(
+                f"{self._base_url}/v1/health",
+                headers=self._headers,
+            )
+            response.raise_for_status()
+            result = WorkerHealth.model_validate(response.json())
+        except Exception as error:
+            return TtsProviderHealth(
+                status="unavailable",
+                model_loaded=False,
+                detail=str(error),
+            )
+        return TtsProviderHealth(
+            status=result.status,
+            model_loaded=result.model_loaded,
+            queue_depth=result.queue_depth,
+            device=result.device,
+        )
+
+    async def refresh_descriptor(self) -> TtsProviderDescriptor:
+        response = await self._client.get(
+            f"{self._base_url}/v1/capabilities",
+            headers=self._headers,
+        )
+        response.raise_for_status()
+        result = TtsWorkerCapabilities.model_validate(response.json())
+        if result.provider_id != self.kind:
+            raise RuntimeError("TTS worker returned mismatched provider identity")
+        return TtsProviderDescriptor(
+            provider_id=result.provider_id,
+            display_name=result.display_name,
+            model=result.model,
+            languages=tuple(result.languages),
+            supports_voice_cloning=result.supports_voice_cloning,
+            supports_style=result.supports_style,
+            supports_speed=result.supports_speed,
+            supports_pitch=result.supports_pitch,
+            native_streaming=result.native_streaming,
+            local_only=result.local_only,
         )
 
     async def _cancel(self, generation_id: UUID) -> None:
@@ -200,8 +315,48 @@ class SherpaKokoroWorkerTtsProvider:
         )
         response.raise_for_status()
 
+    async def deactivate(self) -> None:
+        try:
+            response = await self._client.post(
+                f"{self._base_url}/v1/model/unload",
+                headers=self._headers,
+            )
+            if response.status_code == 404:
+                return
+            response.raise_for_status()
+        except httpx2.ConnectError:
+            return
+
     async def close(self) -> None:
         await self._client.aclose()
+
+
+class SherpaKokoroWorkerTtsProvider(WorkerTtsProvider):
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        token: str,
+        timeout_seconds: float,
+        client: httpx2.AsyncClient | None = None,
+    ) -> None:
+        super().__init__(
+            descriptor=TtsProviderDescriptor(
+                provider_id="sherpa_kokoro_worker",
+                display_name="Kokoro 轻量语音",
+                model="kokoro-multi-lang-v1_1",
+                languages=("zh", "en"),
+                supports_voice_cloning=False,
+                supports_style=False,
+                supports_speed=True,
+                supports_pitch=False,
+                native_streaming=False,
+            ),
+            base_url=base_url,
+            token=token,
+            timeout_seconds=timeout_seconds,
+            client=client,
+        )
 
 
 def _wave_duration_ms(path: Path) -> int:

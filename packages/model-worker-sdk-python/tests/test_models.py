@@ -8,6 +8,7 @@ from chatwaifu_model_worker import (
     SttTranscriptionRequest,
     TtsSynthesisRequest,
     TtsSynthesisResult,
+    TtsWorkerCapabilities,
 )
 from pydantic import ValidationError
 
@@ -61,6 +62,7 @@ def test_tts_request_and_wave_result_keep_full_generation_identity() -> None:
         voice_id="ayachi-nene-demo-zh",
         speaker_id=3,
         speed=1.04,
+        style="温柔、稍微害羞",
     )
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as output:
@@ -85,6 +87,21 @@ def test_tts_request_and_wave_result_keep_full_generation_identity() -> None:
 
     assert result.audio_bytes() == audio
     assert result.generation_id == request.generation_id
+    assert request.style == "温柔、稍微害羞"
+
+
+def test_tts_worker_capabilities_are_provider_neutral() -> None:
+    capabilities = TtsWorkerCapabilities(
+        provider_id="qwen3_tts_mlx",
+        display_name="Qwen3-TTS · MLX",
+        model="Qwen3-TTS-0.6B",
+        languages=["zh", "ja"],
+        supports_voice_cloning=True,
+        native_streaming=True,
+    )
+
+    assert capabilities.output_formats == ["wav"]
+    assert capabilities.local_only is True
 
 
 def test_tts_result_rejects_non_wave_audio() -> None:

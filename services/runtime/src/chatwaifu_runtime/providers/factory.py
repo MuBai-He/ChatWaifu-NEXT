@@ -5,20 +5,22 @@ import sys
 from dataclasses import dataclass
 
 from chatwaifu_runtime.config.settings import Settings
-from chatwaifu_runtime.providers.contracts import LlmProvider, TtsProvider
+from chatwaifu_runtime.providers.contracts import LlmProvider, TtsProvider, TtsProviderDescriptor
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
 from chatwaifu_runtime.providers.tts import (
     FakeTtsProvider,
     MacOsSayTtsProvider,
     SherpaKokoroWorkerTtsProvider,
+    WorkerTtsProvider,
 )
+from chatwaifu_runtime.providers.tts_router import TtsRouter
 
 
 @dataclass(frozen=True, slots=True)
 class ProviderSet:
     llm: LlmProvider
-    tts: TtsProvider
+    tts: TtsRouter
 
     def public_status(self) -> dict[str, str]:
         return {"llm": self.llm.kind, "tts": self.tts.kind}
@@ -38,7 +40,28 @@ def build_providers(settings: Settings) -> ProviderSet:
     else:
         raise ValueError(f"unsupported LLM provider: {settings.llm.provider}")
 
-    tts_kind = settings.tts.provider
+    tts_kind = settings.tts.selected_provider
+    tts_providers: dict[str, TtsProvider] = {}
+    if settings.tts.provider is None:
+        for provider_id, endpoint in settings.tts.workers.items():
+            token = endpoint.token.get_secret_value() if endpoint.token else None
+            tts_providers[provider_id] = WorkerTtsProvider(
+                descriptor=TtsProviderDescriptor(
+                    provider_id=provider_id,
+                    display_name=endpoint.display_name,
+                    model=endpoint.model,
+                    languages=tuple(endpoint.languages),
+                    supports_voice_cloning=endpoint.supports_voice_cloning,
+                    supports_style=endpoint.supports_style,
+                    supports_speed=endpoint.supports_speed,
+                    supports_pitch=endpoint.supports_pitch,
+                    native_streaming=endpoint.native_streaming,
+                    local_only=True,
+                ),
+                base_url=endpoint.url,
+                token=token,
+                timeout_seconds=settings.tts.timeout_seconds,
+            )
     if tts_kind == "auto":
         tts_kind = (
             "macos_say"
@@ -46,22 +69,22 @@ def build_providers(settings: Settings) -> ProviderSet:
             else "fake"
         )
     if tts_kind == "macos_say":
-        tts: TtsProvider = MacOsSayTtsProvider(
+        tts_providers[tts_kind] = MacOsSayTtsProvider(
             voice=settings.tts.voice,
             sample_rate=settings.tts.sample_rate,
             rate=settings.tts.rate,
             timeout_seconds=settings.tts.timeout_seconds,
         )
     elif tts_kind == "fake":
-        tts = FakeTtsProvider(settings.tts.sample_rate)
+        tts_providers[tts_kind] = FakeTtsProvider(settings.tts.sample_rate)
     elif tts_kind == "sherpa_kokoro_worker":
         if settings.tts.worker_token is None:
             raise ValueError("TTS worker token is required")
-        tts = SherpaKokoroWorkerTtsProvider(
+        tts_providers[tts_kind] = SherpaKokoroWorkerTtsProvider(
             base_url=settings.tts.worker_url,
             token=settings.tts.worker_token.get_secret_value(),
             timeout_seconds=settings.tts.timeout_seconds,
         )
-    else:
+    elif tts_kind not in tts_providers:
         raise ValueError(f"unsupported TTS provider: {tts_kind}")
-    return ProviderSet(llm=llm, tts=tts)
+    return ProviderSet(llm=llm, tts=TtsRouter(tts_providers, tts_kind))
