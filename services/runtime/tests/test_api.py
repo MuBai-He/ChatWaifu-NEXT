@@ -16,6 +16,27 @@ class RuntimeHttpClient(Protocol):
 
     def delete(self, url: str) -> Response: ...
 
+    def options(self, url: str, *, headers: dict[str, str]) -> Response: ...
+
+
+def test_browser_cors_allows_memory_mutation_methods(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    response = http.options(
+        "/v1/sessions/session-id/memory/memory-id/pinned",
+        headers={
+            "Origin": runtime_settings.runtime.web_origin,
+            "Access-Control-Request-Method": "PUT",
+        },
+    )
+
+    assert response.status_code == 200
+    allowed = {
+        method.strip() for method in response.headers["access-control-allow-methods"].split(",")
+    }
+    assert {"PUT", "PATCH", "DELETE"}.issubset(allowed)
+
 
 def test_health_session_persistence_and_event_stream(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)

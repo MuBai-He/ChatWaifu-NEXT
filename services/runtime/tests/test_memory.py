@@ -114,6 +114,12 @@ def test_memory_management_correct_pin_and_forget(client: TestClient) -> None:
     _submit_and_wait(http, session_id, "请记住我叫木白")
     original = _memory_items(http)[0]
 
+    pinned_original = http.put(
+        f"/v1/sessions/{session_id}/memory/{original['memory_id']}/pinned",
+        json={"pinned": True},
+    )
+    assert pinned_original.status_code == 200
+
     corrected = http.patch(
         f"/v1/sessions/{session_id}/memory/{original['memory_id']}",
         json={"text": "我叫小白"},
@@ -121,13 +127,19 @@ def test_memory_management_correct_pin_and_forget(client: TestClient) -> None:
     assert corrected.status_code == 200
     corrected_json = cast(dict[str, object], corrected.json())
     assert corrected_json["supersedes"] == original["memory_id"]
+    assert corrected_json["pinned"] is True
 
     pinned = http.put(
         f"/v1/sessions/{session_id}/memory/{corrected_json['memory_id']}/pinned",
-        json={"pinned": True},
+        json={"pinned": False},
     )
     assert pinned.status_code == 200
-    assert cast(dict[str, object], pinned.json())["pinned"] is True
+    assert cast(dict[str, object], pinned.json())["pinned"] is False
+    repinned = http.put(
+        f"/v1/sessions/{session_id}/memory/{corrected_json['memory_id']}/pinned",
+        json={"pinned": True},
+    )
+    assert repinned.status_code == 200
     unrelated_reply = _submit_and_wait(http, session_id, "今天天气怎么样")
     assert "我叫小白" in unrelated_reply
 

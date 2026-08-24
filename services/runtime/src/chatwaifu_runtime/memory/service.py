@@ -174,6 +174,13 @@ class MemoryService:
         )
         if corrected is None:
             raise RuntimeError("corrected memory record was not created")
+        if current.pinned and not corrected.pinned:
+            pinned = await self._repository.set_pinned(corrected.memory_id, True, datetime.now(UTC))
+            if pinned is None:
+                raise RuntimeError("corrected memory record could not preserve pinned state")
+            await self._semantic_index.upsert(pinned)
+            await self._temporal_graph.upsert(pinned)
+            corrected = pinned
         return corrected
 
     async def set_pinned(self, session_id: UUID, memory_id: UUID, pinned: bool) -> MemoryRecord:
