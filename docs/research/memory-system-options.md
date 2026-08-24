@@ -1,8 +1,10 @@
 # ChatWaifu NEXT 记忆系统方案调研
 
-- 状态：Phase 11 决策输入，尚未改变 Runtime 记忆行为
+- 状态：Phase 11 已选择并实现方案 A；方案 B/C 仅保留可替换端口
 - 日期：2026-08-24
-- 当前建议：先做方案 A，并为方案 B/C 保留端口
+- 当前决策：方案 A 是持久化真值；B/C 不安装模型或数据库，只能向统一排序器贡献候选与分数
+
+实现边界和数据流见 [结构化记忆内核](../architecture/structured-memory-kernel.md)。
 
 ## 当前基线与必须解决的问题
 
@@ -62,10 +64,12 @@ event projection，来源事件是证据；更正产生 `supersede/contradict`�
 truth。召回同时取 FTS、向量和 pinned/recent 候选，再用统一排序器融合。这样能找回“措辞不同
 但含义相近”的偏好和共同经历。
 
-可选实现是 SQLite 向量扩展或进程内索引。`sqlite-vec` 能在 SQLite 中存储和查询多种向量，
+可选实现是 SQLite 向量扩展或进程内索引。当前 Runtime 通过 `SemanticMemoryIndex` 端口接收
+语义候选，默认实现为 `NullSemanticMemoryIndex`，不加载模型也不持久化向量。`sqlite-vec` 能在 SQLite 中存储和查询多种向量，
 但其官方 README 明确仍是 pre-v1、可能发生破坏性变更，所以必须藏在 `EmbeddingIndexPort`
 后，不能写进领域层：[sqlite-vec](https://github.com/asg017/sqlite-vec)。嵌入模型也必须走
-本地 worker/provider adapter，记录 `embedding_model/version`，更换模型后可重建。
+本地 worker/provider adapter，记录 `embedding_model/version`，更换模型后可重建。任何实现都不能
+绕过方案 A 的记录状态、来源、隐私和删除规则。
 
 优点是中文口语和同义表达召回明显更稳，仍保留 SQLite 单文件体验。代价是模型下载、索引
 迁移、打包原生扩展和召回漂移；应在 A 的 LongMemEval 子集和产品用例上证明收益后再默认开启。
@@ -79,8 +83,9 @@ episode、semantic entity 和 community 三层子图，并强调连续更新与�
 
 它最适合“宁宁什么时候知道某件事”“用户以前喜欢 A、现在改成 B”“共同经历涉及哪些人”这类
 跨会话、多跳、时间问题。缺点是实体消歧、边抽取、图存储、删除传播和隐私治理都更复杂；对
-当前单角色基础 Demo 属于过早引入。可以先在方案 A 中保留 subject/predicate、valid time 和
-source edges，未来无损投影成图。
+当前单角色基础 Demo 属于过早引入。Runtime 已保留 `TemporalMemoryGraph` 端口，默认
+`NullTemporalMemoryGraph`；方案 A 中的 subject/predicate、valid time 和 source edges 可在未来
+无损投影成图，图结果只贡献候选，不能成为第二套记忆真值。
 
 ## 方案 D：模型管理的分层记忆
 
@@ -99,21 +104,19 @@ source edges，未来无损投影成图。
 其默认数据模型、云服务或评测数字能直接替代本项目的隐私、事件和删除语义。当前应借鉴流水线，
 不把第三方框架放到领域核心。
 
-## 推荐实施顺序
+## 已实现与后续评估门
 
 ### 推荐选择：A → 评估门 → 可选 B
 
-1. 扩展 SQLite projection：records、sources、proposals、policy decisions、retrieval audit；保留
-   现有显式命令兼容路径。
-2. 做自动候选提取，但默认 `suggest`，新增记忆收件箱、来源查看、更正、合并、忘记和自动记忆
-   总开关。
-3. 完成 deterministic dedupe、subject/predicate 冲突与 supersede；任何歧义保持 proposal。
-4. 完成 FTS + recency/importance/confidence 排序和有 token budget 的 ContextPacket。
-5. 建立中文角色用例与 LongMemEval 五类能力子集，记录 proposal precision、false recall、更新
+1. 已完成 SQLite records、sources、proposals、FTS5 projection 与显式命令兼容路径。
+2. 已完成自动候选提取、默认 `suggest`、敏感逐条确认，以及收件箱、来源、更正、置顶和忘记 UI。
+3. 已完成确定性去重、subject/predicate 冲突与 supersede；歧义仍停留在 proposal。
+4. 已完成 FTS + recent/importance/confidence 排序和 token-budgeted ContextPacket。
+5. 下一步建立中文角色用例与 LongMemEval 五类能力子集，记录 proposal precision、false recall、更新
    正确率、拒答率和检索延迟。
 6. 只有当“同义表达漏召回”成为主要错误且 B 在固定评测上显著提升，才增加可选本地 embedding。
 7. 只有当多实体时序问题成为产品重点，再评估 C；不提前引入图数据库。
 
-需要用户决定的是默认策略：推荐“明确命令立即写入；普通对话只产生可审核建议；敏感信息始终
-逐条确认”。如果更重视无感陪伴，也可把低敏感、高置信候选改为自动提交，但误记和隐私风险会
-明显上升。
+当前默认策略已经固定为“明确普通命令立即写入；普通对话只产生可审核建议；敏感信息即使明确
+要求记住也必须逐条确认”。是否放宽成静默自动写入，应当由评测结果与独立产品设置决定，不能由
+提取器自行改变。

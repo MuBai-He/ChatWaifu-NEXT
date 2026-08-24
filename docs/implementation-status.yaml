@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-08-24"
-current_phase: 10
-next_phase: 11
+current_phase: 11
+next_phase: 12
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -35,6 +35,8 @@ validation:
     - browser DOM verifies Runtime, STT provider badge, enabled microphone UI, and fixed viewport
     - browser live text, TTS event, memory, skill, and interruption smoke
     - browser Skills control center, MCP echo, progressive instructions, and denial smoke
+    - browser structured memory proposal, acceptance, provenance, correction, and pin smoke plus exact test-record Runtime tombstone cleanup
+    - browser Ayachi Nene semantic expression and bounded action-motion smoke
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -47,7 +49,7 @@ validation:
       - official Framework 5-r.5
       - locally supplied Cubism Core
       - generated ChatWaifu Cubism bridge
-      - official Natori sample model
+      - local-only Ayachi Nene model adapted from the user-supplied archive
   remote_ci_matrix: pending_first_remote_run
 
 phases:
@@ -65,7 +67,7 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Pydantic protocol source covers all required Phase 1 model families
-      - 27 versioned JSON Schemas are generated deterministically
+      - 28 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
       - 13 Python tests and 7 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
@@ -79,11 +81,11 @@ phases:
       - AvatarCue is reduced through a bounded layered scheduler into an AvatarRenderer
       - AvatarController owns the requestAnimationFrame loop outside React state
       - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
-      - 16 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
+      - 17 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
       - 5 Chromium Playwright scenarios cover cues, vendor failure, viewport scrolling, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
-      - Official Natori loads through the generated bridge with expression, motion, and hit mapping
+      - The local-only Ayachi Nene model loads through the generated bridge with semantic facial presets and bounded action motions
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
       - Desktop chat remains bounded to the viewport while only the transcript scrolls
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
@@ -100,7 +102,7 @@ phases:
       - Kokoro worker generates verified 24 kHz WAV while macOS say and fake remain fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
-      - Explicit memory survives sessions and forget uses auditable tombstones
+      - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
       - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
       - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
       - Manifest-driven runtime.status skill reports actual providers with read-only side effect
@@ -161,6 +163,16 @@ phases:
       - Local Echo example covers read, confirmed write, timeout, cancellation, disable, and recoverable uninstall
       - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, and plugin controls
       - Real browser smoke completed MCP echo and denied a pending write without executing it
+  - id: 11
+    name: structured-memory-kernel
+    status: scheme_a_implemented_with_b_c_ports_pending_longmem_eval
+    evidence:
+      - SQLite WAL stores typed records, sources, proposals, lifecycle states, pinned state, and an FTS5 projection
+      - Explicit normal writes commit immediately; implicit candidates require review; sensitive candidates always require confirmation
+      - Deterministic extraction, exact dedupe, subject-predicate conflict detection, supersede, and provenance are covered by tests
+      - Retrieval applies namespace, state, sensitivity, lexical, importance, confidence, and token-budget policy before prompt injection
+      - The Web memory center reviews proposals and exposes filters, sources, correction, pinning, and auditable forgetting
+      - SemanticMemoryIndex and TemporalMemoryGraph ports reserve optional Scheme B and C candidate inputs without changing SQLite truth ownership
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -176,7 +188,7 @@ constraints:
   live2d_core_committed: false
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: true
-  live2d_real_renderer_validation_scope: local_chromium_natori
+  live2d_real_renderer_validation_scope: local_chromium_ayachi_nene_local_only
   pipecat_dependency_added: true
   pipecat_version: "1.7.0"
   browser_microphone_validated: backend_equivalent_audio_and_ui_entry
@@ -185,3 +197,6 @@ constraints:
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5
+  memory_scheme: structured-records-and-fts5
+  memory_semantic_index: reserved_null_port
+  memory_temporal_graph: reserved_null_port

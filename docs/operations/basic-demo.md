@@ -31,10 +31,11 @@ not be described as character-quality speech.
 - Configuration defaults: `config/default.toml`
 - Environment example: `.env.example`
 
-Deleting local data is deliberately not part of the startup command. Explicit “forget” commands
-tombstone one matched memory without erasing provenance. The destructive `重置` button requires a
-browser confirmation, cancels active generation, then clears the current session's turns/events,
-all explicit memories including tombstones, and all generated WAV files. It keeps the same ready
+Deleting local data is deliberately not part of the startup command. The memory center can review
+implicit proposals, inspect event provenance, correct or pin accepted records, and tombstone one
+record without erasing its audit history. The destructive `重置` button requires a browser confirmation,
+cancels active generation, then clears the current session's turns/events, all structured memories
+including proposals and tombstones, and all generated WAV files. It keeps the same ready
 session and WebSocket so the user can start again immediately.
 
 ## Smoke test
@@ -47,15 +48,17 @@ session and WebSocket so the user can start again immediately.
    not held.
 4. Hold `按住说话` and speak while the character is responding; confirm old audio stops and only the
    new reply continues. The explicit `打断` button must produce the same no-stale-output result.
-5. Send `请记住我喜欢蓝色`, reload or create another session, and ask what it remembers.
-6. Send `请忘记我喜欢蓝色` and confirm the active memory card becomes empty.
-7. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
-8. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
+5. Send `我喜欢蓝色`, open `记忆中心`, inspect the pending preference and its rationale, then accept it.
+6. View its source event, pin it, reload or create another session, and ask `你记得我的喜好吗？`.
+7. Correct the accepted record to `我喜欢紫色`; confirm the old record is superseded and only the new
+   active record is recalled. Then forget the test record and confirm it is tombstoned.
+8. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
+9. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
    explicit decision and that `拒绝` produces a failed run without writing the note.
-9. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
-10. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
+10. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
+11. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
     the transcript moves.
-11. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+12. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
     can be sent in the same session.
 
 Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft

@@ -7,8 +7,9 @@ contract, deterministic scheduling, renderer lifecycle, audio-driven mouth input
 events, and observability without starting Runtime, Pipecat, Tauri, or an AI model SDK.
 
 The Fake/CI path and the real Cubism path are both implemented and locally validated. The real path
-uses the user-supplied Cubism SDK for Web 5 R5 and its Natori sample model; all licensed inputs and
-generated artifacts remain Git-ignored and are not remote-CI inputs.
+uses the user-supplied Cubism SDK for Web 5 R5. The current local Demo adapts the user-supplied
+Ayachi Nene archive; all licensed inputs and generated artifacts remain Git-ignored and are not
+remote-CI inputs. The official Natori sample remains the clean-room setup fallback.
 
 ## Ownership
 
@@ -55,9 +56,10 @@ versioned semantic `AvatarInteractionEvent`; business code never receives raw Cu
 The repository pins the official public Cubism Web Framework `5-r.5` at commit
 `198a3769c26ca3d7b600e932590433badd392edd`. `make setup-live2d-vendor` detects the SDK in Downloads,
 fetches and verifies the Framework, stages Core/sample inputs in ignored directories, builds the
-browser bridge, installs Natori, and verifies the result. The bridge maps semantic emotions,
-motions, gaze, mouth openness, and hit areas to the official SDK Demo adapter without exposing
-model-specific parameters to React.
+browser bridge, installs Natori, and verifies the clean fallback. The separate local Nene installer
+adapts the user archive into facial presets and the bounded semantic actions `headpat`, `stare`,
+`flustered`, and `sing`. Runtime emits only semantic cues; raw Cubism parameter, expression-file, and
+motion-group identifiers stay inside the renderer bridge.
 
 Setup details and official source links are in `vendor/live2d/README.md`.
 
@@ -70,5 +72,5 @@ Setup details and official source links are in `vendor/live2d/README.md`.
   the missing-Core error path, a real Natori render in Avatar Lab, and a real render in main chat.
 - CI installs Chromium and uses only `FakeAvatarRenderer`; licensed vendor artifacts are not CI
   inputs, so real-render scenarios skip when those files are absent.
-- Local Chromium records actual Natori model load, expression/motion changes, draw output, resource
+- Local Chromium records actual local model load, expression/motion changes, draw output, resource
   accounting, fallback canvas remounting, and renderer cleanup. Remote OS validation remains pending.

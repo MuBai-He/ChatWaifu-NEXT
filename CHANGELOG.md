@@ -15,3 +15,9 @@
 - Bound the desktop chat to the display viewport, make transcript history independently scrollable,
   and add a confirmed reset for conversation, memory, events, generated audio, and avatar state.
 - Accept the continuous basic-demo delivery scope and tiered local TTS architecture.
+- Adapt the user-supplied local Ayachi Nene model to semantic facial presets and bounded character
+  actions while keeping all character assets ignored.
+- Implement Scheme A structured memory with review proposals, privacy policy, provenance, FTS5
+  retrieval, dedupe, supersede, correction, pinning, tombstones, and a Web memory center.
+- Reserve null `SemanticMemoryIndex` and `TemporalMemoryGraph` ports for optional Scheme B/C retrieval
+  without changing SQLite Scheme A truth ownership.

@@ -2,7 +2,7 @@
 
 ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当前包含一个可直接
 运行的绫地宁宁主题基础 Demo：文字与真实麦克风对话、VAD 自动回合、本地 STT/角色 TTS、Pipecat
-SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、明确记忆，以及带权限与
+SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、结构化长期记忆，以及带权限与
 确认的 Runtime Skills/MCP 插件链路已接通。
 
 ## 直接运行 Demo
@@ -56,9 +56,11 @@ Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Ru
 - 按住说话时开口抢话，或点击“打断”，会取消旧 generation、丢弃迟到输出并清空播放队列
 - 桌面页面固定为显示区域高度，右侧历史独立滚动，左侧 Live2D 始终留在视口内
 - “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
-- `AvatarCue` 驱动 thinking、speaking、idle 与口型状态
+- `AvatarCue` 驱动 thinking、speaking、idle、表情、角色动作与口型状态；明确的对话意图和
+  角色触摸可触发宁宁的 `headpat`、`stare`、`flustered`、`sing`，不会随机播放长动作
 - 绫地宁宁主题人格、开场白、角色声线与内容声明来自 `characters/default/character.json`
-- 只有明确的“请记住…”和“请忘记…”才会修改长期记忆；忘记采用可审计 tombstone
+- 方案 A 结构化记忆：明确普通记忆直接提交，普通对话候选进入“记忆中心”，敏感内容逐条确认
+- 记忆支持来源查看、FTS5 召回、去重、冲突 supersede、修正、置顶与可审计 tombstone
 - `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
 - “Skills & 插件”控制中心支持按需加载说明、运行记录、权限确认、取消、启停和可恢复卸载
 - 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；可从控制中心安装
@@ -78,7 +80,9 @@ Schema 校验、统一错误、超时与取消。写入、破坏、外部通信�
 获得授权；权限 grant 与每次操作确认是两个独立步骤。当前是软隔离，不是 OS 沙箱，只应安装
 信任的本地插件。具体边界见 [ADR 0013](docs/adr/0013-permissioned-stdio-mcp-plugins.md)。
 
-完整长期记忆尚未按某个第三方框架直接落地；候选方案、隐私策略与推荐顺序见
+方案 A 已作为 SQLite WAL + FTS5 的唯一记忆真值落地；方案 B 语义索引与方案 C 时序图仅保留
+禁用端口，不下载向量模型或引入图数据库。实现边界见
+[结构化记忆内核](docs/architecture/structured-memory-kernel.md)，后续评估门见
 [记忆系统方案调研](docs/research/memory-system-options.md)。
 
 ## TTS 选择
@@ -111,6 +115,15 @@ make demo
 口型与点击命中。换 SDK 路径或样例模型的方法见
 [Live2D vendor 说明](vendor/live2d/README.md)。发布或商用前仍需单独复核 Core 与模型许可。
 
+当前本机也可从用户提供且仅限本地的 `~/Downloads/AYACHI NENE.7z` 安装宁宁模型：
+
+```bash
+uv run python tools/setup_ayachi_nene_model.py
+make build-live2d-bridge
+```
+
+该命令只写入 Git 忽略的 vendor 目录，模型资产不会被提交；再发行前必须自行确认授权。
+
 ## 常用开发命令
 
 ```bash
@@ -138,8 +151,8 @@ make check-generated    # 协议受控产物无漂移检查
 ## 当前边界
 
 这是基础可用 Demo，不声称已经完成：可再发行的 Live2D 资产包与自定义角色模型、RTVI
-数据通道与公网 TURN、生产级插件沙箱、训练后的自定义音色、完整 Tauri 安装包、长时间语音
-压力测试或远端 CI 矩阵。这些能力都有独立边界，不会伪装成已经交付。
+数据通道与公网 TURN、生产级插件沙箱、训练后的自定义音色、向量/图记忆后端、完整 Tauri
+安装包、长时间语音压力测试或远端 CI 矩阵。这些能力都有独立边界，不会伪装成已经交付。
 
 架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
 `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。
