@@ -6,6 +6,25 @@ export interface RuntimeHealth {
   providers: { llm: string; tts: string; stt?: string };
 }
 
+export interface TtsProviderSnapshot {
+  provider_id: string;
+  display_name: string;
+  model: string;
+  languages: string[];
+  supports_voice_cloning: boolean;
+  supports_style: boolean;
+  supports_speed: boolean;
+  supports_pitch: boolean;
+  native_streaming: boolean;
+  local_only: boolean;
+  status: "ready" | "busy" | "starting" | "degraded" | "unavailable";
+  model_loaded: boolean;
+  queue_depth: number;
+  device?: string | null;
+  detail?: string | null;
+  selected: boolean;
+}
+
 export interface CharacterProfile {
   character_id: string;
   display_name: string;

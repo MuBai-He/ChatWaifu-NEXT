@@ -13,6 +13,7 @@ import type {
   RuntimeHealth,
   SessionResetResult,
   SessionSnapshot,
+  TtsProviderSnapshot,
 } from "./types";
 
 export const RUNTIME_URL = "http://127.0.0.1:8765";
@@ -99,6 +100,25 @@ export async function resetSession(
   return request<SessionResetResult>(`/v1/sessions/${sessionId}/reset`, {
     method: "POST",
     body: JSON.stringify({ confirm: true }),
+  });
+}
+
+export async function getTtsProviders(
+  sessionId: string,
+): Promise<TtsProviderSnapshot[]> {
+  const response = await request<{ items: TtsProviderSnapshot[] }>(
+    `/v1/tts/providers?session_id=${encodeURIComponent(sessionId)}`,
+  );
+  return response.items;
+}
+
+export async function selectTtsProvider(
+  sessionId: string,
+  providerId: string,
+): Promise<{ session_id: string; provider_id: string }> {
+  return request(`/v1/sessions/${sessionId}/tts/provider`, {
+    method: "PUT",
+    body: JSON.stringify({ provider_id: providerId }),
   });
 }
 

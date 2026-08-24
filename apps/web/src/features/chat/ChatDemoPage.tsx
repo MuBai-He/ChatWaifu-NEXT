@@ -19,6 +19,9 @@ export function ChatDemoPage() {
     error,
     skillSummary,
     resetting,
+    ttsProviders,
+    ttsProviderId,
+    ttsSwitching,
     voiceState,
     voiceConnected,
     voiceDevices,
@@ -34,6 +37,7 @@ export function ChatDemoPage() {
     endPushToTalk,
     refreshVoiceDevices,
     toggleVoice,
+    changeTtsProvider,
     send: sendMessage,
     interruptActive,
     checkStatus,
@@ -251,6 +255,33 @@ export function ChatDemoPage() {
               </small>
             </div>
             <div className="voice-options">
+              <label>
+                <span>输出声音</span>
+                <select
+                  value={ttsProviderId}
+                  onChange={(event) =>
+                    void changeTtsProvider(event.target.value)
+                  }
+                  disabled={!sessionId || ttsSwitching}
+                  aria-label="选择语音模型"
+                >
+                  {ttsProviders.length === 0 ? (
+                    <option value={ttsProviderId}>{ttsProviderId}</option>
+                  ) : (
+                    ttsProviders.map((provider) => (
+                      <option
+                        value={provider.provider_id}
+                        key={provider.provider_id}
+                        disabled={provider.status === "unavailable"}
+                      >
+                        {provider.display_name}
+                        {provider.model_loaded ? " · 已加载" : ""}
+                        {provider.status === "unavailable" ? " · 离线" : ""}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
               <label>
                 <span>响应方式</span>
                 <select

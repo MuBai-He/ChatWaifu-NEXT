@@ -50,6 +50,44 @@ const session = {
   error: null,
   skillSummary: null,
   resetting: false,
+  ttsProviders: [
+    {
+      provider_id: "qwen3_tts_mlx",
+      display_name: "Qwen3-TTS · MLX（默认）",
+      model: "Qwen3-TTS-0.6B",
+      languages: ["zh", "ja", "en"],
+      supports_voice_cloning: true,
+      supports_style: false,
+      supports_speed: true,
+      supports_pitch: false,
+      native_streaming: true,
+      local_only: true,
+      status: "ready" as const,
+      model_loaded: false,
+      queue_depth: 0,
+      device: "mlx",
+      selected: true,
+    },
+    {
+      provider_id: "gpt_sovits",
+      display_name: "GPT-SoVITS · 本地角色模型",
+      model: "local-character-v2ProPlus",
+      languages: ["zh", "ja", "en"],
+      supports_voice_cloning: true,
+      supports_style: false,
+      supports_speed: true,
+      supports_pitch: false,
+      native_streaming: true,
+      local_only: true,
+      status: "ready" as const,
+      model_loaded: false,
+      queue_depth: 0,
+      device: "cpu",
+      selected: false,
+    },
+  ],
+  ttsProviderId: "qwen3_tts_mlx",
+  ttsSwitching: false,
   voiceState: "disconnected" as VoiceConnectionState,
   voiceConnected: false,
   voiceDevices: [],
@@ -65,6 +103,7 @@ const session = {
   endPushToTalk: vi.fn(),
   refreshVoiceDevices: vi.fn(),
   toggleVoice: vi.fn(),
+  changeTtsProvider: vi.fn(),
   send: vi.fn(),
   interruptActive: vi.fn(),
   checkStatus: vi.fn(),
@@ -136,6 +175,19 @@ describe("ChatWaifu usable demo", () => {
       target: { value: "open_mic" },
     });
     expect(session.setVoiceActivationMode).toHaveBeenCalledWith("open_mic");
+  });
+
+  it("defaults to Qwen TTS and can select GPT-SoVITS", () => {
+    render(<App />);
+
+    const tts = screen.getByRole("combobox", { name: "选择语音模型" });
+    expect(tts).toBeInstanceOf(HTMLSelectElement);
+    if (!(tts instanceof HTMLSelectElement))
+      throw new Error("expected TTS select");
+    expect(tts.value).toBe("qwen3_tts_mlx");
+
+    fireEvent.change(tts, { target: { value: "gpt_sovits" } });
+    expect(session.changeTtsProvider).toHaveBeenCalledWith("gpt_sovits");
   });
 
   it("only transmits while the push-to-talk control is held", () => {

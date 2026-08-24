@@ -9,9 +9,11 @@ import {
   getMemory,
   getMessages,
   getSession,
+  getTtsProviders,
   interrupt,
   resetSession,
   runStatusSkill,
+  selectTtsProvider,
   submitText,
 } from "./runtimeClient";
 import type {
@@ -22,6 +24,7 @@ import type {
   MemoryItem,
   RuntimeEvent,
   RuntimeHealth,
+  TtsProviderSnapshot,
 } from "./types";
 import { GenerationAudioPlayer } from "./audioPlayer";
 import { StreamingTextProjector } from "./streamingTextProjector";
@@ -50,6 +53,9 @@ export function useChatSession() {
   const [error, setError] = useState<string | null>(null);
   const [skillSummary, setSkillSummary] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [ttsProviders, setTtsProviders] = useState<TtsProviderSnapshot[]>([]);
+  const [ttsProviderId, setTtsProviderId] = useState("qwen3_tts_mlx");
+  const [ttsSwitching, setTtsSwitching] = useState(false);
   const [voiceActivity, setVoiceActivity] = useState<
     "idle" | "listening" | "transcribing" | "thinking"
   >("idle");
@@ -312,9 +318,10 @@ export function useChatSession() {
         if (disposed) return;
         localStorage.setItem(SESSION_KEY, session.session_id);
         setSessionId(session.session_id);
-        const [history, savedMemories] = await Promise.all([
+        const [history, savedMemories, availableTts] = await Promise.all([
           getMessages(session.session_id),
           getMemory(),
+          getTtsProviders(session.session_id).catch(() => []),
         ]);
         if (disposed) return;
         setMessages(
@@ -325,6 +332,9 @@ export function useChatSession() {
           })),
         );
         setMemories(savedMemories);
+        setTtsProviders(availableTts);
+        const selectedTts = availableTts.find((provider) => provider.selected);
+        if (selectedTts) setTtsProviderId(selectedTts.provider_id);
         connect(session.session_id);
       } catch (runtimeError: unknown) {
         if (disposed) return;
@@ -389,6 +399,47 @@ export function useChatSession() {
     });
   }, [sessionId, stopAudio, stopText]);
 
+  const changeTtsProvider = useCallback(
+    async (providerId: string) => {
+      if (!sessionId || ttsSwitching || providerId === ttsProviderId) return;
+      setTtsSwitching(true);
+      setError(null);
+      const generationId = activeGeneration.current;
+      if (generationId) {
+        stopText(generationId);
+        stopAudio(generationId);
+        activeGeneration.current = null;
+      }
+      try {
+        const selected = await selectTtsProvider(sessionId, providerId);
+        setTtsProviderId(selected.provider_id);
+        setTtsProviders((current) =>
+          current.map((provider) => ({
+            ...provider,
+            selected: provider.provider_id === selected.provider_id,
+          })),
+        );
+        setHealth((current) =>
+          current
+            ? {
+                ...current,
+                providers: { ...current.providers, tts: selected.provider_id },
+              }
+            : current,
+        );
+      } catch (selectionError: unknown) {
+        setError(
+          selectionError instanceof Error
+            ? selectionError.message
+            : "切换语音模型失败",
+        );
+      } finally {
+        setTtsSwitching(false);
+      }
+    },
+    [sessionId, stopAudio, stopText, ttsProviderId, ttsSwitching],
+  );
+
   const checkStatus = useCallback(async () => {
     if (!sessionId) return;
     try {
@@ -438,6 +489,9 @@ export function useChatSession() {
     error,
     skillSummary,
     resetting,
+    ttsProviders,
+    ttsProviderId,
+    ttsSwitching,
     voiceState: voice.state,
     voiceConnected: voice.connected,
     voiceDevices: voice.devices,
@@ -453,6 +507,7 @@ export function useChatSession() {
     endPushToTalk: voice.endPushToTalk,
     refreshVoiceDevices: voice.refreshDevices,
     toggleVoice: voice.toggle,
+    changeTtsProvider,
     send,
     interruptActive,
     checkStatus,
