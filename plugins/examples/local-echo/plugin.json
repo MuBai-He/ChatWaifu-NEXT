@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "plugin_id": "local.echo",
+  "version": "1.0.0",
+  "name": "Local Echo MCP",
+  "description": "Example isolated stdio MCP plugin with read and confirmed write capabilities.",
+  "transport": {
+    "kind": "stdio",
+    "command": ["python", "server.py"]
+  },
+  "skills": ["chatwaifu.yaml"]
+}

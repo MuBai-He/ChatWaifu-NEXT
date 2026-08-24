@@ -1,17 +1,23 @@
 """Loopback Runtime HTTP and WebSocket routes."""
 
 import asyncio
+from pathlib import Path
 from uuid import UUID
 
+from chatwaifu_protocol.skills import SkillInvocation
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
     CreateSessionRequest,
+    ExamplePluginRequest,
+    InstallPluginRequest,
     InterruptRequest,
+    PluginEnabledRequest,
     ResetSessionRequest,
     RuntimeHealth,
+    SkillConfirmationDecisionRequest,
     SubmitTextRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
@@ -235,6 +241,127 @@ async def read_runtime_skills(request: Request) -> dict[str, object]:
         for definition in _container(request).runtime_skills.list()
     ]
     return {"items": definitions, "count": len(definitions)}
+
+
+@router.get("/skills/{skill_id}/instructions")
+async def read_runtime_skill_instructions(request: Request, skill_id: str) -> dict[str, str]:
+    try:
+        instructions = _container(request).runtime_skills.instructions(skill_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="skill not found") from error
+    return {"skill_id": skill_id, "instructions": instructions}
+
+
+@router.post("/sessions/{session_id}/skill-runs", status_code=status.HTTP_202_ACCEPTED)
+async def invoke_runtime_skill(
+    request: Request, session_id: UUID, body: SkillInvocation
+) -> dict[str, object]:
+    if await _container(request).sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    try:
+        snapshot = await _container(request).runtime_skills.invoke(session_id, body)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/sessions/{session_id}/skill-runs")
+async def read_skill_runs(
+    request: Request,
+    session_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> dict[str, object]:
+    items = await _container(request).runtime_skills.list_runs(session_id, limit)
+    return {"items": [item.model_dump(mode="json") for item in items], "count": len(items)}
+
+
+@router.get("/skill-runs/{skill_run_id}")
+async def read_skill_run(request: Request, skill_run_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.get_run(skill_run_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="skill run not found") from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.post("/skill-runs/{skill_run_id}/cancel")
+async def cancel_skill_run(request: Request, skill_run_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.cancel(skill_run_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="skill run not found") from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/sessions/{session_id}/skill-confirmations")
+async def read_skill_confirmations(request: Request, session_id: UUID) -> dict[str, object]:
+    items = await _container(request).runtime_skills.pending_confirmations(session_id)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/skill-confirmations/{request_id}")
+async def decide_skill_confirmation(
+    request: Request, request_id: UUID, body: SkillConfirmationDecisionRequest
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.decide_confirmation(
+            request_id, body.decision
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="confirmation request not found") from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/plugins")
+async def read_plugins(request: Request) -> dict[str, object]:
+    items = await _container(request).runtime_skills.list_plugins()
+    return {"items": [item.model_dump(mode="json") for item in items], "count": len(items)}
+
+
+@router.post("/plugins/install", status_code=status.HTTP_201_CREATED)
+async def install_plugin(request: Request, body: InstallPluginRequest) -> dict[str, object]:
+    try:
+        plugin = await _container(request).runtime_skills.install_plugin(Path(body.source_path))
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return plugin.model_dump(mode="json")
+
+
+@router.post("/plugins/install-example", status_code=status.HTTP_201_CREATED)
+async def install_example_plugin(request: Request, body: ExamplePluginRequest) -> dict[str, object]:
+    try:
+        plugin = await _container(request).runtime_skills.install_example_plugin(body.example_id)
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return plugin.model_dump(mode="json")
+
+
+@router.put("/plugins/{plugin_id}/enabled")
+async def set_plugin_enabled(
+    request: Request, plugin_id: str, body: PluginEnabledRequest
+) -> dict[str, object]:
+    try:
+        plugin = await _container(request).runtime_skills.set_plugin_enabled(
+            plugin_id, body.enabled
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="plugin not found") from error
+    return plugin.model_dump(mode="json")
+
+
+@router.delete("/plugins/{plugin_id}")
+async def uninstall_plugin(request: Request, plugin_id: str) -> dict[str, object]:
+    try:
+        trash_path = await _container(request).runtime_skills.uninstall_plugin(plugin_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="plugin not found") from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {"plugin_id": plugin_id, "removed": True, "recoverable_from": str(trash_path)}
 
 
 @router.post("/sessions/{session_id}/skills/runtime.status")

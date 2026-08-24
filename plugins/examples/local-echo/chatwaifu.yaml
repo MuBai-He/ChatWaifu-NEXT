@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "local.echo",
+    "version": "1.0.0",
+    "name": "Local Echo",
+    "description": "Example MCP plugin for transport, permission, confirmation, timeout, and cancellation tests.",
+    "capabilities": [
+      {
+        "name": "echo",
+        "adapter_tool": "local_echo",
+        "description": "Return text through the isolated MCP subprocess.",
+        "input_schema": {
+          "type": "object",
+          "required": ["text"],
+          "properties": { "text": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": ["echo", "spoken_summary"],
+          "properties": {
+            "echo": { "type": "string" },
+            "spoken_summary": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "side_effect": "read",
+        "required_permissions": [],
+        "confirmation_required": false,
+        "timeout_seconds": 5
+      },
+      {
+        "name": "append_note",
+        "adapter_tool": "append_note",
+        "description": "Append a line to this plugin's isolated local notes file.",
+        "input_schema": {
+          "type": "object",
+          "required": ["text"],
+          "properties": { "text": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": ["written", "spoken_summary"],
+          "properties": {
+            "written": { "type": "boolean" },
+            "spoken_summary": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "side_effect": "write",
+        "required_permissions": ["plugin.notes.write"],
+        "confirmation_required": true,
+        "timeout_seconds": 5
+      },
+      {
+        "name": "wait",
+        "adapter_tool": "wait",
+        "description": "Wait for a bounded interval for cancellation diagnostics.",
+        "input_schema": {
+          "type": "object",
+          "required": ["seconds"],
+          "properties": { "seconds": { "type": "number", "minimum": 0, "maximum": 10 } },
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": ["waited", "spoken_summary"],
+          "properties": {
+            "waited": { "type": "number" },
+            "spoken_summary": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "side_effect": "read",
+        "required_permissions": [],
+        "confirmation_required": false,
+        "timeout_seconds": 2
+      }
+    ],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {
+    "kind": "mcp",
+    "tool": "local_echo"
+  }
+}

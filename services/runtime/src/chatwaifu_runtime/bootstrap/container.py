@@ -33,6 +33,8 @@ class RuntimeContainer:
         self.stt = build_stt_backend(settings)
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
+            settings.data_dir,
+            self.database,
             self.event_publisher,
             self.providers,
             self.stt.kind,
@@ -64,9 +66,9 @@ class RuntimeContainer:
         if self._started:
             return
         self.characters.start()
-        self.runtime_skills.start()
         self.audio_assets.start()
         await self.database.open()
+        await self.runtime_skills.start()
         self._started = True
         for event in await self.event_store.pending_outbox():
             await self.event_hub.publish(event)
@@ -80,6 +82,7 @@ class RuntimeContainer:
         self._started = False
         await self.voice_media.close()
         await self.conversation.stop()
+        await self.runtime_skills.stop()
         await self.stt.close()
         await self.providers.tts.close()
         await self.event_hub.close()

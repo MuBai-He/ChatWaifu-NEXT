@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "runtime.status",
+    "version": "1.2.0",
+    "name": "Runtime Status",
+    "description": "Read-only report of active ChatWaifu Runtime components and providers.",
+    "capabilities": [
+      {
+        "name": "read",
+        "description": "Read the current local Runtime status.",
+        "input_schema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "runtime_version",
+            "llm_provider",
+            "tts_provider",
+            "stt_provider",
+            "transport",
+            "persistence"
+          ],
+          "properties": {
+            "runtime_version": { "type": "string" },
+            "llm_provider": { "type": "string" },
+            "tts_provider": { "type": "string" },
+            "stt_provider": { "type": "string" },
+            "transport": { "type": "string" },
+            "persistence": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "side_effect": "read",
+        "required_permissions": [],
+        "confirmation_required": false,
+        "timeout_seconds": 5
+      }
+    ],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {
+    "kind": "builtin",
+    "handler": "runtime_status"
+  }
+}

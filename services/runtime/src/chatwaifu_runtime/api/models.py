@@ -62,3 +62,27 @@ class WebRtcPatchRequest(BaseModel):
     candidates: list[WebRtcIceCandidate] = Field(
         default_factory=lambda: list[WebRtcIceCandidate](), max_length=32
     )
+
+
+class InstallPluginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_path: str = Field(min_length=1, max_length=4096)
+
+
+class ExamplePluginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    example_id: str = Field(default="local-echo", pattern=r"^[a-z0-9][a-z0-9_-]{1,63}$")
+
+
+class PluginEnabledRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+
+
+class SkillConfirmationDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["allow_once", "allow_session", "allow_always", "deny"]
