@@ -17,7 +17,16 @@ def main() -> int:
     environment = os.environ.copy()
     environment.pop("VIRTUAL_ENV", None)
     result = subprocess.run(
-        [uv, "sync", "--project", str(WORKER), "--all-groups", "--no-editable"],
+        [
+            uv,
+            "sync",
+            "--project",
+            str(WORKER),
+            "--all-groups",
+            "--no-editable",
+            "--refresh-package",
+            "chatwaifu-model-worker-sdk",
+        ],
         cwd=ROOT,
         env=environment,
         check=False,

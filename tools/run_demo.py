@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_HEALTH = "http://127.0.0.1:8765/v1/runtime/health"
 WEB_URL = "http://127.0.0.1:5173/"
 STT_WORKER = ROOT / "workers" / "asr-faster-whisper"
+TTS_WORKER = ROOT / "workers" / "tts-sherpa-kokoro"
 
 
 def main() -> int:
@@ -64,9 +65,22 @@ def main() -> int:
     )
     if worker_install.returncode != 0:
         return worker_install.returncode
+    print("Checking isolated local Kokoro TTS worker...", flush=True)
+    tts_install = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "setup_tts_worker.py")],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+    )
+    if tts_install.returncode != 0:
+        return tts_install.returncode
 
     stt_port = _find_free_loopback_port()
     stt_token = secrets.token_urlsafe(32)
+    tts_port = _find_free_loopback_port()
+    while tts_port == stt_port:
+        tts_port = _find_free_loopback_port()
+    tts_token = secrets.token_urlsafe(32)
     worker_environment = environment.copy()
     worker_environment.update(
         {
@@ -87,6 +101,23 @@ def main() -> int:
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
             "CHATWAIFU_STT__LANGUAGE": "zh",
+            "CHATWAIFU_TTS__PROVIDER": "sherpa_kokoro_worker",
+            "CHATWAIFU_TTS__WORKER_URL": f"http://127.0.0.1:{tts_port}",
+            "CHATWAIFU_TTS__WORKER_TOKEN": tts_token,
+        }
+    )
+    tts_environment = environment.copy()
+    tts_environment.update(
+        {
+            "CHATWAIFU_TTS_WORKER_HOST": "127.0.0.1",
+            "CHATWAIFU_TTS_WORKER_PORT": str(tts_port),
+            "CHATWAIFU_TTS_WORKER_TOKEN": tts_token,
+            "CHATWAIFU_TTS_WORKER_MODEL": "kokoro-multi-lang-v1_1",
+            "CHATWAIFU_TTS_WORKER_MODEL_DIR": str(
+                ROOT / ".local" / "models" / "kokoro" / "kokoro-multi-lang-v1_1"
+            ),
+            "CHATWAIFU_TTS_WORKER_NUM_THREADS": "2",
+            "CHATWAIFU_TTS_WORKER_PRELOAD": "true",
         }
     )
 
@@ -109,6 +140,21 @@ def main() -> int:
             "Local STT worker",
             timeout_seconds=180,
             headers={"Authorization": f"Bearer {stt_token}"},
+        )
+        print("Loading Kokoro v1.1 character voice...", flush=True)
+        tts_worker = subprocess.Popen(
+            [str(_tts_worker_python()), "-m", "chatwaifu_tts_worker.main"],
+            cwd=ROOT,
+            env=tts_environment,
+            start_new_session=True,
+        )
+        processes.append(tts_worker)
+        _wait_for_url(
+            f"http://127.0.0.1:{tts_port}/v1/health",
+            tts_worker,
+            "Local TTS worker",
+            timeout_seconds=180,
+            headers={"Authorization": f"Bearer {tts_token}"},
         )
         runtime = subprocess.Popen(
             [sys.executable, str(ROOT / "tools" / "run_runtime.py")],
@@ -178,13 +224,21 @@ def _find_free_loopback_port() -> int:
         return int(listener.getsockname()[1])
 
 
-def _stt_worker_python() -> Path:
+def _worker_python(worker: Path) -> Path:
     directory = "Scripts" if os.name == "nt" else "bin"
     executable = "python.exe" if os.name == "nt" else "python"
-    path = STT_WORKER / ".venv" / directory / executable
+    path = worker / ".venv" / directory / executable
     if not path.exists():
-        raise RuntimeError(f"Local STT worker interpreter is missing: {path}")
+        raise RuntimeError(f"Local worker interpreter is missing: {path}")
     return path
+
+
+def _stt_worker_python() -> Path:
+    return _worker_python(STT_WORKER)
+
+
+def _tts_worker_python() -> Path:
+    return _worker_python(TTS_WORKER)
 
 
 def _stop_processes(processes: list[subprocess.Popen[bytes]]) -> None:

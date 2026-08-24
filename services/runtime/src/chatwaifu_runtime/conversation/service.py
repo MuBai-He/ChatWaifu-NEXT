@@ -23,12 +23,16 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
-from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
+from chatwaifu_runtime.characters.service import (
+    CharacterProfile,
+    CharacterService,
+    CharacterVoiceProfile,
+)
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryItem, MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
-from chatwaifu_runtime.providers.contracts import LlmRequest
+from chatwaifu_runtime.providers.contracts import LlmRequest, SynthesisRequest
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -318,10 +322,10 @@ class ConversationService:
                 segment += delta
                 await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})
                 if _segment_ready(segment):
-                    await self._synthesize_segment(accepted, segment)
+                    await self._synthesize_segment(accepted, segment, character.voice_profile)
                     segment = ""
             if segment.strip():
-                await self._synthesize_segment(accepted, segment)
+                await self._synthesize_segment(accepted, segment, character.voice_profile)
             self._ensure_current(accepted)
             await self._complete(accepted, output)
         except asyncio.CancelledError as error:
@@ -350,14 +354,32 @@ class ConversationService:
         )
         return tuple((str(row["role"]), str(row["committed_text"])) for row in reversed(rows))
 
-    async def _synthesize_segment(self, accepted: GenerationAccepted, text: str) -> None:
+    async def _synthesize_segment(
+        self,
+        accepted: GenerationAccepted,
+        text: str,
+        voice: CharacterVoiceProfile,
+    ) -> None:
         self._ensure_current(accepted)
         await self._emit_generic(
             accepted, "assistant.text_segment_committed", {"text": text.strip()}
         )
         asset = self._audio_assets.allocate()
         try:
-            result = await self._providers.tts.synthesize(text.strip(), asset.path)
+            result = await self._providers.tts.synthesize(
+                SynthesisRequest(
+                    session_id=accepted.session_id,
+                    turn_id=accepted.turn_id,
+                    generation_id=accepted.generation_id,
+                    segment_id=asset.asset_id,
+                    text=text.strip(),
+                    destination=asset.path,
+                    language=voice.language,
+                    voice_id=voice.voice_id,
+                    speaker_id=voice.speaker_id,
+                    speed=voice.speed,
+                )
+            )
         except BaseException:
             asset.path.unlink(missing_ok=True)
             raise

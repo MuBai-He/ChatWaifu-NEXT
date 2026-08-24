@@ -8,7 +8,11 @@ from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.providers.contracts import LlmProvider, TtsProvider
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
-from chatwaifu_runtime.providers.tts import FakeTtsProvider, MacOsSayTtsProvider
+from chatwaifu_runtime.providers.tts import (
+    FakeTtsProvider,
+    MacOsSayTtsProvider,
+    SherpaKokoroWorkerTtsProvider,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +54,14 @@ def build_providers(settings: Settings) -> ProviderSet:
         )
     elif tts_kind == "fake":
         tts = FakeTtsProvider(settings.tts.sample_rate)
+    elif tts_kind == "sherpa_kokoro_worker":
+        if settings.tts.worker_token is None:
+            raise ValueError("TTS worker token is required")
+        tts = SherpaKokoroWorkerTtsProvider(
+            base_url=settings.tts.worker_url,
+            token=settings.tts.worker_token.get_secret_value(),
+            timeout_seconds=settings.tts.timeout_seconds,
+        )
     else:
         raise ValueError(f"unsupported TTS provider: {tts_kind}")
     return ProviderSet(llm=llm, tts=tts)

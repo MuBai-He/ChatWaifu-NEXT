@@ -14,7 +14,7 @@ members = [
   "packages/protocol-python",
   "services/runtime",
 ]
-exclude = ["workers/asr-faster-whisper"]
+exclude = ["workers/asr-faster-whisper", "workers/tts-sherpa-kokoro"]
 
 [dependency-groups]
 dev = [

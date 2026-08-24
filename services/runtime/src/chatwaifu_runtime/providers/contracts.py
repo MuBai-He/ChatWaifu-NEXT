@@ -32,8 +32,24 @@ class SynthesisResult:
     duration_ms: int
 
 
+@dataclass(frozen=True, slots=True)
+class SynthesisRequest:
+    session_id: UUID
+    turn_id: UUID
+    generation_id: UUID
+    segment_id: UUID
+    text: str
+    destination: Path
+    language: str
+    voice_id: str
+    speaker_id: int
+    speed: float
+
+
 class TtsProvider(Protocol):
     @property
     def kind(self) -> str: ...
 
-    async def synthesize(self, text: str, destination: Path) -> SynthesisResult: ...
+    async def synthesize(self, request: SynthesisRequest) -> SynthesisResult: ...
+
+    async def close(self) -> None: ...

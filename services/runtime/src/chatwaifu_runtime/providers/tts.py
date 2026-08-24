@@ -1,14 +1,21 @@
 """Dependency-light speech adapters with subprocess cancellation."""
 
 import asyncio
+import logging
 import math
 import shutil
 import struct
 import sys
 import wave
 from pathlib import Path
+from uuid import UUID, uuid4
 
-from chatwaifu_runtime.providers.contracts import SynthesisResult
+import httpx2
+from chatwaifu_model_worker import TtsSynthesisRequest, TtsSynthesisResult
+
+from chatwaifu_runtime.providers.contracts import SynthesisRequest, SynthesisResult
+
+logger = logging.getLogger(__name__)
 
 
 class FakeTtsProvider:
@@ -19,10 +26,13 @@ class FakeTtsProvider:
     def __init__(self, sample_rate: int = 24_000) -> None:
         self._sample_rate = sample_rate
 
-    async def synthesize(self, text: str, destination: Path) -> SynthesisResult:
-        duration_ms = min(max(len(text) * 55, 250), 2500)
-        await asyncio.to_thread(self._write_tone, destination, duration_ms)
-        return SynthesisResult(destination, "audio/wav", self._sample_rate, duration_ms)
+    async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
+        duration_ms = min(max(len(request.text) * 55, 250), 2500)
+        await asyncio.to_thread(self._write_tone, request.destination, duration_ms)
+        return SynthesisResult(request.destination, "audio/wav", self._sample_rate, duration_ms)
+
+    async def close(self) -> None:
+        return None
 
     def _write_tone(self, destination: Path, duration_ms: int) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -52,9 +62,9 @@ class MacOsSayTtsProvider:
         self._rate = rate
         self._timeout_seconds = timeout_seconds
 
-    async def synthesize(self, text: str, destination: Path) -> SynthesisResult:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        source = destination.with_suffix(".aiff")
+    async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
+        request.destination.parent.mkdir(parents=True, exist_ok=True)
+        source = request.destination.with_suffix(".aiff")
         try:
             await self._run(
                 "say",
@@ -66,7 +76,7 @@ class MacOsSayTtsProvider:
                 str(source),
                 "-f",
                 "-",
-                input_text=text,
+                input_text=request.text,
             )
             await self._run(
                 "afconvert",
@@ -75,12 +85,15 @@ class MacOsSayTtsProvider:
                 "-d",
                 f"LEI16@{self._sample_rate}",
                 str(source),
-                str(destination),
+                str(request.destination),
             )
-            duration_ms = await asyncio.to_thread(_wave_duration_ms, destination)
-            return SynthesisResult(destination, "audio/wav", self._sample_rate, duration_ms)
+            duration_ms = await asyncio.to_thread(_wave_duration_ms, request.destination)
+            return SynthesisResult(request.destination, "audio/wav", self._sample_rate, duration_ms)
         finally:
             source.unlink(missing_ok=True)
+
+    async def close(self) -> None:
+        return None
 
     async def _run(self, *command: str, input_text: str | None = None) -> None:
         process = await asyncio.create_subprocess_exec(
@@ -104,6 +117,91 @@ class MacOsSayTtsProvider:
         if process.returncode:
             detail = stderr.decode(errors="replace").strip()
             raise RuntimeError(f"speech command failed ({process.returncode}): {detail}")
+
+
+class SherpaKokoroWorkerTtsProvider:
+    kind = "sherpa_kokoro_worker"
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        token: str,
+        timeout_seconds: float,
+        client: httpx2.AsyncClient | None = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._headers = {"Authorization": f"Bearer {token}"}
+        self._client = client or httpx2.AsyncClient(timeout=timeout_seconds)
+
+    async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
+        body = TtsSynthesisRequest(
+            request_id=uuid4(),
+            session_id=request.session_id,
+            turn_id=request.turn_id,
+            generation_id=request.generation_id,
+            job_id=request.segment_id,
+            text=request.text,
+            language=request.language,
+            voice_id=request.voice_id,
+            speaker_id=request.speaker_id,
+            speed=request.speed,
+        )
+        try:
+            response = await self._client.post(
+                f"{self._base_url}/v1/synthesize",
+                headers=self._headers,
+                json=body.model_dump(mode="json"),
+            )
+            response.raise_for_status()
+        except asyncio.CancelledError:
+            try:
+                await asyncio.shield(self._cancel(request.generation_id))
+            except Exception:
+                logger.warning(
+                    "failed to propagate TTS cancellation for generation %s",
+                    request.generation_id,
+                    exc_info=True,
+                )
+            raise
+        result = TtsSynthesisResult.model_validate(response.json())
+        expected_identity = (
+            body.request_id,
+            request.session_id,
+            request.turn_id,
+            request.generation_id,
+            request.segment_id,
+            request.speaker_id,
+        )
+        actual_identity = (
+            result.request_id,
+            result.session_id,
+            result.turn_id,
+            result.generation_id,
+            result.job_id,
+            result.speaker_id,
+        )
+        if actual_identity != expected_identity:
+            raise RuntimeError("TTS worker returned mismatched request identity")
+        audio = result.audio_bytes()
+        request.destination.parent.mkdir(parents=True, exist_ok=True)
+        request.destination.write_bytes(audio)
+        return SynthesisResult(
+            request.destination,
+            result.media_type,
+            result.sample_rate,
+            result.duration_ms,
+        )
+
+    async def _cancel(self, generation_id: UUID) -> None:
+        response = await self._client.post(
+            f"{self._base_url}/v1/jobs/{generation_id}/cancel",
+            headers=self._headers,
+        )
+        response.raise_for_status()
+
+    async def close(self) -> None:
+        await self._client.aclose()
 
 
 def _wave_duration_ms(path: Path) -> int:

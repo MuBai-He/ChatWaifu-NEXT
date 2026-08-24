@@ -66,6 +66,8 @@ class TtsConfig(BaseModel):
     sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     rate: int = Field(default=190, ge=80, le=500)
     timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    worker_url: str = "http://127.0.0.1:8767"
+    worker_token: SecretStr | None = None
 
 
 class RealtimeConfig(BaseModel):
@@ -128,9 +130,10 @@ class Settings(BaseSettings):
         return self.storage.database_path or self.data_dir / "chatwaifu.db"
 
     def public_dict(self) -> dict[str, object]:
-        public = self.model_dump(mode="json", exclude={"security", "llm", "stt"})
+        public = self.model_dump(mode="json", exclude={"security", "llm", "stt", "tts"})
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
+        public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})
         return public
 
 

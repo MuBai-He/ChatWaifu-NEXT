@@ -79,7 +79,8 @@ class RuntimeContainer:
             return
         self._started = False
         await self.voice_media.close()
-        await self.stt.close()
         await self.conversation.stop()
+        await self.stt.close()
+        await self.providers.tts.close()
         await self.event_hub.close()
         await self.database.close()
