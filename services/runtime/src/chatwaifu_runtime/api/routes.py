@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 from uuid import UUID
 
+from chatwaifu_protocol.commands import PlaybackAckCommand
 from chatwaifu_protocol.skills import SkillInvocation
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
@@ -229,6 +230,43 @@ async def interrupt_generation(
 ) -> dict[str, object]:
     interrupted = await _container(request).conversation.cancel(session_id, body.reason)
     return {"session_id": str(session_id), "interrupted": interrupted}
+
+
+@router.post("/sessions/{session_id}/playback/ack")
+async def acknowledge_playback(
+    request: Request,
+    session_id: UUID,
+    body: PlaybackAckCommand,
+) -> dict[str, object]:
+    if body.session_id != session_id:
+        raise HTTPException(status_code=409, detail="command session_id does not match route")
+    try:
+        result = await _container(request).playback.acknowledge(body)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "command_id": str(result.command_id),
+        "segment_id": str(result.segment_id),
+        "state": result.state,
+        "played_pts_ms": result.played_pts_ms,
+        "completed": result.completed,
+        "spoken_text": result.spoken_text,
+        "duplicate": result.duplicate,
+    }
+
+
+@router.get("/sessions/{session_id}/generations/{generation_id}/playback")
+async def read_playback_status(
+    request: Request,
+    session_id: UUID,
+    generation_id: UUID,
+) -> dict[str, object]:
+    try:
+        return await _container(request).playback.status(session_id, generation_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.post("/sessions/{session_id}/reset")

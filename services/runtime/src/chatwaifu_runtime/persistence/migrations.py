@@ -320,4 +320,46 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         WHERE event.event_type = 'user.turn_committed';
         """,
     ),
+    (
+        6,
+        """
+        ALTER TABLE generations ADD COLUMN audio_stream_id TEXT;
+        ALTER TABLE generations ADD COLUMN spoken_text TEXT NOT NULL DEFAULT '';
+
+        CREATE TABLE playback_segments (
+            segment_id TEXT PRIMARY KEY,
+            stream_id TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+            generation_id TEXT NOT NULL
+                REFERENCES generations(generation_id) ON DELETE CASCADE,
+            segment_index INTEGER NOT NULL CHECK(segment_index >= 0),
+            text TEXT NOT NULL,
+            duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
+            state TEXT NOT NULL CHECK(state IN ('queued', 'playing', 'completed', 'stopped')),
+            played_pts_ms INTEGER NOT NULL DEFAULT 0 CHECK(played_pts_ms >= 0),
+            buffered_ms INTEGER NOT NULL DEFAULT 0 CHECK(buffered_ms >= 0),
+            client_clock_ms INTEGER NOT NULL DEFAULT 0 CHECK(client_clock_ms >= 0),
+            transport TEXT CHECK(transport IN ('audio_element', 'webrtc')),
+            stop_reason TEXT,
+            queued_at TEXT NOT NULL,
+            started_at TEXT,
+            stopped_at TEXT,
+            UNIQUE(generation_id, segment_index),
+            UNIQUE(stream_id, segment_id)
+        );
+
+        CREATE TABLE playback_ack_commands (
+            command_id TEXT PRIMARY KEY,
+            segment_id TEXT NOT NULL
+                REFERENCES playback_segments(segment_id) ON DELETE CASCADE,
+            phase TEXT NOT NULL,
+            received_at TEXT NOT NULL
+        );
+
+        CREATE INDEX playback_segments_generation_idx
+            ON playback_segments(generation_id, segment_index);
+        CREATE INDEX playback_segments_session_state_idx
+            ON playback_segments(session_id, state);
+        """,
+    ),
 )

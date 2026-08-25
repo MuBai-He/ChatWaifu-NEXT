@@ -34,6 +34,7 @@ from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.contracts import LlmRequest, SynthesisRequest
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
@@ -46,6 +47,7 @@ class GenerationAccepted:
     session_id: UUID
     turn_id: UUID
     generation_id: UUID
+    audio_stream_id: UUID
     state: GenerationState
 
 
@@ -75,6 +77,7 @@ class ConversationService:
         audio_assets: AudioAssetStore,
         characters: CharacterService,
         memory: MemoryService,
+        playback: PlaybackService,
     ) -> None:
         self._database = database
         self._event_store = event_store
@@ -84,6 +87,7 @@ class ConversationService:
         self._audio_assets = audio_assets
         self._characters = characters
         self._memory = memory
+        self._playback = playback
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
@@ -245,6 +249,7 @@ class ConversationService:
         generation_id: UUID,
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
+        audio_stream_id = uuid4()
         async with self._database.transaction() as connection:
             await connection.execute(
                 """
@@ -258,8 +263,9 @@ class ConversationService:
             await connection.execute(
                 """
                 INSERT INTO generations(
-                    generation_id, session_id, turn_id, state, backend_kind, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    generation_id, session_id, turn_id, state, backend_kind,
+                    audio_stream_id, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(generation_id),
@@ -267,6 +273,7 @@ class ConversationService:
                     str(turn_id),
                     GenerationState.RUNNING.value,
                     self._providers.llm.kind,
+                    str(audio_stream_id),
                     now.isoformat(),
                 ),
             )
@@ -306,7 +313,13 @@ class ConversationService:
                 ),
             )
         return (
-            GenerationAccepted(session_id, turn_id, generation_id, GenerationState.RUNNING),
+            GenerationAccepted(
+                session_id,
+                turn_id,
+                generation_id,
+                audio_stream_id,
+                GenerationState.RUNNING,
+            ),
             (user_event, generation_event),
         )
 
@@ -320,7 +333,13 @@ class ConversationService:
     ) -> None:
         output = ""
         segment = ""
+        segment_index = 0
         try:
+            await self._emit_generic(
+                accepted,
+                "assistant.audio_stream_started",
+                {"stream_id": str(accepted.audio_stream_id)},
+            )
             for planned in self._avatar_planner.plan_user_turn(user_text):
                 await self._emit_avatar(
                     accepted,
@@ -344,10 +363,21 @@ class ConversationService:
                 segment += delta
                 await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})
                 if _segment_ready(segment):
-                    await self._synthesize_segment(accepted, segment, character.voice_profile)
+                    await self._synthesize_segment(
+                        accepted,
+                        segment,
+                        segment_index,
+                        character.voice_profile,
+                    )
+                    segment_index += 1
                     segment = ""
             if segment.strip():
-                await self._synthesize_segment(accepted, segment, character.voice_profile)
+                await self._synthesize_segment(
+                    accepted,
+                    segment,
+                    segment_index,
+                    character.voice_profile,
+                )
             self._ensure_current(accepted)
             await self._complete(accepted, output)
         except asyncio.CancelledError as error:
@@ -380,6 +410,7 @@ class ConversationService:
         self,
         accepted: GenerationAccepted,
         text: str,
+        segment_index: int,
         voice: CharacterVoiceProfile,
     ) -> None:
         self._ensure_current(accepted)
@@ -406,12 +437,24 @@ class ConversationService:
             asset.path.unlink(missing_ok=True)
             raise
         self._ensure_current(accepted)
+        await self._playback.register_segment(
+            session_id=accepted.session_id,
+            generation_id=accepted.generation_id,
+            stream_id=accepted.audio_stream_id,
+            segment_id=asset.asset_id,
+            segment_index=segment_index,
+            text=text.strip(),
+            duration_ms=result.duration_ms,
+        )
         await self._emit_avatar(accepted, "speech", "speaking", priority=70)
         await self._emit_generic(
             accepted,
             "assistant.audio_chunk_queued",
             {
                 "asset_id": str(asset.asset_id),
+                "stream_id": str(accepted.audio_stream_id),
+                "segment_id": str(asset.asset_id),
+                "segment_index": segment_index,
                 "url": asset.url,
                 "text": text.strip(),
                 "media_type": result.media_type,

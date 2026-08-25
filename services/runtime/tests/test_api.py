@@ -1,7 +1,9 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
 import time
+from datetime import UTC, datetime
 from typing import Protocol, cast
+from uuid import uuid4
 
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.main import create_app
@@ -149,6 +151,142 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     messages = cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())
     roles = [item["role"] for item in cast(list[dict[str, object]], messages["items"])]
     assert roles == ["user", "assistant"]
+
+
+def test_playback_ack_commits_only_a_fully_played_segment(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "请说一句用于播放确认的话。")
+    events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{session_id}/events?limit=500").json(),
+        )["items"],
+    )
+    audio_event = next(
+        event for event in events if event["event_type"] == "assistant.audio_chunk_queued"
+    )
+    generation_id = str(audio_event["generation_id"])
+    payload = cast(dict[str, object], audio_event["payload"])
+    stream_id = str(payload["stream_id"])
+    segment_id = str(payload["segment_id"])
+    duration_ms = int(str(payload["duration_ms"]))
+
+    initial = cast(
+        dict[str, object],
+        http.get(f"/v1/sessions/{session_id}/generations/{generation_id}/playback").json(),
+    )
+    assert initial["spoken_text"] == ""
+    assert cast(list[dict[str, object]], initial["segments"])[0]["state"] == "queued"
+
+    started_id = str(uuid4())
+    started = http.post(
+        f"/v1/sessions/{session_id}/playback/ack",
+        json=_playback_ack(
+            command_id=started_id,
+            session_id=session_id,
+            generation_id=generation_id,
+            stream_id=stream_id,
+            segment_id=segment_id,
+            phase="started",
+            played_pts_ms=0,
+        ),
+    )
+    assert started.status_code == 200
+    assert cast(dict[str, object], started.json())["state"] == "playing"
+
+    partial = http.post(
+        f"/v1/sessions/{session_id}/playback/ack",
+        json=_playback_ack(
+            command_id=str(uuid4()),
+            session_id=session_id,
+            generation_id=generation_id,
+            stream_id=stream_id,
+            segment_id=segment_id,
+            phase="progress",
+            played_pts_ms=duration_ms // 2,
+        ),
+    )
+    assert partial.status_code == 200
+    assert cast(dict[str, object], partial.json())["spoken_text"] == ""
+
+    stopped_id = str(uuid4())
+    stopped_body = _playback_ack(
+        command_id=stopped_id,
+        session_id=session_id,
+        generation_id=generation_id,
+        stream_id=stream_id,
+        segment_id=segment_id,
+        phase="stopped",
+        played_pts_ms=duration_ms,
+        reason="ended",
+    )
+    stopped = http.post(
+        f"/v1/sessions/{session_id}/playback/ack",
+        json=stopped_body,
+    )
+    stopped_json = cast(dict[str, object], stopped.json())
+    assert stopped.status_code == 200
+    assert stopped_json["completed"] is True
+    assert stopped_json["spoken_text"] == payload["text"]
+
+    duplicate = http.post(
+        f"/v1/sessions/{session_id}/playback/ack",
+        json=stopped_body,
+    )
+    assert duplicate.status_code == 200
+    assert cast(dict[str, object], duplicate.json())["duplicate"] is True
+
+    final_events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{session_id}/events?limit=500").json(),
+        )["items"],
+    )
+    event_types = [str(event["event_type"]) for event in final_events]
+    assert "assistant.playback_started" in event_types
+    assert "assistant.playback_progress" in event_types
+    assert event_types.count("assistant.playback_stopped") == 1
+    assert event_types.count("assistant.spoken_text_committed") == 1
+
+
+def test_interrupted_playback_does_not_commit_spoken_text(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "这句话会在播放中途停止。")
+    events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{session_id}/events?limit=500").json(),
+        )["items"],
+    )
+    audio_event = next(
+        event for event in events if event["event_type"] == "assistant.audio_chunk_queued"
+    )
+    payload = cast(dict[str, object], audio_event["payload"])
+    response = http.post(
+        f"/v1/sessions/{session_id}/playback/ack",
+        json=_playback_ack(
+            command_id=str(uuid4()),
+            session_id=session_id,
+            generation_id=str(audio_event["generation_id"]),
+            stream_id=str(payload["stream_id"]),
+            segment_id=str(payload["segment_id"]),
+            phase="stopped",
+            played_pts_ms=max(0, int(str(payload["duration_ms"])) // 2),
+            reason="interrupted",
+        ),
+    )
+    result = cast(dict[str, object], response.json())
+    assert response.status_code == 200
+    assert result["state"] == "stopped"
+    assert result["completed"] is False
+    assert result["spoken_text"] == ""
 
 
 def test_interrupt_cancels_generation_and_rejects_late_output(
@@ -323,3 +461,35 @@ def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str
                 return str(cast(dict[str, object], event["payload"])["text"])
         time.sleep(0.01)
     raise AssertionError(f"generation {generation_id} did not complete")
+
+
+def _playback_ack(
+    *,
+    command_id: str,
+    session_id: str,
+    generation_id: str,
+    stream_id: str,
+    segment_id: str,
+    phase: str,
+    played_pts_ms: int,
+    reason: str | None = None,
+) -> dict[str, object]:
+    return {
+        "command_id": command_id,
+        "schema_version": "1.0",
+        "command_type": "cmd.playback.ack",
+        "issued_at": datetime.now(UTC).isoformat(),
+        "issuer": "test.browser",
+        "session_id": session_id,
+        "generation_id": generation_id,
+        "payload": {
+            "phase": phase,
+            "stream_id": stream_id,
+            "segment_id": segment_id,
+            "played_pts_ms": played_pts_ms,
+            "buffered_ms": 0,
+            "client_clock_ms": 1000 + played_pts_ms,
+            "transport": "audio_element",
+            "reason": reason,
+        },
+    }
