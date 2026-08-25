@@ -221,7 +221,7 @@ export function ChatDemoPage() {
               </div>
               <button
                 type="button"
-                aria-label="关闭语音设置"
+                aria-label="关闭角色和模型设置"
                 onClick={() => setSettingsOpen(false)}
               >
                 ×
