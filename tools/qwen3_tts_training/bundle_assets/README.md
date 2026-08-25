@@ -22,10 +22,17 @@ rightsholders.
 4. Read the GPU preflight result before starting training.
 5. Export the selected checkpoint to your private Google Drive.
 
-The notebook defaults to `Qwen/Qwen3-TTS-12Hz-1.7B-Base` because the upstream
-0.6B fine-tuning path still has unresolved compatibility reports. The notebook
-uses a pinned upstream commit and a ChatWaifu-owned training driver with the text
-projection and label alignment made explicit.
+The notebook defaults to an experimental 200-step
+`Qwen/Qwen3-TTS-12Hz-0.6B-Base` pilot using SDPA. This is intended to fit a
+normal 15 GiB Colab T4 before spending high-memory GPU time on a full run. The
+public 0.6B fine-tuning path has had compatibility and output-quality reports, so
+the bundled ChatWaifu driver makes the text projection and label alignment
+explicit. Listen to the fixed Japanese and Chinese evaluation clips before
+starting a full run.
+
+To continue after a successful pilot, set `PILOT_MODE = False`. To compare the
+larger model, set `MODEL_SIZE = "1.7B"` and select a GPU with at least 30 GiB
+VRAM. The 1.7B path remains available but is no longer the default.
 
 ## Bundle layout
 

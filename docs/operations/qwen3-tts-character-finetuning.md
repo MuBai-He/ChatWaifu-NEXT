@@ -60,13 +60,15 @@ manifest and may be overridden with `--reference-stem` after listening review.
 ## Run in Colab
 
 1. Upload `train_qwen3_tts_colab.ipynb` as a Colab notebook.
-2. Select a high-memory NVIDIA GPU runtime.
+2. Select an NVIDIA GPU runtime. A normal 15 GiB T4 is the initial 0.6B pilot
+   target; the 1.7B option still requires at least 30 GiB VRAM.
 3. Run the notebook and upload the generated compact ZIP when prompted.
 4. Read the rights notice and GPU preflight result.
 5. Materialize WAVs and audio codes.
-6. Run the default two-epoch full SFT, or set `MAX_STEPS=100` for a pilot.
+6. Run the default 200-step 0.6B pilot.
 7. Listen to every fixed Japanese and Chinese evaluation output.
-8. Copy the chosen checkpoint to private Google Drive.
+8. If the pilot is stable, set `PILOT_MODE = False` for the two-epoch full run.
+9. Copy the chosen checkpoint to private Google Drive.
 
 The notebook pins Qwen3-TTS commit
 `022e286b98fbec7e1e916cb940cdf532cd9f488e` and downloads the base checkpoint to
@@ -78,14 +80,24 @@ checkpointing, and records the full run configuration.
 
 ## Model choice
 
-The default is `Qwen/Qwen3-TTS-12Hz-1.7B-Base`. Upstream documentation names both
-1.7B and 0.6B, but current 0.6B reports show dimension and output-quality failures
-in the public fine-tuning path. The bundle therefore does not silently switch to
-0.6B on a small Colab GPU. The notebook rejects insufficient VRAM before model
-download or training instead of risking a late out-of-memory failure.
+The default is now an explicit experimental
+`Qwen/Qwen3-TTS-12Hz-0.6B-Base` pilot with SDPA, batch size 1, gradient
+accumulation, gradient checkpointing, and `MAX_STEPS=200`. This is the cheapest
+way to verify that the Nene data, speaker embedding, patched projection path, and
+Japanese/Chinese generation work together on a normal Colab T4. The preflight
+requires at least 12 GiB VRAM for 0.6B; this is a compatibility gate rather than
+a guarantee against every runtime-specific out-of-memory condition.
+
+Upstream documentation names both 1.7B and 0.6B, but the public 0.6B fine-tuning
+path has had dimension and output-quality reports. The included driver explicitly
+applies the talker text projection and the corrected one-token label alignment.
+Treat 0.6B output as experimental: do not start a full run until the fixed
+Japanese and Chinese pilot samples are intelligible, stable, and free of severe
+repetition or noise. `MODEL_SIZE = "1.7B"` remains available for comparison and
+the notebook rejects it below 30 GiB VRAM.
 
 The existing ChatWaifu Demo runs a third-party MLX 8-bit 0.6B inference adapter.
-A successful PyTorch 1.7B checkpoint is not immediately a drop-in replacement.
+A successful PyTorch fine-tuned checkpoint is not immediately a drop-in replacement.
 After listening evaluation, it still needs a separately validated Hugging Face to
 MLX conversion/quantization step and a local voice profile update. Keep this
 deployment work separate from training so an unverified checkpoint cannot become

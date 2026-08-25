@@ -162,7 +162,7 @@ phases:
       - Three generation-scoped Kokoro WAV segments were emitted for one real model response
       - Web exposes session-scoped Qwen/GPT-SoVITS selection and Runtime cancels before rerouting
       - Qwen and GPT-SoVITS remain local-only evaluation paths until a licensed Ningning voice dataset/model is supplied
-      - A deterministic local-only Nene Qwen3-TTS Colab bundle builder audits audio and text, keeps scene splits stable, pins upstream training code, and emits fixed Japanese/Chinese evaluation prompts
+      - A deterministic local-only Nene Qwen3-TTS Colab bundle builder audits audio and text, keeps scene splits stable, pins upstream training code, and defaults to an experimental 0.6B SDPA 200-step pilot with fixed Japanese/Chinese evaluation prompts
   - id: 10
     name: runtime-skills-and-plugins
     status: basic_permissioned_mcp_slice_implemented_pending_os_sandbox
