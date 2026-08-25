@@ -18,7 +18,8 @@
 8. Runtime Skills and local MCP plugins share schema validation, permissions, confirmation,
    cancellation, timeout, normalized error, and audit boundaries.
 9. A read-only system-status Runtime Skill reports active providers and health truthfully.
-10. Desktop history scrolls inside the conversation pane without moving the avatar off-screen.
+10. The visual-novel stage keeps Live2D and the current dialogue fixed while the optional backlog
+    scrolls independently; voice and provider controls live in a bounded configuration panel.
 11. A confirmed reset cancels active work and returns conversation, memory, event, audio, and
     avatar state to a clean demo baseline while keeping the ready session connected.
 

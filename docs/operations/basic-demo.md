@@ -62,8 +62,9 @@ session and WebSocket so the user can start again immediately.
 10. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
     explicit decision and that `拒绝` produces a failed run without writing the note.
 11. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
-12. Accumulate enough messages to scroll; confirm the browser page and Live2D stay fixed while only
-    the transcript moves.
+12. Open LOG / 历史 after accumulating enough messages; confirm its backlog scrolls while the
+    visual-novel stage, Live2D character, and current dialogue remain fixed. Open CONFIG / 设置,
+    switch between upper-body and full-body framing, and confirm both remain inside the viewport.
 13. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
     can be sent in the same session.
 

@@ -88,11 +88,11 @@ phases:
       - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
       - 17 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
-      - 5 Chromium Playwright scenarios cover cues, vendor failure, viewport scrolling, real Avatar Lab, and real main chat
+      - 6 Chromium Playwright scenarios cover cues, vendor failure, visual-novel backlog and narrow layouts, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
       - The local-only Ayachi Nene model loads through the generated bridge with semantic facial presets and bounded action motions
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
-      - Desktop chat remains bounded to the viewport while only the transcript scrolls
+      - Desktop chat presents a fixed visual-novel stage with selectable upper-body or full-body framing while only the optional backlog scrolls
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
