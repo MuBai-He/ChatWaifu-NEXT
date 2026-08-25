@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-25"
+updated_at: "2026-08-26"
 current_phase: 11
 next_phase: 12
 phase_2_entry_allowed: true
@@ -38,6 +38,7 @@ validation:
     - browser Skills control center, MCP echo, progressive instructions, and denial smoke
     - browser structured memory proposal, acceptance, provenance, correction, and pin smoke plus exact test-record Runtime tombstone cleanup
     - browser Ayachi Nene semantic expression and bounded action-motion smoke
+    - browser Ayachi Nene procedural speaking plus authored gesture layering and interruption smoke
     - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
@@ -86,7 +87,9 @@ phases:
       - AvatarCue is reduced through a bounded layered scheduler into an AvatarRenderer
       - AvatarController owns the requestAnimationFrame loop outside React state
       - FakeAvatarRenderer supports semantic state, expression, gesture, gaze, lipsync, and hit tests
-      - 17 Avatar SDK tests cover scheduling, lifecycle, bridge mapping, fallback, and missing Core
+      - 21 Avatar SDK tests cover scheduling, deterministic procedural behavior, lifecycle, bridge mapping, fallback, and missing Core
+      - Semantic idle, listening, thinking, speaking, and interrupted modes drive normalized micro-motion through per-channel springs
+      - The Live2D bridge maps renderer-neutral channels to model-local parameters with explicit set, add, or multiply blending
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
       - 6 Chromium Playwright scenarios cover cues, vendor failure, visual-novel backlog and narrow layouts, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
