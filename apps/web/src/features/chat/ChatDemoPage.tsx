@@ -56,10 +56,9 @@ export function ChatDemoPage() {
       ? "你"
       : (character?.display_name ?? "绫地宁宁")
     : (character?.display_name ?? "绫地宁宁");
-  const currentText =
-    currentMessage?.text ||
-    character?.greeting ||
-    "你好呀，Runtime 准备好后我们就可以聊天。";
+  const currentText = currentMessage
+    ? currentMessage.text
+    : character?.greeting || "你好呀，Runtime 准备好后我们就可以聊天。";
 
   useEffect(() => {
     const history = historyRef.current;

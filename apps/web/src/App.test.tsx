@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import type { ChatMessage } from "./features/chat/types";
 import type {
   VoiceActivationMode,
   VoiceConnectionState,
@@ -44,7 +45,7 @@ const session = {
     content_notice: "非官方同人技术 Demo。",
   },
   sessionId: "00000000-0000-4000-8000-000000000001",
-  messages: [],
+  messages: [] as ChatMessage[],
   memories: [],
   connection: "connected" as const,
   error: null,
@@ -120,6 +121,7 @@ describe("ChatWaifu usable demo", () => {
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";
     session.voiceTransmitting = false;
+    session.messages = [];
     vi.clearAllMocks();
   });
 
@@ -158,6 +160,24 @@ describe("ChatWaifu usable demo", () => {
     if (!(sendButton instanceof HTMLButtonElement))
       throw new Error("expected send button");
     expect(sendButton.disabled).toBe(true);
+  });
+
+  it("shows only the blinking caret while waiting for the first assistant token", () => {
+    session.messages = [
+      {
+        id: "00000000-0000-4000-8000-000000000101",
+        role: "assistant",
+        text: "",
+        generationId: "00000000-0000-4000-8000-000000000101",
+        pending: true,
+      },
+    ];
+
+    render(<App />);
+
+    const dialogue = screen.getByRole("region", { name: "当前对话" });
+    expect(dialogue.textContent).not.toContain("欢迎回来");
+    expect(dialogue.querySelector(".typing-caret")).toBeTruthy();
   });
 
   it("confirms before resetting conversation and memory", async () => {
