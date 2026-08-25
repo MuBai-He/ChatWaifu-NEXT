@@ -196,16 +196,20 @@ function installVoiceBrowserHarness(initialDevices: MediaDeviceInfo[]) {
   );
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
       if (init?.method === "DELETE")
-        return new Response(JSON.stringify({ connections_closed: 1 }), {
+        return Promise.resolve(
+          new Response(JSON.stringify({ connections_closed: 1 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      return Promise.resolve(
+        new Response(JSON.stringify({ type: "answer", sdp: "answer" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        });
-      return new Response(JSON.stringify({ type: "answer", sdp: "answer" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+        }),
+      );
     }),
   );
   const createElement = document.createElement.bind(document);
@@ -260,13 +264,11 @@ class FakeMediaDevices extends EventTarget {
     this.devices = devices;
   }
 
-  async enumerateDevices(): Promise<MediaDeviceInfo[]> {
-    return this.devices;
+  enumerateDevices(): Promise<MediaDeviceInfo[]> {
+    return Promise.resolve(this.devices);
   }
 
-  async getUserMedia(
-    constraints: MediaStreamConstraints,
-  ): Promise<MediaStream> {
+  getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream> {
     const audio = constraints.audio as MediaTrackConstraints;
     const requested = (
       audio.deviceId as ConstrainDOMStringParameters | undefined
@@ -277,8 +279,8 @@ class FakeMediaDevices extends EventTarget {
         : (this.devices[0]?.deviceId ?? "");
     this.requestedDeviceIds.push(selected);
     if (!this.devices.some((item) => item.deviceId === selected))
-      throw new DOMException("missing", "NotFoundError");
-    return this.makeStream(selected);
+      return Promise.reject(new DOMException("missing", "NotFoundError"));
+    return Promise.resolve(this.makeStream(selected));
   }
 }
 
@@ -336,18 +338,18 @@ class FakePeer extends EventTarget {
     return {} as RTCRtpSender;
   }
 
-  async createOffer(): Promise<RTCSessionDescriptionInit> {
-    return { type: "offer", sdp: "offer" };
+  createOffer(): Promise<RTCSessionDescriptionInit> {
+    return Promise.resolve({ type: "offer", sdp: "offer" });
   }
 
-  async setLocalDescription(
-    description: RTCSessionDescriptionInit,
-  ): Promise<void> {
+  setLocalDescription(description: RTCSessionDescriptionInit): Promise<void> {
     this.localDescription = description as RTCSessionDescription;
+    return Promise.resolve();
   }
 
-  async setRemoteDescription(): Promise<void> {
+  setRemoteDescription(): Promise<void> {
     this.setConnectionState("connected");
+    return Promise.resolve();
   }
 
   setConnectionState(state: RTCPeerConnectionState): void {
@@ -370,8 +372,9 @@ class FakeOutputAudio {
   pause(): void {
     this.paused = true;
   }
-  async play(): Promise<void> {
+  play(): Promise<void> {
     this.paused = false;
+    return Promise.resolve();
   }
 }
 
@@ -391,8 +394,11 @@ class FakeAudioContext {
     };
   }
 
-  async resume(): Promise<void> {}
-  async close(): Promise<void> {
+  resume(): Promise<void> {
+    return Promise.resolve();
+  }
+  close(): Promise<void> {
     this.state = "closed";
+    return Promise.resolve();
   }
 }

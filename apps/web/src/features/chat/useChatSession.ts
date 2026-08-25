@@ -354,9 +354,7 @@ export function useChatSession() {
       getAudioPlayer,
       getTextProjector,
       setAvatarState,
-      startLipSync,
       stopAudio,
-      stopLipSync,
       stopText,
     ],
   );

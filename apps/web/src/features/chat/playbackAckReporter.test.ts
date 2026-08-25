@@ -33,9 +33,11 @@ describe("PlaybackAckReporter", () => {
     const sent: string[] = [];
     const onError = vi.fn();
     const reporter = new PlaybackAckReporter({
-      send: async (item) => {
+      send: (item) => {
         sent.push(item.phase);
-        if (item.phase === "started") throw new Error("offline");
+        if (item.phase === "started")
+          return Promise.reject(new Error("offline"));
+        return Promise.resolve();
       },
       onError,
     });
