@@ -43,6 +43,7 @@ validation:
     - browser Character Kernel state plus four independently persisted model-role cards render inside an independently scrolling fixed-viewport settings panel
     - browser local embedding probe returns a 64-dimensional projection and auxiliary model settings save without changing the chat route
     - local keyless OpenAI-compatible embedding probe returns a 1024-dimensional projection through the standard v1 endpoint
+    - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
     - browser full reload reports no new console warnings or errors
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
@@ -83,6 +84,7 @@ phases:
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
       - Unknown major versions, unknown types, and invalid payloads are rejected
       - Same-major optional fields are accepted
+      - The Python-owned generic event catalog is generated as a golden fixture and exhaustively parsed by TypeScript contract tests
       - Audio control headers round-trip as bounded UTF-8 bytes
   - id: 2
     name: live2d-avatar-lab
