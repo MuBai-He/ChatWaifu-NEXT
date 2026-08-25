@@ -82,6 +82,9 @@ export interface AudioPayload {
   url: string;
   text: string;
   duration_ms: number;
+  stream_id: string;
+  segment_id: string;
+  segment_index: number;
   tts_provider: string;
 }
 

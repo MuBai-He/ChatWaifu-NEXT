@@ -94,6 +94,46 @@ export async function interrupt(sessionId: string): Promise<void> {
   });
 }
 
+export interface PlaybackAckReceipt {
+  phase: "started" | "progress" | "stopped" | "queue_cleared";
+  generationId: string;
+  streamId: string;
+  segmentId: string;
+  playedPtsMs: number;
+  bufferedMs: number;
+  clientClockMs: number;
+  transport: "audio_element" | "webrtc";
+  reason?: "ended" | "interrupted" | "error" | "queue_cleared";
+}
+
+export async function acknowledgePlayback(
+  sessionId: string,
+  receipt: PlaybackAckReceipt,
+): Promise<void> {
+  await request(`/v1/sessions/${sessionId}/playback/ack`, {
+    method: "POST",
+    body: JSON.stringify({
+      command_id: crypto.randomUUID(),
+      schema_version: "1.0",
+      command_type: "cmd.playback.ack",
+      issued_at: new Date().toISOString(),
+      issuer: "web.chat",
+      session_id: sessionId,
+      generation_id: receipt.generationId,
+      payload: {
+        phase: receipt.phase,
+        stream_id: receipt.streamId,
+        segment_id: receipt.segmentId,
+        played_pts_ms: receipt.playedPtsMs,
+        buffered_ms: receipt.bufferedMs,
+        client_clock_ms: receipt.clientClockMs,
+        transport: receipt.transport,
+        reason: receipt.reason ?? null,
+      },
+    }),
+  });
+}
+
 export async function resetSession(
   sessionId: string,
 ): Promise<SessionResetResult> {

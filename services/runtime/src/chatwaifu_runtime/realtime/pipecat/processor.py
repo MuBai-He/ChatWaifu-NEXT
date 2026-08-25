@@ -33,7 +33,9 @@ from pipecat.frames.frames import (
     InputAudioRawFrame,
     InterruptionFrame,
     OutputAudioRawFrame,
+    OutputTransportMessageFrame,
     StartFrame,
+    TTSStoppedFrame,
     VADUserStartedSpeakingFrame,
     VADUserStoppedSpeakingFrame,
 )
@@ -395,11 +397,28 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                 audio, sample_rate, channels = await asyncio.to_thread(_read_pcm_wave, path)
                 if generation_id != self._active_output_generation:
                     continue
+                marker = build_playback_marker(payload, generation_id, "started")
+                if marker is None:
+                    continue
+                await self.push_frame(
+                    OutputTransportMessageFrame(message=marker),
+                    FrameDirection.DOWNSTREAM,
+                )
                 await self.push_frame(
                     OutputAudioRawFrame(
                         audio=audio,
                         sample_rate=sample_rate,
                         num_channels=channels,
+                    ),
+                    FrameDirection.DOWNSTREAM,
+                )
+                # Flush Pipecat's trailing partial audio chunk before the ordered
+                # buffered marker; otherwise the client could acknowledge a segment
+                # while its tail is still held inside the transport.
+                await self.push_frame(TTSStoppedFrame(), FrameDirection.DOWNSTREAM)
+                await self.push_frame(
+                    OutputTransportMessageFrame(
+                        message=build_playback_marker(payload, generation_id, "buffered")
                     ),
                     FrameDirection.DOWNSTREAM,
                 )
@@ -426,3 +445,22 @@ def _optional_uuid(value: object) -> UUID | None:
         return UUID(str(value))
     except ValueError:
         return None
+
+
+def build_playback_marker(
+    payload: dict[str, object], generation_id: UUID, phase: str
+) -> dict[str, object] | None:
+    stream_id = _optional_uuid(payload.get("stream_id"))
+    segment_id = _optional_uuid(payload.get("segment_id"))
+    duration = payload.get("duration_ms")
+    if stream_id is None or segment_id is None or not isinstance(duration, int):
+        return None
+    return {
+        "type": "chatwaifu.playback_segment",
+        "schema_version": "1.0",
+        "phase": phase,
+        "generation_id": str(generation_id),
+        "stream_id": str(stream_id),
+        "segment_id": str(segment_id),
+        "duration_ms": max(0, duration),
+    }

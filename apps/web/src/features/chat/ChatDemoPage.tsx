@@ -462,6 +462,7 @@ function voiceStatusLabel(
     | "disconnected"
     | "requesting"
     | "connecting"
+    | "reconnecting"
     | "connected"
     | "failed",
   activity: "idle" | "listening" | "transcribing" | "thinking",
@@ -471,6 +472,7 @@ function voiceStatusLabel(
   if (state === "unsupported") return "当前浏览器不支持 WebRTC 麦克风";
   if (state === "requesting") return "等待麦克风权限";
   if (state === "connecting") return "正在建立本地 WebRTC";
+  if (state === "reconnecting") return "设备或连接中断，正在自动恢复";
   if (state === "failed") return "连接失败，可再次尝试";
   if (state !== "connected") {
     return activationMode === "push_to_talk"

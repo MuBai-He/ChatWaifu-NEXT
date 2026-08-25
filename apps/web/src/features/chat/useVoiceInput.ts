@@ -5,17 +5,20 @@ import {
   type VoiceConnectionState,
   type VoiceDevice,
 } from "./voiceClient";
+import type { PlaybackAckReceipt } from "./runtimeClient";
 
 interface VoiceInputOptions {
   sessionId: string | null;
   onError: (message: string) => void;
   onConnectionChange: (connected: boolean) => void;
+  onPlaybackReceipt: (receipt: PlaybackAckReceipt) => void;
 }
 
 export function useVoiceInput({
   sessionId,
   onError,
   onConnectionChange,
+  onPlaybackReceipt,
 }: VoiceInputOptions) {
   const clientRef = useRef<BrowserVoiceClient | null>(null);
   const [state, setState] = useState<VoiceConnectionState>(() =>
@@ -35,6 +38,11 @@ export function useVoiceInput({
         onConnectionChange(next === "connected");
       },
       onInputLevel: setInputLevel,
+      onDevicesChange: (available, selected) => {
+        setDevices(available);
+        setDeviceId(selected);
+      },
+      onPlaybackReceipt,
       onError,
     });
     clientRef.current = client;
@@ -42,7 +50,7 @@ export function useVoiceInput({
       clientRef.current = null;
       void client.dispose(sessionId ?? undefined);
     };
-  }, [onConnectionChange, onError, sessionId]);
+  }, [onConnectionChange, onError, onPlaybackReceipt, sessionId]);
 
   const refreshDevices = useCallback(async () => {
     const available = await clientRef.current?.listInputDevices();
@@ -92,6 +100,7 @@ export function useVoiceInput({
     if (
       state === "connected" ||
       state === "connecting" ||
+      state === "reconnecting" ||
       state === "requesting"
     ) {
       await disconnect();
@@ -99,6 +108,12 @@ export function useVoiceInput({
       await connect();
     }
   }, [connect, disconnect, state]);
+
+  const stopRemotePlayback = useCallback(
+    (generationId?: string) =>
+      clientRef.current?.stopRemotePlayback(generationId, "interrupted"),
+    [],
+  );
 
   return {
     state,
@@ -115,5 +130,6 @@ export function useVoiceInput({
     refreshDevices,
     toggle,
     disconnect,
+    stopRemotePlayback,
   };
 }

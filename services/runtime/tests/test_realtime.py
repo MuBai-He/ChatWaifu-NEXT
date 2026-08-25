@@ -6,7 +6,10 @@ from uuid import uuid4
 import httpx2
 import pytest
 from chatwaifu_runtime.realtime.contracts import SttRequest, VoiceTurnIdentity
-from chatwaifu_runtime.realtime.pipecat.processor import UtteranceBuffer
+from chatwaifu_runtime.realtime.pipecat.processor import (
+    UtteranceBuffer,
+    build_playback_marker,
+)
 from chatwaifu_runtime.realtime.stt import FasterWhisperWorkerSttBackend
 from fastapi.testclient import TestClient
 
@@ -37,6 +40,32 @@ def test_webrtc_offer_requires_an_existing_session(client: TestClient) -> None:
 
     assert response.status_code == 404
     assert response.json()["detail"] == "session not found"
+
+
+def test_webrtc_playback_marker_preserves_registered_segment_identity() -> None:
+    generation_id = uuid4()
+    stream_id = uuid4()
+    segment_id = uuid4()
+
+    marker = build_playback_marker(
+        {
+            "stream_id": str(stream_id),
+            "segment_id": str(segment_id),
+            "duration_ms": 1640,
+        },
+        generation_id,
+        "started",
+    )
+
+    assert marker == {
+        "type": "chatwaifu.playback_segment",
+        "schema_version": "1.0",
+        "phase": "started",
+        "generation_id": str(generation_id),
+        "stream_id": str(stream_id),
+        "segment_id": str(segment_id),
+        "duration_ms": 1640,
+    }
 
 
 @pytest.mark.asyncio

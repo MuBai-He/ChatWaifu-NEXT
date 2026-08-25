@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   RUNTIME_URL,
   RUNTIME_WS_URL,
+  acknowledgePlayback,
   createSession,
   getCharacters,
   getHealth,
@@ -25,7 +26,13 @@ import type {
   RuntimeHealth,
   TtsProviderSnapshot,
 } from "./types";
-import { GenerationAudioPlayer } from "./audioPlayer";
+import {
+  GenerationAudioPlayer,
+  type AudioPlaybackItem,
+  type PlaybackPosition,
+  type PlaybackStopReason,
+} from "./audioPlayer";
+import { PlaybackAckReporter } from "./playbackAckReporter";
 import { StreamingTextProjector } from "./streamingTextProjector";
 import { useChatAvatar } from "./useChatAvatar";
 import { useVoiceInput } from "./useVoiceInput";
@@ -61,6 +68,7 @@ export function useChatSession() {
   const activeGeneration = useRef<string | null>(null);
   const voiceConnected = useRef(false);
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
+  const playbackReporter = useRef<PlaybackAckReporter | null>(null);
   const textProjector = useRef<StreamingTextProjector | null>(null);
 
   const setAvatarState = useCallback(
@@ -84,32 +92,96 @@ export function useChatSession() {
     },
     [setAvatarState],
   );
+  const getPlaybackReporter = useCallback(() => {
+    if (!playbackReporter.current && sessionId) {
+      playbackReporter.current = new PlaybackAckReporter({
+        send: (receipt) => acknowledgePlayback(sessionId, receipt),
+        onError: () => setError("播放进度同步失败；本次已听内容可能不完整。"),
+      });
+    }
+    return playbackReporter.current;
+  }, [sessionId]);
+
+  const onVoicePlaybackReceipt = useCallback(
+    (receipt: Parameters<typeof acknowledgePlayback>[1]) => {
+      getPlaybackReporter()?.report(receipt);
+      if (receipt.phase === "started") startLipSync();
+      if (receipt.phase === "stopped" || receipt.phase === "queue_cleared")
+        stopLipSync();
+    },
+    [getPlaybackReporter, startLipSync, stopLipSync],
+  );
+
   const voice = useVoiceInput({
     sessionId,
     onError: setError,
     onConnectionChange: onVoiceConnectionChange,
+    onPlaybackReceipt: onVoicePlaybackReceipt,
   });
+  const stopRemotePlayback = voice.stopRemotePlayback;
+
+  const reportElementPlayback = useCallback(
+    (
+      item: AudioPlaybackItem,
+      phase: "started" | "progress" | "stopped" | "queue_cleared",
+      position: PlaybackPosition,
+      reason?: PlaybackStopReason,
+    ) => {
+      getPlaybackReporter()?.report({
+        phase,
+        generationId: item.generationId,
+        streamId: item.streamId,
+        segmentId: item.segmentId,
+        playedPtsMs: position.playedPtsMs,
+        bufferedMs: position.bufferedMs,
+        clientClockMs: position.clientClockMs,
+        transport: "audio_element",
+        reason,
+      });
+    },
+    [getPlaybackReporter],
+  );
 
   const getAudioPlayer = useCallback(() => {
     if (!audioPlayer.current && typeof Audio !== "undefined") {
       audioPlayer.current = new GenerationAudioPlayer((url) => new Audio(url), {
         isGenerationActive: (generationId) =>
           generationId === activeGeneration.current,
-        onPlaybackStart: startLipSync,
-        onPlaybackStop: stopLipSync,
+        onPlaybackStart: (item, position) => {
+          startLipSync();
+          reportElementPlayback(item, "started", position);
+        },
+        onPlaybackProgress: (item, position) =>
+          reportElementPlayback(item, "progress", position),
+        onPlaybackStop: (item, position, reason) => {
+          stopLipSync();
+          reportElementPlayback(item, "stopped", position, reason);
+        },
+        onQueueCleared: (item) =>
+          reportElementPlayback(
+            item,
+            "queue_cleared",
+            {
+              playedPtsMs: 0,
+              bufferedMs: 0,
+              clientClockMs: Math.round(performance.now()),
+            },
+            "queue_cleared",
+          ),
         onPlaybackError: setError,
       });
     }
     return audioPlayer.current;
-  }, [startLipSync, stopLipSync]);
+  }, [reportElementPlayback, startLipSync, stopLipSync]);
 
   const stopAudio = useCallback(
     (generationId?: string) => {
       audioPlayer.current?.stop();
+      stopRemotePlayback(generationId);
       stopLipSync();
       if (generationId) invalidateGeneration(generationId);
     },
-    [invalidateGeneration, stopLipSync],
+    [invalidateGeneration, stopLipSync, stopRemotePlayback],
   );
 
   const getTextProjector = useCallback(() => {
@@ -222,12 +294,12 @@ export function useChatSession() {
         case "assistant.audio_chunk_queued": {
           if (!generationId || generationId !== activeGeneration.current) break;
           const payload = event.payload as unknown as AudioPayload;
-          if (voiceConnected.current) {
-            startLipSync();
-            break;
-          }
+          if (voiceConnected.current) break;
           getAudioPlayer()?.enqueue({
             generationId,
+            streamId: payload.stream_id,
+            segmentId: payload.segment_id,
+            durationMs: payload.duration_ms,
             url: `${RUNTIME_URL}${payload.url}`,
           });
           break;
@@ -245,9 +317,6 @@ export function useChatSession() {
           setVoiceActivity("idle");
           setAvatarState("idle");
           setVoiceTranscript(null);
-          if (voiceConnected.current) {
-            window.setTimeout(stopLipSync, 450);
-          }
           break;
         }
         case "assistant.generation_cancelled":
@@ -379,6 +448,8 @@ export function useChatSession() {
       stopAudio(activeGeneration.current ?? undefined);
       audioPlayer.current?.dispose();
       audioPlayer.current = null;
+      playbackReporter.current?.dispose();
+      playbackReporter.current = null;
       textProjector.current?.dispose();
       textProjector.current = null;
     };

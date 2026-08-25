@@ -8,8 +8,20 @@ const SILENT_WAV_URL =
 
 export interface AudioPlaybackItem {
   generationId: string;
+  streamId: string;
+  segmentId: string;
+  durationMs: number;
   url: string;
 }
+
+export interface PlaybackPosition {
+  playedPtsMs: number;
+  bufferedMs: number;
+  clientClockMs: number;
+}
+
+export type PlaybackStopReason =
+  "ended" | "interrupted" | "error" | "queue_cleared";
 
 export interface PlayableAudio {
   src: string;
@@ -17,6 +29,10 @@ export interface PlayableAudio {
   onplay: ((event: Event) => void) | null;
   onended: ((event: Event) => void) | null;
   onerror: ((event: Event) => void) | null;
+  ontimeupdate: ((event: Event) => void) | null;
+  currentTime: number;
+  duration: number;
+  buffered: Pick<TimeRanges, "length" | "end">;
   play(): Promise<void>;
   pause(): void;
   removeAttribute(name: string): void;
@@ -25,8 +41,14 @@ export interface PlayableAudio {
 
 interface AudioPlayerCallbacks {
   isGenerationActive(generationId: string): boolean;
-  onPlaybackStart(): void;
-  onPlaybackStop(): void;
+  onPlaybackStart(item: AudioPlaybackItem, position: PlaybackPosition): void;
+  onPlaybackProgress(item: AudioPlaybackItem, position: PlaybackPosition): void;
+  onPlaybackStop(
+    item: AudioPlaybackItem,
+    position: PlaybackPosition,
+    reason: PlaybackStopReason,
+  ): void;
+  onQueueCleared(item: AudioPlaybackItem): void;
   onPlaybackError(message: string): void;
 }
 
@@ -34,6 +56,8 @@ interface ActivePlayback {
   audio: PlayableAudio;
   epoch: number;
   reusable: boolean;
+  item: AudioPlaybackItem;
+  lastReportedMs: number;
 }
 
 type AudioFactory = (url: string) => PlayableAudio;
@@ -68,13 +92,18 @@ export class GenerationAudioPlayer {
   }
 
   stop(): void {
-    this.queue.length = 0;
+    for (const item of this.queue.splice(0))
+      this.callbacks.onQueueCleared(item);
     this.epoch += 1;
     const active = this.active;
     this.active = null;
     if (!active) return;
+    this.callbacks.onPlaybackStop(
+      active.item,
+      playbackPosition(active.audio, active.item),
+      "interrupted",
+    );
     this.recycle(active.audio, active.reusable);
-    this.callbacks.onPlaybackStop();
   }
 
   dispose(): void {
@@ -124,6 +153,7 @@ export class GenerationAudioPlayer {
 
     let next = this.queue.shift();
     while (next && !this.callbacks.isGenerationActive(next.generationId)) {
+      this.callbacks.onQueueCleared(next);
       next = this.queue.shift();
     }
     if (!next) return;
@@ -138,21 +168,38 @@ export class GenerationAudioPlayer {
     }
     audio.preload = "auto";
     const epoch = ++this.epoch;
-    this.active = { audio, epoch, reusable };
+    this.active = { audio, epoch, reusable, item: next, lastReportedMs: 0 };
 
     audio.onplay = () => {
       if (!this.isCurrent(audio, epoch)) return;
       this.unlocked = true;
-      this.callbacks.onPlaybackStart();
+      const position = playbackPosition(audio, next);
+      this.callbacks.onPlaybackStart(next, position);
+      const active = this.active;
+      if (active) active.lastReportedMs = position.playedPtsMs;
+    };
+    audio.ontimeupdate = () => {
+      const active = this.active;
+      if (!active || !this.isCurrent(audio, epoch)) return;
+      const position = playbackPosition(audio, next);
+      if (
+        position.playedPtsMs < next.durationMs &&
+        position.playedPtsMs - active.lastReportedMs < 250
+      )
+        return;
+      active.lastReportedMs = position.playedPtsMs;
+      this.callbacks.onPlaybackProgress(next, position);
     };
     audio.onended = () => {
+      const position = finalPlaybackPosition(audio, next);
       if (!this.release(audio, epoch)) return;
-      this.callbacks.onPlaybackStop();
+      this.callbacks.onPlaybackStop(next, position, "ended");
       this.playNext();
     };
     audio.onerror = () => {
+      const position = playbackPosition(audio, next);
       if (!this.release(audio, epoch)) return;
-      this.callbacks.onPlaybackStop();
+      this.callbacks.onPlaybackStop(next, position, "error");
       this.callbacks.onPlaybackError(AUDIO_PLAYBACK_FAILED_MESSAGE);
       this.playNext();
     };
@@ -174,14 +221,17 @@ export class GenerationAudioPlayer {
     epoch: number,
     error: unknown,
   ): void {
+    const item = this.itemFor(audio, epoch);
+    const position = playbackPosition(audio, item);
     if (!this.release(audio, epoch)) return;
     if (isAbortRejection(error)) {
-      this.callbacks.onPlaybackStop();
+      if (item) this.callbacks.onPlaybackStop(item, position, "interrupted");
       this.playNext();
       return;
     }
-    this.queue.length = 0;
-    this.callbacks.onPlaybackStop();
+    for (const queued of this.queue.splice(0))
+      this.callbacks.onQueueCleared(queued);
+    if (item) this.callbacks.onPlaybackStop(item, position, "error");
     this.callbacks.onPlaybackError(
       isAutoplayRejection(error)
         ? AUTOPLAY_BLOCKED_MESSAGE
@@ -199,6 +249,13 @@ export class GenerationAudioPlayer {
     this.active = null;
     this.recycle(audio, reusable);
     return true;
+  }
+
+  private itemFor(
+    audio: PlayableAudio,
+    epoch: number,
+  ): AudioPlaybackItem | null {
+    return this.isCurrent(audio, epoch) ? (this.active?.item ?? null) : null;
   }
 
   private finishPriming(audio: PlayableAudio): void {
@@ -220,9 +277,51 @@ function cleanupAudio(audio: PlayableAudio): void {
   audio.onplay = null;
   audio.onended = null;
   audio.onerror = null;
+  audio.ontimeupdate = null;
   audio.pause();
   audio.removeAttribute("src");
   audio.load();
+}
+
+function playbackPosition(
+  audio: PlayableAudio,
+  item?: AudioPlaybackItem | null,
+): PlaybackPosition {
+  const durationMs = item?.durationMs ?? Number.POSITIVE_INFINITY;
+  const playedPtsMs = Math.max(
+    0,
+    Math.min(durationMs, Math.round(finite(audio.currentTime) * 1000)),
+  );
+  let bufferedMs = 0;
+  if (audio.buffered.length > 0) {
+    try {
+      bufferedMs = Math.max(
+        0,
+        Math.round(
+          (audio.buffered.end(audio.buffered.length - 1) - audio.currentTime) *
+            1000,
+        ),
+      );
+    } catch {
+      bufferedMs = 0;
+    }
+  }
+  return {
+    playedPtsMs,
+    bufferedMs,
+    clientClockMs: Math.max(0, Math.round(performance.now())),
+  };
+}
+
+function finalPlaybackPosition(
+  audio: PlayableAudio,
+  item: AudioPlaybackItem,
+): PlaybackPosition {
+  return { ...playbackPosition(audio, item), playedPtsMs: item.durationMs };
+}
+
+function finite(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 function isAutoplayRejection(error: unknown): boolean {

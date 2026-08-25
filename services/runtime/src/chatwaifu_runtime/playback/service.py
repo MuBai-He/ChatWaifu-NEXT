@@ -129,24 +129,41 @@ class PlaybackService:
                     duplicate=True,
                 )
 
+            previous_state = str(row["state"])
+            if previous_state in {"completed", "stopped"}:
+                await connection.execute(
+                    """
+                    INSERT INTO playback_ack_commands(command_id, segment_id, phase, received_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        str(command.command_id),
+                        str(payload.segment_id),
+                        payload.phase,
+                        now.isoformat(),
+                    ),
+                )
+                spoken_text = await _spoken_text(connection, command.generation_id)
+                return PlaybackAckResult(
+                    command_id=command.command_id,
+                    segment_id=payload.segment_id,
+                    state=previous_state,
+                    played_pts_ms=int(row["played_pts_ms"]),
+                    completed=previous_state == "completed",
+                    spoken_text=spoken_text,
+                    duplicate=True,
+                )
+
             duration_ms = int(row["duration_ms"])
             if payload.played_pts_ms > duration_ms + 1_000:
                 raise ValueError("played_pts_ms exceeds registered segment duration")
             played_pts_ms = max(int(row["played_pts_ms"]), min(payload.played_pts_ms, duration_ms))
-            previous_state = str(row["state"])
-            terminal = previous_state in {"completed", "stopped"}
-            if terminal and payload.phase in {"started", "progress"}:
-                raise ValueError("playback segment is already terminal")
-
             completed = (
                 payload.phase == "stopped"
                 and payload.reason == "ended"
                 and played_pts_ms >= max(0, duration_ms - 100)
             )
-            if previous_state == "completed":
-                state = "completed"
-                completed = True
-            elif payload.phase in {"started", "progress"}:
+            if payload.phase in {"started", "progress"}:
                 state = "playing"
             elif completed:
                 state = "completed"
