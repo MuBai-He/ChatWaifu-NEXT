@@ -2,16 +2,19 @@
 
 import time
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Protocol, cast
 from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.memory import MemoryRecord
+from chatwaifu_runtime.memory.inference import LlmMemoryCandidateExtractor
 from chatwaifu_runtime.memory.policy import MemoryPolicy
 from chatwaifu_runtime.memory.ports import ScoredMemoryReference
 from chatwaifu_runtime.memory.repository import MemorySearchHit
 from chatwaifu_runtime.memory.retrieval import MemoryRetriever
+from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
@@ -26,6 +29,61 @@ class RuntimeHttpClient(Protocol):
     def patch(self, url: str, *, json: object) -> Response: ...
 
     def delete(self, url: str) -> Response: ...
+
+
+class _ExtractionModels:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def get(self, role: str) -> SimpleNamespace:
+        assert role == "memory_extraction"
+        return SimpleNamespace(enabled=True, provider="openai_compatible")
+
+    async def complete(self, role: str, system: str, user: str) -> str:
+        del system, user
+        assert role == "memory_extraction"
+        self.calls += 1
+        return """
+        {
+          "memories": [{
+            "kind": "procedural.preference",
+            "subject_id": "user",
+            "predicate": "interaction.language",
+            "value": "zh",
+            "text": "用户希望以后使用中文聊天",
+            "confidence": 0.92,
+            "importance": 0.78,
+            "sensitivity": "private",
+            "rationale": "长期交互偏好"
+          }]
+        }
+        """
+
+
+@pytest.mark.asyncio
+async def test_model_extraction_is_schema_validated_and_skips_sensitive_egress() -> None:
+    models = _ExtractionModels()
+    extractor = LlmMemoryCandidateExtractor(cast(ModelConfigurationService, models))
+    observed_at = datetime.now(UTC)
+
+    candidates = await extractor.extract(
+        "以后请用中文和我聊天",
+        namespace="character/default/user/local",
+        observed_at=observed_at,
+        related=[],
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0].draft.kind == "procedural.preference"
+    assert candidates[0].draft.predicate == "interaction.language"
+    assert candidates[0].explicit is False
+    await extractor.extract(
+        "我的邮箱是 private@example.com",
+        namespace="character/default/user/local",
+        observed_at=observed_at,
+        related=[],
+    )
+    assert models.calls == 1
 
 
 def test_implicit_memory_requires_review_and_preserves_sources(client: TestClient) -> None:

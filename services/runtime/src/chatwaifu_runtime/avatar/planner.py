@@ -48,11 +48,19 @@ class SemanticAvatarCuePlanner:
     ) -> tuple[PlannedAvatarCue, ...]:
         expressions = set(capabilities.get("expressions", ()))
         motions = set(capabilities.get("motions", ()))
-        expression = plan.expression if plan.expression in expressions else "neutral"
-        planned = [PlannedAvatarCue("expression", expression, priority=64, duration_ms=5_000)]
+        expression = plan.expression if plan.expression in expressions else None
+        if expression is None and "neutral" in expressions:
+            expression = "neutral"
+        planned = (
+            [PlannedAvatarCue("expression", expression, priority=64, duration_ms=5_000)]
+            if expression is not None
+            else []
+        )
         if plan.motion and plan.motion in motions:
             recent = self._recent_motions[session_id]
-            if plan.motion not in recent or len(set(recent)) == 1:
+            should_emit = not recent or recent[-1] != plan.motion
+            recent.append(plan.motion)
+            if should_emit:
                 duration = {
                     "headpat": 4_500,
                     "stare": 3_200,
@@ -62,7 +70,6 @@ class SemanticAvatarCuePlanner:
                 planned.append(
                     PlannedAvatarCue("motion", plan.motion, priority=66, duration_ms=duration)
                 )
-                recent.append(plan.motion)
         return tuple(planned)
 
     def _expression(self, text: str) -> str | None:

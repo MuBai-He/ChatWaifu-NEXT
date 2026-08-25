@@ -58,11 +58,12 @@ class PromptCompiler:
         selected_history: list[tuple[str, str]] = []
         history_used = 0
         dropped = 0
-        for role, text in reversed(history):
+        for index in range(len(history) - 1, -1, -1):
+            role, text = history[index]
             cost = _tokens(text)
             if history_used + cost > conversation_budget:
-                dropped += 1
-                continue
+                dropped = index + 1
+                break
             selected_history.append((role, text))
             history_used += cost
         selected_history.reverse()

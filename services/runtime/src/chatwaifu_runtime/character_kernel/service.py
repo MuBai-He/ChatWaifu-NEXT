@@ -68,16 +68,20 @@ class CharacterKernelService:
             now,
             character,
         )
-        relationship = RelationshipState(
-            familiarity=float(relationship_row["familiarity"]),
-            trust=float(relationship_row["trust"]),
-            affinity=float(relationship_row["affinity"]),
-            comfort=float(relationship_row["comfort"]),
-            recent_tension=float(relationship_row["recent_tension"]),
-            interaction_count=int(relationship_row["interaction_count"]),
-            stage=cast(RelationshipStage, str(relationship_row["stage"])),
-            preferred_address=relationship_row["preferred_address"],
-            updated_at=datetime.fromisoformat(str(relationship_row["updated_at"])),
+        relationship = _decay_relationship(
+            RelationshipState(
+                familiarity=float(relationship_row["familiarity"]),
+                trust=float(relationship_row["trust"]),
+                affinity=float(relationship_row["affinity"]),
+                comfort=float(relationship_row["comfort"]),
+                recent_tension=float(relationship_row["recent_tension"]),
+                interaction_count=int(relationship_row["interaction_count"]),
+                stage=cast(RelationshipStage, str(relationship_row["stage"])),
+                preferred_address=relationship_row["preferred_address"],
+                updated_at=datetime.fromisoformat(str(relationship_row["updated_at"])),
+            ),
+            now,
+            character,
         )
         return CharacterKernelSnapshot(
             character_id=character_id,
@@ -464,7 +468,16 @@ def _plan_response(
             motion="sing",
             rationale="user requested singing",
         )
-    if signal.headpat or signal.intimate:
+    if signal.headpat:
+        return ResponsePlan(
+            intent="reassure",
+            tone="shy",
+            expression="shy",
+            motion="headpat",
+            response_length="short",
+            rationale="explicit affectionate headpat interaction",
+        )
+    if signal.intimate:
         return ResponsePlan(
             intent="reassure",
             tone="shy",
@@ -535,6 +548,19 @@ def _decay_affect(state: AffectState, now: datetime, character: CharacterProfile
         embarrassment=0.1 + (state.embarrassment - 0.1) * factor,
         tension=0.05 + (state.tension - 0.05) * factor,
         updated_at=now,
+    )
+
+
+def _decay_relationship(
+    state: RelationshipState, now: datetime, character: CharacterProfile
+) -> RelationshipState:
+    elapsed_hours = max(0.0, (now - state.updated_at).total_seconds() / 3600)
+    half_life = float(
+        character.relationship_policy.get("decay", {}).get("tension_half_life_hours", 18)
+    )
+    factor = math.pow(0.5, elapsed_hours / max(half_life, 0.1))
+    return state.model_copy(
+        update={"recent_tension": state.recent_tension * factor, "updated_at": now}
     )
 
 

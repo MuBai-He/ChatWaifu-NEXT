@@ -1,5 +1,7 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
+import json
+import sqlite3
 import time
 from datetime import UTC, datetime
 from typing import Protocol, cast
@@ -186,6 +188,23 @@ def test_character_kernel_persists_and_reset_restores_initial_state(client: Test
     )
     assert restored["revision"] == 0
     assert cast(dict[str, object], restored["relationship"])["interaction_count"] == 0
+
+
+def test_committed_memory_builds_a_rebuildable_embedding_projection(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    _submit_and_wait(http, str(session["session_id"]), "请记住我喜欢蓝色")
+
+    with sqlite3.connect(runtime_settings.database_path) as connection:
+        row = connection.execute(
+            "SELECT model_fingerprint, vector_json FROM memory_embeddings"
+        ).fetchone()
+
+    assert row is not None
+    assert row[0] == "local_hash:local-hash-64-v1"
+    assert len(cast(list[float], json.loads(str(row[1])))) == 64
 
 
 def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None:

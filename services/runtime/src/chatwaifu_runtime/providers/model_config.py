@@ -77,11 +77,19 @@ class LocalModelSecretStore:
         else:
             secrets.pop(role, None)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        os.chmod(self._path, 0o600)
+        temporary = self._path.with_name(f".{self._path.name}.tmp")
+        payload = json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
+                secret_file.write(payload)
+                secret_file.flush()
+                os.fsync(secret_file.fileno())
+            os.replace(temporary, self._path)
+            os.chmod(self._path, 0o600)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
 
     def _read(self) -> dict[str, str]:
         if not self._path.exists():
