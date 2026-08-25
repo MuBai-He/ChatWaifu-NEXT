@@ -47,7 +47,7 @@ export function AvatarViewport({
           renderer · {snapshot?.status ?? "initializing"}
         </div>
         <div className="semantic-readout" data-testid="semantic-state">
-          <strong>{snapshot?.runtime.state ?? "idle"}</strong>
+          <strong>{snapshot?.runtime.procedural.mode ?? "idle"}</strong>
           <span>{snapshot?.runtime.expression ?? "neutral"}</span>
           <span>{snapshot?.runtime.motion ?? "no motion"}</span>
         </div>

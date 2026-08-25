@@ -45,8 +45,10 @@ lift, mouth form, and breath. Only the Live2D bridge maps those channels to mode
 applies explicit `set`, `add`, or `multiply` blending after the model's normal motion/expression
 update. Authored `.motion3.json` actions remain available as bounded gesture primitives and can run
 with the procedural state; interruption clears lower layers and rapidly returns continuous channels
-toward neutral. Phoneme visemes, pitch/stress analysis, MotionSync, and learned Audio2Motion remain
-future adapters rather than hidden dependencies of this state machine.
+toward neutral. The main client projects microphone speech start, transcription, generation, voice
+disconnect, and cancellation into these same semantic states; it does not drive normalized channels
+itself. Phoneme visemes, pitch/stress analysis, MotionSync, and learned Audio2Motion remain future
+adapters rather than hidden dependencies of this state machine.
 
 ## Scheduler policy
 

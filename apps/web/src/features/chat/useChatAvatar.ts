@@ -97,9 +97,16 @@ export function useChatAvatar() {
     controllerRef.current?.setLipSyncSource(new SilentLipSyncSource());
     controllerRef.current?.applyCue({
       cue_id: crypto.randomUUID(),
+      kind: "override",
+      name: "interrupt",
+      duration_ms: 420,
+      priority: 100,
+    });
+    controllerRef.current?.applyCue({
+      cue_id: crypto.randomUUID(),
       kind: "state",
       name: "idle",
-      priority: 90,
+      priority: 95,
     });
   }, []);
 

@@ -63,10 +63,27 @@ export function useChatSession() {
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
   const textProjector = useRef<StreamingTextProjector | null>(null);
 
-  const onVoiceConnectionChange = useCallback((connected: boolean) => {
-    voiceConnected.current = connected;
-    if (!connected) setVoiceActivity("idle");
-  }, []);
+  const setAvatarState = useCallback(
+    (name: "idle" | "listening" | "thinking") => {
+      applyCue({
+        cue_id: crypto.randomUUID(),
+        kind: "state",
+        name,
+        priority: 95,
+      });
+    },
+    [applyCue],
+  );
+  const onVoiceConnectionChange = useCallback(
+    (connected: boolean) => {
+      voiceConnected.current = connected;
+      if (!connected) {
+        setVoiceActivity("idle");
+        setAvatarState("idle");
+      }
+    },
+    [setAvatarState],
+  );
   const voice = useVoiceInput({
     sessionId,
     onError: setError,
@@ -146,11 +163,13 @@ export function useChatSession() {
             stopAudio(previousGeneration);
           }
           setVoiceActivity("listening");
+          setAvatarState("listening");
           setVoiceTranscript(null);
           break;
         }
         case "user.speech_stopped": {
           setVoiceActivity("transcribing");
+          setAvatarState("thinking");
           break;
         }
         case "user.transcript_partial": {
@@ -160,6 +179,7 @@ export function useChatSession() {
         case "user.transcript_final": {
           setVoiceTranscript(payloadText(event.payload.text));
           setVoiceActivity("thinking");
+          setAvatarState("thinking");
           break;
         }
         case "user.turn_committed": {
@@ -176,6 +196,7 @@ export function useChatSession() {
         case "assistant.generation_started": {
           if (!generationId) break;
           setVoiceActivity("thinking");
+          setAvatarState("thinking");
           activeGeneration.current = generationId;
           getTextProjector().start(generationId);
           setMessages((current) => [
@@ -222,6 +243,7 @@ export function useChatSession() {
           getTextProjector().complete(generationId);
           void getMemory().then(setMemories);
           setVoiceActivity("idle");
+          setAvatarState("idle");
           setVoiceTranscript(null);
           if (voiceConnected.current) {
             window.setTimeout(stopLipSync, 450);
@@ -243,13 +265,17 @@ export function useChatSession() {
           );
           activeGeneration.current = null;
           setVoiceActivity("idle");
+          setAvatarState("idle");
           break;
         }
         case "system.error_raised": {
           const nested = event.payload.error as
             { message?: string } | undefined;
           setError(nested?.message ?? "Runtime 生成失败。");
-          if (nested?.message?.includes("语音转写")) setVoiceActivity("idle");
+          if (nested?.message?.includes("语音转写")) {
+            setVoiceActivity("idle");
+            setAvatarState("idle");
+          }
           break;
         }
       }
@@ -258,6 +284,7 @@ export function useChatSession() {
       applyCue,
       getAudioPlayer,
       getTextProjector,
+      setAvatarState,
       startLipSync,
       stopAudio,
       stopLipSync,
