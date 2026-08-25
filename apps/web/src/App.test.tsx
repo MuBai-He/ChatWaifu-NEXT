@@ -48,7 +48,6 @@ const session = {
   memories: [],
   connection: "connected" as const,
   error: null,
-  skillSummary: null,
   resetting: false,
   ttsProviders: [
     {
@@ -106,7 +105,6 @@ const session = {
   changeTtsProvider: vi.fn(),
   send: vi.fn(),
   interruptActive: vi.fn(),
-  checkStatus: vi.fn(),
   resetAll: vi.fn().mockResolvedValue(true),
   refreshMemories: vi.fn().mockResolvedValue(undefined),
 };
@@ -137,6 +135,10 @@ describe("ChatWaifu usable demo", () => {
     expect(screen.getByRole("heading", { name: "绫地宁宁" })).toBeTruthy();
     expect(screen.getByText("Runtime online")).toBeTruthy();
     expect(screen.getByText("LLM · demo")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Skills & 插件" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "记忆中心" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Avatar Lab" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "运行状态 Skill" })).toBeNull();
     const messageBox = screen.getByRole("textbox", { name: "Message" });
     expect(messageBox.getAttribute("placeholder")).toContain(
       "和绫地宁宁说点什么",

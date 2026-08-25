@@ -17,7 +17,6 @@ export function ChatDemoPage() {
     memories,
     connection,
     error,
-    skillSummary,
     resetting,
     ttsProviders,
     ttsProviderId,
@@ -40,7 +39,6 @@ export function ChatDemoPage() {
     changeTtsProvider,
     send: sendMessage,
     interruptActive,
-    checkStatus,
     resetAll,
     refreshMemories,
   } = useChatSession();
@@ -131,17 +129,7 @@ export function ChatDemoPage() {
               sessionId={sessionId}
               onChanged={refreshMemories}
             />
-            <button
-              type="button"
-              onClick={() => void checkStatus()}
-              disabled={!sessionId}
-            >
-              运行状态 Skill
-            </button>
-            <a href="/avatar-lab">Avatar Lab</a>
           </div>
-
-          {skillSummary && <p className="skill-result">{skillSummary}</p>}
 
           <div className="memory-card">
             <div className="memory-title">

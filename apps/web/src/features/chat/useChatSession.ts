@@ -12,7 +12,6 @@ import {
   getTtsProviders,
   interrupt,
   resetSession,
-  runStatusSkill,
   selectTtsProvider,
   submitText,
 } from "./runtimeClient";
@@ -51,7 +50,6 @@ export function useChatSession() {
     "connecting" | "connected" | "offline"
   >("connecting");
   const [error, setError] = useState<string | null>(null);
-  const [skillSummary, setSkillSummary] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const [ttsProviders, setTtsProviders] = useState<TtsProviderSnapshot[]>([]);
   const [ttsProviderId, setTtsProviderId] = useState("qwen3_tts_mlx");
@@ -440,17 +438,6 @@ export function useChatSession() {
     [sessionId, stopAudio, stopText, ttsProviderId, ttsSwitching],
   );
 
-  const checkStatus = useCallback(async () => {
-    if (!sessionId) return;
-    try {
-      setSkillSummary(await runStatusSkill(sessionId));
-    } catch (skillError: unknown) {
-      setError(
-        skillError instanceof Error ? skillError.message : "Skill 执行失败",
-      );
-    }
-  }, [sessionId]);
-
   const resetAll = useCallback(async (): Promise<boolean> => {
     if (!sessionId || resetting) return false;
     setResetting(true);
@@ -463,7 +450,6 @@ export function useChatSession() {
       await resetSession(sessionId);
       setMessages([]);
       setMemories([]);
-      setSkillSummary(null);
       resetAvatar();
       return true;
     } catch (resetError: unknown) {
@@ -487,7 +473,6 @@ export function useChatSession() {
     memories,
     connection,
     error,
-    skillSummary,
     resetting,
     ttsProviders,
     ttsProviderId,
@@ -510,7 +495,6 @@ export function useChatSession() {
     changeTtsProvider,
     send,
     interruptActive,
-    checkStatus,
     resetAll,
     refreshMemories,
   };

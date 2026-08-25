@@ -200,14 +200,6 @@ export async function forgetMemory(
   });
 }
 
-export async function runStatusSkill(sessionId: string): Promise<string> {
-  const response = await request<{ spoken_summary?: string }>(
-    `/v1/sessions/${sessionId}/skills/runtime.status`,
-    { method: "POST", body: "{}" },
-  );
-  return response.spoken_summary ?? "Runtime status is available.";
-}
-
 export interface SkillConfirmation {
   request_id: string;
   skill_run_id: string;
