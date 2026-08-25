@@ -19,7 +19,10 @@ from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.providers.contracts import LlmProvider, LlmRequest
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
-from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
+from chatwaifu_runtime.providers.openai_compatible import (
+    OpenAiCompatibleLlmProvider,
+    openai_compatible_endpoint,
+)
 
 type ModelRole = Literal["chat", "memory_extraction", "memory_summary", "embedding"]
 type ModelProviderKind = Literal["demo", "openai_compatible", "local_hash", "disabled"]
@@ -237,7 +240,7 @@ class ModelConfigurationService:
             headers["Authorization"] = f"Bearer {key}"
         async with httpx2.AsyncClient(timeout=config.timeout_seconds) as client:
             response = await client.post(
-                f"{config.base_url.rstrip('/')}/chat/completions",
+                openai_compatible_endpoint(config.base_url, "chat/completions"),
                 headers=headers,
                 json={
                     "model": config.model,
@@ -282,7 +285,7 @@ class ModelConfigurationService:
             headers["Authorization"] = f"Bearer {key}"
         async with httpx2.AsyncClient(timeout=config.timeout_seconds) as client:
             response = await client.post(
-                f"{config.base_url.rstrip('/')}/embeddings",
+                openai_compatible_endpoint(config.base_url, "embeddings"),
                 headers=headers,
                 json={"model": config.model, "input": list(texts)},
             )

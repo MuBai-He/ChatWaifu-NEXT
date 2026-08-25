@@ -234,7 +234,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                     placeholder={
                       item.api_key_configured
                         ? "留空则保持原密钥"
-                        : "仅写入本机 Runtime"
+                        : "本地无鉴权服务可留空"
                     }
                   />
                 </label>

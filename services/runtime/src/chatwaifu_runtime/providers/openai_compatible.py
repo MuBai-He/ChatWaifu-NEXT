@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import AsyncIterator
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx2
 
@@ -27,7 +28,7 @@ class OpenAiCompatibleLlmProvider:
         async with httpx2.AsyncClient(timeout=self._timeout) as client:
             async with client.stream(
                 "POST",
-                f"{self._base_url}/chat/completions",
+                openai_compatible_endpoint(self._base_url, "chat/completions"),
                 headers=headers,
                 json={"model": self._model, "messages": messages, "stream": True},
             ) as response:
@@ -45,6 +46,15 @@ class OpenAiCompatibleLlmProvider:
                     content = choices[0].get("delta", {}).get("content")
                     if isinstance(content, str) and content:
                         yield content
+
+
+def openai_compatible_endpoint(base_url: str, operation: str) -> str:
+    """Build a standard endpoint while accepting either a host or an explicit API base path."""
+
+    parts = urlsplit(base_url.rstrip("/"))
+    base_path = parts.path.rstrip("/") or "/v1"
+    endpoint_path = f"{base_path}/{operation.strip('/')}"
+    return urlunsplit((parts.scheme, parts.netloc, endpoint_path, parts.query, parts.fragment))
 
 
 def build_messages(request: LlmRequest) -> list[dict[str, str]]:
