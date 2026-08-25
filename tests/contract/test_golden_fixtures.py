@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from chatwaifu_protocol.commands import TextSendCommand
-from chatwaifu_protocol.events import SessionCreatedEvent
+from chatwaifu_protocol.events import GENERIC_CORE_EVENT_TYPES, SessionCreatedEvent
 from chatwaifu_protocol.media import AudioFrameHeader
 from chatwaifu_protocol.registry import create_default_registry
 
@@ -19,6 +19,10 @@ def test_python_event_fixture_parses_through_registry() -> None:
     )
     assert isinstance(event, SessionCreatedEvent)
     assert event.payload.character_id == "default-character"
+
+
+def test_python_generic_event_catalog_fixture_matches_protocol_source() -> None:
+    assert load_fixture("python-generic-core-event-types.json") == list(GENERIC_CORE_EVENT_TYPES)
 
 
 def test_typescript_command_fixture_parses_in_python() -> None:

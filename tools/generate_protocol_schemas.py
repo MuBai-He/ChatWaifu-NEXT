@@ -27,7 +27,11 @@ def main() -> None:
     # Keep generation runnable from a fresh monorepo checkout even when the local
     # Python installation ignores editable-install .pth files.
     sys.path.insert(0, str(PROTOCOL_SOURCE))
-    from chatwaifu_protocol.events import SessionCreatedEvent, SessionCreatedPayload
+    from chatwaifu_protocol.events import (
+        GENERIC_CORE_EVENT_TYPES,
+        SessionCreatedEvent,
+        SessionCreatedPayload,
+    )
     from chatwaifu_protocol.media import AudioFrameHeader
     from chatwaifu_protocol.schema_export import export_schemas
 
@@ -57,6 +61,10 @@ def main() -> None:
             channels=1,
             byte_length=640,
         ),
+    )
+    write_json(
+        FIXTURE_DIR / "python-generic-core-event-types.json",
+        list(GENERIC_CORE_EVENT_TYPES),
     )
 
 

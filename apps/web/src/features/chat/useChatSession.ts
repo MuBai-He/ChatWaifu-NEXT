@@ -378,7 +378,11 @@ export function useChatSession() {
         try {
           handleEvent(parseEventEnvelope(raw) as RuntimeEvent);
         } catch {
-          setError("收到无法识别的 Runtime 事件，已安全忽略。");
+          const eventType =
+            "event_type" in raw && typeof raw.event_type === "string"
+              ? raw.event_type
+              : "unknown";
+          setError(`收到无法识别的 Runtime 事件（${eventType}），已安全忽略。`);
         }
       };
       socket.onclose = () => {

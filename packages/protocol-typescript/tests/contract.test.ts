@@ -29,6 +29,25 @@ describe("cross-language protocol fixtures", () => {
     expect(event.payload.character_id).toBe("default-character");
   });
 
+  it("parses every Python-owned generic core event type", () => {
+    const event = fixture("python-session-created-event.json") as Record<
+      string,
+      unknown
+    >;
+    const eventTypes = fixture(
+      "python-generic-core-event-types.json",
+    ) as string[];
+    for (const eventType of eventTypes) {
+      expect(
+        parseEventEnvelope({
+          ...event,
+          event_type: eventType,
+          payload: {},
+        }).event_type,
+      ).toBe(eventType);
+    }
+  });
+
   it("parses the TypeScript command fixture", () => {
     const command = parseCommandEnvelope(
       fixture("typescript-text-send-command.json"),
