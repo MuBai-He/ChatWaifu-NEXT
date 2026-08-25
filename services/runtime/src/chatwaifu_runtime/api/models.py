@@ -110,3 +110,23 @@ class MemoryPinnedRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     pinned: bool
+
+
+class ModelRoleConfigurationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Literal["demo", "openai_compatible", "local_hash", "disabled"]
+    model: str = Field(min_length=1, max_length=256)
+    base_url: str = Field(default="", max_length=2048)
+    timeout_seconds: float = Field(default=60, gt=0, le=600)
+    context_window: int = Field(default=8192, ge=1024, le=2_000_000)
+    enabled: bool = True
+    api_key: str | None = Field(default=None, max_length=8192)
+    clear_api_key: bool = False
+
+
+class CharacterInteractionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["avatar_touch"]
+    region: str = Field(default="body", min_length=1, max_length=64)

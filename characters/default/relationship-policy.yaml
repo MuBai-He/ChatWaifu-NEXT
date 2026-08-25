@@ -1,0 +1,22 @@
+initial:
+  familiarity: 0.20
+  trust: 0.20
+  affinity: 0.25
+  comfort: 0.20
+maximum_turn_delta: 0.08
+stages:
+  familiar:
+    minimum_interactions: 4
+    familiarity: 0.32
+  trusted:
+    minimum_interactions: 12
+    familiarity: 0.55
+    trust: 0.52
+  close:
+    minimum_interactions: 30
+    familiarity: 0.75
+    trust: 0.72
+    affinity: 0.72
+decay:
+  affect_half_life_hours: 6
+  tension_half_life_hours: 18

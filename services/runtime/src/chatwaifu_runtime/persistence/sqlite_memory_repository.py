@@ -45,7 +45,7 @@ class SQLiteMemoryRepository(MemoryRepository):
 
     async def event_evidence(self, event_id: UUID) -> MemoryEventEvidence | None:
         row = await self._database.fetchone(
-            "SELECT event_id, session_id, occurred_at, envelope_json "
+            "SELECT event_id, event_type, session_id, occurred_at, envelope_json "
             "FROM events WHERE event_id = ?",
             (str(event_id),),
         )
@@ -58,6 +58,7 @@ class SQLiteMemoryRepository(MemoryRepository):
             session_id=UUID(str(row["session_id"])),
             turn_id=UUID(str(turn_id)) if turn_id else None,
             occurred_at=datetime.fromisoformat(str(row["occurred_at"])),
+            event_type=str(row["event_type"]),
         )
 
     async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None:

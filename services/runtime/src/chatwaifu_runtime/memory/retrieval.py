@@ -70,8 +70,16 @@ class MemoryRetriever:
             item.sources.add("fts")
             item.lexical = max(item.lexical, hit.lexical_score)
 
-        semantic = await self._semantic_index.search(query, namespaces, limit)
-        temporal = await self._temporal_graph.search(query, namespaces, datetime.now(UTC), limit)
+        try:
+            semantic = await self._semantic_index.search(query, namespaces, limit)
+        except Exception:
+            semantic = []
+        try:
+            temporal = await self._temporal_graph.search(
+                query, namespaces, datetime.now(UTC), limit
+            )
+        except Exception:
+            temporal = []
         missing_ids = [
             reference.memory_id
             for reference in (*semantic, *temporal)

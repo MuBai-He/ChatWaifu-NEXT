@@ -1,7 +1,11 @@
 """Conservative semantic cue planner for explicit user-facing signals."""
 
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Literal
+from uuid import UUID
+
+from chatwaifu_protocol.character import ResponsePlan
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +23,9 @@ class SemanticAvatarCuePlanner:
     emits Live2D resource identifiers. Unknown or ambiguous turns produce no cue.
     """
 
+    def __init__(self) -> None:
+        self._recent_motions: dict[UUID, deque[str]] = defaultdict(lambda: deque(maxlen=3))
+
     def plan_user_turn(self, text: str) -> tuple[PlannedAvatarCue, ...]:
         normalized = text.casefold().strip()
         expression = self._expression(normalized)
@@ -31,6 +38,31 @@ class SemanticAvatarCuePlanner:
         if motion is not None:
             name, duration_ms = motion
             planned.append(PlannedAvatarCue("motion", name, priority=62, duration_ms=duration_ms))
+        return tuple(planned)
+
+    def plan_response(
+        self,
+        session_id: UUID,
+        plan: ResponsePlan,
+        capabilities: dict[str, list[str]],
+    ) -> tuple[PlannedAvatarCue, ...]:
+        expressions = set(capabilities.get("expressions", ()))
+        motions = set(capabilities.get("motions", ()))
+        expression = plan.expression if plan.expression in expressions else "neutral"
+        planned = [PlannedAvatarCue("expression", expression, priority=64, duration_ms=5_000)]
+        if plan.motion and plan.motion in motions:
+            recent = self._recent_motions[session_id]
+            if plan.motion not in recent or len(set(recent)) == 1:
+                duration = {
+                    "headpat": 4_500,
+                    "stare": 3_200,
+                    "flustered": 6_000,
+                    "sing": 8_000,
+                }.get(plan.motion, 4_000)
+                planned.append(
+                    PlannedAvatarCue("motion", plan.motion, priority=66, duration_ms=duration)
+                )
+                recent.append(plan.motion)
         return tuple(planned)
 
     def _expression(self, text: str) -> str | None:

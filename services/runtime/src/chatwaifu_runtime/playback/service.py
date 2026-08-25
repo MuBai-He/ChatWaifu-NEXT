@@ -31,6 +31,9 @@ class PlaybackAckResult:
     played_pts_ms: int
     completed: bool
     spoken_text: str
+    turn_id: UUID | None = None
+    committed_event_id: UUID | None = None
+    all_segments_completed: bool = False
     duplicate: bool = False
 
 
@@ -100,9 +103,13 @@ class PlaybackService:
 
             row_cursor = await connection.execute(
                 """
-                SELECT segment_id, stream_id, session_id, generation_id, text,
-                       duration_ms, state, played_pts_ms
-                FROM playback_segments WHERE segment_id = ?
+                SELECT segment.segment_id, segment.stream_id, segment.session_id,
+                       segment.generation_id, segment.text, segment.duration_ms,
+                       segment.state, segment.played_pts_ms, generation.turn_id
+                FROM playback_segments AS segment
+                JOIN generations AS generation
+                  ON generation.generation_id = segment.generation_id
+                WHERE segment.segment_id = ?
                 """,
                 (str(payload.segment_id),),
             )
@@ -204,6 +211,7 @@ class PlaybackService:
             persisted.append(await self._event_store.append_in_transaction(connection, event))
 
             newly_completed = completed and previous_state != "completed"
+            committed_event_id: UUID | None = None
             spoken_text = await _spoken_text(connection, command.generation_id)
             if newly_completed:
                 await connection.execute(
@@ -213,6 +221,7 @@ class PlaybackService:
                 committed = AssistantSpokenTextCommittedEvent(
                     event_id=uuid4(),
                     session_id=command.session_id,
+                    turn_id=UUID(str(row["turn_id"])),
                     generation_id=command.generation_id,
                     occurred_at=now,
                     source="runtime.playback",
@@ -228,6 +237,16 @@ class PlaybackService:
                 persisted.append(
                     await self._event_store.append_in_transaction(connection, committed)
                 )
+                committed_event_id = committed.event_id
+            incomplete_cursor = await connection.execute(
+                """
+                SELECT 1 FROM playback_segments
+                WHERE generation_id = ? AND state != 'completed' LIMIT 1
+                """,
+                (str(command.generation_id),),
+            )
+            all_segments_completed = await incomplete_cursor.fetchone() is None
+            await incomplete_cursor.close()
             await connection.execute(
                 """
                 INSERT INTO playback_ack_commands(command_id, segment_id, phase, received_at)
@@ -250,6 +269,9 @@ class PlaybackService:
             played_pts_ms=played_pts_ms,
             completed=completed,
             spoken_text=spoken_text,
+            turn_id=UUID(str(row["turn_id"])),
+            committed_event_id=committed_event_id,
+            all_segments_completed=all_segments_completed,
         )
 
     async def status(self, session_id: UUID, generation_id: UUID) -> dict[str, object]:

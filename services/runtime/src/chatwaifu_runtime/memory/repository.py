@@ -17,7 +17,7 @@ class MemorySearchHit:
 
 
 class MemoryEventEvidence:
-    __slots__ = ("event_id", "occurred_at", "session_id", "turn_id")
+    __slots__ = ("event_id", "event_type", "occurred_at", "session_id", "turn_id")
 
     def __init__(
         self,
@@ -25,11 +25,13 @@ class MemoryEventEvidence:
         session_id: UUID,
         turn_id: UUID | None,
         occurred_at: datetime,
+        event_type: str = "user.turn_committed",
     ) -> None:
         self.event_id = event_id
         self.session_id = session_id
         self.turn_id = turn_id
         self.occurred_at = occurred_at
+        self.event_type = event_type
 
 
 class MemoryRepository(Protocol):

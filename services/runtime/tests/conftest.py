@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 def runtime_settings(tmp_path: Path) -> Settings:
     return Settings.model_validate(
         {
+            "config_dir": tmp_path / "config",
             "data_dir": tmp_path,
             "storage": StorageConfig(database_path=tmp_path / "runtime.db"),
             "llm": {"provider": "demo", "demo_chunk_delay_ms": 0},

@@ -26,8 +26,10 @@ class ProviderSet:
         return {"llm": self.llm.kind, "tts": self.tts.kind}
 
 
-def build_providers(settings: Settings) -> ProviderSet:
-    if settings.llm.provider == "demo":
+def build_providers(settings: Settings, *, llm_override: LlmProvider | None = None) -> ProviderSet:
+    if llm_override is not None:
+        llm = llm_override
+    elif settings.llm.provider == "demo":
         llm: LlmProvider = DemoLlmProvider(settings.llm.demo_chunk_delay_ms)
     elif settings.llm.provider == "openai_compatible":
         key = settings.llm.api_key.get_secret_value() if settings.llm.api_key else None

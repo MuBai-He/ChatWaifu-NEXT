@@ -2,17 +2,21 @@
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.character_kernel.service import CharacterKernelService
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
+from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
@@ -28,11 +32,24 @@ class RuntimeContainer:
         self.event_store = EventStore(self.database)
         self.event_publisher = EventPublisher(self.event_store, self.event_hub)
         self.sessions = SessionService(self.database, self.event_store, self.event_hub)
-        self.providers = build_providers(settings)
+        self.model_configurations = ModelConfigurationService(self.database, settings)
+        self.providers = build_providers(settings, llm_override=self.model_configurations.chat)
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
         self.characters = CharacterService(settings.characters_dir)
+        self.character_kernel = CharacterKernelService(
+            self.database, self.characters, self.event_publisher
+        )
+        self.prompt_compiler = PromptCompiler(self.model_configurations)
         self.memory_repository = SQLiteMemoryRepository(self.database)
-        self.memory = MemoryService(self.memory_repository, self.event_publisher)
+        self.semantic_memory_index = SQLiteSemanticMemoryIndex(
+            self.database, self.model_configurations
+        )
+        self.memory = MemoryService(
+            self.memory_repository,
+            self.event_publisher,
+            semantic_index=self.semantic_memory_index,
+            models=self.model_configurations,
+        )
         self.playback = PlaybackService(
             self.database,
             self.event_store,
@@ -58,6 +75,8 @@ class RuntimeContainer:
             self.characters,
             self.memory,
             self.playback,
+            self.character_kernel,
+            self.prompt_compiler,
         )
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
@@ -77,6 +96,7 @@ class RuntimeContainer:
         self.characters.start()
         self.audio_assets.start()
         await self.database.open()
+        await self.model_configurations.start()
         await self.runtime_skills.start()
         self._started = True
         for event in await self.event_store.pending_outbox():

@@ -25,6 +25,11 @@ from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
+from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.character_kernel.service import (
+    CharacterKernelService,
+    TurnCharacterContext,
+)
 from chatwaifu_runtime.characters.service import (
     CharacterProfile,
     CharacterService,
@@ -78,6 +83,8 @@ class ConversationService:
         characters: CharacterService,
         memory: MemoryService,
         playback: PlaybackService,
+        character_kernel: CharacterKernelService,
+        prompt_compiler: PromptCompiler,
     ) -> None:
         self._database = database
         self._event_store = event_store
@@ -88,6 +95,8 @@ class ConversationService:
         self._characters = characters
         self._memory = memory
         self._playback = playback
+        self._character_kernel = character_kernel
+        self._prompt_compiler = prompt_compiler
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
@@ -155,8 +164,22 @@ class ConversationService:
                 normalized,
             )
             history = await self._recent_history(session_id, accepted.turn_id)
+            character_context = await self._character_kernel.observe_user_turn(
+                session_id=session_id,
+                turn_id=accepted.turn_id,
+                generation_id=accepted.generation_id,
+                character_id=character.character_id,
+                text=normalized,
+            )
             task = asyncio.create_task(
-                self._run_generation(accepted, normalized, character, memory_context, history),
+                self._run_generation(
+                    accepted,
+                    normalized,
+                    character,
+                    character_context,
+                    memory_context,
+                    history,
+                ),
                 name=f"generation-{accepted.generation_id}",
             )
             self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
@@ -192,6 +215,7 @@ class ConversationService:
             self._active.pop(session_id, None)
             now = datetime.now(UTC)
             memories_deleted = await self._memory.clear_all()
+            await self._character_kernel.clear_all()
             async with self._database.transaction() as connection:
                 events_cursor = await connection.execute(
                     "DELETE FROM events WHERE session_id = ?", (str(session_id),)
@@ -328,6 +352,7 @@ class ConversationService:
         accepted: GenerationAccepted,
         user_text: str,
         character: CharacterProfile,
+        character_context: TurnCharacterContext,
         memory_context: MemoryContextPacket,
         history: tuple[tuple[str, str], ...],
     ) -> None:
@@ -340,7 +365,11 @@ class ConversationService:
                 "assistant.audio_stream_started",
                 {"stream_id": str(accepted.audio_stream_id)},
             )
-            for planned in self._avatar_planner.plan_user_turn(user_text):
+            for planned in self._avatar_planner.plan_response(
+                accepted.session_id,
+                character_context.plan,
+                character.avatar_capabilities,
+            ):
                 await self._emit_avatar(
                     accepted,
                     planned.kind,
@@ -349,13 +378,26 @@ class ConversationService:
                     duration_ms=planned.duration_ms,
                 )
             await self._emit_avatar(accepted, "state", "thinking", priority=60)
+            compilation = await self._prompt_compiler.compile(
+                character=character,
+                kernel=character_context.snapshot,
+                plan=character_context.plan,
+                memory=memory_context,
+                history=history,
+                user_text=user_text,
+            )
+            await self._emit_generic(
+                accepted,
+                "character.prompt_compiled",
+                {"report": compilation.report.model_dump(mode="json")},
+            )
             request = LlmRequest(
                 generation_id=accepted.generation_id,
                 user_text=user_text,
-                system_prompt=character.system_prompt,
+                system_prompt=compilation.system_prompt,
                 character_name=character.display_name,
-                context=_memory_context(memory_context),
-                history=history,
+                context=compilation.context,
+                history=compilation.history,
             )
             async for delta in self._providers.llm.stream(request):
                 self._ensure_current(accepted)
@@ -636,17 +678,3 @@ class ConversationService:
 def _segment_ready(text: str) -> bool:
     stripped = text.rstrip()
     return len(text) >= 90 or bool(stripped and stripped[-1] in _SEGMENT_ENDINGS)
-
-
-def _memory_context(packet: MemoryContextPacket) -> tuple[tuple[str, str], ...]:
-    excerpts = (
-        packet.pinned_facts
-        + packet.recent_episodes
-        + packet.relevant_memories
-        + packet.open_commitments
-        + packet.relationship_context
-    )
-    if not excerpts:
-        return ()
-    content = "; ".join(item.text for item in excerpts)
-    return (("system", f"记忆: 仅使用以下经过策略允许且带来源的内容: {content}"),)

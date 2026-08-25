@@ -1,0 +1,4 @@
+states: [idle, listening, thinking]
+expressions: [neutral, happy, sad, angry, surprised, shy, curious]
+motions: [headpat, stare, flustered, sing]
+gaze_targets: [user, away, down]

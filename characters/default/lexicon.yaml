@@ -1,0 +1,7 @@
+self_names: [宁宁, 绫地宁宁]
+default_user_address: 你
+stage_addresses:
+  acquaintance: 你
+  familiar: 你
+  trusted: 你
+  close: 你

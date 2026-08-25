@@ -362,4 +362,62 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON playback_segments(session_id, state);
         """,
     ),
+    (
+        7,
+        """
+        CREATE TABLE model_role_configs (
+            role TEXT PRIMARY KEY CHECK(role IN (
+                'chat', 'memory_extraction', 'memory_summary', 'embedding'
+            )),
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            timeout_seconds REAL NOT NULL CHECK(timeout_seconds > 0),
+            context_window INTEGER NOT NULL CHECK(context_window >= 1024),
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE character_states (
+            character_id TEXT NOT NULL,
+            user_scope TEXT NOT NULL,
+            valence REAL NOT NULL CHECK(valence >= -1 AND valence <= 1),
+            arousal REAL NOT NULL CHECK(arousal >= 0 AND arousal <= 1),
+            energy REAL NOT NULL CHECK(energy >= 0 AND energy <= 1),
+            attention REAL NOT NULL CHECK(attention >= 0 AND attention <= 1),
+            embarrassment REAL NOT NULL CHECK(embarrassment >= 0 AND embarrassment <= 1),
+            tension REAL NOT NULL CHECK(tension >= 0 AND tension <= 1),
+            revision INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(character_id, user_scope)
+        );
+
+        CREATE TABLE relationship_states (
+            character_id TEXT NOT NULL,
+            user_scope TEXT NOT NULL,
+            familiarity REAL NOT NULL CHECK(familiarity >= 0 AND familiarity <= 1),
+            trust REAL NOT NULL CHECK(trust >= 0 AND trust <= 1),
+            affinity REAL NOT NULL CHECK(affinity >= 0 AND affinity <= 1),
+            comfort REAL NOT NULL CHECK(comfort >= 0 AND comfort <= 1),
+            recent_tension REAL NOT NULL CHECK(recent_tension >= 0 AND recent_tension <= 1),
+            interaction_count INTEGER NOT NULL DEFAULT 0 CHECK(interaction_count >= 0),
+            stage TEXT NOT NULL CHECK(stage IN ('acquaintance', 'familiar', 'trusted', 'close')),
+            preferred_address TEXT,
+            revision INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(character_id, user_scope)
+        );
+
+        CREATE TABLE memory_embeddings (
+            memory_id TEXT NOT NULL REFERENCES memory_records(memory_id) ON DELETE CASCADE,
+            model_fingerprint TEXT NOT NULL,
+            vector_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(memory_id, model_fingerprint)
+        );
+
+        CREATE INDEX memory_embeddings_model_idx
+            ON memory_embeddings(model_fingerprint, memory_id);
+        """,
+    ),
 )

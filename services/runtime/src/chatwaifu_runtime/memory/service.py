@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
@@ -22,6 +23,7 @@ from chatwaifu_runtime.memory.extractor import (
     ExplicitMemoryCommand,
     ExtractedMemoryCandidate,
 )
+from chatwaifu_runtime.memory.inference import LlmMemoryCandidateExtractor
 from chatwaifu_runtime.memory.policy import MemoryPolicy, MemoryWriteDecision
 from chatwaifu_runtime.memory.ports import (
     NullSemanticMemoryIndex,
@@ -31,8 +33,10 @@ from chatwaifu_runtime.memory.ports import (
 )
 from chatwaifu_runtime.memory.repository import MemoryEventEvidence, MemoryRepository
 from chatwaifu_runtime.memory.retrieval import MemoryRetriever
+from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 type MemoryItem = MemoryRecord
+logger = logging.getLogger(__name__)
 
 
 class MemoryService:
@@ -43,6 +47,7 @@ class MemoryService:
         *,
         semantic_index: SemanticMemoryIndex | None = None,
         temporal_graph: TemporalMemoryGraph | None = None,
+        models: ModelConfigurationService | None = None,
     ) -> None:
         self._repository = repository
         self._publisher = publisher
@@ -50,6 +55,7 @@ class MemoryService:
         self._policy = MemoryPolicy()
         self._semantic_index = semantic_index or NullSemanticMemoryIndex()
         self._temporal_graph = temporal_graph or NullTemporalMemoryGraph()
+        self._inference = LlmMemoryCandidateExtractor(models) if models else None
         self._retriever = MemoryRetriever(
             repository,
             self._policy,
@@ -86,21 +92,52 @@ class MemoryService:
         evidence = await self._repository.event_evidence(source_event_id)
         if evidence is None:
             raise ValueError("memory source event disappeared")
-        extracted = self._extractor.extract(
+        deterministic = self._extractor.extract(
             content,
             namespace=namespaces[0],
             observed_at=evidence.occurred_at,
             explicit=explicit,
         )
-        if extracted is None:
+        candidates = [deterministic] if deterministic is not None else []
+        if self._inference is not None and not explicit:
+            related = await self._repository.search_fts(content, namespaces, limit=12)
+            try:
+                candidates.extend(
+                    await self._inference.extract(
+                        content,
+                        namespace=namespaces[0],
+                        observed_at=evidence.occurred_at,
+                        related=[item.record for item in related],
+                    )
+                )
+            except Exception as error:
+                logger.warning(
+                    "memory extraction provider failed",
+                    extra={"source_event_id": str(source_event_id), "error": type(error).__name__},
+                )
+        unique: dict[tuple[str, str | None, str], ExtractedMemoryCandidate] = {}
+        for item in candidates:
+            unique.setdefault(
+                (item.draft.kind, item.draft.predicate, _normalize(item.draft.text)), item
+            )
+        if not unique:
             return []
-        proposal = await self._process_candidate(
+        proposals = [
+            await self._process_candidate(session_id, turn_id, source_event_id, item)
+            for item in unique.values()
+        ]
+        await self._emit(
             session_id,
             turn_id,
-            source_event_id,
-            extracted,
+            "memory.extraction_completed",
+            {
+                "candidate_count": len(unique),
+                "proposal_ids": [str(item.proposal_id) for item in proposals],
+                "model_assisted": self._inference is not None,
+            },
+            causation_id=source_event_id,
         )
-        return [proposal]
+        return proposals
 
     async def decide_proposal(
         self, session_id: UUID, proposal_id: UUID, decision: Literal["accept", "reject"]
@@ -269,6 +306,44 @@ class MemoryService:
             )
         return packet
 
+    async def observe_assistant_spoken(
+        self,
+        session_id: UUID,
+        turn_id: UUID,
+        source_event_id: UUID,
+        character_id: str,
+        spoken_text: str,
+    ) -> list[MemoryProposal]:
+        if self._inference is None or not spoken_text.strip():
+            return []
+        evidence = await self._repository.event_evidence(source_event_id)
+        if evidence is None or evidence.event_type != "assistant.spoken_text_committed":
+            raise ValueError("shared memory requires spoken-text evidence")
+        namespaces = _namespaces(character_id)
+        related = await self._repository.search_fts(spoken_text, namespaces, limit=12)
+        try:
+            candidates = await self._inference.extract(
+                f"The user actually heard the character say: {spoken_text}",
+                namespace=namespaces[0],
+                observed_at=evidence.occurred_at,
+                related=[item.record for item in related],
+            )
+        except Exception as error:
+            logger.warning(
+                "shared memory extraction provider failed",
+                extra={"source_event_id": str(source_event_id), "error": type(error).__name__},
+            )
+            return []
+        durable = [
+            item
+            for item in candidates
+            if item.draft.kind in {"episodic.shared_event", "relationship.signal"}
+        ]
+        return [
+            await self._process_candidate(session_id, turn_id, source_event_id, item)
+            for item in durable
+        ]
+
     async def list(
         self,
         *,
@@ -297,6 +372,20 @@ class MemoryService:
             await self._semantic_index.delete(record.memory_id)
             await self._temporal_graph.delete(record.memory_id)
         return removed
+
+    async def reindex_all(self) -> int:
+        records = await self._repository.list_records(limit=500)
+        rebuild = getattr(self._semantic_index, "rebuild", None)
+        if rebuild is not None:
+            return int(await rebuild(records))
+        count = 0
+        for record in records:
+            try:
+                await self._semantic_index.upsert(record)
+            except Exception:
+                continue
+            count += 1
+        return count
 
     async def _process_candidate(
         self,
@@ -399,7 +488,13 @@ class MemoryService:
                 source_event_id=item.event_id,
                 session_id=item.session_id,
                 turn_id=item.turn_id,
-                source_kind="user_turn" if item.turn_id else "memory_management",
+                source_kind=(
+                    "assistant_spoken"
+                    if item.event_type == "assistant.spoken_text_committed"
+                    else "user_turn"
+                    if item.event_type == "user.turn_committed"
+                    else "memory_management"
+                ),
                 created_at=now,
             )
             for item in evidence
@@ -407,7 +502,13 @@ class MemoryService:
         await self._repository.create_record(
             record, sources, supersede_target=proposal.target_memory_id
         )
-        await self._semantic_index.upsert(record)
+        try:
+            await self._semantic_index.upsert(record)
+        except Exception as error:
+            logger.warning(
+                "memory semantic indexing failed",
+                extra={"memory_id": str(record.memory_id), "error": type(error).__name__},
+            )
         await self._temporal_graph.upsert(record)
         if proposal.target_memory_id:
             await self._semantic_index.delete(proposal.target_memory_id)
@@ -445,6 +546,7 @@ class MemoryService:
             "memory.superseded",
             "memory.tombstoned",
             "memory.recalled",
+            "memory.extraction_completed",
         ],
         payload: dict[str, object],
         *,

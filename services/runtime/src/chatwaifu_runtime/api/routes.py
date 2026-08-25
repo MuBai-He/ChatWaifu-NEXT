@@ -1,6 +1,7 @@
 """Loopback Runtime HTTP and WebSocket routes."""
 
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
+    CharacterInteractionRequest,
     CreateSessionRequest,
     ExamplePluginRequest,
     InstallPluginRequest,
@@ -18,6 +20,7 @@ from chatwaifu_runtime.api.models import (
     MemoryCorrectionRequest,
     MemoryPinnedRequest,
     MemoryProposalDecisionRequest,
+    ModelRoleConfigurationRequest,
     PluginEnabledRequest,
     ResetSessionRequest,
     RuntimeHealth,
@@ -28,6 +31,7 @@ from chatwaifu_runtime.api.models import (
     WebRtcPatchRequest,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
 
 router = APIRouter(prefix="/v1")
 
@@ -61,6 +65,54 @@ async def runtime_config(request: Request) -> dict[str, object]:
     return _container(request).settings.public_dict()
 
 
+@router.get("/model-configurations")
+async def read_model_configurations(request: Request) -> dict[str, object]:
+    items = [
+        item.model_dump(mode="json") for item in _container(request).model_configurations.list()
+    ]
+    return {"schema_version": "1.0", "items": items, "count": len(items)}
+
+
+@router.put("/model-configurations/{role}")
+async def update_model_configuration(
+    request: Request,
+    role: ModelRole,
+    body: ModelRoleConfigurationRequest,
+) -> dict[str, object]:
+    if role not in MODEL_ROLES:
+        raise HTTPException(status_code=404, detail="model role not found")
+    try:
+        config = ModelRoleConfig(
+            role=role,
+            provider=body.provider,
+            model=body.model,
+            base_url=body.base_url,
+            timeout_seconds=body.timeout_seconds,
+            context_window=body.context_window,
+            enabled=body.enabled,
+            updated_at=datetime.now(UTC),
+        )
+        updated = await _container(request).model_configurations.update(
+            config,
+            api_key=body.api_key,
+            clear_api_key=body.clear_api_key,
+        )
+        if role == "embedding":
+            await _container(request).memory.reindex_all()
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return updated.model_dump(mode="json")
+
+
+@router.post("/model-configurations/{role}/test")
+async def test_model_configuration(request: Request, role: ModelRole) -> dict[str, object]:
+    try:
+        result = await _container(request).model_configurations.probe(role)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"model probe failed: {error}") from error
+    return {"role": role, **result}
+
+
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)
 async def create_session(request: Request, body: CreateSessionRequest) -> dict[str, object]:
     container = _container(request)
@@ -76,6 +128,35 @@ async def get_session(request: Request, session_id: UUID) -> dict[str, object]:
     snapshot = await _container(request).sessions.get_session(session_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="session not found")
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/sessions/{session_id}/character-state")
+async def read_character_state(request: Request, session_id: UUID) -> dict[str, object]:
+    container = _container(request)
+    session = await container.sessions.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    snapshot = await container.character_kernel.snapshot(session.character_id)
+    return snapshot.model_dump(mode="json")
+
+
+@router.post("/sessions/{session_id}/character-interactions")
+async def register_character_interaction(
+    request: Request,
+    session_id: UUID,
+    body: CharacterInteractionRequest,
+) -> dict[str, object]:
+    container = _container(request)
+    session = await container.sessions.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    snapshot = await container.character_kernel.observe_interaction(
+        session_id=session_id,
+        character_id=session.character_id,
+        kind=body.kind,
+        region=body.region,
+    )
     return snapshot.model_dump(mode="json")
 
 
@@ -246,6 +327,20 @@ async def acknowledge_playback(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    if (
+        result.all_segments_completed
+        and result.committed_event_id is not None
+        and result.turn_id is not None
+    ):
+        session = await _container(request).sessions.get_session(session_id)
+        if session is not None:
+            await _container(request).memory.observe_assistant_spoken(
+                session_id,
+                result.turn_id,
+                result.committed_event_id,
+                session.character_id,
+                result.spoken_text,
+            )
     return {
         "command_id": str(result.command_id),
         "segment_id": str(result.segment_id),

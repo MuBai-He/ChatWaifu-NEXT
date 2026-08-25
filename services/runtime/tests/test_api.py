@@ -97,6 +97,97 @@ def test_websocket_announces_runtime(client: TestClient) -> None:
     assert event["event_type"] == "system.runtime_started"
 
 
+def test_model_roles_are_independent_and_api_keys_never_echo(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    listed = cast(dict[str, object], http.get("/v1/model-configurations").json())
+    items = cast(list[dict[str, object]], listed["items"])
+    assert {str(item["role"]) for item in items} == {
+        "chat",
+        "memory_extraction",
+        "memory_summary",
+        "embedding",
+    }
+    original_chat = next(item for item in items if item["role"] == "chat")
+
+    updated_response = http.put(
+        "/v1/model-configurations/memory_summary",
+        json={
+            "provider": "openai_compatible",
+            "model": "summary-test-model",
+            "base_url": "http://127.0.0.1:9999/v1",
+            "timeout_seconds": 10,
+            "context_window": 16_384,
+            "enabled": True,
+            "api_key": "write-only-test-secret",
+        },
+    )
+    assert updated_response.status_code == 200
+    updated = cast(dict[str, object], updated_response.json())
+    assert updated["role"] == "memory_summary"
+    assert updated["model"] == "summary-test-model"
+    assert updated["api_key_configured"] is True
+    assert "api_key" not in updated
+    assert "write-only-test-secret" not in updated_response.text
+
+    reloaded = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], http.get("/v1/model-configurations").json())["items"],
+    )
+    assert next(item for item in reloaded if item["role"] == "chat") == original_chat
+    assert "write-only-test-secret" not in str(reloaded)
+    secret_file = runtime_settings.config_dir / "model-secrets.json"
+    assert secret_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_character_kernel_persists_and_reset_restores_initial_state(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    first_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    first_session_id = str(first_session["session_id"])
+    before = cast(
+        dict[str, object],
+        http.get(f"/v1/sessions/{first_session_id}/character-state").json(),
+    )
+    touched_response = http.post(
+        f"/v1/sessions/{first_session_id}/character-interactions",
+        json={"kind": "avatar_touch", "region": "body"},
+    )
+    assert touched_response.status_code == 200
+    touched = cast(dict[str, object], touched_response.json())
+    assert int(str(touched["revision"])) == int(str(before["revision"])) + 1
+    _submit_and_wait(http, first_session_id, "谢谢你，我很喜欢和你聊天")
+    after = cast(
+        dict[str, object],
+        http.get(f"/v1/sessions/{first_session_id}/character-state").json(),
+    )
+    after_relationship = cast(dict[str, object], after["relationship"])
+    assert int(str(after["revision"])) == int(str(before["revision"])) + 2
+    assert after_relationship["interaction_count"] == 1
+    assert float(str(after_relationship["affinity"])) > float(
+        str(cast(dict[str, object], before["relationship"])["affinity"])
+    )
+
+    second_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    persisted = cast(
+        dict[str, object],
+        http.get(f"/v1/sessions/{second_session['session_id']}/character-state").json(),
+    )
+    assert persisted["revision"] == after["revision"]
+
+    reset = http.post(
+        f"/v1/sessions/{first_session_id}/reset",
+        json={"confirm": True},
+    )
+    assert reset.status_code == 200
+    restored = cast(
+        dict[str, object],
+        http.get(f"/v1/sessions/{first_session_id}/character-state").json(),
+    )
+    assert restored["revision"] == 0
+    assert cast(dict[str, object], restored["relationship"])["interaction_count"] == 0
+
+
 def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)
     created = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
