@@ -36,6 +36,7 @@ SOURCE_REPOSITORY_URL = (
     "Sabbat_of_the_Witch"
 )
 QWEN_REPOSITORY_COMMIT = "022e286b98fbec7e1e916cb940cdf532cd9f488e"
+DEFAULT_BASE_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
 BUNDLE_SCHEMA_VERSION = "1.0"
 DEFAULT_REFERENCE_STEM = "nen104_084"
 ASSETS = Path(__file__).with_name("bundle_assets")
@@ -206,7 +207,10 @@ def build_training_bundle(
             },
             "qwen": {
                 "repository_commit": QWEN_REPOSITORY_COMMIT,
-                "default_base_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+                "default_base_model": DEFAULT_BASE_MODEL,
+                "default_training_mode": "pilot",
+                "default_max_steps": 200,
+                "default_attention_implementation": "sdpa",
                 "speaker_name": "ayachi_nene_local",
             },
             "audio": {
@@ -247,7 +251,7 @@ def build_training_bundle(
         )
         stage.rename(output)
 
-    bundle_archive = output.with_suffix(".zip")
+    bundle_archive = output.parent / f"{output.name}.zip"
     if bundle_archive.exists():
         if not force:
             raise FileExistsError(

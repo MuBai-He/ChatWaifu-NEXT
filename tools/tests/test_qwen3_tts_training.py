@@ -21,6 +21,7 @@ from tools.qwen3_tts_training.core import (
 )
 from tools.qwen3_tts_training.prepare_dataset import (
     ASSETS,
+    DEFAULT_BASE_MODEL,
     QWEN_REPOSITORY_COMMIT,
     build_training_bundle,
     discover_pairs,
@@ -96,7 +97,7 @@ def test_builds_reproducible_local_only_colab_bundle(tmp_path: Path) -> None:
             output.writestr(f"root/nen/{stem}.lab", label)
 
     clean_pcm = _sine_pcm(duration_seconds=2.0)
-    output = tmp_path / "nene-qwen3-training"
+    output = tmp_path / "nene-qwen3-0.6b-pilot"
     first = build_training_bundle(
         archive=archive,
         output=output,
@@ -108,6 +109,12 @@ def test_builds_reproducible_local_only_colab_bundle(tmp_path: Path) -> None:
     assert first.rejected_count == 1
     assert (output / "train_qwen3_tts_colab.ipynb").is_file()
     assert len(list((output / "source_audio").glob("*.opus"))) == 3
+    manifest = json.loads((output / "bundle_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["qwen"]["default_base_model"] == DEFAULT_BASE_MODEL
+    assert manifest["qwen"]["default_training_mode"] == "pilot"
+    assert manifest["qwen"]["default_max_steps"] == 200
+    assert manifest["qwen"]["default_attention_implementation"] == "sdpa"
+    assert first.bundle_archive.name == "nene-qwen3-0.6b-pilot.zip"
     first_hash = hashlib.sha256(first.bundle_archive.read_bytes()).hexdigest()
 
     second = build_training_bundle(
@@ -125,7 +132,14 @@ def test_colab_notebook_is_pinned_and_all_code_cells_parse() -> None:
     notebook = json.loads((ASSETS / "train_qwen3_tts_colab.ipynb").read_text(encoding="utf-8"))
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
     assert QWEN_REPOSITORY_COMMIT in source
+    assert 'MODEL_SIZE = "0.6B"' in source
+    assert "Qwen/Qwen3-TTS-12Hz-0.6B-Base" in source
     assert "Qwen/Qwen3-TTS-12Hz-1.7B-Base" in source
+    assert "PILOT_MODE = True" in source
+    assert "MAX_STEPS = 200 if PILOT_MODE else 0" in source
+    assert 'ATTENTION_IMPLEMENTATION = "sdpa"' in source
+    assert "qwen3-tts-base-{MODEL_SIZE.lower()}" in source
+    assert "nene-qwen3-{MODEL_SIZE.lower()}-{run_mode}-output" in source
     for cell in notebook["cells"]:
         if cell.get("cell_type") == "code":
             ast.parse("".join(cell.get("source", [])))
