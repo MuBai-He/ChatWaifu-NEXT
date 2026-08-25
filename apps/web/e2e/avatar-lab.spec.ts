@@ -165,7 +165,7 @@ test("desktop chat keeps the visual-novel stage fixed while backlog scrolls", as
   await page.getByRole("button", { name: "关闭对话历史" }).click();
   await page.getByRole("button", { name: /CONFIG.*设置/ }).click();
   await expect(
-    page.getByRole("complementary", { name: "语音设置" }),
+    page.getByRole("complementary", { name: "角色和模型设置" }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "角色构图" })).toHaveValue(
     "bust",
@@ -188,7 +188,7 @@ test("visual-novel controls remain reachable on a narrow viewport", async ({
   await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
   await page.getByRole("button", { name: /CONFIG.*设置/ }).click();
   await expect(
-    page.getByRole("complementary", { name: "语音设置" }),
+    page.getByRole("complementary", { name: "角色和模型设置" }),
   ).toBeVisible();
 
   await expect
