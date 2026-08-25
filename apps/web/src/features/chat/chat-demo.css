@@ -1352,3 +1352,949 @@
     display: none;
   }
 }
+
+/* Visual-novel presentation layer. The Runtime, Live2D controller, and modal
+   control centers stay unchanged; this layer only changes product presentation. */
+.vn-shell {
+  width: 100%;
+  height: 100dvh;
+  min-height: 520px;
+  overflow: hidden;
+  color: #fff;
+  background: #17101f;
+}
+
+.vn-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgb(19 13 32 / 8%), rgb(25 14 32 / 72%)),
+    radial-gradient(circle at 48% 28%, #8b6f9c 0, #51455f 28%, transparent 56%),
+    linear-gradient(135deg, #31283d, #18121f 68%);
+}
+
+.vn-stage::before {
+  position: absolute;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px) 0 0 /
+      72px 72px,
+    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px) 0 0 / 72px 72px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(180deg, #000, transparent 66%);
+  pointer-events: none;
+}
+
+.vn-stage::after {
+  position: absolute;
+  z-index: 3;
+  background: linear-gradient(
+    90deg,
+    rgb(16 10 24 / 62%),
+    transparent 28%,
+    transparent 72%,
+    rgb(16 10 24 / 34%)
+  );
+  content: "";
+  inset: 0;
+  pointer-events: none;
+}
+
+.vn-sky {
+  position: absolute;
+  z-index: 0;
+  overflow: hidden;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vn-moon {
+  position: absolute;
+  top: 8%;
+  right: 15%;
+  width: clamp(150px, 19vw, 310px);
+  aspect-ratio: 1;
+  border: 1px solid rgb(255 239 250 / 28%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(255 255 255 / 96%), transparent 5%),
+    radial-gradient(circle at 66% 62%, rgb(207 183 221 / 42%), transparent 18%),
+    radial-gradient(circle, #f8eafa, #d8badb 68%, #a787b4);
+  box-shadow:
+    0 0 80px rgb(236 203 242 / 32%),
+    0 0 180px rgb(182 127 199 / 18%);
+  opacity: 0.72;
+}
+
+.vn-horizon {
+  position: absolute;
+  right: -5%;
+  bottom: 12%;
+  left: -5%;
+  height: 45%;
+  opacity: 0.55;
+  background:
+    linear-gradient(165deg, transparent 57%, rgb(20 14 26 / 82%) 57.4%) 0 0 /
+      42% 100%,
+    linear-gradient(195deg, transparent 56%, rgb(31 20 38 / 90%) 56.4%) 100% 0 /
+      62% 100%;
+  filter: blur(1px);
+}
+
+.vn-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+.vn-glow.one {
+  top: 32%;
+  left: 18%;
+  width: 280px;
+  height: 280px;
+  background: rgb(242 161 202 / 11%);
+  box-shadow: 0 0 120px rgb(242 161 202 / 18%);
+}
+
+.vn-glow.two {
+  right: 22%;
+  bottom: 30%;
+  width: 190px;
+  height: 190px;
+  background: rgb(180 133 230 / 10%);
+  box-shadow: 0 0 100px rgb(180 133 230 / 16%);
+}
+
+.vn-topbar {
+  position: absolute;
+  z-index: 12;
+  top: 24px;
+  right: 32px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.vn-brand {
+  display: inline-flex;
+  gap: 11px;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+  pointer-events: auto;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 44%);
+}
+
+.vn-brand-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.vn-brand strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  font-weight: 400;
+  letter-spacing: 0.035em;
+}
+
+.vn-brand small {
+  order: -1;
+  color: rgb(244 186 219 / 72%);
+  font: 0.43rem var(--mono);
+  letter-spacing: 0.2em;
+}
+
+.vn-brand strong em {
+  margin-left: 5px;
+  color: #e7a5ca;
+  font: normal 0.55rem var(--mono);
+  letter-spacing: 0.18em;
+  vertical-align: 0.17em;
+}
+
+.vn-brand-ornament {
+  display: grid;
+  width: 20px;
+  height: 46px;
+  place-items: center;
+  color: #efb1d3;
+  grid-template-rows: 1fr auto 1fr;
+}
+
+.vn-brand-ornament i {
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(transparent, rgb(239 177 211 / 72%));
+}
+
+.vn-brand-ornament i:last-child {
+  background: linear-gradient(rgb(239 177 211 / 72%), transparent);
+}
+
+.vn-brand-ornament b {
+  font-size: 0.62rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.vn-runtime {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 11px;
+  border: 1px solid rgb(255 235 247 / 18%);
+  border-radius: 999px;
+  color: rgb(255 246 252 / 72%);
+  background: rgb(25 15 33 / 38%);
+  font: 0.58rem var(--mono);
+  backdrop-filter: blur(14px);
+}
+
+.vn-runtime i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e3a44d;
+}
+
+.vn-runtime.connected i {
+  background: #7ce5ad;
+  box-shadow: 0 0 10px rgb(124 229 173 / 72%);
+}
+
+.vn-runtime small {
+  padding-left: 8px;
+  border-left: 1px solid rgb(255 255 255 / 15%);
+  color: rgb(255 246 252 / 42%);
+}
+
+.vn-character-title {
+  position: absolute;
+  z-index: 4;
+  top: 17%;
+  left: 6%;
+  max-width: 330px;
+  color: rgb(255 247 252 / 82%);
+  text-shadow: 0 3px 24px rgb(0 0 0 / 46%);
+  pointer-events: none;
+}
+
+.vn-character-title p {
+  margin: 0 0 5px;
+  color: #f4bed8;
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.35em;
+}
+
+.vn-character-title h1 {
+  margin: 0;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.vn-character-title span {
+  display: block;
+  margin-top: 10px;
+  color: rgb(255 247 252 / 48%);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.avatar-frame.vn-avatar {
+  position: absolute;
+  z-index: 2;
+  top: 58px;
+  right: 17%;
+  bottom: 218px;
+  left: 17%;
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.vn-avatar canvas {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 24px 28px rgb(13 8 18 / 42%));
+  transform-origin: 50% 34%;
+  transition: transform 320ms ease;
+}
+
+.vn-avatar.framing-full canvas {
+  transform: scale(1.25);
+}
+
+.vn-avatar.framing-bust canvas {
+  transform: scale(1.9) translateY(12%);
+}
+
+.vn-avatar .avatar-state {
+  z-index: 4;
+  bottom: 8px;
+  border-color: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 34%);
+  background: rgb(20 13 28 / 28%);
+}
+
+.vn-stage > .avatar-warning {
+  position: absolute;
+  z-index: 14;
+  top: 74px;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+}
+
+.vn-system-menu {
+  position: absolute;
+  z-index: 16;
+  top: 105px;
+  right: 28px;
+  display: grid;
+  gap: 8px;
+}
+
+.vn-system-menu > button {
+  display: grid;
+  width: 92px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid rgb(255 235 247 / 18%);
+  border-radius: 4px 14px 4px 14px;
+  color: rgb(255 248 252 / 78%);
+  background: linear-gradient(
+    110deg,
+    rgb(100 52 104 / 54%),
+    rgb(35 22 44 / 62%)
+  );
+  box-shadow: 0 9px 26px rgb(0 0 0 / 16%);
+  cursor: pointer;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  backdrop-filter: blur(14px);
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease,
+    background 140ms ease;
+}
+
+.vn-system-menu > button:hover,
+.vn-system-menu > button[aria-pressed="true"] {
+  border-color: rgb(255 205 234 / 52%);
+  background: linear-gradient(
+    110deg,
+    rgb(156 77 128 / 76%),
+    rgb(57 32 67 / 76%)
+  );
+  transform: translateX(-4px);
+}
+
+.vn-system-menu > button:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.vn-system-menu > button small {
+  color: #eab1d1;
+  font: 0.48rem var(--mono);
+  letter-spacing: 0.12em;
+}
+
+.vn-system-menu .memory-proposal-badge {
+  position: absolute;
+  margin: -4px 0 0 54px;
+}
+
+.vn-history-panel,
+.vn-settings-panel {
+  position: absolute;
+  z-index: 24;
+  top: 92px;
+  right: 136px;
+  bottom: 248px;
+  display: grid;
+  width: min(520px, calc(100% - 190px));
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 224 243 / 28%);
+  border-radius: 3px 22px 3px 22px;
+  color: #fff7fc;
+  background: linear-gradient(145deg, rgb(52 29 59 / 94%), rgb(22 15 30 / 93%));
+  box-shadow: 0 26px 80px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(22px);
+  animation: vn-panel-in 180ms ease-out;
+}
+
+.vn-history-panel {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.vn-history-panel > header,
+.vn-settings-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+
+.vn-history-panel header > div,
+.vn-settings-panel header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.vn-history-panel header small,
+.vn-settings-panel header small {
+  color: #eab1d1;
+  font: 0.52rem var(--mono);
+  letter-spacing: 0.16em;
+}
+
+.vn-history-panel header strong,
+.vn-settings-panel header strong {
+  font-family: "Yu Mincho", Georgia, serif;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.vn-history-panel header button,
+.vn-settings-panel header button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 50%;
+  color: rgb(255 255 255 / 68%);
+  background: rgb(255 255 255 / 4%);
+  cursor: pointer;
+  place-items: center;
+}
+
+.vn-history-list {
+  min-height: 0;
+  padding: 18px 20px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(229 160 201 / 38%) transparent;
+  scrollbar-width: thin;
+}
+
+.vn-history-message {
+  display: grid;
+  margin: 0 0 18px;
+  gap: 5px;
+}
+
+.vn-history-message span {
+  color: #eab1d1;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.vn-history-message.user span {
+  color: #beb3d9;
+}
+
+.vn-history-message p,
+.vn-history-empty {
+  margin: 0;
+  color: rgb(255 250 253 / 76%);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.vn-history-empty {
+  color: rgb(255 250 253 / 42%);
+}
+
+.vn-settings-panel {
+  align-content: start;
+  bottom: auto;
+  max-height: calc(100dvh - 108px);
+  padding-bottom: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.vn-settings-panel > label {
+  display: grid;
+  padding: 15px 20px 0;
+  gap: 6px;
+}
+
+.vn-settings-panel > label > span {
+  color: rgb(255 246 252 / 48%);
+  font-size: 0.62rem;
+}
+
+.vn-settings-panel select {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 8px;
+  outline: none;
+  color: #fff7fc;
+  background: rgb(255 255 255 / 7%);
+  font-size: 0.72rem;
+}
+
+.vn-settings-panel option {
+  color: #2f2036;
+  background: white;
+}
+
+.vn-mic-status {
+  display: grid;
+  padding: 17px 20px 0;
+  gap: 8px;
+}
+
+.vn-mic-status .input-meter {
+  background: rgb(255 255 255 / 10%);
+}
+
+.vn-mic-status small {
+  color: rgb(255 246 252 / 45%);
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
+.vn-notices {
+  position: absolute;
+  z-index: 26;
+  right: 6%;
+  bottom: 246px;
+  left: 6%;
+  padding: 0;
+}
+
+.vn-notices .runtime-error,
+.vn-notices .voice-transcript {
+  border-color: rgb(255 221 239 / 25%);
+  color: #fff4fa;
+  background: rgb(50 27 56 / 88%);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 26%);
+  backdrop-filter: blur(16px);
+}
+
+.vn-dialogue {
+  position: absolute;
+  z-index: 20;
+  right: 5%;
+  bottom: 32px;
+  left: 5%;
+  display: grid;
+  min-height: 194px;
+  padding: 36px 24px 18px;
+  border: 1px solid rgb(255 223 242 / 40%);
+  border-radius: 4px 28px 4px 28px;
+  color: #fff;
+  background:
+    linear-gradient(115deg, rgb(73 38 77 / 93%), rgb(24 17 33 / 94%) 58%),
+    rgb(24 17 33 / 94%);
+  box-shadow:
+    inset 0 0 0 4px rgb(255 255 255 / 3%),
+    0 24px 80px rgb(0 0 0 / 44%);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(74px, auto) auto;
+  column-gap: 22px;
+  backdrop-filter: blur(18px);
+}
+
+.vn-dialogue::before,
+.vn-dialogue::after {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  border-color: rgb(244 178 216 / 54%);
+  content: "";
+  pointer-events: none;
+}
+
+.vn-dialogue::before {
+  top: 7px;
+  left: 7px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.vn-dialogue::after {
+  right: 7px;
+  bottom: 7px;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.vn-nameplate {
+  position: absolute;
+  top: -31px;
+  left: 26px;
+  display: flex;
+  min-width: 190px;
+  height: 44px;
+  padding: 0 22px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgb(255 221 241 / 46%);
+  border-radius: 3px 18px 3px 18px;
+  background: linear-gradient(110deg, #a04f80, #5f3569);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+}
+
+.vn-nameplate small {
+  color: rgb(255 245 251 / 56%);
+  font: 0.5rem var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.vn-nameplate strong {
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.vn-dialogue-copy {
+  position: relative;
+  min-width: 0;
+  max-height: 104px;
+  padding: 0 10px;
+  overflow-y: auto;
+}
+
+.vn-dialogue-copy p {
+  margin: 0;
+  color: rgb(255 252 254 / 92%);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: clamp(0.96rem, 1.45vw, 1.18rem);
+  line-height: 1.9;
+  letter-spacing: 0.035em;
+  white-space: pre-wrap;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 32%);
+}
+
+.vn-continue {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #eda9ce;
+  border-bottom: 2px solid #eda9ce;
+  transform: rotate(45deg);
+  animation: vn-continue 1.15s ease-in-out infinite;
+}
+
+.vn-dialogue-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.vn-dialogue-actions button {
+  display: grid;
+  min-width: 58px;
+  padding: 7px 9px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 3px 10px;
+  color: rgb(255 248 252 / 72%);
+  background: rgb(255 255 255 / 5%);
+  cursor: pointer;
+  font-size: 0.64rem;
+  gap: 2px;
+}
+
+.vn-dialogue-actions button small {
+  color: #dea1c5;
+  font: 0.43rem var(--mono);
+  letter-spacing: 0.1em;
+}
+
+.vn-dialogue-actions button:hover,
+.vn-dialogue-actions .vn-voice-button.active,
+.vn-dialogue-actions .vn-push-to-talk.transmitting {
+  border-color: rgb(244 178 216 / 48%);
+  color: #fff;
+  background: rgb(154 74 125 / 42%);
+}
+
+.vn-dialogue-actions button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.vn-composer {
+  display: grid;
+  min-width: 0;
+  padding: 6px 6px 6px 14px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.vn-composer textarea {
+  min-height: 38px;
+  padding: 8px 0 4px;
+  resize: none;
+  border: 0;
+  outline: none;
+  color: rgb(255 252 254 / 92%);
+  background: transparent;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.vn-composer textarea::placeholder {
+  color: rgb(255 247 252 / 32%);
+}
+
+.vn-composer button {
+  display: flex;
+  min-width: 78px;
+  padding: 0 13px;
+  border: 1px solid rgb(255 222 241 / 32%);
+  border-radius: 3px 13px;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  background: linear-gradient(110deg, #9e4d7f, #67386d);
+  cursor: pointer;
+}
+
+.vn-composer button:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.vn-composer button span {
+  color: rgb(255 255 255 / 62%);
+  font-family: var(--mono);
+}
+
+.vn-disclosure {
+  position: absolute;
+  z-index: 21;
+  right: 6%;
+  bottom: 9px;
+  left: 6%;
+  margin: 0;
+  overflow: hidden;
+  color: rgb(255 245 251 / 26%);
+  font-size: 0.5rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes vn-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes vn-continue {
+  50% {
+    opacity: 0.34;
+    transform: translateY(3px) rotate(45deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .vn-topbar {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+  }
+
+  .vn-runtime small,
+  .vn-character-title span {
+    display: none;
+  }
+
+  .vn-character-title {
+    top: 14%;
+    left: 4%;
+  }
+
+  .vn-character-title h1 {
+    font-size: 2.7rem;
+  }
+
+  .avatar-frame.vn-avatar {
+    right: 7%;
+    bottom: 250px;
+    left: 7%;
+  }
+
+  .vn-system-menu {
+    top: 78px;
+    right: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .vn-system-menu > button {
+    width: auto;
+    min-width: 70px;
+  }
+
+  .vn-history-panel,
+  .vn-settings-panel {
+    top: 132px;
+    right: 16px;
+    bottom: 278px;
+    width: min(520px, calc(100% - 32px));
+  }
+
+  .vn-settings-panel {
+    bottom: auto;
+    max-height: calc(100dvh - 148px);
+  }
+
+  .vn-dialogue {
+    right: 16px;
+    bottom: 24px;
+    left: 16px;
+    min-height: 218px;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(72px, auto) auto auto;
+  }
+
+  .vn-dialogue-actions {
+    justify-content: flex-start;
+    padding: 5px 8px 9px;
+    grid-row: 2;
+  }
+
+  .vn-composer {
+    grid-row: 3;
+  }
+
+  .vn-notices {
+    right: 22px;
+    bottom: 274px;
+    left: 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  .vn-shell {
+    min-height: 620px;
+  }
+
+  .vn-brand small,
+  .vn-runtime span,
+  .vn-character-title {
+    display: none;
+  }
+
+  .vn-runtime {
+    padding: 7px;
+  }
+
+  .vn-system-menu {
+    left: 14px;
+    justify-content: stretch;
+  }
+
+  .vn-system-menu > button {
+    flex: 1 1 70px;
+    min-width: 0;
+    padding-inline: 6px;
+  }
+
+  .avatar-frame.vn-avatar {
+    top: 84px;
+    right: 0;
+    bottom: 274px;
+    left: 0;
+  }
+
+  .vn-avatar .avatar-state {
+    bottom: 0;
+  }
+
+  .vn-dialogue {
+    right: 8px;
+    bottom: 14px;
+    left: 8px;
+    min-height: 244px;
+    padding: 34px 12px 12px;
+    border-radius: 3px 18px;
+  }
+
+  .vn-nameplate {
+    left: 14px;
+    min-width: 160px;
+  }
+
+  .vn-dialogue-copy {
+    max-height: 84px;
+    padding-inline: 4px;
+  }
+
+  .vn-dialogue-copy p {
+    font-size: 0.9rem;
+  }
+
+  .vn-dialogue-actions {
+    flex-wrap: wrap;
+    padding-inline: 4px;
+  }
+
+  .vn-dialogue-actions button {
+    min-width: 52px;
+    padding-inline: 7px;
+  }
+
+  .vn-composer {
+    padding-left: 6px;
+  }
+
+  .vn-composer button {
+    min-width: 62px;
+  }
+
+  .vn-history-panel,
+  .vn-settings-panel {
+    top: 132px;
+    right: 8px;
+    bottom: 286px;
+    width: calc(100% - 16px);
+  }
+
+  .vn-settings-panel {
+    bottom: auto;
+    max-height: calc(100dvh - 148px);
+  }
+
+  .vn-notices {
+    right: 12px;
+    bottom: 286px;
+    left: 12px;
+  }
+
+  .vn-disclosure {
+    display: none;
+  }
+}

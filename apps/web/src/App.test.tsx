@@ -131,12 +131,22 @@ describe("ChatWaifu usable demo", () => {
   it("renders the connected character conversation surface", () => {
     render(<App />);
 
-    expect(screen.getByText("ChatWaifu NEXT")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "ChatWaifu NEXT home" }),
+    ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "绫地宁宁" })).toBeTruthy();
-    expect(screen.getByText("Runtime online")).toBeTruthy();
-    expect(screen.getByText("LLM · demo")).toBeTruthy();
+    expect(screen.getByText("LOCAL LINK")).toBeTruthy();
+    expect(screen.getByText("fake")).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: "当前对话" }).textContent,
+    ).toContain("欢迎回来");
     expect(screen.getByRole("button", { name: "Skills & 插件" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "记忆中心" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /LOG.*历史/ }));
+    expect(
+      screen.getByRole("complementary", { name: "对话历史" }),
+    ).toBeTruthy();
+    expect(screen.getByText("故事还没有开始。")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Avatar Lab" })).toBeNull();
     expect(screen.queryByRole("button", { name: "运行状态 Skill" })).toBeNull();
     const messageBox = screen.getByRole("textbox", { name: "Message" });
@@ -162,6 +172,7 @@ describe("ChatWaifu usable demo", () => {
 
   it("defaults to intentional push-to-talk capture", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const activationMode = screen.getByRole("combobox", {
       name: "语音响应方式",
@@ -181,6 +192,17 @@ describe("ChatWaifu usable demo", () => {
 
   it("defaults to Qwen TTS and can select GPT-SoVITS", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
+
+    const framing = screen.getByRole("combobox", { name: "角色构图" });
+    expect(framing).toBeInstanceOf(HTMLSelectElement);
+    if (!(framing instanceof HTMLSelectElement))
+      throw new Error("expected avatar framing select");
+    expect(framing.value).toBe("bust");
+    fireEvent.change(framing, { target: { value: "full" } });
+    expect(
+      screen.getByRole("button", { name: "Touch avatar" }).className,
+    ).toContain("framing-full");
 
     const tts = screen.getByRole("combobox", { name: "选择语音模型" });
     expect(tts).toBeInstanceOf(HTMLSelectElement);

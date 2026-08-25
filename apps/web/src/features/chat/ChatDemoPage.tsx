@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { SkillsControlCenter } from "./SkillsControlCenter";
 import { MemoryControlCenter } from "./MemoryControlCenter";
+import { SkillsControlCenter } from "./SkillsControlCenter";
 import { useChatSession } from "./useChatSession";
 
 export function ChatDemoPage() {
@@ -14,7 +14,6 @@ export function ChatDemoPage() {
     character,
     sessionId,
     messages,
-    memories,
     connection,
     error,
     resetting,
@@ -43,15 +42,28 @@ export function ChatDemoPage() {
     refreshMemories,
   } = useChatSession();
   const [draft, setDraft] = useState("");
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarFraming, setAvatarFraming] = useState<"bust" | "full">("bust");
+  const historyRef = useRef<HTMLDivElement>(null);
   const canSend = Boolean(
     sessionId && connection === "connected" && !resetting,
   );
+  const currentMessage = messages.at(-1);
+  const currentSpeaker = currentMessage
+    ? currentMessage.role === "user"
+      ? "你"
+      : (character?.display_name ?? "绫地宁宁")
+    : (character?.display_name ?? "绫地宁宁");
+  const currentText =
+    currentMessage?.text ||
+    character?.greeting ||
+    "你好呀，Runtime 准备好后我们就可以聊天。";
 
   useEffect(() => {
-    const transcript = transcriptRef.current;
-    if (transcript) transcript.scrollTop = transcript.scrollHeight;
-  }, [messages]);
+    const history = historyRef.current;
+    if (historyOpen && history) history.scrollTop = history.scrollHeight;
+  }, [historyOpen, messages]);
 
   const send = () => {
     const text = draft.trim();
@@ -65,171 +77,229 @@ export function ChatDemoPage() {
       "确定要重置吗？这会永久清空当前对话、全部明确记忆和本地生成语音，且无法撤销。",
     );
     if (!confirmed) return;
-    if (await resetAll()) setDraft("");
+    if (await resetAll()) {
+      setDraft("");
+      setHistoryOpen(false);
+    }
   };
 
   return (
-    <main className="chat-shell">
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="ChatWaifu NEXT home">
-          <span className="brand-mark">CW</span>
-          <span>
-            <strong>ChatWaifu NEXT</strong>
-            <small>local-first character runtime</small>
-          </span>
-        </a>
-        <div className="runtime-badges">
-          <span className={`connection-pill ${connection}`}>
-            <i /> {connection === "connected" ? "Runtime online" : connection}
-          </span>
-          <span className="provider-pill">
-            LLM · {health?.providers.llm ?? "—"}
-          </span>
-          <span className="provider-pill">
-            TTS · {health?.providers.tts ?? "—"}
-          </span>
-          <span className="provider-pill">
-            STT · {health?.providers.stt ?? "—"}
-          </span>
+    <main className="vn-shell">
+      <section className="vn-stage" aria-label="Conversation">
+        <div className="vn-sky" aria-hidden="true">
+          <i className="vn-moon" />
+          <i className="vn-horizon" />
+          <i className="vn-glow one" />
+          <i className="vn-glow two" />
         </div>
-      </header>
 
-      <div className="demo-grid">
-        <section className="character-panel" aria-label="Character">
-          <div className="character-heading">
-            <p>YOUR LOCAL COMPANION</p>
-            <h1>{character?.display_name ?? "绫地宁宁"}</h1>
-            <span>{character?.tagline ?? "正在连接角色 Runtime…"}</span>
-          </div>
-
-          <button
-            className="avatar-frame"
-            type="button"
-            onClick={touch}
-            aria-label="Touch avatar"
-          >
-            <canvas key={rendererKind} ref={canvasRef} />
-            <span className="avatar-state">
-              {rendererKind === "live2d" ? "Live2D" : "Fallback"} ·{" "}
-              {snapshot?.runtime.state ?? "loading"} ·{" "}
-              {snapshot?.runtime.expression ?? "neutral"}
-              {snapshot?.runtime.motion ? ` · ${snapshot.runtime.motion}` : ""}
+        <header className="vn-topbar">
+          <a className="vn-brand" href="/" aria-label="ChatWaifu NEXT home">
+            <span className="vn-brand-ornament" aria-hidden="true">
+              <i />
+              <b>✦</b>
+              <i />
             </span>
-          </button>
-
-          {avatarWarning ? (
-            <p className="avatar-warning" title={avatarWarning}>
-              Live2D 未就绪，当前使用安全回退
-            </p>
-          ) : null}
-
-          <div className="character-actions">
-            <SkillsControlCenter sessionId={sessionId} />
-            <MemoryControlCenter
-              sessionId={sessionId}
-              onChanged={refreshMemories}
-            />
-          </div>
-
-          <div className="memory-card">
-            <div className="memory-title">
-              <span>结构化记忆</span>
-              <small>{memories.length}</small>
-            </div>
-            {memories.length ? (
-              <ul>
-                {memories.slice(0, 4).map((memory) => (
-                  <li key={memory.memory_id}>
-                    {memory.pinned ? "★ " : ""}
-                    {memory.text}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>普通陈述会生成建议；“请记住…”会直接保存。</p>
-            )}
-          </div>
-        </section>
-
-        <section className="conversation-panel" aria-label="Conversation">
-          <div className="conversation-header">
-            <div>
-              <p>SESSION</p>
+            <span className="vn-brand-copy">
+              <small>LOCAL CHARACTER STORY</small>
               <strong>
-                {sessionId ? sessionId.slice(0, 8) : "connecting"}
+                ChatWaifu <em>NEXT</em>
               </strong>
-            </div>
-            <div className="conversation-actions">
-              <button
-                className="reset-button"
-                type="button"
-                onClick={() => void reset()}
-                disabled={!sessionId || resetting}
-                aria-label="重置对话和记忆"
-              >
-                {resetting ? "重置中…" : "↻ 重置"}
-              </button>
-              <button
-                className="interrupt-button"
-                type="button"
-                onClick={() => void interruptActive()}
-                disabled={!sessionId || resetting}
-              >
-                ■ 打断
-              </button>
-            </div>
+            </span>
+          </a>
+          <div className={"vn-runtime " + connection}>
+            <i />
+            <span>
+              {connection === "connected" ? "LOCAL LINK" : connection}
+            </span>
+            <small>{health?.providers.tts ?? "voice offline"}</small>
           </div>
+        </header>
 
-          <div className={`voice-bar ${voiceConnected ? "active" : ""}`}>
-            <div className="voice-controls">
+        <div className="vn-character-title">
+          <p>綾地 寧々</p>
+          <h1>{character?.display_name ?? "绫地宁宁"}</h1>
+          <span>{character?.tagline ?? "正在连接角色 Runtime…"}</span>
+        </div>
+
+        <button
+          className={`avatar-frame vn-avatar framing-${avatarFraming}`}
+          type="button"
+          onClick={touch}
+          aria-label="Touch avatar"
+          data-avatar-status={snapshot?.status ?? "loading"}
+        >
+          <canvas key={rendererKind} ref={canvasRef} />
+          <span className="avatar-state">
+            {rendererKind === "live2d" ? "Live2D" : "Fallback"} ·{" "}
+            {snapshot?.runtime.state ?? "loading"} ·{" "}
+            {snapshot?.runtime.expression ?? "neutral"}
+            {snapshot?.runtime.motion ? ` · ${snapshot.runtime.motion}` : ""}
+          </span>
+        </button>
+
+        {avatarWarning ? (
+          <p className="avatar-warning" title={avatarWarning}>
+            Live2D 未就绪，当前使用安全回退
+          </p>
+        ) : null}
+
+        <nav className="vn-system-menu" aria-label="游戏菜单">
+          <SkillsControlCenter sessionId={sessionId} />
+          <MemoryControlCenter
+            sessionId={sessionId}
+            onChanged={refreshMemories}
+          />
+          <button
+            type="button"
+            aria-pressed={historyOpen}
+            onClick={() => {
+              setHistoryOpen((open) => !open);
+              setSettingsOpen(false);
+            }}
+          >
+            <small>LOG</small>
+            历史
+          </button>
+          <button
+            type="button"
+            aria-pressed={settingsOpen}
+            onClick={() => {
+              setSettingsOpen((open) => !open);
+              setHistoryOpen(false);
+            }}
+          >
+            <small>CONFIG</small>
+            设置
+          </button>
+        </nav>
+
+        {historyOpen ? (
+          <aside className="vn-history-panel" aria-label="对话历史">
+            <header>
+              <div>
+                <small>BACKLOG</small>
+                <strong>对话历史</strong>
+              </div>
               <button
-                className="microphone-button"
                 type="button"
-                onClick={() => void toggleVoice()}
-                disabled={
-                  !sessionId ||
-                  connection !== "connected" ||
-                  resetting ||
-                  voiceState === "unsupported"
-                }
-                aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
-                aria-pressed={voiceConnected}
+                aria-label="关闭对话历史"
+                onClick={() => setHistoryOpen(false)}
               >
-                <span>{voiceConnected ? "●" : "◉"}</span>
-                {voiceConnected ? "断开语音" : "开启语音"}
+                ×
               </button>
-              {voiceConnected && voiceActivationMode === "push_to_talk" ? (
-                <button
-                  className={`push-to-talk-button ${voiceTransmitting ? "transmitting" : ""}`}
-                  type="button"
-                  onPointerDown={(event) => {
-                    event.currentTarget.setPointerCapture?.(event.pointerId);
-                    beginPushToTalk();
-                  }}
-                  onPointerUp={endPushToTalk}
-                  onPointerCancel={endPushToTalk}
-                  onKeyDown={(event) => {
-                    if (
-                      !event.repeat &&
-                      (event.key === " " || event.key === "Enter")
-                    ) {
-                      event.preventDefault();
-                      beginPushToTalk();
-                    }
-                  }}
-                  onKeyUp={(event) => {
-                    if (event.key === " " || event.key === "Enter") {
-                      event.preventDefault();
-                      endPushToTalk();
-                    }
-                  }}
-                  onBlur={endPushToTalk}
-                  aria-label="按住说话"
-                  aria-pressed={voiceTransmitting}
-                >
-                  {voiceTransmitting ? "松开发送" : "按住说话"}
-                </button>
-              ) : null}
+            </header>
+            <div className="vn-history-list" ref={historyRef}>
+              {messages.length ? (
+                messages.map((message) => (
+                  <article
+                    className={"vn-history-message " + message.role}
+                    key={message.id}
+                  >
+                    <span>
+                      {message.role === "user"
+                        ? "你"
+                        : (character?.display_name ?? "绫地宁宁")}
+                    </span>
+                    <p>{message.text}</p>
+                  </article>
+                ))
+              ) : (
+                <p className="vn-history-empty">故事还没有开始。</p>
+              )}
+            </div>
+          </aside>
+        ) : null}
+
+        {settingsOpen ? (
+          <aside className="vn-settings-panel" aria-label="语音设置">
+            <header>
+              <div>
+                <small>VOICE &amp; SYSTEM</small>
+                <strong>语音设置</strong>
+              </div>
+              <button
+                type="button"
+                aria-label="关闭语音设置"
+                onClick={() => setSettingsOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+            <label>
+              <span>角色构图</span>
+              <select
+                value={avatarFraming}
+                onChange={(event) =>
+                  setAvatarFraming(event.target.value as "bust" | "full")
+                }
+                aria-label="角色构图"
+              >
+                <option value="bust">上半身（推荐）</option>
+                <option value="full">全身</option>
+              </select>
+            </label>
+            <label>
+              <span>角色声音</span>
+              <select
+                value={ttsProviderId}
+                onChange={(event) => void changeTtsProvider(event.target.value)}
+                disabled={!sessionId || ttsSwitching}
+                aria-label="选择语音模型"
+              >
+                {ttsProviders.length === 0 ? (
+                  <option value={ttsProviderId}>{ttsProviderId}</option>
+                ) : (
+                  ttsProviders.map((provider) => (
+                    <option
+                      value={provider.provider_id}
+                      key={provider.provider_id}
+                      disabled={provider.status === "unavailable"}
+                    >
+                      {provider.display_name}
+                      {provider.model_loaded ? " · 已加载" : ""}
+                      {provider.status === "unavailable" ? " · 离线" : ""}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label>
+              <span>语音响应方式</span>
+              <select
+                value={voiceActivationMode}
+                onChange={(event) =>
+                  setVoiceActivationMode(
+                    event.target.value as "push_to_talk" | "open_mic",
+                  )
+                }
+                aria-label="语音响应方式"
+              >
+                <option value="push_to_talk">按住说话（推荐）</option>
+                <option value="open_mic">自由对话（会听到附近人声）</option>
+              </select>
+            </label>
+            <label>
+              <span>输入设备</span>
+              <select
+                value={voiceDeviceId}
+                onFocus={() => void refreshVoiceDevices()}
+                onChange={(event) => setVoiceDeviceId(event.target.value)}
+                disabled={voiceConnected || voiceState === "unsupported"}
+                aria-label="选择麦克风"
+              >
+                {voiceDevices.length === 0 ? (
+                  <option value="">默认麦克风</option>
+                ) : (
+                  voiceDevices.map((device) => (
+                    <option value={device.deviceId} key={device.deviceId}>
+                      {device.label}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <div className="vn-mic-status">
               <div className="input-meter" aria-label="麦克风音量">
                 <i style={{ transform: `scaleX(${voiceInputLevel})` }} />
               </div>
@@ -242,130 +312,111 @@ export function ChatDemoPage() {
                 )}
               </small>
             </div>
-            <div className="voice-options">
-              <label>
-                <span>输出声音</span>
-                <select
-                  value={ttsProviderId}
-                  onChange={(event) =>
-                    void changeTtsProvider(event.target.value)
-                  }
-                  disabled={!sessionId || ttsSwitching}
-                  aria-label="选择语音模型"
-                >
-                  {ttsProviders.length === 0 ? (
-                    <option value={ttsProviderId}>{ttsProviderId}</option>
-                  ) : (
-                    ttsProviders.map((provider) => (
-                      <option
-                        value={provider.provider_id}
-                        key={provider.provider_id}
-                        disabled={provider.status === "unavailable"}
-                      >
-                        {provider.display_name}
-                        {provider.model_loaded ? " · 已加载" : ""}
-                        {provider.status === "unavailable" ? " · 离线" : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-              <label>
-                <span>响应方式</span>
-                <select
-                  value={voiceActivationMode}
-                  onChange={(event) =>
-                    setVoiceActivationMode(
-                      event.target.value as "push_to_talk" | "open_mic",
-                    )
-                  }
-                  aria-label="语音响应方式"
-                >
-                  <option value="push_to_talk">按住说话（推荐）</option>
-                  <option value="open_mic">自由对话（会听到附近人声）</option>
-                </select>
-              </label>
-              <label>
-                <span>输入设备</span>
-                <select
-                  value={voiceDeviceId}
-                  onFocus={() => void refreshVoiceDevices()}
-                  onChange={(event) => setVoiceDeviceId(event.target.value)}
-                  disabled={voiceConnected || voiceState === "unsupported"}
-                  aria-label="选择麦克风"
-                >
-                  {voiceDevices.length === 0 ? (
-                    <option value="">默认麦克风</option>
-                  ) : (
-                    voiceDevices.map((device) => (
-                      <option value={device.deviceId} key={device.deviceId}>
-                        {device.label}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
+          </aside>
+        ) : null}
+
+        <div className="conversation-notices vn-notices">
+          {error ? (
+            <div className="runtime-error" role="alert">
+              <strong>连接提示</strong>
+              <span>{error}</span>
+              {connection === "offline" ? <code>make demo</code> : null}
             </div>
+          ) : null}
+          {voiceTranscript && voiceActivity !== "idle" ? (
+            <div className="voice-transcript" aria-live="polite">
+              <span>
+                {voiceActivity === "transcribing" ? "转写中" : "听到"}
+              </span>
+              {voiceTranscript}
+            </div>
+          ) : null}
+        </div>
+
+        <section className="vn-dialogue" aria-label="当前对话">
+          <div className="vn-nameplate">
+            <small>{currentMessage?.role === "user" ? "PLAYER" : "NENE"}</small>
+            <strong>{currentSpeaker}</strong>
           </div>
-
-          <div className="transcript" ref={transcriptRef} aria-live="polite">
-            {messages.length === 0 && (
-              <article className="message assistant welcome-message">
-                <div className="message-avatar">
-                  {character?.display_name.slice(0, 1) ?? "宁"}
-                </div>
-                <div>
-                  <span>{character?.display_name ?? "绫地宁宁"}</span>
-                  <p>
-                    {character?.greeting ??
-                      "你好呀，Runtime 准备好后我们就可以聊天。"}
-                  </p>
-                </div>
-              </article>
-            )}
-            {messages.map((message) => (
-              <article className={`message ${message.role}`} key={message.id}>
-                <div className="message-avatar">
-                  {message.role === "user"
-                    ? "你"
-                    : (character?.display_name.slice(0, 1) ?? "宁")}
-                </div>
-                <div>
-                  <span>
-                    {message.role === "user"
-                      ? "你"
-                      : (character?.display_name ?? "绫地宁宁")}
-                  </span>
-                  <p>
-                    {message.text}
-                    {message.pending && <i className="typing-caret" />}
-                  </p>
-                </div>
-              </article>
-            ))}
+          <div className="vn-dialogue-copy" aria-live="polite">
+            <p>
+              {currentText}
+              {currentMessage?.pending ? <i className="typing-caret" /> : null}
+            </p>
+            <span className="vn-continue" aria-hidden="true" />
           </div>
-
-          <div className="conversation-notices">
-            {error && (
-              <div className="runtime-error" role="alert">
-                <strong>连接提示</strong>
-                <span>{error}</span>
-                {connection === "offline" && <code>make demo</code>}
-              </div>
-            )}
-
-            {voiceTranscript && voiceActivity !== "idle" ? (
-              <div className="voice-transcript" aria-live="polite">
-                <span>
-                  {voiceActivity === "transcribing" ? "转写中" : "听到"}
-                </span>
-                {voiceTranscript}
-              </div>
+          <div className="vn-dialogue-actions">
+            <button
+              className={"vn-voice-button" + (voiceConnected ? " active" : "")}
+              type="button"
+              onClick={() => void toggleVoice()}
+              disabled={
+                !sessionId ||
+                connection !== "connected" ||
+                resetting ||
+                voiceState === "unsupported"
+              }
+              aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
+              aria-pressed={voiceConnected}
+            >
+              <small>VOICE</small>
+              {voiceConnected ? "已连接" : "语音"}
+            </button>
+            {voiceConnected && voiceActivationMode === "push_to_talk" ? (
+              <button
+                className={
+                  "vn-push-to-talk" + (voiceTransmitting ? " transmitting" : "")
+                }
+                type="button"
+                onPointerDown={(event) => {
+                  event.currentTarget.setPointerCapture?.(event.pointerId);
+                  beginPushToTalk();
+                }}
+                onPointerUp={endPushToTalk}
+                onPointerCancel={endPushToTalk}
+                onKeyDown={(event) => {
+                  if (
+                    !event.repeat &&
+                    (event.key === " " || event.key === "Enter")
+                  ) {
+                    event.preventDefault();
+                    beginPushToTalk();
+                  }
+                }}
+                onKeyUp={(event) => {
+                  if (event.key === " " || event.key === "Enter") {
+                    event.preventDefault();
+                    endPushToTalk();
+                  }
+                }}
+                onBlur={endPushToTalk}
+                aria-label="按住说话"
+                aria-pressed={voiceTransmitting}
+              >
+                {voiceTransmitting ? "松开发送" : "按住说话"}
+              </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => void interruptActive()}
+              disabled={!sessionId || resetting}
+              aria-label="打断当前回复"
+            >
+              <small>STOP</small>
+              打断
+            </button>
+            <button
+              type="button"
+              onClick={() => void reset()}
+              disabled={!sessionId || resetting}
+              aria-label="重置对话和记忆"
+            >
+              <small>RESET</small>
+              {resetting ? "重置中" : "重置"}
+            </button>
           </div>
-
           <form
-            className="composer"
+            className="vn-composer"
             onSubmit={(event) => {
               event.preventDefault();
               send();
@@ -380,9 +431,9 @@ export function ChatDemoPage() {
                   send();
                 }
               }}
-              placeholder={`和${character?.display_name ?? "绫地宁宁"}说点什么…  Enter 发送 / Shift+Enter 换行`}
+              placeholder={`和${character?.display_name ?? "绫地宁宁"}说点什么…`}
               aria-label="Message"
-              rows={2}
+              rows={1}
               disabled={!canSend}
             />
             <button
@@ -390,16 +441,17 @@ export function ChatDemoPage() {
               disabled={!canSend || !draft.trim()}
               aria-label="Send message"
             >
-              <span>发送</span>
-              <b>↗</b>
+              发送
+              <span>↵</span>
             </button>
           </form>
-          <p className="demo-disclosure">
-            {character?.content_notice ??
-              "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
-          </p>
         </section>
-      </div>
+
+        <p className="vn-disclosure">
+          {character?.content_notice ??
+            "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
+        </p>
+      </section>
     </main>
   );
 }

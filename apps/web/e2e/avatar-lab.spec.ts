@@ -85,27 +85,31 @@ test("missing proprietary Cubism Core produces an actionable error", async ({
   );
 });
 
-test("desktop chat keeps the avatar visible while only the transcript scrolls", async ({
+test("desktop chat keeps the visual-novel stage fixed while backlog scrolls", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
-  await expect(page.locator(".conversation-panel")).toBeVisible();
+  await expect(page.locator(".vn-stage")).toBeVisible();
+  await expect(page.getByRole("region", { name: "当前对话" })).toBeVisible();
+  await page.getByRole("button", { name: /LOG.*历史/ }).click();
+  await expect(
+    page.getByRole("complementary", { name: "对话历史" }),
+  ).toBeVisible();
   await page.evaluate(`
     (() => {
-      const transcript = document.querySelector(".transcript");
-      if (!transcript) throw new Error("transcript is missing");
+      const transcript = document.querySelector(".vn-history-list");
+      if (!transcript) throw new Error("history list is missing");
       for (let index = 0; index < 40; index += 1) {
         const message = document.createElement("article");
-        message.className = index % 2 ? "message user" : "message assistant";
-        const avatar = document.createElement("div");
-        avatar.className = "message-avatar";
-        avatar.textContent = index % 2 ? "你" : "雾";
-        const body = document.createElement("div");
+        message.className = index % 2
+          ? "vn-history-message user"
+          : "vn-history-message assistant";
+        const speaker = document.createElement("span");
+        speaker.textContent = index % 2 ? "你" : "绫地宁宁";
         const text = document.createElement("p");
         text.textContent = "用于滚动边界验收的第 " + (index + 1) + " 条消息。";
-        body.append(text);
-        message.append(avatar, body);
+        message.append(speaker, text);
         transcript.append(message);
       }
     })()
@@ -113,8 +117,8 @@ test("desktop chat keeps the avatar visible while only the transcript scrolls", 
 
   const transcriptMetrics = await page.evaluate<TranscriptMetrics>(`
     (() => {
-      const transcript = document.querySelector(".transcript");
-      if (!transcript) throw new Error("transcript is missing");
+      const transcript = document.querySelector(".vn-history-list");
+      if (!transcript) throw new Error("history list is missing");
       return {
         transcriptClientHeight: transcript.clientHeight,
         transcriptScrollHeight: transcript.scrollHeight,
@@ -126,19 +130,17 @@ test("desktop chat keeps the avatar visible while only the transcript scrolls", 
     "document.documentElement.scrollHeight",
   );
   const avatar = await page.locator(".avatar-frame").boundingBox();
-  const grid = await page.locator(".demo-grid").boundingBox();
-  const voiceBar = await page.locator(".voice-bar").boundingBox();
-  const transcript = await page.locator(".transcript").boundingBox();
-  const microphoneButton = await page
-    .locator(".microphone-button")
-    .boundingBox();
-  if (!avatar || !grid || !voiceBar || !transcript || !microphoneButton) {
+  const stage = await page.locator(".vn-stage").boundingBox();
+  const dialogue = await page.locator(".vn-dialogue").boundingBox();
+  const transcript = await page.locator(".vn-history-list").boundingBox();
+  const microphoneButton = await page.locator(".vn-voice-button").boundingBox();
+  if (!avatar || !stage || !dialogue || !transcript || !microphoneButton) {
     throw new Error("chat layout is incomplete");
   }
   const viewportHeight = page.viewportSize()?.height ?? 0;
   const microphoneHitTarget = await page.evaluate<boolean>(`
     (() => {
-      const button = document.querySelector(".microphone-button");
+      const button = document.querySelector(".vn-voice-button");
       if (!button) return false;
       const bounds = button.getBoundingClientRect();
       return document
@@ -155,10 +157,61 @@ test("desktop chat keeps the avatar visible while only the transcript scrolls", 
     transcriptMetrics.transcriptClientHeight,
   );
   expect(transcriptMetrics.transcriptOverflow).toBe("auto");
-  expect(voiceBar.y + voiceBar.height).toBeLessThanOrEqual(transcript.y + 1);
   expect(microphoneHitTarget).toBe(true);
   expect(avatar.y + avatar.height).toBeLessThanOrEqual(viewportHeight);
-  expect(grid.y + grid.height).toBeLessThanOrEqual(viewportHeight);
+  expect(stage.y + stage.height).toBeLessThanOrEqual(viewportHeight);
+  expect(dialogue.y + dialogue.height).toBeLessThanOrEqual(viewportHeight);
+
+  await page.getByRole("button", { name: "关闭对话历史" }).click();
+  await page.getByRole("button", { name: /CONFIG.*设置/ }).click();
+  await expect(
+    page.getByRole("complementary", { name: "语音设置" }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "角色构图" })).toHaveValue(
+    "bust",
+  );
+  await page.getByRole("combobox", { name: "角色构图" }).selectOption("full");
+  await expect(page.locator(".vn-avatar")).toHaveClass(/framing-full/);
+  await expect(
+    page.getByRole("combobox", { name: "语音响应方式" }),
+  ).toBeVisible();
+});
+
+test("visual-novel controls remain reachable on a narrow viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.locator(".vn-stage")).toBeVisible();
+  await expect(page.getByRole("region", { name: "当前对话" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+  await page.getByRole("button", { name: /CONFIG.*设置/ }).click();
+  await expect(
+    page.getByRole("complementary", { name: "语音设置" }),
+  ).toBeVisible();
+
+  await expect
+    .poll(() =>
+      page.evaluate<number>(`
+        (() => {
+          const panel = document.querySelector(".vn-settings-panel");
+          if (!panel) return Number.POSITIVE_INFINITY;
+          const bounds = panel.getBoundingClientRect();
+          return Math.max(
+            0,
+            -bounds.left,
+            bounds.right - window.innerWidth,
+            -bounds.top,
+            bounds.bottom - window.innerHeight,
+          );
+        })()
+      `),
+    )
+    .toBeLessThanOrEqual(1);
+  expect(
+    await page.evaluate<number>("document.documentElement.scrollHeight"),
+  ).toBeLessThanOrEqual(844);
 });
 
 test("official bridge renders the locally supplied Live2D model", async ({
@@ -179,8 +232,9 @@ test("official bridge renders the locally supplied Live2D model", async ({
   ).not.toHaveText("0");
 
   await page.getByRole("button", { name: "happy" }).click();
-  await page.getByRole("button", { name: "headpat" }).click();
   await expect(page.getByTestId("semantic-state")).toContainText("happy");
+  await page.getByRole("button", { name: "headpat" }).click();
+  await expect(page.getByTestId("semantic-state")).toContainText("headpat");
 
   const screenshot = await page.getByTestId("avatar-canvas").screenshot({
     animations: "disabled",
@@ -195,10 +249,12 @@ test("main chat uses the installed Live2D renderer", async ({
   test.skip(!realVendorReady, "local licensed Live2D vendor assets are absent");
 
   await page.goto("/");
-  await expect(page.locator(".avatar-state")).toContainText("Live2D · idle", {
+  const avatar = page.getByRole("button", { name: "Touch avatar" });
+  await expect(avatar).toHaveAttribute("data-avatar-status", "ready", {
     timeout: 25_000,
   });
-  await page.getByRole("button", { name: "Touch avatar" }).click();
+  await expect(page.locator(".avatar-state")).toContainText("Live2D · idle");
+  await avatar.click();
   await expect(page.locator(".avatar-state")).toContainText("happy");
   await expect(page.locator(".avatar-state")).toContainText("headpat");
 
