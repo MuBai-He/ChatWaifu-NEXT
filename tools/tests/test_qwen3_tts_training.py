@@ -140,6 +140,9 @@ def test_colab_notebook_is_pinned_and_all_code_cells_parse() -> None:
     assert 'ATTENTION_IMPLEMENTATION = "sdpa"' in source
     assert "qwen3-tts-base-{MODEL_SIZE.lower()}" in source
     assert "nene-qwen3-{MODEL_SIZE.lower()}-{run_mode}-output" in source
+    assert source.count("sys.path.insert(0, str(QWEN_ROOT))") == 2
+    assert source.count("importlib.invalidate_caches()") == 2
+    assert "qwen_tts import OK" in source
     for cell in notebook["cells"]:
         if cell.get("cell_type") == "code":
             ast.parse("".join(cell.get("source", [])))
