@@ -62,6 +62,27 @@ class AssistantGenerationStartedPayload(ProtocolModel):
     backend_kind: str = Field(min_length=1)
 
 
+class AssistantPlaybackPayload(ProtocolModel):
+    stream_id: UUID
+    segment_id: UUID
+    played_pts_ms: int = Field(ge=0)
+    buffered_ms: int = Field(ge=0)
+    client_clock_ms: int = Field(ge=0)
+    transport: Literal["audio_element", "webrtc"]
+
+
+class AssistantPlaybackStoppedPayload(AssistantPlaybackPayload):
+    reason: Literal["ended", "interrupted", "error", "queue_cleared"]
+    completed: bool
+
+
+class AssistantSpokenTextCommittedPayload(ProtocolModel):
+    stream_id: UUID
+    segment_id: UUID
+    text: str = Field(min_length=1, max_length=20_000)
+    spoken_text: str = Field(min_length=1, max_length=100_000)
+
+
 class AvatarCueEmittedPayload(ProtocolModel):
     cue: AvatarCue
 
@@ -110,6 +131,30 @@ class AssistantGenerationStartedEvent(
     event_type: Literal["assistant.generation_started"] = "assistant.generation_started"
 
 
+class AssistantPlaybackStartedEvent(
+    EventEnvelope[Literal["assistant.playback_started"], AssistantPlaybackPayload]
+):
+    event_type: Literal["assistant.playback_started"] = "assistant.playback_started"
+
+
+class AssistantPlaybackProgressEvent(
+    EventEnvelope[Literal["assistant.playback_progress"], AssistantPlaybackPayload]
+):
+    event_type: Literal["assistant.playback_progress"] = "assistant.playback_progress"
+
+
+class AssistantPlaybackStoppedEvent(
+    EventEnvelope[Literal["assistant.playback_stopped"], AssistantPlaybackStoppedPayload]
+):
+    event_type: Literal["assistant.playback_stopped"] = "assistant.playback_stopped"
+
+
+class AssistantSpokenTextCommittedEvent(
+    EventEnvelope[Literal["assistant.spoken_text_committed"], AssistantSpokenTextCommittedPayload]
+):
+    event_type: Literal["assistant.spoken_text_committed"] = "assistant.spoken_text_committed"
+
+
 class AvatarCueEmittedEvent(EventEnvelope[Literal["avatar.cue_emitted"], AvatarCueEmittedPayload]):
     event_type: Literal["avatar.cue_emitted"] = "avatar.cue_emitted"
 
@@ -131,10 +176,6 @@ type GenericCoreEventType = Literal[
     "assistant.generation_completed",
     "assistant.audio_stream_started",
     "assistant.audio_chunk_queued",
-    "assistant.playback_started",
-    "assistant.playback_progress",
-    "assistant.playback_stopped",
-    "assistant.spoken_text_committed",
     "conversation.interruption_requested",
     "conversation.interrupted",
     "conversation.recovered",
@@ -176,10 +217,6 @@ GENERIC_CORE_EVENT_TYPES: tuple[GenericCoreEventType, ...] = (
     "assistant.generation_completed",
     "assistant.audio_stream_started",
     "assistant.audio_chunk_queued",
-    "assistant.playback_started",
-    "assistant.playback_progress",
-    "assistant.playback_stopped",
-    "assistant.spoken_text_committed",
     "conversation.interruption_requested",
     "conversation.interrupted",
     "conversation.recovered",
@@ -223,6 +260,10 @@ type EventModel = (
     | UserTranscriptPartialEvent
     | UserTranscriptFinalEvent
     | AssistantGenerationStartedEvent
+    | AssistantPlaybackStartedEvent
+    | AssistantPlaybackProgressEvent
+    | AssistantPlaybackStoppedEvent
+    | AssistantSpokenTextCommittedEvent
     | AvatarCueEmittedEvent
     | ErrorRaisedEvent
     | GenericCoreEvent

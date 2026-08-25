@@ -2,7 +2,11 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
-from chatwaifu_protocol.events import GenericCoreEvent, SessionCreatedEvent, SessionCreatedPayload
+from chatwaifu_protocol.events import (
+    AssistantPlaybackStoppedEvent,
+    SessionCreatedEvent,
+    SessionCreatedPayload,
+)
 from chatwaifu_protocol.registry import (
     UnknownMessageType,
     UnsupportedSchemaVersion,
@@ -60,12 +64,32 @@ def test_rejects_unknown_event_type_and_invalid_payload() -> None:
         create_default_registry().parse_event(raw)
 
 
-def test_accepts_declared_core_event_without_pretending_its_future_payload_is_specialized() -> None:
+def test_parses_playback_ack_event_as_a_specialized_contract() -> None:
     raw = make_event().model_dump(mode="json")
     raw["event_type"] = "assistant.playback_stopped"
-    raw["payload"] = {"reason": "completed"}
+    raw["generation_id"] = "00000000-0000-4000-8000-000000000301"
+    raw["payload"] = {
+        "stream_id": "00000000-0000-4000-8000-000000000401",
+        "segment_id": "00000000-0000-4000-8000-000000000402",
+        "played_pts_ms": 1840,
+        "buffered_ms": 0,
+        "client_clock_ms": 12040,
+        "transport": "audio_element",
+        "reason": "ended",
+        "completed": True,
+    }
 
     parsed = create_default_registry().parse_event(raw)
 
-    assert isinstance(parsed, GenericCoreEvent)
+    assert isinstance(parsed, AssistantPlaybackStoppedEvent)
     assert parsed.event_type == "assistant.playback_stopped"
+    assert parsed.payload.played_pts_ms == 1840
+
+
+def test_rejects_incomplete_playback_ack_payload() -> None:
+    raw = make_event().model_dump(mode="json")
+    raw["event_type"] = "assistant.playback_progress"
+    raw["payload"] = {"played_pts_ms": 100}
+
+    with pytest.raises(ValidationError):
+        create_default_registry().parse_event(raw)

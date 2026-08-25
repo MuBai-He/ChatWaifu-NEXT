@@ -152,6 +152,57 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
   z
     .object({
       ...eventBase,
+      event_type: z.enum([
+        "assistant.playback_started",
+        "assistant.playback_progress",
+      ]),
+      payload: z
+        .object({
+          stream_id: uuid,
+          segment_id: uuid,
+          played_pts_ms: z.number().int().nonnegative(),
+          buffered_ms: z.number().int().nonnegative(),
+          client_clock_ms: z.number().int().nonnegative(),
+          transport: z.enum(["audio_element", "webrtc"]),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("assistant.playback_stopped"),
+      payload: z
+        .object({
+          stream_id: uuid,
+          segment_id: uuid,
+          played_pts_ms: z.number().int().nonnegative(),
+          buffered_ms: z.number().int().nonnegative(),
+          client_clock_ms: z.number().int().nonnegative(),
+          transport: z.enum(["audio_element", "webrtc"]),
+          reason: z.enum(["ended", "interrupted", "error", "queue_cleared"]),
+          completed: z.boolean(),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("assistant.spoken_text_committed"),
+      payload: z
+        .object({
+          stream_id: uuid,
+          segment_id: uuid,
+          text: z.string().min(1).max(20_000),
+          spoken_text: z.string().min(1).max(100_000),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
       event_type: z.literal("avatar.cue_emitted"),
       payload: z.object({ cue: avatarCueSchema }).passthrough(),
     })
@@ -191,10 +242,6 @@ const genericCoreEventTypes = [
   "assistant.generation_completed",
   "assistant.audio_stream_started",
   "assistant.audio_chunk_queued",
-  "assistant.playback_started",
-  "assistant.playback_progress",
-  "assistant.playback_stopped",
-  "assistant.spoken_text_committed",
   "conversation.interruption_requested",
   "conversation.interrupted",
   "conversation.recovered",
@@ -268,6 +315,26 @@ const commandEnvelopeSchema = z.discriminatedUnion("command_type", [
       ...commandBase,
       command_type: z.literal("cmd.conversation.interrupt"),
       payload: z.object({ reason: z.string().min(1) }).passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...commandBase,
+      command_type: z.literal("cmd.playback.ack"),
+      payload: z
+        .object({
+          phase: z.enum(["started", "progress", "stopped", "queue_cleared"]),
+          stream_id: uuid,
+          segment_id: uuid,
+          played_pts_ms: z.number().int().nonnegative(),
+          buffered_ms: z.number().int().nonnegative(),
+          client_clock_ms: z.number().int().nonnegative(),
+          transport: z.enum(["audio_element", "webrtc"]),
+          reason: z
+            .enum(["ended", "interrupted", "error", "queue_cleared"])
+            .nullish(),
+        })
+        .passthrough(),
     })
     .passthrough(),
 ]);

@@ -70,7 +70,7 @@ describe("cross-language protocol fixtures", () => {
     ).toBeTruthy();
   });
 
-  it("accepts declared generic core events and rejects undeclared types", () => {
+  it("validates specialized playback events and rejects undeclared types", () => {
     const event = fixture("python-session-created-event.json") as Record<
       string,
       unknown
@@ -79,12 +79,51 @@ describe("cross-language protocol fixtures", () => {
       parseEventEnvelope({
         ...event,
         event_type: "assistant.playback_stopped",
-        payload: { reason: "completed" },
+        generation_id: "00000000-0000-4000-8000-000000000301",
+        payload: {
+          stream_id: "00000000-0000-4000-8000-000000000401",
+          segment_id: "00000000-0000-4000-8000-000000000402",
+          played_pts_ms: 1840,
+          buffered_ms: 0,
+          client_clock_ms: 12040,
+          transport: "audio_element",
+          reason: "ended",
+          completed: true,
+        },
       }).event_type,
     ).toBe("assistant.playback_stopped");
     expect(() =>
+      parseEventEnvelope({
+        ...event,
+        event_type: "assistant.playback_progress",
+        payload: { played_pts_ms: 100 },
+      }),
+    ).toThrow();
+    expect(() =>
       parseEventEnvelope({ ...event, event_type: "assistant.future_event" }),
     ).toThrow();
+  });
+
+  it("validates browser playback acknowledgement commands", () => {
+    const command = fixture("typescript-text-send-command.json") as Record<
+      string,
+      unknown
+    >;
+    const parsed = parseCommandEnvelope({
+      ...command,
+      command_type: "cmd.playback.ack",
+      generation_id: "00000000-0000-4000-8000-000000000301",
+      payload: {
+        phase: "progress",
+        stream_id: "00000000-0000-4000-8000-000000000401",
+        segment_id: "00000000-0000-4000-8000-000000000402",
+        played_pts_ms: 640,
+        buffered_ms: 220,
+        client_clock_ms: 10840,
+        transport: "webrtc",
+      },
+    });
+    expect(parsed.command_type).toBe("cmd.playback.ack");
   });
 
   it("validates avatar cues and semantic interaction events", () => {

@@ -35,6 +35,17 @@ class ConversationInterruptPayload(ProtocolModel):
     reason: str = Field(default="user_interruption", min_length=1)
 
 
+class PlaybackAckPayload(ProtocolModel):
+    phase: Literal["started", "progress", "stopped", "queue_cleared"]
+    stream_id: UUID
+    segment_id: UUID
+    played_pts_ms: int = Field(ge=0)
+    buffered_ms: int = Field(ge=0)
+    client_clock_ms: int = Field(ge=0)
+    transport: Literal["audio_element", "webrtc"]
+    reason: Literal["ended", "interrupted", "error", "queue_cleared"] | None = None
+
+
 class SessionStartCommand(CommandEnvelope[Literal["cmd.session.start"], SessionStartPayload]):
     command_type: Literal["cmd.session.start"] = "cmd.session.start"
 
@@ -49,4 +60,10 @@ class ConversationInterruptCommand(
     command_type: Literal["cmd.conversation.interrupt"] = "cmd.conversation.interrupt"
 
 
-CommandModel = SessionStartCommand | TextSendCommand | ConversationInterruptCommand
+class PlaybackAckCommand(CommandEnvelope[Literal["cmd.playback.ack"], PlaybackAckPayload]):
+    command_type: Literal["cmd.playback.ack"] = "cmd.playback.ack"
+
+
+CommandModel = (
+    SessionStartCommand | TextSendCommand | ConversationInterruptCommand | PlaybackAckCommand
+)

@@ -9,17 +9,26 @@ from pydantic import BaseModel
 from chatwaifu_protocol.commands import (
     CommandModel,
     ConversationInterruptCommand,
+    PlaybackAckCommand,
     SessionStartCommand,
     TextSendCommand,
 )
 from chatwaifu_protocol.events import (
     GENERIC_CORE_EVENT_TYPES,
     AssistantGenerationStartedEvent,
+    AssistantPlaybackProgressEvent,
+    AssistantPlaybackStartedEvent,
+    AssistantPlaybackStoppedEvent,
+    AssistantSpokenTextCommittedEvent,
     AvatarCueEmittedEvent,
     ErrorRaisedEvent,
     EventModel,
     GenericCoreEvent,
     SessionCreatedEvent,
+    UserSpeechStartedEvent,
+    UserSpeechStoppedEvent,
+    UserTranscriptFinalEvent,
+    UserTranscriptPartialEvent,
     UserTurnCommittedEvent,
 )
 from chatwaifu_protocol.version import SUPPORTED_SCHEMA_MAJOR
@@ -90,7 +99,15 @@ def create_default_registry() -> SchemaRegistry:
     registry = SchemaRegistry()
     registry.register_event("session.created", SessionCreatedEvent)
     registry.register_event("user.turn_committed", UserTurnCommittedEvent)
+    registry.register_event("user.speech_started", UserSpeechStartedEvent)
+    registry.register_event("user.speech_stopped", UserSpeechStoppedEvent)
+    registry.register_event("user.transcript_partial", UserTranscriptPartialEvent)
+    registry.register_event("user.transcript_final", UserTranscriptFinalEvent)
     registry.register_event("assistant.generation_started", AssistantGenerationStartedEvent)
+    registry.register_event("assistant.playback_started", AssistantPlaybackStartedEvent)
+    registry.register_event("assistant.playback_progress", AssistantPlaybackProgressEvent)
+    registry.register_event("assistant.playback_stopped", AssistantPlaybackStoppedEvent)
+    registry.register_event("assistant.spoken_text_committed", AssistantSpokenTextCommittedEvent)
     registry.register_event("avatar.cue_emitted", AvatarCueEmittedEvent)
     registry.register_event("system.error_raised", ErrorRaisedEvent)
     for event_type in GENERIC_CORE_EVENT_TYPES:
@@ -98,4 +115,5 @@ def create_default_registry() -> SchemaRegistry:
     registry.register_command("cmd.session.start", SessionStartCommand)
     registry.register_command("cmd.text.send", TextSendCommand)
     registry.register_command("cmd.conversation.interrupt", ConversationInterruptCommand)
+    registry.register_command("cmd.playback.ack", PlaybackAckCommand)
     return registry

@@ -118,6 +118,188 @@
       "title": "ConversationInterruptPayload",
       "type": "object"
     },
+    "PlaybackAckCommand": {
+      "properties": {
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "command_type": {
+          "const": "cmd.playback.ack",
+          "default": "cmd.playback.ack",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Revision"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "issuer": {
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/PlaybackAckPayload"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "command_id",
+        "issued_at",
+        "issuer",
+        "payload"
+      ],
+      "title": "PlaybackAckCommand",
+      "type": "object"
+    },
+    "PlaybackAckPayload": {
+      "properties": {
+        "buffered_ms": {
+          "minimum": 0,
+          "title": "Buffered Ms",
+          "type": "integer"
+        },
+        "client_clock_ms": {
+          "minimum": 0,
+          "title": "Client Clock Ms",
+          "type": "integer"
+        },
+        "phase": {
+          "enum": [
+            "started",
+            "progress",
+            "stopped",
+            "queue_cleared"
+          ],
+          "title": "Phase",
+          "type": "string"
+        },
+        "played_pts_ms": {
+          "minimum": 0,
+          "title": "Played Pts Ms",
+          "type": "integer"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "ended",
+                "interrupted",
+                "error",
+                "queue_cleared"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        },
+        "transport": {
+          "enum": [
+            "audio_element",
+            "webrtc"
+          ],
+          "title": "Transport",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase",
+        "stream_id",
+        "segment_id",
+        "played_pts_ms",
+        "buffered_ms",
+        "client_clock_ms",
+        "transport"
+      ],
+      "title": "PlaybackAckPayload",
+      "type": "object"
+    },
     "SessionStartCommand": {
       "properties": {
         "command_id": {
@@ -370,6 +552,9 @@
     },
     {
       "$ref": "#/$defs/ConversationInterruptCommand"
+    },
+    {
+      "$ref": "#/$defs/PlaybackAckCommand"
     }
   ],
   "title": "CommandEnvelope",

@@ -150,6 +150,694 @@
       "title": "AssistantGenerationStartedPayload",
       "type": "object"
     },
+    "AssistantPlaybackPayload": {
+      "properties": {
+        "buffered_ms": {
+          "minimum": 0,
+          "title": "Buffered Ms",
+          "type": "integer"
+        },
+        "client_clock_ms": {
+          "minimum": 0,
+          "title": "Client Clock Ms",
+          "type": "integer"
+        },
+        "played_pts_ms": {
+          "minimum": 0,
+          "title": "Played Pts Ms",
+          "type": "integer"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        },
+        "transport": {
+          "enum": [
+            "audio_element",
+            "webrtc"
+          ],
+          "title": "Transport",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_id",
+        "segment_id",
+        "played_pts_ms",
+        "buffered_ms",
+        "client_clock_ms",
+        "transport"
+      ],
+      "title": "AssistantPlaybackPayload",
+      "type": "object"
+    },
+    "AssistantPlaybackProgressEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "assistant.playback_progress",
+          "default": "assistant.playback_progress",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AssistantPlaybackPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AssistantPlaybackProgressEvent",
+      "type": "object"
+    },
+    "AssistantPlaybackStartedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "assistant.playback_started",
+          "default": "assistant.playback_started",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AssistantPlaybackPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AssistantPlaybackStartedEvent",
+      "type": "object"
+    },
+    "AssistantPlaybackStoppedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "assistant.playback_stopped",
+          "default": "assistant.playback_stopped",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AssistantPlaybackStoppedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AssistantPlaybackStoppedEvent",
+      "type": "object"
+    },
+    "AssistantPlaybackStoppedPayload": {
+      "properties": {
+        "buffered_ms": {
+          "minimum": 0,
+          "title": "Buffered Ms",
+          "type": "integer"
+        },
+        "client_clock_ms": {
+          "minimum": 0,
+          "title": "Client Clock Ms",
+          "type": "integer"
+        },
+        "completed": {
+          "title": "Completed",
+          "type": "boolean"
+        },
+        "played_pts_ms": {
+          "minimum": 0,
+          "title": "Played Pts Ms",
+          "type": "integer"
+        },
+        "reason": {
+          "enum": [
+            "ended",
+            "interrupted",
+            "error",
+            "queue_cleared"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        },
+        "transport": {
+          "enum": [
+            "audio_element",
+            "webrtc"
+          ],
+          "title": "Transport",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_id",
+        "segment_id",
+        "played_pts_ms",
+        "buffered_ms",
+        "client_clock_ms",
+        "transport",
+        "reason",
+        "completed"
+      ],
+      "title": "AssistantPlaybackStoppedPayload",
+      "type": "object"
+    },
+    "AssistantSpokenTextCommittedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "assistant.spoken_text_committed",
+          "default": "assistant.spoken_text_committed",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/AssistantSpokenTextCommittedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "AssistantSpokenTextCommittedEvent",
+      "type": "object"
+    },
+    "AssistantSpokenTextCommittedPayload": {
+      "properties": {
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "spoken_text": {
+          "maxLength": 100000,
+          "minLength": 1,
+          "title": "Spoken Text",
+          "type": "string"
+        },
+        "stream_id": {
+          "format": "uuid",
+          "title": "Stream Id",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_id",
+        "segment_id",
+        "text",
+        "spoken_text"
+      ],
+      "title": "AssistantSpokenTextCommittedPayload",
+      "type": "object"
+    },
     "AvatarCue": {
       "properties": {
         "cue_id": {
@@ -682,10 +1370,6 @@
         "assistant.generation_completed",
         "assistant.audio_stream_started",
         "assistant.audio_chunk_queued",
-        "assistant.playback_started",
-        "assistant.playback_progress",
-        "assistant.playback_stopped",
-        "assistant.spoken_text_committed",
         "conversation.interruption_requested",
         "conversation.interrupted",
         "conversation.recovered",
@@ -1789,6 +2473,18 @@
     },
     {
       "$ref": "#/$defs/AssistantGenerationStartedEvent"
+    },
+    {
+      "$ref": "#/$defs/AssistantPlaybackStartedEvent"
+    },
+    {
+      "$ref": "#/$defs/AssistantPlaybackProgressEvent"
+    },
+    {
+      "$ref": "#/$defs/AssistantPlaybackStoppedEvent"
+    },
+    {
+      "$ref": "#/$defs/AssistantSpokenTextCommittedEvent"
     },
     {
       "$ref": "#/$defs/AvatarCueEmittedEvent"
