@@ -87,16 +87,15 @@ Schema 校验、统一错误、超时与取消。写入、破坏、外部通信�
 
 ## TTS 选择
 
-默认 Demo 没有采用 GPT-SoVITS。它适合作为已有且已获授权的角色音色训练/推理服务，但不适合
-成为基础安装依赖。当前分层策略是：
+页面默认选择本地 Qwen3-TTS MLX，GPT-SoVITS 是可切换的独立重模型 Worker；两者通过同一
+Runtime TTS provider contract 运行，不会把模型 SDK 或路径暴露给 Web。切换会先取消当前
+generation，并在不再使用旧 provider 时卸载模型。Kokoro 和 macOS 系统语音保留为轻量回退。
 
-1. sherpa-onnx + Kokoro v1.1：当前 `make demo` 的角色语音；中英双语、103 个 speaker、
-   24 kHz，不依赖 PyTorch。当前 speaker 是普通合成女声，不是原作声优克隆。
-2. macOS 系统语音：零下载的手动回退路径，直接运行 Runtime 且选择 `auto` 时可用。
-3. CosyVoice 3 0.5B worker：需要零样本音色克隆时优先评估的独立服务。
-4. GPT-SoVITS：保留为用户自行管理的外部 HTTP provider，不塞进主 Runtime。
-
-完整依据和边界见 [ADR 0012](docs/adr/0012-tiered-local-tts.md)。
+当前 Qwen 使用官方 0.6B Base 的 MLX 8-bit 推理版本，仍是公开基础声线。仓库提供一个本地、
+不可分发的宁宁数据审计与 Colab 微调包生成器；训练数据、WAV、checkpoint 和评测音频全部位于
+`.local/`，不会提交。使用方法和训练后评测门见
+[Qwen3-TTS 角色微调](docs/operations/qwen3-tts-character-finetuning.md)。统一接口、懒加载与
+本地模型边界见 [ADR 0014](docs/adr/0014-unified-selectable-neural-tts.md)。
 
 实时语音的数据流、进程边界和取消语义见
 [Realtime voice demo slice](docs/architecture/realtime-voice-demo.md)。
