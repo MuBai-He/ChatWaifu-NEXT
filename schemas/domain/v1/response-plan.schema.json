@@ -1,0 +1,84 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/response-plan.schema.json",
+  "properties": {
+    "expression": {
+      "enum": [
+        "neutral",
+        "happy",
+        "sad",
+        "angry",
+        "surprised",
+        "shy",
+        "curious"
+      ],
+      "title": "Expression",
+      "type": "string"
+    },
+    "intent": {
+      "enum": [
+        "comfort",
+        "answer",
+        "celebrate",
+        "reassure",
+        "tease",
+        "curious"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "motion": {
+      "anyOf": [
+        {
+          "enum": [
+            "headpat",
+            "stare",
+            "flustered",
+            "sing"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Motion"
+    },
+    "rationale": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "response_length": {
+      "default": "normal",
+      "enum": [
+        "short",
+        "normal"
+      ],
+      "title": "Response Length",
+      "type": "string"
+    },
+    "tone": {
+      "enum": [
+        "gentle",
+        "bright",
+        "shy",
+        "serious",
+        "playful",
+        "concerned"
+      ],
+      "title": "Tone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "intent",
+    "tone",
+    "expression",
+    "rationale"
+  ],
+  "title": "ResponsePlan",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

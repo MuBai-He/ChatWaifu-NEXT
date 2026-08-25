@@ -91,7 +91,7 @@ class MemorySource(ProtocolModel):
     source_event_id: UUID
     session_id: UUID
     turn_id: UUID | None = None
-    source_kind: Literal["user_turn", "memory_management", "migration"]
+    source_kind: Literal["user_turn", "assistant_spoken", "memory_management", "migration"]
     created_at: AwareDatetime
 
 

@@ -29,6 +29,7 @@
     "source_kind": {
       "enum": [
         "user_turn",
+        "assistant_spoken",
         "memory_management",
         "migration"
       ],

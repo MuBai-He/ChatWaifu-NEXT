@@ -42,6 +42,25 @@ export type Kind1 = 'pointer' | 'touch' | 'gaze' | 'drag' | 'system'
 export type Target = string | null
 export type X = number | null
 export type Y = number | null
+export type Arousal = number
+export type Attention = number
+export type Embarrassment = number
+export type Energy = number
+export type Tension = number
+export type UpdatedAt = string
+export type Valence = number
+export type CharacterId = string
+export type Affinity = number
+export type Comfort = number
+export type Familiarity = number
+export type InteractionCount = number
+export type PreferredAddress = string | null
+export type RecentTension = number
+export type Stage = 'acquaintance' | 'familiar' | 'trusted' | 'close'
+export type Trust = number
+export type UpdatedAt1 = string
+export type Revision = number
+export type UserScope = string
 export type Command = SessionStartCommand | TextSendCommand | ConversationInterruptCommand | PlaybackAckCommand
 export type CommandId = string
 export type CommandType = 'cmd.session.start'
@@ -50,7 +69,7 @@ export type ExpectedRevision = number | null
 export type GenerationId2 = string | null
 export type IssuedAt = string
 export type Issuer = string
-export type CharacterId = string
+export type CharacterId1 = string
 export type SchemaVersion = string
 export type SessionId = string | null
 export type TurnId = string | null
@@ -126,7 +145,7 @@ export type EventId = string
 export type EventType = 'session.created'
 export type GenerationId7 = string | null
 export type OccurredAt = string
-export type CharacterId1 = string
+export type CharacterId2 = string
 export type PrivacyLevel = 'public' | 'local' | 'private' | 'sensitive'
 export type SchemaVersion4 = string
 export type Sequence1 = number | null
@@ -358,7 +377,10 @@ export type GenericCoreEventType =
   | 'memory.superseded'
   | 'memory.tombstoned'
   | 'memory.recalled'
+  | 'memory.extraction_completed'
   | 'character.state_changed'
+  | 'character.response_planned'
+  | 'character.prompt_compiled'
   | 'relationship.state_changed'
   | 'avatar.interaction_received'
   | 'model.route_selected'
@@ -407,7 +429,7 @@ export type SourceEventIds = [string, ...string[]]
 export type SubjectId = string | null
 export type Supersedes = string | null
 export type Text4 = string
-export type UpdatedAt = string
+export type UpdatedAt2 = string
 export type ValidFrom = string | null
 export type ValidTo = string | null
 export type EntityRelevance = number
@@ -454,7 +476,7 @@ export type MemoryId2 = string
 export type SessionId20 = string
 export type SourceEventId = string
 export type SourceId = string
-export type SourceKind = 'user_turn' | 'memory_management' | 'migration'
+export type SourceKind = 'user_turn' | 'assistant_spoken' | 'memory_management' | 'migration'
 export type TurnId19 = string | null
 export type AdapterVersion = string
 export type Capabilities = string[]
@@ -499,7 +521,7 @@ export type InstallPath = string
 export type InstalledAt = string
 export type Name1 = string
 export type PluginId = string
-export type UpdatedAt1 = string
+export type UpdatedAt3 = string
 export type Version = string
 export type Description1 = string
 export type Name2 = string
@@ -525,6 +547,23 @@ export type Command1 =
   | [string, string, string, string, string, string, string, string]
 export type Kind3 = 'stdio'
 export type Version1 = string
+export type Budget = number
+export type ConversationTokens = number
+export type DroppedHistoryTurns = number
+export type MemoryTokens = number
+export type ModelRole = 'chat' | 'memory_extraction' | 'memory_summary' | 'embedding'
+export type PersonaTokens = number
+export type RelationshipTokens = number
+export type SafetyTokens = number
+export type SceneTokens = number
+export type StateTokens = number
+export type Used = number
+export type Expression = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
+export type Intent = 'comfort' | 'answer' | 'celebrate' | 'reassure' | 'tease' | 'curious'
+export type Motion = ('headpat' | 'stare' | 'flustered' | 'sing') | null
+export type Rationale1 = string
+export type ResponseLength = 'short' | 'normal'
+export type Tone = 'gentle' | 'bright' | 'shy' | 'serious' | 'playful' | 'concerned'
 export type BackendKind2 = string
 export type CloudContextPolicy = string
 export type EstimatedCost = number | null
@@ -532,14 +571,14 @@ export type FallbackChain = string[]
 export type ModelId1 = string
 export type ProviderId = string
 export type ReasonCodes = string[]
-export type CharacterId2 = string
+export type CharacterId3 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
 export type CreatedAt4 = string
-export type Revision = number
+export type Revision1 = number
 export type SessionId22 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
-export type UpdatedAt2 = string
+export type UpdatedAt4 = string
 export type BackgroundAllowed = boolean
 export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
@@ -589,7 +628,7 @@ export type SkillRunState =
   | 'cancelling'
   | 'cancelled'
   | 'expired'
-export type UpdatedAt3 = string
+export type UpdatedAt5 = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -614,6 +653,7 @@ export interface ProtocolCatalog {
   avatar_capabilities: AvatarCapabilityManifest
   avatar_cue: AvatarCue
   avatar_interaction: AvatarInteractionEvent
+  character_kernel: CharacterKernelSnapshot
   command: Command
   conversation_interruption: ConversationInterruption
   error: StructuredError
@@ -629,6 +669,8 @@ export interface ProtocolCatalog {
   permission_request: PermissionRequest
   plugin: PluginSnapshot
   plugin_manifest: PluginManifest
+  prompt_budget: PromptBudgetReport
+  response_plan: ResponsePlan
   route: RouteDecision
   session: SessionSnapshot
   skill: SkillDefinition
@@ -689,6 +731,36 @@ export interface AvatarInteractionEvent {
   y?: Y
   [k: string]: unknown
 }
+export interface CharacterKernelSnapshot {
+  affect: AffectState
+  character_id: CharacterId
+  relationship: RelationshipState
+  revision: Revision
+  user_scope: UserScope
+  [k: string]: unknown
+}
+export interface AffectState {
+  arousal?: Arousal
+  attention?: Attention
+  embarrassment?: Embarrassment
+  energy?: Energy
+  tension?: Tension
+  updated_at: UpdatedAt
+  valence?: Valence
+  [k: string]: unknown
+}
+export interface RelationshipState {
+  affinity?: Affinity
+  comfort?: Comfort
+  familiarity?: Familiarity
+  interaction_count?: InteractionCount
+  preferred_address?: PreferredAddress
+  recent_tension?: RecentTension
+  stage?: Stage
+  trust?: Trust
+  updated_at: UpdatedAt1
+  [k: string]: unknown
+}
 export interface SessionStartCommand {
   command_id: CommandId
   command_type?: CommandType
@@ -704,7 +776,7 @@ export interface SessionStartCommand {
   [k: string]: unknown
 }
 export interface SessionStartPayload {
-  character_id: CharacterId
+  character_id: CharacterId1
   [k: string]: unknown
 }
 export interface TextSendCommand {
@@ -804,7 +876,7 @@ export interface SessionCreatedEvent {
   [k: string]: unknown
 }
 export interface SessionCreatedPayload {
-  character_id: CharacterId1
+  character_id: CharacterId2
   [k: string]: unknown
 }
 export interface UserTurnCommittedEvent {
@@ -1123,7 +1195,7 @@ export interface MemoryRecord {
   subject_id?: SubjectId
   supersedes?: Supersedes
   text: Text4
-  updated_at: UpdatedAt
+  updated_at: UpdatedAt2
   valid_from?: ValidFrom
   valid_to?: ValidTo
   value?:
@@ -1268,7 +1340,7 @@ export interface PluginSnapshot {
   installed_at: InstalledAt
   name: Name1
   plugin_id: PluginId
-  updated_at: UpdatedAt1
+  updated_at: UpdatedAt3
   version: Version
   [k: string]: unknown
 }
@@ -1287,6 +1359,29 @@ export interface PluginTransport {
   kind?: Kind3
   [k: string]: unknown
 }
+export interface PromptBudgetReport {
+  budget: Budget
+  conversation_tokens: ConversationTokens
+  dropped_history_turns: DroppedHistoryTurns
+  memory_tokens: MemoryTokens
+  model_role: ModelRole
+  persona_tokens: PersonaTokens
+  relationship_tokens: RelationshipTokens
+  safety_tokens: SafetyTokens
+  scene_tokens: SceneTokens
+  state_tokens: StateTokens
+  used: Used
+  [k: string]: unknown
+}
+export interface ResponsePlan {
+  expression: Expression
+  intent: Intent
+  motion?: Motion
+  rationale: Rationale1
+  response_length?: ResponseLength
+  tone: Tone
+  [k: string]: unknown
+}
 export interface RouteDecision {
   backend_kind: BackendKind2
   cloud_context_policy: CloudContextPolicy
@@ -1298,13 +1393,13 @@ export interface RouteDecision {
   [k: string]: unknown
 }
 export interface SessionSnapshot {
-  character_id: CharacterId2
+  character_id: CharacterId3
   conversation_state: ConversationState
   created_at: CreatedAt4
-  revision: Revision
+  revision: Revision1
   session_id: SessionId22
   state: SessionState
-  updated_at: UpdatedAt2
+  updated_at: UpdatedAt4
   [k: string]: unknown
 }
 export interface SkillDefinition {
@@ -1372,7 +1467,7 @@ export interface SkillRunSnapshot {
   skill_version: SkillVersion
   started_at?: StartedAt1
   state: SkillRunState
-  updated_at: UpdatedAt3
+  updated_at: UpdatedAt5
   [k: string]: unknown
 }
 export interface TurnSnapshot {

@@ -8,6 +8,11 @@ from pydantic import BaseModel, TypeAdapter
 
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
+from chatwaifu_protocol.character import (
+    CharacterKernelSnapshot,
+    PromptBudgetReport,
+    ResponsePlan,
+)
 from chatwaifu_protocol.commands import CommandModel
 from chatwaifu_protocol.conversation import ConversationInterruption
 from chatwaifu_protocol.errors import StructuredError
@@ -46,6 +51,9 @@ class ProtocolCatalog(ProtocolModel):
     avatar_cue: AvatarCue
     avatar_capabilities: AvatarCapabilityManifest
     avatar_interaction: AvatarInteractionEvent
+    character_kernel: CharacterKernelSnapshot
+    response_plan: ResponsePlan
+    prompt_budget: PromptBudgetReport
     skill: SkillDefinition
     skill_run: SkillRunSnapshot
     skill_result: SkillResult
@@ -69,6 +77,7 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "avatar-capability-manifest": AvatarCapabilityManifest,
     "avatar-cue": AvatarCue,
     "avatar-interaction-event": AvatarInteractionEvent,
+    "character-kernel-snapshot": CharacterKernelSnapshot,
     "command-envelope": TypeAdapter(CommandModel),
     "conversation-interruption": ConversationInterruption,
     "event-envelope": TypeAdapter(EventModel),
@@ -81,10 +90,12 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "permission-decision": PermissionDecision,
     "permission-grant": PermissionGrant,
     "permission-request": PermissionRequest,
+    "prompt-budget-report": PromptBudgetReport,
     "plugin-manifest": PluginManifest,
     "plugin-snapshot": PluginSnapshot,
     "protocol-catalog": ProtocolCatalog,
     "route-decision": RouteDecision,
+    "response-plan": ResponsePlan,
     "session-snapshot": SessionSnapshot,
     "skill-definition": SkillDefinition,
     "skill-invocation": SkillInvocation,

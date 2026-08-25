@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.avatar import AvatarCue
+from chatwaifu_protocol.character import AffectState, RelationshipState
 from chatwaifu_protocol.events import UserSpeechStartedEvent, UserSpeechStartedPayload
 from chatwaifu_protocol.media import (
     AudioFrameHeader,
@@ -55,6 +56,13 @@ def test_avatar_cue_rejects_renderer_parameter_like_intensity_overflow() -> None
             name="happy",
             intensity=1.5,
         )
+
+
+def test_character_states_reject_unbounded_model_deltas() -> None:
+    with pytest.raises(ValidationError):
+        AffectState(valence=2, updated_at=NOW)
+    with pytest.raises(ValidationError):
+        RelationshipState(affinity=-0.1, updated_at=NOW)
 
 
 def test_audio_frame_header_round_trips_with_generation_identity() -> None:

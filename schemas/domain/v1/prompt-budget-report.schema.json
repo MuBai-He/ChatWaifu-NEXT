@@ -1,0 +1,81 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/prompt-budget-report.schema.json",
+  "properties": {
+    "budget": {
+      "minimum": 1,
+      "title": "Budget",
+      "type": "integer"
+    },
+    "conversation_tokens": {
+      "minimum": 0,
+      "title": "Conversation Tokens",
+      "type": "integer"
+    },
+    "dropped_history_turns": {
+      "minimum": 0,
+      "title": "Dropped History Turns",
+      "type": "integer"
+    },
+    "memory_tokens": {
+      "minimum": 0,
+      "title": "Memory Tokens",
+      "type": "integer"
+    },
+    "model_role": {
+      "enum": [
+        "chat",
+        "memory_extraction",
+        "memory_summary",
+        "embedding"
+      ],
+      "title": "Model Role",
+      "type": "string"
+    },
+    "persona_tokens": {
+      "minimum": 0,
+      "title": "Persona Tokens",
+      "type": "integer"
+    },
+    "relationship_tokens": {
+      "minimum": 0,
+      "title": "Relationship Tokens",
+      "type": "integer"
+    },
+    "safety_tokens": {
+      "minimum": 0,
+      "title": "Safety Tokens",
+      "type": "integer"
+    },
+    "scene_tokens": {
+      "minimum": 0,
+      "title": "Scene Tokens",
+      "type": "integer"
+    },
+    "state_tokens": {
+      "minimum": 0,
+      "title": "State Tokens",
+      "type": "integer"
+    },
+    "used": {
+      "minimum": 0,
+      "title": "Used",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "model_role",
+    "budget",
+    "used",
+    "safety_tokens",
+    "persona_tokens",
+    "state_tokens",
+    "relationship_tokens",
+    "memory_tokens",
+    "scene_tokens",
+    "conversation_tokens",
+    "dropped_history_turns"
+  ],
+  "title": "PromptBudgetReport",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

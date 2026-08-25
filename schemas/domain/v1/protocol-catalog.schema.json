@@ -1,5 +1,61 @@
 {
   "$defs": {
+    "AffectState": {
+      "properties": {
+        "arousal": {
+          "default": 0.25,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Arousal",
+          "type": "number"
+        },
+        "attention": {
+          "default": 0.7,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Attention",
+          "type": "number"
+        },
+        "embarrassment": {
+          "default": 0.1,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Embarrassment",
+          "type": "number"
+        },
+        "energy": {
+          "default": 0.65,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Energy",
+          "type": "number"
+        },
+        "tension": {
+          "default": 0.05,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Tension",
+          "type": "number"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "valence": {
+          "default": 0.15,
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Valence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "updated_at"
+      ],
+      "title": "AffectState",
+      "type": "object"
+    },
     "AssistantGenerationStartedEvent": {
       "properties": {
         "causation_id": {
@@ -1284,6 +1340,42 @@
       "title": "AvatarInteractionEvent",
       "type": "object"
     },
+    "CharacterKernelSnapshot": {
+      "properties": {
+        "affect": {
+          "$ref": "#/$defs/AffectState"
+        },
+        "character_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "relationship": {
+          "$ref": "#/$defs/RelationshipState"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "user_scope": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "character_id",
+        "user_scope",
+        "revision",
+        "affect",
+        "relationship"
+      ],
+      "title": "CharacterKernelSnapshot",
+      "type": "object"
+    },
     "ConversationInterruptCommand": {
       "properties": {
         "command_id": {
@@ -1906,7 +1998,10 @@
         "memory.superseded",
         "memory.tombstoned",
         "memory.recalled",
+        "memory.extraction_completed",
         "character.state_changed",
+        "character.response_planned",
+        "character.prompt_compiled",
         "relationship.state_changed",
         "avatar.interaction_received",
         "model.route_selected",
@@ -2478,6 +2573,7 @@
         "source_kind": {
           "enum": [
             "user_turn",
+            "assistant_spoken",
             "memory_management",
             "migration"
           ],
@@ -3151,6 +3247,246 @@
       ],
       "title": "PrivacyLevel",
       "type": "string"
+    },
+    "PromptBudgetReport": {
+      "properties": {
+        "budget": {
+          "minimum": 1,
+          "title": "Budget",
+          "type": "integer"
+        },
+        "conversation_tokens": {
+          "minimum": 0,
+          "title": "Conversation Tokens",
+          "type": "integer"
+        },
+        "dropped_history_turns": {
+          "minimum": 0,
+          "title": "Dropped History Turns",
+          "type": "integer"
+        },
+        "memory_tokens": {
+          "minimum": 0,
+          "title": "Memory Tokens",
+          "type": "integer"
+        },
+        "model_role": {
+          "enum": [
+            "chat",
+            "memory_extraction",
+            "memory_summary",
+            "embedding"
+          ],
+          "title": "Model Role",
+          "type": "string"
+        },
+        "persona_tokens": {
+          "minimum": 0,
+          "title": "Persona Tokens",
+          "type": "integer"
+        },
+        "relationship_tokens": {
+          "minimum": 0,
+          "title": "Relationship Tokens",
+          "type": "integer"
+        },
+        "safety_tokens": {
+          "minimum": 0,
+          "title": "Safety Tokens",
+          "type": "integer"
+        },
+        "scene_tokens": {
+          "minimum": 0,
+          "title": "Scene Tokens",
+          "type": "integer"
+        },
+        "state_tokens": {
+          "minimum": 0,
+          "title": "State Tokens",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_role",
+        "budget",
+        "used",
+        "safety_tokens",
+        "persona_tokens",
+        "state_tokens",
+        "relationship_tokens",
+        "memory_tokens",
+        "scene_tokens",
+        "conversation_tokens",
+        "dropped_history_turns"
+      ],
+      "title": "PromptBudgetReport",
+      "type": "object"
+    },
+    "RelationshipState": {
+      "properties": {
+        "affinity": {
+          "default": 0.25,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Affinity",
+          "type": "number"
+        },
+        "comfort": {
+          "default": 0.2,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Comfort",
+          "type": "number"
+        },
+        "familiarity": {
+          "default": 0.2,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Familiarity",
+          "type": "number"
+        },
+        "interaction_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Interaction Count",
+          "type": "integer"
+        },
+        "preferred_address": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preferred Address"
+        },
+        "recent_tension": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Recent Tension",
+          "type": "number"
+        },
+        "stage": {
+          "default": "acquaintance",
+          "enum": [
+            "acquaintance",
+            "familiar",
+            "trusted",
+            "close"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "trust": {
+          "default": 0.2,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Trust",
+          "type": "number"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "updated_at"
+      ],
+      "title": "RelationshipState",
+      "type": "object"
+    },
+    "ResponsePlan": {
+      "properties": {
+        "expression": {
+          "enum": [
+            "neutral",
+            "happy",
+            "sad",
+            "angry",
+            "surprised",
+            "shy",
+            "curious"
+          ],
+          "title": "Expression",
+          "type": "string"
+        },
+        "intent": {
+          "enum": [
+            "comfort",
+            "answer",
+            "celebrate",
+            "reassure",
+            "tease",
+            "curious"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "motion": {
+          "anyOf": [
+            {
+              "enum": [
+                "headpat",
+                "stare",
+                "flustered",
+                "sing"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Motion"
+        },
+        "rationale": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "response_length": {
+          "default": "normal",
+          "enum": [
+            "short",
+            "normal"
+          ],
+          "title": "Response Length",
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "gentle",
+            "bright",
+            "shy",
+            "serious",
+            "playful",
+            "concerned"
+          ],
+          "title": "Tone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intent",
+        "tone",
+        "expression",
+        "rationale"
+      ],
+      "title": "ResponsePlan",
+      "type": "object"
     },
     "RouteDecision": {
       "properties": {
@@ -5057,6 +5393,9 @@
     "avatar_interaction": {
       "$ref": "#/$defs/AvatarInteractionEvent"
     },
+    "character_kernel": {
+      "$ref": "#/$defs/CharacterKernelSnapshot"
+    },
     "command": {
       "anyOf": [
         {
@@ -5116,6 +5455,12 @@
     "plugin_manifest": {
       "$ref": "#/$defs/PluginManifest"
     },
+    "prompt_budget": {
+      "$ref": "#/$defs/PromptBudgetReport"
+    },
+    "response_plan": {
+      "$ref": "#/$defs/ResponsePlan"
+    },
     "route": {
       "$ref": "#/$defs/RouteDecision"
     },
@@ -5153,6 +5498,9 @@
     "avatar_cue",
     "avatar_capabilities",
     "avatar_interaction",
+    "character_kernel",
+    "response_plan",
+    "prompt_budget",
     "skill",
     "skill_run",
     "skill_result",
