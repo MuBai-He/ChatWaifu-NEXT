@@ -8,6 +8,8 @@ display_name = "Qwen3-TTS · MLX（默认）"
 model = "Qwen3-TTS-12Hz-0.6B-Base-8bit"
 vendor_dir = ".local/vendors/mlx-audio"
 model_dir = ".local/models/qwen3-tts-mlx/Qwen3-TTS-12Hz-0.6B-Base-8bit"
+# For a converted CustomVoice checkpoint, set its exact configured speaker:
+# qwen_voice = "local_character"
 reference_audio = "/absolute/path/to/qwen-reference.wav"
 reference_text = "参考音频对应的准确文本。"
 reference_language = "ja"

@@ -7,8 +7,12 @@ environment, vendor, model, weight, reference-audio, exact transcript, and trans
 paths. `.local/` is ignored by Git. Do not put character weights, reference audio, bearer tokens, or
 machine-specific paths in committed TOML, character manifests, or frontend environment files.
 
-This checkout already has a local profile for the validated Qwen model and the supplied Roxy
-GPT-SoVITS model. Roxy is only a local integration test and must not be described as a Ningning voice.
+For a converted Qwen CustomVoice checkpoint, set `qwen_voice` to the exact speaker name stored in
+its `talker_config.spk_id`. The Worker then calls the fixed CustomVoice speaker and does not send the
+reference WAV or transcript. Base checkpoints omit `qwen_voice` and continue using reference cloning.
+
+This checkout can point its ignored local profile at the converted Nene Qwen checkpoint and the
+supplied GPT-SoVITS model. Neither local voice is a distributable product asset.
 
 Run `make setup-neural-tts-workers` to install the lightweight ChatWaifu worker shim into both
 pre-existing engine environments. This does not copy either engine into Runtime. `make demo` runs

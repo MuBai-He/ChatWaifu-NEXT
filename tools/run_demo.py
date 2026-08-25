@@ -123,7 +123,9 @@ def main() -> int:
                         "display_name": str(profile["display_name"]),
                         "model": str(profile["model"]),
                         "languages": ["zh", "ja", "en"],
-                        "supports_voice_cloning": True,
+                        "supports_voice_cloning": not (
+                            provider_id == "qwen3_tts_mlx" and profile.get("qwen_voice")
+                        ),
                         "supports_style": False,
                         "supports_speed": False,
                         "supports_pitch": False,
@@ -361,6 +363,8 @@ def _tts_worker_environment(
     for key in ("model_dir", "gpt_weights", "sovits_weights"):
         if key in profile:
             values[key.upper()] = profile[key]
+    if "qwen_voice" in profile:
+        values["QWEN_VOICE"] = profile["qwen_voice"]
     prefix = "CHATWAIFU_NEURAL_TTS_WORKER_"
     environment.update({f"{prefix}{key}": str(value) for key, value in values.items()})
     return environment

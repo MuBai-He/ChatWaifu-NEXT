@@ -9,7 +9,7 @@ import gc
 import os
 import sys
 import threading
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -45,15 +45,23 @@ def build_engine(settings: WorkerSettings) -> SynthesisEngine:
 
 
 class QwenMlxEngine:
-    def __init__(self, settings: WorkerSettings) -> None:
+    def __init__(
+        self,
+        settings: WorkerSettings,
+        model_loader: Callable[[Path], Any] | None = None,
+    ) -> None:
         self._settings = settings
-        _prepend_import_path(settings.vendor_dir)
-        from tqdm import tqdm
+        if model_loader is None:
+            _prepend_import_path(settings.vendor_dir)
+            from tqdm import tqdm
 
-        tqdm.monitor_interval = 0
-        from mlx_audio.tts.utils import load_model
+            tqdm.monitor_interval = 0
+            from mlx_audio.tts.utils import load_model
 
-        self._model: Any = load_model(Path(cast(Path, settings.model_dir)))
+            model_loader = load_model
+        assert model_loader is not None
+        self._model: Any = model_loader(Path(cast(Path, settings.model_dir)))
+        self._voice = _resolve_qwen_voice(self._model, settings.qwen_voice)
 
     @property
     def device(self) -> str:
@@ -65,19 +73,27 @@ class QwenMlxEngine:
         language = {"zh": "Chinese", "ja": "Japanese", "en": "English"}.get(
             request.language, "Auto"
         )
-        generator: Generator[Any, None, None] = self._model.generate(
-            text=request.text,
-            lang_code=language,
-            ref_audio=str(self._settings.reference_audio),
-            ref_text=self._settings.reference_text,
+        generation_options: dict[str, Any] = {
+            "text": request.text,
+            "lang_code": language,
             # MLX-Audio accepts this argument, but the selected Qwen checkpoint
             # does not provide a stable duration-control contract.
-            speed=1.0,
-            temperature=self._settings.temperature,
-            stream=True,
-            streaming_interval=self._settings.streaming_interval,
-            verbose=False,
-        )
+            "speed": 1.0,
+            "temperature": self._settings.temperature,
+            "stream": True,
+            "streaming_interval": self._settings.streaming_interval,
+            "verbose": False,
+        }
+        if self._voice is None:
+            generation_options.update(
+                {
+                    "ref_audio": str(self._settings.reference_audio),
+                    "ref_text": self._settings.reference_text,
+                }
+            )
+        else:
+            generation_options["voice"] = self._voice
+        generator: Generator[Any, None, None] = self._model.generate(**generation_options)
         chunks: list[NDArray[np.float32]] = []
         sample_rate = int(self._model.sample_rate)
         try:
@@ -214,3 +230,17 @@ def _prepend_import_path(path: Path) -> None:
     resolved = str(path.resolve())
     if resolved not in sys.path:
         sys.path.insert(0, resolved)
+
+
+def _resolve_qwen_voice(model: Any, configured_voice: str | None) -> str | None:
+    model_type = str(getattr(getattr(model, "config", None), "tts_model_type", "base"))
+    if model_type != "custom_voice":
+        return None
+    if configured_voice is None:
+        raise RuntimeError("Qwen CustomVoice model requires qwen_voice in the local profile")
+    supported = [str(voice) for voice in model.get_supported_speakers()]
+    if supported and configured_voice not in supported:
+        raise RuntimeError(
+            f"Qwen voice {configured_voice!r} is not in the checkpoint speakers: {supported}"
+        )
+    return configured_voice

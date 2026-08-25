@@ -24,6 +24,7 @@ class WorkerSettings(BaseSettings):
     model: str
     vendor_dir: Path
     model_dir: Path | None = None
+    qwen_voice: str | None = Field(default=None, min_length=1, max_length=128)
     gpt_weights: Path | None = None
     sovits_weights: Path | None = None
     reference_audio: Path

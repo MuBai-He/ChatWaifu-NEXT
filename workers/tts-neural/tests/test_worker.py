@@ -9,14 +9,16 @@ import threading
 import wave
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
+import numpy as np
 import pytest
 from chatwaifu_model_worker import TtsSynthesisRequest
 from fastapi.testclient import TestClient
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
-from chatwaifu_tts_neural_worker.engines import SynthesisEngine
+from chatwaifu_tts_neural_worker.engines import QwenMlxEngine, SynthesisEngine
 from chatwaifu_tts_neural_worker.main import create_app
 from chatwaifu_tts_neural_worker.service import SynthesisService
 
@@ -92,6 +94,61 @@ def test_worker_discovers_one_standard_provider(client: TestClient) -> None:
     assert capabilities["supports_voice_cloning"] is True
     assert capabilities["supports_speed"] is False
     assert capabilities["native_streaming"] is True
+
+
+class FakeCustomVoiceQwenModel:
+    def __init__(self) -> None:
+        self.config = SimpleNamespace(tts_model_type="custom_voice")
+        self.sample_rate = 24_000
+        self.speech_tokenizer = None
+        self.calls: list[dict[str, object]] = []
+
+    def get_supported_speakers(self) -> list[str]:
+        return ["ayachi_nene_local"]
+
+    def generate(self, **kwargs: object) -> Iterator[SimpleNamespace]:
+        self.calls.append(kwargs)
+        yield SimpleNamespace(
+            audio=np.ones(2_400, dtype=np.float32) * 0.1,
+            sample_rate=self.sample_rate,
+        )
+
+
+def test_qwen_custom_voice_uses_checkpoint_speaker_without_reference_clone(
+    settings: WorkerSettings,
+) -> None:
+    model = FakeCustomVoiceQwenModel()
+    custom_settings = settings.model_copy(update={"qwen_voice": "ayachi_nene_local"})
+    engine = QwenMlxEngine(custom_settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="ayachi_nene_local",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    audio, sample_rate, duration_ms = engine.synthesize(request, threading.Event())
+
+    assert audio.startswith(b"RIFF")
+    assert sample_rate == 24_000
+    assert duration_ms == 100
+    assert model.calls[0]["voice"] == "ayachi_nene_local"
+    assert "ref_audio" not in model.calls[0]
+    assert "ref_text" not in model.calls[0]
+    service = SynthesisService(custom_settings, engine_factory=lambda _: engine)
+    assert service.capabilities().supports_voice_cloning is False
+
+
+def test_qwen_custom_voice_rejects_missing_profile_speaker(settings: WorkerSettings) -> None:
+    model = FakeCustomVoiceQwenModel()
+    with pytest.raises(RuntimeError, match="requires qwen_voice"):
+        QwenMlxEngine(settings, model_loader=lambda _: model)
 
 
 def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> None:

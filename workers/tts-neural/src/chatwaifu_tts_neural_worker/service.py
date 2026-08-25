@@ -113,12 +113,13 @@ class SynthesisService:
 
     def capabilities(self) -> TtsWorkerCapabilities:
         qwen = self._settings.backend == "qwen3_tts_mlx"
+        fixed_qwen_voice = qwen and self._settings.qwen_voice is not None
         return TtsWorkerCapabilities(
             provider_id=self._settings.provider_id,
             display_name=self._settings.display_name,
             model=self._settings.model,
             languages=["zh", "ja", "en"],
-            supports_voice_cloning=True,
+            supports_voice_cloning=not fixed_qwen_voice,
             supports_style=False,
             supports_speed=False,
             supports_pitch=False,
