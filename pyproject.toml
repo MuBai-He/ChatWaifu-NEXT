@@ -51,6 +51,9 @@ include = [
   "services/runtime/tests",
   "tools",
 ]
+exclude = [
+  "tools/qwen3_tts_training/bundle_assets",
+]
 extraPaths = [
   "packages/model-worker-sdk-python/src",
   "packages/protocol-python/src",
@@ -65,6 +68,7 @@ venv = ".venv"
 line-length = 100
 target-version = "py312"
 exclude = [
+  ".local",
   "CHATWAIFU_NEXT_ARCHITECTURE.md",
   "CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md",
   "CODEX_HANDOFF.md",
@@ -72,4 +76,4 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
-allowed-confusables = ["，"]
+allowed-confusables = ["，", "！", "？"]

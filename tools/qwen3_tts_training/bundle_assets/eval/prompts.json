@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "speaker": "ayachi_nene_local",
+  "prompts": [
+    {
+      "id": "ja_greeting",
+      "language": "ja",
+      "text": "おはようございます。今日も一緒に頑張りましょう。"
+    },
+    {
+      "id": "ja_embarrassed",
+      "language": "ja",
+      "text": "えっ、そんなこと急に言われても……困ります。"
+    },
+    {
+      "id": "ja_gentle",
+      "language": "ja",
+      "text": "もう、仕方ありませんね。少しだけですよ？"
+    },
+    {
+      "id": "zh_greeting",
+      "language": "zh",
+      "text": "早上好，今天也一起加油吧。"
+    },
+    {
+      "id": "zh_embarrassed",
+      "language": "zh",
+      "text": "欸，突然说这种话，我会不好意思的。"
+    },
+    {
+      "id": "zh_gentle",
+      "language": "zh",
+      "text": "真拿你没办法，只能陪你一小会儿哦。"
+    },
+    {
+      "id": "mixed_name",
+      "language": "auto",
+      "text": "ChatWaifu，今日もよろしくお願いします。"
+    }
+  ],
+  "manual_rubric": {
+    "speaker_similarity": "1-5",
+    "pronunciation": "1-5",
+    "naturalness": "1-5",
+    "emotion_fit": "1-5",
+    "speed_stability": "pass/fail",
+    "noise_or_clipping": "pass/fail"
+  }
+}
