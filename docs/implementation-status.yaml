@@ -40,6 +40,9 @@ validation:
     - browser Ayachi Nene semantic expression and bounded action-motion smoke
     - browser Ayachi Nene procedural speaking plus authored gesture layering, real conversation thinking-to-idle, and interruption-to-idle smoke
     - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
+    - browser Character Kernel state plus four independently persisted model-role cards render inside an independently scrolling fixed-viewport settings panel
+    - browser local embedding probe returns a 64-dimensional projection and auxiliary model settings save without changing the chat route
+    - browser full reload reports no new console warnings or errors
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -75,7 +78,7 @@ phases:
       - Pydantic protocol source covers all required Phase 1 model families
       - 31 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
-      - 13 Python tests and 7 TypeScript contract tests pass
+      - 13 Python tests and 8 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
       - Unknown major versions, unknown types, and invalid payloads are rejected
       - Same-major optional fields are accepted
@@ -187,14 +190,14 @@ phases:
       - Real browser smoke completed MCP echo and denied a pending write without executing it
   - id: 11
     name: structured-memory-kernel
-    status: scheme_a_implemented_with_b_c_ports_pending_longmem_eval
+    status: scheme_a_plus_rebuildable_b_projection_implemented_c_reserved_pending_longmem_eval
     evidence:
       - SQLite WAL stores typed records, sources, proposals, lifecycle states, pinned state, and an FTS5 projection
       - Explicit normal writes commit immediately; implicit candidates require review; sensitive candidates always require confirmation
       - Deterministic extraction, exact dedupe, subject-predicate conflict detection, supersede, and provenance are covered by tests
       - Retrieval applies namespace, state, sensitivity, lexical, importance, confidence, and token-budget policy before prompt injection
       - The Web memory center reviews proposals and exposes filters, sources, correction, pinning, and auditable forgetting
-      - SemanticMemoryIndex and TemporalMemoryGraph ports reserve optional Scheme B and C candidate inputs without changing SQLite truth ownership
+      - SQLiteSemanticMemoryIndex activates a rebuildable Scheme B candidate projection while the Scheme C temporal port remains reserved without changing SQLite truth ownership
   - id: 12
     name: character-kernel-and-model-routing
     status: implemented_local_vertical_slice_pending_longmem_and_cross_model_eval
