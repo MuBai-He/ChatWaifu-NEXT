@@ -54,18 +54,24 @@ session and WebSocket so the user can start again immediately.
    not held.
 5. Hold `按住说话` and speak while the character is responding; confirm old audio stops and only the
    new reply continues. The explicit `打断` button must produce the same no-stale-output result.
-6. Send `我喜欢蓝色`, open `记忆中心`, inspect the pending preference and its rationale, then accept it.
-7. View its source event, pin it, reload or create another session, and ask `你记得我的喜好吗？`.
-8. Correct the accepted record to `我喜欢紫色`; confirm the old record is superseded and only the new
-   active record is recalled. Then forget the test record and confirm it is tombstoned.
-9. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
-10. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
+6. While voice remains connected, unplug or disable the selected microphone. Confirm the selector
+   falls back to another input and the state passes through `重连中` to `已连接`. Restart Runtime to
+   exercise the same bounded WebRTC recovery path; explicit `断开麦克风` must not reconnect.
+7. Let one short reply finish, then inspect its Runtime playback status. Confirm `spoken_text`
+   contains the completed sentence. Interrupt a second reply midway and confirm its unfinished
+   sentence is absent rather than being inferred from synthesis or enqueue completion.
+8. Send `我喜欢蓝色`, open `记忆中心`, inspect the pending preference and its rationale, then accept it.
+9. View its source event, pin it, reload or create another session, and ask `你记得我的喜好吗？`.
+10. Correct the accepted record to `我喜欢紫色`; confirm the old record is superseded and only the new
+    active record is recalled. Then forget the test record and confirm it is tombstoned.
+11. Open `Skills & 插件`, run `runtime.status.read`, and compare provider names with the header.
+12. Install the Local Echo example, run `echo`, then invoke `append_note`. Confirm it waits for an
     explicit decision and that `拒绝` produces a failed run without writing the note.
-11. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
-12. Open LOG / 历史 after accumulating enough messages; confirm its backlog scrolls while the
+13. Invoke `wait` with a long duration and cancel it; confirm the terminal state is `cancelled`.
+14. Open LOG / 历史 after accumulating enough messages; confirm its backlog scrolls while the
     visual-novel stage, Live2D character, and current dialogue remain fixed. Open CONFIG / 设置,
     switch between upper-body and full-body framing, and confirm both remain inside the viewport.
-13. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+15. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
     can be sent in the same session.
 
 Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft

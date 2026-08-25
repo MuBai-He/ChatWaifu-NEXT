@@ -111,6 +111,7 @@ phases:
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
+      - Runtime persists idempotent segment playback acknowledgements and projects only completely heard sentences into generation spoken_text
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
       - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
       - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
@@ -118,14 +119,17 @@ phases:
       - make demo supervises Runtime and Web and leaves both loopback ports closed after Ctrl+C
   - id: 5
     name: pipecat-realtime-transport
-    status: basic_web_voice_path_implemented_pending_hardening
+    status: local_reconnect_and_playout_ack_implemented_pending_public_network_hardening
     evidence:
       - Pipecat 1.7 is pinned behind a ChatWaifu-owned SmallWebRTC adapter
       - Browser getUserMedia provides device selection, input meter, echo cancellation, and one audio peer
       - Browser push-to-talk is the safe default capture gate; continuous open mic is an explicit warned opt-in
       - Silero VAD emits typed speech lifecycle events and bounds utterance buffering with pre-roll
       - Remote Runtime TTS is generation-gated and delivered through the WebRTC audio track
+      - Ordered WebRTC data-channel markers bind each remote segment to the browser output-media clock
+      - Track loss, device changes, failed peers, and transient disconnects enter bounded automatic recovery with microphone fallback
       - Real aiortc validation received non-silent remote audio after a local microphone-equivalent input
+      - A live browser peer automatically recovered after Runtime restart and reopened its ordered data channel
   - id: 6
     name: cascade-vertical-slice
     status: basic_real_stt_slice_implemented_pending_long_run
@@ -135,11 +139,13 @@ phases:
       - Local STT, configured LLM, local TTS, AvatarCue, event store, and WebRTC audio run end to end
   - id: 7
     name: interruption-and-generation-semantics
-    status: core_invalidation_implemented_playback_ack_pending
+    status: implemented_with_segment_playback_ack_pending_long_run
     evidence:
       - Speech start pushes Pipecat interruption before cancelling the active conversation generation
       - STT jobs and Runtime generations carry session, turn, and generation identity
       - Superseded STT results and stale Runtime audio are rejected before playback
+      - HTML audio and WebRTC playout clocks report monotonic progress; only a fully ended segment commits spoken text
+      - Interrupted, failed, and queue-cleared segments remain auditable without being claimed as heard
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
@@ -198,8 +204,9 @@ entry_blockers:
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
   - Packaged Tauri delivery is not in the basic Demo
   - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
-  - RTVI control/data channels, public-network TURN, reconnect policy, and device-loss recovery remain pending
-  - Playback progress acknowledgements and long-running multi-turn voice stress tests remain pending
+  - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
+  - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
+  - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
 
 constraints:
   real_model_sdks: forbidden_before_phase_8

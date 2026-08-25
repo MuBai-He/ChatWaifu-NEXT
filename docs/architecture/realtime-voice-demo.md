@@ -13,7 +13,9 @@ browser getUserMedia (mono, EC/NS/AGC)
   -> ConversationService final-text command
   -> configured LLM and local TTS
   -> generation-gated Pipecat output
-  -> browser remote audio track
+  -> browser remote audio track + ordered segment markers
+  -> browser output-media clock playback ACK
+  -> Runtime spoken-text projection
 ```
 
 The browser never calls STT, LLM, or TTS providers. Pipecat owns media transport, VAD frames,
@@ -48,6 +50,36 @@ It cancels any superseded STT job and discards a result whose identity is no lon
 TTS is forwarded only when its generation is the bridge's active output generation. Browser UI and
 Avatar state apply the same generation invalidation rule.
 
+## Playback truth
+
+Each synthesized sentence is registered before delivery with a stable `generation_id`,
+`audio_stream_id`, `segment_id`, segment index, duration, and text. The ordinary HTML audio path
+reads `currentTime` and buffered ranges directly. The WebRTC path sends ordered `started` and
+`buffered` markers over the `chatwaifu-runtime` data channel and measures progress against the
+remote audio element's media clock. Both paths send typed, serial playback acknowledgements at most
+every 250 ms; the browser queue is bounded and coalesces superseded progress updates.
+
+Runtime validates acknowledgement identity and monotonic progress, stores segment snapshots and
+audited playback events, and exposes the current projection at
+`GET /v1/sessions/{session_id}/generations/{generation_id}/playback`. A sentence is appended to the
+generation's `spoken_text` only after its segment reports `stopped` with reason `ended` and reaches
+the registered duration tolerance. Interruption, errors, queue clearing, and partial progress do not
+claim that text was heard. Duplicate commands and terminal retries are idempotent.
+
+The projection is session/segment truth rather than per-browser analytics. If the same session is
+open in several tabs, acknowledgements are merged monotonically and one completed playback commits
+the segment once; the current protocol does not identify which tab completed it.
+
+## Device loss and reconnect
+
+The browser listens for both microphone-track `ended` and media-device `devicechange`. If the
+selected device disappears, it chooses the first remaining input, updates the visible selection,
+and rebuilds the peer connection. WebRTC `failed` reconnects immediately; `disconnected` gets a
+750 ms grace period. Failed attempts use bounded 250/500/1000/2000/4000 ms backoff, preserve the
+chosen activation mode, and tear down the old Runtime peer before a new offer. Explicit disconnect,
+component disposal, or permission denial cancels recovery; after the retry limit the UI asks for a
+manual retry.
+
 The inference thread used by faster-whisper cannot be force-killed safely. Worker cancellation
 cancels the request task and the Runtime rejects a late result; an in-progress native inference may
 finish in the background before worker capacity is reclaimed.
@@ -64,10 +96,11 @@ The token is redacted from public configuration. Model data is cached under the 
 
 - Web Demo only; Tauri sidecar packaging is not claimed.
 - One browser peer per voice connection; public TURN and multi-machine media are not configured.
-- No RTVI data/control channel yet; ChatWaifu HTTP and typed Domain Events remain the control plane.
+- The ordered data channel carries playback markers only. There is no generic RTVI control protocol;
+  ChatWaifu HTTP and typed Domain Events remain the control plane.
 - Final transcription only. The protocol supports partial events, but faster-whisper partial
   streaming is not presented as implemented.
-- Playback progress and queue-clear acknowledgements are pending hardening. Generation gating and
-  Pipecat interruption already prevent superseded chunks from being newly enqueued.
+- Playback ACK is segment-granular because the current TTS adapters do not expose word boundaries;
+  it cannot prove which word inside a partially played sentence was heard.
 - The `base` model favors footprint and startup over maximum Mandarin accuracy. A heavier model can
   replace the worker configuration without changing Runtime or frontend contracts.
