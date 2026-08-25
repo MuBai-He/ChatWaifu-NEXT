@@ -26,6 +26,27 @@ const DEFAULT_MOTION_MAP: Record<string, MotionTarget> = {
   stare: { group: "TapBody", index: 1 },
 };
 
+const DEFAULT_PARAMETER_MAP: ParameterMap = {
+  headYaw: { id: "ParamAngleX", blend: "add", scale: 16 },
+  headPitch: { id: "ParamAngleY", blend: "add", scale: 12 },
+  headRoll: { id: "ParamAngleZ", blend: "add", scale: 9 },
+  bodyYaw: { id: "ParamBodyAngleX", blend: "add", scale: 6 },
+  bodyPitch: { id: "ParamBodyAngleY", blend: "add", scale: 4 },
+  bodyRoll: { id: "ParamBodyAngleZ", blend: "add", scale: 4 },
+  eyeX: { id: "ParamEyeBallX", blend: "add", scale: 0.7 },
+  eyeY: { id: "ParamEyeBallY", blend: "add", scale: 0.55 },
+  eyeOpen: [
+    { id: "ParamEyeLOpen", blend: "multiply" },
+    { id: "ParamEyeROpen", blend: "multiply" },
+  ],
+  browLift: [
+    { id: "ParamBrowLY", blend: "add", scale: 0.45 },
+    { id: "ParamBrowRY", blend: "add", scale: 0.45 },
+  ],
+  mouthForm: { id: "ParamMouthForm", blend: "add", scale: 0.35 },
+  breath: { id: "ParamBreath", blend: "add", scale: 0.18 },
+};
+
 interface MotionTarget {
   group: string;
   index: number;
@@ -34,7 +55,40 @@ interface MotionTarget {
 interface SemanticMapping {
   expressions: Record<string, string>;
   motions: Record<string, MotionTarget>;
+  parameters?: Partial<ParameterMap>;
 }
+
+type ProceduralChannel = Exclude<keyof ProceduralFrame, "mode">;
+type ParameterBlendMode = "set" | "add" | "multiply";
+
+interface ProceduralFrame {
+  mode: "idle" | "listening" | "thinking" | "speaking" | "interrupted";
+  headYaw: number;
+  headPitch: number;
+  headRoll: number;
+  bodyYaw: number;
+  bodyPitch: number;
+  bodyRoll: number;
+  eyeX: number;
+  eyeY: number;
+  eyeOpen: number;
+  browLift: number;
+  mouthForm: number;
+  breath: number;
+}
+
+interface ParameterTarget {
+  id: string;
+  blend: ParameterBlendMode;
+  scale?: number;
+  offset?: number;
+  weight?: number;
+}
+
+type ParameterMap = Record<
+  ProceduralChannel,
+  ParameterTarget | ParameterTarget[]
+>;
 
 interface BridgeOptions {
   canvas: HTMLCanvasElement;
@@ -100,6 +154,8 @@ class ChatWaifuCubismBridge {
   private gazeTarget = "center";
   private expressionMap = DEFAULT_EXPRESSION_MAP;
   private motionMap = DEFAULT_MOTION_MAP;
+  private parameterMap = DEFAULT_PARAMETER_MAP;
+  private proceduralFrame = neutralProceduralFrame();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     acquireFramework();
@@ -129,6 +185,10 @@ class ChatWaifuCubismBridge {
     this.model = model;
     this.expressionMap = semanticMapping?.expressions ?? DEFAULT_EXPRESSION_MAP;
     this.motionMap = semanticMapping?.motions ?? DEFAULT_MOTION_MAP;
+    this.parameterMap = {
+      ...DEFAULT_PARAMETER_MAP,
+      ...semanticMapping?.parameters,
+    };
     LAppPal.updateTime();
     model.loadAssets(new URL(".", modelUrl).href, fileName);
     await waitForModel(model, LOAD_TIMEOUT_MS);
@@ -146,6 +206,7 @@ class ChatWaifuCubismBridge {
     this.model.setDragging(this.gazeTarget === "pointer" ? 0.22 : 0, 0);
     this.model.update();
     const coreModel = this.model.getModel();
+    this.applyProceduralParameters(coreModel);
     const internals = this.model as unknown as ModelInternals;
     for (const parameterId of internals._lipSyncIds) {
       coreModel.setParameterValueById(parameterId, this.mouthOpen);
@@ -218,6 +279,10 @@ class ChatWaifuCubismBridge {
     this.mouthOpen = Math.min(1, Math.max(0, value));
   }
 
+  setProceduralParameters(frame: ProceduralFrame): void {
+    this.proceduralFrame = sanitizeProceduralFrame(frame);
+  }
+
   hitTest(x: number, y: number): BridgeHit[] {
     if (!this.loaded || !this.model) return [];
     const height = this.canvas.clientHeight || this.canvas.height || 1;
@@ -271,12 +336,79 @@ class ChatWaifuCubismBridge {
       this.model = null;
     }
     this.mouthOpen = 0;
+    this.proceduralFrame = neutralProceduralFrame();
     await Promise.resolve();
+  }
+
+  private applyProceduralParameters(
+    model: ReturnType<LAppModel["getModel"]>,
+  ): void {
+    for (const channel of PROCEDURAL_CHANNELS) {
+      const rawValue = this.proceduralFrame[channel];
+      const configured = this.parameterMap[channel];
+      const targets = Array.isArray(configured) ? configured : [configured];
+      for (const target of targets) {
+        const parameterId = CubismFramework.getIdManager().getId(target.id);
+        const value = rawValue * (target.scale ?? 1) + (target.offset ?? 0);
+        const weight = Math.min(1, Math.max(0, target.weight ?? 1));
+        if (target.blend === "set") {
+          model.setParameterValueById(parameterId, value, weight);
+        } else if (target.blend === "multiply") {
+          model.multiplyParameterValueById(parameterId, value, weight);
+        } else {
+          model.addParameterValueById(parameterId, value, weight);
+        }
+      }
+    }
   }
 
   private assertUsable(): void {
     if (this.disposed) throw new Error("Live2D bridge is disposed.");
   }
+}
+
+const PROCEDURAL_CHANNELS: ProceduralChannel[] = [
+  "headYaw",
+  "headPitch",
+  "headRoll",
+  "bodyYaw",
+  "bodyPitch",
+  "bodyRoll",
+  "eyeX",
+  "eyeY",
+  "eyeOpen",
+  "browLift",
+  "mouthForm",
+  "breath",
+];
+
+function neutralProceduralFrame(): ProceduralFrame {
+  return {
+    mode: "idle",
+    headYaw: 0,
+    headPitch: 0,
+    headRoll: 0,
+    bodyYaw: 0,
+    bodyPitch: 0,
+    bodyRoll: 0,
+    eyeX: 0,
+    eyeY: 0,
+    eyeOpen: 1,
+    browLift: 0,
+    mouthForm: 0,
+    breath: 0,
+  };
+}
+
+function sanitizeProceduralFrame(frame: ProceduralFrame): ProceduralFrame {
+  const sanitized = neutralProceduralFrame();
+  sanitized.mode = frame.mode;
+  for (const channel of PROCEDURAL_CHANNELS) {
+    const value = frame[channel];
+    const fallback = channel === "eyeOpen" ? 1 : 0;
+    sanitized[channel] = Number.isFinite(value) ? value : fallback;
+  }
+  return sanitized;
 }
 
 let frameworkUsers = 0;

@@ -1,4 +1,5 @@
 export * from "./audio-clock";
+export * from "./behavior-state-machine";
 export * from "./capability-registry";
 export * from "./controller";
 export * from "./cue-scheduler";
@@ -15,4 +16,5 @@ export * from "./live2d/live2d-hit-test";
 export * from "./live2d/live2d-lip-sync-driver";
 export * from "./live2d/live2d-model-loader";
 export * from "./live2d/live2d-motion-layer";
+export * from "./live2d/live2d-procedural-motion-driver";
 export * from "./live2d/live2d-renderer";

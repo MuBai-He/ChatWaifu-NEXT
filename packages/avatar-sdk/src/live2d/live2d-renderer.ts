@@ -15,6 +15,7 @@ import {
   type OfficialCubismBridge,
 } from "./live2d-model-loader";
 import { Live2DMotionLayer } from "./live2d-motion-layer";
+import { Live2DProceduralMotionDriver } from "./live2d-procedural-motion-driver";
 
 export interface Live2DAvatarRendererOptions {
   modelLoader?: Live2DModelLoader;
@@ -34,6 +35,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
   private expressionMixer: Live2DExpressionMixer | null = null;
   private gazeController: Live2DGazeController | null = null;
   private lipSyncDriver: Live2DLipSyncDriver | null = null;
+  private proceduralMotionDriver: Live2DProceduralMotionDriver | null = null;
   private contextLosses = 0;
   private lastFrameAt: number | null = null;
   private lastError: AvatarWarning | undefined;
@@ -67,6 +69,9 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
       this.expressionMixer = new Live2DExpressionMixer(this.bridge);
       this.gazeController = new Live2DGazeController(this.bridge);
       this.lipSyncDriver = new Live2DLipSyncDriver(this.bridge);
+      this.proceduralMotionDriver = new Live2DProceduralMotionDriver(
+        this.bridge,
+      );
       this.lastFrameAt = null;
       this.status = "ready";
     } catch (error: unknown) {
@@ -77,6 +82,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
 
   async unload(): Promise<void> {
     this.lipSyncDriver?.reset();
+    this.proceduralMotionDriver?.reset();
     this.motionLayer?.reset();
     await this.bridge?.unload();
     this.bridge?.dispose();
@@ -89,6 +95,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
     this.motionLayer?.apply(state.activeCues.gesture);
     this.expressionMixer?.apply(state.activeCues.emotion);
     this.gazeController?.apply(state.gaze);
+    this.proceduralMotionDriver?.apply(state.procedural);
     this.lipSyncDriver?.apply(state.mouthOpen);
     const deltaSeconds =
       this.lastFrameAt === null
@@ -122,6 +129,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
     if (this.disposed) return;
     this.disposed = true;
     this.lipSyncDriver?.reset();
+    this.proceduralMotionDriver?.reset();
     this.bridge?.dispose();
     this.clearBridge();
     this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
@@ -154,6 +162,7 @@ export class Live2DAvatarRenderer implements AvatarRenderer {
     this.expressionMixer = null;
     this.gazeController = null;
     this.lipSyncDriver = null;
+    this.proceduralMotionDriver = null;
     this.lastFrameAt = null;
   }
 }

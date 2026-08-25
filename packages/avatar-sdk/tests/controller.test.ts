@@ -47,10 +47,12 @@ describe("AvatarController", () => {
     controller.setLipSyncSource(new SyntheticLipSyncSource("sine"));
 
     clock.step(200);
+    clock.step(216);
 
     expect(renderer.getLastState()?.state).toBe("speaking");
     expect(renderer.getLastState()?.mouthOpen).toBeGreaterThan(0);
-    expect(controller.snapshot().telemetry.renderedFrames).toBe(1);
+    expect(renderer.getLastState()?.procedural.mode).toBe("speaking");
+    expect(controller.snapshot().telemetry.renderedFrames).toBe(2);
     controller.dispose();
   });
 

@@ -19,9 +19,49 @@ export interface Live2DMotionTarget {
   index: number;
 }
 
+export type AvatarBehaviorMode =
+  "idle" | "listening" | "thinking" | "speaking" | "interrupted";
+
+export interface AvatarProceduralFrame {
+  mode: AvatarBehaviorMode;
+  headYaw: number;
+  headPitch: number;
+  headRoll: number;
+  bodyYaw: number;
+  bodyPitch: number;
+  bodyRoll: number;
+  eyeX: number;
+  eyeY: number;
+  eyeOpen: number;
+  browLift: number;
+  mouthForm: number;
+  breath: number;
+}
+
+export type Live2DProceduralChannel = Exclude<
+  keyof AvatarProceduralFrame,
+  "mode"
+>;
+
+export type Live2DParameterBlendMode = "set" | "add" | "multiply";
+
+export interface Live2DParameterTarget {
+  id: string;
+  blend: Live2DParameterBlendMode;
+  scale?: number;
+  offset?: number;
+  weight?: number;
+}
+
 export interface Live2DSemanticMapping {
   expressions: Record<string, string>;
   motions: Record<string, Live2DMotionTarget>;
+  parameters?: Partial<
+    Record<
+      Live2DProceduralChannel,
+      Live2DParameterTarget | Live2DParameterTarget[]
+    >
+  >;
 }
 
 export interface AvatarHitAreaDefinition {
@@ -69,6 +109,7 @@ export interface AvatarRuntimeState {
   speaking: boolean;
   interrupted: boolean;
   mouthOpen: number;
+  procedural: AvatarProceduralFrame;
   activeCues: Partial<Record<AvatarLayer, AvatarCue>>;
 }
 

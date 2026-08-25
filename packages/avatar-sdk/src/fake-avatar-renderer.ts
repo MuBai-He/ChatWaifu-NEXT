@@ -37,11 +37,11 @@ export class FakeAvatarRenderer implements AvatarRenderer {
     this.context?.clearRect(0, 0, this.width, this.height);
   }
 
-  render(state: AvatarRuntimeState, nowMs: number): void {
+  render(state: AvatarRuntimeState): void {
     if (this.status !== "ready") return;
     this.lastState = state;
     if (!this.context || !this.canvas) return;
-    this.draw(state, nowMs);
+    this.draw(state);
   }
 
   hitTest(x: number, y: number): AvatarHitResult[] {
@@ -116,13 +116,13 @@ export class FakeAvatarRenderer implements AvatarRenderer {
     };
   }
 
-  private draw(state: AvatarRuntimeState, nowMs: number): void {
+  private draw(state: AvatarRuntimeState): void {
     const context = this.context;
     if (!context) return;
     const centerX = this.width / 2;
     const centerY = this.height * 0.46;
     const radius = Math.min(this.width, this.height) * 0.27;
-    const breathe = Math.sin(nowMs / 700) * 2;
+    const breathe = state.procedural.breath * 3;
     context.clearRect(0, 0, this.width, this.height);
 
     const glow = context.createRadialGradient(
@@ -142,26 +142,32 @@ export class FakeAvatarRenderer implements AvatarRenderer {
     context.fillRect(0, 0, this.width, this.height);
 
     context.save();
-    context.translate(0, breathe);
+    context.translate(
+      state.procedural.bodyYaw * radius * 0.06,
+      breathe + state.procedural.bodyPitch * radius * 0.04,
+    );
+    context.rotate(state.procedural.bodyRoll * 0.08);
     context.fillStyle = state.expression === "happy" ? "#f9d7ea" : "#eadcf6";
     context.beginPath();
     context.arc(centerX, centerY, radius, 0, Math.PI * 2);
     context.fill();
 
-    const gazeOffset = state.gaze === "pointer" ? 7 : 0;
+    const gazeOffsetX = state.procedural.eyeX * radius * 0.08;
+    const gazeOffsetY = state.procedural.eyeY * radius * 0.055;
+    const eyeRadius = radius * 0.07 * state.procedural.eyeOpen;
     context.fillStyle = "#2a1c37";
     context.beginPath();
     context.arc(
-      centerX - radius * 0.35 + gazeOffset,
-      centerY - radius * 0.12,
-      radius * 0.07,
+      centerX - radius * 0.35 + gazeOffsetX,
+      centerY - radius * 0.12 - gazeOffsetY,
+      eyeRadius,
       0,
       Math.PI * 2,
     );
     context.arc(
-      centerX + radius * 0.35 + gazeOffset,
-      centerY - radius * 0.12,
-      radius * 0.07,
+      centerX + radius * 0.35 + gazeOffsetX,
+      centerY - radius * 0.12 - gazeOffsetY,
+      eyeRadius,
       0,
       Math.PI * 2,
     );
@@ -173,7 +179,7 @@ export class FakeAvatarRenderer implements AvatarRenderer {
     context.ellipse(
       centerX,
       centerY + radius * 0.32,
-      radius * 0.18,
+      radius * (0.18 + state.procedural.mouthForm * 0.025),
       mouthHeight,
       0,
       0,

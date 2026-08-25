@@ -3,6 +3,10 @@ import { parseAvatarCue } from "@chatwaifu/protocol";
 
 import { BrowserAnimationClock, type AnimationClock } from "./audio-clock";
 import { AvatarCapabilityRegistry } from "./capability-registry";
+import {
+  AvatarBehaviorStateMachine,
+  neutralProceduralFrame,
+} from "./behavior-state-machine";
 import { CueScheduler } from "./cue-scheduler";
 import { interactionFromHit } from "./interaction";
 import { SilentLipSyncSource, type LipSyncSource } from "./lip-sync";
@@ -30,6 +34,7 @@ export class AvatarController {
   private readonly clock: AnimationClock;
   private readonly scheduler: CueScheduler;
   private readonly telemetry = new AvatarTelemetryCollector();
+  private readonly behavior = new AvatarBehaviorStateMachine();
   private readonly maxPreReadyCues: number;
   private readonly telemetryIntervalMs: number;
   private readonly preReadyCues: AvatarCue[] = [];
@@ -132,6 +137,7 @@ export class AvatarController {
 
   reset(): AvatarControllerSnapshot {
     this.scheduler.reset();
+    this.behavior.reset();
     this.publishSemanticState();
     return this.snapshot();
   }
@@ -189,6 +195,7 @@ export class AvatarController {
     this.lipSync.dispose();
     this.lipSync = new SilentLipSyncSource();
     this.scheduler.reset();
+    this.behavior.reset();
     this.preReadyCues.splice(0);
     await this.renderer.unload();
     this.telemetry.reset();
@@ -216,10 +223,15 @@ export class AvatarController {
         return;
       }
       const scheduler = this.scheduler.tick(nowMs);
-      this.runtime = runtimeFromScheduler(
+      const semantic = runtimeFromScheduler(
         scheduler,
         this.lipSync.sample(nowMs),
+        this.runtime.procedural,
       );
+      this.runtime = {
+        ...semantic,
+        procedural: this.behavior.step(behaviorInput(semantic), nowMs),
+      };
       this.renderer.render(this.runtime, nowMs);
       this.telemetry.recordFrame(nowMs);
       if (scheduler.revision !== this.lastPublishedRevision)
@@ -240,7 +252,11 @@ export class AvatarController {
 
   private publishSemanticState(): void {
     const scheduler = this.scheduler.snapshot();
-    this.runtime = runtimeFromScheduler(scheduler, this.runtime.mouthOpen);
+    this.runtime = runtimeFromScheduler(
+      scheduler,
+      this.runtime.mouthOpen,
+      this.runtime.procedural,
+    );
     this.lastPublishedRevision = scheduler.revision;
     this.publish();
   }
@@ -266,6 +282,7 @@ function initialRuntimeState(): AvatarRuntimeState {
     speaking: false,
     interrupted: false,
     mouthOpen: 0,
+    procedural: neutralProceduralFrame(),
     activeCues: {},
   };
 }
@@ -273,6 +290,7 @@ function initialRuntimeState(): AvatarRuntimeState {
 function runtimeFromScheduler(
   scheduler: CueSchedulerSnapshot,
   sampledMouthOpen: number,
+  procedural: AvatarRuntimeState["procedural"],
 ): AvatarRuntimeState {
   const activeCues = Object.fromEntries(
     Object.entries(scheduler.active).map(([layer, scheduled]) => [
@@ -290,6 +308,18 @@ function runtimeFromScheduler(
     speaking,
     interrupted: scheduler.active.override?.cue.name === "interrupt",
     mouthOpen: speaking ? sampledMouthOpen : 0,
+    procedural,
     activeCues,
+  };
+}
+
+function behaviorInput(runtime: AvatarRuntimeState) {
+  return {
+    state: runtime.state,
+    expression: runtime.expression,
+    gaze: runtime.gaze,
+    speaking: runtime.speaking,
+    interrupted: runtime.interrupted,
+    speechEnergy: runtime.mouthOpen,
   };
 }

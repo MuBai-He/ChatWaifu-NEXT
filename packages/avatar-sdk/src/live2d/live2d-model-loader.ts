@@ -1,5 +1,9 @@
 import { AvatarRendererError } from "../renderer";
-import type { AvatarManifest, Live2DSemanticMapping } from "../types";
+import type {
+  AvatarManifest,
+  AvatarProceduralFrame,
+  Live2DSemanticMapping,
+} from "../types";
 
 export const LIVE2D_FRAMEWORK_VERSION = "5-r.5";
 export const LIVE2D_FRAMEWORK_REPOSITORY =
@@ -24,6 +28,7 @@ export interface OfficialCubismBridge {
   setExpression(name: string, intensity: number): void;
   setGaze(target: string): void;
   setMouthOpen(value: number): void;
+  setProceduralParameters(frame: AvatarProceduralFrame): void;
   hitTest(x: number, y: number): CubismBridgeHit[];
   resize(width: number, height: number, dpr: number): void;
   unload(): Promise<void>;

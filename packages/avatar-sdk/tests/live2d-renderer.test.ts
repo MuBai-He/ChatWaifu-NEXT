@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { LIVE2D_LAB_MANIFEST } from "../src/default-manifest";
+import { neutralProceduralFrame } from "../src/behavior-state-machine";
 import type {
   CubismBridgeHit,
   OfficialCubismBridge,
@@ -16,6 +17,7 @@ class StubBridge implements OfficialCubismBridge {
   readonly expressions: Array<[string, number]> = [];
   readonly gazes: string[] = [];
   readonly mouthValues: number[] = [];
+  readonly proceduralFrames: AvatarRuntimeState["procedural"][] = [];
   readonly sizes: Array<[number, number, number]> = [];
   draws = 0;
   unloaded = false;
@@ -52,6 +54,10 @@ class StubBridge implements OfficialCubismBridge {
 
   setMouthOpen(value: number): void {
     this.mouthValues.push(value);
+  }
+
+  setProceduralParameters(frame: AvatarRuntimeState["procedural"]): void {
+    this.proceduralFrames.push(frame);
   }
 
   hitTest(): CubismBridgeHit[] {
@@ -123,6 +129,10 @@ describe("Live2DAvatarRenderer adapter", () => {
       speaking: true,
       interrupted: false,
       mouthOpen: 0.6,
+      procedural: {
+        ...neutralProceduralFrame("speaking"),
+        headPitch: 0.2,
+      },
       activeCues: { gesture: motion, emotion: expression },
     };
 
@@ -135,6 +145,11 @@ describe("Live2DAvatarRenderer adapter", () => {
     expect(bridge.expressions).toEqual([["happy", 0.7]]);
     expect(bridge.gazes).toEqual(["pointer"]);
     expect(bridge.mouthValues).toEqual([0.6]);
+    expect(bridge.proceduralFrames).toHaveLength(2);
+    expect(bridge.proceduralFrames[0]).toMatchObject({
+      mode: "speaking",
+      headPitch: 0.2,
+    });
     expect(bridge.deltas).toEqual([0, 0.016]);
     expect(bridge.draws).toBe(2);
     expect(onMotionEnded).toHaveBeenCalledWith(motion.cue_id);
@@ -172,6 +187,7 @@ describe("Live2DAvatarRenderer adapter", () => {
       speaking: false,
       interrupted: false,
       mouthOpen: 0,
+      procedural: neutralProceduralFrame(),
       activeCues: { gesture: motion },
     };
     renderer.render(active, 0);
