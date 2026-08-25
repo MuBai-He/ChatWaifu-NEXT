@@ -14,6 +14,7 @@ import {
   interrupt,
   resetSession,
   selectTtsProvider,
+  sendCharacterInteraction,
   submitText,
 } from "./runtimeClient";
 import type {
@@ -560,8 +561,24 @@ export function useChatSession() {
     setMemories(await getMemory());
   }, []);
 
+  const touch = useCallback(() => {
+    avatar.touch();
+    if (sessionId) {
+      void sendCharacterInteraction(sessionId, "avatar_touch").catch(
+        (interactionError: unknown) => {
+          setError(
+            interactionError instanceof Error
+              ? interactionError.message
+              : "角色互动同步失败",
+          );
+        },
+      );
+    }
+  }, [avatar, sessionId]);
+
   return {
     ...avatar,
+    touch,
     health,
     character,
     sessionId,

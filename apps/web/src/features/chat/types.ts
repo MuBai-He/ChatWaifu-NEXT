@@ -91,3 +91,47 @@ export interface AudioPayload {
 export interface AvatarCuePayload {
   cue: AvatarCue;
 }
+
+export type ModelRole =
+  "chat" | "memory_extraction" | "memory_summary" | "embedding";
+
+export type ModelProviderKind =
+  "demo" | "openai_compatible" | "local_hash" | "disabled";
+
+export interface ModelRoleConfiguration {
+  role: ModelRole;
+  provider: ModelProviderKind;
+  model: string;
+  base_url: string;
+  timeout_seconds: number;
+  context_window: number;
+  enabled: boolean;
+  api_key_configured: boolean;
+  updated_at: string;
+}
+
+export interface CharacterKernelSnapshot {
+  character_id: string;
+  user_scope: string;
+  revision: number;
+  affect: {
+    valence: number;
+    arousal: number;
+    energy: number;
+    attention: number;
+    embarrassment: number;
+    tension: number;
+    updated_at: string;
+  };
+  relationship: {
+    familiarity: number;
+    trust: number;
+    affinity: number;
+    comfort: number;
+    recent_tension: number;
+    interaction_count: number;
+    stage: "acquaintance" | "familiar" | "trusted" | "close";
+    preferred_address: string | null;
+    updated_at: string;
+  };
+}

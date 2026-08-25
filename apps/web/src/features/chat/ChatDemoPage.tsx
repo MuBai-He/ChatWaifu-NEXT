@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MemoryControlCenter } from "./MemoryControlCenter";
+import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import { useChatSession } from "./useChatSession";
 
@@ -212,11 +213,11 @@ export function ChatDemoPage() {
         ) : null}
 
         {settingsOpen ? (
-          <aside className="vn-settings-panel" aria-label="语音设置">
+          <aside className="vn-settings-panel" aria-label="角色和模型设置">
             <header>
               <div>
-                <small>VOICE &amp; SYSTEM</small>
-                <strong>语音设置</strong>
+                <small>CHARACTER &amp; SYSTEM</small>
+                <strong>角色和模型设置</strong>
               </div>
               <button
                 type="button"
@@ -312,6 +313,7 @@ export function ChatDemoPage() {
                 )}
               </small>
             </div>
+            <ModelSettingsPanel sessionId={sessionId} />
           </aside>
         ) : null}
 

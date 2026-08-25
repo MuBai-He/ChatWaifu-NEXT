@@ -8,8 +8,11 @@ import type {
 } from "@chatwaifu/protocol";
 
 import type {
+  CharacterKernelSnapshot,
   CharacterProfile,
   MemoryItem,
+  ModelRole,
+  ModelRoleConfiguration,
   RuntimeHealth,
   SessionResetResult,
   SessionSnapshot,
@@ -47,6 +50,60 @@ export async function getCharacters(): Promise<CharacterProfile[]> {
     "/v1/characters",
   );
   return response.items;
+}
+
+export async function getModelConfigurations(): Promise<
+  ModelRoleConfiguration[]
+> {
+  return (
+    await request<{ items: ModelRoleConfiguration[] }>(
+      "/v1/model-configurations",
+    )
+  ).items;
+}
+
+export async function updateModelConfiguration(
+  role: ModelRole,
+  configuration: Omit<
+    ModelRoleConfiguration,
+    "role" | "api_key_configured" | "updated_at"
+  > & { api_key?: string; clear_api_key?: boolean },
+): Promise<ModelRoleConfiguration> {
+  return request<ModelRoleConfiguration>(`/v1/model-configurations/${role}`, {
+    method: "PUT",
+    body: JSON.stringify(configuration),
+  });
+}
+
+export async function testModelConfiguration(
+  role: ModelRole,
+): Promise<{ status: string; characters?: number; dimensions?: number }> {
+  return request(`/v1/model-configurations/${role}/test`, {
+    method: "POST",
+    body: "{}",
+  });
+}
+
+export async function getCharacterState(
+  sessionId: string,
+): Promise<CharacterKernelSnapshot> {
+  return request<CharacterKernelSnapshot>(
+    `/v1/sessions/${sessionId}/character-state`,
+  );
+}
+
+export async function sendCharacterInteraction(
+  sessionId: string,
+  kind: "avatar_touch",
+  region = "body",
+): Promise<CharacterKernelSnapshot> {
+  return request<CharacterKernelSnapshot>(
+    `/v1/sessions/${sessionId}/character-interactions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ kind, region }),
+    },
+  );
 }
 
 export async function createSession(
