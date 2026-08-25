@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-08-26"
-current_phase: 11
-next_phase: 12
+current_phase: 12
+next_phase: 13
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -65,7 +65,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Six GitHub Actions workflows are configured
-      - Fourteen ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
+      - Sixteen ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -73,7 +73,7 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Pydantic protocol source covers all required Phase 1 model families
-      - 28 versioned JSON Schemas are generated deterministically
+      - 31 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
       - 13 Python tests and 7 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
@@ -195,6 +195,20 @@ phases:
       - Retrieval applies namespace, state, sensitivity, lexical, importance, confidence, and token-budget policy before prompt injection
       - The Web memory center reviews proposals and exposes filters, sources, correction, pinning, and auditable forgetting
       - SemanticMemoryIndex and TemporalMemoryGraph ports reserve optional Scheme B and C candidate inputs without changing SQLite truth ownership
+  - id: 12
+    name: character-kernel-and-model-routing
+    status: implemented_local_vertical_slice_pending_longmem_and_cross_model_eval
+    evidence:
+      - The default character loads from validated character, persona, voice, avatar, relationship-policy, and lexicon package files with JSON fallback
+      - SQLite persists bounded Affect and Relationship state across sessions; reset restores policy defaults
+      - User turns, elapsed-time decay, and Runtime-acknowledged avatar touch pass deterministic reducers with clamped deltas
+      - A semantic ResponsePlan drives only avatar capabilities declared by the character manifest and suppresses repeated motions
+      - Prompt Compiler preserves safety and canon while budgeting state, relationship, memory, scene, and conversation context
+      - Chat, memory extraction, memory summary, and embedding roles are independently persisted, updated, and probed through Web
+      - API keys are write-only to a mode-0600 Runtime file and are never returned to or persisted by Web
+      - Strict model-assisted memory extraction still passes policy, review, dedupe, contradiction, privacy, and provenance gates
+      - A fingerprinted SQLite semantic projection is rebuilt on embedding-route changes while WAL plus FTS5 remains truth
+      - Shared-event extraction requires completed playback acknowledgement and assistant spoken-text evidence
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -223,5 +237,7 @@ constraints:
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5
   memory_scheme: structured-records-and-fts5
-  memory_semantic_index: reserved_null_port
+  memory_semantic_index: sqlite-rebuildable-role-routed-projection
   memory_temporal_graph: reserved_null_port
+  character_kernel: persistent-affect-relationship-response-plan-and-prompt-compiler
+  model_configuration: runtime-db-plus-write-only-local-secret-store

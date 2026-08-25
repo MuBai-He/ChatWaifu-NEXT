@@ -23,6 +23,12 @@ worker. `qwen3_tts_mlx` is the neural TTS default and `gpt_sovits` is selectable
 `macos_say` remains a zero-download adapter and `fake` is a valid WAV test tone; neither may be
 described as character-quality voice cloning.
 
+Open `CONFIG / 设置` to manage four independent model routes: chat, memory extraction, memory
+summary, and embedding. Each card can use an offline fallback or an OpenAI-compatible endpoint and
+has its own model id, base URL, context window, timeout, API key, save action, and connectivity test.
+Saved keys are write-only and remain in `.local/config/model-secrets.json` with mode `0600`; Web
+never receives them. `.env` chat fields are a legacy first-run import only.
+
 ## Local data
 
 - SQLite: `.local/data/chatwaifu.db`
@@ -31,6 +37,7 @@ described as character-quality voice cloning.
 - Recoverable plugin removals: `.local/data/plugin-trash/`
 - Local STT model cache: `.local/models/faster-whisper/`
 - Local TTS profile: `.local/config/tts-profiles.toml`
+- Local write-only model secrets: `.local/config/model-secrets.json`
 - Local Qwen/GPT-SoVITS environments, vendors, and model caches: `.local/`
 - Configuration defaults: `config/default.toml`
 - Environment example: `.env.example`
@@ -71,7 +78,10 @@ session and WebSocket so the user can start again immediately.
 14. Open LOG / 历史 after accumulating enough messages; confirm its backlog scrolls while the
     visual-novel stage, Live2D character, and current dialogue remain fixed. Open CONFIG / 设置,
     switch between upper-body and full-body framing, and confirm both remain inside the viewport.
-15. Click `重置`, accept the confirmation, and confirm transcript and memory are empty and a new turn
+15. In CONFIG, confirm four model cards and the Character Kernel state are visible. Save and test one
+    auxiliary model; reload and confirm it persists without changing the chat card.
+16. Click `重置`, accept the confirmation, and confirm transcript, memory, Affect, and Relationship
+    state return to their initial values and a new turn
     can be sent in the same session.
 
 Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft

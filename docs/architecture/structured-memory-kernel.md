@@ -17,7 +17,7 @@ committed user event
 
 current turn
   -> FTS/recent candidates
-  + SemanticMemoryIndex candidates (Scheme B port; null by default)
+  + SemanticMemoryIndex candidates (rebuildable SQLite projection)
   + TemporalMemoryGraph candidates (Scheme C port; null by default)
   -> state/namespace/privacy filters
   -> lexical/semantic/entity/temporal + importance/confidence ranking
@@ -52,21 +52,35 @@ It supports kind/privacy filters, explicit sensitive confirmation, provenance lo
 pinning, and auditable forgetting. These operations call Runtime APIs; the browser never accesses
 SQLite or makes policy decisions.
 
-## Reserved Scheme B/C boundaries
+## Activated lightweight Scheme B and reserved Scheme C boundaries
 
-`SemanticMemoryIndex` and `TemporalMemoryGraph` are optional retrieval ports with null implementations.
-They may contribute candidate ids and scores to the common ranker, but they cannot commit records,
-change lifecycle state, weaken privacy filters, or become a second source of truth. A future semantic
-index must be rebuildable from Scheme A records and version its embedding model. A future temporal
-graph must preserve record/source identity and deletion propagation.
+`SemanticMemoryIndex` and `TemporalMemoryGraph` remain optional retrieval ports. The current semantic
+adapter stores vectors in SQLite, fingerprints the independently configured embedding route, and is
+fully rebuildable from active Scheme A records. The offline default is a small lexical hash vector;
+an OpenAI-compatible multilingual embedding model can be selected in Web without changing memory
+truth. Semantic candidates contribute only ids and scores to the common ranker. They cannot commit
+records, change lifecycle state, weaken privacy filters, or become a second source of truth.
 
-No embedding model, vector extension, graph database, or graph extraction model is part of the
-current Demo. Enabling either port requires fixed evaluation evidence, migration/teardown tests, and
-an adapter whose absence leaves Scheme A fully functional.
+The temporal graph remains a null Scheme C port. Enabling it requires fixed evaluation evidence,
+migration/teardown tests, deletion propagation, and an adapter whose absence leaves Scheme A fully
+functional.
+
+## Model-assisted extraction and heard-response evidence
+
+Normal user turns first pass the deterministic extractor, then may pass through the separately
+configured memory-extraction model. Its output is strict JSON validated into typed drafts; policy,
+deduplication, contradiction handling, privacy, provenance, and user review still run afterwards.
+The model cannot directly write or delete records. Secrets and obvious sensitive identifiers are not
+sent to this extractor.
+
+Assistant text is eligible for shared-event proposals only after all generation segments have
+completed playback acknowledgement. The source must be an `assistant.spoken_text_committed` event;
+generated but unheard text never becomes shared memory.
 
 ## Remaining evaluation work
 
 The next gate is a Chinese character-memory suite covering extraction precision, false recall,
-cross-session lookup, corrections, temporal questions, sensitive-data non-recall, and latency. Scheme
-B is justified only if paraphrase misses dominate after FTS tuning; Scheme C is justified only if
-multi-entity temporal reasoning becomes a demonstrated product requirement.
+cross-session lookup, corrections, temporal questions, sensitive-data non-recall, and latency. The
+next gate compares the configured multilingual embedding route against FTS and the local hash
+fallback. Scheme C is justified only if multi-entity temporal reasoning becomes a demonstrated
+product requirement.

@@ -14,35 +14,31 @@ GNU Make。项目会自动在 `.local/tooling/` 准备固定版本的 pnpm，无
 make demo
 ```
 
-命令也会自动安装或校验前端依赖；`.env` 是可选配置，只有需要覆盖默认 provider 时才创建：
+命令也会自动安装或校验前端依赖；`.env` 只保留端口、数据目录等部署覆盖，不再是产品模型
+设置入口。需要时可创建：
 
 ```bash
 cp .env.example .env
 ```
 
-命令会监督启动隔离的 faster-whisper worker、Kokoro TTS worker、Runtime 与 Web，等待全部
+命令会监督启动隔离的 faster-whisper、Qwen3-TTS、GPT-SoVITS worker、Runtime 与 Web，等待全部
 健康后打开 <http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止全部进程。若不想自动打开浏览器：
 
 ```bash
 make demo DEMO_ARGS=--no-open
 ```
 
-首次启动会下载公开的多语言 `faster-whisper base`（约 150 MB）和 Kokoro v1.1（约 365 MB），
+首次启动会下载公开的多语言 `faster-whisper base`（约 150 MB）和已配置的本地语音模型，
 之后复用 `.local/models/` 缓存。STT/TTS 推理都在独立本地 worker 中运行，麦克风音频不会发往
 云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
 VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式
 也会听到旁边人的话，适合安静、独处的环境。
 
-Demo 默认使用明确标注的离线 Demo LLM；若 `.env` 已配置 OpenAI-compatible 服务，启动器会
-直接使用真实模型。模型可以是本机 Ollama、LM Studio、vLLM，也可以是用户明确选择的兼容云
-端点。API Key 只保存在本机 `.env`，不会进入 Web 或公开配置接口：
-
-```bash
-CHATWAIFU_LLM__PROVIDER=openai_compatible
-CHATWAIFU_LLM__MODEL=qwen3:8b
-CHATWAIFU_LLM__BASE_URL=http://127.0.0.1:11434/v1
-# CHATWAIFU_LLM__API_KEY=仅在服务要求时填写
-```
+Demo 默认使用明确标注的离线 Demo LLM。打开页面的 `CONFIG / 设置`，可以分别设置聊天、记忆
+提取、记忆总结与 Embedding 模型；它们可指向本机 Ollama、LM Studio、vLLM 或用户明确选择的
+OpenAI-compatible 端点，保存后立即生效而无需重启。API Key 是只写字段：Web 不保存、不回显，
+Runtime 只将它写入 Git 忽略的 `.local/config/model-secrets.json`（权限 `0600`）。旧 `.env`
+聊天字段仅作为首次迁移兼容，不再是推荐入口。
 
 默认角色为绫地宁宁主题人格，近期已提交对话会作为下一轮上下文。角色提示词约束为日常
 Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Runtime 记忆的内容当成事实。
@@ -58,15 +54,16 @@ Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Ru
 - “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
 - `AvatarCue` 驱动 thinking、speaking、idle、表情、角色动作与口型状态；明确的对话意图和
   角色触摸可触发宁宁的 `headpat`、`stare`、`flustered`、`sing`，不会随机播放长动作
-- 绫地宁宁主题人格、开场白、角色声线与内容声明来自 `characters/default/character.json`
+- 绫地宁宁主题人格、开场白、角色声线、动作能力与关系策略来自 `characters/default/` 六文件角色包
+- 持久化 Character Kernel 管理情绪、熟悉度、信任、好感、关系阶段、响应语义与 Prompt 分区预算
 - 方案 A 结构化记忆：明确普通记忆直接提交，普通对话候选进入“记忆中心”，敏感内容逐条确认
-- 记忆支持来源查看、FTS5 召回、去重、冲突 supersede、修正、置顶与可审计 tombstone
+- 记忆支持来源查看、FTS5 + 可重建 Embedding 混合召回、模型辅助提取、去重、冲突 supersede、修正、置顶与可审计 tombstone
 - `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
 - “Skills & 插件”控制中心支持按需加载说明、运行记录、权限确认、取消、启停和可恢复卸载
 - 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；可从控制中心安装
 - 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
 
-数据默认写入 `.local/data/chatwaifu.db` 与 `.local/data/audio/`，两者都不会提交到 Git。
+数据默认写入 `.local/data/chatwaifu.db`、`.local/data/audio/` 与本地模型密钥文件，均不会提交到 Git。
 
 ## Runtime Skills 与本地插件
 
