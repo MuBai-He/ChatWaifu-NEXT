@@ -40,6 +40,7 @@ validation:
     - browser Ayachi Nene semantic expression and bounded action-motion smoke
     - browser Ayachi Nene procedural speaking plus authored gesture layering, real conversation thinking-to-idle, and interruption-to-idle smoke
     - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
+    - web pending-assistant rendering shows only the blinking caret before the first token and never replays the greeting
     - browser Character Kernel state plus four independently persisted model-role cards render inside an independently scrolling fixed-viewport settings panel
     - browser local embedding probe returns a 64-dimensional projection and auxiliary model settings save without changing the chat route
     - local keyless OpenAI-compatible embedding probe returns a 1024-dimensional projection through the standard v1 endpoint
@@ -116,6 +117,7 @@ phases:
       - Session-scoped TtsRouter selects normalized Qwen or GPT-SoVITS workers while macOS say and fake remain test/fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
       - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
+      - The fixed character greeting is limited to truly empty conversations and is not reused as pending-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
       - Runtime persists idempotent segment playback acknowledgements and projects only completely heard sentences into generation spoken_text
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
