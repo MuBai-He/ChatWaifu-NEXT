@@ -42,6 +42,7 @@ validation:
     - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
     - browser Character Kernel state plus four independently persisted model-role cards render inside an independently scrolling fixed-viewport settings panel
     - browser local embedding probe returns a 64-dimensional projection and auxiliary model settings save without changing the chat route
+    - local keyless OpenAI-compatible embedding probe returns a 1024-dimensional projection through the standard v1 endpoint
     - browser full reload reports no new console warnings or errors
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
@@ -211,6 +212,7 @@ phases:
       - API keys are write-only to a mode-0600 Runtime file and are never returned to or persisted by Web
       - Strict model-assisted memory extraction still passes policy, review, dedupe, contradiction, privacy, and provenance gates
       - A fingerprinted SQLite semantic projection is rebuilt on embedding-route changes while WAL plus FTS5 remains truth
+      - Host-only OpenAI-compatible URLs default to /v1 while explicit and nested API base paths remain unchanged
       - Shared-event extraction requires completed playback acknowledgement and assistant spoken-text evidence
 
 entry_blockers:
