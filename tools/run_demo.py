@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
+from types import FrameType
 from typing import cast
 
 from pnpm_tool import PnpmToolError, environment_with_pnpm, resolve_pnpm
@@ -25,12 +26,24 @@ WEB_URL = "http://127.0.0.1:5173/"
 STT_WORKER = ROOT / "workers" / "asr-faster-whisper"
 NEURAL_TTS_SETUP = ROOT / "tools" / "setup_neural_tts_workers.py"
 TTS_PROFILE_PATH = ROOT / ".local" / "config" / "tts-profiles.toml"
+DEMO_PORTS = (("Runtime", 8765), ("Web", 5173))
+
+
+class TerminationRequested(Exception):
+    """Translate process termination into the normal supervised cleanup path."""
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run ChatWaifu NEXT basic demo")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser")
     args = parser.parse_args()
+    occupied_ports = _occupied_demo_ports()
+    if occupied_ports:
+        occupied = ", ".join(f"{label} {port}" for label, port in occupied_ports)
+        parser.error(
+            "cannot start because demo ports are already in use: "
+            f"{occupied}. Stop the existing ChatWaifu Demo and run `make demo` again."
+        )
     uv = shutil.which("uv")
     if uv is None:
         parser.error("uv is required; install uv and run `make demo` again")
@@ -138,6 +151,11 @@ def main() -> int:
         }
     )
 
+    signal.signal(signal.SIGTERM, _raise_termination)
+    hangup = getattr(signal, "SIGHUP", None)
+    if isinstance(hangup, signal.Signals):
+        signal.signal(hangup, _raise_termination)
+
     processes: list[subprocess.Popen[bytes]] = []
     try:
         print(
@@ -218,7 +236,7 @@ def main() -> int:
             time.sleep(0.25)
         failed = next((process for process in processes if process.poll() not in {None, 0}), None)
         return failed.returncode if failed and failed.returncode is not None else 0
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, TerminationRequested):
         return 0
     finally:
         _stop_processes(processes)
@@ -250,6 +268,24 @@ def _find_free_loopback_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("127.0.0.1", 0))
         return int(listener.getsockname()[1])
+
+
+def _occupied_demo_ports(
+    ports: tuple[tuple[str, int], ...] = DEMO_PORTS,
+) -> tuple[tuple[str, int], ...]:
+    occupied: list[tuple[str, int]] = []
+    for label, port in ports:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                listener.bind(("127.0.0.1", port))
+            except OSError:
+                occupied.append((label, port))
+    return tuple(occupied)
+
+
+def _raise_termination(signum: int, _frame: FrameType | None) -> None:
+    raise TerminationRequested(signum)
 
 
 def _worker_python(worker: Path) -> Path:
