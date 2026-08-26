@@ -146,13 +146,15 @@ export function DesktopPetPage() {
         data-tauri-drag-region
         aria-label="拖动桌宠"
       >
-        <i />
         {displayPreferences.showStatus ? (
-          <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
-            {connection === "connected" ? "NENE ONLINE" : connection}
-          </span>
+          <>
+            <i />
+            <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
+              {connection === "connected" ? "NENE ONLINE" : connection}
+            </span>
+            <i />
+          </>
         ) : null}
-        <i />
       </div>
 
       <button

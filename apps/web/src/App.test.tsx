@@ -180,12 +180,15 @@ describe("ChatWaifu usable demo", () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "桌宠显示设置" }));
+    const dragRegion = screen.getByLabelText("拖动桌宠");
+    expect(dragRegion.querySelectorAll("i")).toHaveLength(2);
     fireEvent.click(screen.getByRole("checkbox", { name: "字幕" }));
     expect(screen.queryByText(/欢迎回来/)).toBeNull();
     expect(screen.getByText("NENE ONLINE")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "在线状态" }));
     expect(screen.queryByText("NENE ONLINE")).toBeNull();
+    expect(dragRegion.querySelectorAll("i")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "桌宠显示设置" })).toBeTruthy();
   });
 
