@@ -4,6 +4,7 @@ import type {
   MemorySource,
 } from "@chatwaifu/protocol";
 import { useState } from "react";
+import { ModalPortal } from "./ModalPortal";
 import {
   correctMemory,
   decideMemoryProposal,
@@ -138,7 +139,7 @@ export function MemoryControlCenter({
         ) : null}
       </button>
       {open ? (
-        <div
+        <ModalPortal
           className="memory-center-overlay"
           role="presentation"
           onMouseDown={(event) => {
@@ -352,7 +353,7 @@ export function MemoryControlCenter({
               </div>
             </div>
           </section>
-        </div>
+        </ModalPortal>
       ) : null}
     </>
   );

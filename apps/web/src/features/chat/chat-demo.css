@@ -222,26 +222,18 @@
   line-height: 1.5;
 }
 
-.skills-center-overlay {
-  position: fixed;
-  z-index: 100;
-  display: grid;
-  padding: 24px;
-  background: rgb(34 22 45 / 32%);
-  inset: 0;
-  place-items: center;
-  backdrop-filter: blur(12px);
-}
-
+.skills-center-overlay,
 .memory-center-overlay {
   position: fixed;
-  z-index: 105;
+  z-index: 1000;
   display: grid;
   padding: 24px;
+  overflow: hidden;
   background: rgb(34 22 45 / 32%);
   inset: 0;
   place-items: center;
   backdrop-filter: blur(12px);
+  overscroll-behavior: contain;
 }
 
 .memory-center {
@@ -321,14 +313,18 @@
   display: grid;
   min-height: 0;
   padding-top: 18px;
+  overflow-y: auto;
   gap: 22px;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(139 92 246 / 34%) transparent;
+  scrollbar-width: thin;
 }
 
 .memory-column {
   min-height: 0;
   padding-right: 5px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .memory-section-title,
@@ -562,14 +558,18 @@
   display: grid;
   min-height: 0;
   padding-top: 18px;
+  overflow-y: auto;
   gap: 22px;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(139 92 246 / 34%) transparent;
+  scrollbar-width: thin;
 }
 
 .skills-column {
   min-height: 0;
   padding-right: 5px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .skills-section-title,

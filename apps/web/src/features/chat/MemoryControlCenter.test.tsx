@@ -79,6 +79,8 @@ describe("MemoryControlCenter", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "记忆中心" }));
+    const dialog = screen.getByRole("dialog", { name: "结构化记忆中心" });
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
     expect(await screen.findByText("我喜欢紫色")).toBeTruthy();
     expect(screen.getByText("我喜欢蓝色")).toBeTruthy();
 

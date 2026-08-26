@@ -69,6 +69,10 @@ describe("SkillsControlCenter", () => {
     render(<SkillsControlCenter sessionId="session-1" />);
     fireEvent.click(screen.getByRole("button", { name: "Skills & 插件" }));
 
+    const dialog = screen.getByRole("dialog", {
+      name: "Skills 与插件控制中心",
+    });
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
     expect(await screen.findByText("Runtime Status")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /read/ }));
     fireEvent.click(screen.getByRole("button", { name: "运行 Skill" }));

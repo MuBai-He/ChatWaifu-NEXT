@@ -5,6 +5,7 @@ import type {
   SkillRunSnapshot,
 } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ModalPortal } from "./ModalPortal";
 import {
   cancelSkillRun,
   decideSkillConfirmation,
@@ -149,7 +150,7 @@ export function SkillsControlCenter({
         Skills &amp; 插件
       </button>
       {open ? (
-        <div
+        <ModalPortal
           className="skills-center-overlay"
           role="presentation"
           onMouseDown={(event) => {
@@ -467,7 +468,7 @@ export function SkillsControlCenter({
               </div>
             </div>
           </section>
-        </div>
+        </ModalPortal>
       ) : null}
     </>
   );
