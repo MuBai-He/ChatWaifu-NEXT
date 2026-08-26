@@ -162,6 +162,31 @@ describe("ChatWaifu usable demo", () => {
     expect(sendButton.disabled).toBe(true);
   });
 
+  it("renders the transparent desktop-pet surface on its dedicated route", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+
+    render(<App />);
+
+    expect(screen.getByLabelText("拖动桌宠")).toBeTruthy();
+    expect(screen.getByText("NENE ONLINE")).toBeTruthy();
+    expect(screen.getByText(/欢迎回来/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "摸摸绫地宁宁" }));
+    expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the desktop control center from becoming a second media owner", () => {
+    window.history.replaceState({}, "", "/control-center");
+
+    render(<App />);
+
+    const voiceButton = screen.getByRole("button", { name: "连接麦克风" });
+    expect(voiceButton).toBeInstanceOf(HTMLButtonElement);
+    if (!(voiceButton instanceof HTMLButtonElement)) {
+      throw new Error("expected voice button");
+    }
+    expect(voiceButton.disabled).toBe(true);
+  });
+
   it("shows only the blinking caret while waiting for the first assistant token", () => {
     session.messages = [
       {

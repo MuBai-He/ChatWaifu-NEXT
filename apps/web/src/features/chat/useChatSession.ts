@@ -40,7 +40,13 @@ import { useVoiceInput } from "./useVoiceInput";
 
 const SESSION_KEY = "chatwaifu.next.session_id";
 
-export function useChatSession() {
+export type ChatSessionOptions = {
+  playbackEnabled?: boolean;
+};
+
+export function useChatSession({
+  playbackEnabled = true,
+}: ChatSessionOptions = {}) {
   const avatar = useChatAvatar();
   const {
     applyCue,
@@ -144,6 +150,7 @@ export function useChatSession() {
   );
 
   const getAudioPlayer = useCallback(() => {
+    if (!playbackEnabled) return null;
     if (!audioPlayer.current && typeof Audio !== "undefined") {
       audioPlayer.current = new GenerationAudioPlayer((url) => new Audio(url), {
         isGenerationActive: (generationId) =>
@@ -173,7 +180,7 @@ export function useChatSession() {
       });
     }
     return audioPlayer.current;
-  }, [reportElementPlayback, startLipSync, stopLipSync]);
+  }, [playbackEnabled, reportElementPlayback, startLipSync, stopLipSync]);
 
   const stopAudio = useCallback(
     (generationId?: string) => {
@@ -566,6 +573,7 @@ export function useChatSession() {
   }, []);
 
   const touch = useCallback(() => {
+    getAudioPlayer()?.prime();
     avatar.touch();
     if (sessionId) {
       void sendCharacterInteraction(sessionId, "avatar_touch").catch(
@@ -578,7 +586,7 @@ export function useChatSession() {
         },
       );
     }
-  }, [avatar, sessionId]);
+  }, [avatar, getAudioPlayer, sessionId]);
 
   return {
     ...avatar,

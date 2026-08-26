@@ -4,7 +4,11 @@ import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import { useChatSession } from "./useChatSession";
 
-export function ChatDemoPage() {
+type ChatDemoPageProps = {
+  mediaOwner?: boolean;
+};
+
+export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const {
     canvasRef,
     snapshot,
@@ -41,7 +45,7 @@ export function ChatDemoPage() {
     interruptActive,
     resetAll,
     refreshMemories,
-  } = useChatSession();
+  } = useChatSession({ playbackEnabled: mediaOwner });
   const [draft, setDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -285,7 +289,9 @@ export function ChatDemoPage() {
                 value={voiceDeviceId}
                 onFocus={() => void refreshVoiceDevices()}
                 onChange={(event) => setVoiceDeviceId(event.target.value)}
-                disabled={voiceConnected || voiceState === "unsupported"}
+                disabled={
+                  !mediaOwner || voiceConnected || voiceState === "unsupported"
+                }
                 aria-label="选择麦克风"
               >
                 {voiceDevices.length === 0 ? (
@@ -304,12 +310,14 @@ export function ChatDemoPage() {
                 <i style={{ transform: `scaleX(${voiceInputLevel})` }} />
               </div>
               <small>
-                {voiceStatusLabel(
-                  voiceState,
-                  voiceActivity,
-                  voiceActivationMode,
-                  voiceTransmitting,
-                )}
+                {mediaOwner
+                  ? voiceStatusLabel(
+                      voiceState,
+                      voiceActivity,
+                      voiceActivationMode,
+                      voiceTransmitting,
+                    )
+                  : "桌宠窗口负责麦克风和语音播放，避免双窗口重叠播放"}
               </small>
             </div>
             <ModelSettingsPanel sessionId={sessionId} />
@@ -352,6 +360,7 @@ export function ChatDemoPage() {
               type="button"
               onClick={() => void toggleVoice()}
               disabled={
+                !mediaOwner ||
                 !sessionId ||
                 connection !== "connected" ||
                 resetting ||

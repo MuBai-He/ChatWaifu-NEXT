@@ -35,6 +35,17 @@ body {
   margin: 0;
 }
 
+html[data-surface="desktop-pet"],
+body[data-surface="desktop-pet"],
+body[data-surface="desktop-pet"] #root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
 button,
 input,
 textarea,

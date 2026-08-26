@@ -1,0 +1,162 @@
+.desktop-pet-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: #fff7fc;
+  background: transparent;
+  user-select: none;
+}
+
+.desktop-pet-drag-region {
+  position: absolute;
+  z-index: 20;
+  top: 8px;
+  left: 50%;
+  display: flex;
+  width: min(180px, 54%);
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgb(255 241 249 / 58%);
+  cursor: grab;
+  font: 0.46rem var(--mono);
+  letter-spacing: 0.18em;
+  text-shadow: 0 1px 8px rgb(34 13 30 / 70%);
+}
+
+.desktop-pet-drag-region:active {
+  cursor: grabbing;
+}
+
+.desktop-pet-drag-region i {
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(244 180 216 / 60%));
+}
+
+.desktop-pet-drag-region i:last-child {
+  background: linear-gradient(90deg, rgb(244 180 216 / 60%), transparent);
+}
+
+.desktop-pet-avatar {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  inset: 24px 0 112px;
+}
+
+.desktop-pet-avatar canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 18px 18px rgb(30 12 28 / 32%));
+  transform: scale(1.34) translateY(7%);
+  transform-origin: 50% 42%;
+}
+
+.desktop-pet-dialogue {
+  position: absolute;
+  z-index: 8;
+  right: 18px;
+  bottom: 54px;
+  left: 18px;
+  min-height: 66px;
+  padding: 18px 18px 13px;
+  border: 1px solid rgb(255 225 242 / 42%);
+  border-radius: 3px 20px 3px 20px;
+  background: linear-gradient(120deg, rgb(85 41 81 / 90%), rgb(24 16 31 / 91%));
+  box-shadow: 0 14px 42px rgb(24 9 22 / 28%);
+  backdrop-filter: blur(16px);
+}
+
+.desktop-pet-dialogue small {
+  position: absolute;
+  top: -11px;
+  left: 15px;
+  padding: 3px 10px;
+  border: 1px solid rgb(255 221 241 / 40%);
+  border-radius: 2px 9px 2px 9px;
+  color: #fff7fb;
+  background: linear-gradient(105deg, #a65482, #67366c);
+  font:
+    0.56rem "Yu Mincho",
+    Georgia,
+    serif;
+  letter-spacing: 0.1em;
+}
+
+.desktop-pet-dialogue p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgb(255 252 254 / 94%);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: 0.83rem;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.desktop-pet-actions {
+  position: absolute;
+  z-index: 14;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.desktop-pet-actions button {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid rgb(255 224 242 / 36%);
+  border-radius: 3px 10px;
+  color: rgb(255 245 251 / 78%);
+  background: rgb(53 27 56 / 76%);
+  cursor: pointer;
+  font: 0.5rem var(--mono);
+  backdrop-filter: blur(12px);
+}
+
+.desktop-pet-actions button:hover,
+.desktop-pet-actions button.active {
+  color: #fff;
+  background: rgb(158 73 126 / 82%);
+}
+
+.desktop-pet-actions button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.desktop-pet-actions button.transmitting {
+  box-shadow: 0 0 0 4px rgb(230 128 183 / 20%);
+}
+
+.desktop-pet-notice {
+  position: absolute;
+  z-index: 15;
+  right: 14px;
+  bottom: 92px;
+  left: 14px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid rgb(255 220 237 / 20%);
+  border-radius: 8px;
+  color: rgb(255 239 248 / 78%);
+  background: rgb(45 24 48 / 76%);
+  font-size: 0.58rem;
+  line-height: 1.4;
+  backdrop-filter: blur(12px);
+}
+
+.desktop-pet-shell[data-connection="offline"] .desktop-pet-drag-region span {
+  color: #f4b3b3;
+}
