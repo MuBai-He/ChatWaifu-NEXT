@@ -42,6 +42,7 @@ validation:
     - browser real-model text grows progressively without burst jumps and drops queued text on generation cancellation
     - web pending-assistant rendering shows only the blinking caret before the first token and never replays the greeting
     - browser Character Kernel state plus four independently persisted model-role cards render inside an independently scrolling fixed-viewport settings panel
+    - browser Skills and structured-memory control centers render above the visual-novel dialogue and accept wheel scrolling across their full content area
     - browser local embedding probe returns a 64-dimensional projection and auxiliary model settings save without changing the chat route
     - local keyless OpenAI-compatible embedding probe returns a 1024-dimensional projection through the standard v1 endpoint
     - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
@@ -104,6 +105,7 @@ phases:
       - The local-only Ayachi Nene model loads through the generated bridge with semantic facial presets and bounded action motions
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
       - Desktop chat presents a fixed visual-novel stage with selectable upper-body or full-body framing while only the optional backlog scrolls
+      - Skills and memory dialogs escape the visual-novel menu stacking context through a page-level modal portal, while their content scroll stays contained
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
