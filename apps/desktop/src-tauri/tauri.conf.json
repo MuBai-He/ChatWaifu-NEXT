@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ChatWaifu NEXT",
+  "version": "0.1.0",
+  "identifier": "local.chatwaifu.next",
+  "build": {
+    "beforeBuildCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../../web/dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "avatar-overlay",
+        "title": "绫地宁宁",
+        "url": "/desktop-pet",
+        "width": 430,
+        "height": 650,
+        "minWidth": 320,
+        "minHeight": 480,
+        "center": true,
+        "transparent": true,
+        "decorations": false,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": true,
+        "maximizable": false,
+        "fullscreen": false,
+        "visible": true
+      },
+      {
+        "label": "control-center",
+        "title": "ChatWaifu NEXT · 控制中心",
+        "url": "/control-center",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 620,
+        "center": true,
+        "decorations": true,
+        "resizable": true,
+        "create": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "capabilities": ["desktop-pet"],
+      "csp": "default-src 'self' customprotocol: asset: http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' asset: data: blob: http://127.0.0.1:*; media-src 'self' blob: http://127.0.0.1:*; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": "all"
+  }
+}

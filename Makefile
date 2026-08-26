@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo desktop format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -12,6 +12,9 @@ bootstrap:
 
 demo:
 	$(UV) run python tools/run_demo.py $(DEMO_ARGS)
+
+desktop:
+	$(UV) run python tools/run_demo.py --desktop
 
 format:
 	$(UV) run ruff format .
@@ -91,7 +94,7 @@ dev-avatar-lab:
 	$(PNPM) --filter @chatwaifu/web dev -- --open /avatar-lab
 
 dev-desktop:
-	@echo "Tauri host starts in Phase 3; Rust workspace checks are available now."
+	$(PNPM) --filter @chatwaifu/desktop dev
 
 clean:
 	rm -rf .venv target apps/web/dist apps/web/node_modules packages/protocol-typescript/dist node_modules

@@ -36,6 +36,11 @@ class TerminationRequested(Exception):
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run ChatWaifu NEXT basic demo")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser")
+    parser.add_argument(
+        "--desktop",
+        action="store_true",
+        help="open the Tauri desktop pet instead of a browser",
+    )
     args = parser.parse_args()
     occupied_ports = _occupied_demo_ports()
     if occupied_ports:
@@ -228,10 +233,23 @@ def main() -> int:
         )
         processes.append(web)
         _wait_for_url(WEB_URL, web, "Web")
-        print(f"\nChatWaifu NEXT is ready: {WEB_URL}")
-        print("Press Ctrl+C to stop Runtime and Web.\n")
-        if not args.no_open:
+        if args.desktop:
+            desktop = subprocess.Popen(
+                [str(pnpm), "--filter", "@chatwaifu/desktop", "dev"],
+                cwd=ROOT,
+                env=environment,
+                start_new_session=True,
+            )
+            processes.append(desktop)
+            print("\nChatWaifu NEXT desktop pet is starting.")
+            print("Press Ctrl+C to stop Desktop, Runtime, Web, and workers.\n")
+        elif not args.no_open:
             webbrowser.open(WEB_URL)
+            print(f"\nChatWaifu NEXT is ready: {WEB_URL}")
+            print("Press Ctrl+C to stop Runtime and Web.\n")
+        else:
+            print(f"\nChatWaifu NEXT is ready: {WEB_URL}")
+            print("Press Ctrl+C to stop Runtime and Web.\n")
         while all(process.poll() is None for process in processes):
             time.sleep(0.25)
         failed = next((process for process in processes if process.poll() not in {None, 0}), None)

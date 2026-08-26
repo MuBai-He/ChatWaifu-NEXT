@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-pet",
+  "description": "Minimal desktop-window capabilities for the local ChatWaifu pet and control center.",
+  "windows": ["avatar-overlay", "control-center"],
+  "permissions": ["core:default", "core:window:allow-start-dragging"]
+}

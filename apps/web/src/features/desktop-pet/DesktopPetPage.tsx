@@ -59,7 +59,9 @@ export function DesktopPetPage() {
         aria-label="拖动桌宠"
       >
         <i />
-        <span>{connection === "connected" ? "NENE ONLINE" : connection}</span>
+        <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
+          {connection === "connected" ? "NENE ONLINE" : connection}
+        </span>
         <i />
       </div>
 
