@@ -23,6 +23,8 @@ pub struct DesktopPreferences {
     pub always_on_top: bool,
     pub click_through: bool,
     pub overlay_visible: bool,
+    pub show_subtitles: bool,
+    pub show_status: bool,
     pub overlay_x: Option<i32>,
     pub overlay_y: Option<i32>,
     pub overlay_width: Option<u32>,
@@ -35,6 +37,8 @@ impl Default for DesktopPreferences {
             always_on_top: true,
             click_through: false,
             overlay_visible: true,
+            show_subtitles: true,
+            show_status: true,
             overlay_x: None,
             overlay_y: None,
             overlay_width: None,
@@ -91,6 +95,21 @@ fn set_avatar_overlay_click_through(
     set_click_through(&app, &state, enabled)
 }
 
+#[tauri::command]
+fn set_avatar_overlay_display(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    show_subtitles: bool,
+    show_status: bool,
+) -> Result<DesktopPreferences, String> {
+    let preferences = update_preferences(&state, |preferences| {
+        preferences.show_subtitles = show_subtitles;
+        preferences.show_status = show_status;
+    })?;
+    persist_preferences(&app, &preferences)?;
+    Ok(preferences)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(DesktopState::default())
@@ -105,6 +124,7 @@ pub fn run() {
             get_desktop_preferences,
             set_avatar_overlay_always_on_top,
             set_avatar_overlay_click_through,
+            set_avatar_overlay_display,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run ChatWaifu desktop host");
@@ -347,6 +367,8 @@ mod tests {
         assert!(preferences.always_on_top);
         assert!(!preferences.click_through);
         assert!(preferences.overlay_visible);
+        assert!(preferences.show_subtitles);
+        assert!(preferences.show_status);
         assert_eq!(preferences.overlay_x, None);
     }
 

@@ -174,6 +174,21 @@ describe("ChatWaifu usable demo", () => {
     expect(session.touch).toHaveBeenCalledOnce();
   });
 
+  it("lets desktop-pet users independently hide subtitles and online status", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "桌宠显示设置" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "字幕" }));
+    expect(screen.queryByText(/欢迎回来/)).toBeNull();
+    expect(screen.getByText("NENE ONLINE")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "在线状态" }));
+    expect(screen.queryByText("NENE ONLINE")).toBeNull();
+    expect(screen.getByRole("button", { name: "桌宠显示设置" })).toBeTruthy();
+  });
+
   it("keeps the desktop control center from becoming a second media owner", () => {
     window.history.replaceState({}, "", "/control-center");
 

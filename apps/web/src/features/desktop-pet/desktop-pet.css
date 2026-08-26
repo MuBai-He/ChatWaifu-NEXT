@@ -112,6 +112,45 @@
   gap: 6px;
 }
 
+.desktop-pet-display-settings {
+  position: absolute;
+  z-index: 18;
+  right: 12px;
+  bottom: 50px;
+  display: grid;
+  width: 128px;
+  gap: 8px;
+  margin: 0;
+  padding: 13px 14px 12px;
+  border: 1px solid rgb(255 224 242 / 36%);
+  border-radius: 4px 16px 4px 16px;
+  color: rgb(255 247 252 / 88%);
+  background: linear-gradient(135deg, rgb(77 38 76 / 94%), rgb(25 16 32 / 95%));
+  box-shadow: 0 14px 32px rgb(20 8 20 / 30%);
+  font: 0.58rem var(--mono);
+  backdrop-filter: blur(16px);
+}
+
+.desktop-pet-display-settings legend {
+  padding: 0 5px;
+  color: rgb(255 221 241 / 76%);
+  letter-spacing: 0.12em;
+}
+
+.desktop-pet-display-settings label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.desktop-pet-display-settings input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #c66b9f;
+}
+
 .desktop-pet-actions button {
   min-width: 30px;
   height: 30px;

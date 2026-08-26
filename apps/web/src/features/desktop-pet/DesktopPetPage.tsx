@@ -1,5 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChatSession } from "../chat/useChatSession";
+
+type DesktopDisplayPreferences = {
+  showSubtitles: boolean;
+  showStatus: boolean;
+};
+
+type DesktopHostPreferences = {
+  show_subtitles?: boolean;
+  show_status?: boolean;
+};
+
+const defaultDisplayPreferences: DesktopDisplayPreferences = {
+  showSubtitles: true,
+  showStatus: true,
+};
+
+const browserPreferenceKey = "chatwaifu.desktop-pet.display.v1";
 
 export function DesktopPetPage() {
   const {
@@ -23,6 +40,10 @@ export function DesktopPetPage() {
     toggleVoice,
   } = useChatSession({ playbackEnabled: true });
   const [controlError, setControlError] = useState<string | null>(null);
+  const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
+  const [displayPreferences, setDisplayPreferences] = useState(
+    defaultDisplayPreferences,
+  );
   const latestAssistant = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -34,6 +55,73 @@ export function DesktopPetPage() {
     !resetting &&
     voiceState !== "unsupported",
   );
+
+  useEffect(() => {
+    let active = true;
+
+    const restoreDisplayPreferences = async () => {
+      try {
+        if ("__TAURI_INTERNALS__" in window) {
+          const { invoke } = await import("@tauri-apps/api/core");
+          const preferences = await invoke<DesktopHostPreferences>(
+            "get_desktop_preferences",
+          );
+          if (active) {
+            setDisplayPreferences({
+              showSubtitles: preferences.show_subtitles ?? true,
+              showStatus: preferences.show_status ?? true,
+            });
+          }
+          return;
+        }
+
+        const stored = window.localStorage.getItem(browserPreferenceKey);
+        if (!stored || !active) return;
+        const preferences = JSON.parse(
+          stored,
+        ) as Partial<DesktopDisplayPreferences>;
+        setDisplayPreferences({
+          showSubtitles: preferences.showSubtitles ?? true,
+          showStatus: preferences.showStatus ?? true,
+        });
+      } catch (restoreError: unknown) {
+        if (active) {
+          setControlError(
+            restoreError instanceof Error
+              ? restoreError.message
+              : "无法读取桌宠显示设置",
+          );
+        }
+      }
+    };
+
+    void restoreDisplayPreferences();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const updateDisplayPreferences = async (next: DesktopDisplayPreferences) => {
+    setDisplayPreferences(next);
+    setControlError(null);
+    try {
+      if ("__TAURI_INTERNALS__" in window) {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("set_avatar_overlay_display", {
+          showSubtitles: next.showSubtitles,
+          showStatus: next.showStatus,
+        });
+        return;
+      }
+      window.localStorage.setItem(browserPreferenceKey, JSON.stringify(next));
+    } catch (updateError: unknown) {
+      setControlError(
+        updateError instanceof Error
+          ? updateError.message
+          : "无法保存桌宠显示设置",
+      );
+    }
+  };
 
   const openControlCenter = async () => {
     setControlError(null);
@@ -59,9 +147,11 @@ export function DesktopPetPage() {
         aria-label="拖动桌宠"
       >
         <i />
-        <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
-          {connection === "connected" ? "NENE ONLINE" : connection}
-        </span>
+        {displayPreferences.showStatus ? (
+          <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
+            {connection === "connected" ? "NENE ONLINE" : connection}
+          </span>
+        ) : null}
         <i />
       </div>
 
@@ -75,7 +165,7 @@ export function DesktopPetPage() {
         <canvas key={rendererKind} ref={canvasRef} />
       </button>
 
-      {dialogue || pending ? (
+      {displayPreferences.showSubtitles && (dialogue || pending) ? (
         <section className="desktop-pet-dialogue" aria-live="polite">
           <small>{character?.display_name ?? "绫地宁宁"}</small>
           <p>
@@ -83,6 +173,38 @@ export function DesktopPetPage() {
             {pending ? <i className="typing-caret" /> : null}
           </p>
         </section>
+      ) : null}
+
+      {displaySettingsOpen ? (
+        <fieldset className="desktop-pet-display-settings">
+          <legend>显示</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={displayPreferences.showSubtitles}
+              onChange={(event) =>
+                void updateDisplayPreferences({
+                  ...displayPreferences,
+                  showSubtitles: event.currentTarget.checked,
+                })
+              }
+            />
+            字幕
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={displayPreferences.showStatus}
+              onChange={(event) =>
+                void updateDisplayPreferences({
+                  ...displayPreferences,
+                  showStatus: event.currentTarget.checked,
+                })
+              }
+            />
+            在线状态
+          </label>
+        </fieldset>
       ) : null}
 
       <nav className="desktop-pet-actions" aria-label="桌宠操作">
@@ -93,6 +215,16 @@ export function DesktopPetPage() {
           title="打开控制中心"
         >
           ◇
+        </button>
+        <button
+          className={displaySettingsOpen ? "active" : ""}
+          type="button"
+          onClick={() => setDisplaySettingsOpen((open) => !open)}
+          aria-label="桌宠显示设置"
+          aria-expanded={displaySettingsOpen}
+          title="字幕与状态显示"
+        >
+          HUD
         </button>
         <button
           className={voiceConnected ? "active" : ""}
