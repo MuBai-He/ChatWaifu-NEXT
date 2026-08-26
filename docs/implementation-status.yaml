@@ -203,6 +203,7 @@ phases:
       - SQLite WAL stores typed records, sources, proposals, lifecycle states, pinned state, and an FTS5 projection
       - Explicit normal writes commit immediately; implicit candidates require review; sensitive candidates always require confirmation
       - Deterministic extraction, exact dedupe, subject-predicate conflict detection, supersede, and provenance are covered by tests
+      - User-initiated conversation topics become reviewable episodic observations without being promoted to stable preferences, and repeated topic choices deduplicate
       - Retrieval applies namespace, state, sensitivity, lexical, importance, confidence, and token-budget policy before prompt injection
       - The Web memory center reviews proposals and exposes filters, sources, correction, pinning, and auditable forgetting
       - SQLiteSemanticMemoryIndex activates a rebuildable Scheme B candidate projection while the Scheme C temporal port remains reserved without changing SQLite truth ownership

@@ -29,6 +29,8 @@ The write policy is intentionally asymmetric:
 
 - explicit normal `remember` requests commit immediately;
 - implicit facts, preferences, procedures, and commitments create review proposals;
+- a user-initiated conversation topic becomes a sourced episodic observation, never an inferred
+  stable preference;
 - sensitive content always requires an individual confirmation;
 - exact duplicates are no-ops;
 - a new value for the same subject and predicate supersedes the prior active record;
