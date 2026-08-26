@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-26"
+updated_at: "2026-08-27"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -52,6 +52,7 @@ validation:
     - real Qwen3-TTS MLX worker produces generation-scoped 24 kHz WAV from the official 0.6B Base model
     - real GPT-SoVITS CPUFast v2ProPlus worker produces non-silent generation-scoped 32 kHz WAV
     - Runtime session route switches Qwen to GPT-SoVITS and unloads each inactive model
+    - duplicate Demo startup fails before worker creation and SIGTERM leaves Runtime, Web, STT, and TTS ports closed
   deterministic_generation: byte_identical_on_repeat
   generated_artifact_hash: fa39b8794f726c614504aa221656789c13bfda09bfd579f88e0a90b20bc1180a
   expected_vendor_diagnostic:
@@ -124,7 +125,7 @@ phases:
       - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
       - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
       - Manifest-driven runtime.status skill reports actual providers with read-only side effect
-      - make demo supervises Runtime and Web and leaves both loopback ports closed after Ctrl+C
+      - make demo preflights fixed ports before worker creation and cleans Runtime, Web, STT, and TTS process groups after Ctrl+C, SIGTERM, or SIGHUP
   - id: 5
     name: pipecat-realtime-transport
     status: local_reconnect_and_playout_ack_implemented_pending_public_network_hardening
