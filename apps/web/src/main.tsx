@@ -4,7 +4,12 @@ import "./index.css";
 import App from "./App.tsx";
 
 const surface =
-  window.location.pathname === "/desktop-pet" ? "desktop-pet" : "application";
+  window.location.pathname === "/desktop-pet"
+    ? "desktop-pet"
+    : window.location.pathname === "/desktop-settings" ||
+        window.location.pathname === "/control-center"
+      ? "desktop-settings"
+      : "application";
 document.documentElement.dataset.surface = surface;
 document.body.dataset.surface = surface;
 

@@ -7,7 +7,7 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WebviewUrl,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -16,6 +16,7 @@ use tauri::{
 pub const HOST_ROLE: &str = "os-capabilities-and-sidecar-management";
 pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
 pub const CONTROL_CENTER_LABEL: &str = "control-center";
+pub const PREFERENCES_CHANGED_EVENT: &str = "desktop-preferences-changed";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -59,11 +60,11 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
         None => WebviewWindowBuilder::new(
             &app,
             CONTROL_CENTER_LABEL,
-            WebviewUrl::App("/control-center".into()),
+            WebviewUrl::App("/desktop-settings".into()),
         )
-        .title("ChatWaifu NEXT · 控制中心")
-        .inner_size(1280.0, 820.0)
-        .min_inner_size(900.0, 620.0)
+        .title("ChatWaifu NEXT · 桌宠设置")
+        .inner_size(960.0, 700.0)
+        .min_inner_size(720.0, 540.0)
         .center()
         .build()
         .map_err(window_error)?,
@@ -96,6 +97,15 @@ fn set_avatar_overlay_click_through(
 }
 
 #[tauri::command]
+fn set_avatar_overlay_visible(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    enabled: bool,
+) -> Result<DesktopPreferences, String> {
+    set_overlay_visible(&app, &state, enabled)
+}
+
+#[tauri::command]
 fn set_avatar_overlay_display(
     app: AppHandle,
     state: State<'_, DesktopState>,
@@ -106,7 +116,7 @@ fn set_avatar_overlay_display(
         preferences.show_subtitles = show_subtitles;
         preferences.show_status = show_status;
     })?;
-    persist_preferences(&app, &preferences)?;
+    commit_preferences(&app, &preferences)?;
     Ok(preferences)
 }
 
@@ -124,6 +134,7 @@ pub fn run() {
             get_desktop_preferences,
             set_avatar_overlay_always_on_top,
             set_avatar_overlay_click_through,
+            set_avatar_overlay_visible,
             set_avatar_overlay_display,
         ])
         .run(tauri::generate_context!())
@@ -134,7 +145,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let toggle_avatar =
         MenuItem::with_id(app, "toggle-avatar", "显示/隐藏角色", true, None::<&str>)?;
     let control_center =
-        MenuItem::with_id(app, "control-center", "打开控制中心", true, None::<&str>)?;
+        MenuItem::with_id(app, "control-center", "打开桌宠设置", true, None::<&str>)?;
     let click_through =
         MenuItem::with_id(app, "click-through", "切换鼠标穿透", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出 ChatWaifu", true, None::<&str>)?;
@@ -255,7 +266,25 @@ fn toggle_avatar_visibility(app: &AppHandle) -> Result<DesktopPreferences, Strin
     let preferences = update_preferences(&state, |preferences| {
         preferences.overlay_visible = !visible;
     })?;
-    persist_preferences(app, &preferences)?;
+    commit_preferences(app, &preferences)?;
+    Ok(preferences)
+}
+
+fn set_overlay_visible(
+    app: &AppHandle,
+    state: &State<'_, DesktopState>,
+    enabled: bool,
+) -> Result<DesktopPreferences, String> {
+    let window = required_window(app, AVATAR_OVERLAY_LABEL)?;
+    if enabled {
+        window.show().map_err(window_error)?;
+    } else {
+        window.hide().map_err(window_error)?;
+    }
+    let preferences = update_preferences(state, |preferences| {
+        preferences.overlay_visible = enabled;
+    })?;
+    commit_preferences(app, &preferences)?;
     Ok(preferences)
 }
 
@@ -270,7 +299,7 @@ fn set_always_on_top(
     let preferences = update_preferences(state, |preferences| {
         preferences.always_on_top = enabled;
     })?;
-    persist_preferences(app, &preferences)?;
+    commit_preferences(app, &preferences)?;
     Ok(preferences)
 }
 
@@ -285,7 +314,7 @@ fn set_click_through(
     let preferences = update_preferences(state, |preferences| {
         preferences.click_through = enabled;
     })?;
-    persist_preferences(app, &preferences)?;
+    commit_preferences(app, &preferences)?;
     Ok(preferences)
 }
 
@@ -346,6 +375,12 @@ fn persist_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Res
         .map_err(|error| format!("desktop preference write failed: {error}"))?;
     fs::rename(&temporary, &path)
         .map_err(|error| format!("desktop preference commit failed: {error}"))
+}
+
+fn commit_preferences(app: &AppHandle, preferences: &DesktopPreferences) -> Result<(), String> {
+    persist_preferences(app, preferences)?;
+    app.emit(PREFERENCES_CHANGED_EVENT, preferences)
+        .map_err(window_error)
 }
 
 fn window_error(error: tauri::Error) -> String {

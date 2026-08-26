@@ -214,6 +214,59 @@ test("visual-novel controls remain reachable on a narrow viewport", async ({
   ).toBeLessThanOrEqual(844);
 });
 
+test("desktop settings is an app-like control surface without chat ownership", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 960, height: 700 });
+  await page.goto("/desktop-settings");
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "桌宠" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "设置分类" }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Conversation" })).toHaveCount(
+    0,
+  );
+
+  const subtitles = page.getByRole("switch", { name: "显示字幕" });
+  await expect(subtitles).toBeEnabled();
+  await subtitles.click();
+  await expect(subtitles).not.toBeChecked();
+
+  await page.getByRole("button", { name: /声音.*角色语音/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "声音" }),
+  ).toBeVisible();
+  await expect(page.getByText(/设置页不会建立第二条媒体链路/)).toBeVisible();
+
+  const metrics = await page.evaluate<{
+    pageHeight: number;
+    viewportHeight: number;
+    overflowY: string;
+  }>(`
+    (() => {
+      const scroll = document.querySelector(".desktop-settings-scroll");
+      if (!scroll) throw new Error("desktop settings scroll container is missing");
+      return {
+        pageHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+        overflowY: getComputedStyle(scroll).overflowY,
+      };
+    })()
+  `);
+  expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
+  expect(metrics.overflowY).toBe("auto");
+
+  const screenshot = await page.screenshot({
+    animations: "disabled",
+    path: testInfo.outputPath("desktop-settings.png"),
+  });
+  expect(screenshot.byteLength).toBeGreaterThan(10_000);
+});
+
 test("official bridge renders the locally supplied Live2D model", async ({
   page,
 }, testInfo) => {

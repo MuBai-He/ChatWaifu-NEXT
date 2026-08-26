@@ -192,17 +192,25 @@ describe("ChatWaifu usable demo", () => {
     expect(screen.getByRole("button", { name: "桌宠显示设置" })).toBeTruthy();
   });
 
-  it("keeps the desktop control center from becoming a second media owner", () => {
-    window.history.replaceState({}, "", "/control-center");
+  it("renders a dedicated desktop settings window without conversation controls", async () => {
+    window.history.replaceState({}, "", "/desktop-settings");
 
     render(<App />);
 
-    const voiceButton = screen.getByRole("button", { name: "连接麦克风" });
-    expect(voiceButton).toBeInstanceOf(HTMLButtonElement);
-    if (!(voiceButton instanceof HTMLButtonElement)) {
-      throw new Error("expected voice button");
-    }
-    expect(voiceButton.disabled).toBe(true);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "桌宠" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "设置分类" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Conversation" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+
+    const subtitle = await screen.findByRole("switch", { name: "显示字幕" });
+    expect(subtitle).toBeInstanceOf(HTMLInputElement);
+    if (!(subtitle instanceof HTMLInputElement))
+      throw new Error("expected subtitle switch");
+    await waitFor(() => expect(subtitle.disabled).toBe(false));
+    fireEvent.click(subtitle);
+    expect(subtitle.checked).toBe(false);
   });
 
   it("shows only the blinking caret while waiting for the first assistant token", () => {

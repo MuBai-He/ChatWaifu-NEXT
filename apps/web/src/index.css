@@ -46,6 +46,16 @@ body[data-surface="desktop-pet"] #root {
   background: transparent;
 }
 
+html[data-surface="desktop-settings"],
+body[data-surface="desktop-settings"],
+body[data-surface="desktop-settings"] #root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 button,
 input,
 textarea,

@@ -1,22 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useChatSession } from "../chat/useChatSession";
-
-type DesktopDisplayPreferences = {
-  showSubtitles: boolean;
-  showStatus: boolean;
-};
-
-type DesktopHostPreferences = {
-  show_subtitles?: boolean;
-  show_status?: boolean;
-};
-
-const defaultDisplayPreferences: DesktopDisplayPreferences = {
-  showSubtitles: true,
-  showStatus: true,
-};
-
-const browserPreferenceKey = "chatwaifu.desktop-pet.display.v1";
+import { useDesktopPreferences } from "./useDesktopPreferences";
 
 export function DesktopPetPage() {
   const {
@@ -41,9 +25,11 @@ export function DesktopPetPage() {
   } = useChatSession({ playbackEnabled: true });
   const [controlError, setControlError] = useState<string | null>(null);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
-  const [displayPreferences, setDisplayPreferences] = useState(
-    defaultDisplayPreferences,
-  );
+  const {
+    preferences,
+    error: preferenceError,
+    setDisplay,
+  } = useDesktopPreferences();
   const latestAssistant = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -56,73 +42,6 @@ export function DesktopPetPage() {
     voiceState !== "unsupported",
   );
 
-  useEffect(() => {
-    let active = true;
-
-    const restoreDisplayPreferences = async () => {
-      try {
-        if ("__TAURI_INTERNALS__" in window) {
-          const { invoke } = await import("@tauri-apps/api/core");
-          const preferences = await invoke<DesktopHostPreferences>(
-            "get_desktop_preferences",
-          );
-          if (active) {
-            setDisplayPreferences({
-              showSubtitles: preferences.show_subtitles ?? true,
-              showStatus: preferences.show_status ?? true,
-            });
-          }
-          return;
-        }
-
-        const stored = window.localStorage.getItem(browserPreferenceKey);
-        if (!stored || !active) return;
-        const preferences = JSON.parse(
-          stored,
-        ) as Partial<DesktopDisplayPreferences>;
-        setDisplayPreferences({
-          showSubtitles: preferences.showSubtitles ?? true,
-          showStatus: preferences.showStatus ?? true,
-        });
-      } catch (restoreError: unknown) {
-        if (active) {
-          setControlError(
-            restoreError instanceof Error
-              ? restoreError.message
-              : "无法读取桌宠显示设置",
-          );
-        }
-      }
-    };
-
-    void restoreDisplayPreferences();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const updateDisplayPreferences = async (next: DesktopDisplayPreferences) => {
-    setDisplayPreferences(next);
-    setControlError(null);
-    try {
-      if ("__TAURI_INTERNALS__" in window) {
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("set_avatar_overlay_display", {
-          showSubtitles: next.showSubtitles,
-          showStatus: next.showStatus,
-        });
-        return;
-      }
-      window.localStorage.setItem(browserPreferenceKey, JSON.stringify(next));
-    } catch (updateError: unknown) {
-      setControlError(
-        updateError instanceof Error
-          ? updateError.message
-          : "无法保存桌宠显示设置",
-      );
-    }
-  };
-
   const openControlCenter = async () => {
     setControlError(null);
     try {
@@ -131,7 +50,7 @@ export function DesktopPetPage() {
         await invoke("show_control_center");
         return;
       }
-      window.location.assign("/control-center");
+      window.location.assign("/desktop-settings");
     } catch (openError: unknown) {
       setControlError(
         openError instanceof Error ? openError.message : "无法打开控制中心",
@@ -146,7 +65,7 @@ export function DesktopPetPage() {
         data-tauri-drag-region
         aria-label="拖动桌宠"
       >
-        {displayPreferences.showStatus ? (
+        {preferences.showStatus ? (
           <>
             <i />
             <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
@@ -167,7 +86,7 @@ export function DesktopPetPage() {
         <canvas key={rendererKind} ref={canvasRef} />
       </button>
 
-      {displayPreferences.showSubtitles && (dialogue || pending) ? (
+      {preferences.showSubtitles && (dialogue || pending) ? (
         <section className="desktop-pet-dialogue" aria-live="polite">
           <small>{character?.display_name ?? "绫地宁宁"}</small>
           <p>
@@ -183,10 +102,9 @@ export function DesktopPetPage() {
           <label>
             <input
               type="checkbox"
-              checked={displayPreferences.showSubtitles}
+              checked={preferences.showSubtitles}
               onChange={(event) =>
-                void updateDisplayPreferences({
-                  ...displayPreferences,
+                void setDisplay({
                   showSubtitles: event.currentTarget.checked,
                 })
               }
@@ -196,10 +114,9 @@ export function DesktopPetPage() {
           <label>
             <input
               type="checkbox"
-              checked={displayPreferences.showStatus}
+              checked={preferences.showStatus}
               onChange={(event) =>
-                void updateDisplayPreferences({
-                  ...displayPreferences,
+                void setDisplay({
                   showStatus: event.currentTarget.checked,
                 })
               }
@@ -259,9 +176,12 @@ export function DesktopPetPage() {
         ) : null}
       </nav>
 
-      {avatarWarning || error || controlError ? (
+      {avatarWarning || error || preferenceError || controlError ? (
         <p className="desktop-pet-notice" role="status">
-          {controlError ?? error ?? "Live2D 未就绪，已使用安全回退。"}
+          {controlError ??
+            preferenceError ??
+            error ??
+            "Live2D 未就绪，已使用安全回退。"}
         </p>
       ) : null}
     </main>
