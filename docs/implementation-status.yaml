@@ -119,7 +119,7 @@ phases:
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
       - Tray actions show or hide the avatar, open the control center, recover mouse click-through, and quit cleanly
-      - Overlay position, size, visibility, always-on-top, and click-through settings persist atomically in the OS application config directory
+      - Overlay position, size, visibility, always-on-top, click-through, subtitle visibility, and online-state visibility persist atomically in the OS application config directory
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
   - id: 4
