@@ -28,6 +28,18 @@ cp .env.example .env
 make demo DEMO_ARGS=--no-open
 ```
 
+macOS 桌宠开发版可改用一个命令启动同一套本地 Runtime 与透明 Tauri 角色窗口：
+
+```bash
+make desktop
+```
+
+桌宠上方细线区域可拖动，点击人物会触发角色互动；右下角 `◇` 打开控制中心，`◉` 连接麦克风。
+菜单栏的“宁”提供显示/隐藏角色、打开控制中心、切换鼠标穿透和退出。窗口位置、尺寸、置顶与
+鼠标穿透状态保存在系统应用配置目录，不进入仓库。控制中心按需创建，并且不会成为第二个语音
+播放端，因此不会与桌宠重叠播放 TTS。透明 macOS 窗口依赖 Tauri private API，只用于桌宠发行
+profile，不满足 Mac App Store 上架条件。
+
 首次启动会下载公开的多语言 `faster-whisper base`（约 150 MB）和已配置的本地语音模型，
 之后复用 `.local/models/` 缓存。STT/TTS 推理都在独立本地 worker 中运行，麦克风音频不会发往
 云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
@@ -124,6 +136,7 @@ make build-live2d-bridge
 
 ```bash
 make demo               # 一次启动 Runtime + Web
+make desktop            # 一次启动 Runtime + Web + Tauri 桌宠
 make setup-stt-worker   # 只准备隔离的 faster-whisper worker 环境
 make setup-tts-worker   # 只准备 Kokoro worker 并校验/下载公开模型
 make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
@@ -147,8 +160,9 @@ make check-generated    # 协议受控产物无漂移检查
 ## 当前边界
 
 这是基础可用 Demo，不声称已经完成：可再发行的 Live2D 资产包与自定义角色模型、RTVI
-数据通道与公网 TURN、生产级插件沙箱、训练后的自定义音色、向量/图记忆后端、完整 Tauri
-安装包、长时间语音压力测试或远端 CI 矩阵。这些能力都有独立边界，不会伪装成已经交付。
+数据通道与公网 TURN、生产级插件沙箱、训练后的自定义音色、向量/图记忆后端、签名并可分发的
+Tauri 安装包、Rust sidecar 握手与崩溃恢复、长时间语音压力测试或远端 CI 矩阵。这些能力都有
+独立边界，不会伪装成已经交付。
 
 架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
 `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。

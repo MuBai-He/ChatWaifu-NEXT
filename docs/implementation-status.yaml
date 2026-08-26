@@ -47,6 +47,9 @@ validation:
     - local keyless OpenAI-compatible embedding probe returns a 1024-dimensional projection through the standard v1 endpoint
     - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
     - browser full reload reports no new console warnings or errors
+    - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
+    - make desktop supervises local workers, Runtime, Web, and the Tauri development host as one process group
+    - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -109,7 +112,16 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: deferred_non_blocking_for_web_demo
+    status: desktop_pet_vertical_slice_implemented_pending_sidecar_and_packaging
+    evidence:
+      - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
+      - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
+      - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
+      - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
+      - Tray actions show or hide the avatar, open the control center, recover mouse click-through, and quit cleanly
+      - Overlay position, size, visibility, always-on-top, and click-through settings persist atomically in the OS application config directory
+      - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
+      - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
@@ -229,7 +241,7 @@ entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
-  - Packaged Tauri delivery is not in the basic Demo
+  - Signed packaged Tauri delivery and Rust-owned Runtime sidecar handshake/crash recovery remain pending
   - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
@@ -240,7 +252,7 @@ constraints:
   live2d_core_committed: false
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: true
-  live2d_real_renderer_validation_scope: local_chromium_ayachi_nene_local_only
+  live2d_real_renderer_validation_scope: local_chromium_and_macos_tauri_ayachi_nene_local_only
   pipecat_dependency_added: true
   pipecat_version: "1.7.0"
   browser_microphone_validated: backend_equivalent_audio_and_ui_entry
