@@ -34,6 +34,12 @@ source of truth, persists UI/OS preferences atomically, and broadcasts a bounded
 `desktop-preferences-changed` event so an open overlay updates immediately. Browser preview uses an
 in-memory/local-storage fallback and does not claim OS integration.
 
+Settings navigation uses local inline SVG symbols rather than font glyphs or network icon assets.
+The desktop application icon is generated from the checked-in moon-and-spark source SVG. The macOS
+tray loads a separate monochrome PNG generated from its checked-in template SVG, declares it as a
+native template image, and intentionally sets no text title so AppKit can recolor it for either menu
+bar appearance.
+
 ## Media ownership and cancellation
 
 Only the overlay is a media owner. It receives generation-scoped audio, playback acknowledgements,

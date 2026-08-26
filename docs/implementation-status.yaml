@@ -123,6 +123,7 @@ phases:
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
       - Overlay position, size, visibility, always-on-top, click-through, subtitle visibility, and online-state visibility persist atomically in the OS application config directory
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
+      - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
   - id: 4
