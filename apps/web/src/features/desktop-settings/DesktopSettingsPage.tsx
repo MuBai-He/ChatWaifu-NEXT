@@ -4,6 +4,7 @@ import { ModelSettingsPanel } from "../chat/ModelSettingsPanel";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import { useChatSession } from "../chat/useChatSession";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
+import { SettingsIcon, type SettingsIconName } from "./SettingsIcon";
 
 type SettingsSection = "appearance" | "voice" | "models" | "data";
 
@@ -11,12 +12,12 @@ const sections: Array<{
   id: SettingsSection;
   label: string;
   description: string;
-  icon: string;
+  icon: SettingsIconName;
 }> = [
-  { id: "appearance", label: "桌宠", description: "窗口与显示", icon: "宠" },
-  { id: "voice", label: "声音", description: "角色语音", icon: "声" },
-  { id: "models", label: "模型", description: "AI 与记忆路由", icon: "模" },
-  { id: "data", label: "数据", description: "记忆与扩展", icon: "据" },
+  { id: "appearance", label: "桌宠", description: "窗口与显示", icon: "pet" },
+  { id: "voice", label: "声音", description: "角色语音", icon: "voice" },
+  { id: "models", label: "模型", description: "AI 与记忆路由", icon: "models" },
+  { id: "data", label: "数据", description: "记忆与扩展", icon: "data" },
 ];
 
 export function DesktopSettingsPage() {
@@ -65,7 +66,9 @@ export function DesktopSettingsPage() {
     <main className="desktop-settings-page">
       <aside className="desktop-settings-sidebar">
         <header>
-          <span className="desktop-settings-app-icon">宁</span>
+          <span className="desktop-settings-app-icon">
+            <SettingsIcon name="brand" />
+          </span>
           <div>
             <strong>ChatWaifu NEXT</strong>
             <small>桌宠设置</small>
@@ -81,7 +84,9 @@ export function DesktopSettingsPage() {
               onClick={() => setSection(item.id)}
               aria-current={section === item.id ? "page" : undefined}
             >
-              <span>{item.icon}</span>
+              <span>
+                <SettingsIcon name={item.icon} />
+              </span>
               <div>
                 <strong>{item.label}</strong>
                 <small>{item.description}</small>
@@ -145,7 +150,9 @@ export function DesktopSettingsPage() {
           {section === "models" ? (
             <section className="desktop-settings-models" aria-label="模型设置">
               <div className="desktop-settings-section-intro">
-                <span>AI</span>
+                <span>
+                  <SettingsIcon name="models" />
+                </span>
                 <div>
                   <h2>模型路由</h2>
                   <p>聊天、记忆提取、总结和向量模型可以分别配置。</p>
@@ -293,7 +300,9 @@ function VoiceSettings({
     <>
       <section className="desktop-settings-voice-card">
         <div className="desktop-settings-section-intro">
-          <span>声</span>
+          <span>
+            <SettingsIcon name="voice" />
+          </span>
           <div>
             <h2>角色声音</h2>
             <p>选择桌宠回答时使用的本地语音模型。</p>
@@ -371,7 +380,9 @@ function DataSettings({
     <>
       <div className="desktop-settings-tool-grid">
         <article className="desktop-settings-tool-card">
-          <span>忆</span>
+          <span>
+            <SettingsIcon name="memory" />
+          </span>
           <h2>结构化记忆</h2>
           <p>查看建议、修正事实、确认敏感内容并管理遗忘。</p>
           <MemoryControlCenter
@@ -380,7 +391,9 @@ function DataSettings({
           />
         </article>
         <article className="desktop-settings-tool-card">
-          <span>技</span>
+          <span>
+            <SettingsIcon name="skills" />
+          </span>
           <h2>Skills 与插件</h2>
           <p>管理能力权限、插件隔离、确认请求和最近运行。</p>
           <SkillsControlCenter sessionId={sessionId} />

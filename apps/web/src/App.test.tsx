@@ -200,7 +200,14 @@ describe("ChatWaifu usable demo", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "桌宠" }),
     ).toBeTruthy();
-    expect(screen.getByRole("navigation", { name: "设置分类" })).toBeTruthy();
+    const settingsNavigation = screen.getByRole("navigation", {
+      name: "设置分类",
+    });
+    expect(settingsNavigation).toBeTruthy();
+    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(4);
+    expect(
+      document.querySelector(".desktop-settings-app-icon svg"),
+    ).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Conversation" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
 

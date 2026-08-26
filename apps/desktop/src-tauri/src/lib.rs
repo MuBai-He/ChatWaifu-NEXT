@@ -9,6 +9,7 @@ use std::{
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
+    image::Image,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
 };
@@ -142,6 +143,7 @@ pub fn run() {
 }
 
 fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
+    let tray_icon = Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
     let toggle_avatar =
         MenuItem::with_id(app, "toggle-avatar", "显示/隐藏角色", true, None::<&str>)?;
     let control_center =
@@ -155,7 +157,8 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     )?;
 
     TrayIconBuilder::with_id("chatwaifu-desktop-pet")
-        .title("宁")
+        .icon(tray_icon)
+        .icon_as_template(cfg!(target_os = "macos"))
         .tooltip("ChatWaifu NEXT · 绫地宁宁")
         .menu(&menu)
         .show_menu_on_left_click(true)

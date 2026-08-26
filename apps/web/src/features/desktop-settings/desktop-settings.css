@@ -42,8 +42,12 @@
   color: #fff8fc;
   background: linear-gradient(145deg, #b35f91, #633d68);
   box-shadow: 0 7px 20px rgb(92 48 87 / 20%);
-  font-family: "Yu Mincho", Georgia, serif;
-  font-size: 0.9rem;
+}
+
+.desktop-settings-app-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.55;
 }
 
 .desktop-settings-sidebar > header div,
@@ -109,8 +113,11 @@
   border-radius: 7px;
   color: #765070;
   background: rgb(118 80 112 / 9%);
-  font-family: "Yu Mincho", Georgia, serif;
-  font-size: 0.66rem;
+}
+
+.desktop-settings-sidebar nav button > span svg {
+  width: 16px;
+  height: 16px;
 }
 
 .desktop-settings-sidebar nav button.active > span {
@@ -457,8 +464,12 @@
   border-radius: 10px;
   color: white;
   background: linear-gradient(145deg, #b96896, #70446e);
-  font-family: "Yu Mincho", Georgia, serif;
-  font-size: 0.76rem;
+}
+
+.desktop-settings-section-intro > span svg,
+.desktop-settings-tool-card > span svg {
+  width: 20px;
+  height: 20px;
 }
 
 .desktop-settings-section-intro h2,
