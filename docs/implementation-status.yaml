@@ -50,6 +50,7 @@ validation:
     - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
     - make desktop supervises local workers, Runtime, Web, and the Tauri development host as one process group
     - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
+    - browser desktop-settings smoke confirms app-like fixed-window layout, internal scroll, working display preferences, and no conversation/media controls
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -103,7 +104,7 @@ phases:
       - Semantic idle, listening, thinking, speaking, and interrupted modes drive normalized micro-motion through per-channel springs
       - The Live2D bridge maps renderer-neutral channels to model-local parameters with explicit set, add, or multiply blending
       - 50 consecutive Fake renderer load and unload cycles leave zero resources
-      - 6 Chromium Playwright scenarios cover cues, vendor failure, visual-novel backlog and narrow layouts, real Avatar Lab, and real main chat
+      - 7 Chromium Playwright scenarios cover cues, vendor failure, visual-novel backlog and narrow layouts, desktop settings, real Avatar Lab, and real main chat
       - Official Cubism Web Framework 5-r.5 is pinned and fetched idempotently
       - The local-only Ayachi Nene model loads through the generated bridge with semantic facial presets and bounded action motions
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
@@ -117,9 +118,11 @@ phases:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
+      - The control-center renders a dedicated four-section desktop settings surface instead of reusing the visual-novel conversation page
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
-      - Tray actions show or hide the avatar, open the control center, recover mouse click-through, and quit cleanly
+      - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
       - Overlay position, size, visibility, always-on-top, click-through, subtitle visibility, and online-state visibility persist atomically in the OS application config directory
+      - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
   - id: 4
