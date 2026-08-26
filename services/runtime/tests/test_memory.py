@@ -121,6 +121,39 @@ def test_implicit_memory_requires_review_and_preserves_sources(client: TestClien
     assert _proposals(http, "ignored")[0]["rationale"] == "duplicate active memory"
 
 
+def test_user_selected_topic_becomes_an_episodic_memory_without_inferred_preference(
+    client: TestClient,
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session_id = _create_session(http)
+
+    _submit_and_wait(http, session_id, "好哦 今天我们聊聊python")
+
+    pending = _proposals(http, "pending")
+    assert len(pending) == 1
+    proposal = pending[0]
+    candidate = cast(dict[str, object], proposal["candidate"])
+    assert candidate["kind"] == "episodic.shared_event"
+    assert candidate["predicate"] is None
+    assert candidate["value"] == {"topic": "python", "initiated_by": "user"}
+    assert candidate["text"] == "用户主动选择过 python 作为聊天话题"
+    assert proposal["rationale"] == "user-initiated conversation topic"
+
+    accepted = http.post(
+        f"/v1/sessions/{session_id}/memory/proposals/{proposal['proposal_id']}/decision",
+        json={"decision": "accept"},
+    )
+    assert accepted.status_code == 200
+    active = _memory_items(http)
+    assert len(active) == 1
+    assert active[0]["kind"] == "episodic.shared_event"
+    assert active[0]["text"] == "用户主动选择过 python 作为聊天话题"
+
+    _submit_and_wait(http, session_id, "那这次我们来聊一聊 python 吧")
+    assert len(_memory_items(http)) == 1
+    assert _proposals(http, "ignored")[0]["rationale"] == "duplicate active memory"
+
+
 def test_preference_correction_supersedes_instead_of_accumulating(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)
     session_id = _create_session(http)

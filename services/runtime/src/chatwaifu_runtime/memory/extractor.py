@@ -20,6 +20,11 @@ _PROFILE = re.compile(r"^我的([^，。,.!?]{1,24})是[\s:\uff1a]*([^。.!?]{1,
 _PREFERENCE = re.compile(r"^我(最喜欢|喜欢|不喜欢|讨厌)[\s:\uff1a]*([^。.!?]{1,160})")
 _PROSPECTIVE = re.compile(r"^(?:请)?提醒我[\s:\uff1a]*([^。.!?]{1,200})")
 _PROCEDURAL = re.compile(r"^(?:以后|下次)(?:请|要)?[\s:\uff1a]*([^。.!?]{1,200})")
+_TOPIC_CHOICE = re.compile(
+    r"(?:^|[，。！？,.!?\s那])(?:今天|这次|现在)\s*(?:我们\s*)?(?:来\s*)?"
+    r"(?:聊聊|聊一聊|聊一下|谈谈|谈一谈|谈一下)\s*([^，。！？,.!?]{1,80})",
+    re.IGNORECASE,
+)
 _SENSITIVE_PATTERNS = (
     re.compile(r"\b1[3-9]\d{9}\b"),
     re.compile(r"\b\d{17}[\dXx]\b"),
@@ -144,6 +149,20 @@ class DeterministicMemoryExtractor:
                 importance=0.7,
                 rationale="future interaction preference",
             )
+        if match := _TOPIC_CHOICE.search(content):
+            topic = re.sub(
+                r"(?:吧|呗|好吗|好不好)$", "", match.group(1).strip(), flags=re.IGNORECASE
+            ).strip()
+            if topic:
+                return self._candidate(
+                    {**base, "text": f"用户主动选择过 {topic} 作为聊天话题"},
+                    explicit,
+                    kind="episodic.shared_event",
+                    predicate=None,
+                    value={"topic": topic, "initiated_by": "user"},
+                    importance=0.55,
+                    rationale="user-initiated conversation topic",
+                )
         if not explicit:
             return None
         return self._candidate(
