@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
+    AliyunCosyVoiceTtsConfigurationRequest,
     AliyunTtsConfigurationRequest,
     CharacterInteractionRequest,
     CreateSessionRequest,
@@ -37,7 +38,10 @@ from chatwaifu_runtime.api.models import (
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
-from chatwaifu_runtime.providers.tts_config import AliyunTtsConfiguration
+from chatwaifu_runtime.providers.tts_config import (
+    AliyunCosyVoiceTtsConfiguration,
+    AliyunTtsConfiguration,
+)
 
 router = APIRouter(prefix="/v1")
 
@@ -307,6 +311,39 @@ async def test_aliyun_tts_configuration(request: Request) -> dict[str, object]:
         return await _container(request).providers.tts.probe("aliyun_qwen_realtime")
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=502, detail=f"百炼语音测试失败: {error}") from error
+
+
+@router.get("/tts/configurations/aliyun_cosyvoice_realtime")
+async def read_aliyun_cosyvoice_tts_configuration(request: Request) -> dict[str, object]:
+    return _container(request).tts_configurations.get_cosyvoice().model_dump(mode="json")
+
+
+@router.put("/tts/configurations/aliyun_cosyvoice_realtime")
+async def update_aliyun_cosyvoice_tts_configuration(
+    request: Request,
+    body: AliyunCosyVoiceTtsConfigurationRequest,
+) -> dict[str, object]:
+    try:
+        configuration = AliyunCosyVoiceTtsConfiguration(
+            **body.model_dump(exclude={"api_key", "clear_api_key"}),
+            updated_at=datetime.now(UTC),
+        )
+        updated = await _container(request).tts_configurations.update(
+            configuration,
+            api_key=body.api_key,
+            clear_api_key=body.clear_api_key,
+        )
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return updated.model_dump(mode="json")
+
+
+@router.post("/tts/configurations/aliyun_cosyvoice_realtime/test")
+async def test_aliyun_cosyvoice_tts_configuration(request: Request) -> dict[str, object]:
+    try:
+        return await _container(request).providers.tts.probe("aliyun_cosyvoice_realtime")
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=f"CosyVoice 测试失败: {error}") from error
 
 
 @router.put("/sessions/{session_id}/tts/provider")

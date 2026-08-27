@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import aiosqlite
 from chatwaifu_protocol.avatar import AvatarCue
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.character import ResponsePlan
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
@@ -571,6 +572,7 @@ class ConversationService:
                         segment,
                         segment_index,
                         character.voice_profile,
+                        _voice_style_instruction(character_context.plan),
                     )
                     segment_index += 1
                     segment = ""
@@ -580,6 +582,7 @@ class ConversationService:
                     segment,
                     segment_index,
                     character.voice_profile,
+                    _voice_style_instruction(character_context.plan),
                 )
             self._ensure_current(accepted)
             await self._complete(accepted, output)
@@ -616,6 +619,7 @@ class ConversationService:
         text: str,
         segment_index: int,
         voice: CharacterVoiceProfile,
+        style: str | None = None,
     ) -> None:
         self._ensure_current(accepted)
         await self._emit_generic(
@@ -651,6 +655,7 @@ class ConversationService:
                     voice_id=voice.voice_id,
                     speaker_id=voice.speaker_id,
                     speed=voice.speed,
+                    style=style,
                 )
             )
             async for event in stream:
@@ -937,3 +942,24 @@ class ConversationService:
 def _segment_ready(text: str) -> bool:
     stripped = text.rstrip()
     return len(text) >= 90 or bool(stripped and stripped[-1] in _SEGMENT_ENDINGS)
+
+
+def _voice_style_instruction(plan: ResponsePlan) -> str:
+    tone = {
+        "gentle": "轻柔温和",
+        "bright": "轻快明亮",
+        "shy": "有些害羞",
+        "serious": "认真克制",
+        "playful": "俏皮亲近",
+        "concerned": "关心而柔和",
+    }[plan.tone]
+    expression = {
+        "neutral": "自然平静",
+        "happy": "带着开心的笑意",
+        "sad": "略带难过但不要夸张",
+        "angry": "略带生气但保持克制",
+        "surprised": "带一点惊讶",
+        "shy": "带一点羞涩",
+        "curious": "带着好奇",
+    }[plan.expression]
+    return f"{tone}，{expression}，像面对面聊天一样自然。"

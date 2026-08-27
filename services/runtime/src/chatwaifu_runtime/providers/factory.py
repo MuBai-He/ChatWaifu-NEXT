@@ -15,6 +15,9 @@ from chatwaifu_runtime.providers.tts import (
     WorkerTtsProvider,
 )
 from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
+from chatwaifu_runtime.providers.tts_aliyun_cosyvoice import (
+    AliyunCosyVoiceRealtimeTtsProvider,
+)
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
 from chatwaifu_runtime.providers.tts_router import TtsRouter
 
@@ -53,6 +56,9 @@ def build_providers(
     tts_providers: dict[str, TtsProvider] = {}
     if tts_configurations is not None:
         tts_providers["aliyun_qwen_realtime"] = AliyunQwenRealtimeTtsProvider(tts_configurations)
+        tts_providers["aliyun_cosyvoice_realtime"] = AliyunCosyVoiceRealtimeTtsProvider(
+            tts_configurations
+        )
     if settings.tts.provider is None:
         for provider_id, endpoint in settings.tts.workers.items():
             token = endpoint.token.get_secret_value() if endpoint.token else None

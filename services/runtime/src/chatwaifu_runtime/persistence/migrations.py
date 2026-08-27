@@ -495,4 +495,11 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             CHECK(duration_finalized IN (0, 1));
         """,
     ),
+    (
+        10,
+        """
+        ALTER TABLE tts_cloud_configs
+            ADD COLUMN instruction TEXT NOT NULL DEFAULT '';
+        """,
+    ),
 )

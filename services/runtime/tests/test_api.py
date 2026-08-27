@@ -181,6 +181,38 @@ def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     secret_file = runtime_settings.config_dir / "tts-secrets.json"
     assert secret_file.stat().st_mode & 0o777 == 0o600
 
+    cosy_current = cast(
+        dict[str, object],
+        http.get("/v1/tts/configurations/aliyun_cosyvoice_realtime").json(),
+    )
+    assert cosy_current["model"] == "cosyvoice-v3.5-plus"
+    assert cosy_current["api_key_configured"] is True
+
+    cosy_response = http.put(
+        "/v1/tts/configurations/aliyun_cosyvoice_realtime",
+        json={
+            "enabled": True,
+            "model": "cosyvoice-v3.5-plus",
+            "voice_id": "cosyvoice-v3.5-plus-test-voice",
+            "region": "beijing",
+            "workspace_id": "",
+            "language_type": "auto",
+            "sample_rate": 24000,
+            "speech_rate": 1.0,
+            "volume": 50,
+            "pitch_rate": 1.0,
+            "instruction": "温柔自然。",
+            "timeout_seconds": 45,
+            "max_audio_bytes": 32000000,
+        },
+    )
+    assert cosy_response.status_code == 200
+    cosy_updated = cast(dict[str, object], cosy_response.json())
+    assert cosy_updated["provider_id"] == "aliyun_cosyvoice_realtime"
+    assert cosy_updated["instruction"] == "温柔自然。"
+    assert cosy_updated["api_key_configured"] is True
+    assert "write-only-aliyun-secret" not in cosy_response.text
+
 
 def test_character_kernel_persists_and_reset_restores_initial_state(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)

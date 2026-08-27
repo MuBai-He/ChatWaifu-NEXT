@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import wave
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -26,7 +27,11 @@ from chatwaifu_runtime.providers.tts import (
     WorkerTtsProvider,
 )
 from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
+from chatwaifu_runtime.providers.tts_aliyun_cosyvoice import (
+    AliyunCosyVoiceRealtimeTtsProvider,
+)
 from chatwaifu_runtime.providers.tts_config import (
+    AliyunCosyVoiceTtsConfiguration,
     AliyunTtsConfiguration,
     TtsConfigurationService,
 )
@@ -101,6 +106,49 @@ class _FakeAliyunConnection:
         return None
 
 
+class _FakeCosyVoiceSocket:
+    def __init__(self, frames: list[str | bytes]) -> None:
+        self.frames = list(frames)
+        self.sent: list[dict[str, object]] = []
+        self.waiting = asyncio.Event()
+
+    async def send(self, value: str) -> None:
+        parsed: object = json.loads(value)
+        assert isinstance(parsed, dict)
+        self.sent.append(cast(dict[str, object], parsed))
+
+    async def recv(self) -> str | bytes:
+        if self.frames:
+            frame = self.frames.pop(0)
+            if isinstance(frame, bytes):
+                return frame
+            header = cast(dict[str, object], self.sent[0]["header"])
+            return json.dumps(
+                {
+                    "header": {
+                        "task_id": header["task_id"],
+                        "event": frame,
+                        "attributes": {},
+                    },
+                    "payload": {},
+                }
+            )
+        self.waiting.set()
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+
+class _FakeCosyVoiceConnection:
+    def __init__(self, socket: _FakeCosyVoiceSocket) -> None:
+        self.socket = socket
+
+    async def __aenter__(self) -> _FakeCosyVoiceSocket:
+        return self.socket
+
+    async def __aexit__(self, *_args: object) -> None:
+        return None
+
+
 class _FakeTtsConfigurations:
     def __init__(self, config: AliyunTtsConfiguration, api_key: str | None = "secret") -> None:
         self.config = config
@@ -110,6 +158,22 @@ class _FakeTtsConfigurations:
         return self.config
 
     def api_key(self) -> str | None:
+        return self.key
+
+
+class _FakeCosyVoiceConfigurations:
+    def __init__(
+        self,
+        config: AliyunCosyVoiceTtsConfiguration,
+        api_key: str | None = "secret",
+    ) -> None:
+        self.config = config
+        self.key = api_key
+
+    def get_cosyvoice(self) -> AliyunCosyVoiceTtsConfiguration:
+        return self.config
+
+    def api_key(self, _provider_id: str) -> str | None:
         return self.key
 
 
@@ -138,6 +202,31 @@ def _voice_catalog_client(
                             "language": "ja",
                         }
                     ],
+                }
+            },
+        )
+
+    return httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
+
+
+def _cosyvoice_catalog_client(
+    *,
+    target_model: str,
+    status: str = "OK",
+) -> httpx2.AsyncClient:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        assert request.url.path == "/api/v1/services/audio/tts/customization"
+        assert request.headers["authorization"] == "Bearer secret"
+        payload = cast(dict[str, object], json.loads(request.content))
+        assert payload["model"] == "voice-enrollment"
+        input_value = cast(dict[str, object], payload["input"])
+        assert input_value["action"] == "query_voice"
+        return httpx2.Response(
+            200,
+            json={
+                "output": {
+                    "target_model": target_model,
+                    "status": status,
                 }
             },
         )
@@ -308,6 +397,142 @@ async def test_aliyun_realtime_tts_reports_region_key_mismatch(tmp_path: Path) -
     finally:
         await provider.close()
         await catalog_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_cosyvoice_realtime_streams_binary_pcm_with_emotion_instruction(
+    tmp_path: Path,
+) -> None:
+    pcm_chunks = [b"\x00\x00\x10\x00", b"\x20\x00\x30\x00"]
+    socket = _FakeCosyVoiceSocket(
+        [
+            "task-started",
+            "result-generated",
+            pcm_chunks[0],
+            "result-generated",
+            pcm_chunks[1],
+            "task-finished",
+        ]
+    )
+    connection_options: dict[str, object] = {}
+
+    def connect(url: str, **options: object) -> _FakeCosyVoiceConnection:
+        connection_options.update({"url": url, **options})
+        return _FakeCosyVoiceConnection(socket)
+
+    config = AliyunCosyVoiceTtsConfiguration(
+        enabled=True,
+        voice_id="cosyvoice-v3.5-plus-test-voice",
+        instruction="温柔自然。",
+        updated_at=datetime.now(UTC),
+    )
+    catalog_client = _cosyvoice_catalog_client(target_model=config.model)
+    provider = AliyunCosyVoiceRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeCosyVoiceConfigurations(config)),
+        websocket_factory=connect,
+        http_client=catalog_client,
+    )
+    request = _synthesis_request(tmp_path / "cosyvoice.wav")
+    request = replace(
+        request,
+        style="带一点羞涩，像面对面聊天一样自然。",
+    )
+    try:
+        events = [event async for event in provider.stream(request)]
+    finally:
+        await provider.close()
+        await catalog_client.aclose()
+
+    chunks = [event for event in events if isinstance(event, TtsPcmChunk)]
+    completed = cast(TtsStreamCompleted, events[-1])
+    assert [chunk.pcm16 for chunk in chunks] == pcm_chunks
+    assert all(chunk.native_streaming for chunk in chunks)
+    assert completed.result.provider_id == "aliyun_cosyvoice_realtime"
+    assert request.destination.read_bytes()[:4] == b"RIFF"
+    assert connection_options["url"] == "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+    actions = [cast(dict[str, object], event["header"])["action"] for event in socket.sent]
+    assert actions == ["run-task", "continue-task", "finish-task"]
+    run_payload = cast(dict[str, object], socket.sent[0]["payload"])
+    parameters = cast(dict[str, object], run_payload["parameters"])
+    assert parameters["format"] == "pcm"
+    assert parameters["instruction"] == ("温柔自然。 带一点羞涩，像面对面聊天一样自然。")
+
+
+@pytest.mark.asyncio
+async def test_cosyvoice_realtime_cancellation_discards_late_audio(
+    tmp_path: Path,
+) -> None:
+    socket = _FakeCosyVoiceSocket(["task-started", "result-generated", b"\x00\x00" * 16])
+
+    def connect(_url: str, **_options: object) -> _FakeCosyVoiceConnection:
+        return _FakeCosyVoiceConnection(socket)
+
+    config = AliyunCosyVoiceTtsConfiguration(
+        enabled=True,
+        voice_id="cosyvoice-v3.5-plus-test-voice",
+        updated_at=datetime.now(UTC),
+    )
+    catalog_client = _cosyvoice_catalog_client(target_model=config.model)
+    provider = AliyunCosyVoiceRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeCosyVoiceConfigurations(config)),
+        websocket_factory=connect,
+        http_client=catalog_client,
+    )
+    request = _synthesis_request(tmp_path / "cancelled-cosyvoice.wav")
+
+    async def consume() -> None:
+        async for _event in provider.stream(request):
+            pass
+
+    task = asyncio.create_task(consume())
+    await asyncio.wait_for(socket.waiting.wait(), timeout=1)
+    task.cancel("barge_in")
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await provider.close()
+    await catalog_client.aclose()
+
+    assert not request.destination.exists()
+    cancel_payload = cast(dict[str, object], socket.sent[-1]["payload"])
+    cancel_input = cast(dict[str, object], cancel_payload["input"])
+    assert cancel_input["directive"] == "cancel"
+
+
+@pytest.mark.asyncio
+async def test_cosyvoice_realtime_rejects_mismatched_voice_before_websocket(
+    tmp_path: Path,
+) -> None:
+    websocket_opened = False
+
+    def connect(_url: str, **_options: object) -> _FakeCosyVoiceConnection:
+        nonlocal websocket_opened
+        websocket_opened = True
+        return _FakeCosyVoiceConnection(_FakeCosyVoiceSocket([]))
+
+    config = AliyunCosyVoiceTtsConfiguration(
+        enabled=True,
+        voice_id="cosyvoice-v3.5-plus-test-voice",
+        updated_at=datetime.now(UTC),
+    )
+    catalog_client = _cosyvoice_catalog_client(target_model="cosyvoice-v3.5-flash")
+    provider = AliyunCosyVoiceRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeCosyVoiceConfigurations(config)),
+        websocket_factory=connect,
+        http_client=catalog_client,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="音色与模型不匹配"):
+            _ = [
+                event
+                async for event in provider.stream(
+                    _synthesis_request(tmp_path / "mismatched-cosyvoice.wav")
+                )
+            ]
+    finally:
+        await provider.close()
+        await catalog_client.aclose()
+
+    assert websocket_opened is False
 
 
 @pytest.mark.asyncio
