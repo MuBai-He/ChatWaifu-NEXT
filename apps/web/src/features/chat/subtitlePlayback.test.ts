@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AudioPlaybackItem } from "./audioPlayer";
 import type { PlaybackAckReceipt } from "./runtimeClient";
 import {
+  calculatePagedSubtitleScrollTop,
   countSubtitleTextUnits,
   normalizeDesktopSubtitle,
   SubtitlePlaybackTracker,
@@ -14,6 +15,28 @@ describe("desktop subtitle playback", () => {
       normalizeDesktopSubtitle("第一段。\n\n  \n第二段。\r\n第三段。"),
     ).toBe("第一段。\n第二段。\n第三段。");
     expect(countSubtitleTextUnits("宁宁……\n你好")).toBe(6);
+  });
+
+  it("turns the subtitle viewport in whole-line steps", () => {
+    const input = {
+      totalTextUnits: 16,
+      scrollHeight: 240,
+      clientHeight: 60,
+      lineHeight: 20,
+    };
+
+    expect(
+      calculatePagedSubtitleScrollTop({ ...input, playedTextUnits: 8 }),
+    ).toBe(80);
+    expect(
+      calculatePagedSubtitleScrollTop({ ...input, playedTextUnits: 8.5 }),
+    ).toBe(80);
+    expect(
+      calculatePagedSubtitleScrollTop({ ...input, playedTextUnits: 10 }),
+    ).toBe(100);
+    expect(
+      calculatePagedSubtitleScrollTop({ ...input, playedTextUnits: 16 }),
+    ).toBe(180);
   });
 
   it("derives cumulative text progress from actual segment playback", () => {

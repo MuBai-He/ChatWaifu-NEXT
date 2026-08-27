@@ -30,6 +30,47 @@ export function countSubtitleTextUnits(text: string): number {
   return Array.from(text).filter((character) => !/\s/u.test(character)).length;
 }
 
+interface PagedSubtitleScrollInput {
+  playedTextUnits: number;
+  totalTextUnits: number;
+  scrollHeight: number;
+  clientHeight: number;
+  lineHeight: number;
+  visibleLineCount?: number;
+}
+
+/** Convert continuous playback progress into whole-line galgame page turns. */
+export function calculatePagedSubtitleScrollTop({
+  playedTextUnits,
+  totalTextUnits,
+  scrollHeight,
+  clientHeight,
+  lineHeight,
+  visibleLineCount = 3,
+}: PagedSubtitleScrollInput): number {
+  const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
+  if (
+    playedTextUnits <= 0 ||
+    totalTextUnits <= 0 ||
+    maxScrollTop <= 0 ||
+    lineHeight <= 0 ||
+    visibleLineCount <= 0
+  )
+    return 0;
+
+  const playbackRatio = Math.min(1, playedTextUnits / totalTextUnits);
+  const totalLineCount = Math.max(
+    visibleLineCount,
+    Math.ceil(scrollHeight / lineHeight),
+  );
+  const activeLineIndex = Math.min(
+    totalLineCount - 1,
+    Math.floor(playbackRatio * totalLineCount),
+  );
+  const firstVisibleLine = Math.max(0, activeLineIndex - visibleLineCount + 1);
+  return Math.min(maxScrollTop, firstVisibleLine * lineHeight);
+}
+
 export class SubtitlePlaybackTracker {
   private generationId: string | null = null;
   private readonly segments = new Map<string, SegmentProgress>();

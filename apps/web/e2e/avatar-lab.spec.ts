@@ -292,6 +292,7 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   const dialogueOverflow = await page.evaluate<{
     overflowY: string;
     lineClamp: string;
+    scrollBehavior: string;
   }>(`
     (() => {
       const container = document.createElement("section");
@@ -304,6 +305,7 @@ test("desktop pet reveals its controls and composer while the pointer is over th
         return {
           overflowY: style.overflowY,
           lineClamp: style.webkitLineClamp,
+          scrollBehavior: style.scrollBehavior,
         };
       } finally {
         container.remove();
@@ -312,6 +314,7 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   `);
   expect(dialogueOverflow.overflowY).toBe("auto");
   expect(dialogueOverflow.lineClamp).toBe("none");
+  expect(dialogueOverflow.scrollBehavior).toBe("auto");
 
   const screenshot = await page.screenshot({
     animations: "disabled",

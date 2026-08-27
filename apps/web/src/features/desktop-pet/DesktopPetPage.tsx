@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatSession } from "../chat/useChatSession";
 import {
+  calculatePagedSubtitleScrollTop,
   countSubtitleTextUnits,
   normalizeDesktopSubtitle,
 } from "../chat/subtitlePlayback";
@@ -34,6 +35,7 @@ export function DesktopPetPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const dialogueRef = useRef<HTMLParagraphElement>(null);
+  const subtitleGenerationRef = useRef<string | null>(null);
   const {
     preferences,
     error: preferenceError,
@@ -61,25 +63,39 @@ export function DesktopPetPage() {
     const dialogueElement = dialogueRef.current;
     if (!dialogueElement) return;
     const generationId = latestAssistant?.generationId;
-    if (!generationId || subtitlePlayback?.generationId !== generationId)
+    if (!generationId) {
+      subtitleGenerationRef.current = null;
+      dialogueElement.scrollTop = 0;
       return;
+    }
+    if (subtitleGenerationRef.current !== generationId) {
+      subtitleGenerationRef.current = generationId;
+      dialogueElement.scrollTop = 0;
+    }
+    if (subtitlePlayback?.generationId !== generationId) return;
     if (subtitlePlayback.playedTextUnits <= 0) {
       dialogueElement.scrollTop = 0;
       return;
     }
     const totalTextUnits = countSubtitleTextUnits(displayDialogue);
     if (totalTextUnits <= 0) return;
-    const maxScrollTop = Math.max(
-      0,
-      dialogueElement.scrollHeight - dialogueElement.clientHeight,
+    const computedLineHeight = Number.parseFloat(
+      window.getComputedStyle(dialogueElement).lineHeight,
     );
-    const playbackRatio = Math.min(
-      1,
-      subtitlePlayback.playedTextUnits / totalTextUnits,
-    );
+    const lineHeight =
+      computedLineHeight > 4
+        ? computedLineHeight
+        : dialogueElement.clientHeight / 3;
+    const nextScrollTop = calculatePagedSubtitleScrollTop({
+      playedTextUnits: subtitlePlayback.playedTextUnits,
+      totalTextUnits,
+      scrollHeight: dialogueElement.scrollHeight,
+      clientHeight: dialogueElement.clientHeight,
+      lineHeight,
+    });
     dialogueElement.scrollTop = Math.max(
       dialogueElement.scrollTop,
-      maxScrollTop * playbackRatio,
+      nextScrollTop,
     );
   }, [displayDialogue, latestAssistant?.generationId, subtitlePlayback]);
 

@@ -101,7 +101,7 @@
   font-size: 0.83rem;
   line-height: 1.65;
   overscroll-behavior: contain;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scrollbar-width: none;
   white-space: pre-wrap;
 }

@@ -198,7 +198,7 @@ describe("ChatWaifu usable demo", () => {
     ).toBeTruthy();
   });
 
-  it("folds blank lines and scrolls desktop subtitles with audio progress", () => {
+  it("folds blank lines and flips whole subtitle lines with audio progress", () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.messages = [
       {
@@ -230,7 +230,21 @@ describe("ChatWaifu usable demo", () => {
     };
     rerender(<App />);
 
-    expect(dialogue.scrollTop).toBeCloseTo(90);
+    expect(dialogue.scrollTop).toBe(80);
+
+    session.subtitlePlayback = {
+      ...session.subtitlePlayback,
+      playedTextUnits: 8.5,
+    };
+    rerender(<App />);
+    expect(dialogue.scrollTop).toBe(80);
+
+    session.subtitlePlayback = {
+      ...session.subtitlePlayback,
+      playedTextUnits: 10,
+    };
+    rerender(<App />);
+    expect(dialogue.scrollTop).toBe(100);
   });
 
   it("sends typed messages from the desktop-pet hover composer", async () => {
