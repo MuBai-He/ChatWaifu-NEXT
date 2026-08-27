@@ -17,11 +17,13 @@ from chatwaifu_runtime.providers import tts as tts_module
 from chatwaifu_runtime.providers.contracts import (
     SynthesisRequest,
     TtsPcmChunk,
+    TtsProviderDescriptor,
     TtsStreamCompleted,
 )
 from chatwaifu_runtime.providers.tts import (
     MacOsSayTtsProvider,
     SherpaKokoroWorkerTtsProvider,
+    WorkerTtsProvider,
 )
 from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
 from chatwaifu_runtime.providers.tts_config import (
@@ -299,6 +301,50 @@ async def test_kokoro_worker_adapter_validates_identity_and_writes_wave(tmp_path
     assert synthesis.destination.read_bytes()[:4] == b"RIFF"
     assert result.sample_rate == 24_000
     assert result.duration_ms == 10
+
+
+@pytest.mark.asyncio
+async def test_worker_capability_does_not_claim_end_to_end_native_streaming() -> None:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        assert request.url.path == "/v1/capabilities"
+        return httpx2.Response(
+            200,
+            json={
+                "schema_version": "1.0",
+                "provider_id": "qwen3_tts_mlx",
+                "display_name": "Qwen3-TTS",
+                "model": "local-qwen",
+                "languages": ["zh", "ja"],
+                "native_streaming": True,
+                "output_formats": ["wav"],
+                "local_only": True,
+            },
+        )
+
+    client = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=client,
+    )
+    try:
+        descriptor = await provider.refresh_descriptor()
+    finally:
+        await provider.close()
+
+    assert descriptor.native_streaming is False
 
 
 @pytest.mark.asyncio

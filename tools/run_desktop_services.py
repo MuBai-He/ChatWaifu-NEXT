@@ -178,7 +178,8 @@ def _runtime_environment(
                         "supports_style": False,
                         "supports_speed": False,
                         "supports_pitch": False,
-                        "native_streaming": provider_id == "qwen3_tts_mlx",
+                        # Worker protocol v1 still returns a complete WAV.
+                        "native_streaming": False,
                     }
                     for provider_id, profile in tts_profiles.items()
                 },

@@ -703,8 +703,8 @@ class ConversationService:
         except BaseException:
             asset.path.unlink(missing_ok=True)
             if stream_started:
-                partial_duration_ms = streamed_audio_bytes * 1000 // max(
-                    1, stream_sample_rate * stream_channels * 2
+                partial_duration_ms = (
+                    streamed_audio_bytes * 1000 // max(1, stream_sample_rate * stream_channels * 2)
                 )
                 await self._playback.finalize_segment(asset.asset_id, partial_duration_ms)
                 await self._audio_streams.publish(

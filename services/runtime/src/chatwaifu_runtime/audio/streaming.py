@@ -92,9 +92,7 @@ class AudioStreamHub:
     async def publish(self, packet: AudioStreamPacket) -> int:
         if self._closed:
             return 0
-        return sum(
-            subscription.offer(packet) for subscription in tuple(self._subscriptions)
-        )
+        return sum(subscription.offer(packet) for subscription in tuple(self._subscriptions))
 
     async def close(self) -> None:
         self._closed = True

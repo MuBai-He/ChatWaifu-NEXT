@@ -305,7 +305,9 @@ class WorkerTtsProvider:
             supports_style=result.supports_style,
             supports_speed=result.supports_speed,
             supports_pitch=result.supports_pitch,
-            native_streaming=result.native_streaming,
+            # `/v1/synthesize` is a complete-WAV boundary in worker protocol v1.
+            # Do not expose an engine-internal streaming flag as delivery latency.
+            native_streaming=False,
             local_only=result.local_only,
         )
 

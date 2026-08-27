@@ -94,7 +94,7 @@ class TtsConfig(BaseModel):
                 supports_voice_cloning=True,
                 supports_style=False,
                 supports_speed=False,
-                native_streaming=True,
+                native_streaming=False,
             ),
             "gpt_sovits": TtsWorkerEndpointConfig(
                 url="http://127.0.0.1:8768",

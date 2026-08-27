@@ -66,7 +66,9 @@ def build_providers(
                     supports_style=endpoint.supports_style,
                     supports_speed=endpoint.supports_speed,
                     supports_pitch=endpoint.supports_pitch,
-                    native_streaming=endpoint.native_streaming,
+                    # Worker protocol v1 returns one complete WAV. Engine-level
+                    # incremental decoding is not end-to-end native streaming.
+                    native_streaming=False,
                     local_only=True,
                 ),
                 base_url=endpoint.url,
