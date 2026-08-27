@@ -86,6 +86,7 @@ class ResourceStatus(BaseModel):
 class CompanionStatus(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    schema_version: Literal["1.0"] = "1.0"
     settings: CompanionSettings
     resources: ResourceStatus
     proactive_today: int = Field(ge=0)

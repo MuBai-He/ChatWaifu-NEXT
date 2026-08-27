@@ -69,17 +69,14 @@ async def update_companion_settings(
     container = _container(request)
     settings = await container.companion_settings.update(body)
     container.resources.touch()
+    container.ambient.settings_changed()
     return settings.model_dump(mode="json")
 
 
 @router.get("/companion/status")
 async def read_companion_status(request: Request) -> dict[str, object]:
     container = _container(request)
-    return {
-        "schema_version": "1.0",
-        "settings": container.companion_settings.get().model_dump(mode="json"),
-        "resources": container.resources.status().model_dump(mode="json"),
-    }
+    return (await container.ambient.status()).model_dump(mode="json")
 
 
 @router.post("/companion/resources/sleep")
@@ -94,6 +91,22 @@ async def sleep_companion_resources(request: Request) -> dict[str, object]:
 @router.post("/companion/resources/wake")
 async def wake_companion_resources(request: Request) -> dict[str, object]:
     return _container(request).resources.wake().model_dump(mode="json")
+
+
+@router.post("/sessions/{session_id}/companion/proactive")
+async def trigger_proactive_preview(request: Request, session_id: UUID) -> dict[str, object]:
+    try:
+        accepted = await _container(request).ambient.trigger_manual(session_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "session_id": str(accepted.session_id),
+        "turn_id": str(accepted.turn_id),
+        "generation_id": str(accepted.generation_id),
+        "state": accepted.state.value,
+    }
 
 
 @router.get("/runtime/version")

@@ -169,4 +169,6 @@ export interface CompanionStatus {
   schema_version: "1.0";
   settings: CompanionSettings;
   resources: ResourceStatus;
+  proactive_today: number;
+  last_proactive_at?: string | null;
 }

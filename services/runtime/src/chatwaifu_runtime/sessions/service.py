@@ -92,6 +92,13 @@ class SessionService:
             return None
         return SessionSnapshot.model_validate(dict(row))
 
+    async def list_ready_sessions(self) -> tuple[SessionSnapshot, ...]:
+        rows = await self._database.fetchall(
+            "SELECT * FROM sessions WHERE state = ? ORDER BY updated_at DESC",
+            (SessionState.READY.value,),
+        )
+        return tuple(SessionSnapshot.model_validate(dict(row)) for row in rows)
+
     async def transition_session(self, session_id: UUID, target: SessionState) -> SessionSnapshot:
         current = await self.get_session(session_id)
         if current is None:

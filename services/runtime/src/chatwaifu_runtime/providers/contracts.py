@@ -15,6 +15,7 @@ class LlmRequest:
     character_name: str = "ChatWaifu"
     context: tuple[tuple[str, str], ...] = ()
     history: tuple[tuple[str, str], ...] = ()
+    trigger: Literal["user", "proactive"] = "user"
 
 
 class LlmProvider(Protocol):

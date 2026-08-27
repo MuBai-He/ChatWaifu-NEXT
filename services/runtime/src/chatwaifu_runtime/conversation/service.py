@@ -45,6 +45,12 @@ from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
 
 _SEGMENT_ENDINGS = frozenset("。\uff01\uff1f!?\uff1b;\n")
+_PROACTIVE_PROMPT = (
+    "[Runtime ambient event] The user has been quietly inactive for a while. "
+    "Offer one brief, natural, low-pressure check-in as the character. "
+    "Do not claim the user just spoke, do not mention timers or system policy, "
+    "and do not demand a reply."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +130,53 @@ class ConversationService:
             turn_id=turn_id,
             generation_id=generation_id,
         )
+
+    async def submit_proactive(
+        self, session_id: UUID, *, reason: str = "idle_check_in"
+    ) -> GenerationAccepted:
+        """Start a policy-approved character turn without fabricating a user message."""
+
+        async with self._start_lock:
+            if self.active_generation_id(session_id) is not None:
+                raise RuntimeError("session already has an active generation")
+            session = await self._sessions.get_session(session_id)
+            if session is None:
+                raise KeyError(f"unknown session {session_id}")
+            if session.state is not SessionState.READY:
+                raise RuntimeError(f"session is not ready: {session.state}")
+            accepted, events = await self._commit_proactive_turn(session_id, reason)
+            for event in events:
+                await self._publisher.publish_persisted(event)
+            character = self._characters.get(session.character_id)
+            if character is None:
+                raise RuntimeError(f"character is not installed: {session.character_id}")
+            memory_context = await self._memory.retrieve_context(
+                session_id,
+                accepted.turn_id,
+                character.character_id,
+                "轻声主动关心用户",
+            )
+            history = await self._recent_history(session_id, accepted.turn_id)
+            character_context = await self._character_kernel.plan_proactive_turn(
+                session_id=session_id,
+                turn_id=accepted.turn_id,
+                generation_id=accepted.generation_id,
+                character_id=character.character_id,
+            )
+            task = asyncio.create_task(
+                self._run_generation(
+                    accepted,
+                    _PROACTIVE_PROMPT,
+                    character,
+                    character_context,
+                    memory_context,
+                    history,
+                    trigger="proactive",
+                ),
+                name=f"proactive-generation-{accepted.generation_id}",
+            )
+            self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
+            return accepted
 
     async def _submit(
         self,
@@ -232,6 +285,9 @@ class ConversationService:
                 turns_deleted = max(turns_cursor.rowcount, 0)
                 await turns_cursor.close()
                 await connection.execute(
+                    "DELETE FROM ambient_actions WHERE session_id = ?", (str(session_id),)
+                )
+                await connection.execute(
                     """
                     UPDATE sessions
                     SET conversation_state = 'idle', revision = revision + 1,
@@ -261,7 +317,9 @@ class ConversationService:
         rows = await self._database.fetchall(
             """
             SELECT turn_id, role, committed_text, committed_at, created_at
-            FROM turns WHERE session_id = ? AND committed_text IS NOT NULL
+            FROM turns
+            WHERE session_id = ? AND committed_text IS NOT NULL
+                AND role IN ('user', 'assistant')
             ORDER BY created_at ASC LIMIT ?
             """,
             (str(session_id), min(max(limit, 1), 500)),
@@ -351,6 +409,94 @@ class ConversationService:
             (user_event, generation_event),
         )
 
+    async def _commit_proactive_turn(
+        self, session_id: UUID, reason: str
+    ) -> tuple[GenerationAccepted, tuple[GenericCoreEvent, AssistantGenerationStartedEvent]]:
+        now = datetime.now(UTC)
+        turn_id = uuid4()
+        generation_id = uuid4()
+        audio_stream_id = uuid4()
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                INSERT INTO turns(
+                    turn_id, session_id, role, committed_text, committed_at, created_at
+                ) VALUES (?, ?, 'system', ?, ?, ?)
+                """,
+                (
+                    str(turn_id),
+                    str(session_id),
+                    _PROACTIVE_PROMPT,
+                    now.isoformat(),
+                    now.isoformat(),
+                ),
+            )
+            await connection.execute(
+                """
+                INSERT INTO generations(
+                    generation_id, session_id, turn_id, state, backend_kind,
+                    audio_stream_id, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(generation_id),
+                    str(session_id),
+                    str(turn_id),
+                    GenerationState.RUNNING.value,
+                    self._providers.llm.kind,
+                    str(audio_stream_id),
+                    now.isoformat(),
+                ),
+            )
+            await connection.execute(
+                """
+                UPDATE sessions SET conversation_state = 'generating', updated_at = ?
+                WHERE session_id = ?
+                """,
+                (now.isoformat(), str(session_id)),
+            )
+            proactive_event = await self._event_store.append_in_transaction(
+                connection,
+                GenericCoreEvent.model_validate(
+                    {
+                        "event_id": uuid4(),
+                        "event_type": "companion.proactive_triggered",
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "generation_id": generation_id,
+                        "occurred_at": now,
+                        "source": "runtime.companion",
+                        "privacy": PrivacyLevel.LOCAL,
+                        "payload": {"reason": reason},
+                    }
+                ),
+            )
+            generation_event = await self._event_store.append_in_transaction(
+                connection,
+                AssistantGenerationStartedEvent(
+                    event_id=uuid4(),
+                    session_id=session_id,
+                    turn_id=turn_id,
+                    generation_id=generation_id,
+                    occurred_at=now,
+                    source="runtime.conversation",
+                    privacy=PrivacyLevel.LOCAL,
+                    payload=AssistantGenerationStartedPayload(
+                        backend_kind=self._providers.llm.kind
+                    ),
+                ),
+            )
+        return (
+            GenerationAccepted(
+                session_id,
+                turn_id,
+                generation_id,
+                audio_stream_id,
+                GenerationState.RUNNING,
+            ),
+            (proactive_event, generation_event),
+        )
+
     async def _run_generation(
         self,
         accepted: GenerationAccepted,
@@ -359,6 +505,8 @@ class ConversationService:
         character_context: TurnCharacterContext,
         memory_context: MemoryContextPacket,
         history: tuple[tuple[str, str], ...],
+        *,
+        trigger: Literal["user", "proactive"] = "user",
     ) -> None:
         output = ""
         segment = ""
@@ -402,6 +550,7 @@ class ConversationService:
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,
+                trigger=trigger,
             )
             async for delta in self._providers.llm.stream(request):
                 self._ensure_current(accepted)
@@ -445,6 +594,7 @@ class ConversationService:
             SELECT role, committed_text
             FROM turns
             WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
+                AND role IN ('user', 'assistant')
             ORDER BY created_at DESC
             LIMIT ?
             """,

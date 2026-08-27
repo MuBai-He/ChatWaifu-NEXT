@@ -6,6 +6,7 @@ from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import CharacterKernelService
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.companion.activity import ActivityTracker
+from chatwaifu_runtime.companion.ambient import AmbientCompanionService
 from chatwaifu_runtime.companion.resources import ResourceLifecycleService
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.config.settings import Settings
@@ -92,6 +93,16 @@ class RuntimeContainer:
         self.resources.set_busy_probe(
             lambda: self.conversation.active_count > 0 or self.providers.tts.active_jobs > 0
         )
+        self.ambient = AmbientCompanionService(
+            self.database,
+            self.companion_settings,
+            self.activity,
+            self.sessions,
+            self.conversation,
+            self.event_publisher,
+            self.resources.status,
+            on_trigger=self.resources.touch,
+        )
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,
@@ -116,6 +127,7 @@ class RuntimeContainer:
         await self.model_configurations.start()
         await self.runtime_skills.start()
         await self.resources.start()
+        await self.ambient.start()
         self._started = True
         for event in await self.event_store.pending_outbox():
             await self.event_hub.publish(event)
@@ -127,6 +139,7 @@ class RuntimeContainer:
         if not self._started:
             return
         self._started = False
+        await self.ambient.stop()
         await self.resources.stop()
         await self.voice_media.close()
         await self.conversation.stop()

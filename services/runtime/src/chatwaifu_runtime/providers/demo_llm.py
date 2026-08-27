@@ -13,6 +13,13 @@ class DemoLlmProvider:
         self._delay_seconds = chunk_delay_ms / 1000
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[str]:
+        if request.trigger == "proactive":
+            response = "那个……忙了这么久，也别忘了稍微休息一下哦。想聊点什么的话，我就在这里。"
+            for chunk in _chunks(response):
+                if self._delay_seconds:
+                    await asyncio.sleep(self._delay_seconds)
+                yield chunk
+            return
         remembered = next(
             (
                 text

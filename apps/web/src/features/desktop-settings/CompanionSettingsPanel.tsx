@@ -33,6 +33,8 @@ const fallbackSettings: CompanionSettings = {
 export function CompanionSettingsPanel() {
   const [settings, setSettings] = useState(fallbackSettings);
   const [resources, setResources] = useState<ResourceStatus | null>(null);
+  const [proactiveToday, setProactiveToday] = useState(0);
+  const [lastProactiveAt, setLastProactiveAt] = useState<string | null>(null);
   const [host, setHost] = useState<DesktopRuntimeStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,8 @@ export function CompanionSettingsPanel() {
         if (!active) return;
         setSettings(status.settings);
         setResources(status.resources);
+        setProactiveToday(status.proactive_today);
+        setLastProactiveAt(status.last_proactive_at ?? null);
         setHost(runtimeHost);
         if (isDesktopHost()) {
           const { listen } = await import("@tauri-apps/api/event");
@@ -239,6 +243,15 @@ export function CompanionSettingsPanel() {
             setSettings((current) => ({ ...current, proactive_daily_budget }))
           }
         />
+        <div className="companion-settings-status-note">
+          今天已主动问候 {proactiveToday} 次
+          {lastProactiveAt
+            ? ` · 最近一次 ${new Date(lastProactiveAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`
+            : " · 今天尚未主动问候"}
+        </div>
       </SettingsBlock>
 
       <SettingsBlock

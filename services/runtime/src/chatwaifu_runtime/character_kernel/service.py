@@ -196,6 +196,34 @@ class CharacterKernelService:
         )
         return snapshot
 
+    async def plan_proactive_turn(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        character_id: str,
+    ) -> TurnCharacterContext:
+        """Plan an ambient turn without treating it as user relationship evidence."""
+
+        snapshot = await self.snapshot(character_id)
+        plan = ResponsePlan(
+            intent="curious",
+            tone="gentle",
+            expression="happy" if snapshot.affect.valence >= 0.2 else "neutral",
+            motion="stare" if snapshot.relationship.stage != "acquaintance" else None,
+            response_length="short",
+            rationale="policy-approved proactive check-in",
+        )
+        await self._emit(
+            "character.response_planned",
+            session_id,
+            turn_id,
+            generation_id,
+            {"plan": plan.model_dump(mode="json"), "trigger": "proactive"},
+        )
+        return TurnCharacterContext(snapshot=snapshot, plan=plan)
+
     async def clear_all(self) -> int:
         async with self._database.transaction() as connection:
             affect = await connection.execute("DELETE FROM character_states")
