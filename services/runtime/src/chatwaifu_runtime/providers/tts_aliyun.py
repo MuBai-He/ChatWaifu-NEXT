@@ -17,6 +17,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 from uuid import uuid4
 
+import httpx2
 from websockets.asyncio.client import connect as websocket_connect
 
 from chatwaifu_runtime.providers.contracts import (
@@ -30,6 +31,7 @@ from chatwaifu_runtime.providers.contracts import (
 )
 from chatwaifu_runtime.providers.tts_config import (
     ALIYUN_TTS_PROVIDER_ID,
+    AliyunTtsConfiguration,
     TtsConfigurationService,
 )
 
@@ -47,9 +49,13 @@ class AliyunQwenRealtimeTtsProvider:
         configurations: TtsConfigurationService,
         *,
         websocket_factory: WebSocketFactory = DEFAULT_WEBSOCKET_FACTORY,
+        http_client: httpx2.AsyncClient | None = None,
     ) -> None:
         self._configurations = configurations
         self._websocket_factory = websocket_factory
+        self._http_client = http_client or httpx2.AsyncClient()
+        self._owns_http_client = http_client is None
+        self._validated_voice_signature: tuple[str, ...] | None = None
 
     @property
     def descriptor(self) -> TtsProviderDescriptor:
@@ -125,6 +131,8 @@ class AliyunQwenRealtimeTtsProvider:
             raise RuntimeError("阿里云百炼实时语音尚未启用")
         if api_key is None:
             raise RuntimeError("阿里云百炼 API Key 尚未配置")
+
+        await self._validate_voice_binding(config, api_key)
 
         request.destination.parent.mkdir(parents=True, exist_ok=True)
         request.destination.unlink(missing_ok=True)
@@ -245,7 +253,91 @@ class AliyunQwenRealtimeTtsProvider:
         return None
 
     async def close(self) -> None:
-        return None
+        if self._owns_http_client:
+            await self._http_client.aclose()
+
+    async def _validate_voice_binding(self, config: AliyunTtsConfiguration, api_key: str) -> None:
+        signature = (
+            config.region,
+            config.workspace_id,
+            config.voice_id,
+            config.model,
+            config.updated_at.isoformat(),
+        )
+        if self._validated_voice_signature == signature:
+            return
+
+        headers = {"Authorization": f"Bearer {api_key}"}
+        if config.workspace_id:
+            headers["X-DashScope-WorkSpace"] = config.workspace_id
+        page_size = 100
+        for page_index in range(20):
+            try:
+                response = await self._http_client.post(
+                    config.voice_catalog_url,
+                    headers=headers,
+                    json={
+                        "model": "qwen-voice-enrollment",
+                        "input": {
+                            "action": "list",
+                            "page_size": page_size,
+                            "page_index": page_index,
+                        },
+                    },
+                    timeout=config.timeout_seconds,
+                )
+                response.raise_for_status()
+            except httpx2.HTTPStatusError as error:
+                if error.response.status_code in {401, 403}:
+                    raise RuntimeError(
+                        "百炼 API Key 无法访问当前地域的 Qwen 音色; "
+                        "请确认 Key 与北京/新加坡设置一致"
+                    ) from error
+                raise RuntimeError(
+                    f"百炼音色元数据查询失败 (HTTP {error.response.status_code})"
+                ) from error
+            except httpx2.TimeoutException as error:
+                raise RuntimeError("百炼音色元数据查询超时") from error
+            except httpx2.HTTPError as error:
+                raise RuntimeError("无法连接百炼音色元数据服务") from error
+
+            payload = _json_object(response)
+            output = payload.get("output")
+            if not isinstance(output, dict):
+                raise RuntimeError("百炼音色列表返回了无效数据")
+            output_value = cast(dict[str, object], output)
+            items = output_value.get("voice_list")
+            if not isinstance(items, list):
+                raise RuntimeError("百炼音色列表缺少 voice_list")
+            item_values = cast(list[object], items)
+            for item in item_values:
+                if not isinstance(item, dict):
+                    continue
+                item_value = cast(dict[str, object], item)
+                if item_value.get("voice") != config.voice_id:
+                    continue
+                target_model = item_value.get("target_model")
+                if not isinstance(target_model, str) or not target_model:
+                    raise RuntimeError("百炼音色缺少 target_model，无法安全调用")
+                if target_model != config.model:
+                    raise RuntimeError(
+                        "百炼音色与模型不匹配: 该音色绑定的是 "
+                        f"{target_model}，当前实时模型是 {config.model}。"
+                        "要保持实时流式，请使用当前实时模型重新复刻音色"
+                    )
+                self._validated_voice_signature = signature
+                return
+
+            total_count = output_value.get("total_count")
+            if (
+                not isinstance(total_count, int)
+                or total_count <= (page_index + 1) * page_size
+                or not item_values
+            ):
+                break
+        raise RuntimeError(
+            "当前 API Key、地域和业务空间下未找到该 Qwen 音色; 请检查音色 ID 与地域设置"
+        )
 
 
 async def _send_event(websocket: Any, event_type: str, **payload: object) -> None:
@@ -293,3 +385,13 @@ def _write_pcm_wave(destination: Path, pcm16: bytes, sample_rate: int, channels:
         output.setsampwidth(2)
         output.setframerate(sample_rate)
         output.writeframes(pcm16)
+
+
+def _json_object(response: httpx2.Response) -> dict[str, object]:
+    try:
+        payload: object = response.json()
+    except ValueError as error:
+        raise RuntimeError("百炼音色列表返回了非 JSON 数据") from error
+    if not isinstance(payload, dict):
+        raise RuntimeError("百炼音色列表返回了无效数据")
+    return cast(dict[str, object], payload)

@@ -64,6 +64,12 @@ class AliyunTtsConfiguration(BaseModel):
             return "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
         return "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
 
+    @property
+    def voice_catalog_url(self) -> str:
+        if self.region == "singapore":
+            return "https://dashscope-intl.aliyuncs.com/api/v1/services/audio/tts/customization"
+        return "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization"
+
 
 class _LocalTtsSecretStore:
     """Mode-0600 storage that never exposes values through Runtime responses."""

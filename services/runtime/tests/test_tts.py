@@ -113,6 +113,38 @@ class _FakeTtsConfigurations:
         return self.key
 
 
+def _voice_catalog_client(
+    *,
+    voice_id: str,
+    target_model: str,
+    status_code: int = 200,
+) -> httpx2.AsyncClient:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        assert request.url.path == "/api/v1/services/audio/tts/customization"
+        assert request.headers["authorization"] == "Bearer secret"
+        if status_code != 200:
+            return httpx2.Response(status_code, json={"code": "InvalidApiKey"})
+        return httpx2.Response(
+            200,
+            json={
+                "output": {
+                    "page_index": 0,
+                    "page_size": 100,
+                    "total_count": 1,
+                    "voice_list": [
+                        {
+                            "voice": voice_id,
+                            "target_model": target_model,
+                            "language": "ja",
+                        }
+                    ],
+                }
+            },
+        )
+
+    return httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
+
+
 @pytest.mark.asyncio
 async def test_aliyun_realtime_tts_streams_pcm_and_persists_wave(tmp_path: Path) -> None:
     pcm_chunks = [b"\x00\x00\x10\x00", b"\x20\x00\x30\x00"]
@@ -138,12 +170,21 @@ async def test_aliyun_realtime_tts_streams_pcm_and_persists_wave(tmp_path: Path)
         return _FakeAliyunConnection(socket)
 
     config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    catalog_client = _voice_catalog_client(
+        voice_id=config.voice_id,
+        target_model=config.model,
+    )
     provider = AliyunQwenRealtimeTtsProvider(
         cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
         websocket_factory=connect,
+        http_client=catalog_client,
     )
     request = _synthesis_request(tmp_path / "aliyun.wav")
-    events = [event async for event in provider.stream(request)]
+    try:
+        events = [event async for event in provider.stream(request)]
+    finally:
+        await provider.close()
+        await catalog_client.aclose()
 
     chunks = [event for event in events if isinstance(event, TtsPcmChunk)]
     completed = cast(TtsStreamCompleted, events[-1])
@@ -184,9 +225,14 @@ async def test_aliyun_realtime_tts_cancellation_never_commits_late_audio(
         return _FakeAliyunConnection(socket)
 
     config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    catalog_client = _voice_catalog_client(
+        voice_id=config.voice_id,
+        target_model=config.model,
+    )
     provider = AliyunQwenRealtimeTtsProvider(
         cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
         websocket_factory=connect,
+        http_client=catalog_client,
     )
     request = _synthesis_request(tmp_path / "cancelled-aliyun.wav")
 
@@ -200,6 +246,68 @@ async def test_aliyun_realtime_tts_cancellation_never_commits_late_audio(
     with pytest.raises(asyncio.CancelledError):
         await task
     assert not request.destination.exists()
+    await provider.close()
+    await catalog_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_aliyun_realtime_tts_rejects_voice_bound_to_batch_model(
+    tmp_path: Path,
+) -> None:
+    config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    websocket_opened = False
+
+    def connect(_url: str, **_options: object) -> _FakeAliyunConnection:
+        nonlocal websocket_opened
+        websocket_opened = True
+        return _FakeAliyunConnection(_FakeAliyunSocket([]))
+
+    catalog_client = _voice_catalog_client(
+        voice_id=config.voice_id,
+        target_model="qwen3-tts-vc-2026-01-22",
+    )
+    provider = AliyunQwenRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
+        websocket_factory=connect,
+        http_client=catalog_client,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="音色与模型不匹配"):
+            _ = [
+                event
+                async for event in provider.stream(_synthesis_request(tmp_path / "mismatch.wav"))
+            ]
+    finally:
+        await provider.close()
+        await catalog_client.aclose()
+
+    assert websocket_opened is False
+    assert not (tmp_path / "mismatch.wav").exists()
+
+
+@pytest.mark.asyncio
+async def test_aliyun_realtime_tts_reports_region_key_mismatch(tmp_path: Path) -> None:
+    config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    catalog_client = _voice_catalog_client(
+        voice_id=config.voice_id,
+        target_model=config.model,
+        status_code=401,
+    )
+    provider = AliyunQwenRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
+        http_client=catalog_client,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="API Key 无法访问当前地域"):
+            _ = [
+                event
+                async for event in provider.stream(
+                    _synthesis_request(tmp_path / "wrong-region.wav")
+                )
+            ]
+    finally:
+        await provider.close()
+        await catalog_client.aclose()
 
 
 @pytest.mark.asyncio
