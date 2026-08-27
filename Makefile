@@ -13,8 +13,8 @@ bootstrap:
 demo:
 	$(UV) run python tools/run_demo.py $(DEMO_ARGS)
 
-desktop:
-	$(UV) run python tools/run_demo.py --desktop
+desktop: bootstrap setup-stt-worker setup-neural-tts-workers
+	$(PNPM) --filter @chatwaifu/desktop dev
 
 format:
 	$(UV) run ruff format .

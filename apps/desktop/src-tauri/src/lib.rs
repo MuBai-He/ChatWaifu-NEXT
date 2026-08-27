@@ -1,5 +1,8 @@
 //! Thin Tauri host for ChatWaifu's desktop-pet and control-center surfaces.
 
+mod runtime_health;
+mod sidecar;
+
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -7,12 +10,15 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, WebviewUrl,
-    WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, RunEvent, Size, State,
+    WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window, WindowEvent,
     image::Image,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
 };
+
+use runtime_health::RuntimeStatus;
+use sidecar::RuntimeHost;
 
 pub const HOST_ROLE: &str = "os-capabilities-and-sidecar-management";
 pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
@@ -53,6 +59,7 @@ impl Default for DesktopPreferences {
 struct DesktopState {
     preferences: Mutex<DesktopPreferences>,
     pointer_inside_overlay: Mutex<bool>,
+    runtime: RuntimeHost,
 }
 
 #[tauri::command]
@@ -137,12 +144,37 @@ fn set_avatar_overlay_pointer_inside(
     Ok(())
 }
 
+#[tauri::command]
+fn start_runtime(app: AppHandle, state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    state.runtime.ensure_started(app)
+}
+
+#[tauri::command]
+fn stop_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    state.runtime.stop()
+}
+
+#[tauri::command]
+fn restart_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    state.runtime.restart()
+}
+
+#[tauri::command]
+fn get_runtime_status(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    state.runtime.status()
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .manage(DesktopState::default())
         .setup(|app| {
             restore_preferences(app.handle())?;
             build_tray(app)?;
+            let state = app.state::<DesktopState>();
+            state
+                .runtime
+                .ensure_started(app.handle().clone())
+                .map_err(std::io::Error::other)?;
             Ok(())
         })
         .on_window_event(handle_window_event)
@@ -154,9 +186,18 @@ pub fn run() {
             set_avatar_overlay_visible,
             set_avatar_overlay_display,
             set_avatar_overlay_pointer_inside,
+            start_runtime,
+            stop_runtime,
+            restart_runtime,
+            get_runtime_status,
         ])
-        .run(tauri::generate_context!())
-        .expect("failed to run ChatWaifu desktop host");
+        .build(tauri::generate_context!())
+        .expect("failed to build ChatWaifu desktop host");
+    app.run(|handle, event| {
+        if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
+            handle.state::<DesktopState>().runtime.shutdown_and_wait();
+        }
+    });
 }
 
 fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
@@ -167,10 +208,18 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
         MenuItem::with_id(app, "control-center", "打开桌宠设置", true, None::<&str>)?;
     let click_through =
         MenuItem::with_id(app, "click-through", "切换鼠标穿透", true, None::<&str>)?;
+    let restart_runtime =
+        MenuItem::with_id(app, "restart-runtime", "重启本地服务", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出 ChatWaifu", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&toggle_avatar, &control_center, &click_through, &quit],
+        &[
+            &toggle_avatar,
+            &control_center,
+            &click_through,
+            &restart_runtime,
+            &quit,
+        ],
     )?;
 
     TrayIconBuilder::with_id("chatwaifu-desktop-pet")
@@ -203,7 +252,15 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
                     eprintln!("desktop tray click-through failed: {error}");
                 }
             }
-            "quit" => app.exit(0),
+            "restart-runtime" => {
+                if let Err(error) = app.state::<DesktopState>().runtime.restart() {
+                    eprintln!("desktop tray Runtime restart failed: {error}");
+                }
+            }
+            "quit" => {
+                app.state::<DesktopState>().runtime.shutdown_and_wait();
+                app.exit(0);
+            }
             _ => {}
         })
         .build(app)?;

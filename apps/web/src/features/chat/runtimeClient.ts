@@ -18,12 +18,11 @@ import type {
   SessionSnapshot,
   TtsProviderSnapshot,
 } from "./types";
-
-export const RUNTIME_URL = "http://127.0.0.1:8765";
-export const RUNTIME_WS_URL = "ws://127.0.0.1:8765";
+import { resolveRuntimeUrl } from "./runtimeEndpoint";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${RUNTIME_URL}${path}`, {
+  const runtimeUrl = await resolveRuntimeUrl();
+  const response = await fetch(`${runtimeUrl}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

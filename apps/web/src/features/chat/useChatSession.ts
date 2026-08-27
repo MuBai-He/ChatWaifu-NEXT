@@ -1,8 +1,6 @@
 import { parseEventEnvelope } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  RUNTIME_URL,
-  RUNTIME_WS_URL,
   acknowledgePlayback,
   createSession,
   getCharacters,
@@ -17,6 +15,7 @@ import {
   sendCharacterInteraction,
   submitText,
 } from "./runtimeClient";
+import { runtimeAssetUrl, runtimeWebSocketUrl } from "./runtimeEndpoint";
 import type {
   AudioPayload,
   AvatarCuePayload,
@@ -324,7 +323,7 @@ export function useChatSession({
             segmentIndex: payload.segment_index,
             text: payload.text,
             durationMs: payload.duration_ms,
-            url: `${RUNTIME_URL}${payload.url}`,
+            url: runtimeAssetUrl(payload.url),
           };
           const progress =
             subtitlePlaybackTracker.current.registerSegment(item);
@@ -393,10 +392,12 @@ export function useChatSession({
     let socket: WebSocket | null = null;
     let reconnectTimer: number | null = null;
 
-    const connect = (resolvedSessionId: string) => {
+    const connect = async (resolvedSessionId: string, refresh = false) => {
+      if (disposed) return;
+      const webSocketUrl = await runtimeWebSocketUrl(refresh);
       if (disposed) return;
       socket = new WebSocket(
-        `${RUNTIME_WS_URL}/v1/events?session_id=${resolvedSessionId}`,
+        `${webSocketUrl}/v1/events?session_id=${resolvedSessionId}`,
       );
       socket.onopen = () => setConnection("connected");
       socket.onmessage = (message) => {
@@ -417,7 +418,7 @@ export function useChatSession({
         if (disposed) return;
         setConnection("connecting");
         reconnectTimer = window.setTimeout(
-          () => connect(resolvedSessionId),
+          () => void connect(resolvedSessionId, true),
           1200,
         );
       };
@@ -460,7 +461,7 @@ export function useChatSession({
         setTtsProviders(availableTts);
         const selectedTts = availableTts.find((provider) => provider.selected);
         if (selectedTts) setTtsProviderId(selectedTts.provider_id);
-        connect(session.session_id);
+        await connect(session.session_id);
       } catch (runtimeError: unknown) {
         if (disposed) return;
         setConnection("offline");
