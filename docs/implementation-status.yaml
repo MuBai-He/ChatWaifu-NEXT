@@ -136,6 +136,7 @@ phases:
       - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
       - Session-scoped TtsRouter selects normalized Qwen or GPT-SoVITS workers while macOS say and fake remain test/fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
+      - Audio-element playback promotes a hanging user-gesture probe as soon as real TTS arrives so WKWebView cannot leave active-generation segments queued forever
       - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
       - The fixed character greeting is limited to truly empty conversations and is not reused as pending-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state

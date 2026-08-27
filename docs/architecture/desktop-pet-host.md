@@ -54,6 +54,12 @@ control, or local playback. This prevents two WebViews from playing the same TTS
 All existing generation, cancellation, late-output, and playback-ACK invariants stay in the Web and
 Runtime layers. Tauri does not reinterpret conversation events.
 
+The audio-element fallback may create a silent user-gesture probe before asynchronous TTS is ready.
+That probe is never allowed to hold the playback queue indefinitely: arrival of the first real,
+active-generation segment immediately promotes the probe element to real playback. A late probe
+resolution is ignored, interruption still clears every queued segment, and only actual playback
+emits progress acknowledgements.
+
 ## Failure and lifecycle behavior
 
 - Missing Runtime renders an offline notice while Live2D remains safely interactive.
@@ -71,7 +77,8 @@ excluded from this slice.
 ## Verification
 
 - Web unit tests cover route selection, avatar interaction, typed-message submission, independent
-  HUD visibility, interaction-rail persistence, and single media ownership.
+  HUD visibility, interaction-rail persistence, hanging audio-unlock recovery, interruption, and
+  single media ownership.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
   internal scrolling, functional HUD switch, and absence of conversation controls in the settings
   window.
