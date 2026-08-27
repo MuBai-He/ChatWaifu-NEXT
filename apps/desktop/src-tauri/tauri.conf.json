@@ -24,6 +24,7 @@
         "decorations": false,
         "shadow": false,
         "acceptFirstMouse": true,
+        "backgroundThrottling": "disabled",
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "resizable": true,

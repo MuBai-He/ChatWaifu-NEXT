@@ -54,6 +54,11 @@ enabled, entering the overlay temporarily captures cursor events so the newly re
 be clicked; leaving or disposing the overlay restores click-through without changing the persisted
 preference. This is rectangular window hit testing, not per-pixel Live2D alpha hit testing.
 
+The always-visible overlay disables WebView background throttling. This keeps streaming-text timers,
+audio progress, Live2D animation, and whole-line subtitle paging active while another application has
+focus; otherwise an inactive WKWebView may defer the visible update until the user clicks or selects
+text. The ordinary control-center window retains the platform default throttling policy.
+
 React shares one desktop-preference hook between the overlay and settings window. Tauri remains the
 source of truth, persists UI/OS preferences atomically, and broadcasts a bounded
 `desktop-preferences-changed` event so an open overlay updates immediately. Browser preview uses an
@@ -93,6 +98,8 @@ emits progress acknowledgements.
 - Click-through can always be disabled again from the tray.
 - Native cursor sampling falls back to ordinary Web pointer events after repeated read failures and
   restores persisted click-through before stopping.
+- Inactive-window scheduling stays enabled for the overlay so streaming subtitles never require a
+  focus or text-selection repaint.
 - Subtitle and online-state visibility persist independently, with visible defaults for old files.
 - Invalid or old preference files fall back to safe interactive defaults.
 - `make desktop` owns all local worker, Runtime, Web, and Tauri development process groups; terminal

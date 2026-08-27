@@ -455,4 +455,17 @@ mod tests {
         assert!(!should_ignore_cursor_events(false, false));
         assert!(!should_ignore_cursor_events(false, true));
     }
+
+    #[test]
+    fn avatar_overlay_keeps_realtime_tasks_running_while_inactive() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let windows = config["app"]["windows"].as_array().unwrap();
+        let overlay = windows
+            .iter()
+            .find(|window| window["label"] == "avatar-overlay")
+            .unwrap();
+
+        assert_eq!(overlay["backgroundThrottling"], "disabled");
+    }
 }
