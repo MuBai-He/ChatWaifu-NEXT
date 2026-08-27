@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
@@ -37,6 +39,27 @@ from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 type MemoryItem = MemoryRecord
 logger = logging.getLogger(__name__)
+_PROJECTION_QUEUE_SIZE = 128
+
+
+@dataclass(frozen=True, slots=True)
+class UserTurnMemoryObservation:
+    session_id: UUID
+    turn_id: UUID
+    source_event_id: UUID
+    character_id: str
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class _QueuedProjection:
+    observation: UserTurnMemoryObservation
+    global_epoch: int
+
+
+@dataclass(slots=True)
+class _ActiveProjection:
+    task: asyncio.Task[list[MemoryProposal]]
 
 
 class MemoryService:
@@ -62,6 +85,69 @@ class MemoryService:
             self._semantic_index,
             self._temporal_graph,
         )
+        self._projection_queue: asyncio.Queue[_QueuedProjection] = asyncio.Queue(
+            maxsize=_PROJECTION_QUEUE_SIZE
+        )
+        self._projection_worker: asyncio.Task[None] | None = None
+        self._active_projection: _ActiveProjection | None = None
+        self._projection_epoch = 0
+        self._projection_stopping = False
+
+    async def start(self) -> None:
+        if self._projection_worker is not None and not self._projection_worker.done():
+            return
+        self._projection_stopping = False
+        self._projection_worker = asyncio.create_task(
+            self._run_projection_worker(), name="memory-projection-worker"
+        )
+
+    async def stop(self) -> None:
+        self._projection_stopping = True
+        worker = self._projection_worker
+        if worker is not None and not worker.done():
+            worker.cancel("runtime_stopping")
+            await asyncio.gather(worker, return_exceptions=True)
+        self._projection_worker = None
+        self._active_projection = None
+        while True:
+            try:
+                self._projection_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            else:
+                self._projection_queue.task_done()
+
+    async def enqueue_user_turn(self, observation: UserTurnMemoryObservation) -> bool:
+        worker = self._projection_worker
+        if worker is None or worker.done():
+            raise RuntimeError("memory projection worker is not running")
+        queued = _QueuedProjection(
+            observation=observation,
+            global_epoch=self._projection_epoch,
+        )
+        try:
+            self._projection_queue.put_nowait(queued)
+        except asyncio.QueueFull:
+            logger.error(
+                "memory projection queue is full",
+                extra={
+                    "session_id": str(observation.session_id),
+                    "turn_id": str(observation.turn_id),
+                    "queue_size": self._projection_queue.qsize(),
+                },
+            )
+            await self._emit(
+                observation.session_id,
+                observation.turn_id,
+                "memory.projection_deferred",
+                {
+                    "reason": "queue_full",
+                    "source_event_id": str(observation.source_event_id),
+                },
+                causation_id=observation.source_event_id,
+            )
+            return False
+        return True
 
     def parse_explicit_command(self, text: str) -> ExplicitMemoryCommand | None:
         return self._extractor.parse_explicit_command(text)
@@ -366,12 +452,61 @@ class MemoryService:
         return await self._repository.list_sources(memory_id)
 
     async def clear_all(self) -> int:
+        await self._invalidate_all_projections()
         records = await self._repository.list_records(include_tombstoned=True, limit=500)
         removed = await self._repository.clear_all()
         for record in records:
             await self._semantic_index.delete(record.memory_id)
             await self._temporal_graph.delete(record.memory_id)
         return removed
+
+    async def _invalidate_all_projections(self) -> None:
+        self._projection_epoch += 1
+        active = self._active_projection
+        if active is not None and not active.task.done():
+            active.task.cancel("all_memory_reset")
+            await asyncio.gather(active.task, return_exceptions=True)
+
+    async def _run_projection_worker(self) -> None:
+        while True:
+            queued = await self._projection_queue.get()
+            try:
+                if self._projection_is_stale(queued):
+                    continue
+                observation = queued.observation
+                task = asyncio.create_task(
+                    self.observe_user_turn(
+                        observation.session_id,
+                        observation.turn_id,
+                        observation.source_event_id,
+                        observation.character_id,
+                        observation.text,
+                    ),
+                    name=f"memory-projection-{observation.turn_id}",
+                )
+                self._active_projection = _ActiveProjection(task)
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    if self._projection_stopping:
+                        raise
+                except Exception:
+                    logger.exception(
+                        "background memory projection failed",
+                        extra={
+                            "session_id": str(observation.session_id),
+                            "turn_id": str(observation.turn_id),
+                            "source_event_id": str(observation.source_event_id),
+                        },
+                    )
+                finally:
+                    if self._active_projection.task is task:
+                        self._active_projection = None
+            finally:
+                self._projection_queue.task_done()
+
+    def _projection_is_stale(self, queued: _QueuedProjection) -> bool:
+        return queued.global_epoch != self._projection_epoch
 
     async def reindex_all(self) -> int:
         records = await self._repository.list_records(limit=500)
@@ -547,6 +682,7 @@ class MemoryService:
             "memory.tombstoned",
             "memory.recalled",
             "memory.extraction_completed",
+            "memory.projection_deferred",
         ],
         payload: dict[str, object],
         *,

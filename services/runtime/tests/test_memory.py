@@ -1,14 +1,17 @@
 """Structured memory projection, policy, retrieval, and extension-port tests."""
 
+import asyncio
+import threading
 import time
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.memory import MemoryRecord
+from chatwaifu_runtime.memory.extractor import ExtractedMemoryCandidate
 from chatwaifu_runtime.memory.inference import LlmMemoryCandidateExtractor
 from chatwaifu_runtime.memory.policy import MemoryPolicy
 from chatwaifu_runtime.memory.ports import ScoredMemoryReference
@@ -58,6 +61,25 @@ class _ExtractionModels:
           }]
         }
         """
+
+
+class _BlockingMemoryInference:
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    async def extract(
+        self,
+        text: str,
+        *,
+        namespace: str,
+        observed_at: datetime,
+        related: list[MemoryRecord],
+    ) -> list[ExtractedMemoryCandidate]:
+        del text, namespace, observed_at, related
+        self.started.set()
+        await asyncio.to_thread(self.release.wait)
+        return []
 
 
 @pytest.mark.asyncio
@@ -119,6 +141,29 @@ def test_implicit_memory_requires_review_and_preserves_sources(client: TestClien
     _submit_and_wait(http, session_id, "我喜欢蓝色")
     assert len(_memory_items(http)) == 1
     assert _proposals(http, "ignored")[0]["rationale"] == "duplicate active memory"
+
+
+def test_implicit_memory_projection_does_not_block_generation_and_reset_cancels_it(
+    client: TestClient,
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    blocking = _BlockingMemoryInference()
+    container = cast(Any, client.app).state.container
+    container.memory._inference = cast(LlmMemoryCandidateExtractor, blocking)
+    session_id = _create_session(http)
+
+    try:
+        reply = _submit_and_wait(http, session_id, "最近在整理桌面上的文件")
+        assert reply
+        assert blocking.started.wait(timeout=1)
+        assert not blocking.release.is_set()
+
+        reset = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
+        assert reset.status_code == 200
+        assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 0
+        assert cast(dict[str, object], http.get("/v1/memory/proposals").json())["count"] == 0
+    finally:
+        blocking.release.set()
 
 
 def test_user_selected_topic_becomes_an_episodic_memory_without_inferred_preference(

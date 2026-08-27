@@ -1,6 +1,7 @@
 """Generation-scoped streaming conversation pipeline with hard cancellation."""
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
@@ -38,7 +39,7 @@ from chatwaifu_runtime.characters.service import (
     CharacterVoiceProfile,
 )
 from chatwaifu_runtime.eventing.publisher import EventPublisher
-from chatwaifu_runtime.memory.service import MemoryService
+from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.playback.service import PlaybackService
@@ -58,6 +59,7 @@ _PROACTIVE_PROMPT = (
     "Do not claim the user just spoke, do not mention timers or system policy, "
     "and do not demand a reply."
 )
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,13 +218,23 @@ class ConversationService:
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
-            await self._memory.observe_user_turn(
-                session_id,
-                accepted.turn_id,
-                events[0].event_id,
-                character.character_id,
-                normalized,
-            )
+            memory_observation: UserTurnMemoryObservation | None = None
+            if self._memory.parse_explicit_command(normalized) is not None:
+                await self._memory.observe_user_turn(
+                    session_id,
+                    accepted.turn_id,
+                    events[0].event_id,
+                    character.character_id,
+                    normalized,
+                )
+            else:
+                memory_observation = UserTurnMemoryObservation(
+                    session_id=session_id,
+                    turn_id=accepted.turn_id,
+                    source_event_id=events[0].event_id,
+                    character_id=character.character_id,
+                    text=normalized,
+                )
             memory_context = await self._memory.retrieve_context(
                 session_id,
                 accepted.turn_id,
@@ -245,6 +257,7 @@ class ConversationService:
                     character_context,
                     memory_context,
                     history,
+                    memory_observation=memory_observation,
                 ),
                 name=f"generation-{accepted.generation_id}",
             )
@@ -516,10 +529,12 @@ class ConversationService:
         history: tuple[tuple[str, str], ...],
         *,
         trigger: Literal["user", "proactive"] = "user",
+        memory_observation: UserTurnMemoryObservation | None = None,
     ) -> None:
         output = ""
         segment = ""
         segment_index = 0
+        memory_projection_submitted = memory_observation is None
         try:
             await self._emit_generic(
                 accepted,
@@ -574,6 +589,9 @@ class ConversationService:
                         character.voice_profile,
                         _voice_style_instruction(character_context.plan),
                     )
+                    if not memory_projection_submitted and memory_observation is not None:
+                        await self._memory.enqueue_user_turn(memory_observation)
+                        memory_projection_submitted = True
                     segment_index += 1
                     segment = ""
             if segment.strip():
@@ -584,6 +602,9 @@ class ConversationService:
                     character.voice_profile,
                     _voice_style_instruction(character_context.plan),
                 )
+                if not memory_projection_submitted and memory_observation is not None:
+                    await self._memory.enqueue_user_turn(memory_observation)
+                    memory_projection_submitted = True
             self._ensure_current(accepted)
             await self._complete(accepted, output)
         except asyncio.CancelledError as error:
@@ -593,6 +614,17 @@ class ConversationService:
         except Exception as error:
             await self._failed(accepted, error)
         finally:
+            if not memory_projection_submitted and memory_observation is not None:
+                try:
+                    await self._memory.enqueue_user_turn(memory_observation)
+                except Exception:
+                    logger.exception(
+                        "could not enqueue committed user turn for memory projection",
+                        extra={
+                            "session_id": str(memory_observation.session_id),
+                            "turn_id": str(memory_observation.turn_id),
+                        },
+                    )
             current = self._active.get(accepted.session_id)
             if current and current.generation_id == accepted.generation_id:
                 self._active.pop(accepted.session_id, None)
