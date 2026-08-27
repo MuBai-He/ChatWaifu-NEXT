@@ -273,6 +273,12 @@ export function useChatSession({
           setAvatarState("thinking");
           break;
         }
+        case "voice.utterance_ignored": {
+          setVoiceActivity("idle");
+          setAvatarState("idle");
+          setVoiceTranscript(null);
+          break;
+        }
         case "user.turn_committed": {
           setMessages((current) => [
             ...current,

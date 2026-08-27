@@ -70,3 +70,31 @@ def test_worker_transcribes_pcm_with_generation_identity(client: TestClient) -> 
     assert result["generation_id"] == identifiers["generation_id"]
     assert result["text"] == "你好, 语音回合。"
     assert result["provider"] == "faster-whisper"
+
+
+def test_worker_unloads_idle_model_and_loads_again_on_demand(client: TestClient) -> None:
+    headers = {"Authorization": "Bearer test-token"}
+    assert client.post("/v1/model/unload", headers=headers).json() == {"unloaded": True}
+    assert client.get("/v1/health", headers=headers).json()["model_loaded"] is False
+
+    identifiers = {
+        "request_id": str(uuid4()),
+        "session_id": str(uuid4()),
+        "turn_id": str(uuid4()),
+        "generation_id": str(uuid4()),
+        "job_id": str(uuid4()),
+    }
+    response = client.post(
+        "/v1/transcribe",
+        headers=headers,
+        json={
+            **identifiers,
+            "audio_base64": base64.b64encode(b"\x00\x01" * 160).decode("ascii"),
+            "sample_rate": 16_000,
+            "channels": 1,
+            "language": "zh",
+        },
+    )
+
+    assert response.status_code == 200
+    assert client.get("/v1/health", headers=headers).json()["model_loaded"] is True

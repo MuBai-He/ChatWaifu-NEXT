@@ -420,4 +420,54 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON memory_embeddings(model_fingerprint, memory_id);
         """,
     ),
+    (
+        8,
+        """
+        CREATE TABLE companion_settings (
+            singleton_id INTEGER PRIMARY KEY CHECK(singleton_id = 1),
+            wake_phrase_enabled INTEGER NOT NULL CHECK(wake_phrase_enabled IN (0, 1)),
+            wake_phrases_json TEXT NOT NULL,
+            quiet_hours_enabled INTEGER NOT NULL CHECK(quiet_hours_enabled IN (0, 1)),
+            quiet_start TEXT NOT NULL,
+            quiet_end TEXT NOT NULL,
+            proactive_enabled INTEGER NOT NULL CHECK(proactive_enabled IN (0, 1)),
+            proactive_idle_minutes INTEGER NOT NULL
+                CHECK(proactive_idle_minutes BETWEEN 1 AND 1440),
+            proactive_cooldown_minutes INTEGER NOT NULL
+                CHECK(proactive_cooldown_minutes BETWEEN 1 AND 10080),
+            proactive_daily_budget INTEGER NOT NULL CHECK(proactive_daily_budget BETWEEN 0 AND 24),
+            resource_sleep_enabled INTEGER NOT NULL CHECK(resource_sleep_enabled IN (0, 1)),
+            resource_idle_minutes INTEGER NOT NULL CHECK(resource_idle_minutes BETWEEN 1 AND 1440),
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE ambient_actions (
+            action_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+            kind TEXT NOT NULL,
+            decision TEXT NOT NULL CHECK(decision IN ('triggered', 'deferred', 'ignored')),
+            reason TEXT NOT NULL,
+            scheduled_at TEXT NOT NULL,
+            emitted_at TEXT
+        );
+
+        CREATE INDEX ambient_actions_session_scheduled_idx
+            ON ambient_actions(session_id, scheduled_at DESC);
+        CREATE INDEX ambient_actions_decision_scheduled_idx
+            ON ambient_actions(decision, scheduled_at DESC);
+
+        INSERT INTO companion_settings(
+            singleton_id, wake_phrase_enabled, wake_phrases_json,
+            quiet_hours_enabled, quiet_start, quiet_end,
+            proactive_enabled, proactive_idle_minutes,
+            proactive_cooldown_minutes, proactive_daily_budget,
+            resource_sleep_enabled, resource_idle_minutes, updated_at
+        ) VALUES (
+            1, 1, '["宁宁","绫地宁宁"]',
+            1, '23:00', '08:00',
+            0, 45, 60, 3,
+            1, 10, CURRENT_TIMESTAMP
+        );
+        """,
+    ),
 )

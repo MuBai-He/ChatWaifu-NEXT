@@ -24,6 +24,8 @@ def main() -> int:
             str(WORKER),
             "--all-groups",
             "--no-editable",
+            "--reinstall-package",
+            "chatwaifu-asr-faster-whisper-worker",
             "--refresh-package",
             "chatwaifu-model-worker-sdk",
         ],

@@ -65,6 +65,7 @@ export function useVoiceInput({
 
   const connect = useCallback(async () => {
     if (!sessionId || !clientRef.current) return;
+    clientRef.current.setActivationMode(activationMode);
     clientRef.current.setCaptureEnabled(activationMode === "open_mic");
     await clientRef.current
       .connect(sessionId, deviceId || undefined)
@@ -81,6 +82,7 @@ export function useVoiceInput({
   const setActivationMode = useCallback((next: VoiceActivationMode) => {
     setActivationModeState(next);
     setTransmitting(false);
+    clientRef.current?.setActivationMode(next);
     clientRef.current?.setCaptureEnabled(next === "open_mic");
   }, []);
 

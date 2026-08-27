@@ -10,10 +10,13 @@ import type {
 import type {
   CharacterKernelSnapshot,
   CharacterProfile,
+  CompanionSettings,
+  CompanionStatus,
   MemoryItem,
   ModelRole,
   ModelRoleConfiguration,
   RuntimeHealth,
+  ResourceStatus,
   SessionResetResult,
   SessionSnapshot,
   TtsProviderSnapshot,
@@ -42,6 +45,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function getHealth(): Promise<RuntimeHealth> {
   return request<RuntimeHealth>("/v1/runtime/health");
+}
+
+export async function getCompanionStatus(): Promise<CompanionStatus> {
+  return request<CompanionStatus>("/v1/companion/status");
+}
+
+export async function updateCompanionSettings(
+  settings: Omit<CompanionSettings, "schema_version" | "updated_at">,
+): Promise<CompanionSettings> {
+  return request<CompanionSettings>("/v1/companion/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function sleepCompanionResources(): Promise<ResourceStatus> {
+  return request<ResourceStatus>("/v1/companion/resources/sleep", {
+    method: "POST",
+    body: "{}",
+  });
+}
+
+export async function wakeCompanionResources(): Promise<ResourceStatus> {
+  return request<ResourceStatus>("/v1/companion/resources/wake", {
+    method: "POST",
+    body: "{}",
+  });
 }
 
 export async function getCharacters(): Promise<CharacterProfile[]> {

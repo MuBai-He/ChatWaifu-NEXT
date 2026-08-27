@@ -1,5 +1,7 @@
 """Run the local Runtime and model workers as one desktop-owned sidecar stack."""
 
+# pyright: reportPrivateUsage=false
+
 from __future__ import annotations
 
 import json
@@ -9,7 +11,6 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
 from types import FrameType
 
 from run_demo import (
@@ -17,8 +18,8 @@ from run_demo import (
     _find_free_loopback_port,
     _load_tts_profiles,
     _profile_python,
-    _stt_worker_python,
     _stop_processes,
+    _stt_worker_python,
     _tts_worker_environment,
     _wait_for_url,
 )

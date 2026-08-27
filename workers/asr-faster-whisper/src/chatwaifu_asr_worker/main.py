@@ -29,7 +29,10 @@ def create_app(
         app.state.settings = resolved
         app.state.transcription = transcription
         await transcription.start()
-        yield
+        try:
+            yield
+        finally:
+            await transcription.close()
 
     app = FastAPI(title="ChatWaifu faster-whisper worker", version="0.1.0", lifespan=lifespan)
 
@@ -60,7 +63,11 @@ def create_app(
             "cancelled": transcription.cancel(generation_id),
         }
 
-    _ = health, transcribe, cancel
+    @app.post("/v1/model/unload", dependencies=[Depends(authorize)])
+    async def unload() -> dict[str, object]:
+        return {"unloaded": await transcription.unload()}
+
+    _ = health, transcribe, cancel, unload
 
     return app
 

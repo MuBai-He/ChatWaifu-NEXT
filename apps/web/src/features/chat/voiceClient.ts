@@ -58,6 +58,7 @@ export class BrowserVoiceClient {
   private playbackFrame: number | null = null;
   private reconnectTimer: number | null = null;
   private captureEnabled = false;
+  private activationMode: VoiceActivationMode = "push_to_talk";
   private disposed = false;
   private desiredConnected = false;
   private sessionId: string | null = null;
@@ -148,6 +149,10 @@ export class BrowserVoiceClient {
   setCaptureEnabled(enabled: boolean): void {
     this.captureEnabled = enabled;
     this.applyCaptureState();
+  }
+
+  setActivationMode(mode: VoiceActivationMode): void {
+    this.activationMode = mode;
   }
 
   stopRemotePlayback(
@@ -266,7 +271,11 @@ export class BrowserVoiceClient {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sdp: local.sdp, type: "offer" }),
+        body: JSON.stringify({
+          sdp: local.sdp,
+          type: "offer",
+          activation_mode: this.activationMode,
+        }),
       },
     );
     if (!response.ok) {

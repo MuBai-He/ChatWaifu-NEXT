@@ -31,6 +31,7 @@ from chatwaifu_runtime.api.models import (
     WebRtcPatchRequest,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
 
 router = APIRouter(prefix="/v1")
@@ -52,7 +53,47 @@ async def runtime_health(request: Request) -> RuntimeHealth:
         subscribers=container.event_hub.subscriber_count,
         dropped_events=container.event_hub.dropped_events,
         providers=providers,
+        resources=container.resources.status().model_dump(mode="json"),
     )
+
+
+@router.get("/companion/settings")
+async def read_companion_settings(request: Request) -> dict[str, object]:
+    return _container(request).companion_settings.get().model_dump(mode="json")
+
+
+@router.put("/companion/settings")
+async def update_companion_settings(
+    request: Request, body: CompanionSettingsUpdate
+) -> dict[str, object]:
+    container = _container(request)
+    settings = await container.companion_settings.update(body)
+    container.resources.touch()
+    return settings.model_dump(mode="json")
+
+
+@router.get("/companion/status")
+async def read_companion_status(request: Request) -> dict[str, object]:
+    container = _container(request)
+    return {
+        "schema_version": "1.0",
+        "settings": container.companion_settings.get().model_dump(mode="json"),
+        "resources": container.resources.status().model_dump(mode="json"),
+    }
+
+
+@router.post("/companion/resources/sleep")
+async def sleep_companion_resources(request: Request) -> dict[str, object]:
+    try:
+        status_snapshot = await _container(request).resources.sleep_now()
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return status_snapshot.model_dump(mode="json")
+
+
+@router.post("/companion/resources/wake")
+async def wake_companion_resources(request: Request) -> dict[str, object]:
+    return _container(request).resources.wake().model_dump(mode="json")
 
 
 @router.get("/runtime/version")
@@ -119,6 +160,8 @@ async def create_session(request: Request, body: CreateSessionRequest) -> dict[s
     if container.characters.get(body.character_id) is None:
         raise HTTPException(status_code=404, detail="character not found")
     snapshot = await container.sessions.create_session(body.character_id)
+    container.activity.touch(snapshot.session_id)
+    container.resources.touch()
     container.providers.tts.bind_session(snapshot.session_id)
     return snapshot.model_dump(mode="json")
 
@@ -128,6 +171,7 @@ async def get_session(request: Request, session_id: UUID) -> dict[str, object]:
     snapshot = await _container(request).sessions.get_session(session_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="session not found")
+    _container(request).activity.touch(session_id)
     return snapshot.model_dump(mode="json")
 
 
@@ -252,6 +296,7 @@ async def create_webrtc_offer(
             type=body.type,
             pc_id=body.pc_id,
             restart_pc=body.restart_pc,
+            activation_mode=body.activation_mode,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -291,6 +336,8 @@ async def read_session_events(
 async def submit_text_turn(
     request: Request, session_id: UUID, body: SubmitTextRequest
 ) -> dict[str, object]:
+    _container(request).activity.touch(session_id)
+    _container(request).resources.touch()
     try:
         accepted = await _container(request).conversation.submit_text(session_id, body.text)
     except KeyError as error:

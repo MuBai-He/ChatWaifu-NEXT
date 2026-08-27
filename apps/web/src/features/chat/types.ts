@@ -4,6 +4,11 @@ export interface RuntimeHealth {
   status: "ok" | "degraded";
   version: string;
   providers: { llm: string; tts: string; stt?: string };
+  resources?: {
+    state: "active" | "sleeping" | "stopping";
+    idle_seconds: number;
+    sleep_count: number;
+  };
 }
 
 export interface TtsProviderSnapshot {
@@ -134,4 +139,34 @@ export interface CharacterKernelSnapshot {
     preferred_address: string | null;
     updated_at: string;
   };
+}
+
+export interface CompanionSettings {
+  schema_version: "1.0";
+  wake_phrase_enabled: boolean;
+  wake_phrases: string[];
+  quiet_hours_enabled: boolean;
+  quiet_start: string;
+  quiet_end: string;
+  proactive_enabled: boolean;
+  proactive_idle_minutes: number;
+  proactive_cooldown_minutes: number;
+  proactive_daily_budget: number;
+  resource_sleep_enabled: boolean;
+  resource_idle_minutes: number;
+  updated_at: string;
+}
+
+export interface ResourceStatus {
+  state: "active" | "sleeping" | "stopping";
+  idle_seconds: number;
+  sleep_count: number;
+  last_sleep_at?: string | null;
+  last_wake_at?: string | null;
+}
+
+export interface CompanionStatus {
+  schema_version: "1.0";
+  settings: CompanionSettings;
+  resources: ResourceStatus;
 }

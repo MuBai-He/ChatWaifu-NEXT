@@ -59,13 +59,15 @@ class TtsRouter:
                 await self._deactivate_if_unused(previous)
 
     async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
-        provider_id = self.bind_session(request.session_id)
-        provider = self._providers[provider_id]
-        self._active_jobs[provider_id] += 1
+        async with self._lock:
+            provider_id = self.bind_session(request.session_id)
+            provider = self._providers[provider_id]
+            self._active_jobs[provider_id] += 1
         try:
             return await provider.synthesize(request)
         finally:
-            self._active_jobs[provider_id] -= 1
+            async with self._lock:
+                self._active_jobs[provider_id] -= 1
 
     async def snapshots(self, session_id: UUID | None = None) -> tuple[TtsProviderSnapshot, ...]:
         selected = (
@@ -88,6 +90,22 @@ class TtsRouter:
             *(provider.close() for provider in self._providers.values()),
             return_exceptions=False,
         )
+
+    @property
+    def active_jobs(self) -> int:
+        return sum(self._active_jobs.values())
+
+    async def deactivate_idle(self) -> bool:
+        """Unload model weights without changing session routing selections."""
+
+        deactivated = False
+        async with self._lock:
+            for provider_id, provider in self._providers.items():
+                if self._active_jobs[provider_id] > 0:
+                    continue
+                await provider.deactivate()
+                deactivated = True
+        return deactivated
 
     async def _deactivate_if_unused(self, provider_id: str) -> None:
         selected_elsewhere = provider_id in self._session_providers.values()

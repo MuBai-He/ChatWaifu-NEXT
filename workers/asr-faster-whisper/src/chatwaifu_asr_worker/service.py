@@ -5,6 +5,7 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 
 import asyncio
+import gc
 from collections.abc import Callable
 from typing import Protocol
 from uuid import UUID
@@ -116,6 +117,24 @@ class TranscriptionService:
             return False
         task.cancel("generation_cancelled")
         return True
+
+    async def unload(self) -> bool:
+        if any(not task.done() for task in self._jobs.values()):
+            return False
+        async with self._load_lock:
+            if self._engine is None:
+                return False
+            self._engine = None
+            await asyncio.to_thread(gc.collect)
+        return True
+
+    async def close(self) -> None:
+        for generation_id in tuple(self._jobs):
+            self.cancel(generation_id)
+        tasks = tuple(self._jobs.values())
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        await self.unload()
 
     def health(self) -> WorkerHealth:
         queue_depth = sum(not task.done() for task in self._jobs.values())

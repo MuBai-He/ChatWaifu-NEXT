@@ -19,6 +19,7 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import (
     ErrorRaisedEvent,
     ErrorRaisedPayload,
+    GenericCoreEvent,
     UserSpeechStartedEvent,
     UserSpeechStartedPayload,
     UserSpeechStoppedEvent,
@@ -42,6 +43,9 @@ from pipecat.frames.frames import (
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.companion.activity import ActivityTracker
+from chatwaifu_runtime.companion.attention import VoiceActivationMode, evaluate_attention
+from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub, EventSubscription
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -129,6 +133,9 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         conversation: ConversationService,
         audio_assets: AudioAssetStore,
         stt: SttBackend,
+        companion_settings: CompanionSettingsService,
+        activity: ActivityTracker,
+        activation_mode: str,
     ) -> None:
         super().__init__(name=f"voice-domain-bridge-{str(session_id)[:8]}")
         self._session_id = session_id
@@ -140,6 +147,9 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         self._conversation = conversation
         self._audio_assets = audio_assets
         self._stt = stt
+        self._companion_settings = companion_settings
+        self._activity = activity
+        self._activation_mode: VoiceActivationMode = cast(VoiceActivationMode, activation_mode)
         self._buffer = UtteranceBuffer(
             sample_rate,
             channels,
@@ -221,6 +231,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         self._buffer.reset()
 
     async def _speech_started(self) -> None:
+        self._activity.touch(self._session_id)
         if self._stt_task is not None:
             previous = self._identity
             if previous is not None:
@@ -245,8 +256,11 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         self._identity = identity
         self._buffer.start()
 
-        # Clear transport output before waiting for provider cancellation.
-        await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        settings = self._companion_settings.get()
+        requires_address = self._activation_mode == "open_mic" and settings.wake_phrase_enabled
+        # Open-mic background speech must not interrupt playback before address detection.
+        if not requires_address:
+            await self._interrupt_current(identity)
         await self._publisher.emit(
             UserSpeechStartedEvent(
                 event_id=uuid4(),
@@ -263,10 +277,6 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                     channels=self._channels,
                 ),
             )
-        )
-        self.create_task(
-            self._conversation.cancel(self._session_id, "barge_in"),
-            name=f"barge-in-{identity.utterance_id}",
         )
 
     async def _speech_stopped(self) -> None:
@@ -313,6 +323,30 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
             text = result.text.strip()
             if not text:
                 return
+            attention = evaluate_attention(
+                text,
+                self._activation_mode,
+                self._companion_settings.get(),
+            )
+            if not attention.accepted:
+                await self._emit_companion_event(
+                    identity,
+                    "voice.utterance_ignored",
+                    {
+                        "reason": attention.reason,
+                        "wake_phrase": attention.wake_phrase,
+                    },
+                )
+                return
+            if attention.reason == "wake_phrase":
+                await self._interrupt_current(identity)
+                await self._emit_companion_event(
+                    identity,
+                    "voice.wake_detected",
+                    {"wake_phrase": attention.wake_phrase},
+                )
+            text = attention.text
+            self._activity.touch(self._session_id)
             await self._publisher.emit(
                 UserTranscriptFinalEvent(
                     event_id=uuid4(),
@@ -365,6 +399,36 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
             current = asyncio.current_task()
             if self._stt_task is current:
                 self._stt_task = None
+
+    async def _interrupt_current(self, identity: VoiceTurnIdentity) -> None:
+        # Clear transport output before waiting for provider cancellation.
+        await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        self.create_task(
+            self._conversation.cancel(self._session_id, "barge_in"),
+            name=f"barge-in-{identity.utterance_id}",
+        )
+
+    async def _emit_companion_event(
+        self,
+        identity: VoiceTurnIdentity,
+        event_type: str,
+        payload: dict[str, object],
+    ) -> None:
+        await self._publisher.emit(
+            GenericCoreEvent.model_validate(
+                {
+                    "event_id": uuid4(),
+                    "event_type": event_type,
+                    "session_id": identity.session_id,
+                    "turn_id": identity.turn_id,
+                    "generation_id": identity.generation_id,
+                    "occurred_at": datetime.now(UTC),
+                    "source": "runtime.companion.attention",
+                    "privacy": PrivacyLevel.LOCAL,
+                    "payload": payload,
+                }
+            )
+        )
 
     async def _forward_runtime_audio(self) -> None:
         subscription = self._subscription

@@ -1398,7 +1398,13 @@
         "model.route_selected",
         "model.worker_loaded",
         "model.worker_unloaded",
-        "model.fallback_triggered"
+        "model.fallback_triggered",
+        "voice.wake_detected",
+        "voice.utterance_ignored",
+        "companion.proactive_triggered",
+        "companion.proactive_deferred",
+        "resource.models_slept",
+        "resource.models_woke"
       ],
       "type": "string"
     },

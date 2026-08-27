@@ -21,6 +21,9 @@ class DisabledSttBackend:
     async def cancel(self, generation_id: UUID) -> None:
         del generation_id
 
+    async def deactivate(self) -> bool:
+        return False
+
     async def close(self) -> None:
         return None
 
@@ -76,6 +79,19 @@ class FasterWhisperWorkerSttBackend:
             headers=self._headers,
         )
         response.raise_for_status()
+
+    async def deactivate(self) -> bool:
+        try:
+            response = await self._client.post(
+                f"{self._base_url}/v1/model/unload",
+                headers=self._headers,
+                timeout=15.0,
+            )
+            response.raise_for_status()
+        except httpx2.ConnectError:
+            return False
+        payload = response.json()
+        return bool(payload.get("unloaded", False))
 
     async def close(self) -> None:
         await self._client.aclose()

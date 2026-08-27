@@ -22,6 +22,8 @@ from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.workers.runner import WorkerRunner
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.companion.activity import ActivityTracker
+from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.config.settings import RealtimeConfig
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
@@ -36,6 +38,7 @@ class WebRtcOffer:
     type: str
     pc_id: str | None = None
     restart_pc: bool = False
+    activation_mode: str = "push_to_talk"
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +58,8 @@ class PipecatMediaAdapter:
         conversation: ConversationService,
         audio_assets: AudioAssetStore,
         stt: SttBackend,
+        companion_settings: CompanionSettingsService,
+        activity: ActivityTracker,
     ) -> None:
         self._config = config
         self._publisher = publisher
@@ -62,6 +67,8 @@ class PipecatMediaAdapter:
         self._conversation = conversation
         self._audio_assets = audio_assets
         self._stt = stt
+        self._companion_settings = companion_settings
+        self._activity = activity
         self._handler = SmallWebRTCRequestHandler(connection_mode=ConnectionMode.MULTIPLE)
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._sessions: dict[str, UUID] = {}
@@ -83,7 +90,7 @@ class PipecatMediaAdapter:
             if connection.pc_id in self._tasks:
                 return
             task = asyncio.create_task(
-                self._run_connection(session_id, connection),
+                self._run_connection(session_id, connection, offer.activation_mode),
                 name=f"webrtc-{connection.pc_id}",
             )
             self._tasks[connection.pc_id] = task
@@ -136,6 +143,7 @@ class PipecatMediaAdapter:
         self,
         session_id: UUID,
         connection: SmallWebRTCConnection,
+        activation_mode: str,
     ) -> None:
         transport = SmallWebRTCTransport(
             webrtc_connection=connection,
@@ -171,6 +179,9 @@ class PipecatMediaAdapter:
             conversation=self._conversation,
             audio_assets=self._audio_assets,
             stt=self._stt,
+            companion_settings=self._companion_settings,
+            activity=self._activity,
+            activation_mode=activation_mode,
         )
         worker = PipelineWorker(
             Pipeline([transport.input(), vad, bridge, transport.output()]),

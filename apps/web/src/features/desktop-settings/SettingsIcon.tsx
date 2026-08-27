@@ -1,5 +1,12 @@
 export type SettingsIconName =
-  "brand" | "pet" | "voice" | "models" | "data" | "memory" | "skills";
+  | "brand"
+  | "pet"
+  | "companion"
+  | "voice"
+  | "models"
+  | "data"
+  | "memory"
+  | "skills";
 
 export function SettingsIcon({ name }: { name: SettingsIconName }) {
   return (
@@ -29,6 +36,12 @@ const iconPaths: Record<SettingsIconName, React.ReactNode> = {
       <rect x="3" y="4" width="18" height="13" rx="2.5" />
       <path d="M8 21h8M12 17v4" />
       <path d="M9.2 10.2c.9-1.7 4.7-1.7 5.6 0M9.8 8.1h.01M14.2 8.1h.01" />
+    </>
+  ),
+  companion: (
+    <>
+      <path d="M15.5 3.2a8.4 8.4 0 1 0 5.2 11.2 7 7 0 0 1-9.1-9.1 8.4 8.4 0 0 0 3.9-2.1Z" />
+      <path d="M17.2 4.2h3M18.7 2.7v3M18 17.5c-1.3 1.1-3.2 1.8-5.2 1.8" />
     </>
   ),
   voice: (

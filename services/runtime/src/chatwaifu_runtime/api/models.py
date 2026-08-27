@@ -18,6 +18,7 @@ class RuntimeHealth(BaseModel):
     subscribers: int
     dropped_events: int
     providers: dict[str, str]
+    resources: dict[str, object]
 
 
 class SubmitTextRequest(BaseModel):
@@ -51,6 +52,7 @@ class WebRtcOfferRequest(BaseModel):
     type: Literal["offer"] = "offer"
     pc_id: str | None = Field(default=None, min_length=1, max_length=256)
     restart_pc: bool = False
+    activation_mode: Literal["push_to_talk", "open_mic"] = "push_to_talk"
 
 
 class WebRtcIceCandidate(BaseModel):

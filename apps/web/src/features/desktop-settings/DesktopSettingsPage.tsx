@@ -4,9 +4,10 @@ import { ModelSettingsPanel } from "../chat/ModelSettingsPanel";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import { useChatSession } from "../chat/useChatSession";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
+import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
 import { SettingsIcon, type SettingsIconName } from "./SettingsIcon";
 
-type SettingsSection = "appearance" | "voice" | "models" | "data";
+type SettingsSection = "appearance" | "companion" | "voice" | "models" | "data";
 
 const sections: Array<{
   id: SettingsSection;
@@ -15,6 +16,12 @@ const sections: Array<{
   icon: SettingsIconName;
 }> = [
   { id: "appearance", label: "桌宠", description: "窗口与显示", icon: "pet" },
+  {
+    id: "companion",
+    label: "陪伴",
+    description: "唤醒、主动与休眠",
+    icon: "companion",
+  },
   { id: "voice", label: "声音", description: "角色语音", icon: "voice" },
   { id: "models", label: "模型", description: "AI 与记忆路由", icon: "models" },
   { id: "data", label: "数据", description: "记忆与扩展", icon: "data" },
@@ -146,6 +153,8 @@ export function DesktopSettingsPage() {
               onChange={changeTtsProvider}
             />
           ) : null}
+
+          {section === "companion" ? <CompanionSettingsPanel /> : null}
 
           {section === "models" ? (
             <section className="desktop-settings-models" aria-label="模型设置">

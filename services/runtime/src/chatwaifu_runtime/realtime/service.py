@@ -25,6 +25,7 @@ class VoiceMediaService:
         type: str,
         pc_id: str | None,
         restart_pc: bool,
+        activation_mode: str,
     ) -> dict[str, str]:
         return await self._adapter.offer(
             session_id,
@@ -33,6 +34,7 @@ class VoiceMediaService:
                 type=type,
                 pc_id=pc_id,
                 restart_pc=restart_pc,
+                activation_mode=activation_mode,
             ),
         )
 

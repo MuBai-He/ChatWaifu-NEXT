@@ -5,6 +5,9 @@ from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import CharacterKernelService
 from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.companion.activity import ActivityTracker
+from chatwaifu_runtime.companion.resources import ResourceLifecycleService
+from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
@@ -32,6 +35,8 @@ class RuntimeContainer:
         self.event_store = EventStore(self.database)
         self.event_publisher = EventPublisher(self.event_store, self.event_hub)
         self.sessions = SessionService(self.database, self.event_store, self.event_hub)
+        self.activity = ActivityTracker()
+        self.companion_settings = CompanionSettingsService(self.database)
         self.model_configurations = ModelConfigurationService(self.database, settings)
         self.providers = build_providers(settings, llm_override=self.model_configurations.chat)
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
@@ -78,6 +83,15 @@ class RuntimeContainer:
             self.character_kernel,
             self.prompt_compiler,
         )
+        self.resources = ResourceLifecycleService(
+            self.companion_settings,
+            self.activity,
+            self.providers.tts,
+            self.stt,
+        )
+        self.resources.set_busy_probe(
+            lambda: self.conversation.active_count > 0 or self.providers.tts.active_jobs > 0
+        )
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,
@@ -86,6 +100,8 @@ class RuntimeContainer:
                 conversation=self.conversation,
                 audio_assets=self.audio_assets,
                 stt=self.stt,
+                companion_settings=self.companion_settings,
+                activity=self.activity,
             )
         )
         self._started = False
@@ -96,8 +112,10 @@ class RuntimeContainer:
         self.characters.start()
         self.audio_assets.start()
         await self.database.open()
+        await self.companion_settings.start()
         await self.model_configurations.start()
         await self.runtime_skills.start()
+        await self.resources.start()
         self._started = True
         for event in await self.event_store.pending_outbox():
             await self.event_hub.publish(event)
@@ -109,6 +127,7 @@ class RuntimeContainer:
         if not self._started:
             return
         self._started = False
+        await self.resources.stop()
         await self.voice_media.close()
         await self.conversation.stop()
         await self.runtime_skills.stop()

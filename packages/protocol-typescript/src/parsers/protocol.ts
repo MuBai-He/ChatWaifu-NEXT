@@ -271,6 +271,12 @@ const genericCoreEventTypes = [
   "model.worker_loaded",
   "model.worker_unloaded",
   "model.fallback_triggered",
+  "voice.wake_detected",
+  "voice.utterance_ignored",
+  "companion.proactive_triggered",
+  "companion.proactive_deferred",
+  "resource.models_slept",
+  "resource.models_woke",
 ] as const;
 
 const genericCoreEventSchema = z

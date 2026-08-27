@@ -101,6 +101,10 @@ class ConversationService:
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
 
+    @property
+    def active_count(self) -> int:
+        return sum(not item.task.done() for item in self._active.values())
+
     async def submit_text(self, session_id: UUID, text: str) -> GenerationAccepted:
         return await self._submit(session_id, text, turn_id=uuid4(), generation_id=uuid4())
 
