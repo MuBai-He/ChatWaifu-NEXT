@@ -125,6 +125,7 @@ phases:
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
       - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
+      - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering

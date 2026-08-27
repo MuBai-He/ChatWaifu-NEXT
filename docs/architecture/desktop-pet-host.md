@@ -45,6 +45,15 @@ voice-provider, model-routing, and local-data sections; it does not render the v
 composer. Opening it creates or shows the native window; closing it hides the window so the pet and
 Runtime remain alive.
 
+The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
+browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the
+global physical cursor position against the current physical overlay bounds every 80 ms, with at most
+one sample in flight and a three-error cutoff. This also works on negative-coordinate secondary
+displays. macOS accepts the first mouse action in an inactive overlay. When persisted click-through is
+enabled, entering the overlay temporarily captures cursor events so the newly revealed controls can
+be clicked; leaving or disposing the overlay restores click-through without changing the persisted
+preference. This is rectangular window hit testing, not per-pixel Live2D alpha hit testing.
+
 React shares one desktop-preference hook between the overlay and settings window. Tauri remains the
 source of truth, persists UI/OS preferences atomically, and broadcasts a bounded
 `desktop-preferences-changed` event so an open overlay updates immediately. Browser preview uses an
@@ -77,6 +86,8 @@ emits progress acknowledgements.
 - Missing Runtime renders an offline notice while Live2D remains safely interactive.
 - Missing proprietary Live2D assets uses the existing deterministic renderer fallback.
 - Click-through can always be disabled again from the tray.
+- Native cursor sampling falls back to ordinary Web pointer events after repeated read failures and
+  restores persisted click-through before stopping.
 - Subtitle and online-state visibility persist independently, with visible defaults for old files.
 - Invalid or old preference files fall back to safe interactive defaults.
 - `make desktop` owns all local worker, Runtime, Web, and Tauri development process groups; terminal
@@ -90,12 +101,14 @@ excluded from this slice.
 
 - Web unit tests cover route selection, avatar interaction, typed-message submission, independent
   HUD visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
-  playback-paced whole-line subtitle turns, out-of-order playback metadata, hanging audio-unlock
-  recovery, interruption, and single media ownership.
+  focus-free pointer presence, multi-display physical bounds, playback-paced whole-line subtitle
+  turns, out-of-order playback metadata, hanging audio-unlock recovery, interruption, and single
+  media ownership.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
   internal scrolling, functional HUD switch, and absence of conversation controls in the settings
   window.
-- Rust tests cover host responsibility and backward-compatible preference defaults.
+- Rust tests cover host responsibility, backward-compatible preference defaults, and temporary
+  cursor capture while persisted click-through remains enabled.
 - Cargo check, Clippy, Rust tests, Web typecheck/lint/tests, and the no-bundle release build are gates.
 - Local macOS smoke must show the transparent overlay with the real local Live2D model over another
   application; browser-only proof is insufficient.
