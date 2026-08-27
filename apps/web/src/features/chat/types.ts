@@ -30,13 +30,25 @@ export interface TtsProviderSnapshot {
   selected: boolean;
 }
 
-export interface AliyunTtsConfiguration {
-  provider_id: "aliyun_qwen_realtime";
+interface AliyunCloudTtsConfigurationBase {
   enabled: boolean;
   model: string;
   voice_id: string;
   region: "beijing" | "singapore";
   workspace_id: string;
+  sample_rate: 8000 | 16000 | 24000 | 48000;
+  speech_rate: number;
+  volume: number;
+  pitch_rate: number;
+  instruction: string;
+  timeout_seconds: number;
+  max_audio_bytes: number;
+  api_key_configured: boolean;
+  updated_at: string;
+}
+
+export interface AliyunTtsConfiguration extends AliyunCloudTtsConfigurationBase {
+  provider_id: "aliyun_qwen_realtime";
   language_type:
     | "Auto"
     | "Chinese"
@@ -49,15 +61,35 @@ export interface AliyunTtsConfiguration {
     | "Korean"
     | "French"
     | "Russian";
-  sample_rate: 8000 | 16000 | 24000 | 48000;
-  speech_rate: number;
-  volume: number;
-  pitch_rate: number;
-  timeout_seconds: number;
-  max_audio_bytes: number;
-  api_key_configured: boolean;
-  updated_at: string;
 }
+
+export interface AliyunCosyVoiceTtsConfiguration extends AliyunCloudTtsConfigurationBase {
+  provider_id: "aliyun_cosyvoice_realtime";
+  language_type:
+    | "auto"
+    | "zh"
+    | "en"
+    | "fr"
+    | "de"
+    | "ja"
+    | "ko"
+    | "ru"
+    | "pt"
+    | "th"
+    | "id"
+    | "vi"
+    | "es"
+    | "it"
+    | "ms"
+    | "fil"
+    | "ar";
+}
+
+export type AliyunCloudTtsConfiguration =
+  AliyunTtsConfiguration | AliyunCosyVoiceTtsConfiguration;
+
+export type AliyunCloudTtsProviderId =
+  AliyunCloudTtsConfiguration["provider_id"];
 
 export interface CharacterProfile {
   character_id: string;

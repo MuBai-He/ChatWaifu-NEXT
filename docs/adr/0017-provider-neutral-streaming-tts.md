@@ -7,9 +7,10 @@
 
 ADR 0014 normalized selectable local TTS providers but intentionally stopped at a complete WAV
 asset boundary. The local Qwen engine already decodes incrementally, GPT-SoVITS can expose
-fragments in supported configurations, and Aliyun Bailian Qwen-TTS-Realtime returns base64 PCM
-deltas over WebSocket. Treating the cloud provider as a special browser API would bypass Runtime
-identity, cancellation, privacy, playback acknowledgement, and fallback rules.
+fragments in supported configurations, Aliyun Bailian Qwen-TTS-Realtime returns base64 PCM deltas,
+and CosyVoice returns binary PCM over its task WebSocket. Treating either cloud provider as a
+special browser API would bypass Runtime identity, cancellation, privacy, playback acknowledgement,
+and fallback rules.
 
 The old `native_streaming` capability described an engine property even though the worker protocol
 still returned one base64 WAV. It therefore did not prove end-to-end streaming delivery.
@@ -33,10 +34,15 @@ provisional duration while synthesis is active and are finalized from the actual
 cancelled stream keeps its partial duration long enough to audit what was played. Stale generation
 fragments, out-of-order sequences, and late provider completion are rejected.
 
-Aliyun Bailian is the first native provider. Its adapter owns WebSocket events, authentication,
-voice/model pairing, PCM decoding, size limits, timeouts, and cancellation. Before opening the media
-WebSocket, it queries the regional voice catalog and requires the voice's `target_model` to exactly
-match the configured realtime model. The supplied voice
+The two Aliyun Bailian adapters are native-streaming providers. Each owns its provider-specific
+WebSocket events, authentication, voice/model pairing, PCM decoding, size limits, timeouts, and
+cancellation. Qwen VC Realtime uses the realtime session protocol and does not accept an emotion
+instruction. CosyVoice uses the `run-task` / `continue-task` / `finish-task` protocol; supported
+CosyVoice 3.5 and v3 Flash models merge a bounded base instruction with Character Kernel's
+turn-specific semantic voice style.
+
+Before opening either media WebSocket, Runtime queries the regional voice catalog and requires the
+voice's `target_model` to exactly match the configured realtime model. The supplied Qwen voice
 `qwen-tts-vc-bailian-voice-20260828030329088-e738` is bound to the batch model
 `qwen3-tts-vc-2026-01-22`, so the realtime adapter intentionally rejects it. A new voice created for
 `qwen3-tts-vc-realtime-2026-01-15` is required for this route. The voice identifier is not treated as

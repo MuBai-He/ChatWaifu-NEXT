@@ -21,8 +21,15 @@ class FakeContext {
   readonly resume = vi.fn(() => Promise.resolve());
   readonly close = vi.fn(() => Promise.resolve());
 
-  createBuffer(channels: number, frames: number, sampleRate: number): AudioBuffer {
-    const values = Array.from({ length: channels }, () => new Float32Array(frames));
+  createBuffer(
+    channels: number,
+    frames: number,
+    sampleRate: number,
+  ): AudioBuffer {
+    const values = Array.from(
+      { length: channels },
+      () => new Float32Array(frames),
+    );
     return {
       duration: frames / sampleRate,
       getChannelData: (channel: number) => values[channel],
@@ -38,7 +45,10 @@ class FakeContext {
 
 describe("PCM stream player", () => {
   beforeEach(() => {
-    vi.stubGlobal("requestAnimationFrame", vi.fn(() => 1));
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
   });
 

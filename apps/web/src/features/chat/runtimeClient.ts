@@ -9,7 +9,8 @@ import type {
 
 import type {
   CharacterKernelSnapshot,
-  AliyunTtsConfiguration,
+  AliyunCloudTtsConfiguration,
+  AliyunCloudTtsProviderId,
   CharacterProfile,
   CompanionSettings,
   CompanionStatus,
@@ -249,32 +250,41 @@ export async function selectTtsProvider(
   });
 }
 
-export async function getAliyunTtsConfiguration(): Promise<AliyunTtsConfiguration> {
-  return request<AliyunTtsConfiguration>(
-    "/v1/tts/configurations/aliyun_qwen_realtime",
+export async function getAliyunTtsConfiguration(
+  providerId: AliyunCloudTtsProviderId,
+): Promise<AliyunCloudTtsConfiguration> {
+  return request<AliyunCloudTtsConfiguration>(
+    `/v1/tts/configurations/${providerId}`,
   );
 }
 
 export async function updateAliyunTtsConfiguration(
   configuration: Omit<
-    AliyunTtsConfiguration,
+    AliyunCloudTtsConfiguration,
     "provider_id" | "api_key_configured" | "updated_at"
-  > & { api_key?: string; clear_api_key?: boolean },
-): Promise<AliyunTtsConfiguration> {
-  return request<AliyunTtsConfiguration>(
-    "/v1/tts/configurations/aliyun_qwen_realtime",
+  > & {
+    provider_id: AliyunCloudTtsProviderId;
+    api_key?: string;
+    clear_api_key?: boolean;
+  },
+): Promise<AliyunCloudTtsConfiguration> {
+  const { provider_id: providerId, ...payload } = configuration;
+  return request<AliyunCloudTtsConfiguration>(
+    `/v1/tts/configurations/${providerId}`,
     {
       method: "PUT",
-      body: JSON.stringify(configuration),
+      body: JSON.stringify(payload),
     },
   );
 }
 
-export async function testAliyunTtsConfiguration(): Promise<{
+export async function testAliyunTtsConfiguration(
+  providerId: AliyunCloudTtsProviderId,
+): Promise<{
   status: string;
   duration_ms?: number;
 }> {
-  return request("/v1/tts/configurations/aliyun_qwen_realtime/test", {
+  return request(`/v1/tts/configurations/${providerId}/test`, {
     method: "POST",
     body: "{}",
   });

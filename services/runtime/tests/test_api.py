@@ -213,6 +213,27 @@ def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     assert cosy_updated["api_key_configured"] is True
     assert "write-only-aliyun-secret" not in cosy_response.text
 
+    unsupported_instruction = http.put(
+        "/v1/tts/configurations/aliyun_cosyvoice_realtime",
+        json={
+            "enabled": False,
+            "model": "cosyvoice-v2",
+            "voice_id": "",
+            "region": "beijing",
+            "workspace_id": "",
+            "language_type": "auto",
+            "sample_rate": 24000,
+            "speech_rate": 1.0,
+            "volume": 50,
+            "pitch_rate": 1.0,
+            "instruction": "温柔自然。",
+            "timeout_seconds": 45,
+            "max_audio_bytes": 32000000,
+        },
+    )
+    assert unsupported_instruction.status_code == 409
+    assert "不支持情绪指令" in unsupported_instruction.text
+
 
 def test_character_kernel_persists_and_reset_restores_initial_state(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)

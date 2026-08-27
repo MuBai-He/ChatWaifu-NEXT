@@ -21,6 +21,9 @@ DEFAULT_ALIYUN_TTS_MODEL = "qwen3-tts-vc-realtime-2026-01-15"
 DEFAULT_ALIYUN_VOICE_ID = "qwen-tts-vc-bailian-voice-20260828030329088-e738"
 DEFAULT_COSYVOICE_MODEL = "cosyvoice-v3.5-plus"
 DEFAULT_COSYVOICE_INSTRUCTION = "温柔自然，带一点害羞，避免播音腔。"
+COSYVOICE_INSTRUCTION_MODELS = frozenset(
+    {"cosyvoice-v3.5-plus", "cosyvoice-v3.5-flash", "cosyvoice-v3-flash"}
+)
 
 type AliyunRegion = Literal["beijing", "singapore"]
 type TtsLanguage = Literal[
@@ -133,6 +136,8 @@ class AliyunCosyVoiceTtsConfiguration(_AliyunCloudTtsConfiguration):
             raise ValueError("启用 CosyVoice 前需要填写声音复刻音色 ID")
         if self.region == "singapore" and self.model != "cosyvoice-v3-plus":
             raise ValueError("当前复刻音色在新加坡地域仅支持 cosyvoice-v3-plus")
+        if self.instruction and self.model not in COSYVOICE_INSTRUCTION_MODELS:
+            raise ValueError(f"{self.model} 不支持情绪指令，请清空基础情绪指令")
         if _instruction_units(self.instruction) > 100:
             raise ValueError("CosyVoice 情绪指令超过 100 字符单位")
         return self

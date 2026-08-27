@@ -200,27 +200,24 @@ export function useChatSession({
   const getPcmStreamPlayer = useCallback(() => {
     if (!playbackEnabled || typeof AudioContext === "undefined") return null;
     if (!pcmStreamPlayer.current) {
-      pcmStreamPlayer.current = new PcmStreamPlayer(
-        () => new AudioContext(),
-        {
-          isGenerationActive: (generationId) =>
-            generationId === activeGeneration.current,
-          onStreamAccepted: (item) => {
-            streamedSegments.current.set(item.segmentId, item);
-          },
-          onPlaybackStart: (item, position) => {
-            startLipSync();
-            reportElementPlayback(item, "started", position);
-          },
-          onPlaybackProgress: (item, position) =>
-            reportElementPlayback(item, "progress", position),
-          onPlaybackStop: (item, position, reason) => {
-            stopLipSync();
-            reportElementPlayback(item, "stopped", position, reason);
-          },
-          onPlaybackError: setError,
+      pcmStreamPlayer.current = new PcmStreamPlayer(() => new AudioContext(), {
+        isGenerationActive: (generationId) =>
+          generationId === activeGeneration.current,
+        onStreamAccepted: (item) => {
+          streamedSegments.current.set(item.segmentId, item);
         },
-      );
+        onPlaybackStart: (item, position) => {
+          startLipSync();
+          reportElementPlayback(item, "started", position);
+        },
+        onPlaybackProgress: (item, position) =>
+          reportElementPlayback(item, "progress", position),
+        onPlaybackStop: (item, position, reason) => {
+          stopLipSync();
+          reportElementPlayback(item, "stopped", position, reason);
+        },
+        onPlaybackError: setError,
+      });
     }
     return pcmStreamPlayer.current;
   }, [playbackEnabled, reportElementPlayback, startLipSync, stopLipSync]);
@@ -468,10 +465,7 @@ export function useChatSession({
       socket.onerror = () => setConnection("offline");
     };
 
-    const connectAudio = async (
-      resolvedSessionId: string,
-      refresh = false,
-    ) => {
+    const connectAudio = async (resolvedSessionId: string, refresh = false) => {
       if (disposed || !playbackEnabled) return;
       const webSocketUrl = await runtimeWebSocketUrl(refresh);
       if (disposed) return;

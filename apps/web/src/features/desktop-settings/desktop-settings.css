@@ -382,7 +382,8 @@
 }
 
 .aliyun-tts-fields input:not([type="range"]),
-.aliyun-tts-fields select {
+.aliyun-tts-fields select,
+.aliyun-tts-fields textarea {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -395,8 +396,27 @@
   font-size: 0.67rem;
 }
 
+.aliyun-tts-fields textarea {
+  min-height: 58px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.aliyun-tts-wide-field {
+  grid-column: 1 / -1;
+}
+
+.aliyun-tts-model-note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
 .aliyun-tts-fields input:focus,
-.aliyun-tts-fields select:focus {
+.aliyun-tts-fields select:focus,
+.aliyun-tts-fields textarea:focus {
   border-color: rgb(158 91 139 / 45%);
   box-shadow: 0 0 0 3px rgb(158 91 139 / 8%);
 }

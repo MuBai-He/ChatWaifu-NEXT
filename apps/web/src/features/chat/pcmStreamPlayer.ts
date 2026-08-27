@@ -54,7 +54,8 @@ export class PcmStreamPlayer {
 
   prime(): void {
     const context = this.ensureContext();
-    if (context?.state === "suspended") void context.resume().catch(() => undefined);
+    if (context?.state === "suspended")
+      void context.resume().catch(() => undefined);
   }
 
   start(message: PcmStreamStarted): void {
@@ -98,14 +99,21 @@ export class PcmStreamPlayer {
     const active = this.active;
     const context = this.ensureContext();
     if (!active || active.item.segmentId !== segmentId || !context) return;
-    if (sequence !== active.nextSequence || pcm16.byteLength % (2 * active.channels)) {
+    if (
+      sequence !== active.nextSequence ||
+      pcm16.byteLength % (2 * active.channels)
+    ) {
       this.fail("实时语音分片顺序异常，完成后将使用 WAV 回退播放。");
       return;
     }
     active.nextSequence += 1;
     const frameCount = pcm16.byteLength / (2 * active.channels);
     if (!frameCount) return;
-    const buffer = context.createBuffer(active.channels, frameCount, active.sampleRate);
+    const buffer = context.createBuffer(
+      active.channels,
+      frameCount,
+      active.sampleRate,
+    );
     const view = new DataView(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength);
     for (let channel = 0; channel < active.channels; channel += 1) {
       const samples = buffer.getChannelData(channel);
@@ -169,7 +177,9 @@ export class PcmStreamPlayer {
       try {
         this.context = this.createContext();
       } catch {
-        this.callbacks.onPlaybackError("当前浏览器不支持实时 PCM 播放，将使用 WAV 回退。");
+        this.callbacks.onPlaybackError(
+          "当前浏览器不支持实时 PCM 播放，将使用 WAV 回退。",
+        );
         return null;
       }
     }
@@ -229,7 +239,10 @@ export class PcmStreamPlayer {
         ? Math.min(active.item.durationMs, playedPtsMs)
         : playedPtsMs,
       bufferedMs: context
-        ? Math.max(0, Math.round((active.scheduledUntil - context.currentTime) * 1000))
+        ? Math.max(
+            0,
+            Math.round((active.scheduledUntil - context.currentTime) * 1000),
+          )
         : 0,
       clientClockMs: Math.round(performance.now()),
     };
@@ -241,10 +254,7 @@ export class PcmStreamPlayer {
   }
 
   private stop(reason: "interrupted" | "error"): void {
-    const streams = [
-      ...this.draining,
-      ...(this.active ? [this.active] : []),
-    ];
+    const streams = [...this.draining, ...(this.active ? [this.active] : [])];
     this.active = null;
     this.draining.clear();
     this.scheduleCursor = this.context?.currentTime ?? 0;
