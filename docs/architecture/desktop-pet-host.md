@@ -33,9 +33,11 @@ Subtitle text keeps a bounded three-line viewport without line clamping or ellip
 retains all earlier content for manual review. The compact overlay collapses consecutive blank lines
 without changing the stored transcript. Automatic upward movement follows generation-scoped audio
 playback acknowledgements and measured playback time rather than token arrival, so a fast model
-cannot reveal-scroll ahead of the voice. Audio-element and WebRTC playback share the same projection;
-late metadata and receipts are reconciled through bounded state, while cleared queues and stale
-generations never advance the subtitle.
+cannot reveal ahead of the voice. Playback progress is quantized to rendered line boundaries: text
+stays still while the voice remains on the same line, then the three-line viewport immediately turns
+forward by a whole line without smooth scrolling. Audio-element and WebRTC playback share the same
+projection; late metadata and receipts are reconciled through bounded state, while cleared queues
+and stale generations never advance the subtitle.
 
 The control center uses `/desktop-settings` (`/control-center` remains a Web compatibility alias)
 and is not created at startup. It is a dedicated app-like settings surface with desktop-pet,
@@ -88,8 +90,8 @@ excluded from this slice.
 
 - Web unit tests cover route selection, avatar interaction, typed-message submission, independent
   HUD visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
-  playback-paced subtitle scrolling, out-of-order playback metadata, hanging audio-unlock recovery,
-  interruption, and single media ownership.
+  playback-paced whole-line subtitle turns, out-of-order playback metadata, hanging audio-unlock
+  recovery, interruption, and single media ownership.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
   internal scrolling, functional HUD switch, and absence of conversation controls in the settings
   window.
