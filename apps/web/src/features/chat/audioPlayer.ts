@@ -10,6 +10,8 @@ export interface AudioPlaybackItem {
   generationId: string;
   streamId: string;
   segmentId: string;
+  segmentIndex: number;
+  text: string;
   durationMs: number;
   url: string;
 }

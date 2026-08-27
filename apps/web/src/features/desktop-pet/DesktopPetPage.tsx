@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatSession } from "../chat/useChatSession";
+import {
+  countSubtitleTextUnits,
+  normalizeDesktopSubtitle,
+} from "../chat/subtitlePlayback";
 import { useDesktopPreferences } from "./useDesktopPreferences";
 
 export function DesktopPetPage() {
@@ -19,6 +23,7 @@ export function DesktopPetPage() {
     voiceConnected,
     voiceActivationMode,
     voiceTransmitting,
+    subtitlePlayback,
     beginPushToTalk,
     endPushToTalk,
     toggleVoice,
@@ -40,6 +45,7 @@ export function DesktopPetPage() {
   const dialogue = latestAssistant
     ? latestAssistant.text
     : character?.greeting || "";
+  const displayDialogue = normalizeDesktopSubtitle(dialogue);
   const pending = latestAssistant?.pending ?? false;
   const canUseVoice = Boolean(
     sessionId &&
@@ -54,8 +60,28 @@ export function DesktopPetPage() {
   useEffect(() => {
     const dialogueElement = dialogueRef.current;
     if (!dialogueElement) return;
-    dialogueElement.scrollTop = dialogueElement.scrollHeight;
-  }, [dialogue, pending]);
+    const generationId = latestAssistant?.generationId;
+    if (!generationId || subtitlePlayback?.generationId !== generationId)
+      return;
+    if (subtitlePlayback.playedTextUnits <= 0) {
+      dialogueElement.scrollTop = 0;
+      return;
+    }
+    const totalTextUnits = countSubtitleTextUnits(displayDialogue);
+    if (totalTextUnits <= 0) return;
+    const maxScrollTop = Math.max(
+      0,
+      dialogueElement.scrollHeight - dialogueElement.clientHeight,
+    );
+    const playbackRatio = Math.min(
+      1,
+      subtitlePlayback.playedTextUnits / totalTextUnits,
+    );
+    dialogueElement.scrollTop = Math.max(
+      dialogueElement.scrollTop,
+      maxScrollTop * playbackRatio,
+    );
+  }, [displayDialogue, latestAssistant?.generationId, subtitlePlayback]);
 
   const sendDraft = async () => {
     const text = draft.trim();
@@ -122,11 +148,11 @@ export function DesktopPetPage() {
         <canvas key={rendererKind} ref={canvasRef} />
       </button>
 
-      {preferences.showSubtitles && (dialogue || pending) ? (
+      {preferences.showSubtitles && (displayDialogue || pending) ? (
         <section className="desktop-pet-dialogue" aria-live="polite">
           <small>{character?.display_name ?? "绫地宁宁"}</small>
           <p ref={dialogueRef}>
-            {dialogue}
+            {displayDialogue}
             {pending ? <i className="typing-caret" /> : null}
           </p>
         </section>

@@ -34,6 +34,10 @@ import {
   type PlaybackStopReason,
 } from "./audioPlayer";
 import { PlaybackAckReporter } from "./playbackAckReporter";
+import {
+  SubtitlePlaybackTracker,
+  type SubtitlePlaybackProgress,
+} from "./subtitlePlayback";
 import { StreamingTextProjector } from "./streamingTextProjector";
 import { useChatAvatar } from "./useChatAvatar";
 import { useVoiceInput } from "./useVoiceInput";
@@ -72,11 +76,14 @@ export function useChatSession({
     "idle" | "listening" | "transcribing" | "thinking"
   >("idle");
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
+  const [subtitlePlayback, setSubtitlePlayback] =
+    useState<SubtitlePlaybackProgress | null>(null);
   const activeGeneration = useRef<string | null>(null);
   const voiceConnected = useRef(false);
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
   const playbackReporter = useRef<PlaybackAckReporter | null>(null);
   const textProjector = useRef<StreamingTextProjector | null>(null);
+  const subtitlePlaybackTracker = useRef(new SubtitlePlaybackTracker());
 
   const setAvatarState = useCallback(
     (name: "idle" | "listening" | "thinking") => {
@@ -111,6 +118,8 @@ export function useChatSession({
 
   const onVoicePlaybackReceipt = useCallback(
     (receipt: Parameters<typeof acknowledgePlayback>[1]) => {
+      const progress = subtitlePlaybackTracker.current.report(receipt);
+      if (progress) setSubtitlePlayback(progress);
       getPlaybackReporter()?.report(receipt);
       if (receipt.phase === "started") startLipSync();
       if (receipt.phase === "stopped" || receipt.phase === "queue_cleared")
@@ -134,7 +143,7 @@ export function useChatSession({
       position: PlaybackPosition,
       reason?: PlaybackStopReason,
     ) => {
-      getPlaybackReporter()?.report({
+      const receipt = {
         phase,
         generationId: item.generationId,
         streamId: item.streamId,
@@ -144,7 +153,10 @@ export function useChatSession({
         clientClockMs: position.clientClockMs,
         transport: "audio_element",
         reason,
-      });
+      } as const;
+      const progress = subtitlePlaybackTracker.current.report(receipt);
+      if (progress) setSubtitlePlayback(progress);
+      getPlaybackReporter()?.report(receipt);
     },
     [getPlaybackReporter],
   );
@@ -278,6 +290,9 @@ export function useChatSession({
           setVoiceActivity("thinking");
           setAvatarState("thinking");
           activeGeneration.current = generationId;
+          setSubtitlePlayback(
+            subtitlePlaybackTracker.current.start(generationId),
+          );
           getTextProjector().start(generationId);
           setMessages((current) => [
             ...current,
@@ -302,14 +317,20 @@ export function useChatSession({
         case "assistant.audio_chunk_queued": {
           if (!generationId || generationId !== activeGeneration.current) break;
           const payload = event.payload as unknown as AudioPayload;
-          if (voiceConnected.current) break;
-          getAudioPlayer()?.enqueue({
+          const item: AudioPlaybackItem = {
             generationId,
             streamId: payload.stream_id,
             segmentId: payload.segment_id,
+            segmentIndex: payload.segment_index,
+            text: payload.text,
             durationMs: payload.duration_ms,
             url: `${RUNTIME_URL}${payload.url}`,
-          });
+          };
+          const progress =
+            subtitlePlaybackTracker.current.registerSegment(item);
+          if (progress) setSubtitlePlayback(progress);
+          if (voiceConnected.current) break;
+          getAudioPlayer()?.enqueue(item);
           break;
         }
         case "avatar.cue_emitted": {
@@ -554,6 +575,8 @@ export function useChatSession({
     stopText(generationId ?? undefined);
     stopAudio(generationId ?? undefined);
     activeGeneration.current = null;
+    subtitlePlaybackTracker.current.reset();
+    setSubtitlePlayback(null);
     try {
       await resetSession(sessionId);
       setMessages([]);
@@ -611,6 +634,7 @@ export function useChatSession({
     voiceTransmitting: voice.transmitting,
     voiceActivity,
     voiceTranscript,
+    subtitlePlayback,
     setVoiceDeviceId: voice.setDeviceId,
     setVoiceActivationMode: voice.setActivationMode,
     beginPushToTalk: voice.beginPushToTalk,

@@ -258,6 +258,8 @@ function playbackItem(generationId: string, url: string) {
     generationId,
     streamId: `00000000-0000-4000-8000-${suffix.padEnd(12, "0").slice(0, 12)}`,
     segmentId: `00000000-0000-4000-8001-${suffix.padEnd(12, "0").slice(0, 12)}`,
+    segmentIndex: 0,
+    text: "测试语音",
     durationMs: 1000,
     url,
   };

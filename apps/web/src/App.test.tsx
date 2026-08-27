@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import type { ChatMessage } from "./features/chat/types";
+import type { SubtitlePlaybackProgress } from "./features/chat/subtitlePlayback";
 import type {
   VoiceActivationMode,
   VoiceConnectionState,
@@ -97,6 +98,7 @@ const session = {
   voiceTransmitting: false,
   voiceActivity: "idle" as const,
   voiceTranscript: null,
+  subtitlePlayback: null as SubtitlePlaybackProgress | null,
   setVoiceDeviceId: vi.fn(),
   setVoiceActivationMode: vi.fn(),
   beginPushToTalk: vi.fn(),
@@ -122,6 +124,7 @@ describe("ChatWaifu usable demo", () => {
     session.voiceActivationMode = "push_to_talk";
     session.voiceTransmitting = false;
     session.messages = [];
+    session.subtitlePlayback = null;
     vi.clearAllMocks();
   });
 
@@ -195,13 +198,13 @@ describe("ChatWaifu usable demo", () => {
     ).toBeTruthy();
   });
 
-  it("keeps a growing desktop-pet reply scrolled to its newest text", () => {
+  it("folds blank lines and scrolls desktop subtitles with audio progress", () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.messages = [
       {
         id: "generation-streaming",
         role: "assistant",
-        text: "第一句。",
+        text: "一二三四\n\n五六七八\n九十甲乙\n丙丁戊己",
         generationId: "generation-streaming",
         pending: true,
       },
@@ -214,16 +217,20 @@ describe("ChatWaifu usable demo", () => {
       configurable: true,
       value: 240,
     });
-
-    session.messages = [
-      {
-        ...session.messages[0],
-        text: "第一句。\n第二句。\n第三句。\n这是刚刚抵达的最后一句。",
-      },
-    ];
+    Object.defineProperty(dialogue, "clientHeight", {
+      configurable: true,
+      value: 60,
+    });
+    expect(dialogue.textContent).not.toContain("\n\n");
+    session.subtitlePlayback = {
+      generationId: "generation-streaming",
+      segmentIndex: 0,
+      playedTextUnits: 8,
+      phase: "playing",
+    };
     rerender(<App />);
 
-    expect(dialogue.scrollTop).toBe(240);
+    expect(dialogue.scrollTop).toBeCloseTo(90);
   });
 
   it("sends typed messages from the desktop-pet hover composer", async () => {
