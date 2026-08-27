@@ -72,6 +72,11 @@ microphone capture, interruption, and stale-generation rejection through `useCha
 settings window can change product configuration but has no conversation composer, microphone
 control, or local playback. This prevents two WebViews from playing the same TTS segment.
 
+The macOS host declares its microphone usage in the bundled `Info.plist`; the OS remains the final
+permission authority and prompts on first capture. A WebView missing `getUserMedia` or WebRTC stays
+outside the media path, but its microphone control remains actionable long enough to explain the
+specific restart or system-update recovery instead of presenting an inert disabled button.
+
 All existing generation, cancellation, late-output, and playback-ACK invariants stay in the Web and
 Runtime layers. Tauri does not reinterpret conversation events.
 

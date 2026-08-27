@@ -13,6 +13,29 @@ afterEach(() => {
 });
 
 describe("voice capture gating", () => {
+  it("reports an actionable error when the WebView has no microphone API", async () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: undefined,
+    });
+    const onError = vi.fn();
+    const onStateChange = vi.fn();
+    const client = new BrowserVoiceClient({
+      onStateChange,
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError,
+    });
+
+    await expect(client.connect("session-1")).rejects.toThrow("麦克风能力");
+
+    expect(onStateChange).toHaveBeenCalledWith("unsupported");
+    expect(onError).toHaveBeenCalledWith(
+      expect.stringContaining("重新启动桌宠"),
+    );
+  });
+
   it("enables and disables every outbound audio track", () => {
     const tracks = [{ enabled: true }, { enabled: true }];
     const stream = {

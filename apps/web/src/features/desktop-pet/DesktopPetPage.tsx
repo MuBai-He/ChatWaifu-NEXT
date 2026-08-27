@@ -52,10 +52,7 @@ export function DesktopPetPage() {
   const displayDialogue = normalizeDesktopSubtitle(dialogue);
   const pending = latestAssistant?.pending ?? false;
   const canUseVoice = Boolean(
-    sessionId &&
-    connection === "connected" &&
-    !resetting &&
-    voiceState !== "unsupported",
+    sessionId && connection === "connected" && !resetting,
   );
   const canSend = Boolean(
     sessionId && connection === "connected" && !resetting,
@@ -257,13 +254,31 @@ export function DesktopPetPage() {
           HUD
         </button>
         <button
-          className={voiceConnected ? "active" : ""}
+          className={
+            voiceConnected
+              ? "active"
+              : voiceState === "unsupported"
+                ? "unavailable"
+                : ""
+          }
           type="button"
           onClick={() => void toggleVoice()}
           disabled={!canUseVoice}
-          aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
+          aria-label={
+            voiceConnected
+              ? "断开麦克风"
+              : voiceState === "unsupported"
+                ? "检查麦克风不可用原因"
+                : "连接麦克风"
+          }
           aria-pressed={voiceConnected}
-          title={voiceConnected ? "断开麦克风" : "连接麦克风"}
+          title={
+            voiceConnected
+              ? "断开麦克风"
+              : voiceState === "unsupported"
+                ? "麦克风暂不可用，点击查看原因"
+                : "连接麦克风"
+          }
         >
           ◉
         </button>

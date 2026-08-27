@@ -268,6 +268,12 @@
   background: rgb(158 73 126 / 82%);
 }
 
+.desktop-pet-actions button.unavailable {
+  border-color: rgb(244 174 174 / 48%);
+  color: rgb(255 207 207 / 90%);
+  background: rgb(94 48 62 / 82%);
+}
+
 .desktop-pet-actions button:disabled {
   cursor: default;
   opacity: 0.38;

@@ -71,11 +71,20 @@ export class BrowserVoiceClient {
   constructor(private readonly callbacks: VoiceClientCallbacks) {}
 
   static supported(): boolean {
-    return (
-      typeof navigator !== "undefined" &&
-      typeof navigator.mediaDevices?.getUserMedia === "function" &&
-      typeof RTCPeerConnection === "function"
-    );
+    return BrowserVoiceClient.unavailableReason() === null;
+  }
+
+  static unavailableReason(): string | null {
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.mediaDevices?.getUserMedia !== "function"
+    ) {
+      return "当前桌宠没有获得麦克风能力。请完全退出并重新启动桌宠，然后允许系统麦克风权限。";
+    }
+    if (typeof RTCPeerConnection !== "function") {
+      return "当前系统 WebView 不支持实时语音连接，请更新系统后重新启动桌宠。";
+    }
+    return null;
   }
 
   async listInputDevices(): Promise<VoiceDevice[]> {
@@ -91,9 +100,11 @@ export class BrowserVoiceClient {
 
   async connect(sessionId: string, deviceId?: string): Promise<void> {
     if (this.disposed) return;
-    if (!BrowserVoiceClient.supported()) {
+    const unavailableReason = BrowserVoiceClient.unavailableReason();
+    if (unavailableReason) {
       this.callbacks.onStateChange("unsupported");
-      return;
+      this.callbacks.onError(unavailableReason);
+      throw new Error(unavailableReason);
     }
     this.desiredConnected = true;
     this.sessionId = sessionId;

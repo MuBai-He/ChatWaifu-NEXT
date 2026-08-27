@@ -178,6 +178,20 @@ describe("ChatWaifu usable demo", () => {
     expect(session.touch).toHaveBeenCalledOnce();
   });
 
+  it("lets an unsupported desktop WebView explain why voice is unavailable", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    session.voiceState = "unsupported";
+
+    render(<App />);
+
+    const voiceButton = screen.getByRole("button", {
+      name: "检查麦克风不可用原因",
+    });
+    expect((voiceButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(voiceButton);
+    expect(session.toggleVoice).toHaveBeenCalledOnce();
+  });
+
   it("shows only the caret before the first desktop-pet reply token", () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.messages = [

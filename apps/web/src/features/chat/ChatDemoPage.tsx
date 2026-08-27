@@ -363,8 +363,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 !mediaOwner ||
                 !sessionId ||
                 connection !== "connected" ||
-                resetting ||
-                voiceState === "unsupported"
+                resetting
               }
               aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
               aria-pressed={voiceConnected}

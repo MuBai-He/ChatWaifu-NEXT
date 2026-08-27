@@ -120,6 +120,7 @@ phases:
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated four-section desktop settings surface instead of reusing the visual-novel conversation page
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
+      - The macOS host embeds a microphone usage description and unsupported WebViews expose an actionable recovery message instead of an inert disabled control
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
       - Overlay position, size, visibility, always-on-top, click-through, subtitle visibility, and online-state visibility persist atomically in the OS application config directory
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
