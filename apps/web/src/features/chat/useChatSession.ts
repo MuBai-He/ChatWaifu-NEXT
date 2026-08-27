@@ -24,6 +24,7 @@ import type {
   MemoryItem,
   RuntimeEvent,
   RuntimeHealth,
+  TtsStreamMessage,
   TtsProviderSnapshot,
 } from "./types";
 import {
@@ -33,6 +34,7 @@ import {
   type PlaybackStopReason,
 } from "./audioPlayer";
 import { PlaybackAckReporter } from "./playbackAckReporter";
+import { decodePcmBase64, PcmStreamPlayer } from "./pcmStreamPlayer";
 import {
   SubtitlePlaybackTracker,
   type SubtitlePlaybackProgress,
@@ -80,6 +82,8 @@ export function useChatSession({
   const activeGeneration = useRef<string | null>(null);
   const voiceConnected = useRef(false);
   const audioPlayer = useRef<GenerationAudioPlayer | null>(null);
+  const pcmStreamPlayer = useRef<PcmStreamPlayer | null>(null);
+  const streamedSegments = useRef(new Map<string, AudioPlaybackItem>());
   const playbackReporter = useRef<PlaybackAckReporter | null>(null);
   const textProjector = useRef<StreamingTextProjector | null>(null);
   const subtitlePlaybackTracker = useRef(new SubtitlePlaybackTracker());
@@ -193,9 +197,38 @@ export function useChatSession({
     return audioPlayer.current;
   }, [playbackEnabled, reportElementPlayback, startLipSync, stopLipSync]);
 
+  const getPcmStreamPlayer = useCallback(() => {
+    if (!playbackEnabled || typeof AudioContext === "undefined") return null;
+    if (!pcmStreamPlayer.current) {
+      pcmStreamPlayer.current = new PcmStreamPlayer(
+        () => new AudioContext(),
+        {
+          isGenerationActive: (generationId) =>
+            generationId === activeGeneration.current,
+          onStreamAccepted: (item) => {
+            streamedSegments.current.set(item.segmentId, item);
+          },
+          onPlaybackStart: (item, position) => {
+            startLipSync();
+            reportElementPlayback(item, "started", position);
+          },
+          onPlaybackProgress: (item, position) =>
+            reportElementPlayback(item, "progress", position),
+          onPlaybackStop: (item, position, reason) => {
+            stopLipSync();
+            reportElementPlayback(item, "stopped", position, reason);
+          },
+          onPlaybackError: setError,
+        },
+      );
+    }
+    return pcmStreamPlayer.current;
+  }, [playbackEnabled, reportElementPlayback, startLipSync, stopLipSync]);
+
   const stopAudio = useCallback(
     (generationId?: string) => {
       audioPlayer.current?.stop();
+      pcmStreamPlayer.current?.cancel();
       stopRemotePlayback(generationId);
       stopLipSync();
       if (generationId) invalidateGeneration(generationId);
@@ -334,6 +367,7 @@ export function useChatSession({
           const progress =
             subtitlePlaybackTracker.current.registerSegment(item);
           if (progress) setSubtitlePlayback(progress);
+          if (streamedSegments.current.has(item.segmentId)) break;
           if (voiceConnected.current) break;
           getAudioPlayer()?.enqueue(item);
           break;
@@ -395,8 +429,11 @@ export function useChatSession({
 
   useEffect(() => {
     let disposed = false;
+    const streamItems = streamedSegments.current;
     let socket: WebSocket | null = null;
+    let audioSocket: WebSocket | null = null;
     let reconnectTimer: number | null = null;
+    let audioReconnectTimer: number | null = null;
 
     const connect = async (resolvedSessionId: string, refresh = false) => {
       if (disposed) return;
@@ -429,6 +466,72 @@ export function useChatSession({
         );
       };
       socket.onerror = () => setConnection("offline");
+    };
+
+    const connectAudio = async (
+      resolvedSessionId: string,
+      refresh = false,
+    ) => {
+      if (disposed || !playbackEnabled) return;
+      const webSocketUrl = await runtimeWebSocketUrl(refresh);
+      if (disposed) return;
+      audioSocket = new WebSocket(
+        `${webSocketUrl}/v1/audio/stream?session_id=${resolvedSessionId}`,
+      );
+      audioSocket.onmessage = (message) => {
+        let payload: TtsStreamMessage;
+        try {
+          payload = JSON.parse(String(message.data)) as TtsStreamMessage;
+        } catch {
+          return;
+        }
+        if (
+          payload.type !== "chatwaifu.tts_stream" ||
+          payload.schema_version !== "1.0" ||
+          payload.generation_id !== activeGeneration.current
+        )
+          return;
+        const player = getPcmStreamPlayer();
+        if (!player) return;
+        if (voiceConnected.current && !payload.native_streaming) return;
+        if (payload.phase === "started") {
+          player.start({
+            phase: "started",
+            generationId: payload.generation_id,
+            streamId: payload.stream_id,
+            segmentId: payload.segment_id,
+            segmentIndex: payload.segment_index,
+            text: payload.text,
+            sampleRate: payload.sample_rate,
+            channels: payload.channels,
+            nativeStreaming: payload.native_streaming,
+          });
+        } else if (payload.phase === "chunk" && payload.pcm16_base64) {
+          player.push(
+            payload.segment_id,
+            payload.sequence,
+            decodePcmBase64(payload.pcm16_base64),
+          );
+        } else if (payload.phase === "completed") {
+          const item = streamedSegments.current.get(payload.segment_id);
+          if (item) {
+            item.durationMs = payload.duration_ms;
+            const progress =
+              subtitlePlaybackTracker.current.registerSegment(item);
+            if (progress) setSubtitlePlayback(progress);
+          }
+          player.complete(payload.segment_id, payload.duration_ms);
+        } else if (payload.phase === "cancelled") {
+          player.cancel(payload.segment_id);
+        }
+      };
+      audioSocket.onclose = () => {
+        if (disposed) return;
+        audioReconnectTimer = window.setTimeout(
+          () => void connectAudio(resolvedSessionId, true),
+          1200,
+        );
+      };
     };
 
     const initialize = async () => {
@@ -467,7 +570,10 @@ export function useChatSession({
         setTtsProviders(availableTts);
         const selectedTts = availableTts.find((provider) => provider.selected);
         if (selectedTts) setTtsProviderId(selectedTts.provider_id);
-        await connect(session.session_id);
+        await Promise.all([
+          connect(session.session_id),
+          connectAudio(session.session_id),
+        ]);
       } catch (runtimeError: unknown) {
         if (disposed) return;
         setConnection("offline");
@@ -482,21 +588,28 @@ export function useChatSession({
     return () => {
       disposed = true;
       socket?.close();
+      audioSocket?.close();
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      if (audioReconnectTimer !== null)
+        window.clearTimeout(audioReconnectTimer);
       stopAudio(activeGeneration.current ?? undefined);
       audioPlayer.current?.dispose();
       audioPlayer.current = null;
+      pcmStreamPlayer.current?.dispose();
+      pcmStreamPlayer.current = null;
+      streamItems.clear();
       playbackReporter.current?.dispose();
       playbackReporter.current = null;
       textProjector.current?.dispose();
       textProjector.current = null;
     };
-  }, [handleEvent, stopAudio]);
+  }, [getPcmStreamPlayer, handleEvent, playbackEnabled, stopAudio]);
 
   const send = useCallback(
     async (text: string) => {
       if (!sessionId || !text.trim()) return;
       getAudioPlayer()?.prime();
+      getPcmStreamPlayer()?.prime();
       if (connection !== "connected") {
         setError("Runtime 事件通道尚未连接，请稍等片刻再发送。");
         return;
@@ -515,7 +628,14 @@ export function useChatSession({
         );
       }
     },
-    [connection, getAudioPlayer, sessionId, stopAudio, stopText],
+    [
+      connection,
+      getAudioPlayer,
+      getPcmStreamPlayer,
+      sessionId,
+      stopAudio,
+      stopText,
+    ],
   );
 
   const interruptActive = useCallback(async () => {
@@ -573,6 +693,14 @@ export function useChatSession({
     },
     [sessionId, stopAudio, stopText, ttsProviderId, ttsSwitching],
   );
+
+  const refreshTtsProviders = useCallback(async () => {
+    if (!sessionId) return;
+    const available = await getTtsProviders(sessionId);
+    setTtsProviders(available);
+    const selected = available.find((provider) => provider.selected);
+    if (selected) setTtsProviderId(selected.provider_id);
+  }, [sessionId]);
 
   const resetAll = useCallback(async (): Promise<boolean> => {
     if (!sessionId || resetting) return false;
@@ -649,6 +777,7 @@ export function useChatSession({
     refreshVoiceDevices: voice.refreshDevices,
     toggleVoice: voice.toggle,
     changeTtsProvider,
+    refreshTtsProviders,
     send,
     interruptActive,
     resetAll,

@@ -5,6 +5,7 @@ import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import { useChatSession } from "../chat/useChatSession";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
+import { AliyunTtsSettingsPanel } from "./AliyunTtsSettingsPanel";
 import { SettingsIcon, type SettingsIconName } from "./SettingsIcon";
 
 type SettingsSection = "appearance" | "companion" | "voice" | "models" | "data";
@@ -42,6 +43,7 @@ export function DesktopSettingsPage() {
     ttsProviderId,
     ttsSwitching,
     changeTtsProvider,
+    refreshTtsProviders,
     resetAll,
     refreshMemories,
   } = useChatSession({ playbackEnabled: false });
@@ -151,6 +153,7 @@ export function DesktopSettingsPage() {
               switching={ttsSwitching}
               sessionReady={Boolean(sessionId)}
               onChange={changeTtsProvider}
+              onConfigured={refreshTtsProviders}
             />
           ) : null}
 
@@ -293,6 +296,7 @@ type VoiceSettingsProps = {
   switching: boolean;
   sessionReady: boolean;
   onChange: (providerId: string) => Promise<void>;
+  onConfigured: () => Promise<void>;
 };
 
 function VoiceSettings({
@@ -301,6 +305,7 @@ function VoiceSettings({
   switching,
   sessionReady,
   onChange,
+  onConfigured,
 }: VoiceSettingsProps) {
   const selected = providers.find(
     (provider) => provider.provider_id === providerId,
@@ -314,7 +319,7 @@ function VoiceSettings({
           </span>
           <div>
             <h2>角色声音</h2>
-            <p>选择桌宠回答时使用的本地语音模型。</p>
+            <p>选择桌宠回答时使用的本地或云端实时语音。</p>
           </div>
         </div>
         <label className="desktop-settings-select-row">
@@ -366,6 +371,8 @@ function VoiceSettings({
           <p className="desktop-settings-empty">等待 Runtime 返回语音能力…</p>
         )}
       </SettingsGroup>
+
+      <AliyunTtsSettingsPanel onSaved={onConfigured} />
 
       <p className="desktop-settings-info">
         麦克风采集和声音播放只由桌宠窗口负责，设置页不会建立第二条媒体链路，因此不会产生重叠语音。

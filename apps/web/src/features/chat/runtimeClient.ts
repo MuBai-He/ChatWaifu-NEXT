@@ -9,6 +9,7 @@ import type {
 
 import type {
   CharacterKernelSnapshot,
+  AliyunTtsConfiguration,
   CharacterProfile,
   CompanionSettings,
   CompanionStatus,
@@ -245,6 +246,37 @@ export async function selectTtsProvider(
   return request(`/v1/sessions/${sessionId}/tts/provider`, {
     method: "PUT",
     body: JSON.stringify({ provider_id: providerId }),
+  });
+}
+
+export async function getAliyunTtsConfiguration(): Promise<AliyunTtsConfiguration> {
+  return request<AliyunTtsConfiguration>(
+    "/v1/tts/configurations/aliyun_qwen_realtime",
+  );
+}
+
+export async function updateAliyunTtsConfiguration(
+  configuration: Omit<
+    AliyunTtsConfiguration,
+    "provider_id" | "api_key_configured" | "updated_at"
+  > & { api_key?: string; clear_api_key?: boolean },
+): Promise<AliyunTtsConfiguration> {
+  return request<AliyunTtsConfiguration>(
+    "/v1/tts/configurations/aliyun_qwen_realtime",
+    {
+      method: "PUT",
+      body: JSON.stringify(configuration),
+    },
+  );
+}
+
+export async function testAliyunTtsConfiguration(): Promise<{
+  status: string;
+  duration_ms?: number;
+}> {
+  return request("/v1/tts/configurations/aliyun_qwen_realtime/test", {
+    method: "POST",
+    body: "{}",
   });
 }
 

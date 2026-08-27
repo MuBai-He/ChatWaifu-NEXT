@@ -30,6 +30,35 @@ export interface TtsProviderSnapshot {
   selected: boolean;
 }
 
+export interface AliyunTtsConfiguration {
+  provider_id: "aliyun_qwen_realtime";
+  enabled: boolean;
+  model: string;
+  voice_id: string;
+  region: "beijing" | "singapore";
+  workspace_id: string;
+  language_type:
+    | "Auto"
+    | "Chinese"
+    | "English"
+    | "German"
+    | "Italian"
+    | "Portuguese"
+    | "Spanish"
+    | "Japanese"
+    | "Korean"
+    | "French"
+    | "Russian";
+  sample_rate: 8000 | 16000 | 24000 | 48000;
+  speech_rate: number;
+  volume: number;
+  pitch_rate: number;
+  timeout_seconds: number;
+  max_audio_bytes: number;
+  api_key_configured: boolean;
+  updated_at: string;
+}
+
 export interface CharacterProfile {
   character_id: string;
   display_name: string;
@@ -91,6 +120,29 @@ export interface AudioPayload {
   segment_id: string;
   segment_index: number;
   tts_provider: string;
+  streamed_live?: boolean;
+}
+
+export interface TtsStreamMessage {
+  type: "chatwaifu.tts_stream";
+  schema_version: "1.0";
+  phase: "started" | "chunk" | "completed" | "cancelled";
+  session_id: string;
+  turn_id: string;
+  generation_id: string;
+  stream_id: string;
+  segment_id: string;
+  segment_index: number;
+  text: string;
+  sequence: number;
+  sample_rate: number;
+  channels: number;
+  native_streaming: boolean;
+  pcm16_base64: string;
+  duration_ms: number;
+  provider_id: string;
+  model: string;
+  reason?: string | null;
 }
 
 export interface AvatarCuePayload {

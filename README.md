@@ -116,6 +116,11 @@ generation，并在不再使用旧 provider 时卸载模型。Kokoro 和 macOS �
 [Qwen3-TTS 角色微调](docs/operations/qwen3-tts-character-finetuning.md)。统一接口、懒加载与
 本地模型边界见 [ADR 0014](docs/adr/0014-unified-selectable-neural-tts.md)。
 
+声音设置还可启用阿里云百炼 Qwen 声音复刻实时语音。音色 ID、区域、语种、语速和音量在设置页
+保存，API Key 使用独立的本地权限文件且不会回显。百炼仅接收当前待朗读句段，并通过有界 PCM
+流边生成边播放；完整 WAV 继续作为断线回退。流式合约、取消和云端出站边界见
+[ADR 0017](docs/adr/0017-provider-neutral-streaming-tts.md)。
+
 实时语音的数据流、进程边界和取消语义见
 [Realtime voice demo slice](docs/architecture/realtime-voice-demo.md)。
 
