@@ -27,6 +27,11 @@ until the pointer enters the pet window, keyboard focus reaches a control, or a 
 send, or push-to-talk interaction needs it to remain available. Touch-only previews keep the rail
 visible. Tauri commands only expose bounded window and presentation-preference operations.
 
+The character greeting is shown only before any assistant message exists. Once a generation has
+started, its empty pre-token state renders only the typing caret and never falls back to the greeting.
+Subtitle text keeps a bounded three-line viewport without line clamping or ellipsis; progressive text
+growth scrolls that viewport to the newest content while retaining earlier text for manual review.
+
 The control center uses `/desktop-settings` (`/control-center` remains a Web compatibility alias)
 and is not created at startup. It is a dedicated app-like settings surface with desktop-pet,
 voice-provider, model-routing, and local-data sections; it does not render the visual-novel stage or
@@ -77,8 +82,8 @@ excluded from this slice.
 ## Verification
 
 - Web unit tests cover route selection, avatar interaction, typed-message submission, independent
-  HUD visibility, interaction-rail persistence, hanging audio-unlock recovery, interruption, and
-  single media ownership.
+  HUD visibility, interaction-rail persistence, pending-caret rendering, progressive subtitle
+  auto-scroll, hanging audio-unlock recovery, interruption, and single media ownership.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
   internal scrolling, functional HUD switch, and absence of conversation controls in the settings
   window.
