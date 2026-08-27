@@ -6,6 +6,7 @@ import {
   normalizeDesktopSubtitle,
 } from "../chat/subtitlePlayback";
 import { useDesktopPreferences } from "./useDesktopPreferences";
+import { useDesktopPointerPresence } from "./useDesktopPointerPresence";
 
 export function DesktopPetPage() {
   const {
@@ -41,6 +42,7 @@ export function DesktopPetPage() {
     error: preferenceError,
     setDisplay,
   } = useDesktopPreferences();
+  const pointerPresence = useDesktopPointerPresence();
   const latestAssistant = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -137,6 +139,9 @@ export function DesktopPetPage() {
         sending ||
         Boolean(draft.trim())
       }
+      data-pointer-inside={pointerPresence.pointerInside}
+      onPointerEnter={pointerPresence.onPointerEnter}
+      onPointerLeave={pointerPresence.onPointerLeave}
     >
       <div
         className="desktop-pet-drag-region"

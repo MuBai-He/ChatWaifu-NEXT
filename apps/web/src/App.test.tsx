@@ -267,6 +267,22 @@ describe("ChatWaifu usable demo", () => {
     expect((messageBox as HTMLInputElement).value).toBe("");
   });
 
+  it("reveals desktop-pet controls from pointer presence without focus", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+
+    render(<App />);
+
+    const petShell = document.querySelector(".desktop-pet-shell");
+    if (!(petShell instanceof HTMLElement))
+      throw new Error("expected desktop-pet shell");
+    expect(petShell.getAttribute("data-pointer-inside")).toBe("false");
+    fireEvent.pointerEnter(petShell);
+    expect(petShell.getAttribute("data-pointer-inside")).toBe("true");
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.pointerLeave(petShell);
+    expect(petShell.getAttribute("data-pointer-inside")).toBe("false");
+  });
+
   it("lets desktop-pet users independently hide subtitles and online status", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 

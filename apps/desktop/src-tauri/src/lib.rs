@@ -52,6 +52,7 @@ impl Default for DesktopPreferences {
 #[derive(Default)]
 struct DesktopState {
     preferences: Mutex<DesktopPreferences>,
+    pointer_inside_overlay: Mutex<bool>,
 }
 
 #[tauri::command]
@@ -121,6 +122,21 @@ fn set_avatar_overlay_display(
     Ok(preferences)
 }
 
+#[tauri::command]
+fn set_avatar_overlay_pointer_inside(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    inside: bool,
+) -> Result<(), String> {
+    let mut pointer_inside = lock_pointer_inside(&state)?;
+    let click_through = lock_preferences(&state)?.click_through;
+    required_window(&app, AVATAR_OVERLAY_LABEL)?
+        .set_ignore_cursor_events(should_ignore_cursor_events(click_through, inside))
+        .map_err(window_error)?;
+    *pointer_inside = inside;
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(DesktopState::default())
@@ -137,6 +153,7 @@ pub fn run() {
             set_avatar_overlay_click_through,
             set_avatar_overlay_visible,
             set_avatar_overlay_display,
+            set_avatar_overlay_pointer_inside,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run ChatWaifu desktop host");
@@ -311,14 +328,20 @@ fn set_click_through(
     state: &State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let pointer_inside = lock_pointer_inside(state)?;
     required_window(app, AVATAR_OVERLAY_LABEL)?
-        .set_ignore_cursor_events(enabled)
+        .set_ignore_cursor_events(should_ignore_cursor_events(enabled, *pointer_inside))
         .map_err(window_error)?;
     let preferences = update_preferences(state, |preferences| {
         preferences.click_through = enabled;
     })?;
+    drop(pointer_inside);
     commit_preferences(app, &preferences)?;
     Ok(preferences)
+}
+
+fn should_ignore_cursor_events(click_through: bool, pointer_inside: bool) -> bool {
+    click_through && !pointer_inside
 }
 
 fn required_window(app: &AppHandle, label: &str) -> Result<WebviewWindow, String> {
@@ -342,6 +365,15 @@ fn lock_preferences<'a>(
         .preferences
         .lock()
         .map_err(|_| "desktop preference lock was poisoned".to_owned())
+}
+
+fn lock_pointer_inside<'a>(
+    state: &'a State<'_, DesktopState>,
+) -> Result<MutexGuard<'a, bool>, String> {
+    state
+        .pointer_inside_overlay
+        .lock()
+        .map_err(|_| "desktop pointer-presence lock was poisoned".to_owned())
 }
 
 fn preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -392,7 +424,7 @@ fn window_error(error: tauri::Error) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{DesktopPreferences, HOST_ROLE};
+    use super::{DesktopPreferences, HOST_ROLE, should_ignore_cursor_events};
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
@@ -414,5 +446,13 @@ mod tests {
     fn older_preference_files_receive_safe_defaults() {
         let preferences: DesktopPreferences = serde_json::from_str("{}").unwrap();
         assert_eq!(preferences, DesktopPreferences::default());
+    }
+
+    #[test]
+    fn cursor_capture_temporarily_overrides_persisted_click_through() {
+        assert!(should_ignore_cursor_events(true, false));
+        assert!(!should_ignore_cursor_events(true, true));
+        assert!(!should_ignore_cursor_events(false, false));
+        assert!(!should_ignore_cursor_events(false, true));
     }
 }

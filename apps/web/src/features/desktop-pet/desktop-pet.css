@@ -123,8 +123,8 @@
     transform 180ms ease;
 }
 
-.desktop-pet-shell:hover .desktop-pet-actions,
-.desktop-pet-shell:hover .desktop-pet-composer,
+.desktop-pet-shell[data-pointer-inside="true"] .desktop-pet-actions,
+.desktop-pet-shell[data-pointer-inside="true"] .desktop-pet-composer,
 .desktop-pet-shell:focus-within .desktop-pet-actions,
 .desktop-pet-shell:focus-within .desktop-pet-composer,
 .desktop-pet-shell[data-actions-active="true"] .desktop-pet-actions,
