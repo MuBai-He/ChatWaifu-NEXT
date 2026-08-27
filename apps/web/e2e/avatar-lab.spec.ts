@@ -289,6 +289,30 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   await expect(composer.locator("..")).toHaveCSS("opacity", "1");
   await expect(composer.locator("..")).toHaveCSS("pointer-events", "auto");
 
+  const dialogueOverflow = await page.evaluate<{
+    overflowY: string;
+    lineClamp: string;
+  }>(`
+    (() => {
+      const container = document.createElement("section");
+      container.className = "desktop-pet-dialogue";
+      const dialogue = document.createElement("p");
+      container.append(dialogue);
+      document.body.append(container);
+      try {
+        const style = getComputedStyle(dialogue);
+        return {
+          overflowY: style.overflowY,
+          lineClamp: style.webkitLineClamp,
+        };
+      } finally {
+        container.remove();
+      }
+    })()
+  `);
+  expect(dialogueOverflow.overflowY).toBe("auto");
+  expect(dialogueOverflow.lineClamp).toBe("none");
+
   const screenshot = await page.screenshot({
     animations: "disabled",
     path: testInfo.outputPath("desktop-pet-hover-composer.png"),

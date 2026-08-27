@@ -92,15 +92,22 @@
 }
 
 .desktop-pet-dialogue p {
-  display: -webkit-box;
+  max-height: calc(1.65em * 3);
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: rgb(255 252 254 / 94%);
   font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
   font-size: 0.83rem;
   line-height: 1.65;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  white-space: pre-wrap;
+}
+
+.desktop-pet-dialogue p::-webkit-scrollbar {
+  display: none;
 }
 
 .desktop-pet-actions,

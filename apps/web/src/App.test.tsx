@@ -175,6 +175,57 @@ describe("ChatWaifu usable demo", () => {
     expect(session.touch).toHaveBeenCalledOnce();
   });
 
+  it("shows only the caret before the first desktop-pet reply token", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    session.messages = [
+      {
+        id: "generation-pending",
+        role: "assistant",
+        text: "",
+        generationId: "generation-pending",
+        pending: true,
+      },
+    ];
+
+    render(<App />);
+
+    expect(screen.queryByText(/欢迎回来/)).toBeNull();
+    expect(
+      document.querySelector(".desktop-pet-dialogue .typing-caret"),
+    ).toBeTruthy();
+  });
+
+  it("keeps a growing desktop-pet reply scrolled to its newest text", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    session.messages = [
+      {
+        id: "generation-streaming",
+        role: "assistant",
+        text: "第一句。",
+        generationId: "generation-streaming",
+        pending: true,
+      },
+    ];
+    const { rerender } = render(<App />);
+    const dialogue = document.querySelector(".desktop-pet-dialogue p");
+    if (!(dialogue instanceof HTMLParagraphElement))
+      throw new Error("expected desktop-pet dialogue");
+    Object.defineProperty(dialogue, "scrollHeight", {
+      configurable: true,
+      value: 240,
+    });
+
+    session.messages = [
+      {
+        ...session.messages[0],
+        text: "第一句。\n第二句。\n第三句。\n这是刚刚抵达的最后一句。",
+      },
+    ];
+    rerender(<App />);
+
+    expect(dialogue.scrollTop).toBe(240);
+  });
+
   it("sends typed messages from the desktop-pet hover composer", async () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.send.mockResolvedValueOnce(undefined);

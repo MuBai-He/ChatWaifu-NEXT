@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatSession } from "../chat/useChatSession";
 import { useDesktopPreferences } from "./useDesktopPreferences";
 
@@ -28,6 +28,7 @@ export function DesktopPetPage() {
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const dialogueRef = useRef<HTMLParagraphElement>(null);
   const {
     preferences,
     error: preferenceError,
@@ -36,7 +37,9 @@ export function DesktopPetPage() {
   const latestAssistant = messages.findLast(
     (message) => message.role === "assistant",
   );
-  const dialogue = latestAssistant?.text || character?.greeting || "";
+  const dialogue = latestAssistant
+    ? latestAssistant.text
+    : character?.greeting || "";
   const pending = latestAssistant?.pending ?? false;
   const canUseVoice = Boolean(
     sessionId &&
@@ -47,6 +50,12 @@ export function DesktopPetPage() {
   const canSend = Boolean(
     sessionId && connection === "connected" && !resetting,
   );
+
+  useEffect(() => {
+    const dialogueElement = dialogueRef.current;
+    if (!dialogueElement) return;
+    dialogueElement.scrollTop = dialogueElement.scrollHeight;
+  }, [dialogue, pending]);
 
   const sendDraft = async () => {
     const text = draft.trim();
@@ -116,7 +125,7 @@ export function DesktopPetPage() {
       {preferences.showSubtitles && (dialogue || pending) ? (
         <section className="desktop-pet-dialogue" aria-live="polite">
           <small>{character?.display_name ?? "绫地宁宁"}</small>
-          <p>
+          <p ref={dialogueRef}>
             {dialogue}
             {pending ? <i className="typing-caret" /> : null}
           </p>
