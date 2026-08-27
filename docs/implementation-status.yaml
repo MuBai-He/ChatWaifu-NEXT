@@ -1,10 +1,13 @@
 schema_version: "1.0"
-updated_at: "2026-08-27"
+updated_at: "2026-08-28"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
+out_of_order_slices:
+  - phase_3_native_runtime_supervision
+  - phase_15_idle_proactive_companion
 
 validation:
   local_platform: macos-arm64
@@ -49,6 +52,11 @@ validation:
     - browser full reload reports no new console warnings or errors
     - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
     - make desktop supervises local workers, Runtime, Web, and the Tauri development host as one process group
+    - dynamic desktop service-stack bootstrap reports a loopback Runtime plus STT/Qwen/GPT workers and Ctrl+C closes the observed Runtime listener
+    - live Tauri-owned Runtime exposes persisted companion defaults and completes resource sleep then wake without dropping the session service
+    - obsolete Tauri hot-reload sidecars were identified by missing parent ownership and cleaned without touching the active fixed-port browser Runtime
+    - open-mic attention tests reject unaddressed nearby speech and accept then strip a leading configured wake phrase
+    - proactive policy and API tests cover cross-midnight quiet hours, busy deferral, cooldown, daily budget, hidden system turns, and natural Demo fallback
     - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
     - browser desktop-settings smoke confirms app-like fixed-window layout, internal scroll, working display preferences, and no conversation/media controls
     - Chromium real Live2D renders in Avatar Lab and main chat
@@ -87,7 +95,7 @@ phases:
       - Pydantic protocol source covers all required Phase 1 model families
       - 31 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
-      - 13 Python tests and 8 TypeScript contract tests pass
+      - 13 Python tests and 9 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
       - Unknown major versions, unknown types, and invalid payloads are rejected
       - Same-major optional fields are accepted
@@ -113,12 +121,12 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: desktop_pet_vertical_slice_implemented_pending_sidecar_and_packaging
+    status: desktop_pet_and_native_runtime_supervision_implemented_pending_packaging
     evidence:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
-      - The control-center renders a dedicated four-section desktop settings surface instead of reusing the visual-novel conversation page
+      - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
       - The macOS host embeds a microphone usage description and unsupported WebViews expose an actionable recovery message instead of an inert disabled control
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
@@ -130,6 +138,10 @@ phases:
       - The avatar overlay disables inactive WebView throttling so streaming text, audio progress, Live2D, and subtitle paging continue without mouse focus or selection
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
+      - Tauri starts the local service stack on dynamic ports and accepts only a versioned prefix-delimited secret-free bootstrap handshake
+      - Unexpected Runtime-stack exits use bounded exponential restart backoff, open a circuit after five failures, and expose manual recovery in settings and tray
+      - Rust shutdown terminates and waits for the owned service child so ordinary desktop exit leaves no orphan Runtime or workers
+      - The service stack watches its owning Rust PID and self-cleans after abrupt development hot reloads that bypass normal Tauri exit events
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
   - id: 4
     name: runtime-core
@@ -157,6 +169,8 @@ phases:
       - Pipecat 1.7 is pinned behind a ChatWaifu-owned SmallWebRTC adapter
       - Browser getUserMedia provides device selection, input meter, echo cancellation, and one audio peer
       - Browser push-to-talk is the safe default capture gate; continuous open mic is an explicit warned opt-in
+      - Open mic defaults to transcript-level local wake-phrase attention and delays barge-in until STT confirms an addressed utterance
+      - Unaddressed nearby speech is audited as ignored without committing a user turn or interrupting current playback
       - Silero VAD emits typed speech lifecycle events and bounds utterance buffering with pre-roll
       - Remote Runtime TTS is generation-gated and delivered through the WebRTC audio track
       - Ordered WebRTC data-channel markers bind each remote segment to the browser output-media clock
@@ -186,6 +200,7 @@ phases:
     evidence:
       - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
+      - Idle ASR and TTS models can release weights without stopping workers, sessions, memory, or the desktop host and lazily reload on next use
       - sherpa-onnx Kokoro v1.1 runs in its own locked environment and loopback-authenticated process
       - One authenticated worker protocol covers Qwen3-TTS MLX and GPT-SoVITS CPUFast capabilities, synthesis, cancellation, and unload
       - make demo provisions ephemeral tokens, selects free ports, supervises STT plus both lazy TTS workers, and reuses model caches
@@ -244,6 +259,16 @@ phases:
       - A fingerprinted SQLite semantic projection is rebuilt on embedding-route changes while WAL plus FTS5 remains truth
       - Host-only OpenAI-compatible URLs default to /v1 while explicit and nested API base paths remain unchanged
       - Shared-event extraction requires completed playback acknowledgement and assistant spoken-text evidence
+  - id: 15
+    name: proactive-behavior-and-ambient
+    status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
+    evidence:
+      - Runtime-owned companion settings persist wake phrases, quiet hours, proactive limits, and resource-idle policy in SQLite
+      - Proactive speech is disabled by default and the idle source requires threshold, non-quiet time, no active generation, cooldown, and remaining daily budget
+      - Triggered and deferred ambient actions are locally auditable, while repeated equal deferrals are debounced
+      - Ambient generation uses Character Kernel, memory retrieval, semantic avatar cues, TTS, cancellation, and playback ACK without fabricating a visible user turn
+      - Demo fallback emits a natural fixed check-in rather than exposing the internal ambient instruction
+      - The dedicated companion settings panel reports daily use and controls attention, quiet hours, proactive limits, resource sleep, and native Runtime recovery
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -251,11 +276,12 @@ entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
-  - Signed packaged Tauri delivery and Rust-owned Runtime sidecar handshake/crash recovery remain pending
+  - Signed packaged Tauri delivery and a frozen release sidecar remain pending
   - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
+  - Proactive prospective-memory, Skill-completion, calendar, and scene event sources plus ignore-adaptive frequency remain pending
 
 constraints:
   real_model_sdks: forbidden_before_phase_8

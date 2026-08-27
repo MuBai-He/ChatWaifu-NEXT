@@ -113,6 +113,7 @@ class RuntimeContainer:
                 stt=self.stt,
                 companion_settings=self.companion_settings,
                 activity=self.activity,
+                resource_activity=self.resources.touch,
             )
         )
         self._started = False

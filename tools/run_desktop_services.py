@@ -10,6 +10,7 @@ import secrets
 import signal
 import subprocess
 import sys
+import threading
 import time
 from types import FrameType
 
@@ -44,6 +45,7 @@ def main() -> int:
     hangup = getattr(signal, "SIGHUP", None)
     if isinstance(hangup, signal.Signals):
         signal.signal(hangup, _raise_termination)
+    _start_parent_watchdog(environment)
 
     try:
         stt_environment = environment.copy()
@@ -200,6 +202,40 @@ def _write_bootstrap(runtime_url: str, pid: int, ports: dict[str, int]) -> None:
 
 def _raise_termination(signum: int, _frame: FrameType | None) -> None:
     raise TerminationRequested(signum)
+
+
+def _start_parent_watchdog(environment: dict[str, str]) -> None:
+    raw_parent_pid = environment.get("CHATWAIFU_DESKTOP_PARENT_PID", "").strip()
+    if not raw_parent_pid:
+        return
+    try:
+        parent_pid = int(raw_parent_pid)
+    except ValueError as error:
+        raise RuntimeError("CHATWAIFU_DESKTOP_PARENT_PID must be an integer") from error
+    if parent_pid <= 1 or parent_pid == os.getpid():
+        raise RuntimeError("CHATWAIFU_DESKTOP_PARENT_PID is not a valid supervisor")
+    threading.Thread(
+        target=_watch_parent,
+        args=(parent_pid,),
+        name="desktop-parent-watchdog",
+        daemon=True,
+    ).start()
+
+
+def _watch_parent(parent_pid: int) -> None:
+    while _process_exists(parent_pid):
+        time.sleep(0.5)
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+def _process_exists(process_id: int) -> bool:
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 if __name__ == "__main__":

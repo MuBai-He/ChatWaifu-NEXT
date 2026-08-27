@@ -82,8 +82,21 @@ export function CompanionSettingsPanel() {
     setSaving(true);
     setError(null);
     try {
-      const { schema_version: _, updated_at: __, ...payload } = settings;
-      setSettings(await updateCompanionSettings(payload));
+      setSettings(
+        await updateCompanionSettings({
+          wake_phrase_enabled: settings.wake_phrase_enabled,
+          wake_phrases: settings.wake_phrases,
+          quiet_hours_enabled: settings.quiet_hours_enabled,
+          quiet_start: settings.quiet_start,
+          quiet_end: settings.quiet_end,
+          proactive_enabled: settings.proactive_enabled,
+          proactive_idle_minutes: settings.proactive_idle_minutes,
+          proactive_cooldown_minutes: settings.proactive_cooldown_minutes,
+          proactive_daily_budget: settings.proactive_daily_budget,
+          resource_sleep_enabled: settings.resource_sleep_enabled,
+          resource_idle_minutes: settings.resource_idle_minutes,
+        }),
+      );
     } catch (saveError: unknown) {
       setError(message(saveError, "无法保存陪伴设置"));
     } finally {

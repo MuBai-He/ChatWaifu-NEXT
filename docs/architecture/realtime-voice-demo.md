@@ -30,14 +30,15 @@ a conversation with another person nearby.
 
 The browser defaults to `push_to_talk`. Its outbound audio track is disabled before and after a
 press and enabled only while the control is held; releasing it produces silence so Runtime VAD can
-close the current utterance normally. `open_mic` is an explicit opt-in for quiet, single-user rooms
-and warns that nearby speech may start a turn or interrupt current output. Both modes retain the
-same WebRTC, VAD, STT, identity, and cancellation contracts.
+close the current utterance normally. `open_mic` is an explicit opt-in and, by default, requires a
+configured wake phrase at the beginning of the local final transcript. Runtime does not barge in at
+VAD start in that mode: accepted addressed speech interrupts only after STT confirmation, while
+unaddressed nearby conversation emits `voice.utterance_ignored` and creates no turn. Users can
+explicitly disable the wake gate for quiet, single-user rooms. Both modes retain the same WebRTC,
+VAD, STT, identity, and cancellation contracts.
 
-A later hands-free attention layer may combine a local wake word, a short armed-conversation window,
-and optional enrolled-speaker verification. Semantic addressee classification can be an additional
-signal after STT, but it must not be the sole privacy or interruption gate. This attention layer is
-not claimed as implemented in the current demo.
+This is transcript-level local attention, not an acoustic low-power wake-word engine or enrolled
+speaker verification. Those can later precede STT without changing the conversation contract.
 
 ## Identity and cancellation
 
@@ -94,7 +95,8 @@ The token is redacted from public configuration. Model data is cached under the 
 
 ## Deliberate exclusions
 
-- Web Demo only; Tauri sidecar packaging is not claimed.
+- Web and Tauri desktop development paths are supported; frozen and signed sidecar packaging is not
+  claimed.
 - One browser peer per voice connection; public TURN and multi-machine media are not configured.
 - The ordered data channel carries playback markers only. There is no generic RTVI control protocol;
   ChatWaifu HTTP and typed Domain Events remain the control plane.

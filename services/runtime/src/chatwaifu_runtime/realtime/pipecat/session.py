@@ -1,6 +1,7 @@
 """SmallWebRTC signaling and per-connection Pipecat pipeline adapter."""
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -60,6 +61,7 @@ class PipecatMediaAdapter:
         stt: SttBackend,
         companion_settings: CompanionSettingsService,
         activity: ActivityTracker,
+        resource_activity: Callable[[], None],
     ) -> None:
         self._config = config
         self._publisher = publisher
@@ -69,6 +71,7 @@ class PipecatMediaAdapter:
         self._stt = stt
         self._companion_settings = companion_settings
         self._activity = activity
+        self._resource_activity = resource_activity
         self._handler = SmallWebRTCRequestHandler(connection_mode=ConnectionMode.MULTIPLE)
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._sessions: dict[str, UUID] = {}
@@ -181,6 +184,7 @@ class PipecatMediaAdapter:
             stt=self._stt,
             companion_settings=self._companion_settings,
             activity=self._activity,
+            resource_activity=self._resource_activity,
             activation_mode=activation_mode,
         )
         worker = PipelineWorker(

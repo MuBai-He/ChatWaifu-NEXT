@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -39,3 +40,21 @@ def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None
     assert payload["runtime_url"] == "http://127.0.0.1:41001"
     assert payload["workers"] == ["qwen3_tts_mlx", "stt"]
     assert "token" not in line.casefold()
+
+
+def test_parent_watchdog_requires_a_real_supervisor_pid(monkeypatch: Any) -> None:
+    started: list[tuple[object, ...]] = []
+
+    class _Thread:
+        def __init__(self, *, args: tuple[object, ...], **_kwargs: object) -> None:
+            started.append(args)
+
+        def start(self) -> None:
+            return None
+
+    monkeypatch.setattr(desktop_services.threading, "Thread", _Thread)
+
+    desktop_services._start_parent_watchdog({"CHATWAIFU_DESKTOP_PARENT_PID": str(os.getppid())})
+
+    assert started == [(os.getppid(),)]
+    assert desktop_services._process_exists(os.getpid()) is True

@@ -41,9 +41,9 @@ and stale generations never advance the subtitle.
 
 The control center uses `/desktop-settings` (`/control-center` remains a Web compatibility alias)
 and is not created at startup. It is a dedicated app-like settings surface with desktop-pet,
-voice-provider, model-routing, and local-data sections; it does not render the visual-novel stage or
-composer. Opening it creates or shows the native window; closing it hides the window so the pet and
-Runtime remain alive.
+voice-provider, model-routing, companion-policy, and local-data sections; it does not render the
+visual-novel stage or composer. Opening it creates or shows the native window; closing it hides the
+window so the pet and Runtime remain alive.
 
 The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
 browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the
@@ -102,12 +102,17 @@ emits progress acknowledgements.
   focus or text-selection repaint.
 - Subtitle and online-state visibility persist independently, with visible defaults for old files.
 - Invalid or old preference files fall back to safe interactive defaults.
-- `make desktop` owns all local worker, Runtime, Web, and Tauri development process groups; terminal
-  interruption tears them down together.
+- Tauri starts one supervised Python service-stack child. A versioned, prefix-delimited bootstrap
+  handshake publishes its dynamic Runtime URL without logging worker tokens.
+- Unexpected service-stack exit enters bounded exponential backoff. Five consecutive failed restarts
+  open a circuit visible in settings and tray; manual restart closes it and begins a fresh attempt.
+- Application exit terminates and waits for the child process group, while ordinary settings-window
+  close leaves the Runtime and pet alive.
+- The service stack also watches the owning Rust PID, so an abrupt development hot reload still
+  tears down workers even when Tauri cannot deliver its normal exit callback.
 
-Rust-owned Runtime bootstrap handshakes, automatic Runtime crash restart, signed installers,
-automatic updates, autostart, and Store-compatible non-transparent profiles are intentionally
-excluded from this slice.
+Frozen release sidecars, signed installers, automatic updates, autostart, and Store-compatible
+non-transparent profiles are intentionally excluded from this slice.
 
 ## Verification
 
@@ -119,8 +124,8 @@ excluded from this slice.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
   internal scrolling, functional HUD switch, and absence of conversation controls in the settings
   window.
-- Rust tests cover host responsibility, backward-compatible preference defaults, and temporary
-  cursor capture while persisted click-through remains enabled.
+- Rust tests cover host responsibility, bootstrap parsing, bounded restart state, backward-compatible
+  preference defaults, and temporary cursor capture while persisted click-through remains enabled.
 - Cargo check, Clippy, Rust tests, Web typecheck/lint/tests, and the no-bundle release build are gates.
 - Local macOS smoke must show the transparent overlay with the real local Live2D model over another
   application; browser-only proof is insufficient.

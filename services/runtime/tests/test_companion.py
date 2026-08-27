@@ -227,3 +227,32 @@ async def test_resource_sleep_refuses_to_cancel_active_work(tmp_path: Path) -> N
             await resources.sleep_now()
     finally:
         await database.close()
+
+
+@pytest.mark.asyncio
+async def test_resource_sleep_aborts_if_voice_activity_arrives_during_unload(
+    tmp_path: Path,
+) -> None:
+    database = Database(tmp_path / "runtime.db", StorageConfig())
+    await database.open()
+    settings = CompanionSettingsService(database)
+    await settings.start()
+    resources: ResourceLifecycleService
+
+    class _TouchingTts(_FakeTts):
+        async def deactivate_idle(self) -> bool:
+            resources.touch()
+            return await super().deactivate_idle()
+
+    resources = ResourceLifecycleService(
+        settings,
+        ActivityTracker(),
+        _TouchingTts(),
+        _FakeStt(),
+    )
+    try:
+        with pytest.raises(RuntimeError, match="新的活动"):
+            await resources.sleep_now()
+        assert resources.status().state == "active"
+    finally:
+        await database.close()

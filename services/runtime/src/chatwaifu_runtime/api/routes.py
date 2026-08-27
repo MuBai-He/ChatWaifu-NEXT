@@ -208,6 +208,8 @@ async def register_character_interaction(
     session = await container.sessions.get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="session not found")
+    container.activity.touch(session_id)
+    container.resources.touch()
     snapshot = await container.character_kernel.observe_interaction(
         session_id=session_id,
         character_id=session.character_id,

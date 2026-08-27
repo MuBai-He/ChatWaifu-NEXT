@@ -265,7 +265,7 @@ fn recover_or_wait(
     error: String,
 ) -> bool {
     *restart_count += 1;
-    if *restart_count > MAX_AUTOMATIC_RESTARTS {
+    let Some(backoff) = restart_backoff(*restart_count) else {
         update_status(
             app,
             status,
@@ -278,8 +278,7 @@ fn recover_or_wait(
         );
         *desired_running = false;
         return true;
-    }
-    let backoff = Duration::from_secs(1_u64 << (*restart_count - 1).min(4));
+    };
     update_status(
         app,
         status,
@@ -303,6 +302,15 @@ fn recover_or_wait(
         }
         Err(RecvTimeoutError::Timeout) => true,
     }
+}
+
+fn restart_backoff(restart_count: u32) -> Option<Duration> {
+    if restart_count > MAX_AUTOMATIC_RESTARTS {
+        return None;
+    }
+    Some(Duration::from_secs(
+        1_u64 << restart_count.saturating_sub(1).min(4),
+    ))
 }
 
 fn publish_ready(
@@ -347,6 +355,10 @@ fn spawn_service_stack() -> Result<Child, String> {
         command
     };
     command
+        .env(
+            "CHATWAIFU_DESKTOP_PARENT_PID",
+            std::process::id().to_string(),
+        )
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
@@ -407,4 +419,18 @@ fn lock<'a, T>(value: &'a Mutex<T>, label: &str) -> Result<MutexGuard<'a, T>, St
     value
         .lock()
         .map_err(|_| format!("{label} lock was poisoned"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_AUTOMATIC_RESTARTS, restart_backoff};
+    use std::time::Duration;
+
+    #[test]
+    fn restart_backoff_is_bounded_and_opens_the_circuit() {
+        assert_eq!(restart_backoff(1), Some(Duration::from_secs(1)));
+        assert_eq!(restart_backoff(2), Some(Duration::from_secs(2)));
+        assert_eq!(restart_backoff(5), Some(Duration::from_secs(16)));
+        assert_eq!(restart_backoff(MAX_AUTOMATIC_RESTARTS + 1), None);
+    }
 }

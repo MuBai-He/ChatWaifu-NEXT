@@ -8,6 +8,7 @@ import asyncio
 import logging
 import wave
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -135,6 +136,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         stt: SttBackend,
         companion_settings: CompanionSettingsService,
         activity: ActivityTracker,
+        resource_activity: Callable[[], None],
         activation_mode: str,
     ) -> None:
         super().__init__(name=f"voice-domain-bridge-{str(session_id)[:8]}")
@@ -149,6 +151,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         self._stt = stt
         self._companion_settings = companion_settings
         self._activity = activity
+        self._resource_activity = resource_activity
         self._activation_mode: VoiceActivationMode = cast(VoiceActivationMode, activation_mode)
         self._buffer = UtteranceBuffer(
             sample_rate,
@@ -232,6 +235,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
 
     async def _speech_started(self) -> None:
         self._activity.touch(self._session_id)
+        self._resource_activity()
         if self._stt_task is not None:
             previous = self._identity
             if previous is not None:
