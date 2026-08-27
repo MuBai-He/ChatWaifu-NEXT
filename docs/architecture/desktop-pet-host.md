@@ -18,12 +18,14 @@ architecture direction.
 
 The overlay consumes the same loopback Runtime HTTP/WebSocket contracts and semantic `AvatarCue`
 stream as the browser Demo. It renders a transparent Live2D canvas, the latest assistant subtitle,
-connection state, avatar touch, microphone connection, and push-to-talk controls. Subtitle and
+connection state, avatar touch, a compact typed-message composer, microphone connection, and
+push-to-talk controls. The composer calls the same generation-safe `useChatSession.send` path as the
+main visual-novel page; the overlay does not own a parallel chat protocol. Subtitle and
 connection-state visibility are independent presentation preferences; hiding either does not stop
-generation, playback, lip sync, or avatar motion. The bottom action rail stays visually hidden until
-the pointer enters the pet window, keyboard focus reaches a control, or an active HUD/push-to-talk
-interaction needs it to remain available. Touch-only previews keep the rail visible. Tauri commands
-only expose bounded window and presentation-preference operations.
+generation, playback, lip sync, or avatar motion. The bottom interaction rail stays visually hidden
+until the pointer enters the pet window, keyboard focus reaches a control, or a draft, active HUD,
+send, or push-to-talk interaction needs it to remain available. Touch-only previews keep the rail
+visible. Tauri commands only expose bounded window and presentation-preference operations.
 
 The control center uses `/desktop-settings` (`/control-center` remains a Web compatibility alias)
 and is not created at startup. It is a dedicated app-like settings surface with desktop-pet,
@@ -68,10 +70,11 @@ excluded from this slice.
 
 ## Verification
 
-- Web unit tests cover route selection, avatar interaction, independent HUD visibility, action-rail
-  persistence during active interactions, and single media ownership.
-- Chromium checks hover-only action-rail reveal, the dedicated settings layout, internal scrolling,
-  functional HUD switch, and absence of conversation controls.
+- Web unit tests cover route selection, avatar interaction, typed-message submission, independent
+  HUD visibility, interaction-rail persistence, and single media ownership.
+- Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
+  internal scrolling, functional HUD switch, and absence of conversation controls in the settings
+  window.
 - Rust tests cover host responsibility and backward-compatible preference defaults.
 - Cargo check, Clippy, Rust tests, Web typecheck/lint/tests, and the no-bundle release build are gates.
 - Local macOS smoke must show the transparent overlay with the real local Live2D model over another
