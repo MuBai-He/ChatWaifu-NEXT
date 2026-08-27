@@ -209,7 +209,8 @@ phases:
       - Qwen3-TTS 0.6B Base completed real Chinese and Japanese MLX synthesis on Apple Silicon
       - GPT-SoVITS Roxy v2ProPlus completed real Chinese and Japanese CPUFast synthesis as a local integration model
       - Provider-neutral TTS streaming now carries ordered PCM16 fragments with bounded ephemeral fan-out, cancellation, provisional playback ACK duration, and complete WAV fallback
-      - Aliyun Bailian Qwen VC Realtime is configurable from the local voice settings page with write-only mode-0600 API-key storage and the supplied Nene voice ID
+      - Aliyun Bailian Qwen VC Realtime is configurable from the local voice settings page with write-only mode-0600 API-key storage and regional voice-to-target-model preflight
+      - The supplied Nene voice ID is bound to batch qwen3-tts-vc-2026-01-22 and is rejected by the realtime adapter until a voice is created for qwen3-tts-vc-realtime-2026-01-15
   - id: 9
     name: real-cascade-models
     status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset

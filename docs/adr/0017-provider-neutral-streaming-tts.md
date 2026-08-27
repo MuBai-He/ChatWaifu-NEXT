@@ -34,9 +34,13 @@ cancelled stream keeps its partial duration long enough to audit what was played
 fragments, out-of-order sequences, and late provider completion are rejected.
 
 Aliyun Bailian is the first native provider. Its adapter owns WebSocket events, authentication,
-voice/model pairing, PCM decoding, size limits, timeouts, and cancellation. The configured voice is
-`qwen-tts-vc-bailian-voice-20260828030329088-e738` and the default compatible base model is
-`qwen3-tts-vc-realtime-2026-01-15`. The voice identifier is not treated as a model identifier.
+voice/model pairing, PCM decoding, size limits, timeouts, and cancellation. Before opening the media
+WebSocket, it queries the regional voice catalog and requires the voice's `target_model` to exactly
+match the configured realtime model. The supplied voice
+`qwen-tts-vc-bailian-voice-20260828030329088-e738` is bound to the batch model
+`qwen3-tts-vc-2026-01-22`, so the realtime adapter intentionally rejects it. A new voice created for
+`qwen3-tts-vc-realtime-2026-01-15` is required for this route. The voice identifier is not treated as
+a model identifier, and the Runtime does not silently downgrade to batch synthesis.
 
 Selecting and enabling the cloud provider in the local settings UI is explicit egress consent. Only
 the current committed TTS text segment leaves the device. Conversation history, memory, system
@@ -49,6 +53,10 @@ Aliyun audio can begin playing before the complete WAV exists, while all existin
 compatible. Local Qwen and GPT-SoVITS can later expose their native fragments without changing the
 conversation, playback, or Web contracts. Until their worker endpoints are upgraded, they retain
 batch latency despite passing through the normalized stream adapter.
+
+The first cloud synthesis after a configuration change performs one metadata preflight. Region/key,
+voice visibility, and `target_model` mismatches are reported before opening the audio WebSocket;
+successful validation is cached until the configuration changes.
 
 The Runtime now owns an additional ephemeral audio WebSocket and provisional playback duration
 state. Clients must keep a bounded queue and preserve fragment order. A connected native stream

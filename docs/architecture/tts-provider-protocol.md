@@ -23,7 +23,9 @@ its model/reference paths, native caches, and SDK-specific cleanup.
 
 The normalized request is `TtsSynthesisRequest`; the normalized result is `TtsSynthesisResult`.
 `TtsWorkerCapabilities` is descriptive and must not be inferred from a display name. Provider
-adapters validate every returned identity before writing a WAV into Runtime-owned storage.
+adapters validate every returned identity before writing a WAV into Runtime-owned storage. Cloud
+voice-cloning adapters also validate the selected region, voice visibility, and exact voice-to-model
+binding before opening their media WebSocket.
 
 `TtsRouter.stream` is now the delivery boundary. A native provider yields PCM16 while generation is
 still running. A batch provider is normalized into the same event sequence after its WAV completes.

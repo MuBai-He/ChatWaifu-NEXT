@@ -375,6 +375,12 @@
   font-size: 0.63rem;
 }
 
+.aliyun-tts-fields label > small {
+  color: #8c7f8a;
+  font-size: 0.57rem;
+  line-height: 1.45;
+}
+
 .aliyun-tts-fields input:not([type="range"]),
 .aliyun-tts-fields select {
   box-sizing: border-box;

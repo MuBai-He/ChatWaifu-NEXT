@@ -134,6 +134,9 @@ export function AliyunTtsSettingsPanel({
             value={configuration.model}
             onChange={(event) => change("model", event.currentTarget.value)}
           />
+          <small>
+            音色必须由同一个 target_model 创建；非实时 VC 音色不能直接用于实时模型。
+          </small>
         </label>
         <label>
           <span>服务区域</span>
