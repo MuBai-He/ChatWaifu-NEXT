@@ -38,6 +38,7 @@ from chatwaifu_runtime.characters.service import (
     CharacterService,
     CharacterVoiceProfile,
 )
+from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
 from chatwaifu_runtime.persistence.database import Database
@@ -52,7 +53,6 @@ from chatwaifu_runtime.providers.contracts import (
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
 
-_SEGMENT_ENDINGS = frozenset("。\uff01\uff1f!?\uff1b;\n")
 _PROACTIVE_PROMPT = (
     "[Runtime ambient event] The user has been quietly inactive for a while. "
     "Offer one brief, natural, low-pressure check-in as the character. "
@@ -532,9 +532,24 @@ class ConversationService:
         memory_observation: UserTurnMemoryObservation | None = None,
     ) -> None:
         output = ""
-        segment = ""
+        segmenter = StreamingTextSegmenter()
         segment_index = 0
         memory_projection_submitted = memory_observation is None
+
+        async def deliver_segment(text: str) -> None:
+            nonlocal memory_projection_submitted, segment_index
+            await self._synthesize_segment(
+                accepted,
+                text,
+                segment_index,
+                character.voice_profile,
+                _voice_style_instruction(character_context.plan),
+            )
+            if not memory_projection_submitted and memory_observation is not None:
+                await self._memory.enqueue_user_turn(memory_observation)
+                memory_projection_submitted = True
+            segment_index += 1
+
         try:
             await self._emit_generic(
                 accepted,
@@ -579,32 +594,11 @@ class ConversationService:
             async for delta in self._providers.llm.stream(request):
                 self._ensure_current(accepted)
                 output += delta
-                segment += delta
                 await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})
-                if _segment_ready(segment):
-                    await self._synthesize_segment(
-                        accepted,
-                        segment,
-                        segment_index,
-                        character.voice_profile,
-                        _voice_style_instruction(character_context.plan),
-                    )
-                    if not memory_projection_submitted and memory_observation is not None:
-                        await self._memory.enqueue_user_turn(memory_observation)
-                        memory_projection_submitted = True
-                    segment_index += 1
-                    segment = ""
-            if segment.strip():
-                await self._synthesize_segment(
-                    accepted,
-                    segment,
-                    segment_index,
-                    character.voice_profile,
-                    _voice_style_instruction(character_context.plan),
-                )
-                if not memory_projection_submitted and memory_observation is not None:
-                    await self._memory.enqueue_user_turn(memory_observation)
-                    memory_projection_submitted = True
+                for segment in segmenter.feed(delta):
+                    await deliver_segment(segment)
+            for segment in segmenter.flush():
+                await deliver_segment(segment)
             self._ensure_current(accepted)
             await self._complete(accepted, output)
         except asyncio.CancelledError as error:
@@ -969,11 +963,6 @@ class ConversationService:
     def _is_current(self, accepted: GenerationAccepted) -> bool:
         active = self._active.get(accepted.session_id)
         return active is not None and active.generation_id == accepted.generation_id
-
-
-def _segment_ready(text: str) -> bool:
-    stripped = text.rstrip()
-    return len(text) >= 90 or bool(stripped and stripped[-1] in _SEGMENT_ENDINGS)
 
 
 def _voice_style_instruction(plan: ResponsePlan) -> str:

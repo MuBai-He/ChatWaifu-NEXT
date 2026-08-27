@@ -218,6 +218,8 @@ phases:
     status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset
     evidence:
       - OpenAI-compatible adapter receives character prompt, allowed memory context, recent committed dialogue, and current turn
+      - OpenAI-compatible streaming logs text-free TTFT, chunk-size, and delivery-span diagnostics and classifies token, sentence-batched, and burst-buffered delivery
+      - Incremental text segmentation splits multiple CJK or English sentences inside one provider delta while protecting decimals, URLs, abbreviations, and a 90-character TTS bound
       - Default character is an explicitly labeled unofficial Ayachi Nene themed profile with short visual-novel conversation rules
       - Character voice manifest defaults to the provider-neutral local reference-clone profile without claiming original voice-actor identity
       - A real two-turn dialogue recalled the preceding invitation to sit down and rest
@@ -249,6 +251,7 @@ phases:
       - Retrieval applies namespace, state, sensitivity, lexical, importance, confidence, and token-budget policy before prompt injection
       - The Web memory center reviews proposals and exposes filters, sources, correction, pinning, and auditable forgetting
       - SQLiteSemanticMemoryIndex activates a rebuildable Scheme B candidate projection while the Scheme C temporal port remains reserved without changing SQLite truth ownership
+      - Implicit extraction enters a bounded background projection worker only after first-audio delivery; explicit remember or forget remains synchronous and reset cancels stale projection work
   - id: 12
     name: character-kernel-and-model-routing
     status: implemented_local_vertical_slice_pending_longmem_and_cross_model_eval
