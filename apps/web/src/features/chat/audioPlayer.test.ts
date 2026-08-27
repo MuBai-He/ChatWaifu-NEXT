@@ -135,6 +135,23 @@ describe("GenerationAudioPlayer", () => {
     expect(probe?.play).toHaveBeenCalledTimes(2);
   });
 
+  it("promotes a hanging user-gesture probe when real speech arrives", async () => {
+    const harness = createHarness(() => "generation-1");
+
+    harness.player.prime();
+    const probe = harness.audios[0];
+    harness.player.enqueue(playbackItem("generation-1", "/one.wav"));
+
+    expect(harness.audios).toHaveLength(1);
+    expect(probe?.pause).toHaveBeenCalledOnce();
+    expect(probe?.src).toBe("/one.wav");
+    expect(probe?.play).toHaveBeenCalledTimes(2);
+
+    probe?.resolvePlay();
+    await flushPromises();
+    expect(harness.starts).toHaveLength(1);
+  });
+
   it("drops stale generation chunks before creating audio", () => {
     const harness = createHarness(() => "generation-2");
 

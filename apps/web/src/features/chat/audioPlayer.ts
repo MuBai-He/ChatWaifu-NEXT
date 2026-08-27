@@ -88,6 +88,11 @@ export class GenerationAudioPlayer {
       return;
     }
     this.queue.push(item);
+    const pendingProbe = this.primingAudio;
+    if (pendingProbe) {
+      this.finishPriming(pendingProbe);
+      return;
+    }
     this.playNext();
   }
 
