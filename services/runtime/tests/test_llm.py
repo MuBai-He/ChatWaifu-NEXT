@@ -6,6 +6,7 @@ import pytest
 from chatwaifu_runtime.providers.contracts import LlmRequest
 from chatwaifu_runtime.providers.openai_compatible import (
     build_messages,
+    classify_stream_delivery,
     openai_compatible_endpoint,
 )
 
@@ -57,3 +58,41 @@ def test_openai_compatible_endpoint_accepts_host_or_explicit_api_base(
     base_url: str, operation: str, expected: str
 ) -> None:
     assert openai_compatible_endpoint(base_url, operation) == expected
+
+
+@pytest.mark.parametrize(
+    ("metrics", "expected"),
+    [
+        (
+            {
+                "chunk_count": 90,
+                "character_count": 110,
+                "max_chunk_characters": 3,
+                "delivery_span_ms": 1_400,
+            },
+            "token_stream",
+        ),
+        (
+            {
+                "chunk_count": 4,
+                "character_count": 99,
+                "max_chunk_characters": 38,
+                "delivery_span_ms": 224,
+            },
+            "sentence_batched",
+        ),
+        (
+            {
+                "chunk_count": 3,
+                "character_count": 97,
+                "max_chunk_characters": 35,
+                "delivery_span_ms": 7,
+            },
+            "burst_buffered",
+        ),
+    ],
+)
+def test_stream_delivery_classification_uses_only_timing_and_chunk_sizes(
+    metrics: dict[str, int], expected: str
+) -> None:
+    assert classify_stream_delivery(**metrics) == expected
