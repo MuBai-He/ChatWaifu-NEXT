@@ -470,4 +470,29 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        9,
+        """
+        CREATE TABLE tts_cloud_configs (
+            provider_id TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL CHECK(enabled IN (0, 1)),
+            model TEXT NOT NULL,
+            voice_id TEXT NOT NULL,
+            region TEXT NOT NULL CHECK(region IN ('beijing', 'singapore')),
+            workspace_id TEXT NOT NULL DEFAULT '',
+            language_type TEXT NOT NULL,
+            sample_rate INTEGER NOT NULL CHECK(sample_rate IN (8000, 16000, 24000, 48000)),
+            speech_rate REAL NOT NULL CHECK(speech_rate BETWEEN 0.5 AND 2.0),
+            volume INTEGER NOT NULL CHECK(volume BETWEEN 0 AND 100),
+            pitch_rate REAL NOT NULL CHECK(pitch_rate BETWEEN 0.5 AND 2.0),
+            timeout_seconds REAL NOT NULL CHECK(timeout_seconds > 0),
+            max_audio_bytes INTEGER NOT NULL CHECK(max_audio_bytes >= 1000000),
+            updated_at TEXT NOT NULL
+        );
+
+        ALTER TABLE playback_segments
+            ADD COLUMN duration_finalized INTEGER NOT NULL DEFAULT 1
+            CHECK(duration_finalized IN (0, 1));
+        """,
+    ),
 )

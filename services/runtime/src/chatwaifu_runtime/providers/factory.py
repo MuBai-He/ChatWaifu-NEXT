@@ -14,6 +14,8 @@ from chatwaifu_runtime.providers.tts import (
     SherpaKokoroWorkerTtsProvider,
     WorkerTtsProvider,
 )
+from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
+from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
 from chatwaifu_runtime.providers.tts_router import TtsRouter
 
 
@@ -26,7 +28,12 @@ class ProviderSet:
         return {"llm": self.llm.kind, "tts": self.tts.kind}
 
 
-def build_providers(settings: Settings, *, llm_override: LlmProvider | None = None) -> ProviderSet:
+def build_providers(
+    settings: Settings,
+    *,
+    llm_override: LlmProvider | None = None,
+    tts_configurations: TtsConfigurationService | None = None,
+) -> ProviderSet:
     if llm_override is not None:
         llm = llm_override
     elif settings.llm.provider == "demo":
@@ -44,6 +51,8 @@ def build_providers(settings: Settings, *, llm_override: LlmProvider | None = No
 
     tts_kind = settings.tts.selected_provider
     tts_providers: dict[str, TtsProvider] = {}
+    if tts_configurations is not None:
+        tts_providers["aliyun_qwen_realtime"] = AliyunQwenRealtimeTtsProvider(tts_configurations)
     if settings.tts.provider is None:
         for provider_id, endpoint in settings.tts.workers.items():
             token = endpoint.token.get_secret_value() if endpoint.token else None

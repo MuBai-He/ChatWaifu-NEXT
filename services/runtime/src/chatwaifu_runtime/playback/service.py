@@ -60,6 +60,7 @@ class PlaybackService:
         segment_index: int,
         text: str,
         duration_ms: int,
+        duration_finalized: bool = True,
     ) -> None:
         now = datetime.now(UTC).isoformat()
         async with self._database.transaction() as connection:
@@ -67,8 +68,8 @@ class PlaybackService:
                 """
                 INSERT INTO playback_segments(
                     segment_id, stream_id, session_id, generation_id, segment_index,
-                    text, duration_ms, state, queued_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)
+                    text, duration_ms, duration_finalized, state, queued_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?)
                 """,
                 (
                     str(segment_id),
@@ -78,8 +79,27 @@ class PlaybackService:
                     segment_index,
                     text,
                     duration_ms,
+                    int(duration_finalized),
                     now,
                 ),
+            )
+
+    async def finalize_segment(self, segment_id: UUID, duration_ms: int) -> None:
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                UPDATE playback_segments
+                SET duration_ms = ?, duration_finalized = 1
+                WHERE segment_id = ?
+                """,
+                (duration_ms, str(segment_id)),
+            )
+
+    async def discard_segment(self, segment_id: UUID) -> None:
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                "DELETE FROM playback_segments WHERE segment_id = ?",
+                (str(segment_id),),
             )
 
     async def acknowledge(self, command: PlaybackAckCommand) -> PlaybackAckResult:
@@ -105,7 +125,8 @@ class PlaybackService:
                 """
                 SELECT segment.segment_id, segment.stream_id, segment.session_id,
                        segment.generation_id, segment.text, segment.duration_ms,
-                       segment.state, segment.played_pts_ms, generation.turn_id
+                       segment.duration_finalized, segment.state,
+                       segment.played_pts_ms, generation.turn_id
                 FROM playback_segments AS segment
                 JOIN generations AS generation
                   ON generation.generation_id = segment.generation_id
@@ -162,11 +183,18 @@ class PlaybackService:
                 )
 
             duration_ms = int(row["duration_ms"])
-            if payload.played_pts_ms > duration_ms + 1_000:
+            duration_finalized = bool(row["duration_finalized"])
+            if duration_finalized and payload.played_pts_ms > duration_ms + 1_000:
                 raise ValueError("played_pts_ms exceeds registered segment duration")
-            played_pts_ms = max(int(row["played_pts_ms"]), min(payload.played_pts_ms, duration_ms))
+            played_pts_ms = max(
+                int(row["played_pts_ms"]),
+                min(payload.played_pts_ms, duration_ms)
+                if duration_finalized
+                else payload.played_pts_ms,
+            )
             completed = (
-                payload.phase == "stopped"
+                duration_finalized
+                and payload.phase == "stopped"
                 and payload.reason == "ended"
                 and played_pts_ms >= max(0, duration_ms - 100)
             )

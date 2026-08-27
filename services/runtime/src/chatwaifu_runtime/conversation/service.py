@@ -24,6 +24,7 @@ from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.audio.streaming import AudioStreamHub, AudioStreamPacket
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import (
@@ -40,7 +41,12 @@ from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.playback.service import PlaybackService
-from chatwaifu_runtime.providers.contracts import LlmRequest, SynthesisRequest
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    SynthesisRequest,
+    SynthesisResult,
+    TtsPcmChunk,
+)
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -86,6 +92,7 @@ class ConversationService:
         sessions: SessionService,
         providers: ProviderSet,
         audio_assets: AudioAssetStore,
+        audio_streams: AudioStreamHub,
         characters: CharacterService,
         memory: MemoryService,
         playback: PlaybackService,
@@ -98,6 +105,7 @@ class ConversationService:
         self._sessions = sessions
         self._providers = providers
         self._audio_assets = audio_assets
+        self._audio_streams = audio_streams
         self._characters = characters
         self._memory = memory
         self._playback = playback
@@ -614,8 +622,24 @@ class ConversationService:
             accepted, "assistant.text_segment_committed", {"text": text.strip()}
         )
         asset = self._audio_assets.allocate()
+        await self._playback.register_segment(
+            session_id=accepted.session_id,
+            generation_id=accepted.generation_id,
+            stream_id=accepted.audio_stream_id,
+            segment_id=asset.asset_id,
+            segment_index=segment_index,
+            text=text.strip(),
+            duration_ms=0,
+            duration_finalized=False,
+        )
+        result: SynthesisResult | None = None
+        stream_started = False
+        native_streaming = False
+        streamed_audio_bytes = 0
+        stream_sample_rate = 24_000
+        stream_channels = 1
         try:
-            result = await self._providers.tts.synthesize(
+            stream = self._providers.tts.stream(
                 SynthesisRequest(
                     session_id=accepted.session_id,
                     turn_id=accepted.turn_id,
@@ -629,18 +653,96 @@ class ConversationService:
                     speed=voice.speed,
                 )
             )
+            async for event in stream:
+                self._ensure_current(accepted)
+                if isinstance(event, TtsPcmChunk):
+                    native_streaming = native_streaming or event.native_streaming
+                    streamed_audio_bytes += len(event.pcm16)
+                    stream_sample_rate = event.sample_rate
+                    stream_channels = event.channels
+                    if not stream_started:
+                        stream_started = True
+                        await self._audio_streams.publish(
+                            AudioStreamPacket(
+                                phase="started",
+                                session_id=accepted.session_id,
+                                turn_id=accepted.turn_id,
+                                generation_id=accepted.generation_id,
+                                stream_id=accepted.audio_stream_id,
+                                segment_id=asset.asset_id,
+                                segment_index=segment_index,
+                                text=text.strip(),
+                                sample_rate=event.sample_rate,
+                                channels=event.channels,
+                                native_streaming=event.native_streaming,
+                                provider_id=self._providers.tts.provider_for(accepted.session_id),
+                            )
+                        )
+                    await self._audio_streams.publish(
+                        AudioStreamPacket(
+                            phase="chunk",
+                            session_id=accepted.session_id,
+                            turn_id=accepted.turn_id,
+                            generation_id=accepted.generation_id,
+                            stream_id=accepted.audio_stream_id,
+                            segment_id=asset.asset_id,
+                            segment_index=segment_index,
+                            text=text.strip(),
+                            sequence=event.sequence,
+                            sample_rate=event.sample_rate,
+                            channels=event.channels,
+                            native_streaming=event.native_streaming,
+                            pcm16=event.pcm16,
+                            provider_id=self._providers.tts.provider_for(accepted.session_id),
+                        )
+                    )
+                else:
+                    result = event.result
+            if result is None:
+                raise RuntimeError("TTS provider ended without a completed result")
         except BaseException:
             asset.path.unlink(missing_ok=True)
+            if stream_started:
+                partial_duration_ms = streamed_audio_bytes * 1000 // max(
+                    1, stream_sample_rate * stream_channels * 2
+                )
+                await self._playback.finalize_segment(asset.asset_id, partial_duration_ms)
+                await self._audio_streams.publish(
+                    AudioStreamPacket(
+                        phase="cancelled",
+                        session_id=accepted.session_id,
+                        turn_id=accepted.turn_id,
+                        generation_id=accepted.generation_id,
+                        stream_id=accepted.audio_stream_id,
+                        segment_id=asset.asset_id,
+                        segment_index=segment_index,
+                        text=text.strip(),
+                        native_streaming=native_streaming,
+                        duration_ms=partial_duration_ms,
+                        reason="generation_cancelled",
+                    )
+                )
+            else:
+                await self._playback.discard_segment(asset.asset_id)
             raise
         self._ensure_current(accepted)
-        await self._playback.register_segment(
-            session_id=accepted.session_id,
-            generation_id=accepted.generation_id,
-            stream_id=accepted.audio_stream_id,
-            segment_id=asset.asset_id,
-            segment_index=segment_index,
-            text=text.strip(),
-            duration_ms=result.duration_ms,
+        await self._playback.finalize_segment(asset.asset_id, result.duration_ms)
+        live_completion_consumers = await self._audio_streams.publish(
+            AudioStreamPacket(
+                phase="completed",
+                session_id=accepted.session_id,
+                turn_id=accepted.turn_id,
+                generation_id=accepted.generation_id,
+                stream_id=accepted.audio_stream_id,
+                segment_id=asset.asset_id,
+                segment_index=segment_index,
+                text=text.strip(),
+                sample_rate=result.sample_rate,
+                duration_ms=result.duration_ms,
+                native_streaming=native_streaming,
+                provider_id=result.provider_id,
+                model=result.model,
+            )
         )
         await self._emit_avatar(accepted, "speech", "speaking", priority=70)
         await self._emit_generic(
@@ -658,6 +760,9 @@ class ConversationService:
                 "duration_ms": result.duration_ms,
                 "tts_provider": result.provider_id,
                 "tts_model": result.model,
+                "streamed_live": stream_started
+                and native_streaming
+                and live_completion_consumers > 0,
             },
         )
 

@@ -456,6 +456,8 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                 if not isinstance(raw_payload, dict):
                     continue
                 payload = cast(dict[str, object], raw_payload)
+                if payload.get("streamed_live") is True:
+                    continue
                 asset_id = _optional_uuid(payload.get("asset_id"))
                 if asset_id is None:
                     continue

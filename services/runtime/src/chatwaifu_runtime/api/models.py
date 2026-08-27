@@ -45,6 +45,37 @@ class TtsProviderSelectionRequest(BaseModel):
     provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
 
 
+class AliyunTtsConfigurationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    model: str = Field(min_length=1, max_length=256)
+    voice_id: str = Field(min_length=1, max_length=256)
+    region: Literal["beijing", "singapore"] = "beijing"
+    workspace_id: str = Field(default="", max_length=256)
+    language_type: Literal[
+        "Auto",
+        "Chinese",
+        "English",
+        "German",
+        "Italian",
+        "Portuguese",
+        "Spanish",
+        "Japanese",
+        "Korean",
+        "French",
+        "Russian",
+    ] = "Auto"
+    sample_rate: Literal[8000, 16000, 24000, 48000] = 24000
+    speech_rate: float = Field(default=1.0, ge=0.5, le=2.0)
+    volume: int = Field(default=50, ge=0, le=100)
+    pitch_rate: float = Field(default=1.0, ge=0.5, le=2.0)
+    timeout_seconds: float = Field(default=45.0, gt=0, le=300)
+    max_audio_bytes: int = Field(default=32_000_000, ge=1_000_000, le=128_000_000)
+    api_key: str | None = Field(default=None, max_length=8192)
+    clear_api_key: bool = False
+
+
 class WebRtcOfferRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

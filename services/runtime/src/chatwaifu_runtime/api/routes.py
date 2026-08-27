@@ -1,8 +1,11 @@
 """Loopback Runtime HTTP and WebSocket routes."""
 
 import asyncio
+import base64
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 from chatwaifu_protocol.commands import PlaybackAckCommand
@@ -12,6 +15,7 @@ from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
+    AliyunTtsConfigurationRequest,
     CharacterInteractionRequest,
     CreateSessionRequest,
     ExamplePluginRequest,
@@ -33,6 +37,7 @@ from chatwaifu_runtime.api.models import (
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
+from chatwaifu_runtime.providers.tts_config import AliyunTtsConfiguration
 
 router = APIRouter(prefix="/v1")
 
@@ -269,6 +274,39 @@ async def read_tts_providers(
         "items": items,
         "count": len(items),
     }
+
+
+@router.get("/tts/configurations/aliyun_qwen_realtime")
+async def read_aliyun_tts_configuration(request: Request) -> dict[str, object]:
+    return _container(request).tts_configurations.get().model_dump(mode="json")
+
+
+@router.put("/tts/configurations/aliyun_qwen_realtime")
+async def update_aliyun_tts_configuration(
+    request: Request,
+    body: AliyunTtsConfigurationRequest,
+) -> dict[str, object]:
+    try:
+        configuration = AliyunTtsConfiguration(
+            **body.model_dump(exclude={"api_key", "clear_api_key"}),
+            updated_at=datetime.now(UTC),
+        )
+        updated = await _container(request).tts_configurations.update(
+            configuration,
+            api_key=body.api_key,
+            clear_api_key=body.clear_api_key,
+        )
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return updated.model_dump(mode="json")
+
+
+@router.post("/tts/configurations/aliyun_qwen_realtime/test")
+async def test_aliyun_tts_configuration(request: Request) -> dict[str, object]:
+    try:
+        return await _container(request).providers.tts.probe("aliyun_qwen_realtime")
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=f"百炼语音测试失败: {error}") from error
 
 
 @router.put("/sessions/{session_id}/tts/provider")
@@ -740,7 +778,10 @@ async def runtime_events(websocket: WebSocket) -> None:
             )
             for task in pending:
                 task.cancel()
-            await asyncio.gather(*pending, return_exceptions=True)
+            await asyncio.gather(
+                *(cast(Awaitable[object], task) for task in pending),
+                return_exceptions=True,
+            )
             if disconnect_task in completed:
                 message = disconnect_task.result()
                 if message["type"] == "websocket.disconnect":
@@ -751,3 +792,70 @@ async def runtime_events(websocket: WebSocket) -> None:
         pass
     finally:
         container.event_hub.unsubscribe(subscription)
+
+
+@router.websocket("/audio/stream")
+async def runtime_audio_stream(websocket: WebSocket) -> None:
+    container: RuntimeContainer = websocket.app.state.container
+    requested_session = websocket.query_params.get("session_id")
+    if requested_session is None:
+        await websocket.close(code=1008, reason="session_id is required")
+        return
+    try:
+        session_id = UUID(requested_session)
+    except ValueError:
+        await websocket.close(code=1008, reason="invalid session_id")
+        return
+    if await container.sessions.get_session(session_id) is None:
+        await websocket.close(code=1008, reason="session not found")
+        return
+    await websocket.accept()
+    subscription = container.audio_streams.subscribe(session_id)
+    try:
+        while True:
+            packet_task = asyncio.create_task(subscription.receive())
+            disconnect_task = asyncio.create_task(websocket.receive())
+            completed, pending = await asyncio.wait(
+                {packet_task, disconnect_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(
+                *(cast(Awaitable[object], task) for task in pending),
+                return_exceptions=True,
+            )
+            if disconnect_task in completed:
+                message = disconnect_task.result()
+                if message["type"] == "websocket.disconnect":
+                    break
+                continue
+            packet = packet_task.result()
+            await websocket.send_json(
+                {
+                    "type": "chatwaifu.tts_stream",
+                    "schema_version": "1.0",
+                    "phase": packet.phase,
+                    "session_id": str(packet.session_id),
+                    "turn_id": str(packet.turn_id),
+                    "generation_id": str(packet.generation_id),
+                    "stream_id": str(packet.stream_id),
+                    "segment_id": str(packet.segment_id),
+                    "segment_index": packet.segment_index,
+                    "text": packet.text,
+                    "sequence": packet.sequence,
+                    "sample_rate": packet.sample_rate,
+                    "channels": packet.channels,
+                    "native_streaming": packet.native_streaming,
+                    "pcm16_base64": (
+                        base64.b64encode(packet.pcm16).decode("ascii") if packet.pcm16 else ""
+                    ),
+                    "duration_ms": packet.duration_ms,
+                    "provider_id": packet.provider_id,
+                    "model": packet.model,
+                    "reason": packet.reason,
+                }
+            )
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        pass
+    finally:
+        container.audio_streams.unsubscribe(subscription)

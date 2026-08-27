@@ -36,6 +36,25 @@ class SynthesisResult:
 
 
 @dataclass(frozen=True, slots=True)
+class TtsPcmChunk:
+    """One ordered provider-neutral PCM16 fragment."""
+
+    sequence: int
+    pcm16: bytes
+    sample_rate: int
+    channels: int = 1
+    native_streaming: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class TtsStreamCompleted:
+    result: SynthesisResult
+
+
+type TtsStreamEvent = TtsPcmChunk | TtsStreamCompleted
+
+
+@dataclass(frozen=True, slots=True)
 class SynthesisRequest:
     session_id: UUID
     turn_id: UUID

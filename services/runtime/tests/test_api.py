@@ -143,6 +143,45 @@ def test_model_roles_are_independent_and_api_keys_never_echo(
     assert secret_file.stat().st_mode & 0o777 == 0o600
 
 
+def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    current = cast(
+        dict[str, object],
+        http.get("/v1/tts/configurations/aliyun_qwen_realtime").json(),
+    )
+    assert current["voice_id"] == "qwen-tts-vc-bailian-voice-20260828030329088-e738"
+    assert current["api_key_configured"] is False
+
+    response = http.put(
+        "/v1/tts/configurations/aliyun_qwen_realtime",
+        json={
+            "enabled": True,
+            "model": "qwen3-tts-vc-realtime-2026-01-15",
+            "voice_id": "qwen-tts-vc-bailian-voice-20260828030329088-e738",
+            "region": "beijing",
+            "workspace_id": "",
+            "language_type": "Auto",
+            "sample_rate": 24000,
+            "speech_rate": 1.0,
+            "volume": 50,
+            "pitch_rate": 1.0,
+            "timeout_seconds": 45,
+            "max_audio_bytes": 32000000,
+            "api_key": "write-only-aliyun-secret",
+        },
+    )
+    assert response.status_code == 200
+    updated = cast(dict[str, object], response.json())
+    assert updated["enabled"] is True
+    assert updated["api_key_configured"] is True
+    assert "api_key" not in updated
+    assert "write-only-aliyun-secret" not in response.text
+    secret_file = runtime_settings.config_dir / "tts-secrets.json"
+    assert secret_file.stat().st_mode & 0o777 == 0o600
+
+
 def test_character_kernel_persists_and_reset_restores_initial_state(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)
     first_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())

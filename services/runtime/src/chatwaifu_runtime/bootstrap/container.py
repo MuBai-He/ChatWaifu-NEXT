@@ -2,6 +2,7 @@
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.audio.store import AudioAssetStore
+from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import CharacterKernelService
 from chatwaifu_runtime.characters.service import CharacterService
@@ -21,6 +22,7 @@ from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryR
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
+from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
@@ -39,8 +41,14 @@ class RuntimeContainer:
         self.activity = ActivityTracker()
         self.companion_settings = CompanionSettingsService(self.database)
         self.model_configurations = ModelConfigurationService(self.database, settings)
-        self.providers = build_providers(settings, llm_override=self.model_configurations.chat)
+        self.tts_configurations = TtsConfigurationService(self.database, settings)
+        self.providers = build_providers(
+            settings,
+            llm_override=self.model_configurations.chat,
+            tts_configurations=self.tts_configurations,
+        )
         self.audio_assets = AudioAssetStore(settings.data_dir / "audio")
+        self.audio_streams = AudioStreamHub()
         self.characters = CharacterService(settings.characters_dir)
         self.character_kernel = CharacterKernelService(
             self.database, self.characters, self.event_publisher
@@ -78,6 +86,7 @@ class RuntimeContainer:
             self.sessions,
             self.providers,
             self.audio_assets,
+            self.audio_streams,
             self.characters,
             self.memory,
             self.playback,
@@ -126,6 +135,7 @@ class RuntimeContainer:
         await self.database.open()
         await self.companion_settings.start()
         await self.model_configurations.start()
+        await self.tts_configurations.start()
         await self.runtime_skills.start()
         await self.resources.start()
         await self.ambient.start()
@@ -147,5 +157,6 @@ class RuntimeContainer:
         await self.runtime_skills.stop()
         await self.stt.close()
         await self.providers.tts.close()
+        await self.audio_streams.close()
         await self.event_hub.close()
         await self.database.close()

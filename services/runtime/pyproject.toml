@@ -21,6 +21,7 @@ dependencies = [
   "pyyaml>=6.0.2,<7",
   "structlog>=25,<27",
   "uvicorn[standard]>=0.35,<1",
+  "websockets>=17,<18",
 ]
 
 [project.scripts]

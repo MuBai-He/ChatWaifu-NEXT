@@ -5,17 +5,28 @@ import base64
 import io
 import json
 import wave
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 import httpx2
 import pytest
 from chatwaifu_model_worker import TtsSynthesisResult
 from chatwaifu_runtime.providers import tts as tts_module
-from chatwaifu_runtime.providers.contracts import SynthesisRequest
+from chatwaifu_runtime.providers.contracts import (
+    SynthesisRequest,
+    TtsPcmChunk,
+    TtsStreamCompleted,
+)
 from chatwaifu_runtime.providers.tts import (
     MacOsSayTtsProvider,
     SherpaKokoroWorkerTtsProvider,
+)
+from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
+from chatwaifu_runtime.providers.tts_config import (
+    AliyunTtsConfiguration,
+    TtsConfigurationService,
 )
 
 
@@ -58,6 +69,135 @@ def _synthesis_request(destination: Path) -> SynthesisRequest:
         speaker_id=3,
         speed=1.04,
     )
+
+
+class _FakeAliyunSocket:
+    def __init__(self, events: list[dict[str, object]]) -> None:
+        self.events = [json.dumps(event) for event in events]
+        self.sent: list[dict[str, object]] = []
+        self.waiting = asyncio.Event()
+
+    async def send(self, value: str) -> None:
+        self.sent.append(json.loads(value))
+
+    async def recv(self) -> str:
+        if self.events:
+            return self.events.pop(0)
+        self.waiting.set()
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+
+class _FakeAliyunConnection:
+    def __init__(self, socket: _FakeAliyunSocket) -> None:
+        self.socket = socket
+
+    async def __aenter__(self) -> _FakeAliyunSocket:
+        return self.socket
+
+    async def __aexit__(self, *_args: object) -> None:
+        return None
+
+
+class _FakeTtsConfigurations:
+    def __init__(self, config: AliyunTtsConfiguration, api_key: str | None = "secret") -> None:
+        self.config = config
+        self.key = api_key
+
+    def get(self) -> AliyunTtsConfiguration:
+        return self.config
+
+    def api_key(self) -> str | None:
+        return self.key
+
+
+@pytest.mark.asyncio
+async def test_aliyun_realtime_tts_streams_pcm_and_persists_wave(tmp_path: Path) -> None:
+    pcm_chunks = [b"\x00\x00\x10\x00", b"\x20\x00\x30\x00"]
+    socket = _FakeAliyunSocket(
+        [
+            {"type": "session.created"},
+            {"type": "session.updated"},
+            *[
+                {
+                    "type": "response.audio.delta",
+                    "delta": base64.b64encode(chunk).decode("ascii"),
+                }
+                for chunk in pcm_chunks
+            ],
+            {"type": "response.done", "response": {"status": "completed"}},
+            {"type": "session.finished"},
+        ]
+    )
+    connection_options: dict[str, object] = {}
+
+    def connect(url: str, **options: object) -> _FakeAliyunConnection:
+        connection_options.update({"url": url, **options})
+        return _FakeAliyunConnection(socket)
+
+    config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    provider = AliyunQwenRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
+        websocket_factory=connect,
+    )
+    request = _synthesis_request(tmp_path / "aliyun.wav")
+    events = [event async for event in provider.stream(request)]
+
+    chunks = [event for event in events if isinstance(event, TtsPcmChunk)]
+    completed = cast(TtsStreamCompleted, events[-1])
+    assert [chunk.pcm16 for chunk in chunks] == pcm_chunks
+    assert all(chunk.native_streaming for chunk in chunks)
+    assert request.destination.read_bytes()[:4] == b"RIFF"
+    assert completed.result.provider_id == "aliyun_qwen_realtime"
+    assert config.model in str(connection_options["url"])
+    headers = cast(dict[str, str], connection_options["additional_headers"])
+    assert headers["Authorization"] == "Bearer secret"
+    assert [event["type"] for event in socket.sent] == [
+        "session.update",
+        "input_text_buffer.append",
+        "input_text_buffer.commit",
+        "session.finish",
+    ]
+    session = cast(dict[str, object], socket.sent[0]["session"])
+    assert session["voice"] == config.voice_id
+    assert session["response_format"] == "pcm"
+
+
+@pytest.mark.asyncio
+async def test_aliyun_realtime_tts_cancellation_never_commits_late_audio(
+    tmp_path: Path,
+) -> None:
+    socket = _FakeAliyunSocket(
+        [
+            {"type": "session.created"},
+            {"type": "session.updated"},
+            {
+                "type": "response.audio.delta",
+                "delta": base64.b64encode(b"\x00\x00" * 16).decode("ascii"),
+            },
+        ]
+    )
+
+    def connect(_url: str, **_options: object) -> _FakeAliyunConnection:
+        return _FakeAliyunConnection(socket)
+
+    config = AliyunTtsConfiguration(enabled=True, updated_at=datetime.now(UTC))
+    provider = AliyunQwenRealtimeTtsProvider(
+        cast(TtsConfigurationService, _FakeTtsConfigurations(config)),
+        websocket_factory=connect,
+    )
+    request = _synthesis_request(tmp_path / "cancelled-aliyun.wav")
+
+    async def consume() -> None:
+        async for _event in provider.stream(request):
+            pass
+
+    task = asyncio.create_task(consume())
+    await asyncio.wait_for(socket.waiting.wait(), timeout=1)
+    task.cancel("barge_in")
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert not request.destination.exists()
 
 
 @pytest.mark.asyncio
