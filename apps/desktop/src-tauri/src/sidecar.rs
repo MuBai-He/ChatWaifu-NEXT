@@ -40,18 +40,34 @@ impl RuntimeHost {
             .as_ref()
             .is_none_or(JoinHandle::is_finished);
         if needs_thread {
+            update_status(
+                &app,
+                &self.status,
+                RuntimeStatus {
+                    state: RuntimeLifecycleState::Starting,
+                    detail: Some("正在启动本地 Runtime 与语音服务".to_owned()),
+                    ..RuntimeStatus::default()
+                },
+            );
             let (sender, receiver) = mpsc::channel();
             let status = Arc::clone(&self.status);
+            let supervisor_app = app.clone();
             let join = thread::Builder::new()
                 .name("chatwaifu-runtime-supervisor".to_owned())
-                .spawn(move || supervise(app, receiver, status))
-                .map_err(|error| format!("failed to start Runtime supervisor: {error}"))?;
+                .spawn(move || supervise(supervisor_app, receiver, status))
+                .map_err(|error| {
+                    update_status(&app, &self.status, RuntimeStatus::default());
+                    format!("failed to start Runtime supervisor: {error}")
+                })?;
             *lock(&self.join, "Runtime supervisor thread")? = Some(join);
             *control = Some(sender);
         } else if let Some(sender) = control.as_ref() {
-            sender
-                .send(SupervisorCommand::Start)
-                .map_err(|_| "Runtime supervisor is unavailable".to_owned())?;
+            let current = self.status()?;
+            if should_request_start(&current.state) {
+                sender
+                    .send(SupervisorCommand::Start)
+                    .map_err(|_| "Runtime supervisor is unavailable".to_owned())?;
+            }
         }
         self.status()
     }
@@ -90,6 +106,13 @@ impl RuntimeHost {
             .send(command)
             .map_err(|_| "Runtime supervisor is unavailable".to_owned())
     }
+}
+
+fn should_request_start(state: &RuntimeLifecycleState) -> bool {
+    matches!(
+        state,
+        RuntimeLifecycleState::Stopped | RuntimeLifecycleState::CircuitOpen
+    )
 }
 
 fn supervise(
@@ -423,7 +446,8 @@ fn lock<'a, T>(value: &'a Mutex<T>, label: &str) -> Result<MutexGuard<'a, T>, St
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_AUTOMATIC_RESTARTS, restart_backoff};
+    use super::{MAX_AUTOMATIC_RESTARTS, restart_backoff, should_request_start};
+    use crate::runtime_health::RuntimeLifecycleState;
     use std::time::Duration;
 
     #[test]
@@ -432,5 +456,14 @@ mod tests {
         assert_eq!(restart_backoff(2), Some(Duration::from_secs(2)));
         assert_eq!(restart_backoff(5), Some(Duration::from_secs(16)));
         assert_eq!(restart_backoff(MAX_AUTOMATIC_RESTARTS + 1), None);
+    }
+
+    #[test]
+    fn ensure_started_only_wakes_an_inactive_supervisor() {
+        assert!(should_request_start(&RuntimeLifecycleState::Stopped));
+        assert!(should_request_start(&RuntimeLifecycleState::CircuitOpen));
+        assert!(!should_request_start(&RuntimeLifecycleState::Starting));
+        assert!(!should_request_start(&RuntimeLifecycleState::Ready));
+        assert!(!should_request_start(&RuntimeLifecycleState::Backoff));
     }
 }
