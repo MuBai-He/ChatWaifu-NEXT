@@ -170,8 +170,29 @@ describe("ChatWaifu usable demo", () => {
     expect(screen.getByLabelText("拖动桌宠")).toBeTruthy();
     expect(screen.getByText("NENE ONLINE")).toBeTruthy();
     expect(screen.getByText(/欢迎回来/)).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "桌宠文字消息" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "摸摸绫地宁宁" }));
     expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("sends typed messages from the desktop-pet hover composer", async () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    session.send.mockResolvedValueOnce(undefined);
+
+    render(<App />);
+
+    const messageBox = screen.getByRole("textbox", {
+      name: "桌宠文字消息",
+    });
+    const petShell = document.querySelector(".desktop-pet-shell");
+    fireEvent.change(messageBox, { target: { value: "今天一起学 Python 吧" } });
+    expect(petShell?.getAttribute("data-actions-active")).toBe("true");
+    fireEvent.submit(messageBox.closest("form")!);
+
+    await waitFor(() => {
+      expect(session.send).toHaveBeenCalledWith("今天一起学 Python 吧");
+    });
+    expect((messageBox as HTMLInputElement).value).toBe("");
   });
 
   it("lets desktop-pet users independently hide subtitles and online status", () => {

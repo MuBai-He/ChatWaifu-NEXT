@@ -22,9 +22,12 @@ export function DesktopPetPage() {
     beginPushToTalk,
     endPushToTalk,
     toggleVoice,
+    send,
   } = useChatSession({ playbackEnabled: true });
   const [controlError, setControlError] = useState<string | null>(null);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const {
     preferences,
     error: preferenceError,
@@ -41,6 +44,21 @@ export function DesktopPetPage() {
     !resetting &&
     voiceState !== "unsupported",
   );
+  const canSend = Boolean(
+    sessionId && connection === "connected" && !resetting,
+  );
+
+  const sendDraft = async () => {
+    const text = draft.trim();
+    if (!text || !canSend || sending) return;
+    setDraft("");
+    setSending(true);
+    try {
+      await send(text);
+    } finally {
+      setSending(false);
+    }
+  };
 
   const openControlCenter = async () => {
     setControlError(null);
@@ -62,7 +80,12 @@ export function DesktopPetPage() {
     <main
       className="desktop-pet-shell"
       data-connection={connection}
-      data-actions-active={displaySettingsOpen || voiceTransmitting}
+      data-actions-active={
+        displaySettingsOpen ||
+        voiceTransmitting ||
+        sending ||
+        Boolean(draft.trim())
+      }
     >
       <div
         className="desktop-pet-drag-region"
@@ -129,6 +152,34 @@ export function DesktopPetPage() {
           </label>
         </fieldset>
       ) : null}
+
+      <form
+        className="desktop-pet-composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void sendDraft();
+        }}
+      >
+        <input
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.currentTarget.value)}
+          placeholder={`和${character?.display_name ?? "绫地宁宁"}说点什么…`}
+          aria-label="桌宠文字消息"
+          autoComplete="off"
+          disabled={!canSend}
+        />
+        <button
+          type="submit"
+          aria-label="发送文字消息"
+          title="发送"
+          disabled={!canSend || sending || !draft.trim()}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 12-7-3.8 14-2.4-5-5.8-2Zm5.8 2L17 5" />
+          </svg>
+        </button>
+      </form>
 
       <nav className="desktop-pet-actions" aria-label="桌宠操作">
         <button

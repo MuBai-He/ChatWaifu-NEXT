@@ -267,15 +267,18 @@ test("desktop settings is an app-like control surface without chat ownership", a
   expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });
 
-test("desktop pet reveals its controls only while the pointer is over the pet", async ({
+test("desktop pet reveals its controls and composer while the pointer is over the pet", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 430, height: 650 });
   await page.goto("/desktop-pet");
 
   const actions = page.getByRole("navigation", { name: "桌宠操作" });
+  const composer = page.getByRole("textbox", { name: "桌宠文字消息" });
   await expect(actions).toHaveCSS("opacity", "0");
   await expect(actions).toHaveCSS("pointer-events", "none");
+  await expect(composer.locator("..")).toHaveCSS("opacity", "0");
+  await expect(composer.locator("..")).toHaveCSS("pointer-events", "none");
 
   await page.getByRole("button", { name: "摸摸绫地宁宁" }).hover({
     position: { x: 200, y: 80 },
@@ -283,6 +286,14 @@ test("desktop pet reveals its controls only while the pointer is over the pet", 
 
   await expect(actions).toHaveCSS("opacity", "1");
   await expect(actions).toHaveCSS("pointer-events", "auto");
+  await expect(composer.locator("..")).toHaveCSS("opacity", "1");
+  await expect(composer.locator("..")).toHaveCSS("pointer-events", "auto");
+
+  const screenshot = await page.screenshot({
+    animations: "disabled",
+    path: testInfo.outputPath("desktop-pet-hover-composer.png"),
+  });
+  expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });
 
 test("official bridge renders the locally supplied Live2D model", async ({

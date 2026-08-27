@@ -103,13 +103,11 @@
   -webkit-line-clamp: 3;
 }
 
-.desktop-pet-actions {
+.desktop-pet-actions,
+.desktop-pet-composer {
   position: absolute;
   z-index: 14;
-  right: 12px;
   bottom: 12px;
-  display: flex;
-  gap: 6px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(6px);
@@ -119,11 +117,90 @@
 }
 
 .desktop-pet-shell:hover .desktop-pet-actions,
+.desktop-pet-shell:hover .desktop-pet-composer,
 .desktop-pet-shell:focus-within .desktop-pet-actions,
-.desktop-pet-shell[data-actions-active="true"] .desktop-pet-actions {
+.desktop-pet-shell:focus-within .desktop-pet-composer,
+.desktop-pet-shell[data-actions-active="true"] .desktop-pet-actions,
+.desktop-pet-shell[data-actions-active="true"] .desktop-pet-composer {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+.desktop-pet-composer {
+  right: 170px;
+  left: 12px;
+  display: flex;
+  height: 30px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 224 242 / 36%);
+  border-radius: 3px 12px 3px 12px;
+  background: linear-gradient(110deg, rgb(71 34 71 / 88%), rgb(29 18 35 / 90%));
+  box-shadow: 0 10px 26px rgb(24 9 22 / 22%);
+  backdrop-filter: blur(14px);
+}
+
+.desktop-pet-composer:focus-within {
+  border-color: rgb(255 208 237 / 68%);
+  box-shadow:
+    0 10px 26px rgb(24 9 22 / 22%),
+    0 0 0 2px rgb(213 110 169 / 14%);
+}
+
+.desktop-pet-composer input {
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  padding: 0 4px 0 11px;
+  border: 0;
+  outline: 0;
+  color: rgb(255 248 252 / 94%);
+  background: transparent;
+  font-size: 0.65rem;
+}
+
+.desktop-pet-composer input::placeholder {
+  color: rgb(255 228 244 / 48%);
+}
+
+.desktop-pet-composer button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  color: rgb(255 239 248 / 82%);
+  background: transparent;
+  cursor: pointer;
+}
+
+.desktop-pet-composer button:hover:not(:disabled) {
+  color: #fff;
+  background: rgb(158 73 126 / 68%);
+}
+
+.desktop-pet-composer button:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.desktop-pet-composer svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.desktop-pet-actions {
+  right: 12px;
+  display: flex;
+  gap: 6px;
 }
 
 .desktop-pet-display-settings {
@@ -215,7 +292,8 @@
 }
 
 @media (hover: none) {
-  .desktop-pet-actions {
+  .desktop-pet-actions,
+  .desktop-pet-composer {
     opacity: 1;
     pointer-events: auto;
     transform: none;
@@ -223,7 +301,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .desktop-pet-actions {
+  .desktop-pet-actions,
+  .desktop-pet-composer {
     transition: none;
   }
 }
