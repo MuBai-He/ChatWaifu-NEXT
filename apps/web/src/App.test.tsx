@@ -174,6 +174,9 @@ describe("ChatWaifu usable demo", () => {
     expect(screen.getByText("NENE ONLINE")).toBeTruthy();
     expect(screen.getByText(/欢迎回来/)).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "桌宠文字消息" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "连接麦克风" }).querySelector("svg"),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "摸摸绫地宁宁" }));
     expect(session.touch).toHaveBeenCalledOnce();
   });
