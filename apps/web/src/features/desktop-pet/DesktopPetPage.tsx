@@ -59,7 +59,11 @@ export function DesktopPetPage() {
   };
 
   return (
-    <main className="desktop-pet-shell" data-connection={connection}>
+    <main
+      className="desktop-pet-shell"
+      data-connection={connection}
+      data-actions-active={displaySettingsOpen || voiceTransmitting}
+    >
       <div
         className="desktop-pet-drag-region"
         data-tauri-drag-region

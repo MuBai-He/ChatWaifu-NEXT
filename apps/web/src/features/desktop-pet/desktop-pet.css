@@ -110,6 +110,20 @@
   bottom: 12px;
   display: flex;
   gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition:
+    opacity 150ms ease,
+    transform 180ms ease;
+}
+
+.desktop-pet-shell:hover .desktop-pet-actions,
+.desktop-pet-shell:focus-within .desktop-pet-actions,
+.desktop-pet-shell[data-actions-active="true"] .desktop-pet-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .desktop-pet-display-settings {
@@ -198,4 +212,18 @@
 
 .desktop-pet-shell[data-connection="offline"] .desktop-pet-drag-region span {
   color: #f4b3b3;
+}
+
+@media (hover: none) {
+  .desktop-pet-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-pet-actions {
+    transition: none;
+  }
 }

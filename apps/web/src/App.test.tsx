@@ -179,7 +179,13 @@ describe("ChatWaifu usable demo", () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: "桌宠显示设置" }));
+    const displaySettings = screen.getByRole("button", {
+      name: "桌宠显示设置",
+    });
+    const petShell = document.querySelector(".desktop-pet-shell");
+    expect(petShell?.getAttribute("data-actions-active")).toBe("false");
+    fireEvent.click(displaySettings);
+    expect(petShell?.getAttribute("data-actions-active")).toBe("true");
     const dragRegion = screen.getByLabelText("拖动桌宠");
     expect(dragRegion.querySelectorAll("i")).toHaveLength(2);
     fireEvent.click(screen.getByRole("checkbox", { name: "字幕" }));
