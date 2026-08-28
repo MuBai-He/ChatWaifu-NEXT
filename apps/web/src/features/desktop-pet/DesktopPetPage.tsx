@@ -311,6 +311,7 @@ export function DesktopPetPage() {
           {controlError ??
             preferenceError ??
             error ??
+            avatarWarning ??
             "Live2D 未就绪，已使用安全回退。"}
         </p>
       ) : null}

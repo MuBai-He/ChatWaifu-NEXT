@@ -124,6 +124,7 @@ describe("ChatWaifu usable demo", () => {
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";
     session.voiceTransmitting = false;
+    session.avatarWarning = null;
     session.messages = [];
     session.subtitlePlayback = null;
     vi.clearAllMocks();
@@ -180,6 +181,19 @@ describe("ChatWaifu usable demo", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "摸摸绫地宁宁" }));
     expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("shows the specific Live2D failure instead of hiding it behind fallback copy", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    session.avatarWarning =
+      "Cannot initialize WebGL2 with the current Windows graphics adapter.";
+
+    render(<App />);
+
+    expect(
+      screen.getByRole("status").textContent,
+    ).toBe("Cannot initialize WebGL2 with the current Windows graphics adapter.");
+    expect(screen.queryByText("Live2D 未就绪，已使用安全回退。")).toBeNull();
   });
 
   it("lets an unsupported desktop WebView explain why voice is unavailable", () => {
