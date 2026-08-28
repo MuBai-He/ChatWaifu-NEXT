@@ -248,9 +248,9 @@ export function McpConnectionsPanel() {
       `capabilities:${selectedConnection.connection_id}`,
       () => getMcpCapabilities(selectedConnection.connection_id),
       {
-        pending: "正在读取 tools、resources 与 prompts…",
+        pending: "正在读取 tools、resources、resource templates 与 prompts…",
         success: (result) =>
-          `已发现 ${result.tools.length} 个工具、${result.resources.length} 个资源、${result.prompts.length} 个提示模板`,
+          `已发现 ${result.tools.length} 个工具、${result.resources.length} 个资源、${result.resource_templates.length} 个资源模板、${result.prompts.length} 个提示模板`,
         error: "读取 MCP 能力失败",
       },
     );
@@ -715,7 +715,7 @@ function CapabilitiesBrowser({
     <section className="mcp-capabilities" aria-label="MCP 能力浏览">
       <header>
         <strong>能力浏览</strong>
-        <small>tools · resources · prompts</small>
+        <small>tools · resources/templates · prompts</small>
       </header>
       {!capabilities ? (
         <p className="mcp-capabilities-empty">
@@ -753,6 +753,23 @@ function CapabilitiesBrowser({
                 >
                   读取
                 </button>
+              </article>
+            ))}
+          </div>
+          <div>
+            <h3>
+              Resource Templates <span>{capabilities.resource_templates.length}</span>
+            </h3>
+            {capabilities.resource_templates.map((template) => (
+              <article key={template.uri_template}>
+                <strong>{template.title || template.name}</strong>
+                <code>{template.uri_template}</code>
+                <p>{
+                  template.description ||
+                  template.mime_type ||
+                  "参数化 MCP 资源模板"
+                }</p>
+                <small>URI 模板；填充参数后才能读取</small>
               </article>
             ))}
           </div>

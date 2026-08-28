@@ -57,6 +57,7 @@ describe("McpConnectionsPanel", () => {
     vi.mocked(getMcpCapabilities).mockResolvedValue({
       tools: [],
       resources: [],
+      resource_templates: [],
       prompts: [],
     });
   });
@@ -145,6 +146,14 @@ describe("McpConnectionsPanel", () => {
           description: "本地角色资料",
         },
       ],
+      resource_templates: [
+        {
+          uri_template: "notes://daily/{date}",
+          name: "daily-note",
+          title: "每日笔记",
+          description: "按日期读取本地笔记",
+        },
+      ],
       prompts: [
         {
           name: "greeting",
@@ -173,7 +182,18 @@ describe("McpConnectionsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "刷新能力" }));
     expect(await screen.findByText("notes.search")).toBeTruthy();
     expect(screen.getByText("宁宁资料")).toBeTruthy();
+    expect(screen.getByText("每日笔记")).toBeTruthy();
+    expect(screen.getByText("notes://daily/{date}")).toBeTruthy();
+    expect(screen.getByText("URI 模板；填充参数后才能读取")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /读取.*notes:\/\/daily/ }),
+    ).toBeNull();
     expect(screen.getByText("greeting")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "已发现 1 个工具、1 个资源、1 个资源模板、1 个提示模板",
+      ),
+    ).toBeTruthy();
 
     fireEvent.click(
       screen.getByRole("button", { name: "读取资源 notes://profile/nene" }),

@@ -527,6 +527,15 @@ export interface McpToolCapability {
 export interface McpResourceCapability {
   uri: string;
   name?: string;
+  title?: string;
+  description?: string;
+  mime_type?: string;
+}
+
+export interface McpResourceTemplateCapability {
+  uri_template: string;
+  name: string;
+  title?: string;
   description?: string;
   mime_type?: string;
 }
@@ -550,6 +559,7 @@ export interface McpCapabilitiesSnapshot {
   server_version?: string | null;
   tools: McpToolCapability[];
   resources: McpResourceCapability[];
+  resource_templates: McpResourceTemplateCapability[];
   prompts: McpPromptCapability[];
   discovered_at?: string | null;
 }
