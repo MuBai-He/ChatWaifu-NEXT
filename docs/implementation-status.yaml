@@ -51,6 +51,9 @@ validation:
     - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
     - browser full reload reports no new console warnings or errors
     - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
+    - Windows 11 ARM64 VM runs the win-amd64 Python 3.12 environment with Ruff, Pyright, and all 118 Python tests passing
+    - Windows Web formatting, lint, type checks, 80 unit tests, and the production Web build pass serially
+    - Windows x64 Rust target passes Clippy and 11 Tauri tests, then produces a release EXE verified as PE machine 0x8664
     - make desktop supervises local workers, Runtime, Web, and the Tauri development host as one process group
     - dynamic desktop service-stack bootstrap reports a loopback Runtime plus STT/Qwen/GPT workers and Ctrl+C closes the observed Runtime listener
     - live Tauri-owned Runtime exposes persisted companion defaults and completes resource sleep then wake without dropping the session service
