@@ -32,11 +32,13 @@ read-only operations; their content is never silently inserted into character co
 Legacy SSE is compatibility-only; new profiles should use Streamable HTTP.
 
 Stdio profiles accept an explicit executable and argument vector rather than only Python. Local
-untrusted processes default to a required OS sandbox. Supported backends are macOS Seatbelt
-(`sandbox-exec`), Linux bubblewrap, or an OCI runtime with a read-only root, dropped capabilities,
-bounded resources, and network disabled unless policy grants it. A required sandbox fails closed
-when no enforcing backend is available. A trusted profile may explicitly choose preferred or
-disabled isolation, but the UI and API always report the actual backend and enforcement state.
+untrusted processes default to a required OS sandbox. Product backends are macOS Seatbelt
+(`sandbox-exec`) and Linux bubblewrap. An OCI planner with a read-only root, dropped capabilities,
+bounded resources, and explicit network policy is reserved for a future packaged-runtime path; it
+is not exposed as an end-user connection option in this slice. A required sandbox fails closed when
+no enforcing backend is available. A trusted profile may explicitly choose preferred or disabled
+isolation, but disabled isolation can only declare unrestricted child-process networking. The UI
+and API always report the actual backend and enforcement state.
 
 Runtime also mounts a standard Streamable HTTP MCP server at `/mcp`. It binds with the Runtime to
 loopback, validates Host and Origin through the SDK transport-security layer, and uses Runtime
@@ -58,10 +60,11 @@ dependency, but prevents a growing partial protocol implementation. Existing `pl
 `chatwaifu.yaml` packages migrate without changing their Skill identity; their transport and
 security fields receive safe defaults.
 
-Strong isolation availability is platform-dependent. Windows without an OCI runtime has no approved
-backend in this decision and therefore cannot execute an untrusted `sandbox_mode=required` stdio
-profile; remote MCP and trusted explicit profiles remain usable. Adding an AppContainer launcher is
-a compatible follow-up, but soft process cleanup must never be labeled an OS sandbox.
+Strong isolation availability is platform-dependent. Windows has no approved AppContainer backend
+in this decision and therefore cannot execute an untrusted `sandbox_mode=required` stdio profile;
+remote MCP and trusted explicit profiles remain usable. Adding an AppContainer launcher or a
+packaged OCI execution path is a compatible follow-up, but soft process cleanup must never be
+labeled an OS sandbox or claim a network restriction it cannot enforce.
 
 MCP Apps, sampling, elicitation, filesystem roots, automatic prompt injection, and transport of
 realtime media remain out of scope. Adding any of them requires a separate threat-model review.

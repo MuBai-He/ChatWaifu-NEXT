@@ -128,6 +128,8 @@ link-local、metadata、reserved、重定向和系统代理继承。
 本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用 Seatbelt，Linux 使用 bubblewrap；
 缺少可强制执行的后端时会 fail closed。Windows 当前没有批准的原生 AppContainer 后端，因此
 `sandbox_mode=required` 的不可信 stdio 服务会被拒绝；远程 MCP 与用户显式标为可信的本地连接仍可用。
+连接测试后设置页会显示实际隔离后端；显式关闭沙箱时网络策略只能是“允许”，不会把进程清理或环境
+变量过滤误报成网络隔离。
 运行中的 ChatWaifu Runtime 还在同一个 loopback 端口公开标准 Streamable HTTP `/mcp`：匿名模式仅发布
 安全只读能力，配置 Runtime 管理 Token 后才认证发布副作用工具，而且调用仍要求有效会话并可能进入
 本地确认队列。完整边界见 [ADR 0018](docs/adr/0018-complete-mcp-host-server-and-sandbox.md)。

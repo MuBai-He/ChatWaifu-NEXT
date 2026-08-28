@@ -304,7 +304,7 @@ entry_blockers:
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
   - Signed packaged Tauri delivery and a frozen release sidecar remain pending
-  - Plugin child processes have soft isolation; packaged OS sandbox and network allowlists remain pending
+  - Windows still lacks an approved AppContainer backend for untrusted local stdio MCP; macOS Seatbelt and Linux bubblewrap fail closed when unavailable
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
