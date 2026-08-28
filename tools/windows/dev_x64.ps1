@@ -8,6 +8,8 @@ if ($env:OS -ne "Windows_NT") {
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $Live2DModel = Join-Path $RepoRoot "apps\web\public\vendor\live2d\model\avatar.model3.json"
+$Live2DTexture = Join-Path $RepoRoot "apps\web\public\vendor\live2d\model\texture\texture_00.png"
+$Live2DTextureOptimizer = Join-Path $RepoRoot "tools\windows\optimize_live2d_texture.ps1"
 $Target = "x86_64-pc-windows-msvc"
 
 if (-not (Test-Path $VenvPython)) {
@@ -38,6 +40,12 @@ try {
     }
     if (-not (Test-Path $Live2DModel)) {
         Write-Warning "Local Live2D assets are missing. The Windows app will use the deterministic fallback avatar."
+    } elseif (Test-Path $Live2DTexture) {
+        try {
+            & $Live2DTextureOptimizer -TexturePath $Live2DTexture
+        } catch {
+            Write-Warning "Could not optimize the local Live2D texture: $($_.Exception.Message)"
+        }
     }
     Write-Host "Starting ChatWaifu NEXT as Windows x64 ($Target)."
     Write-Host "Keep this PowerShell window open. Ctrl+C is the normal way to stop the development stack."
