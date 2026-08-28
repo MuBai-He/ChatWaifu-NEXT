@@ -36,8 +36,10 @@ class TerminationRequested(Exception):
 def main() -> int:
     environment = os.environ.copy()
     environment["PYTHONUNBUFFERED"] = "1"
-    tts_profiles = _load_tts_profiles()
-    ports = _allocate_ports(tuple(tts_profiles))
+    optional_local_workers = _optional_local_workers_enabled(environment)
+    tts_profiles = _load_available_tts_profiles(optional=optional_local_workers)
+    stt_python = _resolve_stt_worker_python(optional=optional_local_workers)
+    ports = _allocate_ports(tuple(tts_profiles), include_stt=stt_python is not None)
     tokens = {name: secrets.token_urlsafe(32) for name in ports if name != "runtime"}
     processes: list[subprocess.Popen[bytes]] = []
 
@@ -48,36 +50,37 @@ def main() -> int:
     _start_parent_watchdog(environment)
 
     try:
-        stt_environment = environment.copy()
-        stt_environment.update(
-            {
-                "CHATWAIFU_STT_WORKER_HOST": "127.0.0.1",
-                "CHATWAIFU_STT_WORKER_PORT": str(ports["stt"]),
-                "CHATWAIFU_STT_WORKER_TOKEN": tokens["stt"],
-                "CHATWAIFU_STT_WORKER_MODEL": "base",
-                "CHATWAIFU_STT_WORKER_MODEL_DIR": str(
-                    ROOT / ".local" / "models" / "faster-whisper"
-                ),
-                "CHATWAIFU_STT_WORKER_DEVICE": "cpu",
-                "CHATWAIFU_STT_WORKER_COMPUTE_TYPE": "int8",
-                # Desktop startup stays light; the first intentional voice turn wakes ASR.
-                "CHATWAIFU_STT_WORKER_PRELOAD": "false",
-            }
-        )
-        stt_worker = subprocess.Popen(
-            [str(_stt_worker_python()), "-m", "chatwaifu_asr_worker.main"],
-            cwd=ROOT,
-            env=stt_environment,
-            start_new_session=os.name == "posix",
-        )
-        processes.append(stt_worker)
-        _wait_for_url(
-            f"http://127.0.0.1:{ports['stt']}/v1/health",
-            stt_worker,
-            "Local STT worker",
-            timeout_seconds=30,
-            headers={"Authorization": f"Bearer {tokens['stt']}"},
-        )
+        if stt_python is not None:
+            stt_environment = environment.copy()
+            stt_environment.update(
+                {
+                    "CHATWAIFU_STT_WORKER_HOST": "127.0.0.1",
+                    "CHATWAIFU_STT_WORKER_PORT": str(ports["stt"]),
+                    "CHATWAIFU_STT_WORKER_TOKEN": tokens["stt"],
+                    "CHATWAIFU_STT_WORKER_MODEL": "base",
+                    "CHATWAIFU_STT_WORKER_MODEL_DIR": str(
+                        ROOT / ".local" / "models" / "faster-whisper"
+                    ),
+                    "CHATWAIFU_STT_WORKER_DEVICE": "cpu",
+                    "CHATWAIFU_STT_WORKER_COMPUTE_TYPE": "int8",
+                    # Desktop startup stays light; the first intentional voice turn wakes ASR.
+                    "CHATWAIFU_STT_WORKER_PRELOAD": "false",
+                }
+            )
+            stt_worker = subprocess.Popen(
+                [str(stt_python), "-m", "chatwaifu_asr_worker.main"],
+                cwd=ROOT,
+                env=stt_environment,
+                start_new_session=os.name == "posix",
+            )
+            processes.append(stt_worker)
+            _wait_for_url(
+                f"http://127.0.0.1:{ports['stt']}/v1/health",
+                stt_worker,
+                "Local STT worker",
+                timeout_seconds=30,
+                headers={"Authorization": f"Bearer {tokens['stt']}"},
+            )
 
         for provider_id, profile in tts_profiles.items():
             worker = subprocess.Popen(
@@ -104,8 +107,8 @@ def main() -> int:
         runtime_environment = _runtime_environment(
             environment,
             runtime_port=ports["runtime"],
-            stt_port=ports["stt"],
-            stt_token=tokens["stt"],
+            stt_port=ports.get("stt"),
+            stt_token=tokens.get("stt"),
             tts_profiles=tts_profiles,
             ports=ports,
             tokens=tokens,
@@ -131,8 +134,8 @@ def main() -> int:
         _stop_processes(processes)
 
 
-def _allocate_ports(provider_ids: tuple[str, ...]) -> dict[str, int]:
-    names = ("runtime", "stt", *provider_ids)
+def _allocate_ports(provider_ids: tuple[str, ...], *, include_stt: bool = True) -> dict[str, int]:
+    names = ("runtime", *(("stt",) if include_stt else ()), *provider_ids)
     ports: dict[str, int] = {}
     allocated: set[int] = set()
     for name in names:
@@ -144,12 +147,49 @@ def _allocate_ports(provider_ids: tuple[str, ...]) -> dict[str, int]:
     return ports
 
 
+def _optional_local_workers_enabled(environment: dict[str, str]) -> bool:
+    return environment.get("CHATWAIFU_DESKTOP_OPTIONAL_LOCAL_WORKERS", "").strip().casefold() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _load_available_tts_profiles(*, optional: bool) -> dict[str, dict[str, object]]:
+    try:
+        return _load_tts_profiles()
+    except RuntimeError as error:
+        if not optional:
+            raise
+        print(
+            f"Local TTS workers are unavailable; using Runtime fallback: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return {}
+
+
+def _resolve_stt_worker_python(*, optional: bool) -> os.PathLike[str] | None:
+    try:
+        return _stt_worker_python()
+    except RuntimeError as error:
+        if not optional:
+            raise
+        print(
+            f"Local STT worker is unavailable; microphone transcription is disabled: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return None
+
+
 def _runtime_environment(
     base: dict[str, str],
     *,
     runtime_port: int,
-    stt_port: int,
-    stt_token: str,
+    stt_port: int | None,
+    stt_token: str | None,
     tts_profiles: dict[str, dict[str, object]],
     ports: dict[str, int],
     tokens: dict[str, str],
@@ -158,12 +198,12 @@ def _runtime_environment(
     environment.update(
         {
             "CHATWAIFU_RUNTIME__PORT": str(runtime_port),
-            "CHATWAIFU_STT__PROVIDER": "faster_whisper_worker",
-            "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
-            "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
+            "CHATWAIFU_STT__PROVIDER": (
+                "faster_whisper_worker" if stt_port is not None else "disabled"
+            ),
             "CHATWAIFU_STT__LANGUAGE": "zh",
-            "CHATWAIFU_TTS__PROVIDER": "null",
-            "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx",
+            "CHATWAIFU_TTS__PROVIDER": "null" if tts_profiles else "fake",
+            "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx" if tts_profiles else "fake",
             "CHATWAIFU_TTS__WORKERS": json.dumps(
                 {
                     provider_id: {
@@ -187,6 +227,13 @@ def _runtime_environment(
             ),
         }
     )
+    if stt_port is not None and stt_token is not None:
+        environment.update(
+            {
+                "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
+                "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
+            }
+        )
     return environment
 
 

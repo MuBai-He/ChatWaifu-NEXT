@@ -42,11 +42,19 @@ make desktop
 profile，不满足 Mac App Store 上架条件。Tauri 会以动态端口启动并监督本地 Runtime/Worker 服务栈；
 异常退出会限次自动重启，连续失败后可从“陪伴”设置或托盘手动恢复。
 
-Windows 发布目标固定为 x64。即使在 Windows 11 ARM 虚拟机中调试，也不生成 ARM 应用；先在
-PowerShell 中准备 x64 Python/Rust 目标，再执行带 PE 架构校验的构建：
+Windows 发布目标固定为 x64。即使在 Windows 11 ARM 虚拟机中调试，也不生成 ARM 应用；首次在
+PowerShell 中准备 x64 Python/Rust 目标，然后使用开发脚本启动带热更新和终端日志的桌面程序：
 
 ```powershell
 .\tools\windows\bootstrap_x64.ps1
+.\tools\windows\dev_x64.ps1
+```
+
+缺少 Windows 本地模型 Worker 时，开发脚本会启动可连接的 Demo Runtime，并暂时禁用本地麦克风
+转写、使用确定性语音回退；支持的云端 TTS 仍可在设置界面配置。按 `Ctrl+C` 会停止桌面程序、
+Runtime 和开发服务器。准备发布文件时再执行带测试和 PE 架构校验的构建：
+
+```powershell
 .\tools\windows\build_x64.ps1
 ```
 

@@ -26,6 +26,51 @@ def test_allocated_desktop_ports_are_unique(monkeypatch: Any) -> None:
     }
 
 
+def test_optional_workers_can_leave_only_the_runtime_port(monkeypatch: Any) -> None:
+    monkeypatch.setattr(desktop_services, "_find_free_loopback_port", lambda: 41001)
+
+    ports = desktop_services._allocate_ports((), include_stt=False)
+
+    assert ports == {"runtime": 41001}
+
+
+def test_optional_worker_mode_accepts_explicit_truthy_values() -> None:
+    for value in ("1", "true", "TRUE", "yes", "on"):
+        assert desktop_services._optional_local_workers_enabled(
+            {"CHATWAIFU_DESKTOP_OPTIONAL_LOCAL_WORKERS": value}
+        )
+    assert desktop_services._optional_local_workers_enabled({}) is False
+
+
+def test_missing_optional_tts_profile_degrades_to_no_local_workers(
+    monkeypatch: Any,
+) -> None:
+    def missing_profiles() -> dict[str, dict[str, object]]:
+        raise RuntimeError("profile missing")
+
+    monkeypatch.setattr(desktop_services, "_load_tts_profiles", missing_profiles)
+
+    assert desktop_services._load_available_tts_profiles(optional=True) == {}
+
+
+def test_runtime_environment_uses_safe_fallback_without_local_workers() -> None:
+    environment = desktop_services._runtime_environment(
+        {},
+        runtime_port=41001,
+        stt_port=None,
+        stt_token=None,
+        tts_profiles={},
+        ports={"runtime": 41001},
+        tokens={},
+    )
+
+    assert environment["CHATWAIFU_STT__PROVIDER"] == "disabled"
+    assert environment["CHATWAIFU_TTS__PROVIDER"] == "fake"
+    assert environment["CHATWAIFU_TTS__DEFAULT_PROVIDER"] == "fake"
+    assert json.loads(environment["CHATWAIFU_TTS__WORKERS"]) == {}
+    assert "CHATWAIFU_STT__WORKER_TOKEN" not in environment
+
+
 def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None:
     desktop_services._write_bootstrap(
         "http://127.0.0.1:41001",
