@@ -27,6 +27,7 @@ from run_demo import (
 
 BOOTSTRAP_PREFIX = "CHATWAIFU_BOOTSTRAP "
 STACK_VERSION = "1.0"
+RUNTIME_STARTUP_TIMEOUT_SECONDS = 120
 
 
 class TerminationRequested(Exception):
@@ -121,7 +122,12 @@ def main() -> int:
         )
         processes.append(runtime)
         runtime_url = f"http://127.0.0.1:{ports['runtime']}"
-        _wait_for_url(f"{runtime_url}/v1/runtime/health", runtime, "Runtime")
+        _wait_for_url(
+            f"{runtime_url}/v1/runtime/health",
+            runtime,
+            "Runtime",
+            timeout_seconds=RUNTIME_STARTUP_TIMEOUT_SECONDS,
+        )
         _write_bootstrap(runtime_url, runtime.pid, ports)
 
         while all(process.poll() is None for process in processes):
