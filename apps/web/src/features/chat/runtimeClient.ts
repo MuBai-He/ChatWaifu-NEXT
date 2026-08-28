@@ -484,3 +484,160 @@ export async function cancelSkillRun(
     body: "{}",
   });
 }
+
+export type McpTransport = "stdio" | "streamable_http" | "sse";
+export type McpSandboxMode = "required" | "preferred" | "disabled";
+export type McpTrustLevel = "trusted" | "untrusted";
+export type McpNetworkPolicy = "deny" | "loopback" | "allow";
+
+export interface McpConnectionInput {
+  name: string;
+  transport: McpTransport;
+  command?: string[];
+  url?: string;
+  bearer_token?: string;
+  clear_bearer_token?: boolean;
+  enabled: boolean;
+  allow_remote: boolean;
+  timeout_seconds: number;
+  trust_level: McpTrustLevel;
+  sandbox_mode: McpSandboxMode;
+  network_policy: McpNetworkPolicy;
+}
+
+export interface McpConnectionSnapshot
+  extends Omit<McpConnectionInput, "bearer_token" | "clear_bearer_token"> {
+  connection_id: string;
+  bearer_token_configured: boolean;
+  status?: "ready" | "disabled" | "untested" | "error";
+  sandbox_backend?: string | null;
+  capabilities?: McpCapabilitiesSnapshot;
+  last_error?: string | null;
+  last_tested_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface McpToolCapability {
+  name: string;
+  description?: string;
+  input_schema?: Record<string, unknown>;
+}
+
+export interface McpResourceCapability {
+  uri: string;
+  name?: string;
+  description?: string;
+  mime_type?: string;
+}
+
+export interface McpPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+export interface McpPromptCapability {
+  name: string;
+  description?: string;
+  arguments?: McpPromptArgument[];
+}
+
+export interface McpCapabilitiesSnapshot {
+  connection_id?: string;
+  protocol_version?: string | null;
+  server_name?: string | null;
+  server_version?: string | null;
+  tools: McpToolCapability[];
+  resources: McpResourceCapability[];
+  prompts: McpPromptCapability[];
+  discovered_at?: string | null;
+}
+
+export interface McpConnectionProbeResult {
+  status: string;
+  latency_ms?: number;
+  protocol_version?: string;
+  detail?: string;
+}
+
+export type McpConnectionTestResult =
+  | McpConnectionSnapshot
+  | McpConnectionProbeResult;
+
+export async function getMcpConnections(): Promise<McpConnectionSnapshot[]> {
+  return (
+    await request<{ items: McpConnectionSnapshot[] }>("/v1/mcp/connections")
+  ).items;
+}
+
+export async function createMcpConnection(
+  connection: McpConnectionInput,
+): Promise<McpConnectionSnapshot> {
+  return request<McpConnectionSnapshot>("/v1/mcp/connections", {
+    method: "POST",
+    body: JSON.stringify(connection),
+  });
+}
+
+export async function updateMcpConnection(
+  connectionId: string,
+  connection: Partial<McpConnectionInput>,
+): Promise<McpConnectionSnapshot> {
+  return request<McpConnectionSnapshot>(
+    `/v1/mcp/connections/${encodeURIComponent(connectionId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(connection),
+    },
+  );
+}
+
+export async function deleteMcpConnection(
+  connectionId: string,
+): Promise<void> {
+  await request(`/v1/mcp/connections/${encodeURIComponent(connectionId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function testMcpConnection(
+  connectionId: string,
+): Promise<McpConnectionTestResult> {
+  return request<McpConnectionTestResult>(
+    `/v1/mcp/connections/${encodeURIComponent(connectionId)}/test`,
+    { method: "POST", body: "{}" },
+  );
+}
+
+export async function getMcpCapabilities(
+  connectionId: string,
+): Promise<McpCapabilitiesSnapshot> {
+  return request<McpCapabilitiesSnapshot>(
+    `/v1/mcp/connections/${encodeURIComponent(connectionId)}/capabilities`,
+  );
+}
+
+export async function readMcpResource(
+  connectionId: string,
+  uri: string,
+): Promise<unknown> {
+  return request(
+    `/v1/mcp/connections/${encodeURIComponent(connectionId)}/resources/read`,
+    { method: "POST", body: JSON.stringify({ uri }) },
+  );
+}
+
+export async function getMcpPrompt(
+  connectionId: string,
+  name: string,
+  args: Record<string, string>,
+): Promise<unknown> {
+  return request(
+    `/v1/mcp/connections/${encodeURIComponent(connectionId)}/prompts/get`,
+    {
+      method: "POST",
+      body: JSON.stringify({ name, arguments: args }),
+    },
+  );
+}

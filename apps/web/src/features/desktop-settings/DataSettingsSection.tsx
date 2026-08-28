@@ -1,6 +1,7 @@
 import { MemoryControlCenter } from "../chat/MemoryControlCenter";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import { McpConnectionsPanel } from "./McpConnectionsPanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsGroup } from "./SettingsPrimitives";
 
@@ -31,6 +32,14 @@ export function DataSettingsSection({
           <h2>Skills 与插件</h2>
           <p>管理能力权限、插件隔离、确认请求和最近运行。</p>
           <SkillsControlCenter sessionId={data.sessionId} />
+        </article>
+        <article className="desktop-settings-tool-card">
+          <span>
+            <SettingsIcon name="skills" />
+          </span>
+          <h2>MCP 连接</h2>
+          <p>连接本地或远程 MCP 服务，检查工具、资源和 Prompt 能力。</p>
+          <McpConnectionsPanel />
         </article>
       </div>
 
