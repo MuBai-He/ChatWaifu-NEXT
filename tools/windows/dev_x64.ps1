@@ -7,6 +7,7 @@ if ($env:OS -ne "Windows_NT") {
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+$Live2DModel = Join-Path $RepoRoot "apps\web\public\vendor\live2d\model\avatar.model3.json"
 $Target = "x86_64-pc-windows-msvc"
 
 if (-not (Test-Path $VenvPython)) {
@@ -31,6 +32,16 @@ try {
     # The Runtime starts with deterministic fallback providers; cloud providers can still be
     # configured through the normal settings UI.
     $env:CHATWAIFU_DESKTOP_OPTIONAL_LOCAL_WORKERS = "true"
+    $SessionId = (Get-Process -Id $PID).SessionId
+    if ($SessionId -eq 0) {
+        Write-Warning "This shell is not attached to the visible Windows desktop. Run this script inside the Parallels Windows PowerShell window."
+    }
+    if (-not (Test-Path $Live2DModel)) {
+        Write-Warning "Local Live2D assets are missing. The Windows app will use the deterministic fallback avatar."
+    }
+    Write-Host "Starting ChatWaifu NEXT as Windows x64 ($Target)."
+    Write-Host "Keep this PowerShell window open. Ctrl+C is the normal way to stop the development stack."
+    Write-Host "Parallels Coherence can display this Windows window directly on the macOS desktop."
     & $VenvPython tools/run_pnpm.py --filter '@chatwaifu/desktop' exec tauri dev --target $Target
     if ($LASTEXITCODE -ne 0) {
         throw "Windows x64 desktop development host exited with code $LASTEXITCODE"
