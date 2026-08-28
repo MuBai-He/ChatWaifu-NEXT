@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_tauri_dev_server_binds_the_same_ipv4_url_it_waits_for() -> None:
     config = cast(
         dict[str, object],
-        json.loads((ROOT / "apps/desktop/src-tauri/tauri.conf.json").read_text()),
+        json.loads((ROOT / "apps/desktop/src-tauri/tauri.conf.json").read_text(encoding="utf-8")),
     )
     build = cast(dict[str, object], config["build"])
     command = str(build["beforeDevCommand"])

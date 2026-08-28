@@ -1,6 +1,7 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
 import json
+import os
 import sqlite3
 import time
 from datetime import UTC, datetime
@@ -140,7 +141,8 @@ def test_model_roles_are_independent_and_api_keys_never_echo(
     assert next(item for item in reloaded if item["role"] == "chat") == original_chat
     assert "write-only-test-secret" not in str(reloaded)
     secret_file = runtime_settings.config_dir / "model-secrets.json"
-    assert secret_file.stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert secret_file.stat().st_mode & 0o777 == 0o600
 
 
 def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
@@ -179,7 +181,8 @@ def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     assert "api_key" not in updated
     assert "write-only-aliyun-secret" not in response.text
     secret_file = runtime_settings.config_dir / "tts-secrets.json"
-    assert secret_file.stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert secret_file.stat().st_mode & 0o777 == 0o600
 
     cosy_current = cast(
         dict[str, object],

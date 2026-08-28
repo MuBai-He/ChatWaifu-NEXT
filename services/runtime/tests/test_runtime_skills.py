@@ -47,7 +47,7 @@ def test_example_mcp_plugin_install_execute_confirm_disable_and_uninstall(
     )
     assert echo.status_code == 202
     echoed = _wait_for_run(http, str(cast(dict[str, object], echo.json())["skill_run_id"]))
-    assert echoed["state"] == "succeeded"
+    assert echoed["state"] == "succeeded", echoed
     assert (
         cast(dict[str, object], cast(dict[str, object], echoed["result"])["data"])["echo"]
         == "hello MCP"

@@ -8,7 +8,7 @@ from tools.pnpm_tool import PNPM_VERSION, ROOT, environment_with_pnpm
 
 
 def test_pinned_version_matches_package_manager() -> None:
-    package_json = json.loads((ROOT / "package.json").read_text())
+    package_json = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
     assert package_json["packageManager"] == f"pnpm@{PNPM_VERSION}"
 
