@@ -80,6 +80,7 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
         None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, control_center_entry(&app))
             .initialization_script(CONTROL_CENTER_INIT_SCRIPT)
             .title("ChatWaifu NEXT · 桌宠设置")
+            .always_on_top(true)
             .inner_size(960.0, 700.0)
             .min_inner_size(720.0, 540.0)
             .center()
@@ -87,6 +88,7 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
             .map_err(window_error)?,
     };
     set_avatar_overlay_topmost(&app, false)?;
+    window.set_always_on_top(true).map_err(window_error)?;
     if let Err(error) = window.show().map_err(window_error) {
         restore_avatar_overlay_topmost(&app);
         return Err(error);
@@ -315,17 +317,26 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
     if window.label() == CONTROL_CENTER_LABEL {
         match event {
             WindowEvent::Focused(true) => {
+                if let Err(error) = window.set_always_on_top(true) {
+                    eprintln!("desktop control-center promotion failed: {error}");
+                }
                 if let Err(error) = set_avatar_overlay_topmost(window.app_handle(), false) {
                     eprintln!("desktop overlay demotion failed: {error}");
                 }
             }
             WindowEvent::Focused(false) | WindowEvent::Destroyed => {
+                if let Err(error) = window.set_always_on_top(false) {
+                    eprintln!("desktop control-center demotion failed: {error}");
+                }
                 restore_avatar_overlay_topmost(window.app_handle());
             }
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 if let Err(error) = window.hide() {
                     eprintln!("desktop control-center hide failed: {error}");
+                }
+                if let Err(error) = window.set_always_on_top(false) {
+                    eprintln!("desktop control-center demotion failed: {error}");
                 }
                 restore_avatar_overlay_topmost(window.app_handle());
             }
