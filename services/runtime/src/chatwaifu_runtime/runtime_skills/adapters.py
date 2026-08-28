@@ -19,6 +19,9 @@ from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 BuiltinHandler = Callable[[JsonObject], Awaitable[JsonObject]]
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MAX_RPC_LINE_BYTES = 1024 * 1024
+KillProcessGroup = Callable[[int, int], None]
+_kill_process_group = cast(KillProcessGroup | None, getattr(os, "killpg", None))
+_force_termination_signal = cast(int, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
 class BuiltinAdapter:
@@ -58,7 +61,7 @@ class McpStdioAdapter:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
             limit=MAX_RPC_LINE_BYTES,
         )
         try:
@@ -217,17 +220,28 @@ async def _terminate(process: asyncio.subprocess.Process) -> None:
     if process.returncode is not None:
         return
     try:
-        os.killpg(process.pid, signal.SIGTERM)
+        _signal_process(process, int(signal.SIGTERM))
     except ProcessLookupError:
         return
     try:
         await asyncio.wait_for(process.wait(), timeout=1.0)
     except TimeoutError:
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            _signal_process(process, _force_termination_signal, force=True)
         except ProcessLookupError:
             return
         await process.wait()
+
+
+def _signal_process(
+    process: asyncio.subprocess.Process, requested_signal: int, *, force: bool = False
+) -> None:
+    if os.name == "posix" and _kill_process_group is not None:
+        _kill_process_group(process.pid, requested_signal)
+    elif force:
+        process.kill()
+    else:
+        process.terminate()
 
 
 async def _stderr_text(process: asyncio.subprocess.Process) -> str:

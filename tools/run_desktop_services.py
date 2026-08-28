@@ -68,7 +68,7 @@ def main() -> int:
             [str(_stt_worker_python()), "-m", "chatwaifu_asr_worker.main"],
             cwd=ROOT,
             env=stt_environment,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         )
         processes.append(stt_worker)
         _wait_for_url(
@@ -90,7 +90,7 @@ def main() -> int:
                     ports[provider_id],
                     tokens[provider_id],
                 ),
-                start_new_session=True,
+                start_new_session=os.name == "posix",
             )
             processes.append(worker)
             _wait_for_url(
@@ -114,7 +114,7 @@ def main() -> int:
             [sys.executable, str(ROOT / "tools" / "run_runtime.py")],
             cwd=ROOT,
             env=runtime_environment,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         )
         processes.append(runtime)
         runtime_url = f"http://127.0.0.1:{ports['runtime']}"

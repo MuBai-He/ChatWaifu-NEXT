@@ -14,6 +14,7 @@ import tomllib
 import urllib.error
 import urllib.request
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 from types import FrameType
 from typing import cast
@@ -27,6 +28,9 @@ STT_WORKER = ROOT / "workers" / "asr-faster-whisper"
 NEURAL_TTS_SETUP = ROOT / "tools" / "setup_neural_tts_workers.py"
 TTS_PROFILE_PATH = ROOT / ".local" / "config" / "tts-profiles.toml"
 DEMO_PORTS = (("Runtime", 8765), ("Web", 5173))
+KillProcessGroup = Callable[[int, int], None]
+_kill_process_group = cast(KillProcessGroup | None, getattr(os, "killpg", None))
+_force_termination_signal = cast(int, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
 class TerminationRequested(Exception):
@@ -172,7 +176,7 @@ def main() -> int:
             [str(_stt_worker_python()), "-m", "chatwaifu_asr_worker.main"],
             cwd=ROOT,
             env=worker_environment,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         )
         processes.append(stt_worker)
         _wait_for_url(
@@ -198,7 +202,7 @@ def main() -> int:
                     tts_ports[provider_id],
                     tts_tokens[provider_id],
                 ),
-                start_new_session=True,
+                start_new_session=os.name == "posix",
             )
             processes.append(tts_worker)
             _wait_for_url(
@@ -212,7 +216,7 @@ def main() -> int:
             [sys.executable, str(ROOT / "tools" / "run_runtime.py")],
             cwd=ROOT,
             env=runtime_environment,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         )
         processes.append(runtime)
         _wait_for_url(RUNTIME_HEALTH, runtime, "Runtime")
@@ -230,7 +234,7 @@ def main() -> int:
             ],
             cwd=ROOT,
             env=environment,
-            start_new_session=True,
+            start_new_session=os.name == "posix",
         )
         processes.append(web)
         _wait_for_url(WEB_URL, web, "Web")
@@ -239,7 +243,7 @@ def main() -> int:
                 [str(pnpm), "--filter", "@chatwaifu/desktop", "dev"],
                 cwd=ROOT,
                 env=environment,
-                start_new_session=True,
+                start_new_session=os.name == "posix",
             )
             processes.append(desktop)
             print("\nChatWaifu NEXT desktop pet is starting.")
@@ -435,13 +439,17 @@ def _stop_processes(processes: list[subprocess.Popen[bytes]]) -> None:
         try:
             process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            _signal_group(process, signal.SIGKILL)
+            _signal_group(process, _force_termination_signal, force=True)
             process.wait(timeout=2)
 
 
-def _signal_group(process: subprocess.Popen[bytes], requested_signal: signal.Signals) -> None:
-    if os.name == "posix":
-        os.killpg(process.pid, requested_signal)
+def _signal_group(
+    process: subprocess.Popen[bytes], requested_signal: int, *, force: bool = False
+) -> None:
+    if os.name == "posix" and _kill_process_group is not None:
+        _kill_process_group(process.pid, requested_signal)
+    elif force:
+        process.kill()
     else:
         process.terminate()
 

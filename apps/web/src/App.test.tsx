@@ -119,6 +119,7 @@ vi.mock("./features/chat/useChatSession", () => ({
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
+    window.localStorage?.clear();
     session.voiceState = "disconnected";
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";

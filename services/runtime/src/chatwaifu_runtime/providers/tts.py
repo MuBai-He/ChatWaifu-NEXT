@@ -100,12 +100,12 @@ class MacOsSayTtsProvider:
     )
 
     def __init__(self, *, voice: str, sample_rate: int, rate: int, timeout_seconds: float) -> None:
-        if sys.platform != "darwin" or not shutil.which("say") or not shutil.which("afconvert"):
-            raise RuntimeError("macOS say and afconvert are required")
         self._voice = voice
         self._sample_rate = sample_rate
         self._rate = rate
         self._timeout_seconds = timeout_seconds
+        if sys.platform != "darwin" or not shutil.which("say") or not shutil.which("afconvert"):
+            raise RuntimeError("macOS say and afconvert are required")
 
     async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
         request.destination.parent.mkdir(parents=True, exist_ok=True)
