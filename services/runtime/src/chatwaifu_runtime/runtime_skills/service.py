@@ -13,6 +13,8 @@ from chatwaifu_protocol.base import JsonObject, PrivacyLevel
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_protocol.skills import (
+    McpConnectionConfiguration,
+    McpConnectionSnapshot,
     PluginSnapshot,
     SkillCapability,
     SkillDefinition,
@@ -27,8 +29,13 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.providers.factory import ProviderSet
-from chatwaifu_runtime.runtime_skills.adapters import BuiltinAdapter, McpStdioAdapter
+from chatwaifu_runtime.runtime_skills.adapters import (
+    BuiltinAdapter,
+    McpConnectionAdapter,
+    McpStdioAdapter,
+)
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.host_connections import McpConnectionManager
 from chatwaifu_runtime.runtime_skills.permissions import PermissionBroker
 from chatwaifu_runtime.runtime_skills.plugins import PluginManager
 from chatwaifu_runtime.runtime_skills.registry import (
@@ -36,6 +43,8 @@ from chatwaifu_runtime.runtime_skills.registry import (
     SkillRegistry,
     load_plugin_manifest,
 )
+from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher
+from chatwaifu_runtime.runtime_skills.transports import McpClientTransport, SandboxLauncher
 
 TERMINAL_STATES = {
     SkillRunState.SUCCEEDED,
@@ -55,6 +64,7 @@ class RuntimeSkillService:
         providers: ProviderSet,
         stt_provider: str,
         version: str,
+        sandbox_launcher: SandboxLauncher | None = None,
     ) -> None:
         self._root = root
         self._database = database
@@ -67,11 +77,16 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(database)
         self._builtin = BuiltinAdapter()
         self._builtin.register("runtime_status", self._runtime_status)
-        self._mcp = McpStdioAdapter()
+        launcher = sandbox_launcher or RuntimeSandboxLauncher()
+        self._mcp = McpStdioAdapter(launcher)
+        mcp_transport = McpClientTransport(launcher)
+        self._mcp_connections = McpConnectionManager(database, data_dir, mcp_transport)
+        self._mcp_connection_adapter = McpConnectionAdapter(mcp_transport)
         self._tasks: dict[UUID, asyncio.Task[None]] = {}
 
     async def start(self) -> None:
         await self._plugins.start()
+        await self._mcp_connections.start()
         now = _now().isoformat()
         async with self._database.transaction() as connection:
             await connection.execute(
@@ -109,6 +124,67 @@ class RuntimeSkillService:
 
     async def list_plugins(self) -> list[PluginSnapshot]:
         return await self._plugins.list()
+
+    async def list_mcp_connections(self) -> list[McpConnectionSnapshot]:
+        return await self._mcp_connections.list()
+
+    async def get_mcp_connection(self, connection_id: UUID) -> McpConnectionSnapshot:
+        return await self._mcp_connections.get(connection_id)
+
+    async def create_mcp_connection(
+        self,
+        config: McpConnectionConfiguration,
+        *,
+        bearer_token: str | None = None,
+    ) -> McpConnectionSnapshot:
+        snapshot = await self._mcp_connections.create(config, bearer_token=bearer_token)
+        await self._reload_registry()
+        return snapshot
+
+    async def update_mcp_connection(
+        self,
+        config: McpConnectionConfiguration,
+        *,
+        bearer_token: str | None = None,
+        clear_bearer_token: bool = False,
+    ) -> McpConnectionSnapshot:
+        snapshot = await self._mcp_connections.update(
+            config,
+            bearer_token=bearer_token,
+            clear_bearer_token=clear_bearer_token,
+        )
+        await self._reload_registry()
+        return snapshot
+
+    async def delete_mcp_connection(self, connection_id: UUID) -> None:
+        active = await self._database.fetchone(
+            """
+            SELECT 1 FROM skill_runs
+            WHERE mcp_connection_id = ?
+              AND state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+            LIMIT 1
+            """,
+            (str(connection_id),),
+        )
+        if active is not None:
+            raise ValueError("MCP connection has an active skill run")
+        await self._mcp_connections.delete(connection_id)
+        await self._reload_registry()
+
+    async def test_mcp_connection(self, connection_id: UUID) -> McpConnectionSnapshot:
+        try:
+            snapshot = await self._mcp_connections.test(connection_id)
+        finally:
+            await self._reload_registry()
+        return snapshot
+
+    async def read_mcp_resource(self, connection_id: UUID, uri: str) -> JsonObject:
+        return await self._mcp_connections.read_resource(connection_id, uri)
+
+    async def get_mcp_prompt(
+        self, connection_id: UUID, name: str, arguments: dict[str, str]
+    ) -> JsonObject:
+        return await self._mcp_connections.get_prompt(connection_id, name, arguments)
 
     async def install_plugin(self, source: Path) -> PluginSnapshot:
         source = await asyncio.to_thread(lambda: source.expanduser().resolve())
@@ -170,8 +246,8 @@ class RuntimeSkillService:
                 """
                 INSERT INTO skill_runs(
                     skill_run_id, session_id, skill_id, skill_version, capability,
-                    plugin_id, state, arguments_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'created', ?, ?, ?)
+                    plugin_id, mcp_connection_id, state, arguments_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, ?, ?)
                 """,
                 (
                     str(run_id),
@@ -180,6 +256,11 @@ class RuntimeSkillService:
                     entry.definition.version,
                     capability.name,
                     entry.definition.plugin_id,
+                    (
+                        str(entry.definition.mcp_connection_id)
+                        if entry.definition.mcp_connection_id
+                        else None
+                    ),
                     json.dumps(invocation.arguments, ensure_ascii=False),
                     now,
                     now,
@@ -317,7 +398,10 @@ class RuntimeSkillService:
         return completed.result
 
     async def _reload_registry(self) -> None:
-        self._registry.reload(await self._plugins.registry_sources())
+        self._registry.reload(
+            await self._plugins.registry_sources(),
+            await self._mcp_connections.list(),
+        )
 
     def _schedule(self, run_id: UUID) -> None:
         if run_id in self._tasks:
@@ -375,7 +459,7 @@ class RuntimeSkillService:
                     self._builtin.invoke(entry.adapter.target, arguments),
                     timeout=capability.timeout_seconds,
                 )
-            else:
+            elif entry.adapter.kind == "mcp":
                 if entry.plugin is None or entry.plugin_root is None:
                     raise SkillExecutionError(
                         "plugin_missing", "Plugin adapter metadata is missing"
@@ -384,6 +468,27 @@ class RuntimeSkillService:
                     plugin=entry.plugin,
                     plugin_root=entry.plugin_root,
                     tool=capability.adapter_tool or entry.adapter.target,
+                    arguments=arguments,
+                    timeout_seconds=capability.timeout_seconds,
+                )
+            else:
+                connection_id = entry.definition.mcp_connection_id
+                if connection_id is None:
+                    raise SkillExecutionError(
+                        "mcp_connection_missing", "MCP connection metadata is missing"
+                    )
+                connection = await self._mcp_connections.get(connection_id)
+                config = McpConnectionConfiguration.model_validate(
+                    connection.model_dump(mode="python")
+                )
+                bearer_token = await asyncio.to_thread(
+                    self._mcp_connections.bearer_token, connection_id
+                )
+                data = await self._mcp_connection_adapter.invoke(
+                    config=config,
+                    bearer_token=bearer_token,
+                    working_root=self._mcp_connections.working_root(connection_id),
+                    tool=capability.adapter_tool or capability.name,
                     arguments=arguments,
                     timeout_seconds=capability.timeout_seconds,
                 )
@@ -618,6 +723,7 @@ def _snapshot(row: object) -> SkillRunSnapshot:
             "skill_version": values["skill_version"],
             "capability": values["capability"],
             "plugin_id": values["plugin_id"],
+            "mcp_connection_id": values["mcp_connection_id"],
             "session_id": values["session_id"],
             "state": values["state"],
             "progress": values["progress"],

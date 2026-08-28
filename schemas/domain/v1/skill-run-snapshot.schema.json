@@ -302,6 +302,19 @@
       ],
       "default": null
     },
+    "mcp_connection_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mcp Connection Id"
+    },
     "plugin_id": {
       "anyOf": [
         {

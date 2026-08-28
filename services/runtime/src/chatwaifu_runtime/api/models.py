@@ -2,6 +2,7 @@
 
 from typing import Literal
 
+from chatwaifu_protocol.base import JsonObject
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -164,6 +165,43 @@ class SkillConfirmationDecisionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: Literal["allow_once", "allow_session", "allow_always", "deny"]
+
+
+class McpConnectionConfigurationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=128)
+    transport: Literal["stdio", "streamable_http", "sse"]
+    command: list[str] = Field(default_factory=list, max_length=32)
+    url: str | None = Field(default=None, min_length=1, max_length=4096)
+    allow_remote: bool = False
+    enabled: bool = True
+    timeout_seconds: float = Field(default=30, gt=0, le=600)
+    trust_level: Literal["trusted", "untrusted"] = "untrusted"
+    sandbox_mode: Literal["required", "preferred", "disabled"] | None = None
+    network_policy: Literal["deny", "loopback", "allow"] | None = None
+    bearer_token: str | None = Field(default=None, min_length=1, max_length=16_384)
+    clear_bearer_token: bool = False
+
+
+class McpResourceReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uri: str = Field(min_length=1, max_length=4096)
+
+
+class McpPromptGetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=256)
+    arguments: dict[str, str] = Field(default_factory=dict)
+
+
+class McpToolCallRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=256)
+    arguments: JsonObject = Field(default_factory=dict)
 
 
 class MemoryProposalDecisionRequest(BaseModel):

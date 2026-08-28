@@ -6,7 +6,10 @@
   "description": "Example isolated stdio MCP plugin with read and confirmed write capabilities.",
   "transport": {
     "kind": "stdio",
-    "command": ["python", "server.py"]
+    "command": ["python", "server.py"],
+    "trust_level": "trusted",
+    "sandbox_mode": "disabled",
+    "network_policy": "deny"
   },
   "skills": ["chatwaifu.yaml"]
 }

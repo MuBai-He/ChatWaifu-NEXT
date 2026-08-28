@@ -1,0 +1,525 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "McpCapabilitySnapshot": {
+      "properties": {
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "discovered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Discovered At"
+        },
+        "prompts": {
+          "items": {
+            "$ref": "#/$defs/McpPromptDescriptor"
+          },
+          "title": "Prompts",
+          "type": "array"
+        },
+        "protocol_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Protocol Version"
+        },
+        "resource_templates": {
+          "items": {
+            "$ref": "#/$defs/McpResourceTemplateDescriptor"
+          },
+          "title": "Resource Templates",
+          "type": "array"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/McpResourceDescriptor"
+          },
+          "title": "Resources",
+          "type": "array"
+        },
+        "server_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Server Name"
+        },
+        "server_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Server Version"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/$defs/McpToolDescriptor"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "connection_id"
+      ],
+      "title": "McpCapabilitySnapshot",
+      "type": "object"
+    },
+    "McpPromptDescriptor": {
+      "properties": {
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "McpPromptDescriptor",
+      "type": "object"
+    },
+    "McpResourceDescriptor": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "uri": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri",
+        "name"
+      ],
+      "title": "McpResourceDescriptor",
+      "type": "object"
+    },
+    "McpResourceTemplateDescriptor": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "uri_template": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Uri Template",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri_template",
+        "name"
+      ],
+      "title": "McpResourceTemplateDescriptor",
+      "type": "object"
+    },
+    "McpToolDescriptor": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "input_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "McpToolDescriptor",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/mcp-connection-snapshot.schema.json",
+  "properties": {
+    "allow_remote": {
+      "default": false,
+      "title": "Allow Remote",
+      "type": "boolean"
+    },
+    "bearer_token_configured": {
+      "default": false,
+      "title": "Bearer Token Configured",
+      "type": "boolean"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/McpCapabilitySnapshot"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Command",
+      "type": "array"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "enabled": {
+      "default": true,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "last_error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Error"
+    },
+    "last_tested_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Tested At"
+    },
+    "name": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "network_policy": {
+      "default": "deny",
+      "enum": [
+        "deny",
+        "loopback",
+        "allow"
+      ],
+      "title": "Network Policy",
+      "type": "string"
+    },
+    "sandbox_backend": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sandbox Backend"
+    },
+    "sandbox_mode": {
+      "default": "required",
+      "enum": [
+        "required",
+        "preferred",
+        "disabled"
+      ],
+      "title": "Sandbox Mode",
+      "type": "string"
+    },
+    "status": {
+      "default": "untested",
+      "enum": [
+        "untested",
+        "ready",
+        "error",
+        "disabled"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "timeout_seconds": {
+      "default": 30,
+      "exclusiveMinimum": 0,
+      "maximum": 600,
+      "title": "Timeout Seconds",
+      "type": "number"
+    },
+    "transport": {
+      "enum": [
+        "stdio",
+        "streamable_http",
+        "sse"
+      ],
+      "title": "Transport",
+      "type": "string"
+    },
+    "trust_level": {
+      "default": "untrusted",
+      "enum": [
+        "trusted",
+        "untrusted"
+      ],
+      "title": "Trust Level",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "url": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Url"
+    }
+  },
+  "required": [
+    "connection_id",
+    "name",
+    "transport",
+    "capabilities",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "McpConnectionSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

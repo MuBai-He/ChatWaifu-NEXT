@@ -36,12 +36,119 @@ def handle(request: dict[str, Any]) -> dict[str, Any] | None:
             "id": request_id,
             "result": {
                 "protocolVersion": PROTOCOL_VERSION,
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
                 "serverInfo": {"name": "chatwaifu-local-echo", "version": "1.0.0"},
             },
         }
     if method in {"notifications/initialized", "notifications/cancelled"}:
         return None
+    if method == "tools/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "tools": [
+                    {
+                        "name": "local_echo",
+                        "description": "Return text through the MCP subprocess.",
+                        "inputSchema": {
+                            "type": "object",
+                            "required": ["text"],
+                            "properties": {"text": {"type": "string"}},
+                        },
+                        "outputSchema": {
+                            "type": "object",
+                            "required": ["echo", "spoken_summary"],
+                            "properties": {
+                                "echo": {"type": "string"},
+                                "spoken_summary": {"type": "string"},
+                            },
+                        },
+                    },
+                    {
+                        "name": "append_note",
+                        "description": "Append a local test note.",
+                        "inputSchema": {
+                            "type": "object",
+                            "required": ["text"],
+                            "properties": {"text": {"type": "string"}},
+                        },
+                    },
+                    {
+                        "name": "wait",
+                        "description": "Wait for cancellation tests.",
+                        "inputSchema": {
+                            "type": "object",
+                            "required": ["seconds"],
+                            "properties": {"seconds": {"type": "number"}},
+                        },
+                    },
+                ]
+            },
+        }
+    if method == "resources/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "resources": [
+                    {
+                        "uri": "chatwaifu://example/readme",
+                        "name": "Example readme",
+                        "mimeType": "text/plain",
+                    }
+                ]
+            },
+        }
+    if method == "resources/templates/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "resourceTemplates": [
+                    {
+                        "uriTemplate": "chatwaifu://example/{name}",
+                        "name": "Example template",
+                        "mimeType": "text/plain",
+                    }
+                ]
+            },
+        }
+    if method == "resources/read":
+        uri = str(request.get("params", {}).get("uri", ""))
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "contents": [{"uri": uri, "mimeType": "text/plain", "text": "example resource"}]
+            },
+        }
+    if method == "prompts/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "prompts": [
+                    {
+                        "name": "greet",
+                        "description": "Create a greeting.",
+                        "arguments": [{"name": "name", "required": False}],
+                    }
+                ]
+            },
+        }
+    if method == "prompts/get":
+        name = str(request.get("params", {}).get("arguments", {}).get("name", "friend"))
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "description": "Example greeting",
+                "messages": [
+                    {"role": "user", "content": {"type": "text", "text": f"Hello {name}"}}
+                ],
+            },
+        }
     if method != "tools/call":
         return _error(request_id, -32601, "Method not found")
     params = request.get("params", {})

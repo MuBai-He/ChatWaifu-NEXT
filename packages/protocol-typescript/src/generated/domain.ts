@@ -410,8 +410,69 @@ export type SessionId19 = string
 export type StartedAt = string | null
 export type GenerationState = 'created' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed'
 export type TurnId18 = string
-export type Confidence = number
+export type ConnectionId = string
+export type DiscoveredAt = string | null
+export type Arguments = JsonObject[]
+export type Description = string | null
+export type Name1 = string
+export type Title = string | null
+export type Prompts = McpPromptDescriptor[]
+export type ProtocolVersion = string | null
+export type Description1 = string | null
+export type MimeType = string | null
+export type Name2 = string
+export type Title1 = string | null
+export type UriTemplate = string
+export type ResourceTemplates = McpResourceTemplateDescriptor[]
+export type Description2 = string | null
+export type MimeType1 = string | null
+export type Name3 = string
+export type Title2 = string | null
+export type Uri = string
+export type Resources = McpResourceDescriptor[]
+export type ServerName = string | null
+export type ServerVersion = string | null
+export type Description3 = string | null
+export type Name4 = string
+export type Title3 = string | null
+export type Tools = McpToolDescriptor[]
+export type AllowRemote = boolean
+export type BearerTokenConfigured = boolean
+/**
+ * @maxItems 32
+ */
+export type Command1 = string[]
+export type ConnectionId1 = string
 export type CreatedAt = string
+export type Enabled = boolean
+export type LastError = string | null
+export type LastTestedAt = string | null
+export type Name5 = string
+export type NetworkPolicy = 'deny' | 'loopback' | 'allow'
+export type SandboxBackend = string | null
+export type SandboxMode = 'required' | 'preferred' | 'disabled'
+export type Status = 'untested' | 'ready' | 'error' | 'disabled'
+export type TimeoutSeconds = number
+export type Transport3 = 'stdio' | 'streamable_http' | 'sse'
+export type TrustLevel = 'trusted' | 'untrusted'
+export type UpdatedAt2 = string
+export type Url = string | null
+export type AllowRemote1 = boolean
+/**
+ * @maxItems 32
+ */
+export type Command2 = string[]
+export type ConnectionId2 = string
+export type Enabled1 = boolean
+export type Name6 = string
+export type NetworkPolicy1 = 'deny' | 'loopback' | 'allow'
+export type SandboxMode1 = 'required' | 'preferred' | 'disabled'
+export type TimeoutSeconds1 = number
+export type Transport4 = 'stdio' | 'streamable_http' | 'sse'
+export type TrustLevel1 = 'trusted' | 'untrusted'
+export type Url1 = string | null
+export type Confidence = number
+export type CreatedAt1 = string
 export type Importance = number
 export type MemoryKind =
   | 'core'
@@ -435,7 +496,7 @@ export type SourceEventIds = [string, ...string[]]
 export type SubjectId = string | null
 export type Supersedes = string | null
 export type Text4 = string
-export type UpdatedAt2 = string
+export type UpdatedAt3 = string
 export type ValidFrom = string | null
 export type ValidTo = string | null
 export type EntityRelevance = number
@@ -467,7 +528,7 @@ export type PrivacyLevel15 = 'public' | 'local' | 'private' | 'sensitive'
 export type SubjectId1 = string | null
 export type Text6 = string
 export type Confidence2 = number
-export type CreatedAt1 = string
+export type CreatedAt2 = string
 export type DecidedAt = string | null
 /**
  * @minItems 1
@@ -477,7 +538,7 @@ export type MemoryOperation = 'add' | 'update' | 'supersede' | 'contradict' | 'f
 export type ProposalId = string
 export type Rationale = string
 export type TargetMemoryId = string | null
-export type CreatedAt2 = string
+export type CreatedAt3 = string
 export type MemoryId2 = string
 export type SessionId20 = string
 export type SourceEventId = string
@@ -505,7 +566,7 @@ export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason4 = string | null
 export type RequestId = string
 export type Capability = string
-export type CreatedAt3 = string
+export type CreatedAt4 = string
 export type ExpiresAt = string | null
 export type GrantId = string
 export type Permission = string
@@ -521,16 +582,20 @@ export type Reason5 = string
 export type RequestId1 = string
 export type RequestedAt1 = string
 export type SideEffect = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
-export type Description = string
-export type Enabled = boolean
+export type Description4 = string
+export type Enabled2 = boolean
 export type InstallPath = string
 export type InstalledAt = string
-export type Name1 = string
+export type Name7 = string
+export type NetworkPolicy2 = 'deny' | 'loopback' | 'allow'
 export type PluginId = string
-export type UpdatedAt3 = string
+export type SandboxBackend1 = string | null
+export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
+export type TrustLevel2 = 'trusted' | 'untrusted'
+export type UpdatedAt4 = string
 export type Version = string
-export type Description1 = string
-export type Name2 = string
+export type Description5 = string
+export type Name8 = string
 export type PluginId1 = string
 export type SchemaVersion18 = '1.0'
 /**
@@ -540,18 +605,13 @@ export type SchemaVersion18 = '1.0'
 export type Skills = [string, ...string[]]
 /**
  * @minItems 1
- * @maxItems 8
+ * @maxItems 32
  */
-export type Command1 =
-  | [string]
-  | [string, string]
-  | [string, string, string]
-  | [string, string, string, string]
-  | [string, string, string, string, string]
-  | [string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string, string]
+export type Command3 = [string, ...string[]]
 export type Kind3 = 'stdio'
+export type NetworkPolicy3 = 'deny' | 'loopback' | 'allow'
+export type SandboxMode3 = 'required' | 'preferred' | 'disabled'
+export type TrustLevel3 = 'trusted' | 'untrusted'
 export type Version1 = string
 export type Budget = number
 export type ConversationTokens = number
@@ -580,27 +640,28 @@ export type ReasonCodes = string[]
 export type CharacterId3 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt4 = string
+export type CreatedAt5 = string
 export type Revision1 = number
 export type SessionId22 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
-export type UpdatedAt4 = string
+export type UpdatedAt5 = string
 export type BackgroundAllowed = boolean
 export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
-export type Description2 = string
-export type Name3 = string
+export type Description6 = string
+export type Name9 = string
 export type RequiredPermissions = string[]
 export type SideEffect1 = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
-export type TimeoutSeconds = number
+export type TimeoutSeconds2 = number
 export type Capabilities1 = SkillCapability[]
-export type Description3 = string
-export type Enabled1 = boolean
+export type Description7 = string
+export type Enabled3 = boolean
 export type Interruptible1 = boolean
-export type Name4 = string
+export type McpConnectionId = string | null
+export type Name10 = string
 export type PluginId2 = string | null
 export type SkillId1 = string
-export type Source14 = 'builtin' | 'plugin'
+export type Source14 = 'builtin' | 'plugin' | 'mcp_connection'
 export type Version2 = string
 export type Capability2 = string
 export type SkillId2 = string
@@ -609,12 +670,13 @@ export type MemoryProposalIds = string[]
 export type ProspectiveTaskIds = string[]
 export type Provenance = string[]
 export type SpokenSummary = string | null
-export type Status = string
+export type Status1 = string
 export type UiCards = JsonObject[]
 export type Capability3 = string
 export type CompletedAt1 = string | null
 export type ConfirmationRequestId = string | null
-export type CreatedAt5 = string
+export type CreatedAt6 = string
+export type McpConnectionId1 = string | null
 export type PluginId3 = string | null
 export type Progress = number | null
 export type SessionId23 = string
@@ -634,7 +696,7 @@ export type SkillRunState =
   | 'cancelling'
   | 'cancelled'
   | 'expired'
-export type UpdatedAt5 = string
+export type UpdatedAt6 = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -665,6 +727,9 @@ export interface ProtocolCatalog {
   error: StructuredError
   event: EventModel
   generation: GenerationSnapshot
+  mcp_capabilities: McpCapabilitySnapshot
+  mcp_connection: McpConnectionSnapshot
+  mcp_connection_configuration: McpConnectionConfiguration
   memory: MemoryRecord
   memory_context: MemoryContextPacket
   memory_proposal: MemoryProposal
@@ -1185,9 +1250,91 @@ export interface GenerationSnapshot {
   turn_id: TurnId18
   [k: string]: unknown
 }
+export interface McpCapabilitySnapshot {
+  connection_id: ConnectionId
+  discovered_at?: DiscoveredAt
+  prompts?: Prompts
+  protocol_version?: ProtocolVersion
+  resource_templates?: ResourceTemplates
+  resources?: Resources
+  server_name?: ServerName
+  server_version?: ServerVersion
+  tools?: Tools
+  [k: string]: unknown
+}
+export interface McpPromptDescriptor {
+  arguments?: Arguments
+  description?: Description
+  name: Name1
+  title?: Title
+  [k: string]: unknown
+}
+export interface McpResourceTemplateDescriptor {
+  description?: Description1
+  mime_type?: MimeType
+  name: Name2
+  title?: Title1
+  uri_template: UriTemplate
+  [k: string]: unknown
+}
+export interface McpResourceDescriptor {
+  description?: Description2
+  mime_type?: MimeType1
+  name: Name3
+  title?: Title2
+  uri: Uri
+  [k: string]: unknown
+}
+export interface McpToolDescriptor {
+  description?: Description3
+  input_schema?: JsonObject
+  name: Name4
+  output_schema?: JsonObject | null
+  title?: Title3
+  [k: string]: unknown
+}
+export interface McpConnectionSnapshot {
+  allow_remote?: AllowRemote
+  bearer_token_configured?: BearerTokenConfigured
+  capabilities: McpCapabilitySnapshot
+  command?: Command1
+  connection_id: ConnectionId1
+  created_at: CreatedAt
+  enabled?: Enabled
+  last_error?: LastError
+  last_tested_at?: LastTestedAt
+  name: Name5
+  network_policy?: NetworkPolicy
+  sandbox_backend?: SandboxBackend
+  sandbox_mode?: SandboxMode
+  status?: Status
+  timeout_seconds?: TimeoutSeconds
+  transport: Transport3
+  trust_level?: TrustLevel
+  updated_at: UpdatedAt2
+  url?: Url
+  [k: string]: unknown
+}
+/**
+ * Persisted MCP Host connection settings; authentication secrets are excluded.
+ */
+export interface McpConnectionConfiguration {
+  allow_remote?: AllowRemote1
+  command?: Command2
+  connection_id: ConnectionId2
+  enabled?: Enabled1
+  name: Name6
+  network_policy?: NetworkPolicy1
+  sandbox_mode?: SandboxMode1
+  timeout_seconds?: TimeoutSeconds1
+  transport: Transport4
+  trust_level?: TrustLevel1
+  url?: Url1
+  [k: string]: unknown
+}
 export interface MemoryRecord {
   confidence: Confidence
-  created_at: CreatedAt
+  created_at: CreatedAt1
   importance: Importance
   kind: MemoryKind
   memory_id: MemoryId
@@ -1201,7 +1348,7 @@ export interface MemoryRecord {
   subject_id?: SubjectId
   supersedes?: Supersedes
   text: Text4
-  updated_at: UpdatedAt2
+  updated_at: UpdatedAt3
   valid_from?: ValidFrom
   valid_to?: ValidTo
   value?:
@@ -1240,7 +1387,7 @@ export interface MemoryExcerpt {
 export interface MemoryProposal {
   candidate?: MemoryRecordDraft | null
   confidence: Confidence2
-  created_at: CreatedAt1
+  created_at: CreatedAt2
   decided_at?: DecidedAt
   evidence_event_ids: EvidenceEventIds
   operation: MemoryOperation
@@ -1272,7 +1419,7 @@ export interface MemoryRecordDraft {
   [k: string]: unknown
 }
 export interface MemorySource {
-  created_at: CreatedAt2
+  created_at: CreatedAt3
   memory_id: MemoryId2
   session_id: SessionId20
   source_event_id: SourceEventId
@@ -1317,7 +1464,7 @@ export interface PermissionDecision {
 }
 export interface PermissionGrant {
   capability: Capability
-  created_at: CreatedAt3
+  created_at: CreatedAt4
   expires_at?: ExpiresAt
   grant_id: GrantId
   permission: Permission
@@ -1340,19 +1487,23 @@ export interface PermissionRequest {
   [k: string]: unknown
 }
 export interface PluginSnapshot {
-  description: Description
-  enabled: Enabled
+  description: Description4
+  enabled: Enabled2
   install_path: InstallPath
   installed_at: InstalledAt
-  name: Name1
+  name: Name7
+  network_policy?: NetworkPolicy2
   plugin_id: PluginId
-  updated_at: UpdatedAt3
+  sandbox_backend?: SandboxBackend1
+  sandbox_mode?: SandboxMode2
+  trust_level?: TrustLevel2
+  updated_at: UpdatedAt4
   version: Version
   [k: string]: unknown
 }
 export interface PluginManifest {
-  description: Description1
-  name: Name2
+  description: Description5
+  name: Name8
   plugin_id: PluginId1
   schema_version?: SchemaVersion18
   skills: Skills
@@ -1361,8 +1512,11 @@ export interface PluginManifest {
   [k: string]: unknown
 }
 export interface PluginTransport {
-  command: Command1
+  command: Command3
   kind?: Kind3
+  network_policy?: NetworkPolicy3
+  sandbox_mode?: SandboxMode3
+  trust_level?: TrustLevel3
   [k: string]: unknown
 }
 export interface PromptBudgetReport {
@@ -1401,20 +1555,21 @@ export interface RouteDecision {
 export interface SessionSnapshot {
   character_id: CharacterId3
   conversation_state: ConversationState
-  created_at: CreatedAt4
+  created_at: CreatedAt5
   revision: Revision1
   session_id: SessionId22
   state: SessionState
-  updated_at: UpdatedAt4
+  updated_at: UpdatedAt5
   [k: string]: unknown
 }
 export interface SkillDefinition {
   background_allowed?: BackgroundAllowed
   capabilities?: Capabilities1
-  description: Description3
-  enabled?: Enabled1
+  description: Description7
+  enabled?: Enabled3
   interruptible?: Interruptible1
-  name: Name4
+  mcp_connection_id?: McpConnectionId
+  name: Name10
   plugin_id?: PluginId2
   skill_id: SkillId1
   source?: Source14
@@ -1424,13 +1579,13 @@ export interface SkillDefinition {
 export interface SkillCapability {
   adapter_tool?: AdapterTool
   confirmation_required?: ConfirmationRequired
-  description: Description2
+  description: Description6
   input_schema: JsonObject
-  name: Name3
+  name: Name9
   output_schema: JsonObject
   required_permissions?: RequiredPermissions
   side_effect?: SideEffect1
-  timeout_seconds?: TimeoutSeconds
+  timeout_seconds?: TimeoutSeconds2
   [k: string]: unknown
 }
 export interface SkillInvocation {
@@ -1454,7 +1609,7 @@ export interface SkillResult {
   prospective_task_ids?: ProspectiveTaskIds
   provenance?: Provenance
   spoken_summary?: SpokenSummary
-  status: Status
+  status: Status1
   ui_cards?: UiCards
   [k: string]: unknown
 }
@@ -1462,8 +1617,9 @@ export interface SkillRunSnapshot {
   capability: Capability3
   completed_at?: CompletedAt1
   confirmation_request_id?: ConfirmationRequestId
-  created_at: CreatedAt5
+  created_at: CreatedAt6
   error?: StructuredError | null
+  mcp_connection_id?: McpConnectionId1
   plugin_id?: PluginId3
   progress?: Progress
   result?: SkillResult | null
@@ -1473,7 +1629,7 @@ export interface SkillRunSnapshot {
   skill_version: SkillVersion
   started_at?: StartedAt1
   state: SkillRunState
-  updated_at: UpdatedAt5
+  updated_at: UpdatedAt6
   [k: string]: unknown
 }
 export interface TurnSnapshot {

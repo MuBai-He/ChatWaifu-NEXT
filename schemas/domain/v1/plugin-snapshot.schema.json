@@ -22,8 +22,49 @@
       "title": "Name",
       "type": "string"
     },
+    "network_policy": {
+      "default": "deny",
+      "enum": [
+        "deny",
+        "loopback",
+        "allow"
+      ],
+      "title": "Network Policy",
+      "type": "string"
+    },
     "plugin_id": {
       "title": "Plugin Id",
+      "type": "string"
+    },
+    "sandbox_backend": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sandbox Backend"
+    },
+    "sandbox_mode": {
+      "default": "required",
+      "enum": [
+        "required",
+        "preferred",
+        "disabled"
+      ],
+      "title": "Sandbox Mode",
+      "type": "string"
+    },
+    "trust_level": {
+      "default": "untrusted",
+      "enum": [
+        "trusted",
+        "untrusted"
+      ],
+      "title": "Trust Level",
       "type": "string"
     },
     "updated_at": {

@@ -47,6 +47,10 @@ class PluginManager:
                     "name": row["name"],
                     "description": row["description"],
                     "enabled": bool(row["enabled"]),
+                    "trust_level": row["trust_level"],
+                    "sandbox_mode": row["sandbox_mode"],
+                    "network_policy": row["network_policy"],
+                    "sandbox_backend": row["sandbox_backend"],
                     "install_path": row["install_path"],
                     "installed_at": row["installed_at"],
                     "updated_at": row["updated_at"],
@@ -95,8 +99,9 @@ class PluginManager:
                     """
                     INSERT INTO skill_plugins(
                         plugin_id, version, name, description, install_path,
-                        manifest_json, enabled, installed_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+                        manifest_json, enabled, trust_level, sandbox_mode,
+                        network_policy, installed_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
                     """,
                     (
                         manifest.plugin_id,
@@ -105,6 +110,9 @@ class PluginManager:
                         manifest.description,
                         str(destination),
                         manifest.model_dump_json(),
+                        manifest.transport.trust_level,
+                        manifest.transport.sandbox_mode,
+                        manifest.transport.network_policy,
                         now,
                         now,
                     ),
@@ -164,6 +172,10 @@ class PluginManager:
                 "name": row["name"],
                 "description": row["description"],
                 "enabled": bool(row["enabled"]),
+                "trust_level": row["trust_level"],
+                "sandbox_mode": row["sandbox_mode"],
+                "network_policy": row["network_policy"],
+                "sandbox_backend": row["sandbox_backend"],
                 "install_path": row["install_path"],
                 "installed_at": row["installed_at"],
                 "updated_at": row["updated_at"],

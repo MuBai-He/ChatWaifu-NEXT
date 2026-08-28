@@ -502,4 +502,52 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ADD COLUMN instruction TEXT NOT NULL DEFAULT '';
         """,
     ),
+    (
+        11,
+        """
+        CREATE TABLE mcp_connections (
+            connection_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            transport TEXT NOT NULL
+                CHECK(transport IN ('stdio', 'streamable_http', 'sse')),
+            command_json TEXT NOT NULL DEFAULT '[]',
+            url TEXT,
+            allow_remote INTEGER NOT NULL DEFAULT 0 CHECK(allow_remote IN (0, 1)),
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+            timeout_seconds REAL NOT NULL DEFAULT 30 CHECK(timeout_seconds > 0),
+            trust_level TEXT NOT NULL DEFAULT 'untrusted'
+                CHECK(trust_level IN ('trusted', 'untrusted')),
+            sandbox_mode TEXT NOT NULL DEFAULT 'required'
+                CHECK(sandbox_mode IN ('required', 'preferred', 'disabled')),
+            network_policy TEXT NOT NULL DEFAULT 'deny'
+                CHECK(network_policy IN ('deny', 'loopback', 'allow')),
+            bearer_token_configured INTEGER NOT NULL DEFAULT 0
+                CHECK(bearer_token_configured IN (0, 1)),
+            status TEXT NOT NULL DEFAULT 'untested'
+                CHECK(status IN ('untested', 'ready', 'error', 'disabled')),
+            capabilities_json TEXT NOT NULL DEFAULT '{}',
+            sandbox_backend TEXT,
+            last_error TEXT,
+            last_tested_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        ALTER TABLE skill_runs ADD COLUMN mcp_connection_id TEXT
+            REFERENCES mcp_connections(connection_id) ON DELETE SET NULL;
+
+        CREATE INDEX mcp_connections_enabled_name_idx
+            ON mcp_connections(enabled, name COLLATE NOCASE);
+        CREATE INDEX skill_runs_mcp_connection_idx
+            ON skill_runs(mcp_connection_id, created_at DESC);
+
+        ALTER TABLE skill_plugins ADD COLUMN trust_level TEXT NOT NULL DEFAULT 'untrusted'
+            CHECK(trust_level IN ('trusted', 'untrusted'));
+        ALTER TABLE skill_plugins ADD COLUMN sandbox_mode TEXT NOT NULL DEFAULT 'required'
+            CHECK(sandbox_mode IN ('required', 'preferred', 'disabled'));
+        ALTER TABLE skill_plugins ADD COLUMN network_policy TEXT NOT NULL DEFAULT 'deny'
+            CHECK(network_policy IN ('deny', 'loopback', 'allow'));
+        ALTER TABLE skill_plugins ADD COLUMN sandbox_backend TEXT;
+        """,
+    ),
 )

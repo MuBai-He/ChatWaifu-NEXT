@@ -28,6 +28,9 @@ from chatwaifu_protocol.models import ModelManifest, RouteDecision
 from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
 from chatwaifu_protocol.skills import (
+    McpCapabilitySnapshot,
+    McpConnectionConfiguration,
+    McpConnectionSnapshot,
     PluginManifest,
     PluginSnapshot,
     SkillDefinition,
@@ -68,6 +71,9 @@ class ProtocolCatalog(ProtocolModel):
     permission_grant: PermissionGrant
     plugin_manifest: PluginManifest
     plugin: PluginSnapshot
+    mcp_connection_configuration: McpConnectionConfiguration
+    mcp_connection: McpConnectionSnapshot
+    mcp_capabilities: McpCapabilitySnapshot
     skill_invocation: SkillInvocation
     error: StructuredError
 
@@ -86,6 +92,9 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "memory-proposal": MemoryProposal,
     "memory-record": MemoryRecord,
     "memory-source": MemorySource,
+    "mcp-capability-snapshot": McpCapabilitySnapshot,
+    "mcp-connection-configuration": McpConnectionConfiguration,
+    "mcp-connection-snapshot": McpConnectionSnapshot,
     "model-manifest": ModelManifest,
     "permission-decision": PermissionDecision,
     "permission-grant": PermissionGrant,

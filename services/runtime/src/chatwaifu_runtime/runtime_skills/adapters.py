@@ -1,27 +1,20 @@
-"""Builtin and isolated MCP stdio Runtime Skill adapters."""
+"""Builtin and official-SDK MCP Runtime Skill adapters."""
 
 from __future__ import annotations
 
 import asyncio
-import json
-import os
-import signal
-import sys
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import cast
 
 from chatwaifu_protocol.base import JsonObject
-from chatwaifu_protocol.skills import PluginManifest
+from chatwaifu_protocol.skills import McpConnectionConfiguration, PluginManifest
+from mcp.types import CallToolResult
 
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.transports import McpClientTransport, SandboxLauncher
 
 BuiltinHandler = Callable[[JsonObject], Awaitable[JsonObject]]
-MCP_PROTOCOL_VERSION = "2025-11-25"
-MAX_RPC_LINE_BYTES = 1024 * 1024
-KillProcessGroup = Callable[[int, int], None]
-_kill_process_group = cast(KillProcessGroup | None, getattr(os, "killpg", None))
-_force_termination_signal = cast(int, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
 class BuiltinAdapter:
@@ -41,7 +34,10 @@ class BuiltinAdapter:
 
 
 class McpStdioAdapter:
-    """One isolated child process per invocation; no process state crosses runs."""
+    """Invoke installed stdio plugins through the official MCP client SDK."""
+
+    def __init__(self, sandbox_launcher: SandboxLauncher | None = None) -> None:
+        self._transport = McpClientTransport(sandbox_launcher)
 
     async def invoke(
         self,
@@ -52,23 +48,16 @@ class McpStdioAdapter:
         arguments: JsonObject,
         timeout_seconds: float,
     ) -> JsonObject:
-        command = _resolve_command(plugin, plugin_root)
-        environment = _clean_environment(plugin.plugin_id)
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            cwd=plugin_root,
-            env=environment,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=os.name == "posix",
-            limit=MAX_RPC_LINE_BYTES,
-        )
+        # The official stdio transport reserves a bounded process-reaping window.
+        # Keep the persisted run terminal within its advertised deadline as well.
+        operation_timeout = max(0.1, timeout_seconds - min(0.25, timeout_seconds * 0.1))
         try:
-            return await asyncio.wait_for(
-                self._run_protocol(process, tool=tool, arguments=arguments),
-                timeout=timeout_seconds,
-            )
+            async with asyncio.timeout(operation_timeout):
+                async with self._transport.plugin_session(plugin, plugin_root) as (
+                    session,
+                    _,
+                ):
+                    result = await session.call_tool(tool, arguments)
         except TimeoutError as error:
             raise SkillExecutionError(
                 "skill_timeout",
@@ -77,187 +66,83 @@ class McpStdioAdapter:
                 details={"plugin_id": plugin.plugin_id, "tool": tool},
             ) from error
         except asyncio.CancelledError:
-            await _notify_cancel(process)
             raise
-        finally:
-            await _terminate(process)
+        except SkillExecutionError:
+            raise
+        except Exception as error:
+            raise SkillExecutionError(
+                "plugin_transport_error",
+                "MCP plugin transport failed",
+                retryable=True,
+                details={"plugin_id": plugin.plugin_id, "tool": tool},
+            ) from error
+        return normalize_tool_result(result)
 
-    async def _run_protocol(
+
+class McpConnectionAdapter:
+    """Invoke discovered tools on a persisted MCP Host connection."""
+
+    def __init__(self, transport: McpClientTransport) -> None:
+        self._transport = transport
+
+    async def invoke(
         self,
-        process: asyncio.subprocess.Process,
         *,
+        config: McpConnectionConfiguration,
+        bearer_token: str | None,
+        working_root: Path,
         tool: str,
         arguments: JsonObject,
+        timeout_seconds: float,
     ) -> JsonObject:
-        await _send(
-            process,
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": MCP_PROTOCOL_VERSION,
-                    "capabilities": {},
-                    "clientInfo": {"name": "chatwaifu-runtime", "version": "0.1.0"},
-                },
-            },
-        )
-        initialized = await _response(process, 1)
-        negotiated = initialized.get("protocolVersion")
-        if negotiated != MCP_PROTOCOL_VERSION:
-            raise SkillExecutionError(
-                "mcp_version_mismatch", f"Plugin negotiated unsupported MCP version: {negotiated}"
-            )
-        await _send(process, {"jsonrpc": "2.0", "method": "notifications/initialized"})
-        await _send(
-            process,
-            {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/call",
-                "params": {"name": tool, "arguments": arguments},
-            },
-        )
-        result = await _response(process, 2)
-        if result.get("isError") is True:
-            raise SkillExecutionError("plugin_tool_failed", _content_text(result))
-        structured = result.get("structuredContent")
-        if not isinstance(structured, dict):
-            raise SkillExecutionError(
-                "invalid_plugin_output", "MCP tool response requires structuredContent"
-            )
-        return cast(JsonObject, structured)
-
-
-def _resolve_command(plugin: PluginManifest, root: Path) -> list[str]:
-    raw = plugin.transport.command
-    if not raw or raw[0] != "python":
-        raise SkillExecutionError(
-            "unsupported_plugin_command", "The local demo only permits Python stdio plugins"
-        )
-    if len(raw) < 2:
-        raise SkillExecutionError("invalid_plugin_command", "Python plugin entrypoint is missing")
-    entrypoint = (root / raw[1]).resolve()
-    if not entrypoint.is_relative_to(root.resolve()) or not entrypoint.is_file():
-        raise SkillExecutionError("unsafe_plugin_command", "Plugin entrypoint escapes install root")
-    return [sys.executable, "-X", "utf8", "-I", "-B", "-u", str(entrypoint), *raw[2:]]
-
-
-def _clean_environment(plugin_id: str) -> dict[str, str]:
-    environment = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-        "LANG": os.environ.get("LANG", "C.UTF-8"),
-        "LC_ALL": os.environ.get("LC_ALL", "C.UTF-8"),
-        "CHATWAIFU_PLUGIN_ID": plugin_id,
-    }
-    return environment
-
-
-async def _send(process: asyncio.subprocess.Process, message: dict[str, object]) -> None:
-    if process.stdin is None:
-        raise SkillExecutionError("plugin_transport_closed", "Plugin stdin is unavailable")
-    encoded = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
-    if len(encoded) > MAX_RPC_LINE_BYTES:
-        raise SkillExecutionError("plugin_request_too_large", "Plugin request exceeds 1 MiB")
-    process.stdin.write(encoded)
-    await process.stdin.drain()
-
-
-async def _response(process: asyncio.subprocess.Process, request_id: int) -> JsonObject:
-    if process.stdout is None:
-        raise SkillExecutionError("plugin_transport_closed", "Plugin stdout is unavailable")
-    for _ in range(64):
-        line = await process.stdout.readline()
-        if not line:
-            stderr = await _stderr_text(process)
-            raise SkillExecutionError(
-                "plugin_exited", f"Plugin exited before responding{': ' + stderr if stderr else ''}"
-            )
         try:
-            loaded: object = json.loads(line)
-        except json.JSONDecodeError as error:
+            async with asyncio.timeout(timeout_seconds):
+                async with self._transport.connection_session(
+                    config,
+                    bearer_token=bearer_token,
+                    working_root=working_root,
+                ) as (session, _):
+                    result = await session.call_tool(tool, arguments)
+        except TimeoutError as error:
             raise SkillExecutionError(
-                "invalid_mcp_message", "Plugin emitted invalid JSON-RPC"
+                "skill_timeout",
+                f"MCP tool exceeded {timeout_seconds:g}s timeout",
+                retryable=True,
+                details={"connection_id": str(config.connection_id), "tool": tool},
             ) from error
-        if not isinstance(loaded, dict):
-            raise SkillExecutionError("invalid_mcp_message", "Plugin emitted invalid JSON-RPC")
-        message = cast(dict[str, object], loaded)
-        if message.get("id") != request_id:
-            continue
-        rpc_error = message.get("error")
-        if isinstance(rpc_error, dict):
-            typed_error = cast(dict[str, object], rpc_error)
+        except asyncio.CancelledError:
+            raise
+        except SkillExecutionError:
+            raise
+        except Exception as error:
             raise SkillExecutionError(
-                "plugin_rpc_error",
-                str(typed_error.get("message", "Plugin JSON-RPC request failed")),
-                details={"rpc_code": typed_error.get("code", -32603)},
-            )
-        result = message.get("result")
-        if not isinstance(result, dict):
-            raise SkillExecutionError(
-                "invalid_mcp_message", "Plugin response result must be an object"
-            )
-        return cast(JsonObject, result)
-    raise SkillExecutionError("mcp_message_limit", "Plugin emitted too many unrelated messages")
+                "mcp_transport_error",
+                "MCP connection failed while invoking a tool",
+                retryable=True,
+                details={"connection_id": str(config.connection_id), "tool": tool},
+            ) from error
+        return normalize_tool_result(result)
 
 
-async def _notify_cancel(process: asyncio.subprocess.Process) -> None:
-    try:
-        await _send(
-            process,
-            {
-                "jsonrpc": "2.0",
-                "method": "notifications/cancelled",
-                "params": {"requestId": 2, "reason": "runtime_cancelled"},
-            },
+def normalize_tool_result(result: object) -> JsonObject:
+    if not isinstance(result, CallToolResult):
+        raise SkillExecutionError(
+            "invalid_mcp_result", "MCP server returned an invalid tool result"
         )
-    except (BrokenPipeError, ConnectionError, SkillExecutionError):
-        return
+    if result.is_error:
+        raise SkillExecutionError("mcp_tool_failed", _content_text(result))
+    structured_content = cast(object, result.structured_content)
+    if isinstance(structured_content, dict):
+        typed_content = cast(dict[str, object], structured_content)
+        return cast(JsonObject, typed_content)
+    serialized = result.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return cast(JsonObject, {"content": serialized.get("content", [])})
 
 
-async def _terminate(process: asyncio.subprocess.Process) -> None:
-    if process.returncode is not None:
-        return
-    try:
-        _signal_process(process, int(signal.SIGTERM))
-    except ProcessLookupError:
-        return
-    try:
-        await asyncio.wait_for(process.wait(), timeout=1.0)
-    except TimeoutError:
-        try:
-            _signal_process(process, _force_termination_signal, force=True)
-        except ProcessLookupError:
-            return
-        await process.wait()
-
-
-def _signal_process(
-    process: asyncio.subprocess.Process, requested_signal: int, *, force: bool = False
-) -> None:
-    if os.name == "posix" and _kill_process_group is not None:
-        _kill_process_group(process.pid, requested_signal)
-    elif force:
-        process.kill()
-    else:
-        process.terminate()
-
-
-async def _stderr_text(process: asyncio.subprocess.Process) -> str:
-    if process.stderr is None:
-        return ""
-    try:
-        data = await asyncio.wait_for(process.stderr.read(4096), timeout=0.1)
-    except TimeoutError:
-        return ""
-    return data.decode(errors="replace").strip()
-
-
-def _content_text(result: JsonObject) -> str:
-    content = result.get("content")
-    if isinstance(content, list):
-        texts = [item.get("text") for item in content if isinstance(item, dict)]
-        rendered = " ".join(value for value in texts if isinstance(value, str))
-        if rendered:
-            return rendered
-    return "Plugin tool reported an error"
+def _content_text(result: CallToolResult) -> str:
+    texts: list[str] = []
+    for item in result.content:
+        text = getattr(item, "text", None)
+        if isinstance(text, str):
+            texts.append(text)
+    return " ".join(texts) or "MCP tool reported an error"

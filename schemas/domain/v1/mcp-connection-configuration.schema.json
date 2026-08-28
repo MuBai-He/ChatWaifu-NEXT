@@ -1,0 +1,102 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/mcp-connection-configuration.schema.json",
+  "description": "Persisted MCP Host connection settings; authentication secrets are excluded.",
+  "properties": {
+    "allow_remote": {
+      "default": false,
+      "title": "Allow Remote",
+      "type": "boolean"
+    },
+    "command": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Command",
+      "type": "array"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "enabled": {
+      "default": true,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "name": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "network_policy": {
+      "default": "deny",
+      "enum": [
+        "deny",
+        "loopback",
+        "allow"
+      ],
+      "title": "Network Policy",
+      "type": "string"
+    },
+    "sandbox_mode": {
+      "default": "required",
+      "enum": [
+        "required",
+        "preferred",
+        "disabled"
+      ],
+      "title": "Sandbox Mode",
+      "type": "string"
+    },
+    "timeout_seconds": {
+      "default": 30,
+      "exclusiveMinimum": 0,
+      "maximum": 600,
+      "title": "Timeout Seconds",
+      "type": "number"
+    },
+    "transport": {
+      "enum": [
+        "stdio",
+        "streamable_http",
+        "sse"
+      ],
+      "title": "Transport",
+      "type": "string"
+    },
+    "trust_level": {
+      "default": "untrusted",
+      "enum": [
+        "trusted",
+        "untrusted"
+      ],
+      "title": "Trust Level",
+      "type": "string"
+    },
+    "url": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Url"
+    }
+  },
+  "required": [
+    "connection_id",
+    "name",
+    "transport"
+  ],
+  "title": "McpConnectionConfiguration",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -6,10 +6,10 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from chatwaifu_protocol.commands import PlaybackAckCommand
-from chatwaifu_protocol.skills import SkillInvocation
+from chatwaifu_protocol.skills import McpConnectionConfiguration, SkillInvocation
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 
@@ -22,6 +22,10 @@ from chatwaifu_runtime.api.models import (
     ExamplePluginRequest,
     InstallPluginRequest,
     InterruptRequest,
+    McpConnectionConfigurationRequest,
+    McpPromptGetRequest,
+    McpResourceReadRequest,
+    McpToolCallRequest,
     MemoryCorrectionRequest,
     MemoryPinnedRequest,
     MemoryProposalDecisionRequest,
@@ -780,6 +784,153 @@ async def uninstall_plugin(request: Request, plugin_id: str) -> dict[str, object
     return {"plugin_id": plugin_id, "removed": True, "recoverable_from": str(trash_path)}
 
 
+@router.get("/mcp/connections")
+async def read_mcp_connections(request: Request) -> dict[str, object]:
+    items = await _container(request).runtime_skills.list_mcp_connections()
+    return {
+        "schema_version": "1.0",
+        "items": [item.model_dump(mode="json") for item in items],
+        "count": len(items),
+    }
+
+
+@router.post("/mcp/connections", status_code=status.HTTP_201_CREATED)
+async def create_mcp_connection(
+    request: Request, body: McpConnectionConfigurationRequest
+) -> dict[str, object]:
+    connection_id = uuid4()
+    try:
+        config = _mcp_configuration(connection_id, body)
+        snapshot = await _container(request).runtime_skills.create_mcp_connection(
+            config,
+            bearer_token=body.bearer_token,
+        )
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/mcp/connections/{connection_id}")
+async def read_mcp_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.get_mcp_connection(connection_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.put("/mcp/connections/{connection_id}")
+async def update_mcp_connection(
+    request: Request,
+    connection_id: UUID,
+    body: McpConnectionConfigurationRequest,
+) -> dict[str, object]:
+    try:
+        config = _mcp_configuration(connection_id, body)
+        snapshot = await _container(request).runtime_skills.update_mcp_connection(
+            config,
+            bearer_token=body.bearer_token,
+            clear_bearer_token=body.clear_bearer_token,
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.delete("/mcp/connections/{connection_id}")
+async def delete_mcp_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        await _container(request).runtime_skills.delete_mcp_connection(connection_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {"connection_id": str(connection_id), "removed": True}
+
+
+@router.post("/mcp/connections/{connection_id}/test")
+async def test_mcp_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.test_mcp_connection(connection_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/mcp/connections/{connection_id}/capabilities")
+async def read_mcp_capabilities(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).runtime_skills.get_mcp_connection(connection_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    return snapshot.capabilities.model_dump(mode="json")
+
+
+@router.post("/mcp/connections/{connection_id}/resources/read")
+async def read_mcp_resource(
+    request: Request,
+    connection_id: UUID,
+    body: McpResourceReadRequest,
+) -> dict[str, object]:
+    try:
+        result = await _container(request).runtime_skills.read_mcp_resource(connection_id, body.uri)
+        return cast(dict[str, object], result)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.post("/mcp/connections/{connection_id}/prompts/get")
+async def get_mcp_prompt(
+    request: Request,
+    connection_id: UUID,
+    body: McpPromptGetRequest,
+) -> dict[str, object]:
+    try:
+        result = await _container(request).runtime_skills.get_mcp_prompt(
+            connection_id, body.name, body.arguments
+        )
+        return cast(dict[str, object], result)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="MCP connection not found") from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.post(
+    "/sessions/{session_id}/mcp/connections/{connection_id}/tools/call",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def call_mcp_tool(
+    request: Request,
+    session_id: UUID,
+    connection_id: UUID,
+    body: McpToolCallRequest,
+) -> dict[str, object]:
+    container = _container(request)
+    if await container.sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    try:
+        snapshot = await container.runtime_skills.invoke(
+            session_id,
+            SkillInvocation(
+                skill_id=f"mcp.{connection_id.hex}",
+                capability=body.name,
+                arguments=body.arguments,
+            ),
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return snapshot.model_dump(mode="json")
+
+
 @router.post("/sessions/{session_id}/skills/runtime.status")
 async def run_runtime_status_skill(request: Request, session_id: UUID) -> dict[str, object]:
     session = await _container(request).sessions.get_session(session_id)
@@ -787,6 +938,32 @@ async def run_runtime_status_skill(request: Request, session_id: UUID) -> dict[s
         raise HTTPException(status_code=404, detail="session not found")
     result = await _container(request).runtime_skills.run_status(session_id)
     return result.model_dump(mode="json")
+
+
+def _mcp_configuration(
+    connection_id: UUID,
+    body: McpConnectionConfigurationRequest,
+) -> McpConnectionConfiguration:
+    if body.bearer_token and body.clear_bearer_token:
+        raise ValueError("bearer_token and clear_bearer_token are mutually exclusive")
+    network_transport = body.transport != "stdio"
+    sandbox_mode = body.sandbox_mode or ("disabled" if network_transport else "required")
+    network_policy = body.network_policy or (
+        ("allow" if body.allow_remote else "loopback") if network_transport else "deny"
+    )
+    return McpConnectionConfiguration(
+        connection_id=connection_id,
+        name=body.name,
+        transport=body.transport,
+        command=body.command,
+        url=body.url,
+        allow_remote=body.allow_remote,
+        enabled=body.enabled,
+        timeout_seconds=body.timeout_seconds,
+        trust_level=body.trust_level,
+        sandbox_mode=sandbox_mode,
+        network_policy=network_policy,
+    )
 
 
 @router.websocket("/events")

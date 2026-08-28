@@ -53,7 +53,7 @@
         "adapter_tool": {
           "anyOf": [
             {
-              "maxLength": 128,
+              "maxLength": 256,
               "minLength": 1,
               "type": "string"
             },
@@ -139,6 +139,19 @@
       "title": "Interruptible",
       "type": "boolean"
     },
+    "mcp_connection_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mcp Connection Id"
+    },
     "name": {
       "title": "Name",
       "type": "string"
@@ -163,7 +176,8 @@
       "default": "builtin",
       "enum": [
         "builtin",
-        "plugin"
+        "plugin",
+        "mcp_connection"
       ],
       "title": "Source",
       "type": "string"

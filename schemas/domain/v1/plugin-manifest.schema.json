@@ -6,7 +6,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 8,
+          "maxItems": 32,
           "minItems": 1,
           "title": "Command",
           "type": "array"
@@ -15,6 +15,35 @@
           "const": "stdio",
           "default": "stdio",
           "title": "Kind",
+          "type": "string"
+        },
+        "network_policy": {
+          "default": "deny",
+          "enum": [
+            "deny",
+            "loopback",
+            "allow"
+          ],
+          "title": "Network Policy",
+          "type": "string"
+        },
+        "sandbox_mode": {
+          "default": "required",
+          "enum": [
+            "required",
+            "preferred",
+            "disabled"
+          ],
+          "title": "Sandbox Mode",
+          "type": "string"
+        },
+        "trust_level": {
+          "default": "untrusted",
+          "enum": [
+            "trusted",
+            "untrusted"
+          ],
+          "title": "Trust Level",
           "type": "string"
         }
       },
