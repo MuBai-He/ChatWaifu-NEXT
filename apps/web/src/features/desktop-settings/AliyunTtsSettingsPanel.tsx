@@ -50,20 +50,25 @@ const COSYVOICE_INSTRUCTION_MODELS = new Set([
 ]);
 
 export function AliyunTtsSettingsPanel({
+  providerId,
+  onProviderIdChange,
   onSaved,
 }: {
+  providerId: AliyunCloudTtsProviderId;
+  onProviderIdChange: (
+    providerId: AliyunCloudTtsProviderId,
+  ) => Promise<void> | void;
   onSaved: () => Promise<void>;
 }) {
+  const provider = PROVIDERS.find((item) => item.providerId === providerId);
+  if (!provider) return null;
   return (
-    <>
-      {PROVIDERS.map((provider) => (
-        <AliyunTtsSettingsCard
-          key={provider.providerId}
-          {...provider}
-          onSaved={onSaved}
-        />
-      ))}
-    </>
+    <AliyunTtsSettingsCard
+      key={provider.providerId}
+      {...provider}
+      onProviderIdChange={onProviderIdChange}
+      onSaved={onSaved}
+    />
   );
 }
 
@@ -73,8 +78,14 @@ function AliyunTtsSettingsCard({
   description,
   models,
   emotionControl,
+  onProviderIdChange,
   onSaved,
-}: (typeof PROVIDERS)[number] & { onSaved: () => Promise<void> }) {
+}: (typeof PROVIDERS)[number] & {
+  onProviderIdChange: (
+    providerId: AliyunCloudTtsProviderId,
+  ) => Promise<void> | void;
+  onSaved: () => Promise<void>;
+}) {
   const [configuration, setConfiguration] =
     useState<AliyunCloudTtsConfiguration | null>(null);
   const [apiKey, setApiKey] = useState("");
@@ -155,11 +166,24 @@ function AliyunTtsSettingsCard({
     }
   };
 
-  if (!configuration)
+  if (!configuration || configuration.provider_id !== providerId)
     return (
-      <p className="desktop-settings-empty">
-        {message ?? `正在读取${title}配置…`}
-      </p>
+      <section className="aliyun-tts-panel" aria-label="阿里云百炼 API 设置">
+        <header>
+          <div>
+            <h2>阿里云百炼</h2>
+            <p>选择具体实时语音 API，再填写对应模型和克隆音色。</p>
+          </div>
+          <AliyunApiSelector
+            providerId={providerId}
+            disabled={Boolean(busy)}
+            onChange={onProviderIdChange}
+          />
+        </header>
+        <p className="desktop-settings-empty">
+          {message ?? `正在读取${title}配置…`}
+        </p>
+      </section>
     );
 
   const cosyVoice = configuration.provider_id === "aliyun_cosyvoice_realtime";
@@ -182,12 +206,17 @@ function AliyunTtsSettingsCard({
   };
 
   return (
-    <section className="aliyun-tts-panel" aria-label={title}>
+    <section className="aliyun-tts-panel" aria-label="阿里云百炼 API 设置">
       <header>
         <div>
-          <h2>阿里云百炼 · {title}</h2>
-          <p>{description} 仅发送当前待朗读句段。</p>
+          <h2>阿里云百炼</h2>
+          <p>{title}：{description} 仅发送当前待朗读句段。</p>
         </div>
+        <AliyunApiSelector
+          providerId={providerId}
+          disabled={Boolean(busy)}
+          onChange={onProviderIdChange}
+        />
         <label className="desktop-settings-switch">
           <input
             type="checkbox"
@@ -366,6 +395,38 @@ function AliyunTtsSettingsCard({
         generation 的迟到音频会被丢弃。
       </p>
     </section>
+  );
+}
+
+function AliyunApiSelector({
+  providerId,
+  disabled,
+  onChange,
+}: {
+  providerId: AliyunCloudTtsProviderId;
+  disabled: boolean;
+  onChange: (providerId: AliyunCloudTtsProviderId) => Promise<void> | void;
+}) {
+  return (
+    <label className="aliyun-tts-api-selector">
+      <span>百炼语音 API</span>
+      <select
+        aria-label="百炼语音 API"
+        value={providerId}
+        disabled={disabled}
+        onChange={(event) =>
+          void onChange(event.currentTarget.value as AliyunCloudTtsProviderId)
+        }
+      >
+        {PROVIDERS.map((provider) => (
+          <option value={provider.providerId} key={provider.providerId}>
+            {provider.providerId === "aliyun_cosyvoice_realtime"
+              ? "CosyVoice（情绪）"
+              : "Qwen3-TTS VC"}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

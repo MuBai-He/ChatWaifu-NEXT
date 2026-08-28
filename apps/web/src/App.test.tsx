@@ -125,6 +125,9 @@ const session = {
   resetAll: vi.fn().mockResolvedValue(true),
   refreshMemories: vi.fn().mockResolvedValue(undefined),
 };
+const defaultTtsProviders = session.ttsProviders.map((provider) => ({
+  ...provider,
+}));
 
 vi.mock("./features/chat/useChatSession", () => ({
   useChatSession: () => session,
@@ -145,6 +148,10 @@ describe("ChatWaifu usable demo", () => {
     session.avatarWarning = null;
     session.messages = [];
     session.subtitlePlayback = null;
+    session.ttsProviders = defaultTtsProviders.map((provider) => ({
+      ...provider,
+    }));
+    session.ttsProviderId = "qwen3_tts_mlx";
     session.hitTest.mockReturnValue([
       {
         interaction_id: "00000000-0000-4000-8000-000000000099",
@@ -591,6 +598,38 @@ describe("ChatWaifu usable demo", () => {
 
     fireEvent.change(tts, { target: { value: "gpt_sovits" } });
     expect(session.changeTtsProvider).toHaveBeenCalledWith("gpt_sovits");
+  });
+
+  it("shows Bailian once and resolves it to the preferred concrete API", () => {
+    session.ttsProviders.push(
+      {
+        ...defaultTtsProviders[0],
+        provider_id: "aliyun_qwen_realtime",
+        display_name: "阿里云百炼 · Qwen3-TTS VC",
+        model: "qwen3-tts-vc-realtime-2026-01-15",
+        local_only: false,
+        selected: false,
+      },
+      {
+        ...defaultTtsProviders[0],
+        provider_id: "aliyun_cosyvoice_realtime",
+        display_name: "阿里云百炼 · CosyVoice",
+        model: "cosyvoice-v3.5-plus",
+        local_only: false,
+        selected: false,
+      },
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
+
+    const tts = screen.getByRole("combobox", { name: "选择语音模型" });
+    expect(
+      screen.getAllByRole("option", { name: "阿里云百炼" }),
+    ).toHaveLength(1);
+    fireEvent.change(tts, { target: { value: "aliyun_bailian" } });
+    expect(session.changeTtsProvider).toHaveBeenCalledWith(
+      "aliyun_cosyvoice_realtime",
+    );
   });
 
   it("only transmits while the push-to-talk control is held", () => {

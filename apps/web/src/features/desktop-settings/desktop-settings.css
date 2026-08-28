@@ -348,6 +348,30 @@
   justify-content: space-between;
 }
 
+.aliyun-tts-api-selector {
+  display: grid;
+  min-width: 190px;
+  gap: 5px;
+  color: var(--settings-muted);
+  font-size: 0.6rem;
+}
+
+.aliyun-tts-api-selector select {
+  min-width: 0;
+  padding: 8px 28px 8px 10px;
+  border: 1px solid rgb(119 77 111 / 18%);
+  border-radius: 9px;
+  outline: none;
+  color: var(--settings-text);
+  background: rgb(255 255 255 / 82%);
+  font-size: 0.65rem;
+}
+
+.aliyun-tts-api-selector select:focus {
+  border-color: rgb(158 91 139 / 45%);
+  box-shadow: 0 0 0 3px rgb(158 91 139 / 8%);
+}
+
 .aliyun-tts-panel h2 {
   margin: 0;
   font-size: 0.86rem;
@@ -467,6 +491,15 @@
 }
 
 @media (max-width: 760px) {
+  .aliyun-tts-panel > header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .aliyun-tts-api-selector {
+    width: calc(100% - 52px);
+  }
+
   .aliyun-tts-fields {
     grid-template-columns: 1fr;
   }

@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { MemoryControlCenter } from "./MemoryControlCenter";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { SkillsControlCenter } from "./SkillsControlCenter";
+import {
+  buildTtsProviderChoices,
+  isAliyunCloudTtsProviderId,
+  providerSelectorValue,
+  readAliyunTtsPreference,
+  resolveProviderSelection,
+  saveAliyunTtsPreference,
+} from "./ttsProviderPresentation";
 import { useChatSession } from "./useChatSession";
 
 type ChatDemoPageProps = {
@@ -50,6 +58,23 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarFraming, setAvatarFraming] = useState<"bust" | "full">("bust");
+  const bailianPreference = readAliyunTtsPreference();
+  const ttsProviderChoices = buildTtsProviderChoices(
+    ttsProviders,
+    ttsProviderId,
+    bailianPreference,
+  );
+  const selectTtsProvider = (selectionId: string) => {
+    const providerId = resolveProviderSelection(
+      selectionId,
+      ttsProviders,
+      ttsProviderId,
+      bailianPreference,
+    );
+    if (isAliyunCloudTtsProviderId(providerId))
+      saveAliyunTtsPreference(providerId);
+    void changeTtsProvider(providerId);
+  };
   const historyRef = useRef<HTMLDivElement>(null);
   const canSend = Boolean(
     sessionId && connection === "connected" && !resetting,
@@ -246,22 +271,27 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
             <label>
               <span>角色声音</span>
               <select
-                value={ttsProviderId}
-                onChange={(event) => void changeTtsProvider(event.target.value)}
+                value={providerSelectorValue(ttsProviderId)}
+                onChange={(event) => selectTtsProvider(event.target.value)}
                 disabled={!sessionId || ttsSwitching}
                 aria-label="选择语音模型"
               >
-                {ttsProviders.length === 0 ? (
-                  <option value={ttsProviderId}>{ttsProviderId}</option>
+                {ttsProviderChoices.length === 0 ? (
+                  <option value={providerSelectorValue(ttsProviderId)}>
+                    {providerSelectorValue(ttsProviderId) ===
+                    "aliyun_bailian"
+                      ? "阿里云百炼"
+                      : ttsProviderId}
+                  </option>
                 ) : (
-                  ttsProviders.map((provider) => (
+                  ttsProviderChoices.map((provider) => (
                     <option
-                      value={provider.provider_id}
-                      key={provider.provider_id}
+                      value={provider.id}
+                      key={provider.id}
                       disabled={provider.status === "unavailable"}
                     >
-                      {provider.display_name}
-                      {provider.model_loaded ? " · 已加载" : ""}
+                      {provider.displayName}
+                      {provider.modelLoaded ? " · 已加载" : ""}
                       {provider.status === "unavailable" ? " · 离线" : ""}
                     </option>
                   ))

@@ -3,6 +3,16 @@ import { MemoryControlCenter } from "../chat/MemoryControlCenter";
 import { ModelSettingsPanel } from "../chat/ModelSettingsPanel";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import { useChatSession } from "../chat/useChatSession";
+import {
+  buildTtsProviderChoices,
+  isAliyunCloudTtsProviderId,
+  providerSelectorValue,
+  readAliyunTtsPreference,
+  resolveAliyunCloudProviderId,
+  resolveProviderSelection,
+  saveAliyunTtsPreference,
+} from "../chat/ttsProviderPresentation";
+import type { AliyunCloudTtsProviderId } from "../chat/types";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
 import { AliyunTtsSettingsPanel } from "./AliyunTtsSettingsPanel";
@@ -297,9 +307,44 @@ function VoiceSettings({
   onChange,
   onConfigured,
 }: VoiceSettingsProps) {
-  const selected = providers.find(
-    (provider) => provider.provider_id === providerId,
+  const [bailianProviderId, setBailianProviderId] =
+    useState<AliyunCloudTtsProviderId>(() =>
+      resolveAliyunCloudProviderId(
+        providers,
+        providerId,
+        readAliyunTtsPreference(),
+      ),
+    );
+  const activeBailianProviderId = isAliyunCloudTtsProviderId(providerId)
+    ? providerId
+    : bailianProviderId;
+
+  const choices = buildTtsProviderChoices(
+    providers,
+    providerId,
+    activeBailianProviderId,
   );
+  const selected = choices.find(
+    (provider) => provider.id === providerSelectorValue(providerId),
+  );
+  const changeProvider = async (selectionId: string) => {
+    const nextProviderId = resolveProviderSelection(
+      selectionId,
+      providers,
+      providerId,
+      activeBailianProviderId,
+    );
+    if (isAliyunCloudTtsProviderId(nextProviderId)) {
+      setBailianProviderId(nextProviderId);
+      saveAliyunTtsPreference(nextProviderId);
+    }
+    await onChange(nextProviderId);
+  };
+  const changeBailianApi = async (next: AliyunCloudTtsProviderId) => {
+    setBailianProviderId(next);
+    saveAliyunTtsPreference(next);
+    if (isAliyunCloudTtsProviderId(providerId)) await onChange(next);
+  };
   return (
     <>
       <section className="desktop-settings-voice-card">
@@ -315,46 +360,53 @@ function VoiceSettings({
         <label className="desktop-settings-select-row">
           <div>
             <strong>当前语音</strong>
-            <small>{selected?.model ?? "正在读取 Runtime 配置"}</small>
+            <small>
+              {selected
+                ? `${selected.engineLabel ? `${selected.engineLabel} · ` : ""}${selected.model}`
+                : "正在读取 Runtime 配置"}
+            </small>
           </div>
           <select
-            value={providerId}
+            value={providerSelectorValue(providerId)}
             disabled={!sessionReady || switching}
-            onChange={(event) => void onChange(event.target.value)}
+            onChange={(event) => void changeProvider(event.target.value)}
             aria-label="选择桌宠语音"
           >
-            {providers.length ? (
-              providers.map((provider) => (
+            {choices.length ? (
+              choices.map((provider) => (
                 <option
-                  value={provider.provider_id}
-                  key={provider.provider_id}
+                  value={provider.id}
+                  key={provider.id}
                   disabled={provider.status === "unavailable"}
                 >
-                  {provider.display_name}
+                  {provider.displayName}
                 </option>
               ))
             ) : (
-              <option value={providerId}>正在读取…</option>
+              <option value={providerSelectorValue(providerId)}>
+                正在读取…
+              </option>
             )}
           </select>
         </label>
       </section>
 
       <SettingsGroup title="可用语音" description="模型只在需要时加载">
-        {providers.length ? (
-          providers.map((provider) => (
+        {choices.length ? (
+          choices.map((provider) => (
             <div
               className="desktop-settings-provider"
-              key={provider.provider_id}
+              key={provider.id}
             >
               <i className={provider.status} />
               <div>
-                <strong>{provider.display_name}</strong>
+                <strong>{provider.displayName}</strong>
                 <small>
+                  {provider.engineLabel ? `${provider.engineLabel} · ` : ""}
                   {provider.model} · {provider.languages.join(" / ")}
                 </small>
               </div>
-              <span>{provider.model_loaded ? "已加载" : provider.status}</span>
+              <span>{provider.modelLoaded ? "已加载" : provider.status}</span>
             </div>
           ))
         ) : (
@@ -362,7 +414,11 @@ function VoiceSettings({
         )}
       </SettingsGroup>
 
-      <AliyunTtsSettingsPanel onSaved={onConfigured} />
+      <AliyunTtsSettingsPanel
+        providerId={activeBailianProviderId}
+        onProviderIdChange={changeBailianApi}
+        onSaved={onConfigured}
+      />
 
       <p className="desktop-settings-info">
         麦克风采集和声音播放只由桌宠窗口负责，设置页不会建立第二条媒体链路，因此不会产生重叠语音。
