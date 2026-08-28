@@ -223,6 +223,7 @@ phases:
       - Provider-neutral TTS streaming now carries ordered PCM16 fragments with bounded ephemeral fan-out, cancellation, provisional playback ACK duration, and complete WAV fallback
       - Aliyun Bailian Qwen VC Realtime is configurable from the local voice settings page with write-only mode-0600 API-key storage and regional voice-to-target-model preflight
       - Aliyun Bailian CosyVoice Realtime is independently selectable and maps Character Kernel voice style to supported provider instructions without changing the Qwen VC route
+      - Web and desktop settings expose one Aliyun Bailian provider entry, with the concrete Qwen VC or CosyVoice adapter selected inside the shared API panel and resolved before the Runtime session command
       - The configured cosyvoice-v3.5-plus cloned voice passed regional target-model preflight, a real six-fragment PCM conversation stream, generation completion, and 206 WAV fallback retrieval
       - The supplied Nene voice ID is bound to batch qwen3-tts-vc-2026-01-22 and is rejected by the realtime adapter until a voice is created for qwen3-tts-vc-realtime-2026-01-15
   - id: 9

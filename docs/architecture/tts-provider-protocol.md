@@ -22,6 +22,11 @@ selection, generation identity, synthesis destinations, cancellation propagation
 unload, audio asset publication, and stale-output rejection. A worker owns exactly one heavy engine,
 its model/reference paths, native caches, and SDK-specific cleanup.
 
+The Web presentation groups both Bailian adapters under one `阿里云百炼` entry. Its API setting
+selects Qwen VC or CosyVoice and resolves that choice back to the concrete Runtime provider ID before
+issuing the session command. This is presentation-only aggregation: capability discovery, model/voice
+validation, cancellation, streaming, and diagnostics remain isolated per adapter.
+
 The normalized request is `TtsSynthesisRequest`; the normalized result is `TtsSynthesisResult`.
 `TtsWorkerCapabilities` is descriptive and must not be inferred from a display name. Provider
 adapters validate every returned identity before writing a WAV into Runtime-owned storage. Cloud
