@@ -148,6 +148,7 @@ phases:
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
       - Windows x64 development launcher keeps Vite hot reload and Rust logs attached while preserving the x86_64-pc-windows-msvc target on Windows-on-ARM
       - Windows development without local model assets degrades to a healthy dynamic-port Demo Runtime with fake TTS and disabled STT; cloud TTS remains discoverable and Ctrl+C leaves no Runtime listener
+      - Windows parent-watchdog liveness checks use a non-signaling process handle instead of POSIX kill-zero semantics; a real x64 development smoke remains alive through Runtime readiness and cleans host plus listeners on intentional Ctrl+C
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
