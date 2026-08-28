@@ -146,6 +146,8 @@ phases:
       - Rust shutdown terminates and waits for the owned service child so ordinary desktop exit leaves no orphan Runtime or workers
       - The service stack watches its owning Rust PID and self-cleans after abrupt development hot reloads that bypass normal Tauri exit events
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
+      - Windows x64 development launcher keeps Vite hot reload and Rust logs attached while preserving the x86_64-pc-windows-msvc target on Windows-on-ARM
+      - Windows development without local model assets degrades to a healthy dynamic-port Demo Runtime with fake TTS and disabled STT; cloud TTS remains discoverable and Ctrl+C leaves no Runtime listener
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
