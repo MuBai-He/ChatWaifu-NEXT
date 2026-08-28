@@ -149,6 +149,8 @@ def _clean_environment(plugin_id: str) -> dict[str, str]:
         "LANG": os.environ.get("LANG", "C.UTF-8"),
         "LC_ALL": os.environ.get("LC_ALL", "C.UTF-8"),
         "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8",
         "CHATWAIFU_PLUGIN_ID": plugin_id,
     }
     return environment
