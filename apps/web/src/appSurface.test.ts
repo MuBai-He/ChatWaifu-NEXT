@@ -23,4 +23,26 @@ describe("application surface routing", () => {
       "desktop-pet",
     );
   });
+
+  it("prioritizes the host-injected surface over stale Windows WebView context", () => {
+    expect(
+      resolveAppSurfaceFromContext(
+        "/desktop-pet",
+        "avatar-overlay",
+        "desktop-settings",
+        "desktop-pet",
+      ),
+    ).toBe("desktop-settings");
+  });
+
+  it("uses the development URL marker before window-label fallbacks", () => {
+    expect(
+      resolveAppSurfaceFromContext(
+        "/desktop-pet",
+        null,
+        null,
+        "desktop-settings",
+      ),
+    ).toBe("desktop-settings");
+  });
 });

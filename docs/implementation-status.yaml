@@ -130,7 +130,7 @@ phases:
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
-      - Immutable Tauri window labels are the authoritative surface identity; the lazy control center loads devUrl directly in development and embedded index.html in packages, avoiding Windows child-route load failures and duplicate desktop-pet media owners
+      - The native host injects an explicit control-center surface marker before frontend scripts; development URLs carry the same marker, while immutable labels and paths remain fallbacks, preventing stale Windows WebView context from mounting the desktop-pet page in settings
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
       - The macOS host embeds a microphone usage description and unsupported WebViews expose an actionable recovery message instead of an inert disabled control
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly

@@ -25,6 +25,15 @@ pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
 pub const CONTROL_CENTER_LABEL: &str = "control-center";
 pub const APP_ENTRY: &str = "index.html";
 pub const PREFERENCES_CHANGED_EVENT: &str = "desktop-preferences-changed";
+pub const CONTROL_CENTER_SURFACE: &str = "desktop-settings";
+pub const NATIVE_SURFACE_QUERY: &str = "chatwaifu_surface";
+pub const CONTROL_CENTER_INIT_SCRIPT: &str = r#"
+Object.defineProperty(window, "__CHATWAIFU_NATIVE_SURFACE__", {
+  value: "desktop-settings",
+  writable: false,
+  configurable: false
+});
+"#;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
@@ -68,7 +77,8 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
             refresh_development_window(&app, &window)?;
             window
         }
-        None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, native_app_entry(&app))
+        None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, control_center_entry(&app))
+            .initialization_script(CONTROL_CENTER_INIT_SCRIPT)
             .title("ChatWaifu NEXT · 桌宠设置")
             .inner_size(960.0, 700.0)
             .min_inner_size(720.0, 540.0)
@@ -82,7 +92,7 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
 
 #[cfg(debug_assertions)]
 fn refresh_development_window(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
-    if let Some(dev_url) = app.config().build.dev_url.clone() {
+    if let Some(dev_url) = development_control_center_url(app) {
         window.navigate(dev_url).map_err(window_error)?;
     }
     Ok(())
@@ -93,12 +103,21 @@ fn refresh_development_window(_app: &AppHandle, _window: &WebviewWindow) -> Resu
     Ok(())
 }
 
-fn native_app_entry(app: &AppHandle) -> WebviewUrl {
+fn control_center_entry(app: &AppHandle) -> WebviewUrl {
     #[cfg(debug_assertions)]
-    if let Some(dev_url) = app.config().build.dev_url.clone() {
+    if let Some(dev_url) = development_control_center_url(app) {
         return WebviewUrl::External(dev_url);
     }
     WebviewUrl::App(APP_ENTRY.into())
+}
+
+#[cfg(debug_assertions)]
+fn development_control_center_url(app: &AppHandle) -> Option<tauri::Url> {
+    let mut dev_url = app.config().build.dev_url.clone()?;
+    dev_url
+        .query_pairs_mut()
+        .append_pair(NATIVE_SURFACE_QUERY, CONTROL_CENTER_SURFACE);
+    Some(dev_url)
 }
 
 #[tauri::command]
@@ -498,7 +517,10 @@ fn window_error(error: tauri::Error) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{APP_ENTRY, DesktopPreferences, HOST_ROLE, should_ignore_cursor_events};
+    use super::{
+        APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
+        HOST_ROLE, NATIVE_SURFACE_QUERY, should_ignore_cursor_events,
+    };
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
@@ -508,6 +530,14 @@ mod tests {
     #[test]
     fn packaged_control_center_uses_the_stable_application_entry() {
         assert_eq!(APP_ENTRY, "index.html");
+    }
+
+    #[test]
+    fn control_center_declares_an_explicit_frontend_surface_contract() {
+        assert_eq!(CONTROL_CENTER_SURFACE, "desktop-settings");
+        assert_eq!(NATIVE_SURFACE_QUERY, "chatwaifu_surface");
+        assert!(CONTROL_CENTER_INIT_SCRIPT.contains("__CHATWAIFU_NATIVE_SURFACE__"));
+        assert!(CONTROL_CENTER_INIT_SCRIPT.contains(CONTROL_CENTER_SURFACE));
     }
 
     #[test]

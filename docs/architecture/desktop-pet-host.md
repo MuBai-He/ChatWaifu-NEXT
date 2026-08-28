@@ -49,12 +49,14 @@ voice-provider, model-routing, companion-policy, and local-data sections; it doe
 visual-novel stage or composer. Opening it creates or shows the native window; closing it hides the
 window so the pet and Runtime remain alive.
 
-Native window labels are the authoritative desktop surface identity: `avatar-overlay` always mounts
-the desktop-pet surface and `control-center` always mounts the settings surface. The lazily created
-control center has one native Rust builder definition rather than a dormant configuration entry plus
-a second copy. In development that builder loads the configured Vite `devUrl` directly, avoiding
-Tauri's platform-specific app-subpath proxy; packaged builds load the embedded `index.html`. Browser
-previews continue to use pathname routing.
+The native host declares the control center's surface identity before page scripts execute, so
+Windows WebView2 cannot accidentally mount the pet when its path or JavaScript window label is stale.
+The host-injected `desktop-settings` marker is authoritative in packaged builds; development URLs
+carry the same typed marker so an already-open hot-reload window can recover on navigation. Immutable
+Tauri labels and browser paths remain compatibility fallbacks: `avatar-overlay` maps to the pet and
+`control-center` maps to settings. The lazily created control center has one native Rust builder
+definition rather than a dormant configuration entry plus a second copy. In development that builder
+loads the configured Vite `devUrl` directly; packaged builds load the embedded `index.html`.
 
 The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
 browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the

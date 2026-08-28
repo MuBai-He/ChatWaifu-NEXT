@@ -156,6 +156,7 @@ describe("ChatWaifu usable demo", () => {
     ]);
     nativeWindow.label = "avatar-overlay";
     Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+    Reflect.deleteProperty(window, "__CHATWAIFU_NATIVE_SURFACE__");
     vi.clearAllMocks();
   });
 
@@ -442,6 +443,28 @@ describe("ChatWaifu usable demo", () => {
       value: {},
     });
     nativeWindow.label = "control-center";
+
+    render(<App />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "桌宠" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "设置分类" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "摸摸绫地宁宁" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "桌宠文字消息" })).toBeNull();
+  });
+
+  it("uses the host-injected settings surface when Windows reports stale pet context", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    Object.defineProperty(window, "__CHATWAIFU_NATIVE_SURFACE__", {
+      configurable: true,
+      value: "desktop-settings",
+    });
+    nativeWindow.label = "avatar-overlay";
 
     render(<App />);
 
