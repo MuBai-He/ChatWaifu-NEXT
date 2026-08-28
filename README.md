@@ -178,6 +178,7 @@ make build-live2d-bridge
 ```bash
 make demo               # 一次启动 Runtime + Web
 make desktop            # 一次启动 Runtime + Web + Tauri 桌宠
+make setup-nltk-data    # 准备 Pipecat 断句所需的本地 NLTK 数据
 make setup-stt-worker   # 只准备隔离的 faster-whisper worker 环境
 make setup-tts-worker   # 只准备 Kokoro worker 并校验/下载公开模型
 make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
@@ -193,6 +194,10 @@ make typecheck          # Pyright、tsc、cargo check
 make test               # Python、TypeScript、Rust 测试
 make check-generated    # 协议受控产物无漂移检查
 ```
+
+`punkt_tab` 会从 NLTK 官方数据仓库的固定提交下载到 Git 忽略的 `.local/nltk_data`，并在
+解压前校验 SHA-256。Runtime 会在导入 Pipecat 前使用该本地目录，因此代理 Fake-IP 模式不会
+触发 NLTK 的 SSRF 告警；常规启动不会重复下载。
 
 协议以 `packages/protocol-python/src/chatwaifu_protocol/` 为源；不要手工编辑
 `schemas/domain/v1/` 或生成的 TypeScript domain 文件。专有 Cubism Core 与有授权的角色模型

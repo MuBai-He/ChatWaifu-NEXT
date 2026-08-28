@@ -2,10 +2,11 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo desktop format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo desktop format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
+	$(MAKE) setup-nltk-data
 	$(PNPM) install --frozen-lockfile
 	$(CARGO) fetch --locked
 	$(MAKE) generate-protocol
@@ -60,6 +61,9 @@ test-avatar:
 
 test-runtime:
 	$(UV) run pytest services/runtime/tests
+
+setup-nltk-data:
+	$(UV) run python tools/setup_nltk_data.py
 
 setup-stt-worker:
 	$(UV) run python tools/setup_stt_worker.py

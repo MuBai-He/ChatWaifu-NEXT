@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-28"
+updated_at: "2026-08-29"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -56,6 +56,7 @@ validation:
     - Windows x64 Rust target passes Clippy and 11 Tauri tests, then produces a release EXE verified as PE machine 0x8664
     - make desktop supervises local workers, Runtime, Web, and the Tauri development host as one process group
     - dynamic desktop service-stack bootstrap reports a loopback Runtime plus STT/Qwen/GPT workers and Ctrl+C closes the observed Runtime listener
+    - macOS Runtime startup no longer emits the proxy Fake-IP punkt_tab warning after installing a revision-pinned checksummed NLTK archive; the Windows x64 bootstrap installs the same local resource and awaits VM retest
     - live Tauri-owned Runtime exposes persisted companion defaults and completes resource sleep then wake without dropping the session service
     - obsolete Tauri hot-reload sidecars were identified by missing parent ownership and cleaned without touching the active fixed-port browser Runtime
     - open-mic attention tests reject unaddressed nearby speech and accept then strip a leading configured wake phrase

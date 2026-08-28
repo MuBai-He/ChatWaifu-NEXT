@@ -61,6 +61,7 @@ try {
         "--all-groups",
         "--locked"
     )
+    Invoke-Checked $VenvPython @("tools/setup_nltk_data.py")
     Invoke-Checked $VenvPython @("tools/run_pnpm.py", "install", "--frozen-lockfile")
     Invoke-Checked $Rustup @("target", "add", "x86_64-pc-windows-msvc")
     Invoke-Checked $Cargo @("fetch", "--locked")
