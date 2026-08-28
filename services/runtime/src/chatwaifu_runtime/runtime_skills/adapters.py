@@ -140,7 +140,7 @@ def _resolve_command(plugin: PluginManifest, root: Path) -> list[str]:
     entrypoint = (root / raw[1]).resolve()
     if not entrypoint.is_relative_to(root.resolve()) or not entrypoint.is_file():
         raise SkillExecutionError("unsafe_plugin_command", "Plugin entrypoint escapes install root")
-    return [sys.executable, "-I", "-B", str(entrypoint), *raw[2:]]
+    return [sys.executable, "-X", "utf8", "-I", "-B", "-u", str(entrypoint), *raw[2:]]
 
 
 def _clean_environment(plugin_id: str) -> dict[str, str]:
@@ -148,9 +148,6 @@ def _clean_environment(plugin_id: str) -> dict[str, str]:
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "LANG": os.environ.get("LANG", "C.UTF-8"),
         "LC_ALL": os.environ.get("LC_ALL", "C.UTF-8"),
-        "PYTHONUNBUFFERED": "1",
-        "PYTHONUTF8": "1",
-        "PYTHONIOENCODING": "utf-8",
         "CHATWAIFU_PLUGIN_ID": plugin_id,
     }
     return environment

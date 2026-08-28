@@ -63,10 +63,10 @@ class Database:
         async with self._lock:
             try:
                 cursor = await _finish_before_cancelling(connection.execute("BEGIN IMMEDIATE"))
+                await _finish_before_cancelling(cursor.close())
             except asyncio.CancelledError:
                 await _finish_before_cancelling(connection.rollback())
                 raise
-            await cursor.close()
             try:
                 yield connection
             except BaseException:
