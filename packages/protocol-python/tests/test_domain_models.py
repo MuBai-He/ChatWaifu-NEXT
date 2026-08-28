@@ -11,6 +11,7 @@ from chatwaifu_protocol.media import (
     encode_audio_frame_header,
 )
 from chatwaifu_protocol.memory import MemoryProposal, MemoryRecordDraft
+from chatwaifu_protocol.skills import McpConnectionConfiguration, PluginTransport
 from pydantic import ValidationError
 
 NOW = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
@@ -106,3 +107,39 @@ def test_speech_started_event_carries_future_generation_identity() -> None:
     assert event.payload.sample_rate == 16_000
     assert event.turn_id is not None
     assert event.generation_id is not None
+
+
+@pytest.mark.parametrize(
+    ("trust_level", "sandbox_mode", "network_policy"),
+    [
+        ("untrusted", "disabled", "allow"),
+        ("trusted", "disabled", "deny"),
+        ("trusted", "required", "loopback"),
+    ],
+)
+def test_local_mcp_process_policy_rejects_unenforceable_combinations(
+    trust_level: str,
+    sandbox_mode: str,
+    network_policy: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        PluginTransport.model_validate(
+            {
+                "command": ["server"],
+                "trust_level": trust_level,
+                "sandbox_mode": sandbox_mode,
+                "network_policy": network_policy,
+            }
+        )
+    with pytest.raises(ValidationError):
+        McpConnectionConfiguration.model_validate(
+            {
+                "connection_id": uuid4(),
+                "name": "Invalid local process",
+                "transport": "stdio",
+                "command": ["server"],
+                "trust_level": trust_level,
+                "sandbox_mode": sandbox_mode,
+                "network_policy": network_policy,
+            }
+        )

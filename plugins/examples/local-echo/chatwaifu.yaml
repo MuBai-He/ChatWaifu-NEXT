@@ -12,7 +12,7 @@
           {
             "name": "echo",
             "adapter_tool": "local_echo",
-            "description": "Return text through the isolated MCP subprocess.",
+            "description": "Return text through the trusted MCP subprocess.",
             "input_schema":
               {
                 "type": "object",
@@ -43,7 +43,7 @@
           {
             "name": "append_note",
             "adapter_tool": "append_note",
-            "description": "Append a line to this plugin's isolated local notes file.",
+            "description": "Append a line to this plugin's local notes file.",
             "input_schema":
               {
                 "type": "object",

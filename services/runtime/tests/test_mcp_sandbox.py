@@ -5,15 +5,22 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
+from uuid import uuid4
 
 import pytest
+from chatwaifu_protocol.skills import McpConnectionConfiguration
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.sandbox import (
     RuntimeSandboxLauncher,
     SandboxPlanner,
     SandboxPolicyError,
 )
-from chatwaifu_runtime.runtime_skills.transports import PreparedStdioCommand
+from chatwaifu_runtime.runtime_skills.transports import (
+    McpClientTransport,
+    NoopSandboxLauncher,
+    PreparedStdioCommand,
+)
 
 
 def test_untrusted_process_cannot_disable_sandbox(tmp_path: Path) -> None:
@@ -21,6 +28,19 @@ def test_untrusted_process_cannot_disable_sandbox(tmp_path: Path) -> None:
 
     with pytest.raises(SandboxPolicyError, match="cannot disable"):
         planner.prepare(["server"], working_dir=tmp_path, mode="disabled", trust_level="untrusted")
+
+
+def test_disabled_sandbox_cannot_claim_restricted_network_policy(tmp_path: Path) -> None:
+    planner = SandboxPlanner(platform_name="win32", which=lambda _: None)
+
+    with pytest.raises(SandboxPolicyError, match="cannot enforce a restricted network policy"):
+        planner.prepare(
+            ["server"],
+            working_dir=tmp_path,
+            mode="disabled",
+            trust_level="trusted",
+            network_policy="deny",
+        )
 
 
 def test_required_sandbox_fails_closed_when_backend_is_missing(tmp_path: Path) -> None:
@@ -34,12 +54,31 @@ def test_preferred_sandbox_reports_soft_fallback_for_trusted_process(tmp_path: P
     planner = SandboxPlanner(platform_name="win32", which=lambda _: None)
 
     plan = planner.prepare(
-        ["server"], working_dir=tmp_path, mode="preferred", trust_level="trusted"
+        ["server"],
+        working_dir=tmp_path,
+        mode="preferred",
+        trust_level="trusted",
+        network_policy="allow",
     )
 
     assert plan.backend == "none"
     assert plan.enforced is False
     assert "soft isolation" in plan.diagnostic
+
+
+def test_preferred_sandbox_fails_closed_for_network_deny_without_backend(
+    tmp_path: Path,
+) -> None:
+    planner = SandboxPlanner(platform_name="win32", which=lambda _: None)
+
+    with pytest.raises(SandboxPolicyError, match="requested network policy"):
+        planner.prepare(
+            ["server"],
+            working_dir=tmp_path,
+            mode="preferred",
+            trust_level="trusted",
+            network_policy="deny",
+        )
 
 
 def test_macos_plan_uses_seatbelt_and_denies_network(tmp_path: Path) -> None:
@@ -118,6 +157,21 @@ def test_runtime_launcher_normalizes_required_backend_failure(tmp_path: Path) ->
     assert raised.value.structured.code == "sandbox_unavailable"
 
 
+def test_runtime_launcher_rejects_unenforceable_loopback_policy(tmp_path: Path) -> None:
+    launcher = RuntimeSandboxLauncher(SandboxPlanner(platform_name="win32", which=lambda _: None))
+    command = PreparedStdioCommand(command="server", args=(), cwd=tmp_path, env={})
+
+    with pytest.raises(SkillExecutionError) as raised:
+        launcher.prepare(
+            command,
+            trust_level="trusted",
+            sandbox_mode="disabled",
+            network_policy="loopback",
+        )
+
+    assert raised.value.structured.code == "sandbox_network_policy_unavailable"
+
+
 def test_runtime_launcher_reports_actual_backend(tmp_path: Path) -> None:
     launcher = RuntimeSandboxLauncher(
         SandboxPlanner(
@@ -136,6 +190,72 @@ def test_runtime_launcher_reports_actual_backend(tmp_path: Path) -> None:
 
     assert prepared.command == "/usr/bin/sandbox-exec"
     assert prepared.sandbox_backend == "macos_seatbelt"
+
+
+@pytest.mark.parametrize("sandbox_mode", ["disabled", "preferred", "required"])
+def test_noop_launcher_always_rejects_loopback_policy(tmp_path: Path, sandbox_mode: str) -> None:
+    launcher = NoopSandboxLauncher()
+    command = PreparedStdioCommand(command="server", args=(), cwd=tmp_path, env={})
+
+    with pytest.raises(SkillExecutionError) as raised:
+        launcher.prepare(
+            command,
+            trust_level="trusted",
+            sandbox_mode=sandbox_mode,
+            network_policy="loopback",
+        )
+
+    assert raised.value.structured.code == "sandbox_network_policy_unavailable"
+
+
+def test_noop_launcher_rejects_disabled_restricted_network(tmp_path: Path) -> None:
+    launcher = NoopSandboxLauncher()
+    command = PreparedStdioCommand(command="server", args=(), cwd=tmp_path, env={})
+
+    with pytest.raises(SkillExecutionError) as raised:
+        launcher.prepare(
+            command,
+            trust_level="trusted",
+            sandbox_mode="disabled",
+            network_policy="deny",
+        )
+
+    assert raised.value.structured.code == "sandbox_network_policy_unavailable"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "darwin" or shutil.which("sandbox-exec") is None,
+    reason="macOS Seatbelt is unavailable",
+)
+async def test_macos_seatbelt_allows_official_mcp_stdio_handshake(tmp_path: Path) -> None:
+    source_fixture = Path(__file__).parent / "fixtures" / "mcp_stdio_server.py"
+    fixture = tmp_path / source_fixture.name
+    shutil.copy2(source_fixture, fixture)
+    config = McpConnectionConfiguration(
+        connection_id=uuid4(),
+        name="Seatbelt stdio fixture",
+        transport="stdio",
+        command=[sys.executable, str(fixture)],
+        trust_level="untrusted",
+        sandbox_mode="required",
+        network_policy="deny",
+        timeout_seconds=5,
+    )
+    transport = McpClientTransport(RuntimeSandboxLauncher())
+
+    async with transport.connection_session(
+        config,
+        bearer_token=None,
+        working_root=tmp_path,
+    ) as (session, initialized):
+        assert initialized.server_info.name == "chatwaifu-seatbelt-fixture"
+        assert initialized.server_info.version == "1.0.0"
+        tools = await session.list_tools()
+        assert [tool.name for tool in tools.tools] == ["ping"]
+        result = await session.call_tool("ping", {"text": "sandbox handshake"})
+        assert result.is_error is False
+        assert cast(dict[str, Any], result.structured_content) == {"reply": "sandbox handshake"}
 
 
 @pytest.mark.skipif(

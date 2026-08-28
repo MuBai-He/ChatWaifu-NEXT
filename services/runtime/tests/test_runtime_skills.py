@@ -171,7 +171,7 @@ def test_persisted_stdio_mcp_host_discovers_and_routes_capabilities(
             "command": [sys.executable, str(server)],
             "trust_level": "trusted",
             "sandbox_mode": "disabled",
-            "network_policy": "deny",
+            "network_policy": "allow",
             "bearer_token": "write-only-test-token",
         },
     )

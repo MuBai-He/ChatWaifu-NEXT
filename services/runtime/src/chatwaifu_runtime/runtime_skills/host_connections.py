@@ -9,6 +9,7 @@ import shutil
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import RLock
 from typing import cast
 from uuid import UUID
 
@@ -27,7 +28,10 @@ from mcp.types import PaginatedRequestParams
 
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
-from chatwaifu_runtime.runtime_skills.transports import McpClientTransport
+from chatwaifu_runtime.runtime_skills.transports import (
+    McpClientTransport,
+    enforce_mcp_json_payload_limit,
+)
 
 MAX_DISCOVERED_ITEMS = 2_000
 
@@ -37,31 +41,34 @@ class McpConnectionSecretStore:
 
     def __init__(self, path: Path) -> None:
         self._path = path
+        self._lock = RLock()
 
     def get(self, connection_id: UUID) -> str | None:
-        value = self._read().get(str(connection_id))
-        return value if isinstance(value, str) and value else None
+        with self._lock:
+            value = self._read().get(str(connection_id))
+            return value if isinstance(value, str) and value else None
 
     def set(self, connection_id: UUID, value: str | None) -> None:
-        secrets = self._read()
-        if value:
-            secrets[str(connection_id)] = value
-        else:
-            secrets.pop(str(connection_id), None)
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self._path.with_name(f".{self._path.name}.tmp")
-        payload = json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
-                secret_file.write(payload)
-                secret_file.flush()
-                os.fsync(secret_file.fileno())
-            os.replace(temporary, self._path)
-            os.chmod(self._path, 0o600)
-        finally:
-            if temporary.exists():
-                temporary.unlink()
+        with self._lock:
+            secrets = self._read()
+            if value:
+                secrets[str(connection_id)] = value
+            else:
+                secrets.pop(str(connection_id), None)
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self._path.with_name(f".{self._path.name}.tmp")
+            payload = json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
+                    secret_file.write(payload)
+                    secret_file.flush()
+                    os.fsync(secret_file.fileno())
+                os.replace(temporary, self._path)
+                os.chmod(self._path, 0o600)
+            finally:
+                if temporary.exists():
+                    temporary.unlink()
 
     def _read(self) -> dict[str, str]:
         if not self._path.exists():
@@ -183,7 +190,8 @@ class McpConnectionManager:
                     name = ?, transport = ?, command_json = ?, url = ?, allow_remote = ?,
                     enabled = ?, timeout_seconds = ?, trust_level = ?, sandbox_mode = ?,
                     network_policy = ?, bearer_token_configured = ?, status = ?,
-                    capabilities_json = ?, last_error = NULL, last_tested_at = NULL,
+                    capabilities_json = ?, sandbox_backend = NULL,
+                    last_error = NULL, last_tested_at = NULL,
                     updated_at = ?
                 WHERE connection_id = ?
                 """,
@@ -230,6 +238,10 @@ class McpConnectionManager:
         current = await self.get(connection_id)
         config = _configuration(current)
         try:
+            sandbox_backend = self._transport.connection_sandbox_backend(
+                config,
+                working_root=self.working_root(connection_id),
+            )
             capabilities = await self.discover(config)
         except asyncio.CancelledError:
             raise
@@ -242,7 +254,8 @@ class McpConnectionManager:
                 await connection.execute(
                     """
                     UPDATE mcp_connections SET status = 'error', last_error = ?,
-                        last_tested_at = ?, updated_at = ? WHERE connection_id = ?
+                        sandbox_backend = NULL, last_tested_at = ?, updated_at = ?
+                    WHERE connection_id = ?
                     """,
                     (message[:2_000], now.isoformat(), now.isoformat(), str(connection_id)),
                 )
@@ -252,11 +265,13 @@ class McpConnectionManager:
             await connection.execute(
                 """
                 UPDATE mcp_connections SET status = 'ready', capabilities_json = ?,
-                    last_error = NULL, last_tested_at = ?, updated_at = ?
+                    sandbox_backend = ?, last_error = NULL,
+                    last_tested_at = ?, updated_at = ?
                 WHERE connection_id = ?
                 """,
                 (
                     capabilities.model_dump_json(),
+                    sandbox_backend,
                     now.isoformat(),
                     now.isoformat(),
                     str(connection_id),
@@ -310,7 +325,7 @@ class McpConnectionManager:
                 retryable=True,
                 details={"exception_type": type(error).__name__},
             ) from error
-        return McpCapabilitySnapshot(
+        snapshot = McpCapabilitySnapshot(
             connection_id=config.connection_id,
             protocol_version=initialized.protocol_version,
             server_name=initialized.server_info.name,
@@ -321,6 +336,11 @@ class McpConnectionManager:
             prompts=prompts,
             discovered_at=_now(),
         )
+        enforce_mcp_json_payload_limit(
+            snapshot.model_dump(mode="json", exclude_none=True),
+            boundary="capability discovery",
+        )
+        return snapshot
 
     async def read_resource(self, connection_id: UUID, uri: str) -> JsonObject:
         current = await self.get(connection_id)
@@ -338,7 +358,11 @@ class McpConnectionManager:
             raise
         except Exception as error:
             raise _operation_error("read resource", error) from error
-        return cast(JsonObject, result.model_dump(mode="json", by_alias=True, exclude_none=True))
+        serialized = cast(
+            JsonObject, result.model_dump(mode="json", by_alias=True, exclude_none=True)
+        )
+        enforce_mcp_json_payload_limit(serialized, boundary="resource read")
+        return serialized
 
     async def get_prompt(
         self, connection_id: UUID, name: str, arguments: dict[str, str]
@@ -358,7 +382,11 @@ class McpConnectionManager:
             raise
         except Exception as error:
             raise _operation_error("get prompt", error) from error
-        return cast(JsonObject, result.model_dump(mode="json", by_alias=True, exclude_none=True))
+        serialized = cast(
+            JsonObject, result.model_dump(mode="json", by_alias=True, exclude_none=True)
+        )
+        enforce_mcp_json_payload_limit(serialized, boundary="prompt result")
+        return serialized
 
     def bearer_token(self, connection_id: UUID) -> str | None:
         return self._secrets.get(connection_id)

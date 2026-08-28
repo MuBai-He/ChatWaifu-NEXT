@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import json
 import os
 import shutil
 import socket
@@ -25,6 +26,8 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.types import InitializeResult
 
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+
+MAX_MCP_JSON_PAYLOAD_BYTES = 2 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,15 +62,20 @@ class NoopSandboxLauncher:
         network_policy: str,
     ) -> PreparedStdioCommand:
         del trust_level
+        if network_policy == "loopback":
+            raise SkillExecutionError(
+                "sandbox_network_policy_unavailable",
+                "Soft isolation cannot enforce a loopback-only network policy",
+            )
         if sandbox_mode == "required":
             raise SkillExecutionError(
                 "sandbox_unavailable",
                 "This MCP connection requires an OS sandbox, but no sandbox backend is active",
             )
-        if network_policy == "loopback" and sandbox_mode != "disabled":
+        if network_policy != "allow":
             raise SkillExecutionError(
                 "sandbox_network_policy_unavailable",
-                "The active sandbox cannot enforce a loopback-only network policy",
+                "Soft isolation cannot enforce the requested restricted network policy",
             )
         return command
 
@@ -75,6 +83,23 @@ class NoopSandboxLauncher:
 class McpClientTransport:
     def __init__(self, sandbox_launcher: SandboxLauncher | None = None) -> None:
         self._sandbox = sandbox_launcher or NoopSandboxLauncher()
+
+    def connection_sandbox_backend(
+        self,
+        config: McpConnectionConfiguration,
+        *,
+        working_root: Path,
+    ) -> str | None:
+        """Resolve the backend that a stdio connection would actually execute under.
+
+        Network transports do not launch a local child process and therefore have no
+        local sandbox backend. Preparing the stdio command applies the exact same
+        fail-closed policy used by :meth:`connection_session`.
+        """
+
+        if config.transport != "stdio":
+            return None
+        return _connection_command(config, working_root, self._sandbox).sandbox_backend
 
     @asynccontextmanager
     async def plugin_session(
@@ -164,6 +189,29 @@ class McpClientTransport:
             async with asyncio.timeout(timeout_seconds):
                 initialized = await session.initialize()
             yield session, initialized
+
+
+def enforce_mcp_json_payload_limit(payload: object, *, boundary: str) -> None:
+    """Reject an MCP response whose normalized JSON exceeds the shared limit."""
+
+    try:
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise SkillExecutionError(
+            "invalid_mcp_result",
+            f"MCP {boundary} response is not valid JSON",
+        ) from error
+    if len(encoded) > MAX_MCP_JSON_PAYLOAD_BYTES:
+        raise SkillExecutionError(
+            "mcp_response_limit",
+            f"MCP {boundary} response exceeded the {MAX_MCP_JSON_PAYLOAD_BYTES}-byte limit",
+            details={"boundary": boundary, "limit_bytes": MAX_MCP_JSON_PAYLOAD_BYTES},
+        )
 
 
 async def validate_mcp_url(

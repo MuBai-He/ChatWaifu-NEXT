@@ -60,6 +60,15 @@ class PluginTransport(ProtocolModel):
     sandbox_mode: Literal["required", "preferred", "disabled"] = "required"
     network_policy: Literal["deny", "loopback", "allow"] = "deny"
 
+    @model_validator(mode="after")
+    def validate_sandbox_policy(self) -> PluginTransport:
+        _validate_local_process_policy(
+            trust_level=self.trust_level,
+            sandbox_mode=self.sandbox_mode,
+            network_policy=self.network_policy,
+        )
+        return self
+
 
 class PluginManifest(ProtocolModel):
     schema_version: Literal["1.0"] = "1.0"
@@ -146,6 +155,11 @@ class McpConnectionConfiguration(ProtocolModel):
                 raise ValueError("stdio MCP connections do not accept url")
             if self.allow_remote:
                 raise ValueError("stdio MCP connections do not use allow_remote")
+            _validate_local_process_policy(
+                trust_level=self.trust_level,
+                sandbox_mode=self.sandbox_mode,
+                network_policy=self.network_policy,
+            )
         else:
             if self.command:
                 raise ValueError("network MCP connections do not accept command")
@@ -159,6 +173,21 @@ class McpConnectionConfiguration(ProtocolModel):
                     f"network MCP connections require network_policy={expected_network}"
                 )
         return self
+
+
+def _validate_local_process_policy(
+    *,
+    trust_level: Literal["trusted", "untrusted"],
+    sandbox_mode: Literal["required", "preferred", "disabled"],
+    network_policy: Literal["deny", "loopback", "allow"],
+) -> None:
+    if network_policy == "loopback":
+        raise ValueError("local MCP processes do not support a host-loopback-only network policy")
+    if sandbox_mode == "disabled":
+        if trust_level != "trusted":
+            raise ValueError("untrusted local MCP processes cannot disable the sandbox")
+        if network_policy != "allow":
+            raise ValueError("disabled local MCP sandboxing requires network_policy=allow")
 
 
 class McpToolDescriptor(ProtocolModel):

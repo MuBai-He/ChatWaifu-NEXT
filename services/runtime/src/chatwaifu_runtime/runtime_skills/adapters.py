@@ -12,7 +12,11 @@ from chatwaifu_protocol.skills import McpConnectionConfiguration, PluginManifest
 from mcp.types import CallToolResult
 
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
-from chatwaifu_runtime.runtime_skills.transports import McpClientTransport, SandboxLauncher
+from chatwaifu_runtime.runtime_skills.transports import (
+    McpClientTransport,
+    SandboxLauncher,
+    enforce_mcp_json_payload_limit,
+)
 
 BuiltinHandler = Callable[[JsonObject], Awaitable[JsonObject]]
 
@@ -129,13 +133,14 @@ def normalize_tool_result(result: object) -> JsonObject:
         raise SkillExecutionError(
             "invalid_mcp_result", "MCP server returned an invalid tool result"
         )
+    serialized = result.model_dump(mode="json", by_alias=True, exclude_none=True)
+    enforce_mcp_json_payload_limit(serialized, boundary="tool result")
     if result.is_error:
         raise SkillExecutionError("mcp_tool_failed", _content_text(result))
     structured_content = cast(object, result.structured_content)
     if isinstance(structured_content, dict):
         typed_content = cast(dict[str, object], structured_content)
         return cast(JsonObject, typed_content)
-    serialized = result.model_dump(mode="json", by_alias=True, exclude_none=True)
     return cast(JsonObject, {"content": serialized.get("content", [])})
 
 

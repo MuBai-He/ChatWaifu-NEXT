@@ -67,6 +67,10 @@ class SandboxPlanner:
         if mode == "disabled":
             if trust_level != "trusted":
                 raise SandboxPolicyError("Untrusted local MCP servers cannot disable the sandbox")
+            if network_policy != "allow":
+                raise SandboxPolicyError(
+                    "A disabled sandbox cannot enforce a restricted network policy"
+                )
             return SandboxPlan(
                 command=normalized,
                 backend="none",
@@ -87,6 +91,10 @@ class SandboxPlanner:
             raise SandboxPolicyError(
                 "No enforcing sandbox backend is available; install bubblewrap on Linux, "
                 "use macOS Seatbelt, or configure an OCI image/runtime"
+            )
+        if network_policy != "allow":
+            raise SandboxPolicyError(
+                "No enforcing sandbox backend is available for the requested network policy"
             )
         return SandboxPlan(
             command=normalized,
@@ -180,11 +188,11 @@ class RuntimeSandboxLauncher:
             raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP trust level")
         if sandbox_mode not in {"required", "preferred", "disabled"}:
             raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP sandbox mode")
-        if network_policy == "loopback" and sandbox_mode != "disabled":
+        if network_policy == "loopback":
             raise SkillExecutionError(
                 "sandbox_network_policy_unavailable",
                 "No active sandbox backend can enforce host-loopback-only networking; "
-                "choose deny or explicitly trust and disable the sandbox",
+                "choose deny or allow explicitly",
             )
         if network_policy not in {"deny", "allow", "loopback"}:
             raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP network policy")
@@ -242,6 +250,7 @@ def _seatbelt_profile(command: tuple[str, ...], root: Path, network_policy: Netw
         (
             "(version 1)",
             "(deny default)",
+            '(import "system.sb")',
             "(allow process*)",
             "(allow signal (target self))",
             "(allow sysctl-read)",
