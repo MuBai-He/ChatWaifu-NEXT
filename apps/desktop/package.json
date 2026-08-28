@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build --no-bundle"
+    "build": "tauri build --no-bundle",
+    "build:windows-x64": "tauri build --no-bundle --target x86_64-pc-windows-msvc"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.4"

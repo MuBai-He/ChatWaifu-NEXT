@@ -42,6 +42,18 @@ make desktop
 profile，不满足 Mac App Store 上架条件。Tauri 会以动态端口启动并监督本地 Runtime/Worker 服务栈；
 异常退出会限次自动重启，连续失败后可从“陪伴”设置或托盘手动恢复。
 
+Windows 发布目标固定为 x64。即使在 Windows 11 ARM 虚拟机中调试，也不生成 ARM 应用；先在
+PowerShell 中准备 x64 Python/Rust 目标，再执行带 PE 架构校验的构建：
+
+```powershell
+.\tools\windows\bootstrap_x64.ps1
+.\tools\windows\build_x64.ps1
+```
+
+若仓库中已有其他架构的 `.venv`，首次准备时增加 `-RecreateEnvironment`。Node、Git、uv 或
+rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust target 与桌面 EXE 仍会被脚本
+分别校验为 `win-amd64`、`x86_64-pc-windows-msvc` 和 PE `0x8664`。
+
 桌面版使用“月牙与星芒”应用标识；macOS 菜单栏使用同主题的单色模板图标，可随系统浅色/深色
 菜单栏自动着色，不再显示单字托盘标题。
 

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @chatwaifu/web dev",
     "build": "pnpm -r --if-present build",
+    "build:windows-x64": "pnpm --filter @chatwaifu/desktop build:windows-x64",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "pnpm -r --if-present lint",

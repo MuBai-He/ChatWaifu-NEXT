@@ -18,3 +18,15 @@ def test_tauri_dev_server_binds_the_same_ipv4_url_it_waits_for() -> None:
     assert "exec vite --host 127.0.0.1 --port 5173" in command
     assert "vite -- --host" not in command
     assert build["devUrl"] == "http://127.0.0.1:5173"
+
+
+def test_windows_release_script_explicitly_targets_x64() -> None:
+    package = cast(
+        dict[str, object],
+        json.loads((ROOT / "apps/desktop/package.json").read_text(encoding="utf-8")),
+    )
+    scripts = cast(dict[str, object], package["scripts"])
+
+    assert scripts["build:windows-x64"] == (
+        "tauri build --no-bundle --target x86_64-pc-windows-msvc"
+    )
