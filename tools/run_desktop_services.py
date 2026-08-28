@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import secrets
@@ -12,7 +13,9 @@ import subprocess
 import sys
 import threading
 import time
+from ctypes import wintypes as ctypes_wintypes
 from types import FrameType
+from typing import Any, cast
 
 from run_demo import (
     ROOT,
@@ -28,6 +31,8 @@ from run_demo import (
 BOOTSTRAP_PREFIX = "CHATWAIFU_BOOTSTRAP "
 STACK_VERSION = "1.0"
 RUNTIME_STARTUP_TIMEOUT_SECONDS = 120
+WINDOWS_SYNCHRONIZE = 0x00100000
+WINDOWS_WAIT_TIMEOUT = 0x00000102
 
 
 class TerminationRequested(Exception):
@@ -282,7 +287,9 @@ def _watch_parent(parent_pid: int) -> None:
     os.kill(os.getpid(), signal.SIGTERM)
 
 
-def _process_exists(process_id: int) -> bool:
+def _process_exists(process_id: int, *, platform_name: str | None = None) -> bool:
+    if (platform_name or os.name) == "nt":
+        return _windows_process_exists(process_id)
     try:
         os.kill(process_id, 0)
     except ProcessLookupError:
@@ -290,6 +297,30 @@ def _process_exists(process_id: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+def _windows_process_exists(process_id: int) -> bool:
+    windll = cast(Any, getattr(ctypes, "windll", None))
+    if windll is None:
+        raise RuntimeError("Windows process APIs are unavailable")
+    kernel32 = windll.kernel32
+    kernel32.OpenProcess.argtypes = [
+        ctypes_wintypes.DWORD,
+        ctypes_wintypes.BOOL,
+        ctypes_wintypes.DWORD,
+    ]
+    kernel32.OpenProcess.restype = ctypes_wintypes.HANDLE
+    kernel32.WaitForSingleObject.argtypes = [ctypes_wintypes.HANDLE, ctypes_wintypes.DWORD]
+    kernel32.WaitForSingleObject.restype = ctypes_wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [ctypes_wintypes.HANDLE]
+    kernel32.CloseHandle.restype = ctypes_wintypes.BOOL
+    process_handle = kernel32.OpenProcess(WINDOWS_SYNCHRONIZE, False, process_id)
+    if not process_handle:
+        return False
+    try:
+        return kernel32.WaitForSingleObject(process_handle, 0) == WINDOWS_WAIT_TIMEOUT
+    finally:
+        kernel32.CloseHandle(process_handle)
 
 
 if __name__ == "__main__":

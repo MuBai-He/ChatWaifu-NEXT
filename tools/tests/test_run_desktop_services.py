@@ -103,3 +103,22 @@ def test_parent_watchdog_requires_a_real_supervisor_pid(monkeypatch: Any) -> Non
 
     assert started == [(os.getppid(),)]
     assert desktop_services._process_exists(os.getpid()) is True
+
+
+def test_windows_process_probe_does_not_send_a_console_signal(monkeypatch: Any) -> None:
+    probes: list[int] = []
+    signals: list[tuple[int, int]] = []
+
+    def probe(process_id: int) -> bool:
+        probes.append(process_id)
+        return False
+
+    def record_signal(process_id: int, signal_number: int) -> None:
+        signals.append((process_id, signal_number))
+
+    monkeypatch.setattr(desktop_services, "_windows_process_exists", probe)
+    monkeypatch.setattr(desktop_services.os, "kill", record_signal)
+
+    assert desktop_services._process_exists(4242, platform_name="nt") is False
+    assert probes == [4242]
+    assert signals == []
