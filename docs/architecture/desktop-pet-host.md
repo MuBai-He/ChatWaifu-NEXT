@@ -58,6 +58,12 @@ Tauri labels and browser paths remain compatibility fallbacks: `avatar-overlay` 
 definition rather than a dormant configuration entry plus a second copy. In development that builder
 loads the configured Vite `devUrl` directly; packaged builds load the embedded `index.html`.
 
+An always-on-top avatar can otherwise cover the ordinary control-center window, especially after a
+large persisted overlay resize. While the control center has focus, the host temporarily demotes the
+avatar from the topmost window band. Losing focus or closing settings restores the persisted
+always-on-top preference. Changing that preference inside focused settings updates persistence but
+keeps the control center unobscured until the user leaves it.
+
 The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
 browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the
 global physical cursor position against the current physical overlay bounds every 80 ms, with at most

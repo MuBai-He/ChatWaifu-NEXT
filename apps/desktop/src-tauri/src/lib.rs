@@ -86,8 +86,16 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
             .build()
             .map_err(window_error)?,
     };
-    window.show().map_err(window_error)?;
-    window.set_focus().map_err(window_error)
+    set_avatar_overlay_topmost(&app, false)?;
+    if let Err(error) = window.show().map_err(window_error) {
+        restore_avatar_overlay_topmost(&app);
+        return Err(error);
+    }
+    if let Err(error) = window.set_focus().map_err(window_error) {
+        restore_avatar_overlay_topmost(&app);
+        return Err(error);
+    }
+    Ok(())
 }
 
 #[cfg(debug_assertions)]
@@ -305,11 +313,23 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
 
 fn handle_window_event(window: &Window, event: &WindowEvent) {
     if window.label() == CONTROL_CENTER_LABEL {
-        if let WindowEvent::CloseRequested { api, .. } = event {
-            api.prevent_close();
-            if let Err(error) = window.hide() {
-                eprintln!("desktop control-center hide failed: {error}");
+        match event {
+            WindowEvent::Focused(true) => {
+                if let Err(error) = set_avatar_overlay_topmost(window.app_handle(), false) {
+                    eprintln!("desktop overlay demotion failed: {error}");
+                }
             }
+            WindowEvent::Focused(false) | WindowEvent::Destroyed => {
+                restore_avatar_overlay_topmost(window.app_handle());
+            }
+            WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                if let Err(error) = window.hide() {
+                    eprintln!("desktop control-center hide failed: {error}");
+                }
+                restore_avatar_overlay_topmost(window.app_handle());
+            }
+            _ => {}
         }
         return;
     }
@@ -406,9 +426,10 @@ fn set_always_on_top(
     state: &State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
-    required_window(app, AVATAR_OVERLAY_LABEL)?
-        .set_always_on_top(enabled)
-        .map_err(window_error)?;
+    set_avatar_overlay_topmost(
+        app,
+        effective_overlay_topmost(enabled, control_center_is_focused(app)),
+    )?;
     let preferences = update_preferences(state, |preferences| {
         preferences.always_on_top = enabled;
     })?;
@@ -435,6 +456,34 @@ fn set_click_through(
 
 fn should_ignore_cursor_events(click_through: bool, pointer_inside: bool) -> bool {
     click_through && !pointer_inside
+}
+
+fn control_center_is_focused(app: &AppHandle) -> bool {
+    app.get_webview_window(CONTROL_CENTER_LABEL)
+        .and_then(|window| window.is_focused().ok())
+        .unwrap_or(false)
+}
+
+fn effective_overlay_topmost(preferred: bool, control_center_focused: bool) -> bool {
+    preferred && !control_center_focused
+}
+
+fn set_avatar_overlay_topmost(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    required_window(app, AVATAR_OVERLAY_LABEL)?
+        .set_always_on_top(enabled)
+        .map_err(window_error)
+}
+
+fn restore_avatar_overlay_topmost(app: &AppHandle) {
+    let enabled = app
+        .state::<DesktopState>()
+        .preferences
+        .lock()
+        .map(|preferences| preferences.always_on_top)
+        .unwrap_or(true);
+    if let Err(error) = set_avatar_overlay_topmost(app, enabled) {
+        eprintln!("desktop overlay topmost restore failed: {error}");
+    }
 }
 
 fn required_window(app: &AppHandle, label: &str) -> Result<WebviewWindow, String> {
@@ -519,7 +568,7 @@ fn window_error(error: tauri::Error) -> String {
 mod tests {
     use super::{
         APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
-        HOST_ROLE, NATIVE_SURFACE_QUERY, should_ignore_cursor_events,
+        HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost, should_ignore_cursor_events,
     };
 
     #[test]
@@ -562,6 +611,14 @@ mod tests {
         assert!(!should_ignore_cursor_events(true, true));
         assert!(!should_ignore_cursor_events(false, false));
         assert!(!should_ignore_cursor_events(false, true));
+    }
+
+    #[test]
+    fn focused_control_center_temporarily_demotes_the_avatar_overlay() {
+        assert!(effective_overlay_topmost(true, false));
+        assert!(!effective_overlay_topmost(true, true));
+        assert!(!effective_overlay_topmost(false, false));
+        assert!(!effective_overlay_topmost(false, true));
     }
 
     #[test]

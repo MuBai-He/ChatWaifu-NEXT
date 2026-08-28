@@ -131,6 +131,7 @@ phases:
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
       - The native host injects an explicit control-center surface marker before frontend scripts; development URLs carry the same marker, while immutable labels and paths remain fallbacks, preventing stale Windows WebView context from mounting the desktop-pet page in settings
+      - Focused desktop settings temporarily demote the always-on-top avatar and restore the persisted preference on blur or close, preventing a large Windows overlay from covering the control center
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
       - The macOS host embeds a microphone usage description and unsupported WebViews expose an actionable recovery message instead of an inert disabled control
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
