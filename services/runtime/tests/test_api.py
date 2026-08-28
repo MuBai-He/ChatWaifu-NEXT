@@ -318,7 +318,19 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     while time.monotonic() < deadline:
         response = http.get(f"/v1/sessions/{session_id}/events")
         events = cast(list[dict[str, object]], cast(dict[str, object], response.json())["items"])
-        if any(item["event_type"] == "assistant.generation_completed" for item in events):
+        generation_events = [
+            item for item in events if str(item.get("generation_id")) == generation_id
+        ]
+        generation_completed = any(
+            item["event_type"] == "assistant.generation_completed" for item in generation_events
+        )
+        avatar_idle = any(
+            item["event_type"] == "avatar.cue_emitted"
+            and cast(dict[str, object], cast(dict[str, object], item["payload"])["cue"]).get("name")
+            == "idle"
+            for item in generation_events
+        )
+        if generation_completed and avatar_idle:
             break
         time.sleep(0.01)
 
