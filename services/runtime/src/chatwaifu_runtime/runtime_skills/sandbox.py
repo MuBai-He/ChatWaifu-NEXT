@@ -14,7 +14,10 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
+
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.transports import PreparedStdioCommand
 
 SandboxMode = Literal["required", "preferred", "disabled"]
 TrustLevel = Literal["trusted", "untrusted"]
@@ -151,6 +154,59 @@ class SandboxPlanner:
         if container_image and (self._which("docker") or self._which("podman")):
             return "oci"
         return None
+
+
+class RuntimeSandboxLauncher:
+    """Adapt :class:`SandboxPlanner` to the MCP transport launcher contract."""
+
+    def __init__(
+        self,
+        planner: SandboxPlanner | None = None,
+        *,
+        container_image: str | None = None,
+    ) -> None:
+        self._planner = planner or SandboxPlanner()
+        self._container_image = container_image
+
+    def prepare(
+        self,
+        command: PreparedStdioCommand,
+        *,
+        trust_level: str,
+        sandbox_mode: str,
+        network_policy: str,
+    ) -> PreparedStdioCommand:
+        if trust_level not in {"trusted", "untrusted"}:
+            raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP trust level")
+        if sandbox_mode not in {"required", "preferred", "disabled"}:
+            raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP sandbox mode")
+        if network_policy == "loopback" and sandbox_mode != "disabled":
+            raise SkillExecutionError(
+                "sandbox_network_policy_unavailable",
+                "No active sandbox backend can enforce host-loopback-only networking; "
+                "choose deny or explicitly trust and disable the sandbox",
+            )
+        if network_policy not in {"deny", "allow", "loopback"}:
+            raise SkillExecutionError("invalid_sandbox_policy", "Invalid MCP network policy")
+        effective_network: NetworkPolicy = "allow" if network_policy == "allow" else "deny"
+        try:
+            plan = self._planner.prepare(
+                (command.command, *command.args),
+                working_dir=command.cwd,
+                mode=cast(SandboxMode, sandbox_mode),
+                trust_level=cast(TrustLevel, trust_level),
+                network_policy=effective_network,
+                container_image=self._container_image,
+            )
+        except SandboxPolicyError as error:
+            raise SkillExecutionError("sandbox_unavailable", str(error)) from error
+        return PreparedStdioCommand(
+            command=plan.command[0],
+            args=plan.command[1:],
+            cwd=command.cwd,
+            env=command.env,
+            sandbox_backend=plan.backend if plan.enforced else None,
+        )
 
 
 def _validate_command(command: Sequence[str]) -> tuple[str, ...]:

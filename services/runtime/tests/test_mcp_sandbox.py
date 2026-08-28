@@ -7,7 +7,13 @@ import sys
 from pathlib import Path
 
 import pytest
-from chatwaifu_runtime.runtime_skills.sandbox import SandboxPlanner, SandboxPolicyError
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.sandbox import (
+    RuntimeSandboxLauncher,
+    SandboxPlanner,
+    SandboxPolicyError,
+)
+from chatwaifu_runtime.runtime_skills.transports import PreparedStdioCommand
 
 
 def test_untrusted_process_cannot_disable_sandbox(tmp_path: Path) -> None:
@@ -95,6 +101,41 @@ def test_oci_backend_is_available_on_windows_when_image_is_configured(tmp_path: 
     assert plan.enforced is True
     assert "none" in plan.command
     assert "no-new-privileges" in plan.command
+
+
+def test_runtime_launcher_normalizes_required_backend_failure(tmp_path: Path) -> None:
+    launcher = RuntimeSandboxLauncher(SandboxPlanner(platform_name="win32", which=lambda _: None))
+    command = PreparedStdioCommand(command="server", args=(), cwd=tmp_path, env={})
+
+    with pytest.raises(SkillExecutionError) as raised:
+        launcher.prepare(
+            command,
+            trust_level="untrusted",
+            sandbox_mode="required",
+            network_policy="deny",
+        )
+
+    assert raised.value.structured.code == "sandbox_unavailable"
+
+
+def test_runtime_launcher_reports_actual_backend(tmp_path: Path) -> None:
+    launcher = RuntimeSandboxLauncher(
+        SandboxPlanner(
+            platform_name="darwin",
+            which=lambda name: "/usr/bin/sandbox-exec" if name == "sandbox-exec" else None,
+        )
+    )
+    command = PreparedStdioCommand(command="python", args=("server.py",), cwd=tmp_path, env={})
+
+    prepared = launcher.prepare(
+        command,
+        trust_level="untrusted",
+        sandbox_mode="required",
+        network_policy="deny",
+    )
+
+    assert prepared.command == "/usr/bin/sandbox-exec"
+    assert prepared.sandbox_backend == "macos_seatbelt"
 
 
 @pytest.mark.skipif(
