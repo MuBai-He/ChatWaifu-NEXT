@@ -132,6 +132,7 @@ phases:
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
+      - A typed desktop settings registry is the single navigation/composition entry; existing sections use shared layout, write-only secret, and mutually-exclusive async-operation primitives with platform visibility and availability hooks
       - The native host injects an explicit control-center surface marker before frontend scripts; development URLs carry the same marker, while immutable labels and paths remain fallbacks, preventing stale Windows WebView context from mounting the desktop-pet page in settings
       - Focused desktop settings temporarily promote the control center and demote the always-on-top avatar, restoring both normal settings z-order and the persisted avatar preference on blur or close
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
