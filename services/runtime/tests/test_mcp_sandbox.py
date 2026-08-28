@@ -1,6 +1,7 @@
 """OS sandbox policy tests for local MCP processes."""
 
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -128,3 +129,40 @@ def test_macos_seatbelt_actually_denies_read_outside_plugin_root(tmp_path: Path)
 
     assert completed.returncode != 0
     assert "must-not-leak" not in completed.stdout
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin" or shutil.which("sandbox-exec") is None,
+    reason="macOS Seatbelt is unavailable",
+)
+def test_macos_seatbelt_actually_denies_loopback_network(tmp_path: Path) -> None:
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    port = listener.getsockname()[1]
+    planner = SandboxPlanner()
+    plan = planner.prepare(
+        [
+            sys.executable,
+            "-c",
+            f"import socket; socket.create_connection(('127.0.0.1', {port})); print('connected')",
+        ],
+        working_dir=tmp_path,
+        mode="required",
+        trust_level="untrusted",
+        network_policy="deny",
+    )
+    try:
+        completed = subprocess.run(
+            plan.command,
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    finally:
+        listener.close()
+
+    assert completed.returncode != 0
+    assert "connected" not in completed.stdout
