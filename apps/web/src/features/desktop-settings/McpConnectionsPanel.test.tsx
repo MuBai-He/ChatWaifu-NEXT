@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -117,9 +123,9 @@ describe("McpConnectionsPanel", () => {
       }),
     );
     await waitFor(() =>
-      expect(screen.getByLabelText<HTMLInputElement>("MCP Bearer Token").value).toBe(
-        "",
-      ),
+      expect(
+        screen.getByLabelText<HTMLInputElement>("MCP Bearer Token").value,
+      ).toBe(""),
     );
     expect(screen.getByText("令牌已保存")).toBeTruthy();
     expect(screen.queryByDisplayValue("secret-token")).toBeNull();
@@ -176,7 +182,9 @@ describe("McpConnectionsPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "测试连接" }));
     await waitFor(() =>
-      expect(testMcpConnection).toHaveBeenCalledWith(localConnection.connection_id),
+      expect(testMcpConnection).toHaveBeenCalledWith(
+        localConnection.connection_id,
+      ),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "刷新能力" }));
@@ -209,7 +217,9 @@ describe("McpConnectionsPanel", () => {
     fireEvent.change(screen.getByLabelText("MCP Prompt 参数"), {
       target: { value: '{"name":"木白"}' },
     });
-    fireEvent.click(screen.getByRole("button", { name: "获取 Prompt greeting" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "获取 Prompt greeting" }),
+    );
     await waitFor(() =>
       expect(getMcpPrompt).toHaveBeenCalledWith(
         localConnection.connection_id,

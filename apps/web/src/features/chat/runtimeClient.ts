@@ -505,8 +505,10 @@ export interface McpConnectionInput {
   network_policy: McpNetworkPolicy;
 }
 
-export interface McpConnectionSnapshot
-  extends Omit<McpConnectionInput, "bearer_token" | "clear_bearer_token"> {
+export interface McpConnectionSnapshot extends Omit<
+  McpConnectionInput,
+  "bearer_token" | "clear_bearer_token"
+> {
   connection_id: string;
   bearer_token_configured: boolean;
   status?: "ready" | "disabled" | "untested" | "error";
@@ -572,8 +574,7 @@ export interface McpConnectionProbeResult {
 }
 
 export type McpConnectionTestResult =
-  | McpConnectionSnapshot
-  | McpConnectionProbeResult;
+  McpConnectionSnapshot | McpConnectionProbeResult;
 
 export async function getMcpConnections(): Promise<McpConnectionSnapshot[]> {
   return (
@@ -603,9 +604,7 @@ export async function updateMcpConnection(
   );
 }
 
-export async function deleteMcpConnection(
-  connectionId: string,
-): Promise<void> {
+export async function deleteMcpConnection(connectionId: string): Promise<void> {
   await request(`/v1/mcp/connections/${encodeURIComponent(connectionId)}`, {
     method: "DELETE",
   });

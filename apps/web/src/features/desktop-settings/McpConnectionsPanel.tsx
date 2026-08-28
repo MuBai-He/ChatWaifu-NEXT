@@ -20,7 +20,10 @@ import type {
   McpTransport,
   McpTrustLevel,
 } from "../chat/runtimeClient";
-import { SettingsSecretField, SettingsStatus } from "../settings/SettingsFields";
+import {
+  SettingsSecretField,
+  SettingsStatus,
+} from "../settings/SettingsFields";
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import type { SettingsNotice } from "../settings/useSettingsOperation";
 
@@ -69,8 +72,9 @@ export function McpConnectionsPanel() {
 
   const selectedConnection = useMemo(
     () =>
-      connections.find((connection) => connection.connection_id === selectedId) ??
-      null,
+      connections.find(
+        (connection) => connection.connection_id === selectedId,
+      ) ?? null,
     [connections, selectedId],
   );
 
@@ -224,9 +228,7 @@ export function McpConnectionsPanel() {
             "connection_id" in result
               ? result.capabilities?.protocol_version
               : result.protocol_version;
-          const version = protocolVersion
-            ? `，协议 ${protocolVersion}`
-            : "";
+          const version = protocolVersion ? `，协议 ${protocolVersion}` : "";
           return `连接测试 ${result.status}${latency}${version}`;
         },
         error: "MCP 连接测试失败",
@@ -331,7 +333,10 @@ export function McpConnectionsPanel() {
               </button>
             </header>
 
-            <SettingsStatus notice={notice} className="mcp-connections-notice" />
+            <SettingsStatus
+              notice={notice}
+              className="mcp-connections-notice"
+            />
 
             <div className="mcp-connections-layout">
               <aside className="mcp-connection-list">
@@ -345,7 +350,9 @@ export function McpConnectionsPanel() {
                   connections.map((connection) => (
                     <article
                       className={
-                        selectedId === connection.connection_id ? "selected" : ""
+                        selectedId === connection.connection_id
+                          ? "selected"
+                          : ""
                       }
                       key={connection.connection_id}
                     >
@@ -358,7 +365,8 @@ export function McpConnectionsPanel() {
                           <strong>{connection.name}</strong>
                         </span>
                         <small>
-                          {transportLabel(connection.transport)} · {connection.connection_id}
+                          {transportLabel(connection.transport)} ·{" "}
+                          {connection.connection_id}
                         </small>
                       </button>
                       <div>
@@ -489,7 +497,10 @@ function ConnectionEditor({
                 transport === "stdio" ? "required" : "disabled",
               );
               onChange("allowRemote", false);
-              onChange("networkPolicy", transport === "stdio" ? "deny" : "loopback");
+              onChange(
+                "networkPolicy",
+                transport === "stdio" ? "deny" : "loopback",
+              );
             }}
           >
             <option value="stdio">本地 stdio</option>
@@ -623,7 +634,8 @@ function ConnectionEditor({
             />
           </label>
           <p className="mcp-risk-note">
-            远程 MCP 服务能看到发送给它的参数和读取请求。只连接可信服务；优先使用
+            远程 MCP
+            服务能看到发送给它的参数和读取请求。只连接可信服务；优先使用
             HTTPS。SSE 仅用于兼容旧服务，新接入优先 Streamable HTTP。
           </p>
         </>
@@ -661,7 +673,8 @@ function ConnectionEditor({
 
       {!isRemote && draft.sandboxMode === "disabled" ? (
         <p className="mcp-risk-note danger">
-          沙箱已关闭。MCP 进程可能访问当前用户可访问的文件和网络，请仅用于可信服务。
+          沙箱已关闭。MCP
+          进程可能访问当前用户可访问的文件和网络，请仅用于可信服务。
         </p>
       ) : null}
       {draft.trustLevel === "trusted" ? (
@@ -724,7 +737,9 @@ function CapabilitiesBrowser({
       ) : (
         <div className="mcp-capability-grid">
           <div>
-            <h3>Tools <span>{capabilities.tools.length}</span></h3>
+            <h3>
+              Tools <span>{capabilities.tools.length}</span>
+            </h3>
             {capabilities.tools.map((tool) => (
               <article key={tool.name}>
                 <strong>{tool.name}</strong>
@@ -739,12 +754,16 @@ function CapabilitiesBrowser({
             ))}
           </div>
           <div>
-            <h3>Resources <span>{capabilities.resources.length}</span></h3>
+            <h3>
+              Resources <span>{capabilities.resources.length}</span>
+            </h3>
             {capabilities.resources.map((resource) => (
               <article key={resource.uri}>
                 <strong>{resource.name || resource.uri}</strong>
                 <code>{resource.uri}</code>
-                <p>{resource.description || resource.mime_type || "MCP 资源"}</p>
+                <p>
+                  {resource.description || resource.mime_type || "MCP 资源"}
+                </p>
                 <button
                   type="button"
                   disabled={busy}
@@ -758,23 +777,26 @@ function CapabilitiesBrowser({
           </div>
           <div>
             <h3>
-              Resource Templates <span>{capabilities.resource_templates.length}</span>
+              Resource Templates{" "}
+              <span>{capabilities.resource_templates.length}</span>
             </h3>
             {capabilities.resource_templates.map((template) => (
               <article key={template.uri_template}>
                 <strong>{template.title || template.name}</strong>
                 <code>{template.uri_template}</code>
-                <p>{
-                  template.description ||
-                  template.mime_type ||
-                  "参数化 MCP 资源模板"
-                }</p>
+                <p>
+                  {template.description ||
+                    template.mime_type ||
+                    "参数化 MCP 资源模板"}
+                </p>
                 <small>URI 模板；填充参数后才能读取</small>
               </article>
             ))}
           </div>
           <div>
-            <h3>Prompts <span>{capabilities.prompts.length}</span></h3>
+            <h3>
+              Prompts <span>{capabilities.prompts.length}</span>
+            </h3>
             {capabilities.prompts.length ? (
               <label>
                 <span>Prompt 参数 JSON</span>
@@ -851,8 +873,7 @@ function validateAndBuildPayload(
     allow_remote: draft.transport === "stdio" ? false : draft.allowRemote,
     timeout_seconds: draft.timeoutSeconds,
     trust_level: draft.trustLevel,
-    sandbox_mode:
-      draft.transport === "stdio" ? draft.sandboxMode : "disabled",
+    sandbox_mode: draft.transport === "stdio" ? draft.sandboxMode : "disabled",
     network_policy:
       draft.transport === "stdio"
         ? draft.networkPolicy
@@ -894,7 +915,9 @@ function validateAndBuildPayload(
   return { ...base, url };
 }
 
-function draftFromConnection(connection: McpConnectionSnapshot): ConnectionDraft {
+function draftFromConnection(
+  connection: McpConnectionSnapshot,
+): ConnectionDraft {
   return {
     name: connection.name,
     transport: connection.transport,
