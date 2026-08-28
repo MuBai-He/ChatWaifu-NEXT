@@ -12,7 +12,12 @@ import {
   type DesktopRuntimeStatus,
 } from "../chat/runtimeEndpoint";
 import type { CompanionSettings, ResourceStatus } from "../chat/types";
-import { SettingsIcon } from "./SettingsIcon";
+import {
+  SettingsGroup,
+  SettingsSectionIntro,
+  SettingsToggle,
+} from "./SettingsPrimitives";
+import { useSettingsOperation } from "./useSettingsOperation";
 
 const fallbackSettings: CompanionSettings = {
   schema_version: "1.0",
@@ -37,8 +42,9 @@ export function CompanionSettingsPanel() {
   const [lastProactiveAt, setLastProactiveAt] = useState<string | null>(null);
   const [host, setHost] = useState<DesktopRuntimeStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { busy, notice, setNotice, run } = useSettingsOperation<
+    "save" | "resource" | "restart"
+  >();
   const phrases = useMemo(() => settings.wake_phrases.join("、"), [settings]);
 
   useEffect(() => {
@@ -66,7 +72,11 @@ export function CompanionSettingsPanel() {
           );
         }
       } catch (loadError: unknown) {
-        if (active) setError(message(loadError, "无法读取陪伴设置"));
+        if (active)
+          setNotice({
+            tone: "error",
+            text: message(loadError, "无法读取陪伴设置"),
+          });
       } finally {
         if (active) setLoading(false);
       }
@@ -76,14 +86,13 @@ export function CompanionSettingsPanel() {
       active = false;
       unlisten?.();
     };
-  }, []);
+  }, [setNotice]);
 
   const save = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      setSettings(
-        await updateCompanionSettings({
+    const updated = await run(
+      "save",
+      () =>
+        updateCompanionSettings({
           wake_phrase_enabled: settings.wake_phrase_enabled,
           wake_phrases: settings.wake_phrases,
           quiet_hours_enabled: settings.quiet_hours_enabled,
@@ -96,52 +105,54 @@ export function CompanionSettingsPanel() {
           resource_sleep_enabled: settings.resource_sleep_enabled,
           resource_idle_minutes: settings.resource_idle_minutes,
         }),
-      );
-    } catch (saveError: unknown) {
-      setError(message(saveError, "无法保存陪伴设置"));
-    } finally {
-      setSaving(false);
-    }
+      { success: "陪伴设置已保存。", error: "无法保存陪伴设置" },
+    );
+    if (updated) setSettings(updated);
   };
 
   const resourceAction = async (action: "sleep" | "wake") => {
-    setError(null);
-    try {
-      setResources(
+    const updated = await run(
+      "resource",
+      () =>
         action === "sleep"
-          ? await sleepCompanionResources()
-          : await wakeCompanionResources(),
-      );
-    } catch (actionError: unknown) {
-      setError(message(actionError, "无法切换模型资源状态"));
-    }
+          ? sleepCompanionResources()
+          : wakeCompanionResources(),
+      {
+        success: action === "sleep" ? "模型资源已休眠。" : "模型资源已唤醒。",
+        error: "无法切换模型资源状态",
+      },
+    );
+    if (updated) setResources(updated);
+  };
+
+  const restartRuntime = async () => {
+    const updated = await run(
+      "restart",
+      restartDesktopRuntime,
+      { success: "本地服务已重新启动。", error: "无法重启本地服务" },
+    );
+    if (updated) setHost(updated);
   };
 
   return (
     <>
       <section className="desktop-settings-voice-card companion-settings-hero">
-        <div className="desktop-settings-section-intro">
-          <span>
-            <SettingsIcon name="companion" />
-          </span>
-          <div>
-            <h2>陪伴模式</h2>
-            <p>
-              决定宁宁什么时候听你说话、什么时候主动出现，以及空闲时保留多少资源。
-            </p>
-          </div>
-        </div>
+        <SettingsSectionIntro
+          icon="companion"
+          title="陪伴模式"
+          description="决定宁宁什么时候听你说话、什么时候主动出现，以及空闲时保留多少资源。"
+        />
       </section>
 
-      <SettingsBlock
+      <SettingsGroup
         title="注意力"
         description="按键说话始终直接响应；开放麦克风时可要求先叫名字"
       >
-        <ToggleRow
+        <SettingsToggle
           label="开放麦克风需要唤醒词"
           description="避免把你和旁人的普通交谈当成对宁宁说话"
           checked={settings.wake_phrase_enabled}
-          disabled={loading || saving}
+          disabled={loading || Boolean(busy)}
           onChange={(wake_phrase_enabled) =>
             setSettings((current) => ({ ...current, wake_phrase_enabled }))
           }
@@ -154,7 +165,7 @@ export function CompanionSettingsPanel() {
           <input
             aria-label="桌宠唤醒称呼"
             value={phrases}
-            disabled={loading || saving}
+            disabled={loading || Boolean(busy)}
             onChange={(event) =>
               setSettings((current) => ({
                 ...current,
@@ -163,17 +174,17 @@ export function CompanionSettingsPanel() {
             }
           />
         </label>
-      </SettingsBlock>
+      </SettingsGroup>
 
-      <SettingsBlock
+      <SettingsGroup
         title="安静时段"
         description="安静时段内不会主动说话，但你仍可正常呼叫和聊天"
       >
-        <ToggleRow
+        <SettingsToggle
           label="启用安静时段"
           description={`${settings.quiet_start} 至 ${settings.quiet_end}`}
           checked={settings.quiet_hours_enabled}
-          disabled={loading || saving}
+          disabled={loading || Boolean(busy)}
           onChange={(quiet_hours_enabled) =>
             setSettings((current) => ({ ...current, quiet_hours_enabled }))
           }
@@ -208,17 +219,17 @@ export function CompanionSettingsPanel() {
             />
           </label>
         </div>
-      </SettingsBlock>
+      </SettingsGroup>
 
-      <SettingsBlock
+      <SettingsGroup
         title="主动陪伴"
         description="默认关闭；启用后仍受安静时段、冷却和每日次数限制"
       >
-        <ToggleRow
+        <SettingsToggle
           label="允许宁宁主动开口"
           description={`空闲 ${settings.proactive_idle_minutes} 分钟后考虑一次，每日最多 ${settings.proactive_daily_budget} 次`}
           checked={settings.proactive_enabled}
-          disabled={loading || saving}
+          disabled={loading || Boolean(busy)}
           onChange={(proactive_enabled) =>
             setSettings((current) => ({ ...current, proactive_enabled }))
           }
@@ -265,17 +276,17 @@ export function CompanionSettingsPanel() {
               })}`
             : " · 今天尚未主动问候"}
         </div>
-      </SettingsBlock>
+      </SettingsGroup>
 
-      <SettingsBlock
+      <SettingsGroup
         title="资源休眠"
         description="只卸载模型权重；服务和对话仍保持，下一次使用会自动加载"
       >
-        <ToggleRow
+        <SettingsToggle
           label="空闲时释放模型"
           description={`连续空闲 ${settings.resource_idle_minutes} 分钟后释放 ASR/TTS 权重`}
           checked={settings.resource_sleep_enabled}
-          disabled={loading || saving}
+          disabled={loading || Boolean(busy)}
           onChange={(resource_sleep_enabled) =>
             setSettings((current) => ({ ...current, resource_sleep_enabled }))
           }
@@ -308,10 +319,10 @@ export function CompanionSettingsPanel() {
             {resources?.state === "sleeping" ? "唤醒" : "立即休眠"}
           </button>
         </div>
-      </SettingsBlock>
+      </SettingsGroup>
 
       {host ? (
-        <SettingsBlock
+        <SettingsGroup
           title="本地服务"
           description="桌面宿主会自动检测崩溃并恢复 Runtime 与语音进程"
         >
@@ -325,75 +336,27 @@ export function CompanionSettingsPanel() {
             <button
               type="button"
               disabled={host.state === "starting" || host.state === "backoff"}
-              onClick={() => void restartDesktopRuntime().then(setHost)}
+              onClick={() => void restartRuntime()}
             >
               重启本地服务
             </button>
           </div>
-        </SettingsBlock>
+        </SettingsGroup>
       ) : null}
 
       <div className="companion-settings-save-row">
-        <span>{error ?? "设置保存在本机 Runtime 中。"}</span>
+        <span role={notice ? "status" : undefined} data-tone={notice?.tone}>
+          {notice?.text ?? "设置保存在本机 Runtime 中。"}
+        </span>
         <button
           type="button"
-          disabled={loading || saving}
+          disabled={loading || Boolean(busy)}
           onClick={() => void save()}
         >
-          {saving ? "正在保存…" : "保存陪伴设置"}
+          {busy === "save" ? "正在保存…" : "保存陪伴设置"}
         </button>
       </div>
     </>
-  );
-}
-
-function SettingsBlock({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="desktop-settings-group">
-      <header>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </header>
-      <div>{children}</div>
-    </section>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="desktop-settings-toggle-row">
-      <span>
-        <strong>{label}</strong>
-        <small>{description}</small>
-      </span>
-      <input
-        type="checkbox"
-        role="switch"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-    </label>
   );
 }
 

@@ -11,6 +11,11 @@ import type {
   ModelRole,
   ModelRoleConfiguration,
 } from "./types";
+import {
+  SettingsSecretField,
+  SettingsStatus,
+} from "../desktop-settings/SettingsPrimitives";
+import { useSettingsOperation } from "../desktop-settings/useSettingsOperation";
 
 const ROLE_ORDER: ModelRole[] = [
   "chat",
@@ -48,8 +53,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
   const [apiKeys, setApiKeys] = useState<Partial<Record<ModelRole, string>>>(
     {},
   );
-  const [busy, setBusy] = useState<ModelRole | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { busy, notice, setNotice, run } = useSettingsOperation<ModelRole>();
 
   useEffect(() => {
     let active = true;
@@ -65,12 +69,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       })
       .catch((error: unknown) => {
         if (active)
-          setNotice(error instanceof Error ? error.message : "读取设置失败");
+          setNotice({
+            tone: "error",
+            text: error instanceof Error ? error.message : "读取设置失败",
+          });
       });
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, setNotice]);
 
   const byRole = useMemo(
     () => new Map(configurations.map((item) => [item.role, item])),
@@ -92,50 +99,46 @@ export function ModelSettingsPanel({ sessionId }: Props) {
   const save = async (role: ModelRole, clearApiKey = false) => {
     const item = byRole.get(role);
     if (!item) return;
-    setBusy(role);
-    setNotice(null);
-    try {
-      const apiKey = apiKeys[role]?.trim();
-      const updated = await updateModelConfiguration(role, {
-        provider: item.provider,
-        model: item.model,
-        base_url: item.base_url,
-        timeout_seconds: item.timeout_seconds,
-        context_window: item.context_window,
-        enabled: item.enabled,
-        ...(apiKey ? { api_key: apiKey } : {}),
-        ...(clearApiKey ? { clear_api_key: true } : {}),
-      });
-      setConfigurations((current) =>
-        current.map((candidate) =>
-          candidate.role === role ? updated : candidate,
-        ),
-      );
-      setApiKeys((current) => ({ ...current, [role]: "" }));
-      setNotice(`${ROLE_LABELS[role].title}已保存`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "保存失败");
-    } finally {
-      setBusy(null);
-    }
+    const apiKey = apiKeys[role]?.trim();
+    const updated = await run(
+      role,
+      () =>
+        updateModelConfiguration(role, {
+          provider: item.provider,
+          model: item.model,
+          base_url: item.base_url,
+          timeout_seconds: item.timeout_seconds,
+          context_window: item.context_window,
+          enabled: item.enabled,
+          ...(apiKey ? { api_key: apiKey } : {}),
+          ...(clearApiKey ? { clear_api_key: true } : {}),
+        }),
+      {
+        success: `${ROLE_LABELS[role].title}已保存`,
+        error: "保存失败",
+      },
+    );
+    if (!updated) return;
+    setConfigurations((current) =>
+      current.map((candidate) =>
+        candidate.role === role ? updated : candidate,
+      ),
+    );
+    setApiKeys((current) => ({ ...current, [role]: "" }));
   };
 
   const probe = async (role: ModelRole) => {
-    setBusy(role);
-    setNotice(null);
-    try {
-      const result = await testModelConfiguration(role);
-      const detail = result.dimensions
-        ? `，${result.dimensions} 维`
-        : result.characters
-          ? `，返回 ${result.characters} 字符`
-          : "";
-      setNotice(`${ROLE_LABELS[role].title}连接 ${result.status}${detail}`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "连接测试失败");
-    } finally {
-      setBusy(null);
-    }
+    await run(role, () => testModelConfiguration(role), {
+      success: (result) => {
+        const detail = result.dimensions
+          ? `，${result.dimensions} 维`
+          : result.characters
+            ? `，返回 ${result.characters} 字符`
+            : "";
+        return `${ROLE_LABELS[role].title}连接 ${result.status}${detail}`;
+      },
+      error: "连接测试失败",
+    });
   };
 
   return (
@@ -215,29 +218,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                     placeholder="https://…/v1"
                   />
                 </label>
-                <label>
-                  <span>
-                    API Key
-                    {item.api_key_configured ? " · 已在 Runtime 本地配置" : ""}
-                  </span>
-                  <input
-                    aria-label={`${ROLE_LABELS[role].title} API Key`}
-                    type="password"
-                    value={apiKeys[role] ?? ""}
-                    onChange={(event) =>
-                      setApiKeys((current) => ({
-                        ...current,
-                        [role]: event.target.value,
-                      }))
-                    }
-                    autoComplete="new-password"
-                    placeholder={
-                      item.api_key_configured
-                        ? "留空则保持原密钥"
-                        : "本地无鉴权服务可留空"
-                    }
-                  />
-                </label>
+                <SettingsSecretField
+                  ariaLabel={`${ROLE_LABELS[role].title} API Key`}
+                  configured={item.api_key_configured}
+                  value={apiKeys[role] ?? ""}
+                  disabled={busy === role}
+                  onChange={(value) =>
+                    setApiKeys((current) => ({ ...current, [role]: value }))
+                  }
+                />
               </>
             ) : null}
             <div className="model-role-grid">
@@ -296,11 +285,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       <p className="model-secret-note">
         密钥不会回显或写入浏览器；保存后只进入本机 Runtime 的 0600 私密文件。
       </p>
-      {notice ? (
-        <p className="model-settings-notice" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <SettingsStatus notice={notice} className="model-settings-notice" />
     </div>
   );
 }

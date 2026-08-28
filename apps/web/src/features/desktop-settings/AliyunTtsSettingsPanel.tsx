@@ -8,6 +8,8 @@ import type {
   AliyunCloudTtsConfiguration,
   AliyunCloudTtsProviderId,
 } from "../chat/types";
+import { SettingsSecretField } from "./SettingsPrimitives";
+import { useSettingsOperation } from "./useSettingsOperation";
 
 type UpdatePayload = Parameters<typeof updateAliyunTtsConfiguration>[0];
 
@@ -90,8 +92,9 @@ function AliyunTtsSettingsCard({
     useState<AliyunCloudTtsConfiguration | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [clearApiKey, setClearApiKey] = useState(false);
-  const [busy, setBusy] = useState<"save" | "test" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { busy, notice, setNotice, run } = useSettingsOperation<
+    "save" | "test"
+  >();
 
   useEffect(() => {
     let disposed = false;
@@ -101,14 +104,16 @@ function AliyunTtsSettingsCard({
       })
       .catch((error: unknown) => {
         if (!disposed)
-          setMessage(
-            error instanceof Error ? error.message : "读取百炼配置失败",
-          );
+          setNotice({
+            tone: "error",
+            text:
+              error instanceof Error ? error.message : "读取百炼配置失败",
+          });
       });
     return () => {
       disposed = true;
     };
-  }, [providerId]);
+  }, [providerId, setNotice]);
 
   const change = <Key extends keyof AliyunCloudTtsConfiguration>(
     key: Key,
@@ -135,35 +140,29 @@ function AliyunTtsSettingsCard({
 
   const save = async () => {
     if (!configuration || busy) return;
-    setBusy("save");
-    setMessage(null);
-    try {
-      await persist();
-      setMessage(`${title}配置已保存。`);
-    } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "保存失败");
-    } finally {
-      setBusy(null);
-    }
+    await run("save", persist, {
+      success: `${title}配置已保存。`,
+      error: "保存失败",
+    });
   };
 
   const test = async () => {
     if (!configuration || busy) return;
-    setBusy("test");
-    setMessage("正在保存配置并生成一小段测试语音…");
-    try {
-      const updated = await persist();
-      const result = await testAliyunTtsConfiguration(updated.provider_id);
-      setMessage(
-        result.status === "ok"
-          ? `连接、音色与实时音频可用（${result.duration_ms ?? 0} ms）。`
-          : `测试结果：${result.status}`,
-      );
-    } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "连接测试失败");
-    } finally {
-      setBusy(null);
-    }
+    await run(
+      "test",
+      async () => {
+        const updated = await persist();
+        return testAliyunTtsConfiguration(updated.provider_id);
+      },
+      {
+        pending: "正在保存配置并生成一小段测试语音…",
+        success: (result) =>
+          result.status === "ok"
+            ? `连接、音色与实时音频可用（${result.duration_ms ?? 0} ms）。`
+            : `测试结果：${result.status}`,
+        error: "连接测试失败",
+      },
+    );
   };
 
   if (!configuration || configuration.provider_id !== providerId)
@@ -181,7 +180,7 @@ function AliyunTtsSettingsCard({
           />
         </header>
         <p className="desktop-settings-empty">
-          {message ?? `正在读取${title}配置…`}
+          {notice?.text ?? `正在读取${title}配置…`}
         </p>
       </section>
     );
@@ -286,21 +285,14 @@ function AliyunTtsSettingsCard({
             <option value={cosyVoice ? "en" : "English"}>英语</option>
           </select>
         </label>
-        <label>
-          <span>API Key</span>
-          <input
-            type="password"
-            value={apiKey}
-            autoComplete="off"
-            placeholder={
-              configuration.api_key_configured
-                ? "已安全保存；留空保持不变"
-                : "输入 DashScope API Key"
-            }
-            onChange={(event) => setApiKey(event.currentTarget.value)}
-          />
-          <small>同地域的 Qwen 与 CosyVoice 可以复用已保存的百炼 Key。</small>
-        </label>
+        <SettingsSecretField
+          ariaLabel="阿里云百炼 API Key"
+          configured={configuration.api_key_configured}
+          value={apiKey}
+          disabled={Boolean(busy)}
+          help="同地域的 Qwen 与 CosyVoice 可以复用已保存的百炼 Key。"
+          onChange={setApiKey}
+        />
         <label>
           <span>业务空间 ID（可选）</span>
           <input
@@ -371,7 +363,9 @@ function AliyunTtsSettingsCard({
       ) : null}
 
       <footer>
-        <span>{message}</span>
+        <span role={notice ? "status" : undefined} data-tone={notice?.tone}>
+          {notice?.text}
+        </span>
         <div>
           <button
             type="button"

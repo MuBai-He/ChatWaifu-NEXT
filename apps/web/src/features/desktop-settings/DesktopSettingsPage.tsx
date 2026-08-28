@@ -1,85 +1,72 @@
 import { useState } from "react";
-import { MemoryControlCenter } from "../chat/MemoryControlCenter";
-import { ModelSettingsPanel } from "../chat/ModelSettingsPanel";
-import { SkillsControlCenter } from "../chat/SkillsControlCenter";
+
 import { useChatSession } from "../chat/useChatSession";
-import {
-  buildTtsProviderChoices,
-  isAliyunCloudTtsProviderId,
-  providerSelectorValue,
-  readAliyunTtsPreference,
-  resolveAliyunCloudProviderId,
-  resolveProviderSelection,
-  saveAliyunTtsPreference,
-} from "../chat/ttsProviderPresentation";
-import type { AliyunCloudTtsProviderId } from "../chat/types";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
-import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
-import { AliyunTtsSettingsPanel } from "./AliyunTtsSettingsPanel";
-import { SettingsIcon, type SettingsIconName } from "./SettingsIcon";
-
-type SettingsSection = "appearance" | "companion" | "voice" | "models" | "data";
-
-const sections: Array<{
-  id: SettingsSection;
-  label: string;
-  description: string;
-  icon: SettingsIconName;
-}> = [
-  { id: "appearance", label: "桌宠", description: "窗口与显示", icon: "pet" },
-  {
-    id: "companion",
-    label: "陪伴",
-    description: "唤醒、主动与休眠",
-    icon: "companion",
-  },
-  { id: "voice", label: "声音", description: "角色语音", icon: "voice" },
-  { id: "models", label: "模型", description: "AI 与记忆路由", icon: "models" },
-  { id: "data", label: "数据", description: "记忆与扩展", icon: "data" },
-];
+import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import {
+  desktopSettingsRegistry,
+  type DesktopSettingsSectionId,
+} from "./desktopSettingsRegistry";
+import { SettingsIcon } from "./SettingsIcon";
+import {
+  settingsSectionAvailability,
+  visibleSettingsSections,
+} from "./settingsRegistry";
 
 export function DesktopSettingsPage() {
-  const {
-    canvasRef,
-    snapshot,
-    rendererKind,
-    health,
-    character,
-    sessionId,
-    connection,
-    error: runtimeError,
-    resetting,
-    ttsProviders,
-    ttsProviderId,
-    ttsSwitching,
-    changeTtsProvider,
-    refreshTtsProviders,
-    resetAll,
-    refreshMemories,
-  } = useChatSession({ playbackEnabled: false });
-  const {
-    preferences,
-    loading,
-    saving,
-    error: preferenceError,
-    desktopHost,
-    setDisplay,
-    setAlwaysOnTop,
-    setClickThrough,
-    setOverlayVisible,
-  } = useDesktopPreferences();
-  const [section, setSection] = useState<SettingsSection>("appearance");
-  const selected = sections.find((item) => item.id === section) ?? sections[0];
+  const chat = useChatSession({ playbackEnabled: false });
+  const desktop = useDesktopPreferences();
+  const [sectionId, setSectionId] =
+    useState<DesktopSettingsSectionId>("appearance");
 
-  const reset = async () => {
+  const resetConversationAndMemory = async () => {
     if (
       !window.confirm(
         "确定清空当前对话、全部明确记忆和本地生成语音吗？此操作无法撤销。",
       )
     )
       return;
-    await resetAll();
+    await chat.resetAll();
   };
+  const context: DesktopSettingsContext = {
+    canvasRef: chat.canvasRef,
+    appearance: {
+      snapshot: chat.snapshot,
+      rendererKind: chat.rendererKind,
+      character: chat.character,
+    },
+    voice: {
+      sessionId: chat.sessionId,
+      ttsProviders: chat.ttsProviders,
+      ttsProviderId: chat.ttsProviderId,
+      ttsSwitching: chat.ttsSwitching,
+      changeTtsProvider: chat.changeTtsProvider,
+      refreshTtsProviders: chat.refreshTtsProviders,
+    },
+    data: {
+      sessionId: chat.sessionId,
+      resetting: chat.resetting,
+      refreshMemories: chat.refreshMemories,
+    },
+    runtime: {
+      connection: chat.connection,
+      health: chat.health,
+      error: chat.error,
+    },
+    sessionId: chat.sessionId,
+    desktop,
+    resetConversationAndMemory,
+  };
+  const surface = desktop.desktopHost ? "desktop" : "browser";
+  const sections = visibleSettingsSections(
+    desktopSettingsRegistry,
+    context,
+    surface,
+  );
+  const selected =
+    sections.find((section) => section.id === sectionId) ?? sections[0];
+  if (!selected) return null;
+  const SelectedSection = selected.component;
 
   return (
     <main className="desktop-settings-page">
@@ -95,31 +82,42 @@ export function DesktopSettingsPage() {
         </header>
 
         <nav aria-label="设置分类">
-          {sections.map((item) => (
-            <button
-              className={section === item.id ? "active" : ""}
-              type="button"
-              key={item.id}
-              onClick={() => setSection(item.id)}
-              aria-current={section === item.id ? "page" : undefined}
-            >
-              <span>
-                <SettingsIcon name={item.icon} />
-              </span>
-              <div>
-                <strong>{item.label}</strong>
-                <small>{item.description}</small>
-              </div>
-            </button>
-          ))}
+          {sections.map((section) => {
+            const availability = settingsSectionAvailability(section, context);
+            return (
+              <button
+                className={selected.id === section.id ? "active" : ""}
+                type="button"
+                key={section.id}
+                disabled={!availability.enabled}
+                title={availability.reason}
+                onClick={() =>
+                  setSectionId(section.id as DesktopSettingsSectionId)
+                }
+                aria-current={
+                  selected.id === section.id ? "page" : undefined
+                }
+              >
+                <span>
+                  <SettingsIcon name={section.icon} />
+                </span>
+                <div>
+                  <strong>{section.label}</strong>
+                  <small>{availability.reason ?? section.description}</small>
+                </div>
+              </button>
+            );
+          })}
         </nav>
 
         <footer>
-          <i className={connection} />
+          <i className={context.runtime.connection} />
           <div>
-            <strong>{connectionLabel(connection)}</strong>
+            <strong>{connectionLabel(context.runtime.connection)}</strong>
             <small>
-              {health?.version ? `Runtime ${health.version}` : "本地服务"}
+              {context.runtime.health?.version
+                ? `Runtime ${context.runtime.health.version}`
+                : "本地服务"}
             </small>
           </div>
         </footer>
@@ -131,404 +129,27 @@ export function DesktopSettingsPage() {
             <small>{selected.description}</small>
             <h1>{selected.label}</h1>
           </div>
-          <span className={`desktop-settings-runtime ${connection}`}>
+          <span
+            className={`desktop-settings-runtime ${context.runtime.connection}`}
+          >
             <i />
-            {connection === "connected"
+            {context.runtime.connection === "connected"
               ? "运行正常"
-              : connectionLabel(connection)}
+              : connectionLabel(context.runtime.connection)}
           </span>
         </header>
 
         <div className="desktop-settings-scroll">
-          {section === "appearance" ? (
-            <AppearanceSettings
-              canvasRef={canvasRef}
-              characterName={character?.display_name ?? "绫地宁宁"}
-              rendererKind={rendererKind}
-              avatarStatus={snapshot?.status ?? "loading"}
-              preferences={preferences}
-              disabled={loading || saving}
-              desktopHost={desktopHost}
-              setOverlayVisible={setOverlayVisible}
-              setAlwaysOnTop={setAlwaysOnTop}
-              setClickThrough={setClickThrough}
-              setDisplay={setDisplay}
-            />
-          ) : null}
+          <SelectedSection context={context} />
 
-          {section === "voice" ? (
-            <VoiceSettings
-              providers={ttsProviders}
-              providerId={ttsProviderId}
-              switching={ttsSwitching}
-              sessionReady={Boolean(sessionId)}
-              onChange={changeTtsProvider}
-              onConfigured={refreshTtsProviders}
-            />
-          ) : null}
-
-          {section === "companion" ? <CompanionSettingsPanel /> : null}
-
-          {section === "models" ? (
-            <section className="desktop-settings-models" aria-label="模型设置">
-              <div className="desktop-settings-section-intro">
-                <span>
-                  <SettingsIcon name="models" />
-                </span>
-                <div>
-                  <h2>模型路由</h2>
-                  <p>聊天、记忆提取、总结和向量模型可以分别配置。</p>
-                </div>
-              </div>
-              <ModelSettingsPanel sessionId={sessionId} />
-            </section>
-          ) : null}
-
-          {section === "data" ? (
-            <DataSettings
-              sessionId={sessionId}
-              resetting={resetting}
-              onMemoryChanged={refreshMemories}
-              onReset={reset}
-            />
-          ) : null}
-
-          {runtimeError || preferenceError ? (
+          {context.runtime.error || desktop.error ? (
             <p className="desktop-settings-error" role="alert">
-              {preferenceError ?? runtimeError}
+              {desktop.error ?? context.runtime.error}
             </p>
           ) : null}
         </div>
       </section>
     </main>
-  );
-}
-
-type AppearanceSettingsProps = {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  characterName: string;
-  rendererKind: "live2d" | "fake";
-  avatarStatus: string;
-  preferences: ReturnType<typeof useDesktopPreferences>["preferences"];
-  disabled: boolean;
-  desktopHost: boolean;
-  setOverlayVisible: (enabled: boolean) => Promise<void>;
-  setAlwaysOnTop: (enabled: boolean) => Promise<void>;
-  setClickThrough: (enabled: boolean) => Promise<void>;
-  setDisplay: (display: { showSubtitles?: boolean }) => Promise<void>;
-};
-
-function AppearanceSettings({
-  canvasRef,
-  characterName,
-  rendererKind,
-  avatarStatus,
-  preferences,
-  disabled,
-  desktopHost,
-  setOverlayVisible,
-  setAlwaysOnTop,
-  setClickThrough,
-  setDisplay,
-}: AppearanceSettingsProps) {
-  return (
-    <>
-      <section className="desktop-settings-preview-card">
-        <div className="desktop-settings-avatar-preview">
-          <canvas key={rendererKind} ref={canvasRef} />
-        </div>
-        <div>
-          <small>CURRENT CHARACTER</small>
-          <h2>{characterName}</h2>
-          <p>
-            {rendererKind === "live2d" ? "Live2D" : "安全回退"} · {avatarStatus}
-          </p>
-          <span>拖动宁宁角色本体可移动桌宠，拖动窗口边缘可调整大小。</span>
-        </div>
-      </section>
-
-      {!desktopHost ? (
-        <p className="desktop-settings-preview-note">
-          当前是浏览器预览；窗口置顶、显示和鼠标穿透会在桌面版中生效。
-        </p>
-      ) : null}
-
-      <SettingsGroup title="窗口" description="控制桌宠在桌面上的行为">
-        <SettingsToggle
-          label="显示桌宠"
-          description="隐藏后仍可从托盘或这里重新显示"
-          checked={preferences.overlayVisible}
-          disabled={disabled}
-          onChange={setOverlayVisible}
-        />
-        <SettingsToggle
-          label="始终置顶"
-          description="让宁宁保持在其他窗口上方"
-          checked={preferences.alwaysOnTop}
-          disabled={disabled}
-          onChange={setAlwaysOnTop}
-        />
-        <SettingsToggle
-          label="鼠标穿透"
-          description="开启后点击会落到下方窗口，可在本设置页或托盘关闭"
-          checked={preferences.clickThrough}
-          disabled={disabled}
-          onChange={setClickThrough}
-        />
-      </SettingsGroup>
-
-      <SettingsGroup title="画面" description="只改变显示，不影响语音和动作">
-        <SettingsToggle
-          label="显示字幕"
-          description="显示宁宁当前正在说的话"
-          checked={preferences.showSubtitles}
-          disabled={disabled}
-          onChange={(enabled) => setDisplay({ showSubtitles: enabled })}
-        />
-      </SettingsGroup>
-    </>
-  );
-}
-
-type VoiceSettingsProps = {
-  providers: ReturnType<typeof useChatSession>["ttsProviders"];
-  providerId: string;
-  switching: boolean;
-  sessionReady: boolean;
-  onChange: (providerId: string) => Promise<void>;
-  onConfigured: () => Promise<void>;
-};
-
-function VoiceSettings({
-  providers,
-  providerId,
-  switching,
-  sessionReady,
-  onChange,
-  onConfigured,
-}: VoiceSettingsProps) {
-  const [bailianProviderId, setBailianProviderId] =
-    useState<AliyunCloudTtsProviderId>(() =>
-      resolveAliyunCloudProviderId(
-        providers,
-        providerId,
-        readAliyunTtsPreference(),
-      ),
-    );
-  const activeBailianProviderId = isAliyunCloudTtsProviderId(providerId)
-    ? providerId
-    : bailianProviderId;
-
-  const choices = buildTtsProviderChoices(
-    providers,
-    providerId,
-    activeBailianProviderId,
-  );
-  const selected = choices.find(
-    (provider) => provider.id === providerSelectorValue(providerId),
-  );
-  const changeProvider = async (selectionId: string) => {
-    const nextProviderId = resolveProviderSelection(
-      selectionId,
-      providers,
-      providerId,
-      activeBailianProviderId,
-    );
-    if (isAliyunCloudTtsProviderId(nextProviderId)) {
-      setBailianProviderId(nextProviderId);
-      saveAliyunTtsPreference(nextProviderId);
-    }
-    await onChange(nextProviderId);
-  };
-  const changeBailianApi = async (next: AliyunCloudTtsProviderId) => {
-    setBailianProviderId(next);
-    saveAliyunTtsPreference(next);
-    if (isAliyunCloudTtsProviderId(providerId)) await onChange(next);
-  };
-  return (
-    <>
-      <section className="desktop-settings-voice-card">
-        <div className="desktop-settings-section-intro">
-          <span>
-            <SettingsIcon name="voice" />
-          </span>
-          <div>
-            <h2>角色声音</h2>
-            <p>选择桌宠回答时使用的本地或云端实时语音。</p>
-          </div>
-        </div>
-        <label className="desktop-settings-select-row">
-          <div>
-            <strong>当前语音</strong>
-            <small>
-              {selected
-                ? `${selected.engineLabel ? `${selected.engineLabel} · ` : ""}${selected.model}`
-                : "正在读取 Runtime 配置"}
-            </small>
-          </div>
-          <select
-            value={providerSelectorValue(providerId)}
-            disabled={!sessionReady || switching}
-            onChange={(event) => void changeProvider(event.target.value)}
-            aria-label="选择桌宠语音"
-          >
-            {choices.length ? (
-              choices.map((provider) => (
-                <option
-                  value={provider.id}
-                  key={provider.id}
-                  disabled={provider.status === "unavailable"}
-                >
-                  {provider.displayName}
-                </option>
-              ))
-            ) : (
-              <option value={providerSelectorValue(providerId)}>
-                正在读取…
-              </option>
-            )}
-          </select>
-        </label>
-      </section>
-
-      <SettingsGroup title="可用语音" description="模型只在需要时加载">
-        {choices.length ? (
-          choices.map((provider) => (
-            <div
-              className="desktop-settings-provider"
-              key={provider.id}
-            >
-              <i className={provider.status} />
-              <div>
-                <strong>{provider.displayName}</strong>
-                <small>
-                  {provider.engineLabel ? `${provider.engineLabel} · ` : ""}
-                  {provider.model} · {provider.languages.join(" / ")}
-                </small>
-              </div>
-              <span>{provider.modelLoaded ? "已加载" : provider.status}</span>
-            </div>
-          ))
-        ) : (
-          <p className="desktop-settings-empty">等待 Runtime 返回语音能力…</p>
-        )}
-      </SettingsGroup>
-
-      <AliyunTtsSettingsPanel
-        providerId={activeBailianProviderId}
-        onProviderIdChange={changeBailianApi}
-        onSaved={onConfigured}
-      />
-
-      <p className="desktop-settings-info">
-        麦克风采集和声音播放只由桌宠窗口负责，设置页不会建立第二条媒体链路，因此不会产生重叠语音。
-      </p>
-    </>
-  );
-}
-
-function DataSettings({
-  sessionId,
-  resetting,
-  onMemoryChanged,
-  onReset,
-}: {
-  sessionId: string | null;
-  resetting: boolean;
-  onMemoryChanged: () => Promise<void>;
-  onReset: () => Promise<void>;
-}) {
-  return (
-    <>
-      <div className="desktop-settings-tool-grid">
-        <article className="desktop-settings-tool-card">
-          <span>
-            <SettingsIcon name="memory" />
-          </span>
-          <h2>结构化记忆</h2>
-          <p>查看建议、修正事实、确认敏感内容并管理遗忘。</p>
-          <MemoryControlCenter
-            sessionId={sessionId}
-            onChanged={onMemoryChanged}
-          />
-        </article>
-        <article className="desktop-settings-tool-card">
-          <span>
-            <SettingsIcon name="skills" />
-          </span>
-          <h2>Skills 与插件</h2>
-          <p>管理能力权限、插件隔离、确认请求和最近运行。</p>
-          <SkillsControlCenter sessionId={sessionId} />
-        </article>
-      </div>
-
-      <SettingsGroup title="本地数据" description="数据只保存在这台设备">
-        <div className="desktop-settings-danger-row">
-          <div>
-            <strong>重置对话与记忆</strong>
-            <small>清空当前对话、明确记忆和已生成语音，操作无法撤销。</small>
-          </div>
-          <button
-            type="button"
-            disabled={!sessionId || resetting}
-            onClick={() => void onReset()}
-          >
-            {resetting ? "正在重置…" : "全部重置"}
-          </button>
-        </div>
-      </SettingsGroup>
-    </>
-  );
-}
-
-function SettingsGroup({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="desktop-settings-group">
-      <header>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </header>
-      <div>{children}</div>
-    </section>
-  );
-}
-
-function SettingsToggle({
-  label,
-  description,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (enabled: boolean) => Promise<void>;
-}) {
-  return (
-    <label className="desktop-settings-toggle-row">
-      <span>
-        <strong>{label}</strong>
-        <small>{description}</small>
-      </span>
-      <input
-        type="checkbox"
-        role="switch"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => void onChange(event.currentTarget.checked)}
-        aria-label={label}
-      />
-    </label>
   );
 }
 
