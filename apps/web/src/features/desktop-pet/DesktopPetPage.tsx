@@ -6,6 +6,7 @@ import {
   normalizeDesktopSubtitle,
 } from "../chat/subtitlePlayback";
 import { useDesktopPreferences } from "./useDesktopPreferences";
+import { useDesktopAvatarDrag } from "./useDesktopAvatarDrag";
 import { useDesktopPointerPresence } from "./useDesktopPointerPresence";
 
 export function DesktopPetPage() {
@@ -14,6 +15,7 @@ export function DesktopPetPage() {
     snapshot,
     rendererKind,
     avatarWarning,
+    hitTest,
     touch,
     character,
     messages,
@@ -43,6 +45,11 @@ export function DesktopPetPage() {
     setDisplay,
   } = useDesktopPreferences();
   const pointerPresence = useDesktopPointerPresence();
+  const avatarDrag = useDesktopAvatarDrag({
+    hitTest,
+    touch,
+    onError: setControlError,
+  });
   const latestAssistant = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -120,8 +127,10 @@ export function DesktopPetPage() {
       }
       window.location.assign("/desktop-settings");
     } catch (openError: unknown) {
+      const reason =
+        openError instanceof Error ? openError.message : String(openError);
       setControlError(
-        openError instanceof Error ? openError.message : "无法打开控制中心",
+        reason ? `无法打开桌宠设置：${reason}` : "无法打开桌宠设置",
       );
     }
   };
@@ -140,26 +149,13 @@ export function DesktopPetPage() {
       onPointerEnter={pointerPresence.onPointerEnter}
       onPointerLeave={pointerPresence.onPointerLeave}
     >
-      <div
-        className="desktop-pet-drag-region"
-        data-tauri-drag-region
-        aria-label="拖动桌宠"
-      >
-        {preferences.showStatus ? (
-          <>
-            <i />
-            <span title={`${rendererKind} · ${snapshot?.status ?? "loading"}`}>
-              {connection === "connected" ? "NENE ONLINE" : connection}
-            </span>
-            <i />
-          </>
-        ) : null}
-      </div>
-
       <button
         className="desktop-pet-avatar"
         type="button"
-        onClick={touch}
+        onPointerDown={avatarDrag.onPointerDown}
+        onPointerMove={avatarDrag.onPointerMove}
+        onPointerUp={avatarDrag.onPointerUp}
+        onPointerCancel={avatarDrag.onPointerCancel}
         aria-label="摸摸绫地宁宁"
         data-avatar-status={snapshot?.status ?? "loading"}
       >
@@ -190,18 +186,6 @@ export function DesktopPetPage() {
               }
             />
             字幕
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={preferences.showStatus}
-              onChange={(event) =>
-                void setDisplay({
-                  showStatus: event.currentTarget.checked,
-                })
-              }
-            />
-            在线状态
           </label>
         </fieldset>
       ) : null}

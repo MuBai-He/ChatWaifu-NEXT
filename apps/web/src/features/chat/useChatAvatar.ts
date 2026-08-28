@@ -8,7 +8,7 @@ import {
   SyntheticLipSyncSource,
   type AvatarControllerSnapshot,
 } from "@chatwaifu/avatar-sdk";
-import type { AvatarCue } from "@chatwaifu/protocol";
+import type { AvatarCue, AvatarInteractionEvent } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useChatAvatar() {
@@ -127,6 +127,24 @@ export function useChatAvatar() {
     });
   }, []);
 
+  const hitTest = useCallback(
+    (clientX: number, clientY: number): AvatarInteractionEvent[] => {
+      const canvas = canvasRef.current;
+      const controller = controllerRef.current;
+      if (!canvas || !controller) return [];
+      const bounds = canvas.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) return [];
+      const x =
+        (clientX - bounds.left) *
+        ((canvas.clientWidth || bounds.width) / bounds.width);
+      const y =
+        (clientY - bounds.top) *
+        ((canvas.clientHeight || bounds.height) / bounds.height);
+      return controller.hitTest(x, y);
+    },
+    [],
+  );
+
   const resetAvatar = useCallback(() => {
     controllerRef.current?.setLipSyncSource(new SilentLipSyncSource());
     controllerRef.current?.reset();
@@ -141,6 +159,7 @@ export function useChatAvatar() {
     startLipSync,
     stopLipSync,
     invalidateGeneration,
+    hitTest,
     touch,
     resetAvatar,
   };

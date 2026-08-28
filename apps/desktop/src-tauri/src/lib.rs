@@ -23,6 +23,7 @@ use sidecar::RuntimeHost;
 pub const HOST_ROLE: &str = "os-capabilities-and-sidecar-management";
 pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
 pub const CONTROL_CENTER_LABEL: &str = "control-center";
+pub const APP_ENTRY: &str = "index.html";
 pub const PREFERENCES_CHANGED_EVENT: &str = "desktop-preferences-changed";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -32,7 +33,6 @@ pub struct DesktopPreferences {
     pub click_through: bool,
     pub overlay_visible: bool,
     pub show_subtitles: bool,
-    pub show_status: bool,
     pub overlay_x: Option<i32>,
     pub overlay_y: Option<i32>,
     pub overlay_width: Option<u32>,
@@ -46,7 +46,6 @@ impl Default for DesktopPreferences {
             click_through: false,
             overlay_visible: true,
             show_subtitles: true,
-            show_status: true,
             overlay_x: None,
             overlay_y: None,
             overlay_width: None,
@@ -65,21 +64,41 @@ struct DesktopState {
 #[tauri::command]
 fn show_control_center(app: AppHandle) -> Result<(), String> {
     let window = match app.get_webview_window(CONTROL_CENTER_LABEL) {
-        Some(window) => window,
-        None => WebviewWindowBuilder::new(
-            &app,
-            CONTROL_CENTER_LABEL,
-            WebviewUrl::App("/desktop-settings".into()),
-        )
-        .title("ChatWaifu NEXT · 桌宠设置")
-        .inner_size(960.0, 700.0)
-        .min_inner_size(720.0, 540.0)
-        .center()
-        .build()
-        .map_err(window_error)?,
+        Some(window) => {
+            refresh_development_window(&app, &window)?;
+            window
+        }
+        None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, native_app_entry(&app))
+            .title("ChatWaifu NEXT · 桌宠设置")
+            .inner_size(960.0, 700.0)
+            .min_inner_size(720.0, 540.0)
+            .center()
+            .build()
+            .map_err(window_error)?,
     };
     window.show().map_err(window_error)?;
     window.set_focus().map_err(window_error)
+}
+
+#[cfg(debug_assertions)]
+fn refresh_development_window(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
+    if let Some(dev_url) = app.config().build.dev_url.clone() {
+        window.navigate(dev_url).map_err(window_error)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(debug_assertions))]
+fn refresh_development_window(_app: &AppHandle, _window: &WebviewWindow) -> Result<(), String> {
+    Ok(())
+}
+
+fn native_app_entry(app: &AppHandle) -> WebviewUrl {
+    #[cfg(debug_assertions)]
+    if let Some(dev_url) = app.config().build.dev_url.clone() {
+        return WebviewUrl::External(dev_url);
+    }
+    WebviewUrl::App(APP_ENTRY.into())
 }
 
 #[tauri::command]
@@ -119,11 +138,9 @@ fn set_avatar_overlay_display(
     app: AppHandle,
     state: State<'_, DesktopState>,
     show_subtitles: bool,
-    show_status: bool,
 ) -> Result<DesktopPreferences, String> {
     let preferences = update_preferences(&state, |preferences| {
         preferences.show_subtitles = show_subtitles;
-        preferences.show_status = show_status;
     })?;
     commit_preferences(&app, &preferences)?;
     Ok(preferences)
@@ -481,11 +498,16 @@ fn window_error(error: tauri::Error) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{DesktopPreferences, HOST_ROLE, should_ignore_cursor_events};
+    use super::{APP_ENTRY, DesktopPreferences, HOST_ROLE, should_ignore_cursor_events};
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
         assert_eq!(HOST_ROLE, "os-capabilities-and-sidecar-management");
+    }
+
+    #[test]
+    fn packaged_control_center_uses_the_stable_application_entry() {
+        assert_eq!(APP_ENTRY, "index.html");
     }
 
     #[test]
@@ -495,7 +517,6 @@ mod tests {
         assert!(!preferences.click_through);
         assert!(preferences.overlay_visible);
         assert!(preferences.show_subtitles);
-        assert!(preferences.show_status);
         assert_eq!(preferences.overlay_x, None);
     }
 

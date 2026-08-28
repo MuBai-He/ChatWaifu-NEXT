@@ -32,20 +32,6 @@
         "maximizable": false,
         "fullscreen": false,
         "visible": true
-      },
-      {
-        "label": "control-center",
-        "title": "ChatWaifu NEXT · 桌宠设置",
-        "url": "/desktop-settings",
-        "width": 960,
-        "height": 700,
-        "minWidth": 720,
-        "minHeight": 540,
-        "center": true,
-        "decorations": true,
-        "resizable": true,
-        "create": false,
-        "visible": false
       }
     ],
     "security": {

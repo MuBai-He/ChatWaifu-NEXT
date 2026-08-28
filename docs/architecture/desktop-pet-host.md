@@ -6,8 +6,8 @@ The first desktop slice turns the existing React and Live2D application path int
 desktop pet. Tauri owns OS integration only:
 
 - a transparent `avatar-overlay` window;
-- a lazily created normal `control-center` window rendering `/desktop-settings`;
-- tray actions, click-through, always-on-top, visibility, position, size, and HUD visibility;
+- a lazily created normal `control-center` window mounting the desktop-settings surface;
+- tray actions, click-through, always-on-top, visibility, position, size, and subtitle visibility;
 - atomic persistence of those OS-level preferences.
 
 Character behavior, model calls, memory, voice routing, Runtime events, and Live2D asset identifiers
@@ -18,14 +18,18 @@ architecture direction.
 
 The overlay consumes the same loopback Runtime HTTP/WebSocket contracts and semantic `AvatarCue`
 stream as the browser Demo. It renders a transparent Live2D canvas, the latest assistant subtitle,
-connection state, avatar touch, a compact typed-message composer, microphone connection, and
-push-to-talk controls. The composer calls the same generation-safe `useChatSession.send` path as the
-main visual-novel page; the overlay does not own a parallel chat protocol. Subtitle and
-connection-state visibility are independent presentation preferences; hiding either does not stop
-generation, playback, lip sync, or avatar motion. The bottom interaction rail stays visually hidden
+avatar touch, a compact typed-message composer, microphone connection, and push-to-talk controls.
+The composer calls the same generation-safe `useChatSession.send` path as the main visual-novel
+page; the overlay does not own a parallel chat protocol. Hiding subtitles does not stop generation,
+playback, lip sync, or avatar motion. The bottom interaction rail stays visually hidden
 until the pointer enters the pet window, keyboard focus reaches a control, or a draft, active HUD,
 send, or push-to-talk interaction needs it to remain available. Touch-only previews keep the rail
 visible. Tauri commands only expose bounded window and presentation-preference operations.
+
+The model canvas uses semantic Live2D hit testing before window movement. Pressing and moving from
+the mapped head area crosses a small pointer threshold and calls Tauri's native window drag API;
+releasing without crossing the threshold remains a character touch. The old online label and its
+decorative drag strip are not part of the HUD.
 
 The character greeting is shown only before any assistant message exists. Once a generation has
 started, its empty pre-token state renders only the typing caret and never falls back to the greeting.
@@ -44,6 +48,13 @@ and is not created at startup. It is a dedicated app-like settings surface with 
 voice-provider, model-routing, companion-policy, and local-data sections; it does not render the
 visual-novel stage or composer. Opening it creates or shows the native window; closing it hides the
 window so the pet and Runtime remain alive.
+
+Native window labels are the authoritative desktop surface identity: `avatar-overlay` always mounts
+the desktop-pet surface and `control-center` always mounts the settings surface. The lazily created
+control center has one native Rust builder definition rather than a dormant configuration entry plus
+a second copy. In development that builder loads the configured Vite `devUrl` directly, avoiding
+Tauri's platform-specific app-subpath proxy; packaged builds load the embedded `index.html`. Browser
+previews continue to use pathname routing.
 
 The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
 browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the
@@ -95,6 +106,9 @@ emits progress acknowledgements.
 
 - Missing Runtime renders an offline notice while Live2D remains safely interactive.
 - Missing proprietary Live2D assets uses the existing deterministic renderer fallback.
+- Windows x64 development bounds oversized local Live2D textures to 4096 pixels before launch,
+  preserving the source beside the ignored local asset. This keeps model-specific optimization out
+  of the renderer contract while avoiding virtual-GPU decode timeouts.
 - Click-through can always be disabled again from the tray.
 - Native cursor sampling falls back to ordinary Web pointer events after repeated read failures and
   restores persisted click-through before stopping.
@@ -116,8 +130,8 @@ non-transparent profiles are intentionally excluded from this slice.
 
 ## Verification
 
-- Web unit tests cover route selection, avatar interaction, typed-message submission, independent
-  HUD visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
+- Web unit tests cover route selection, avatar interaction, semantic head dragging, typed-message
+  submission, subtitle visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
   focus-free pointer presence, multi-display physical bounds, playback-paced whole-line subtitle
   turns, out-of-order playback metadata, hanging audio-unlock recovery, interruption, and single
   media ownership.

@@ -205,10 +205,7 @@ type AppearanceSettingsProps = {
   setOverlayVisible: (enabled: boolean) => Promise<void>;
   setAlwaysOnTop: (enabled: boolean) => Promise<void>;
   setClickThrough: (enabled: boolean) => Promise<void>;
-  setDisplay: (display: {
-    showSubtitles?: boolean;
-    showStatus?: boolean;
-  }) => Promise<void>;
+  setDisplay: (display: { showSubtitles?: boolean }) => Promise<void>;
 };
 
 function AppearanceSettings({
@@ -236,7 +233,7 @@ function AppearanceSettings({
           <p>
             {rendererKind === "live2d" ? "Live2D" : "安全回退"} · {avatarStatus}
           </p>
-          <span>拖动桌宠窗口边缘即可调整大小，位置和尺寸会自动保存。</span>
+          <span>拖动宁宁的头部可移动桌宠，拖动窗口边缘可调整大小。</span>
         </div>
       </section>
 
@@ -277,13 +274,6 @@ function AppearanceSettings({
           checked={preferences.showSubtitles}
           disabled={disabled}
           onChange={(enabled) => setDisplay({ showSubtitles: enabled })}
-        />
-        <SettingsToggle
-          label="显示在线状态"
-          description="同时控制 NENE ONLINE 与两侧装饰线"
-          checked={preferences.showStatus}
-          disabled={disabled}
-          onChange={(enabled) => setDisplay({ showStatus: enabled })}
         />
       </SettingsGroup>
     </>

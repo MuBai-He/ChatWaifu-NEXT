@@ -130,13 +130,15 @@ phases:
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
+      - Immutable Tauri window labels are the authoritative surface identity; the lazy control center loads devUrl directly in development and embedded index.html in packages, avoiding Windows child-route load failures and duplicate desktop-pet media owners
       - One media-owner policy keeps TTS playback and microphone capture in the pet window so the control center cannot duplicate audio
       - The macOS host embeds a microphone usage description and unsupported WebViews expose an actionable recovery message instead of an inert disabled control
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
-      - Overlay position, size, visibility, always-on-top, click-through, subtitle visibility, and online-state visibility persist atomically in the OS application config directory
+      - Overlay position, size, visibility, always-on-top, click-through, and subtitle visibility persist atomically in the OS application config directory
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
       - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
+      - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while semantic head press-and-move starts native window dragging without converting the gesture into a touch
       - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
       - The avatar overlay disables inactive WebView throttling so streaming text, audio progress, Live2D, and subtitle paging continue without mouse focus or selection
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival
@@ -149,6 +151,7 @@ phases:
       - Windows x64 development launcher keeps Vite hot reload and Rust logs attached while preserving the x86_64-pc-windows-msvc target on Windows-on-ARM
       - Windows development without local model assets degrades to a healthy dynamic-port Demo Runtime with fake TTS and disabled STT; cloud TTS remains discoverable and Ctrl+C leaves no Runtime listener
       - Windows parent-watchdog liveness checks use a non-signaling process handle instead of POSIX kill-zero semantics; a real x64 development smoke remains alive through Runtime readiness and cleans host plus listeners on intentional Ctrl+C
+      - A real Windows x64 Tauri smoke renders the local Ayachi Nene Live2D model transparently after the launcher bounds the ignored 8192px source texture to a preserved 4096px runtime copy
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci

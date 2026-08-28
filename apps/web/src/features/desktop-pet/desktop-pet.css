@@ -8,38 +8,6 @@
   user-select: none;
 }
 
-.desktop-pet-drag-region {
-  position: absolute;
-  z-index: 20;
-  top: 8px;
-  left: 50%;
-  display: flex;
-  width: min(180px, 54%);
-  height: 22px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: rgb(255 241 249 / 58%);
-  cursor: grab;
-  font: 0.46rem var(--mono);
-  letter-spacing: 0.18em;
-  text-shadow: 0 1px 8px rgb(34 13 30 / 70%);
-}
-
-.desktop-pet-drag-region:active {
-  cursor: grabbing;
-}
-
-.desktop-pet-drag-region i {
-  width: 22px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(244 180 216 / 60%));
-}
-
-.desktop-pet-drag-region i:last-child {
-  background: linear-gradient(90deg, rgb(244 180 216 / 60%), transparent);
-}
-
 .desktop-pet-avatar {
   position: absolute;
   z-index: 2;
@@ -47,8 +15,12 @@
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: grab;
   inset: 24px 0 112px;
+}
+
+.desktop-pet-avatar:active {
+  cursor: grabbing;
 }
 
 .desktop-pet-avatar canvas {
@@ -321,10 +293,6 @@
   font-size: 0.58rem;
   line-height: 1.4;
   backdrop-filter: blur(12px);
-}
-
-.desktop-pet-shell[data-connection="offline"] .desktop-pet-drag-region span {
-  color: #f4b3b3;
 }
 
 @media (hover: none) {

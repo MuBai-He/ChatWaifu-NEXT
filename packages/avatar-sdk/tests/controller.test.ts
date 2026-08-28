@@ -84,10 +84,20 @@ describe("AvatarController", () => {
     await controller.load();
     controller.resize(600, 600);
 
+    let observedInteractions = 0;
+    controller.onInteraction(() => {
+      observedInteractions += 1;
+    });
+    const probed = controller.hitTest(300, 180);
+
+    expect(probed[0]?.target).toBe("touched_head");
+    expect(observedInteractions).toBe(0);
+
     const events = controller.handlePointer(300, 180);
 
     expect(events[0]?.target).toBe("touched_head");
     expect(events[0]?.kind).toBe("touch");
+    expect(observedInteractions).toBe(1);
     controller.dispose();
   });
 });

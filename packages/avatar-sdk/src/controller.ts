@@ -153,10 +153,14 @@ export class AvatarController {
     this.renderer.resize(width, height, dpr);
   }
 
-  handlePointer(x: number, y: number): AvatarInteractionEvent[] {
-    const events = this.renderer
+  hitTest(x: number, y: number): AvatarInteractionEvent[] {
+    return this.renderer
       .hitTest(x, y)
       .map((hit) => interactionFromHit(this.manifest, hit));
+  }
+
+  handlePointer(x: number, y: number): AvatarInteractionEvent[] {
+    const events = this.hitTest(x, y);
     for (const event of events) {
       for (const listener of this.interactionListeners) listener(event);
     }

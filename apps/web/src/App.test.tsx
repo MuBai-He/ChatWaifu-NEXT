@@ -16,11 +16,25 @@ import type {
   VoiceConnectionState,
 } from "./features/chat/voiceClient";
 
+const nativeWindow = vi.hoisted(() => ({
+  label: String("avatar-overlay"),
+  startDragging: vi.fn().mockResolvedValue(undefined),
+}));
+
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
   snapshot: null,
   rendererKind: "fake" as const,
-  avatarWarning: null,
+  avatarWarning: null as string | null,
+  hitTest: vi.fn(() => [
+    {
+      interaction_id: "00000000-0000-4000-8000-000000000099",
+      avatar_id: "ayachi-nene",
+      kind: "touch" as const,
+      target: "touched_head",
+      metadata: { area_id: "head" },
+    },
+  ]),
   touch: vi.fn(),
   health: {
     status: "ok" as const,
@@ -116,6 +130,10 @@ vi.mock("./features/chat/useChatSession", () => ({
   useChatSession: () => session,
 }));
 
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => nativeWindow,
+}));
+
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
@@ -127,6 +145,17 @@ describe("ChatWaifu usable demo", () => {
     session.avatarWarning = null;
     session.messages = [];
     session.subtitlePlayback = null;
+    session.hitTest.mockReturnValue([
+      {
+        interaction_id: "00000000-0000-4000-8000-000000000099",
+        avatar_id: "ayachi-nene",
+        kind: "touch",
+        target: "touched_head",
+        metadata: { area_id: "head" },
+      },
+    ]);
+    nativeWindow.label = "avatar-overlay";
+    Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
     vi.clearAllMocks();
   });
 
@@ -172,15 +201,58 @@ describe("ChatWaifu usable demo", () => {
 
     render(<App />);
 
-    expect(screen.getByLabelText("拖动桌宠")).toBeTruthy();
-    expect(screen.getByText("NENE ONLINE")).toBeTruthy();
+    expect(screen.queryByText("NENE ONLINE")).toBeNull();
     expect(screen.getByText(/欢迎回来/)).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "桌宠文字消息" })).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "连接麦克风" }).querySelector("svg"),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "摸摸绫地宁宁" }));
+    const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
+    fireEvent.pointerDown(avatar, {
+      button: 0,
+      pointerId: 1,
+      clientX: 160,
+      clientY: 120,
+    });
+    fireEvent.pointerUp(avatar, {
+      button: 0,
+      pointerId: 1,
+      clientX: 160,
+      clientY: 120,
+    });
     expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("drags the native pet from a semantic head hit without firing touch", async () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+
+    render(<App />);
+
+    const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
+    fireEvent.pointerDown(avatar, {
+      button: 0,
+      pointerId: 7,
+      clientX: 160,
+      clientY: 120,
+    });
+    fireEvent.pointerMove(avatar, {
+      pointerId: 7,
+      clientX: 172,
+      clientY: 120,
+    });
+    await waitFor(() => expect(nativeWindow.startDragging).toHaveBeenCalled());
+    fireEvent.pointerUp(avatar, {
+      button: 0,
+      pointerId: 7,
+      clientX: 172,
+      clientY: 120,
+    });
+
+    expect(session.touch).not.toHaveBeenCalled();
   });
 
   it("shows the specific Live2D failure instead of hiding it behind fallback copy", () => {
@@ -190,9 +262,9 @@ describe("ChatWaifu usable demo", () => {
 
     render(<App />);
 
-    expect(
-      screen.getByRole("status").textContent,
-    ).toBe("Cannot initialize WebGL2 with the current Windows graphics adapter.");
+    expect(screen.getByRole("status").textContent).toBe(
+      "Cannot initialize WebGL2 with the current Windows graphics adapter.",
+    );
     expect(screen.queryByText("Live2D 未就绪，已使用安全回退。")).toBeNull();
   });
 
@@ -315,7 +387,7 @@ describe("ChatWaifu usable demo", () => {
     expect(petShell.getAttribute("data-pointer-inside")).toBe("false");
   });
 
-  it("lets desktop-pet users independently hide subtitles and online status", () => {
+  it("keeps the compact HUD limited to subtitle visibility", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 
     render(<App />);
@@ -327,15 +399,10 @@ describe("ChatWaifu usable demo", () => {
     expect(petShell?.getAttribute("data-actions-active")).toBe("false");
     fireEvent.click(displaySettings);
     expect(petShell?.getAttribute("data-actions-active")).toBe("true");
-    const dragRegion = screen.getByLabelText("拖动桌宠");
-    expect(dragRegion.querySelectorAll("i")).toHaveLength(2);
+    expect(screen.queryByText("NENE ONLINE")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "在线状态" })).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: "字幕" }));
     expect(screen.queryByText(/欢迎回来/)).toBeNull();
-    expect(screen.getByText("NENE ONLINE")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "在线状态" }));
-    expect(screen.queryByText("NENE ONLINE")).toBeNull();
-    expect(dragRegion.querySelectorAll("i")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "桌宠显示设置" })).toBeTruthy();
   });
 
@@ -357,6 +424,7 @@ describe("ChatWaifu usable demo", () => {
     ).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Conversation" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "显示在线状态" })).toBeNull();
 
     const subtitle = await screen.findByRole("switch", { name: "显示字幕" });
     expect(subtitle).toBeInstanceOf(HTMLInputElement);
@@ -365,6 +433,24 @@ describe("ChatWaifu usable demo", () => {
     await waitFor(() => expect(subtitle.disabled).toBe(false));
     fireEvent.click(subtitle);
     expect(subtitle.checked).toBe(false);
+  });
+
+  it("uses the native control-center role when Windows loses the settings path", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    nativeWindow.label = "control-center";
+
+    render(<App />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "桌宠" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "设置分类" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "摸摸绫地宁宁" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "桌宠文字消息" })).toBeNull();
   });
 
   it("shows only the blinking caret while waiting for the first assistant token", () => {

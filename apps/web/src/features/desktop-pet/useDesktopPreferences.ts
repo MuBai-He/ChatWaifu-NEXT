@@ -5,7 +5,6 @@ export type DesktopPreferences = {
   clickThrough: boolean;
   overlayVisible: boolean;
   showSubtitles: boolean;
-  showStatus: boolean;
   overlayWidth: number | null;
   overlayHeight: number | null;
 };
@@ -15,7 +14,6 @@ type DesktopHostPreferences = {
   click_through?: boolean;
   overlay_visible?: boolean;
   show_subtitles?: boolean;
-  show_status?: boolean;
   overlay_width?: number | null;
   overlay_height?: number | null;
 };
@@ -25,7 +23,6 @@ const defaultPreferences: DesktopPreferences = {
   clickThrough: false,
   overlayVisible: true,
   showSubtitles: true,
-  showStatus: true,
   overlayWidth: null,
   overlayHeight: null,
 };
@@ -144,11 +141,10 @@ export function useDesktopPreferences() {
   );
 
   const setDisplay = useCallback(
-    (display: { showSubtitles?: boolean; showStatus?: boolean }) => {
+    (display: { showSubtitles?: boolean }) => {
       const next = { ...preferencesRef.current, ...display };
       return commit(next, "set_avatar_overlay_display", {
         showSubtitles: next.showSubtitles,
-        showStatus: next.showStatus,
       });
     },
     [commit],
@@ -205,7 +201,6 @@ function fromHostPreferences(
     clickThrough: value.click_through ?? false,
     overlayVisible: value.overlay_visible ?? true,
     showSubtitles: value.show_subtitles ?? true,
-    showStatus: value.show_status ?? true,
     overlayWidth: value.overlay_width ?? null,
     overlayHeight: value.overlay_height ?? null,
   };
@@ -231,7 +226,6 @@ function fromBrowserValue(value: unknown): DesktopPreferences {
     clickThrough: booleanOr(stored.clickThrough, false),
     overlayVisible: booleanOr(stored.overlayVisible, true),
     showSubtitles: booleanOr(stored.showSubtitles, true),
-    showStatus: booleanOr(stored.showStatus, true),
     overlayWidth: numberOrNull(stored.overlayWidth),
     overlayHeight: numberOrNull(stored.overlayHeight),
   };
