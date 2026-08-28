@@ -44,6 +44,7 @@ const localConnection: McpConnectionSnapshot = {
   network_policy: "deny",
   bearer_token_configured: false,
   status: "ready",
+  sandbox_backend: "macos_seatbelt",
 };
 
 describe("McpConnectionsPanel", () => {
@@ -53,6 +54,7 @@ describe("McpConnectionsPanel", () => {
   });
 
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(getMcpConnections).mockResolvedValue([]);
     vi.mocked(deleteMcpConnection).mockResolvedValue();
     vi.mocked(testMcpConnection).mockResolvedValue({
@@ -128,7 +130,126 @@ describe("McpConnectionsPanel", () => {
       ).toBe(""),
     );
     expect(screen.getByText("令牌已保存")).toBeTruthy();
+    expect(screen.getByText("沙箱：已关闭")).toBeTruthy();
     expect(screen.queryByDisplayValue("secret-token")).toBeNull();
+  });
+
+  it("keeps stdio network policy truthful when sandbox mode changes", async () => {
+    const saved: McpConnectionSnapshot = {
+      ...localConnection,
+      connection_id: "33333333-3333-4333-8333-333333333333",
+      name: "无沙箱工具",
+      sandbox_mode: "disabled",
+      network_policy: "allow",
+      sandbox_backend: null,
+    };
+    vi.mocked(createMcpConnection).mockResolvedValue(saved);
+
+    render(<McpConnectionsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
+    await screen.findByRole("dialog", { name: "MCP 连接管理" });
+
+    fireEvent.change(screen.getByLabelText("MCP 连接名称"), {
+      target: { value: "无沙箱工具" },
+    });
+    fireEvent.change(screen.getByLabelText("MCP 启动命令"), {
+      target: { value: "python\nserver.py" },
+    });
+
+    const networkPolicy =
+      screen.getByLabelText<HTMLSelectElement>("MCP 网络策略");
+    expect(screen.queryByRole("option", { name: "仅允许本机回环" })).toBeNull();
+    expect(networkPolicy.value).toBe("deny");
+
+    fireEvent.change(screen.getByLabelText("MCP 沙箱策略"), {
+      target: { value: "disabled" },
+    });
+    expect(networkPolicy.value).toBe("allow");
+    expect(screen.getByLabelText<HTMLSelectElement>("MCP 信任等级").value).toBe(
+      "trusted",
+    );
+
+    fireEvent.change(networkPolicy, { target: { value: "deny" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存连接" }));
+    expect(
+      await screen.findByText(
+        "关闭沙箱后无法保证网络隔离，stdio 网络策略必须设为允许网络。",
+      ),
+    ).toBeTruthy();
+    expect(createMcpConnection).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("MCP 沙箱策略"), {
+      target: { value: "preferred" },
+    });
+    expect(networkPolicy.value).toBe("deny");
+    fireEvent.change(screen.getByLabelText("MCP 沙箱策略"), {
+      target: { value: "disabled" },
+    });
+    expect(networkPolicy.value).toBe("allow");
+    fireEvent.change(screen.getByLabelText("MCP 信任等级"), {
+      target: { value: "untrusted" },
+    });
+    expect(screen.getByLabelText<HTMLSelectElement>("MCP 沙箱策略").value).toBe(
+      "required",
+    );
+    expect(networkPolicy.value).toBe("deny");
+    fireEvent.change(screen.getByLabelText("MCP 沙箱策略"), {
+      target: { value: "disabled" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存连接" }));
+
+    await waitFor(() =>
+      expect(createMcpConnection).toHaveBeenCalledWith({
+        name: "无沙箱工具",
+        transport: "stdio",
+        command: ["python", "server.py"],
+        enabled: true,
+        allow_remote: false,
+        timeout_seconds: 30,
+        trust_level: "trusted",
+        sandbox_mode: "disabled",
+        network_policy: "allow",
+      }),
+    );
+    expect(await screen.findByText("沙箱：已关闭")).toBeTruthy();
+  });
+
+  it("rejects a legacy untrusted stdio connection with no sandbox", async () => {
+    vi.mocked(getMcpConnections).mockResolvedValue([
+      {
+        ...localConnection,
+        trust_level: "untrusted",
+        sandbox_mode: "disabled",
+        network_policy: "allow",
+        sandbox_backend: null,
+      },
+    ]);
+
+    render(<McpConnectionsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
+    await screen.findByDisplayValue("本地笔记");
+    fireEvent.click(screen.getByRole("button", { name: "保存连接" }));
+
+    expect(
+      await screen.findByText(
+        "不受信任的 stdio 进程不能关闭沙箱，请启用沙箱或改为受信任。",
+      ),
+    ).toBeTruthy();
+    expect(updateMcpConnection).not.toHaveBeenCalled();
+  });
+
+  it("shows an untested sandbox until a backend is reported", async () => {
+    vi.mocked(getMcpConnections).mockResolvedValue([
+      {
+        ...localConnection,
+        status: "untested",
+        sandbox_backend: null,
+      },
+    ]);
+
+    render(<McpConnectionsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
+    expect(await screen.findByText("沙箱：尚未测试")).toBeTruthy();
   });
 
   it("tests, toggles and browses tools, resources and prompts", async () => {
@@ -179,6 +300,7 @@ describe("McpConnectionsPanel", () => {
     render(<McpConnectionsPanel />);
     fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
     expect(await screen.findByDisplayValue("本地笔记")).toBeTruthy();
+    expect(screen.getByText("沙箱：macos_seatbelt")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "测试连接" }));
     await waitFor(() =>

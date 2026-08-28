@@ -243,7 +243,7 @@
   gap: 10px;
 }
 
-.mcp-connection-editor > header > div {
+.mcp-connection-editor > header > div:first-child {
   display: grid;
   gap: 3px;
 }
@@ -259,7 +259,14 @@
   font: 0.55rem var(--mono);
 }
 
-.mcp-connection-editor > header > span {
+.mcp-connection-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.mcp-connection-badges > span {
   padding: 4px 7px;
   border-radius: 999px;
   color: #3f7750;

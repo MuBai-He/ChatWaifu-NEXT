@@ -460,7 +460,12 @@ function ConnectionEditor({
               : "连接 ID 保存后不可修改"}
           </small>
         </div>
-        {existing?.bearer_token_configured ? <span>令牌已保存</span> : null}
+        {existing ? (
+          <div className="mcp-connection-badges">
+            <span>{sandboxStatusLabel(existing)}</span>
+            {existing.bearer_token_configured ? <span>令牌已保存</span> : null}
+          </div>
+        ) : null}
       </header>
 
       <div className="mcp-connection-form-grid">
@@ -520,12 +525,17 @@ function ConnectionEditor({
               aria-label="MCP 沙箱策略"
               value={draft.sandboxMode}
               disabled={busy}
-              onChange={(event) =>
+              onChange={(event) => {
+                const sandboxMode = event.currentTarget.value as McpSandboxMode;
+                onChange("sandboxMode", sandboxMode);
+                if (sandboxMode === "disabled") {
+                  onChange("trustLevel", "trusted");
+                }
                 onChange(
-                  "sandboxMode",
-                  event.currentTarget.value as McpSandboxMode,
-                )
-              }
+                  "networkPolicy",
+                  sandboxMode === "disabled" ? "allow" : "deny",
+                );
+              }}
             >
               <option value="required">必须启用，否则拒绝启动</option>
               <option value="preferred">优先启用</option>
@@ -539,9 +549,18 @@ function ConnectionEditor({
             aria-label="MCP 信任等级"
             value={draft.trustLevel}
             disabled={busy}
-            onChange={(event) =>
-              onChange("trustLevel", event.currentTarget.value as McpTrustLevel)
-            }
+            onChange={(event) => {
+              const trustLevel = event.currentTarget.value as McpTrustLevel;
+              onChange("trustLevel", trustLevel);
+              if (
+                !isRemote &&
+                trustLevel === "untrusted" &&
+                draft.sandboxMode === "disabled"
+              ) {
+                onChange("sandboxMode", "required");
+                onChange("networkPolicy", "deny");
+              }
+            }}
           >
             <option value="untrusted">不受信任（推荐）</option>
             <option value="trusted">受信任</option>
@@ -576,7 +595,6 @@ function ConnectionEditor({
               }
             >
               <option value="deny">禁止网络</option>
-              <option value="loopback">仅允许本机回环</option>
               <option value="allow">允许网络</option>
             </select>
           </label>
@@ -865,6 +883,35 @@ function validateAndBuildPayload(
     setNotice({ tone: "error", text: "超时必须在 1 到 600 秒之间。" });
     return null;
   }
+  if (
+    draft.transport === "stdio" &&
+    draft.sandboxMode === "disabled" &&
+    draft.trustLevel !== "trusted"
+  ) {
+    setNotice({
+      tone: "error",
+      text: "不受信任的 stdio 进程不能关闭沙箱，请启用沙箱或改为受信任。",
+    });
+    return null;
+  }
+  if (
+    draft.transport === "stdio" &&
+    draft.sandboxMode === "disabled" &&
+    draft.networkPolicy !== "allow"
+  ) {
+    setNotice({
+      tone: "error",
+      text: "关闭沙箱后无法保证网络隔离，stdio 网络策略必须设为允许网络。",
+    });
+    return null;
+  }
+  if (draft.transport === "stdio" && draft.networkPolicy === "loopback") {
+    setNotice({
+      tone: "error",
+      text: "本地 stdio 不提供仅回环网络策略，请选择禁止网络或允许网络。",
+    });
+    return null;
+  }
 
   const base: McpConnectionInput = {
     name,
@@ -991,6 +1038,12 @@ function transportLabel(transport: McpTransport): string {
     streamable_http: "Streamable HTTP",
     sse: "SSE",
   }[transport];
+}
+
+function sandboxStatusLabel(connection: McpConnectionSnapshot): string {
+  if (connection.sandbox_mode === "disabled") return "沙箱：已关闭";
+  if (connection.sandbox_backend) return `沙箱：${connection.sandbox_backend}`;
+  return "沙箱：尚未测试";
 }
 
 function formatResult(value: unknown): string {
