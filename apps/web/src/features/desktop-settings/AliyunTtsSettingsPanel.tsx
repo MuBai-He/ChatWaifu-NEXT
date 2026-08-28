@@ -9,7 +9,7 @@ import type {
   AliyunCloudTtsProviderId,
 } from "../chat/types";
 import { SettingsSecretField } from "./SettingsPrimitives";
-import { useSettingsOperation } from "./useSettingsOperation";
+import { useSettingsOperation } from "../settings/useSettingsOperation";
 
 type UpdatePayload = Parameters<typeof updateAliyunTtsConfiguration>[0];
 

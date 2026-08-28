@@ -17,7 +17,7 @@ import {
   SettingsSectionIntro,
   SettingsToggle,
 } from "./SettingsPrimitives";
-import { useSettingsOperation } from "./useSettingsOperation";
+import { useSettingsOperation } from "../settings/useSettingsOperation";
 
 const fallbackSettings: CompanionSettings = {
   schema_version: "1.0",

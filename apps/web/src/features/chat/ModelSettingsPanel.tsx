@@ -14,8 +14,8 @@ import type {
 import {
   SettingsSecretField,
   SettingsStatus,
-} from "../desktop-settings/SettingsPrimitives";
-import { useSettingsOperation } from "../desktop-settings/useSettingsOperation";
+} from "../settings/SettingsFields";
+import { useSettingsOperation } from "../settings/useSettingsOperation";
 
 const ROLE_ORDER: ModelRole[] = [
   "chat",

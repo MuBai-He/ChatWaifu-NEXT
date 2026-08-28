@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { useSettingsOperation } from "./useSettingsOperation";
+import { useSettingsOperation } from "../settings/useSettingsOperation";
 
 describe("useSettingsOperation", () => {
   it("normalizes pending, success, and busy state", async () => {
