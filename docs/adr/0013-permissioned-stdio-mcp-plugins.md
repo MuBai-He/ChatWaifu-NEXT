@@ -1,6 +1,6 @@
 # ADR 0013: Permissioned stdio MCP plugin execution
 
-- Status: Accepted
+- Status: Superseded by ADR 0018
 - Date: 2026-08-24
 
 ## Context
