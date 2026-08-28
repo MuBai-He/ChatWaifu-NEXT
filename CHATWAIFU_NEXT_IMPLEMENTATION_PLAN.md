@@ -1413,16 +1413,18 @@ context
 
 ## 10.6 MCP Gateway
 
-支持：
+已实现：
 
-- stdio server。
-- loopback HTTP server。
-- tool list cache。
-- resource list cache。
-- tool schema validation。
-- cancellation。
-- progress。
-- server health。
+- 官方 MCP SDK 的 stdio、Streamable HTTP 与兼容 SSE Host。
+- SQLite 连接配置与独立只写 Bearer secret storage。
+- Tools、Resources、Resource Templates、Prompts 分页发现与显式读取。
+- 远程工具映射为 Runtime Skill，复用权限、确认、Schema、超时、取消和审计。
+- 每次连接前 DNS/SSRF 校验，禁止凭证 URL、重定向和系统代理继承。
+- macOS Seatbelt、Linux bubblewrap 的强隔离；required 模式无后端时 fail closed。
+- Runtime 自身在 loopback `/mcp` 公开受策略过滤的 Streamable HTTP Server。
+
+仍然明确不在本阶段范围：MCP Apps、sampling、elicitation、filesystem roots、自动 Prompt 注入、
+Windows AppContainer 和实时媒体经 MCP 传输。
 
 ## 10.7 Permission Broker
 

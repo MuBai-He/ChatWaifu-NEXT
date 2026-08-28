@@ -244,15 +244,20 @@ phases:
       - The 0.6B pilot checkpoint converts to an 8-bit MLX CustomVoice model with the fixed ayachi_nene_local speaker and completes real Chinese/Japanese synthesis on Apple Silicon
   - id: 10
     name: runtime-skills-and-plugins
-    status: basic_permissioned_mcp_slice_implemented_pending_os_sandbox
+    status: complete_permissioned_mcp_host_and_loopback_server_with_platform_sandbox
     evidence:
       - SKILL.md and chatwaifu.yaml discovery validates ids, versions, schemas, paths, and duplicates
-      - SQLite persists plugins, runs, permission requests, grants, and audited tool calls
+      - SQLite persists plugins, MCP connection profiles, runs, permission requests, grants, and audited tool calls
       - Permission grants remain separate from per-invocation side-effect confirmation
-      - MCP 2025-11-25 stdio tools run in fresh Python child processes with cleaned environments
+      - The official MCP 2.1.1 SDK hosts stdio, Streamable HTTP, and compatibility SSE connections and accepts non-Python executables
+      - Capability discovery paginates tools, resources, resource templates, and prompts; resources and prompts remain explicit reads and are never silently injected into character context
+      - Remote URLs default to loopback and are revalidated before every connection with DNS, SSRF, redirect, credential, and system-proxy defenses
+      - Untrusted local stdio defaults to required OS isolation and denied networking; macOS Seatbelt read/network denial is exercised against a real child process and Linux bubblewrap is fail-closed when unavailable
+      - Runtime publishes a policy-filtered standard Streamable HTTP MCP server at /mcp with loopback Host and Origin protection, optional Bearer authentication, and no adapter bypass
+      - MCP bearer tokens are write-only, atomically stored mode-0600, and corrupt secret storage fails closed
       - Input/output schema validation, normalized errors, timeout, cancellation, and restart expiry pass tests
       - Local Echo example covers read, confirmed write, timeout, cancellation, disable, and recoverable uninstall
-      - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, and plugin controls
+      - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, plugin controls, and MCP connection/capability management
       - Real browser smoke completed MCP echo and denied a pending write without executing it
   - id: 11
     name: structured-memory-kernel

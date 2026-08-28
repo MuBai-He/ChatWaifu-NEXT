@@ -105,22 +105,32 @@ Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Ru
 - 记忆支持来源查看、FTS5 + 可重建 Embedding 混合召回、模型辅助提取、去重、冲突 supersede、修正、置顶与可审计 tombstone
 - `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
 - “Skills & 插件”控制中心支持按需加载说明、运行记录、权限确认、取消、启停和可恢复卸载
-- 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；可从控制中心安装
+- 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；“数据 → MCP 连接”还可管理
+  任意 stdio、Streamable HTTP 或兼容 SSE 服务，并浏览 Tools、Resources、Resource Templates 与 Prompts
 - 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
 
 数据默认写入 `.local/data/chatwaifu.db`、`.local/data/audio/` 与本地模型密钥文件，均不会提交到 Git。
 
-## Runtime Skills 与本地插件
+## Runtime Skills、MCP Host 与 MCP Server
 
 产品 Runtime Skills 位于 `skills/`，Codex 开发技能位于 `.agents/skills/`，两者不会互相加载。
 页面左侧打开“Skills & 插件”，可安装仓库内 Local Echo 测试插件，或填写一个本地插件目录的
 绝对路径。插件需要 `plugin.json`、`SKILL.md` 与 `chatwaifu.yaml`；安装时拒绝 symlink、越界
 路径和过大文件。
 
-插件通过 MCP stdio 在逐次创建的 Python 子进程中运行，使用独立工作目录、清理后的环境、
-Schema 校验、统一错误、超时与取消。写入、破坏、外部通信和设备控制不会因为安装插件就自动
-获得授权；权限 grant 与每次操作确认是两个独立步骤。当前是软隔离，不是 OS 沙箱，只应安装
-信任的本地插件。具体边界见 [ADR 0013](docs/adr/0013-permissioned-stdio-mcp-plugins.md)。
+Runtime 现在同时是 MCP Host 与受限 MCP Server。“数据 → MCP 连接”可保存 stdio、Streamable HTTP
+或兼容 SSE 连接；Bearer Token 是只写字段，存入权限为 `0600` 的本地文件。连接测试会分页发现
+Tools、Resources、Resource Templates 与 Prompts，外部工具随后映射为 Runtime Skill，继续经过
+Schema 校验、Permission Broker、逐次副作用确认、超时、取消与审计，而不是由前端或模型绕过策略层
+直接调用。远程地址默认仅允许 loopback；显式允许远程后仍会在每次连接前重新解析 DNS，并拒绝
+link-local、metadata、reserved、重定向和系统代理继承。
+
+本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用 Seatbelt，Linux 使用 bubblewrap；
+缺少可强制执行的后端时会 fail closed。Windows 当前没有批准的原生 AppContainer 后端，因此
+`sandbox_mode=required` 的不可信 stdio 服务会被拒绝；远程 MCP 与用户显式标为可信的本地连接仍可用。
+运行中的 ChatWaifu Runtime 还在同一个 loopback 端口公开标准 Streamable HTTP `/mcp`：匿名模式仅发布
+安全只读能力，配置 Runtime 管理 Token 后才认证发布副作用工具，而且调用仍要求有效会话并可能进入
+本地确认队列。完整边界见 [ADR 0018](docs/adr/0018-complete-mcp-host-server-and-sandbox.md)。
 
 方案 A 已作为 SQLite WAL + FTS5 的唯一记忆真值落地；方案 B 语义索引与方案 C 时序图仅保留
 禁用端口，不下载向量模型或引入图数据库。实现边界见

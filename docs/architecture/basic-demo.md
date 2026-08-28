@@ -15,8 +15,9 @@
    and returns the avatar to listening.
 7. Explicit normal memories commit immediately; implicit candidates enter a review inbox; accepted
    records persist with provenance, correction, supersede, pin, privacy, and tombstone semantics.
-8. Runtime Skills and local MCP plugins share schema validation, permissions, confirmation,
-   cancellation, timeout, normalized error, and audit boundaries.
+8. Runtime Skills and local or remote MCP servers share schema validation, permissions,
+   confirmation, cancellation, timeout, normalized error, and audit boundaries. Runtime also
+   exposes a policy-filtered loopback Streamable HTTP MCP server at `/mcp`.
 9. A read-only system-status Runtime Skill reports active providers and health truthfully.
 10. The visual-novel stage keeps Live2D and the current dialogue fixed while the optional backlog
     scrolls independently; voice and provider controls live in a bounded configuration panel.
@@ -46,12 +47,14 @@
 - Pipecat 1.7 SmallWebRTC owns full-duplex transport and Silero VAD behind ChatWaifu contracts.
 - faster-whisper runs in an independently locked worker environment and returns versioned SDK models.
 - `sherpa-onnx` and all model bundles are optional worker/runtime dependencies, never base CI inputs.
-- MCP plugins run in fresh stdio child processes; the packaged OS sandbox remains future hardening.
+- MCP Host connections use the official SDK over stdio, Streamable HTTP, or compatibility SSE.
+  Untrusted local processes require an enforcing macOS Seatbelt or Linux bubblewrap sandbox and
+  fail closed when one is unavailable; network transports are revalidated against SSRF policy.
 - Tauri remains a thin host for Runtime lifecycle and shared Web assets.
 
 ## Release exclusions
 
-The basic demo does not claim production sandboxing, public TURN/RTVI data-channel control, trained
+The basic demo does not claim a Windows AppContainer sandbox, public TURN/RTVI data-channel control, trained
 custom voice weights, cloud realtime, multi-machine workers, proactive ambient behavior, semantic
 vector retrieval, temporal graph reasoning, or a completed LongMemEval gate. Playback acknowledgements
 and long-running multi-turn voice stress tests remain hardening work rather than hidden completed features.
