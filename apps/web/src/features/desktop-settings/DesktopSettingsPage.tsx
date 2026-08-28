@@ -233,7 +233,7 @@ function AppearanceSettings({
           <p>
             {rendererKind === "live2d" ? "Live2D" : "安全回退"} · {avatarStatus}
           </p>
-          <span>拖动宁宁的头部可移动桌宠，拖动窗口边缘可调整大小。</span>
+          <span>拖动宁宁角色本体可移动桌宠，拖动窗口边缘可调整大小。</span>
         </div>
       </section>
 

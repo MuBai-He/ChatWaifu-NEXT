@@ -140,7 +140,7 @@ phases:
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
       - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
-      - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while semantic head press-and-move starts native window dragging without converting the gesture into a touch
+      - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while pressing and moving any semantic avatar hit area starts native window dragging without converting the gesture into a touch
       - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
       - The avatar overlay disables inactive WebView throttling so streaming text, audio progress, Live2D, and subtitle paging continue without mouse focus or selection
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival

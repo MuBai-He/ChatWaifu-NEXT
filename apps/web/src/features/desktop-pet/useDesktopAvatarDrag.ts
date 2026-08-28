@@ -8,7 +8,6 @@ type AvatarGesture = {
   startX: number;
   startY: number;
   hitAvatar: boolean;
-  canDrag: boolean;
   dragging: boolean;
 };
 
@@ -35,10 +34,6 @@ export function useDesktopAvatarDrag({
         startX: event.clientX,
         startY: event.clientY,
         hitAvatar: hits.length > 0,
-        canDrag: hits.some(
-          (hit) =>
-            hit.target === "touched_head" || hit.metadata?.area_id === "head",
-        ),
         dragging: false,
       };
       event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -53,7 +48,7 @@ export function useDesktopAvatarDrag({
         !desktopHost ||
         !gesture ||
         gesture.pointerId !== event.pointerId ||
-        !gesture.canDrag ||
+        !gesture.hitAvatar ||
         gesture.dragging ||
         Math.hypot(
           event.clientX - gesture.startX,
@@ -71,7 +66,7 @@ export function useDesktopAvatarDrag({
           onError(
             dragError instanceof Error
               ? dragError.message
-              : "无法通过角色头部移动桌宠",
+              : "无法通过角色移动桌宠",
           );
         });
     },

@@ -139,7 +139,7 @@ non-transparent profiles are intentionally excluded from this slice.
 
 ## Verification
 
-- Web unit tests cover route selection, avatar interaction, semantic head dragging, typed-message
+- Web unit tests cover route selection, avatar interaction, semantic avatar dragging, typed-message
   submission, subtitle visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
   focus-free pointer presence, multi-display physical bounds, playback-paced whole-line subtitle
   turns, out-of-order playback metadata, hanging audio-unlock recovery, interruption, and single

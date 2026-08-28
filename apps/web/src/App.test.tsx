@@ -224,12 +224,21 @@ describe("ChatWaifu usable demo", () => {
     expect(session.touch).toHaveBeenCalledOnce();
   });
 
-  it("drags the native pet from a semantic head hit without firing touch", async () => {
+  it("drags the native pet from any semantic avatar hit without firing touch", async () => {
     window.history.replaceState({}, "", "/desktop-pet");
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
       value: {},
     });
+    session.hitTest.mockReturnValue([
+      {
+        interaction_id: "00000000-0000-4000-8000-000000000098",
+        avatar_id: "ayachi-nene",
+        kind: "touch",
+        target: "touched_body",
+        metadata: { area_id: "body" },
+      },
+    ]);
 
     render(<App />);
 
@@ -253,6 +262,39 @@ describe("ChatWaifu usable demo", () => {
       clientY: 120,
     });
 
+    expect(session.touch).not.toHaveBeenCalled();
+  });
+
+  it("does not drag or touch through the transparent avatar background", () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    session.hitTest.mockReturnValue([]);
+
+    render(<App />);
+
+    const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
+    fireEvent.pointerDown(avatar, {
+      button: 0,
+      pointerId: 8,
+      clientX: 20,
+      clientY: 20,
+    });
+    fireEvent.pointerMove(avatar, {
+      pointerId: 8,
+      clientX: 40,
+      clientY: 20,
+    });
+    fireEvent.pointerUp(avatar, {
+      button: 0,
+      pointerId: 8,
+      clientX: 40,
+      clientY: 20,
+    });
+
+    expect(nativeWindow.startDragging).not.toHaveBeenCalled();
     expect(session.touch).not.toHaveBeenCalled();
   });
 
