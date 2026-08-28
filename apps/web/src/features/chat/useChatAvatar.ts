@@ -10,6 +10,10 @@ import {
 } from "@chatwaifu/avatar-sdk";
 import type { AvatarCue, AvatarInteractionEvent } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getAvatarCanvasLayoutSize,
+  mapClientPointToAvatarCanvas,
+} from "./avatarCanvasGeometry";
 
 export function useChatAvatar() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,10 +63,10 @@ export function useChatAvatar() {
     );
 
     const resize = () => {
-      const bounds = canvas.getBoundingClientRect();
+      const layout = getAvatarCanvasLayoutSize(canvas);
       controllerRef.current?.resize(
-        bounds.width || 420,
-        bounds.height || 420,
+        layout.width || 420,
+        layout.height || 420,
         window.devicePixelRatio || 1,
       );
     };
@@ -132,15 +136,8 @@ export function useChatAvatar() {
       const canvas = canvasRef.current;
       const controller = controllerRef.current;
       if (!canvas || !controller) return [];
-      const bounds = canvas.getBoundingClientRect();
-      if (bounds.width <= 0 || bounds.height <= 0) return [];
-      const x =
-        (clientX - bounds.left) *
-        ((canvas.clientWidth || bounds.width) / bounds.width);
-      const y =
-        (clientY - bounds.top) *
-        ((canvas.clientHeight || bounds.height) / bounds.height);
-      return controller.hitTest(x, y);
+      const point = mapClientPointToAvatarCanvas(canvas, clientX, clientY);
+      return point ? controller.hitTest(point.x, point.y) : [];
     },
     [],
   );

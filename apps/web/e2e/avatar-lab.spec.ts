@@ -328,6 +328,7 @@ test("official bridge renders the locally supplied Live2D model", async ({
 }, testInfo) => {
   test.skip(!realVendorReady, "local licensed Live2D vendor assets are absent");
 
+  await page.setViewportSize({ width: 1280, height: 1200 });
   await page.goto("/avatar-lab");
   await page.getByLabel("Renderer").selectOption("live2d");
   await expect(page.getByTestId("renderer-status")).toContainText("ready", {
@@ -340,12 +341,37 @@ test("official bridge renders the locally supplied Live2D model", async ({
       .locator("strong"),
   ).not.toHaveText("0");
 
+  const canvas = page.getByTestId("avatar-canvas");
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error("Live2D canvas has no bounds");
+  const interaction = page.getByTestId("last-interaction");
+  await page.mouse.click(
+    bounds.x + bounds.width * 0.1,
+    bounds.y + bounds.height * 0.1,
+  );
+  await expect(interaction).toHaveText("touch the avatar");
+  await page.mouse.click(
+    bounds.x + bounds.width * 0.5,
+    bounds.y + bounds.height * 0.2,
+  );
+  await expect(interaction).toContainText("touched_avatar");
+  await page.mouse.click(
+    bounds.x + bounds.width * 0.5,
+    bounds.y + bounds.height * 0.35,
+  );
+  await expect(interaction).toContainText("touched_body");
+  await page.mouse.click(
+    bounds.x + bounds.width * 0.52,
+    bounds.y + bounds.height * 0.76,
+  );
+  await expect(interaction).toContainText("touched_avatar");
+
   await page.getByRole("button", { name: "happy" }).click();
   await expect(page.getByTestId("semantic-state")).toContainText("happy");
   await page.getByRole("button", { name: "headpat" }).click();
   await expect(page.getByTestId("semantic-state")).toContainText("headpat");
 
-  const screenshot = await page.getByTestId("avatar-canvas").screenshot({
+  const screenshot = await canvas.screenshot({
     animations: "disabled",
     path: testInfo.outputPath("live2d-local-model.png"),
   });

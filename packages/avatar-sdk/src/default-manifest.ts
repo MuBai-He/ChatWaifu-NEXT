@@ -19,12 +19,13 @@ export const AVATAR_LAB_MANIFEST: AvatarManifest = {
     ],
     motions: ["headpat", "stare", "flustered", "sing"],
     gaze_targets: ["center", "pointer"],
-    hit_areas: ["head", "body"],
+    hit_areas: ["head", "body", "avatar"],
     supports_lipsync: true,
   },
   hitAreas: [
     { id: "head", semanticTarget: "touched_head" },
     { id: "body", semanticTarget: "touched_body" },
+    { id: "avatar", semanticTarget: "touched_avatar" },
   ],
 };
 

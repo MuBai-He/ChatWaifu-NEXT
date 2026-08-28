@@ -224,46 +224,49 @@ describe("ChatWaifu usable demo", () => {
     expect(session.touch).toHaveBeenCalledOnce();
   });
 
-  it("drags the native pet from any semantic avatar hit without firing touch", async () => {
-    window.history.replaceState({}, "", "/desktop-pet");
-    Object.defineProperty(window, "__TAURI_INTERNALS__", {
-      configurable: true,
-      value: {},
-    });
-    session.hitTest.mockReturnValue([
-      {
-        interaction_id: "00000000-0000-4000-8000-000000000098",
-        avatar_id: "ayachi-nene",
-        kind: "touch",
-        target: "touched_body",
-        metadata: { area_id: "body" },
-      },
-    ]);
+  it.each(["touched_head", "touched_body", "touched_avatar"])(
+    "drags the native pet from %s without firing touch",
+    (target) => {
+      window.history.replaceState({}, "", "/desktop-pet");
+      Object.defineProperty(window, "__TAURI_INTERNALS__", {
+        configurable: true,
+        value: {},
+      });
+      session.hitTest.mockReturnValue([
+        {
+          interaction_id: "00000000-0000-4000-8000-000000000098",
+          avatar_id: "ayachi-nene",
+          kind: "touch",
+          target,
+          metadata: { area_id: target.replace("touched_", "") },
+        },
+      ]);
 
-    render(<App />);
+      render(<App />);
 
-    const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
-    fireEvent.pointerDown(avatar, {
-      button: 0,
-      pointerId: 7,
-      clientX: 160,
-      clientY: 120,
-    });
-    fireEvent.pointerMove(avatar, {
-      pointerId: 7,
-      clientX: 172,
-      clientY: 120,
-    });
-    await waitFor(() => expect(nativeWindow.startDragging).toHaveBeenCalled());
-    fireEvent.pointerUp(avatar, {
-      button: 0,
-      pointerId: 7,
-      clientX: 172,
-      clientY: 120,
-    });
+      const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
+      fireEvent.pointerDown(avatar, {
+        button: 0,
+        pointerId: 7,
+        clientX: 160,
+        clientY: 120,
+      });
+      fireEvent.pointerMove(avatar, {
+        pointerId: 7,
+        clientX: 172,
+        clientY: 120,
+      });
+      expect(nativeWindow.startDragging).toHaveBeenCalledOnce();
+      fireEvent.pointerUp(avatar, {
+        button: 0,
+        pointerId: 7,
+        clientX: 172,
+        clientY: 120,
+      });
 
-    expect(session.touch).not.toHaveBeenCalled();
-  });
+      expect(session.touch).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not drag or touch through the transparent avatar background", () => {
     window.history.replaceState({}, "", "/desktop-pet");

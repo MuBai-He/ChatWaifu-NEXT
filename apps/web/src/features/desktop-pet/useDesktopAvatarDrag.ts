@@ -1,4 +1,5 @@
 import type { AvatarInteractionEvent } from "@chatwaifu/protocol";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useRef, type PointerEventHandler } from "react";
 
 const dragThresholdPx = 6;
@@ -60,15 +61,13 @@ export function useDesktopAvatarDrag({
       gesture.dragging = true;
       event.preventDefault();
       releasePointerCapture(event.currentTarget, event.pointerId);
-      void import("@tauri-apps/api/window")
-        .then(({ getCurrentWindow }) => getCurrentWindow().startDragging())
-        .catch((dragError: unknown) => {
-          onError(
-            dragError instanceof Error
-              ? dragError.message
-              : "无法通过角色移动桌宠",
-          );
-        });
+      try {
+        void getCurrentWindow()
+          .startDragging()
+          .catch((dragError: unknown) => reportDragError(dragError, onError));
+      } catch (dragError: unknown) {
+        reportDragError(dragError, onError);
+      }
     },
     [desktopHost, onError],
   );
@@ -106,4 +105,13 @@ function releasePointerCapture(element: HTMLButtonElement, pointerId: number) {
   if (element.hasPointerCapture?.(pointerId)) {
     element.releasePointerCapture(pointerId);
   }
+}
+
+function reportDragError(
+  dragError: unknown,
+  onError: (message: string) => void,
+) {
+  onError(
+    dragError instanceof Error ? dragError.message : "无法通过角色移动桌宠",
+  );
 }

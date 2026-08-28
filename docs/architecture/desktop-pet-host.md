@@ -26,10 +26,15 @@ until the pointer enters the pet window, keyboard focus reaches a control, or a 
 send, or push-to-talk interaction needs it to remain available. Touch-only previews keep the rail
 visible. Tauri commands only expose bounded window and presentation-preference operations.
 
-The model canvas uses semantic Live2D hit testing before window movement. Pressing and moving from
-the mapped head area crosses a small pointer threshold and calls Tauri's native window drag API;
-releasing without crossing the threshold remains a character touch. The old online label and its
-decorative drag strip are not part of the HUD.
+The model canvas uses semantic Live2D hit testing before window movement. Authored head and body
+areas retain their semantic targets; visible drawable triangles provide a model-neutral silhouette
+fallback for hair, arms, skirts, and legs that the source model omitted from those authored areas.
+The fallback ignores hidden and effectively transparent drawables, so empty canvas space does not
+become a drag handle. Pointer coordinates are mapped from the CSS-transformed canvas bounds back to
+its untransformed layout space before Cubism hit testing. Pressing and moving from any of these
+character hits crosses a small pointer threshold and calls Tauri's native window drag API directly
+inside the pointer event; releasing without crossing the threshold remains a character touch. The
+old online label and its decorative drag strip are not part of the HUD.
 
 The character greeting is shown only before any assistant message exists. Once a generation has
 started, its empty pre-token state renders only the typing caret and never falls back to the greeting.
@@ -139,14 +144,15 @@ non-transparent profiles are intentionally excluded from this slice.
 
 ## Verification
 
-- Web unit tests cover route selection, avatar interaction, semantic avatar dragging, typed-message
+- Web unit tests cover route selection, avatar interaction, semantic and visible-mesh avatar dragging,
+  CSS-transformed canvas coordinates, typed-message
   submission, subtitle visibility, interaction-rail persistence, pending-caret rendering, paragraph-gap folding,
   focus-free pointer presence, multi-display physical bounds, playback-paced whole-line subtitle
   turns, out-of-order playback metadata, hanging audio-unlock recovery, interruption, and single
   media ownership.
 - Chromium checks hover-only interaction-rail reveal and layout, the dedicated settings layout,
-  internal scrolling, functional HUD switch, and absence of conversation controls in the settings
-  window.
+  internal scrolling, functional HUD switch, absence of conversation controls in the settings
+  window, and real-model transparent, head, authored-body, and leg hit points.
 - Rust tests cover host responsibility, bootstrap parsing, bounded restart state, backward-compatible
   preference defaults, and temporary cursor capture while persisted click-through remains enabled.
 - Cargo check, Clippy, Rust tests, Web typecheck/lint/tests, and the no-bundle release build are gates.

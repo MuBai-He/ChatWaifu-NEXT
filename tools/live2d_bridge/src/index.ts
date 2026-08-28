@@ -10,6 +10,7 @@ import {
 } from "@framework/live2dcubismframework";
 import { CubismMatrix44 } from "@framework/math/cubismmatrix44";
 import { CubismWebGLOffscreenManager } from "@framework/rendering/cubismoffscreenmanager";
+import { isPointInVisibleDrawableMeshes } from "./mesh-hit-test";
 
 const FRAMEWORK_VERSION = "5-r.5";
 const LOAD_TIMEOUT_MS = 20_000;
@@ -295,6 +296,16 @@ class ChatWaifuCubismBridge {
     }
     if (this.model.hitTest("Body", modelX, modelY)) {
       hits.push({ areaId: "body", confidence: 1, modelX, modelY });
+    }
+    if (hits.length === 0) {
+      const modelMatrix = this.model.getModelMatrix();
+      const localX = modelMatrix.invertTransformX(modelX);
+      const localY = modelMatrix.invertTransformY(modelY);
+      if (
+        isPointInVisibleDrawableMeshes(this.model.getModel(), localX, localY)
+      ) {
+        hits.push({ areaId: "avatar", confidence: 0.9, modelX, modelY });
+      }
     }
     return hits;
   }
