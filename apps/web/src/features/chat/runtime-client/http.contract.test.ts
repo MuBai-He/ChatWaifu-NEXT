@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getSession } from "./sessionsClient";
-import { getTtsConfigurationRegistrations } from "./ttsClient";
+import { getTtsConfigurationRegistrations, getTtsProviders } from "./ttsClient";
 
 const validSession = {
   session_id: "00000000-0000-4000-8000-000000000101",
@@ -60,6 +60,7 @@ describe("Runtime HTTP contracts", () => {
             {
               provider_id: "provider_from_registry",
               display_name: "Registry Voice",
+              configuration_schema_version: "2.0",
               configuration_schema: {
                 type: "object",
                 properties: { model: { type: "string" } },
@@ -82,6 +83,19 @@ describe("Runtime HTTP contracts", () => {
                   },
                 ],
               },
+              credential: {
+                kind: "api_key",
+                field_key: "api_key",
+                configured_field: "credential_present",
+                clear_field: "remove_credential",
+                fallback_provider_id: null,
+              },
+              presentation: {
+                group_id: "cloud_alpha",
+                group_display_name: "Cloud Alpha",
+                variant_label: "Natural",
+                group_default: true,
+              },
               configuration: {
                 provider_id: "provider_from_registry",
                 model: "voice-v1",
@@ -97,6 +111,62 @@ describe("Runtime HTTP contracts", () => {
     expect(registrations[0]?.ui_schema.fields[0]).toMatchObject({
       key: "model",
       control: "text",
+    });
+    expect(registrations[0]).toMatchObject({
+      configuration_schema_version: "2.0",
+      credential: {
+        configured_field: "credential_present",
+        clear_field: "remove_credential",
+      },
+      presentation: {
+        group_id: "cloud_alpha",
+        variant_label: "Natural",
+      },
+    });
+  });
+
+  it("parses provider-neutral grouping metadata from TTS snapshots", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          items: [
+            {
+              provider_id: "alpha_natural",
+              display_name: "Alpha Natural",
+              model: "alpha-v1",
+              languages: ["zh"],
+              supports_voice_cloning: true,
+              supports_style: true,
+              supports_speed: true,
+              supports_pitch: false,
+              native_streaming: true,
+              local_only: false,
+              status: "ready",
+              model_loaded: false,
+              queue_depth: 0,
+              device: null,
+              detail: null,
+              selected: true,
+              presentation: {
+                group_id: "cloud_alpha",
+                group_display_name: "Cloud Alpha",
+                variant_label: "Natural",
+                group_default: true,
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    const providers = await getTtsProviders(validSession.session_id);
+
+    expect(providers[0]?.presentation).toMatchObject({
+      group_id: "cloud_alpha",
+      group_display_name: "Cloud Alpha",
+      variant_label: "Natural",
+      group_default: true,
     });
   });
 });

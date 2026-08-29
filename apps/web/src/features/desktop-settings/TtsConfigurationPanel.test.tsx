@@ -12,7 +12,7 @@ import type {
   TtsConfigurationRegistration,
   TtsConfigurationSnapshot,
 } from "../chat/types";
-import { TtsConfigurationPanel } from "./AliyunTtsSettingsPanel";
+import { TtsConfigurationPanel } from "./TtsConfigurationPanel";
 
 vi.mock("../chat/runtimeClient", () => ({
   getTtsConfiguration: vi.fn(),
@@ -29,6 +29,9 @@ describe("TtsConfigurationPanel", () => {
     vi.mocked(runtimeClient.getTtsConfiguration).mockImplementation(
       (providerId) => Promise.resolve(configuration(providerId)),
     );
+    vi.mocked(runtimeClient.updateTtsConfiguration).mockImplementation(
+      (providerId) => Promise.resolve(configuration(providerId)),
+    );
   });
 
   afterEach(() => {
@@ -40,7 +43,7 @@ describe("TtsConfigurationPanel", () => {
     const onProviderIdChange = vi.fn();
     render(
       <TtsConfigurationPanel
-        preferredProviderId="aliyun_cosyvoice_realtime"
+        preferredProviderId="cloud_beta_voice"
         onProviderIdChange={onProviderIdChange}
         onSaved={vi.fn()}
       />,
@@ -49,46 +52,67 @@ describe("TtsConfigurationPanel", () => {
     expect(
       await screen.findByRole("region", { name: "TTS Provider 设置" }),
     ).toBeTruthy();
-    expect(
-      screen.getAllByText("阿里云百炼 · CosyVoice 实时音色").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cloud Beta Voice").length).toBeGreaterThan(0);
     expect(screen.getByText("基础情绪指令")).toBeTruthy();
 
     fireEvent.change(screen.getByRole("combobox", { name: "TTS 配置入口" }), {
-      target: { value: "aliyun_qwen_realtime" },
+      target: { value: "cloud_alpha_voice" },
     });
-    expect(onProviderIdChange).toHaveBeenCalledWith("aliyun_qwen_realtime");
+    expect(onProviderIdChange).toHaveBeenCalledWith("cloud_alpha_voice");
     await waitFor(() =>
       expect(runtimeClient.getTtsConfiguration).toHaveBeenCalledWith(
-        "aliyun_qwen_realtime",
+        "cloud_alpha_voice",
       ),
     );
     await waitFor(() =>
-      expect(
-        screen.getAllByText("阿里云百炼 · Qwen3-TTS 实时音色").length,
-      ).toBeGreaterThan(0),
+      expect(screen.getAllByText("Cloud Alpha Voice").length).toBeGreaterThan(
+        0,
+      ),
     );
     expect(screen.queryByText("基础情绪指令")).toBeNull();
+  });
+
+  it("uses credential metadata for configured state and clear payload", async () => {
+    render(
+      <TtsConfigurationPanel
+        preferredProviderId="cloud_alpha_voice"
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Access Token · 已在 Runtime 本地配置"),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByLabelText("移除此 Provider 单独保存的 Access Token"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "保存配置" }));
+
+    await waitFor(() =>
+      expect(runtimeClient.updateTtsConfiguration).toHaveBeenCalledWith(
+        "cloud_alpha_voice",
+        expect.objectContaining({ revoke_token: true }),
+      ),
+    );
+    const payload = vi.mocked(runtimeClient.updateTtsConfiguration).mock
+      .calls[0]?.[1];
+    expect(payload).not.toHaveProperty("clear_api_key");
   });
 });
 
 function registrations(): TtsConfigurationRegistration[] {
   return [
-    registration("aliyun_qwen_realtime", "阿里云百炼 · Qwen3-TTS 实时音色", [
+    registration("cloud_alpha_voice", "Cloud Alpha Voice", [
       field("enabled", "启用", "toggle"),
       field("model", "模型", "text"),
-      field("api_key", "API Key", "secret"),
+      field("api_key", "Access Token", "secret"),
     ]),
-    registration(
-      "aliyun_cosyvoice_realtime",
-      "阿里云百炼 · CosyVoice 实时音色",
-      [
-        field("enabled", "启用", "toggle"),
-        field("model", "模型", "text"),
-        field("instruction", "基础情绪指令", "textarea"),
-        field("api_key", "API Key", "secret"),
-      ],
-    ),
+    registration("cloud_beta_voice", "Cloud Beta Voice", [
+      field("enabled", "启用", "toggle"),
+      field("model", "模型", "text"),
+      field("instruction", "基础情绪指令", "textarea"),
+      field("api_key", "Access Token", "secret"),
+    ]),
   ];
 }
 
@@ -100,8 +124,22 @@ function registration(
   return {
     provider_id: providerId,
     display_name: displayName,
+    configuration_schema_version: "1.0",
     configuration_schema: { properties: {}, required: [] },
     ui_schema: { schema_version: "1.0", fields },
+    credential: {
+      kind: "api_key",
+      field_key: "api_key",
+      configured_field: "token_present",
+      clear_field: "revoke_token",
+      fallback_provider_id: null,
+    },
+    presentation: {
+      group_id: "cloud_suite",
+      group_display_name: "Cloud Suite",
+      variant_label: providerId.includes("alpha") ? "Alpha" : "Beta",
+      group_default: providerId.includes("beta"),
+    },
     configuration: configuration(providerId),
   };
 }
@@ -129,11 +167,9 @@ function configuration(providerId: string): TtsConfigurationSnapshot {
   return {
     provider_id: providerId,
     enabled: true,
-    model: providerId.includes("cosyvoice")
-      ? "cosyvoice-v3.5-plus"
-      : "qwen3-tts-vc-realtime-2026-01-15",
-    instruction: providerId.includes("cosyvoice") ? "温柔" : "",
-    api_key_configured: true,
+    model: providerId.includes("beta") ? "beta-v2" : "alpha-v1",
+    instruction: providerId.includes("beta") ? "温柔" : "",
+    token_present: true,
     updated_at: new Date(0).toISOString(),
   };
 }

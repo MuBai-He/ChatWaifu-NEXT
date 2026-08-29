@@ -9,7 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { ChatMessage } from "./features/chat/types";
+import type { ChatMessage, TtsProviderSnapshot } from "./features/chat/types";
 import type { SubtitlePlaybackProgress } from "./features/chat/subtitlePlayback";
 import type {
   VoiceActivationMode,
@@ -100,7 +100,7 @@ const session = {
       device: "cpu",
       selected: false,
     },
-  ],
+  ] as TtsProviderSnapshot[],
   ttsProviderId: "qwen3_tts_mlx",
   ttsSwitching: false,
   voiceState: "disconnected" as VoiceConnectionState,
@@ -609,6 +609,12 @@ describe("ChatWaifu usable demo", () => {
         model: "qwen3-tts-vc-realtime-2026-01-15",
         local_only: false,
         selected: false,
+        presentation: {
+          group_id: "aliyun_bailian",
+          group_display_name: "阿里云百炼",
+          variant_label: "Qwen3-TTS VC",
+          group_default: false,
+        },
       },
       {
         ...defaultTtsProviders[0],
@@ -617,16 +623,26 @@ describe("ChatWaifu usable demo", () => {
         model: "cosyvoice-v3.5-plus",
         local_only: false,
         selected: false,
+        presentation: {
+          group_id: "aliyun_bailian",
+          group_display_name: "阿里云百炼",
+          variant_label: "CosyVoice",
+          group_default: true,
+        },
       },
     );
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const tts = screen.getByRole("combobox", { name: "选择语音模型" });
+    const bailian = screen.getByRole("option", { name: "阿里云百炼" });
     expect(screen.getAllByRole("option", { name: "阿里云百炼" })).toHaveLength(
       1,
     );
-    fireEvent.change(tts, { target: { value: "aliyun_bailian" } });
+    expect(bailian).toBeInstanceOf(HTMLOptionElement);
+    if (!(bailian instanceof HTMLOptionElement))
+      throw new Error("expected grouped TTS option");
+    fireEvent.change(tts, { target: { value: bailian.value } });
     expect(session.changeTtsProvider).toHaveBeenCalledWith(
       "aliyun_cosyvoice_realtime",
     );

@@ -4,11 +4,10 @@ import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import {
   buildTtsProviderChoices,
-  isAliyunCloudTtsProviderId,
   providerSelectorValue,
-  readAliyunTtsPreference,
+  readTtsProviderPreferences,
   resolveProviderSelection,
-  saveAliyunTtsPreference,
+  saveTtsProviderPreference,
 } from "./ttsProviderPresentation";
 import { useChatSession } from "./useChatSession";
 
@@ -58,21 +57,21 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarFraming, setAvatarFraming] = useState<"bust" | "full">("bust");
-  const bailianPreference = readAliyunTtsPreference();
+  const ttsProviderPreferences = readTtsProviderPreferences(ttsProviders);
   const ttsProviderChoices = buildTtsProviderChoices(
     ttsProviders,
     ttsProviderId,
-    bailianPreference,
+    ttsProviderPreferences,
   );
+  const ttsSelectorValue = providerSelectorValue(ttsProviders, ttsProviderId);
   const selectTtsProvider = (selectionId: string) => {
     const providerId = resolveProviderSelection(
       selectionId,
       ttsProviders,
       ttsProviderId,
-      bailianPreference,
+      ttsProviderPreferences,
     );
-    if (isAliyunCloudTtsProviderId(providerId))
-      saveAliyunTtsPreference(providerId);
+    saveTtsProviderPreference(ttsProviders, providerId);
     void changeTtsProvider(providerId);
   };
   const historyRef = useRef<HTMLDivElement>(null);
@@ -271,16 +270,14 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
             <label>
               <span>角色声音</span>
               <select
-                value={providerSelectorValue(ttsProviderId)}
+                value={ttsSelectorValue}
                 onChange={(event) => selectTtsProvider(event.target.value)}
                 disabled={!sessionId || ttsSwitching}
                 aria-label="选择语音模型"
               >
                 {ttsProviderChoices.length === 0 ? (
-                  <option value={providerSelectorValue(ttsProviderId)}>
-                    {providerSelectorValue(ttsProviderId) === "aliyun_bailian"
-                      ? "阿里云百炼"
-                      : ttsProviderId}
+                  <option value={ttsSelectorValue}>
+                    {ttsProviderId || "正在读取 Runtime 配置"}
                   </option>
                 ) : (
                   ttsProviderChoices.map((provider) => (

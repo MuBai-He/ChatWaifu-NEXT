@@ -5,10 +5,6 @@ export type {
   SessionSnapshot,
 } from "@chatwaifu/protocol";
 export type {
-  AliyunCloudTtsConfiguration,
-  AliyunCloudTtsProviderId,
-  AliyunCosyVoiceTtsConfiguration,
-  AliyunTtsConfiguration,
   AudioPayload,
   CharacterProfile,
   CompanionSettings,
@@ -21,9 +17,11 @@ export type {
   SessionResetResult,
   TtsProviderSnapshot,
   TtsConfigurationJsonSchema,
+  TtsConfigurationCredential,
   TtsConfigurationRegistration,
   TtsConfigurationSnapshot,
   TtsConfigurationUiField,
+  TtsProviderPresentation,
   TtsStreamMessage,
 } from "./runtime-client/contracts";
 

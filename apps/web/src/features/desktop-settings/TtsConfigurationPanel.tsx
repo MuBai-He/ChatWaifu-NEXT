@@ -7,6 +7,7 @@ import {
   updateTtsConfiguration,
 } from "../chat/runtimeClient";
 import type {
+  TtsConfigurationCredential,
   TtsConfigurationRegistration,
   TtsConfigurationSnapshot,
   TtsConfigurationUiField,
@@ -108,6 +109,7 @@ export function TtsConfigurationPanel({
       editableConfiguration(
         configuration,
         registration.ui_schema.fields,
+        registration.credential,
         secretValues,
         clearedSecrets,
       ),
@@ -154,7 +156,7 @@ export function TtsConfigurationPanel({
   };
 
   return (
-    <section className="aliyun-tts-panel" aria-label="TTS Provider 设置">
+    <section className="tts-configuration-panel" aria-label="TTS Provider 设置">
       <header>
         <div>
           <h2>TTS Provider</h2>
@@ -165,7 +167,7 @@ export function TtsConfigurationPanel({
               : ""}
           </p>
         </div>
-        <label className="aliyun-tts-api-selector">
+        <label className="tts-configuration-selector">
           <span>配置入口</span>
           <select
             aria-label="TTS 配置入口"
@@ -198,13 +200,20 @@ export function TtsConfigurationPanel({
       </header>
 
       {configuration && registration ? (
-        <div className="aliyun-tts-fields">
-          {regularFields(registration.ui_schema.fields).map((field) =>
-            field.control === "secret" ? (
+        <div className="tts-configuration-fields">
+          {regularFields(
+            registration.ui_schema.fields,
+            registration.credential,
+          ).map((field) =>
+            field.control === "secret" && registration.credential ? (
               <SettingsSecretField
                 key={field.key}
+                label={field.label}
                 ariaLabel={field.label}
-                configured={configuration[`${field.key}_configured`] === true}
+                configured={
+                  configuration[registration.credential.configured_field] ===
+                  true
+                }
                 value={secretValues[field.key] ?? ""}
                 disabled={Boolean(busy)}
                 help={field.help_text}
@@ -225,9 +234,9 @@ export function TtsConfigurationPanel({
             ),
           )}
           {advancedFields(registration.ui_schema.fields).length ? (
-            <details className="aliyun-tts-wide-field">
+            <details className="tts-configuration-wide-field">
               <summary>高级设置</summary>
-              <div className="aliyun-tts-fields">
+              <div className="tts-configuration-fields">
                 {advancedFields(registration.ui_schema.fields).map((field) => (
                   <ConfigurationField
                     key={field.key}
@@ -247,28 +256,30 @@ export function TtsConfigurationPanel({
       )}
 
       {configuration && registration
-        ? registration.ui_schema.fields
+        ? credentialField(registration)
             .filter(
-              (field) =>
-                field.control === "secret" &&
-                configuration[`${field.key}_configured`] === true,
+              () =>
+                registration.credential !== null &&
+                configuration[registration.credential.configured_field] ===
+                  true,
             )
             .map((field) => (
               <label
-                className="aliyun-tts-clear-key"
+                className="tts-configuration-clear-key"
                 key={`clear-${field.key}`}
               >
                 <input
                   type="checkbox"
                   checked={clearedSecrets.has(field.key)}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
                     setClearedSecrets((current) => {
                       const next = new Set(current);
-                      if (event.currentTarget.checked) next.add(field.key);
+                      if (checked) next.add(field.key);
                       else next.delete(field.key);
                       return next;
-                    })
-                  }
+                    });
+                  }}
                 />
                 移除此 Provider 单独保存的 {field.label}
               </label>
@@ -298,15 +309,12 @@ export function TtsConfigurationPanel({
       </footer>
 
       <p className="desktop-settings-info">
-        Provider 的字段、枚举与范围由 Runtime
-        注册表提供。新增语音后，设置页不再需要添加专属 Qwen/CosyVoice 分支。
+        Provider 的字段、枚举与范围由 Runtime 注册表提供。新增语音 Provider
+        后，设置页不需要添加专属分支。
       </p>
     </section>
   );
 }
-
-// Compatibility export for callers that still use the previous component name.
-export const AliyunTtsSettingsPanel = TtsConfigurationPanel;
 
 function ConfigurationField({
   field,
@@ -370,7 +378,7 @@ function ConfigurationField({
   }
   if (field.control === "textarea") {
     return (
-      <label className="aliyun-tts-wide-field">
+      <label className="tts-configuration-wide-field">
         <span>{field.label}</span>
         <textarea
           rows={2}
@@ -395,12 +403,16 @@ function ConfigurationField({
   );
 }
 
-function regularFields(fields: TtsConfigurationUiField[]) {
+function regularFields(
+  fields: TtsConfigurationUiField[],
+  credential: TtsConfigurationCredential | null,
+) {
   return fields.filter(
     (field) =>
       !field.advanced &&
       field.key !== "enabled" &&
-      !INTERNAL_FIELDS.has(field.key),
+      !INTERNAL_FIELDS.has(field.key) &&
+      (field.control !== "secret" || field.key === credential?.field_key),
   );
 }
 
@@ -416,6 +428,7 @@ function advancedFields(fields: TtsConfigurationUiField[]) {
 function editableConfiguration(
   configuration: TtsConfigurationSnapshot,
   fields: TtsConfigurationUiField[],
+  credential: TtsConfigurationCredential | null,
   secretValues: Record<string, string>,
   clearedSecrets: ReadonlySet<string>,
 ): Record<string, unknown> {
@@ -429,14 +442,26 @@ function editableConfiguration(
       )
       .map((field) => [field.key, configuration[field.key]]),
   );
-  for (const field of fields.filter(
-    (candidate) => candidate.control === "secret",
-  )) {
-    const secret = secretValues[field.key]?.trim();
-    if (secret) payload[field.key] = secret;
-    if (clearedSecrets.has(field.key)) payload[`clear_${field.key}`] = true;
+  if (credential) {
+    const secret = secretValues[credential.field_key]?.trim();
+    if (secret) payload[credential.field_key] = secret;
+    if (clearedSecrets.has(credential.field_key)) {
+      payload[credential.clear_field] = true;
+    }
   }
   return payload;
+}
+
+function credentialField(
+  registration: TtsConfigurationRegistration,
+): TtsConfigurationUiField[] {
+  const credential = registration.credential;
+  if (!credential) return [];
+  const field = registration.ui_schema.fields.find(
+    (candidate) =>
+      candidate.key === credential.field_key && candidate.control === "secret",
+  );
+  return field ? [field] : [];
 }
 
 function scalarText(value: unknown): string {

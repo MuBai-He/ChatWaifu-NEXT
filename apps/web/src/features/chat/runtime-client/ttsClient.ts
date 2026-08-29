@@ -1,12 +1,9 @@
 import { z } from "zod";
 
 import {
-  aliyunTtsConfigurationSchema,
   ttsConfigurationRegistrationSchema,
   ttsConfigurationSnapshotSchema,
   ttsProviderSnapshotSchema,
-  type AliyunCloudTtsConfiguration,
-  type AliyunCloudTtsProviderId,
   type TtsProviderSnapshot,
   type TtsConfigurationRegistration,
   type TtsConfigurationSnapshot,
@@ -74,34 +71,4 @@ export async function testTtsConfiguration(
     testResultSchema,
     { method: "POST", body: "{}" },
   );
-}
-
-export async function getAliyunTtsConfiguration(
-  providerId: AliyunCloudTtsProviderId,
-): Promise<AliyunCloudTtsConfiguration> {
-  return aliyunTtsConfigurationSchema.parse(
-    await getTtsConfiguration(providerId),
-  );
-}
-
-export async function updateAliyunTtsConfiguration(
-  configuration: Omit<
-    AliyunCloudTtsConfiguration,
-    "provider_id" | "api_key_configured" | "updated_at"
-  > & {
-    provider_id: AliyunCloudTtsProviderId;
-    api_key?: string;
-    clear_api_key?: boolean;
-  },
-): Promise<AliyunCloudTtsConfiguration> {
-  const { provider_id: providerId, ...payload } = configuration;
-  return aliyunTtsConfigurationSchema.parse(
-    await updateTtsConfiguration(providerId, payload),
-  );
-}
-
-export async function testAliyunTtsConfiguration(
-  providerId: AliyunCloudTtsProviderId,
-): Promise<z.infer<typeof testResultSchema>> {
-  return testTtsConfiguration(providerId);
 }

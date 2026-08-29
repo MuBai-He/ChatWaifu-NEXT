@@ -83,6 +83,8 @@ export const sessionResetResultSchema = z
     events_deleted: z.number().int().nonnegative(),
     memories_deleted: z.number().int().nonnegative(),
     audio_assets_deleted: z.number().int().nonnegative(),
+    audio_assets_pending_cleanup: z.number().int().nonnegative(),
+    audio_cleanup_complete: z.boolean(),
     scope: z.object({
       character_id: z.string().min(1),
       user_scope: z.string().min(1),
@@ -95,6 +97,15 @@ export const sessionResetResultSchema = z
   .passthrough();
 
 export type SessionResetResult = z.infer<typeof sessionResetResultSchema>;
+
+export const ttsProviderPresentationSchema = z
+  .object({
+    group_id: z.string().min(1).nullish(),
+    group_display_name: z.string().min(1).nullish(),
+    variant_label: z.string().min(1).nullish(),
+    group_default: z.boolean(),
+  })
+  .passthrough();
 
 export const ttsProviderSnapshotSchema = z
   .object({
@@ -114,10 +125,14 @@ export const ttsProviderSnapshotSchema = z
     device: z.string().nullish(),
     detail: z.string().nullish(),
     selected: z.boolean(),
+    presentation: ttsProviderPresentationSchema.nullish(),
   })
   .passthrough();
 
 export type TtsProviderSnapshot = z.infer<typeof ttsProviderSnapshotSchema>;
+export type TtsProviderPresentation = z.infer<
+  typeof ttsProviderPresentationSchema
+>;
 
 const ttsConfigurationFieldSchema = z
   .object({
@@ -184,12 +199,25 @@ export const ttsConfigurationSnapshotSchema = z
   })
   .passthrough();
 
+export const ttsConfigurationCredentialSchema = z
+  .object({
+    kind: z.literal("api_key"),
+    field_key: z.string().min(1),
+    configured_field: z.string().min(1),
+    clear_field: z.string().min(1),
+    fallback_provider_id: z.string().min(1).nullish(),
+  })
+  .passthrough();
+
 export const ttsConfigurationRegistrationSchema = z
   .object({
     provider_id: z.string().min(1),
     display_name: z.string().min(1),
+    configuration_schema_version: z.string().min(1),
     configuration_schema: ttsConfigurationJsonSchema,
     ui_schema: ttsConfigurationUiSchema,
+    credential: ttsConfigurationCredentialSchema.nullable(),
+    presentation: ttsProviderPresentationSchema,
     configuration: ttsConfigurationSnapshotSchema,
   })
   .passthrough();
@@ -206,91 +234,8 @@ export type TtsConfigurationRegistration = z.infer<
 export type TtsConfigurationUiField = z.infer<
   typeof ttsConfigurationUiFieldSchema
 >;
-
-const aliyunConfigurationBase = {
-  enabled: z.boolean(),
-  model: z.string(),
-  voice_id: z.string(),
-  region: z.enum(["beijing", "singapore"]),
-  workspace_id: z.string(),
-  sample_rate: z.union([
-    z.literal(8000),
-    z.literal(16000),
-    z.literal(24000),
-    z.literal(48000),
-  ]),
-  speech_rate: z.number(),
-  volume: z.number(),
-  pitch_rate: z.number(),
-  instruction: z.string(),
-  timeout_seconds: z.number().positive(),
-  max_audio_bytes: z.number().int().positive(),
-  api_key_configured: z.boolean(),
-  updated_at: dateTime,
-};
-
-export const aliyunTtsConfigurationSchema = z.discriminatedUnion(
-  "provider_id",
-  [
-    z
-      .object({
-        ...aliyunConfigurationBase,
-        provider_id: z.literal("aliyun_qwen_realtime"),
-        language_type: z.enum([
-          "Auto",
-          "Chinese",
-          "English",
-          "German",
-          "Italian",
-          "Portuguese",
-          "Spanish",
-          "Japanese",
-          "Korean",
-          "French",
-          "Russian",
-        ]),
-      })
-      .passthrough(),
-    z
-      .object({
-        ...aliyunConfigurationBase,
-        provider_id: z.literal("aliyun_cosyvoice_realtime"),
-        language_type: z.enum([
-          "auto",
-          "zh",
-          "en",
-          "fr",
-          "de",
-          "ja",
-          "ko",
-          "ru",
-          "pt",
-          "th",
-          "id",
-          "vi",
-          "es",
-          "it",
-          "ms",
-          "fil",
-          "ar",
-        ]),
-      })
-      .passthrough(),
-  ],
-);
-
-export type AliyunCloudTtsConfiguration = z.infer<
-  typeof aliyunTtsConfigurationSchema
->;
-export type AliyunCloudTtsProviderId =
-  AliyunCloudTtsConfiguration["provider_id"];
-export type AliyunTtsConfiguration = Extract<
-  AliyunCloudTtsConfiguration,
-  { provider_id: "aliyun_qwen_realtime" }
->;
-export type AliyunCosyVoiceTtsConfiguration = Extract<
-  AliyunCloudTtsConfiguration,
-  { provider_id: "aliyun_cosyvoice_realtime" }
+export type TtsConfigurationCredential = z.infer<
+  typeof ttsConfigurationCredentialSchema
 >;
 
 export const modelRoleSchema = z.enum([

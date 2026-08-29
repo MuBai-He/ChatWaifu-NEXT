@@ -1,16 +1,11 @@
-import { useState } from "react";
-
 import {
   buildTtsProviderChoices,
-  isAliyunCloudTtsProviderId,
   providerSelectorValue,
-  readAliyunTtsPreference,
-  resolveAliyunCloudProviderId,
+  readTtsProviderPreferences,
   resolveProviderSelection,
-  saveAliyunTtsPreference,
+  saveTtsProviderPreference,
 } from "../chat/ttsProviderPresentation";
-import type { AliyunCloudTtsProviderId } from "../chat/types";
-import { TtsConfigurationPanel } from "./AliyunTtsSettingsPanel";
+import { TtsConfigurationPanel } from "./TtsConfigurationPanel";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 
@@ -20,26 +15,16 @@ export function VoiceSettingsSection({
   context: DesktopSettingsContext;
 }) {
   const { voice } = context;
-  const [bailianProviderId, setBailianProviderId] =
-    useState<AliyunCloudTtsProviderId>(() =>
-      resolveAliyunCloudProviderId(
-        voice.ttsProviders,
-        voice.ttsProviderId,
-        readAliyunTtsPreference(),
-      ),
-    );
-  const activeBailianProviderId = isAliyunCloudTtsProviderId(
-    voice.ttsProviderId,
-  )
-    ? voice.ttsProviderId
-    : bailianProviderId;
+  const preferences = readTtsProviderPreferences(voice.ttsProviders);
   const choices = buildTtsProviderChoices(
     voice.ttsProviders,
     voice.ttsProviderId,
-    activeBailianProviderId,
+    preferences,
   );
   const selected = choices.find(
-    (provider) => provider.id === providerSelectorValue(voice.ttsProviderId),
+    (provider) =>
+      provider.id ===
+      providerSelectorValue(voice.ttsProviders, voice.ttsProviderId),
   );
 
   const changeProvider = async (selectionId: string) => {
@@ -47,19 +32,13 @@ export function VoiceSettingsSection({
       selectionId,
       voice.ttsProviders,
       voice.ttsProviderId,
-      activeBailianProviderId,
+      preferences,
     );
-    if (isAliyunCloudTtsProviderId(nextProviderId)) {
-      setBailianProviderId(nextProviderId);
-      saveAliyunTtsPreference(nextProviderId);
-    }
+    saveTtsProviderPreference(voice.ttsProviders, nextProviderId);
     await voice.changeTtsProvider(nextProviderId);
   };
   const changeConfiguredProvider = async (next: string) => {
-    if (isAliyunCloudTtsProviderId(next)) {
-      setBailianProviderId(next);
-      saveAliyunTtsPreference(next);
-    }
+    saveTtsProviderPreference(voice.ttsProviders, next);
     if (voice.ttsProviders.some((provider) => provider.provider_id === next))
       await voice.changeTtsProvider(next);
   };
@@ -77,12 +56,15 @@ export function VoiceSettingsSection({
             <strong>当前语音</strong>
             <small>
               {selected
-                ? `${selected.engineLabel ? `${selected.engineLabel} · ` : ""}${selected.model}`
+                ? `${selected.variantLabel ? `${selected.variantLabel} · ` : ""}${selected.model}`
                 : "正在读取 Runtime 配置"}
             </small>
           </div>
           <select
-            value={providerSelectorValue(voice.ttsProviderId)}
+            value={providerSelectorValue(
+              voice.ttsProviders,
+              voice.ttsProviderId,
+            )}
             disabled={!voice.sessionId || voice.ttsSwitching}
             onChange={(event) => void changeProvider(event.target.value)}
             aria-label="选择桌宠语音"
@@ -98,7 +80,12 @@ export function VoiceSettingsSection({
                 </option>
               ))
             ) : (
-              <option value={providerSelectorValue(voice.ttsProviderId)}>
+              <option
+                value={providerSelectorValue(
+                  voice.ttsProviders,
+                  voice.ttsProviderId,
+                )}
+              >
                 正在读取…
               </option>
             )}
@@ -114,7 +101,7 @@ export function VoiceSettingsSection({
               <div>
                 <strong>{provider.displayName}</strong>
                 <small>
-                  {provider.engineLabel ? `${provider.engineLabel} · ` : ""}
+                  {provider.variantLabel ? `${provider.variantLabel} · ` : ""}
                   {provider.model} · {provider.languages.join(" / ")}
                 </small>
               </div>
@@ -127,7 +114,7 @@ export function VoiceSettingsSection({
       </SettingsGroup>
 
       <TtsConfigurationPanel
-        preferredProviderId={activeBailianProviderId}
+        preferredProviderId={voice.ttsProviderId}
         onProviderIdChange={changeConfiguredProvider}
         onSaved={voice.refreshTtsProviders}
       />

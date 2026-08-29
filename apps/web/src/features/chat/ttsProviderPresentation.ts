@@ -1,13 +1,10 @@
-import type { AliyunCloudTtsProviderId, TtsProviderSnapshot } from "./types";
+import type { TtsProviderSnapshot } from "./types";
 
-export const ALIYUN_BAILIAN_ENTRY_ID = "aliyun_bailian";
-export const ALIYUN_TTS_PREFERENCE_KEY =
-  "chatwaifu.next.aliyun_tts_provider_id";
+const TTS_GROUP_PREFERENCE_PREFIX =
+  "chatwaifu.next.tts_provider_group_preference.";
+const TTS_GROUP_SELECTOR_PREFIX = "tts-provider-group:";
 
-const ALIYUN_PROVIDER_IDS: AliyunCloudTtsProviderId[] = [
-  "aliyun_cosyvoice_realtime",
-  "aliyun_qwen_realtime",
-];
+export type TtsProviderPreferences = Readonly<Record<string, string>>;
 
 export interface TtsProviderChoice {
   id: string;
@@ -18,129 +15,195 @@ export interface TtsProviderChoice {
   modelLoaded: boolean;
   selected: boolean;
   actualProviderId: string;
-  engineLabel?: string;
+  groupId?: string;
+  variantLabel?: string;
 }
 
-export function isAliyunCloudTtsProviderId(
-  providerId: string,
-): providerId is AliyunCloudTtsProviderId {
-  return ALIYUN_PROVIDER_IDS.includes(providerId as AliyunCloudTtsProviderId);
-}
-
-export function providerSelectorValue(providerId: string): string {
-  return isAliyunCloudTtsProviderId(providerId)
-    ? ALIYUN_BAILIAN_ENTRY_ID
-    : providerId;
-}
-
-export function resolveAliyunCloudProviderId(
+export function providerSelectorValue(
   providers: TtsProviderSnapshot[],
-  currentProviderId: string,
-  preferredProviderId?: AliyunCloudTtsProviderId,
-): AliyunCloudTtsProviderId {
-  if (isAliyunCloudTtsProviderId(currentProviderId)) return currentProviderId;
-
-  const available = (providerId: AliyunCloudTtsProviderId) => {
-    const provider = providers.find((item) => item.provider_id === providerId);
-    return provider && provider.status !== "unavailable";
-  };
-  if (preferredProviderId && available(preferredProviderId))
-    return preferredProviderId;
-
-  const selected = providers.find(
-    (provider) =>
-      provider.selected && isAliyunCloudTtsProviderId(provider.provider_id),
-  );
-  if (selected && isAliyunCloudTtsProviderId(selected.provider_id))
-    return selected.provider_id;
-
-  return (
-    ALIYUN_PROVIDER_IDS.find(available) ??
-    preferredProviderId ??
-    "aliyun_cosyvoice_realtime"
-  );
+  providerId: string,
+): string {
+  const provider = providers.find((item) => item.provider_id === providerId);
+  const groupId = provider ? providerGroupId(provider) : undefined;
+  return groupId ? groupSelectorId(groupId) : providerId;
 }
 
 export function resolveProviderSelection(
   selectionId: string,
   providers: TtsProviderSnapshot[],
   currentProviderId: string,
-  preferredProviderId?: AliyunCloudTtsProviderId,
+  preferences: TtsProviderPreferences = {},
 ): string {
-  return selectionId === ALIYUN_BAILIAN_ENTRY_ID
-    ? resolveAliyunCloudProviderId(
-        providers,
-        currentProviderId,
-        preferredProviderId,
-      )
-    : selectionId;
+  const groupId = groupIdForSelector(providers, selectionId);
+  if (!groupId) return selectionId;
+  return resolveGroupProviderId(
+    providers,
+    groupId,
+    currentProviderId,
+    preferences[groupId],
+  );
 }
 
 export function buildTtsProviderChoices(
   providers: TtsProviderSnapshot[],
   currentProviderId: string,
-  preferredProviderId?: AliyunCloudTtsProviderId,
+  preferences: TtsProviderPreferences = {},
 ): TtsProviderChoice[] {
-  const bailianProviders = providers.filter((provider) =>
-    isAliyunCloudTtsProviderId(provider.provider_id),
-  );
-  const actualProviderId = resolveAliyunCloudProviderId(
-    providers,
-    currentProviderId,
-    preferredProviderId,
-  );
-  const presented =
-    bailianProviders.find(
-      (provider) => provider.provider_id === actualProviderId,
-    ) ?? bailianProviders[0];
   const choices: TtsProviderChoice[] = [];
-  let bailianAdded = false;
+  const emittedGroups = new Set<string>();
 
   for (const provider of providers) {
-    if (!isAliyunCloudTtsProviderId(provider.provider_id)) {
-      choices.push({
-        id: provider.provider_id,
-        displayName: provider.display_name,
-        model: provider.model,
-        languages: provider.languages,
-        status: provider.status,
-        modelLoaded: provider.model_loaded,
-        selected: provider.provider_id === currentProviderId,
-        actualProviderId: provider.provider_id,
-      });
+    const groupId = providerGroupId(provider);
+    if (!groupId) {
+      choices.push(providerChoice(provider, currentProviderId));
       continue;
     }
-    if (bailianAdded) continue;
-    bailianAdded = true;
-    if (!presented) continue;
+    if (emittedGroups.has(groupId)) continue;
+    emittedGroups.add(groupId);
+
+    const actualProviderId = resolveGroupProviderId(
+      providers,
+      groupId,
+      currentProviderId,
+      preferences[groupId],
+    );
+    const presented =
+      providers.find((item) => item.provider_id === actualProviderId) ??
+      provider;
     choices.push({
-      id: ALIYUN_BAILIAN_ENTRY_ID,
-      displayName: "阿里云百炼",
-      model: presented.model,
-      languages: presented.languages,
-      status: presented.status,
-      modelLoaded: bailianProviders.some((item) => item.model_loaded),
-      selected: isAliyunCloudTtsProviderId(currentProviderId),
+      ...providerChoice(presented, currentProviderId),
+      id: groupSelectorId(groupId),
+      displayName:
+        presented.presentation?.group_display_name ?? presented.display_name,
+      selected:
+        providerSelectorValue(providers, currentProviderId) ===
+        groupSelectorId(groupId),
       actualProviderId,
-      engineLabel:
-        presented.provider_id === "aliyun_cosyvoice_realtime"
-          ? "CosyVoice"
-          : "Qwen3-TTS VC",
+      groupId,
+      variantLabel: presented.presentation?.variant_label ?? undefined,
     });
   }
   return choices;
 }
 
-export function readAliyunTtsPreference():
-  AliyunCloudTtsProviderId | undefined {
-  if (typeof window === "undefined") return undefined;
-  const value = window.localStorage?.getItem(ALIYUN_TTS_PREFERENCE_KEY) ?? "";
-  return isAliyunCloudTtsProviderId(value) ? value : undefined;
+export function readTtsProviderPreferences(
+  providers: TtsProviderSnapshot[],
+): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const preferences: Record<string, string> = {};
+  for (const groupId of providerGroupIds(providers)) {
+    try {
+      const providerId =
+        window.localStorage?.getItem(preferenceStorageKey(groupId)) ?? "";
+      if (
+        providers.some(
+          (provider) =>
+            provider.provider_id === providerId &&
+            providerGroupId(provider) === groupId,
+        )
+      ) {
+        preferences[groupId] = providerId;
+      }
+    } catch {
+      // Storage can be unavailable in privacy-constrained WebViews. Runtime
+      // selection remains authoritative, so failing closed only loses a hint.
+    }
+  }
+  return preferences;
 }
 
-export function saveAliyunTtsPreference(
-  providerId: AliyunCloudTtsProviderId,
+export function saveTtsProviderPreference(
+  providers: TtsProviderSnapshot[],
+  providerId: string,
 ): void {
   if (typeof window === "undefined") return;
-  window.localStorage?.setItem(ALIYUN_TTS_PREFERENCE_KEY, providerId);
+  const provider = providers.find((item) => item.provider_id === providerId);
+  const groupId = provider ? providerGroupId(provider) : undefined;
+  if (!groupId) return;
+  try {
+    window.localStorage?.setItem(preferenceStorageKey(groupId), providerId);
+  } catch {
+    // See readTtsProviderPreferences: persistence is best-effort UI state.
+  }
+}
+
+function resolveGroupProviderId(
+  providers: TtsProviderSnapshot[],
+  groupId: string,
+  currentProviderId: string,
+  preferredProviderId?: string,
+): string {
+  const grouped = providers.filter(
+    (provider) => providerGroupId(provider) === groupId,
+  );
+  if (!grouped.length) return currentProviderId;
+
+  const current = grouped.find(
+    (provider) => provider.provider_id === currentProviderId,
+  );
+  if (current) return current.provider_id;
+
+  const orderedCandidates = [
+    grouped.find((provider) => provider.provider_id === preferredProviderId),
+    grouped.find((provider) => provider.selected),
+    grouped.find((provider) => provider.presentation?.group_default),
+    ...grouped,
+  ].filter((provider): provider is TtsProviderSnapshot => Boolean(provider));
+  return (
+    orderedCandidates.find((provider) => provider.status !== "unavailable") ??
+    orderedCandidates[0] ??
+    grouped[0]
+  ).provider_id;
+}
+
+function providerChoice(
+  provider: TtsProviderSnapshot,
+  currentProviderId: string,
+): TtsProviderChoice {
+  return {
+    id: provider.provider_id,
+    displayName: provider.display_name,
+    model: provider.model,
+    languages: provider.languages,
+    status: provider.status,
+    modelLoaded: provider.model_loaded,
+    selected: provider.provider_id === currentProviderId,
+    actualProviderId: provider.provider_id,
+  };
+}
+
+function providerGroupId(provider: TtsProviderSnapshot): string | undefined {
+  const presentation = provider.presentation;
+  return presentation?.group_id &&
+    presentation.group_display_name &&
+    presentation.variant_label
+    ? presentation.group_id
+    : undefined;
+}
+
+function providerGroupIds(providers: TtsProviderSnapshot[]): string[] {
+  return [
+    ...new Set(
+      providers
+        .map((provider) => providerGroupId(provider))
+        .filter((groupId): groupId is string => Boolean(groupId)),
+    ),
+  ];
+}
+
+function groupIdForSelector(
+  providers: TtsProviderSnapshot[],
+  selectionId: string,
+): string | undefined {
+  return providerGroupIds(providers).find(
+    (groupId) => groupSelectorId(groupId) === selectionId,
+  );
+}
+
+function groupSelectorId(groupId: string): string {
+  return `${TTS_GROUP_SELECTOR_PREFIX}${groupId}`;
+}
+
+function preferenceStorageKey(groupId: string): string {
+  return `${TTS_GROUP_PREFERENCE_PREFIX}${encodeURIComponent(groupId)}`;
 }
