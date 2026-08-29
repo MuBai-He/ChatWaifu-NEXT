@@ -13,6 +13,7 @@ import pytest
 from chatwaifu_protocol.skills import McpConnectionConfiguration
 from chatwaifu_runtime.config.settings import StorageConfig
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.runtime_skills.adapters import normalize_tool_result
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.host_connections import McpConnectionManager
@@ -46,7 +47,9 @@ async def test_manager_rejects_oversized_resource_prompt_and_discovery(
     database = Database(database_path, StorageConfig(database_path=database_path))
     await database.open()
     transport = _OversizedTransport()
-    manager = McpConnectionManager(database, tmp_path / "data", transport)
+    manager = McpConnectionManager(
+        SQLiteRuntimeSkillRepository(database), tmp_path / "data", transport
+    )
     await manager.start()
     config = McpConnectionConfiguration(
         connection_id=uuid4(),

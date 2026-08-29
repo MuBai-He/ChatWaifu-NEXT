@@ -48,6 +48,13 @@
       "default": null,
       "title": "Sandbox Backend"
     },
+    "sandbox_limits_enforced": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sandbox Limits Enforced",
+      "type": "array"
+    },
     "sandbox_mode": {
       "default": "required",
       "enum": [

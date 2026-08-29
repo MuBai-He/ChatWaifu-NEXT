@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
+from uuid import UUID
 
 import yaml  # pyright: ignore[reportMissingTypeStubs]
 from chatwaifu_protocol.base import SideEffect
@@ -37,6 +38,7 @@ class RegistryEntry:
     instructions_text: str | None = None
     plugin: PluginManifest | None = None
     plugin_root: Path | None = None
+    audit_public_fields_allowed: bool = False
 
 
 class SkillRegistry:
@@ -65,8 +67,8 @@ class SkillRegistry:
                 )
                 _insert(entries, entry)
         for connection in mcp_connections or []:
-            if connection.capabilities.tools:
-                _insert(entries, _load_mcp_connection(connection))
+            for entry in _load_mcp_connection(connection):
+                _insert(entries, entry)
         self._entries = entries
 
     def list(self, *, include_disabled: bool = True) -> list[SkillDefinition]:
@@ -148,16 +150,29 @@ def _load_skill(
         instructions_path=instructions_path,
         plugin=plugin,
         plugin_root=plugin_root,
+        audit_public_fields_allowed=source == "builtin",
     )
 
 
-def _load_mcp_connection(connection: McpConnectionSnapshot) -> RegistryEntry:
-    skill_id = f"mcp.{connection.connection_id.hex}"
+def mcp_tool_skill_id(connection_id: UUID) -> str:
+    return f"mcp.{connection_id.hex}"
+
+
+def mcp_resource_skill_id(connection_id: UUID) -> str:
+    return f"mcp.resource.{connection_id.hex}"
+
+
+def mcp_prompt_skill_id(connection_id: UUID) -> str:
+    return f"mcp.prompt.{connection_id.hex}"
+
+
+def _load_mcp_connection(connection: McpConnectionSnapshot) -> list[RegistryEntry]:
     side_effect = (
         SideEffect.WRITE if connection.transport == "stdio" else SideEffect.EXTERNAL_COMMUNICATION
     )
-    permission = f"mcp.connection.{connection.connection_id}.tool.call"
-    capabilities = [
+    tool_permission = f"mcp.connection.{connection.connection_id}.tool.call"
+    entries: list[RegistryEntry] = []
+    tool_capabilities = [
         SkillCapability(
             name=tool.name,
             adapter_tool=tool.name,
@@ -165,20 +180,113 @@ def _load_mcp_connection(connection: McpConnectionSnapshot) -> RegistryEntry:
             input_schema=tool.input_schema,
             output_schema=tool.output_schema or {"type": "object"},
             side_effect=side_effect,
-            required_permissions=[permission],
+            required_permissions=[tool_permission],
             confirmation_required=True,
             timeout_seconds=connection.timeout_seconds,
         )
         for tool in connection.capabilities.tools
     ]
+    if tool_capabilities:
+        entries.append(
+            _mcp_registry_entry(
+                connection,
+                skill_id=mcp_tool_skill_id(connection.connection_id),
+                name=connection.name,
+                description="Discovered tools from this MCP server.",
+                capabilities=tool_capabilities,
+            )
+        )
+
+    read_side_effect = (
+        SideEffect.READ if connection.transport == "stdio" else SideEffect.EXTERNAL_COMMUNICATION
+    )
+    if connection.capabilities.resources or connection.capabilities.resource_templates:
+        entries.append(
+            _mcp_registry_entry(
+                connection,
+                skill_id=mcp_resource_skill_id(connection.connection_id),
+                name=f"{connection.name} Resources",
+                description="Permissioned reads from this MCP server's resources.",
+                capabilities=[
+                    SkillCapability(
+                        name="read",
+                        adapter_tool="resources/read",
+                        adapter_operation="resource_read",
+                        description="Read one MCP resource by URI.",
+                        input_schema={
+                            "type": "object",
+                            "required": ["uri"],
+                            "properties": {
+                                "uri": {"type": "string", "minLength": 1, "maxLength": 4096}
+                            },
+                            "additionalProperties": False,
+                        },
+                        output_schema={"type": "object"},
+                        side_effect=read_side_effect,
+                        required_permissions=[
+                            f"mcp.connection.{connection.connection_id}.resource.read"
+                        ],
+                        timeout_seconds=connection.timeout_seconds,
+                    )
+                ],
+            )
+        )
+    if connection.capabilities.prompts:
+        entries.append(
+            _mcp_registry_entry(
+                connection,
+                skill_id=mcp_prompt_skill_id(connection.connection_id),
+                name=f"{connection.name} Prompts",
+                description="Permissioned prompt reads from this MCP server.",
+                capabilities=[
+                    SkillCapability(
+                        name="get",
+                        adapter_tool="prompts/get",
+                        adapter_operation="prompt_get",
+                        description="Get one MCP prompt with string arguments.",
+                        input_schema={
+                            "type": "object",
+                            "required": ["name", "arguments"],
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                },
+                                "arguments": {
+                                    "type": "object",
+                                    "additionalProperties": {"type": "string"},
+                                },
+                            },
+                            "additionalProperties": False,
+                        },
+                        output_schema={"type": "object"},
+                        side_effect=read_side_effect,
+                        required_permissions=[
+                            f"mcp.connection.{connection.connection_id}.prompt.get"
+                        ],
+                        timeout_seconds=connection.timeout_seconds,
+                    )
+                ],
+            )
+        )
+    return entries
+
+
+def _mcp_registry_entry(
+    connection: McpConnectionSnapshot,
+    *,
+    skill_id: str,
+    name: str,
+    description: str,
+    capabilities: list[SkillCapability],
+) -> RegistryEntry:
+    server_name = connection.capabilities.server_name or connection.name
     definition = SkillDefinition(
         skill_id=skill_id,
         version=connection.capabilities.server_version or "0.0.0",
-        name=connection.name,
-        description=(
-            "Discovered tools from MCP server "
-            f"{connection.capabilities.server_name or connection.name}."
-        ),
+        name=name,
+        description=f"{description} Server: {server_name}.",
         capabilities=capabilities,
         interruptible=True,
         background_allowed=False,
@@ -187,10 +295,8 @@ def _load_mcp_connection(connection: McpConnectionSnapshot) -> RegistryEntry:
         enabled=connection.enabled and connection.status == "ready",
     )
     instructions = (
-        f"# {connection.name}\n\n"
-        "This skill exposes tools discovered from an external MCP connection. "
-        "Only invoke the specific tool required by the user. Every call remains subject "
-        "to Runtime permissions and per-invocation confirmation.\n"
+        f"# {name}\n\n{description} Every operation remains subject to Runtime "
+        "permissions, immutable execution planning, timeout, cancellation, and audit policy.\n"
     )
     return RegistryEntry(
         definition=definition,

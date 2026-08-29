@@ -1,5 +1,10 @@
 """Composition root and ordered Runtime lifecycle."""
 
+import asyncio
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import cast
+
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
@@ -18,16 +23,39 @@ from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
+from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
+from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
+from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
+
+type AsyncCleanup = Callable[[], Awaitable[None]]
+
+
+@dataclass(frozen=True, slots=True)
+class _CleanupStep:
+    name: str
+    callback: AsyncCleanup
+
+
+class RuntimeCleanupError(RuntimeError):
+    def __init__(self, component: str, cause: Exception) -> None:
+        super().__init__(f"{component} cleanup failed: {cause}")
+        self.component = component
+        self.__cause__ = cause
+
+
+class RuntimeLifecycleError(ExceptionGroup):
+    """Multiple Runtime lifecycle operations failed but cleanup still continued."""
 
 
 class RuntimeContainer:
@@ -41,7 +69,9 @@ class RuntimeContainer:
         self.activity = ActivityTracker()
         self.companion_settings = CompanionSettingsService(self.database)
         self.model_configurations = ModelConfigurationService(self.database, settings)
-        self.tts_configurations = TtsConfigurationService(self.database, settings)
+        self.tts_configurations = TtsConfigurationService(
+            self.database, settings, TTS_PROVIDER_REGISTRATIONS
+        )
         self.providers = build_providers(
             settings,
             llm_override=self.model_configurations.chat,
@@ -55,6 +85,7 @@ class RuntimeContainer:
         )
         self.prompt_compiler = PromptCompiler(self.model_configurations)
         self.memory_repository = SQLiteMemoryRepository(self.database)
+        self.runtime_skill_repository = SQLiteRuntimeSkillRepository(self.database)
         self.semantic_memory_index = SQLiteSemanticMemoryIndex(
             self.database, self.model_configurations
         )
@@ -69,19 +100,23 @@ class RuntimeContainer:
             self.event_store,
             self.event_publisher,
         )
+        self.conversation_repository = SQLiteConversationRepository(self.database, self.event_store)
+        self.experience_reset_repository = SQLiteExperienceResetRepository(
+            self.database, self.event_store
+        )
         self.stt = build_stt_backend(settings)
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
             settings.data_dir,
-            self.database,
+            self.runtime_skill_repository,
             self.event_publisher,
             self.providers,
             self.stt.kind,
             __version__,
         )
         self.conversation = ConversationService(
-            self.database,
-            self.event_store,
+            self.conversation_repository,
+            self.experience_reset_repository,
             self.event_publisher,
             self.sessions,
             self.providers,
@@ -125,40 +160,108 @@ class RuntimeContainer:
                 resource_activity=self.resources.touch,
             )
         )
-        self._started = False
+        self._state = "new"
+        # Ownership begins at construction, not after successful startup. Several
+        # adapters allocate HTTP clients and queues in __init__, so a late startup
+        # failure must close every owned component, including ones with no start().
+        self._cleanup_steps = self._shutdown_steps()
+        self._lifecycle_lock = asyncio.Lock()
 
     async def start(self) -> None:
-        if self._started:
-            return
-        self.characters.start()
-        self.audio_assets.start()
-        await self.database.open()
-        await self.companion_settings.start()
-        await self.model_configurations.start()
-        await self.tts_configurations.start()
-        await self.memory.start()
-        await self.runtime_skills.start()
-        await self.resources.start()
-        await self.ambient.start()
-        self._started = True
-        for event in await self.event_store.pending_outbox():
-            await self.event_hub.publish(event)
-            event_id = event.get("event_id")
-            if event_id is not None:
-                await self.event_store.mark_published(str(event_id))
+        async with self._lifecycle_lock:
+            if self._state == "started":
+                return
+            if self._state != "new":
+                raise RuntimeError(
+                    "this RuntimeContainer is terminal after stop or failed startup; "
+                    "construct a new container"
+                )
+
+            self._state = "starting"
+            try:
+                self.characters.start()
+                self.audio_assets.start()
+
+                await self.database.open()
+                self.audio_assets.recover_staged_removals(
+                    await self.experience_reset_repository.all_audio_asset_ids()
+                )
+                await self.companion_settings.start()
+                await self.model_configurations.start()
+                await self.tts_configurations.start()
+                await self.providers.tts.refresh_capabilities()
+
+                await self.memory.start()
+                await self.runtime_skills.start()
+                await self.resources.start()
+                await self.ambient.start()
+
+                for event in await self.event_store.pending_outbox():
+                    await self.event_hub.publish(event)
+                    event_id = event.get("event_id")
+                    if event_id is not None:
+                        await self.event_store.mark_published(str(event_id))
+            except BaseException as error:
+                failed, cleanup_errors = await _drain_cleanup_steps(self._cleanup_steps)
+                self._cleanup_steps = failed
+                self._state = "failed" if failed else "stopped"
+                if cleanup_errors:
+                    _raise_lifecycle_group(
+                        "Runtime start and rollback failed", error, cleanup_errors
+                    )
+                raise
+
+            self._state = "started"
 
     async def stop(self) -> None:
-        if not self._started:
-            return
-        self._started = False
-        await self.ambient.stop()
-        await self.resources.stop()
-        await self.voice_media.close()
-        await self.conversation.stop()
-        await self.memory.stop()
-        await self.runtime_skills.stop()
-        await self.stt.close()
-        await self.providers.tts.close()
-        await self.audio_streams.close()
-        await self.event_hub.close()
-        await self.database.close()
+        async with self._lifecycle_lock:
+            if self._state == "stopped":
+                return
+            self._state = "stopping"
+            failed, errors = await _drain_cleanup_steps(self._cleanup_steps)
+            self._cleanup_steps = failed
+            self._state = "failed" if failed else "stopped"
+            if errors:
+                _raise_lifecycle_group("Runtime shutdown failed", None, errors)
+
+    def _shutdown_steps(self) -> list[_CleanupStep]:
+        return [
+            _CleanupStep("ambient", lambda: self.ambient.stop()),
+            _CleanupStep("resources", lambda: self.resources.stop()),
+            _CleanupStep("voice_media", lambda: self.voice_media.close()),
+            _CleanupStep("conversation", lambda: self.conversation.stop()),
+            _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),
+            _CleanupStep("memory", lambda: self.memory.stop()),
+            _CleanupStep("stt", lambda: self.stt.close()),
+            _CleanupStep("tts", lambda: self.providers.tts.close()),
+            _CleanupStep("audio_streams", lambda: self.audio_streams.close()),
+            _CleanupStep("event_hub", lambda: self.event_hub.close()),
+            _CleanupStep("database", lambda: self.database.close()),
+        ]
+
+
+async def _drain_cleanup_steps(
+    steps: list[_CleanupStep],
+) -> tuple[list[_CleanupStep], list[BaseException]]:
+    failed: list[_CleanupStep] = []
+    errors: list[BaseException] = []
+    for step in steps:
+        try:
+            await step.callback()
+        except BaseException as error:
+            failed.append(step)
+            errors.append(
+                RuntimeCleanupError(step.name, error) if isinstance(error, Exception) else error
+            )
+    return failed, errors
+
+
+def _raise_lifecycle_group(
+    message: str,
+    primary: BaseException | None,
+    cleanup_errors: list[BaseException],
+) -> None:
+    errors = ([primary] if primary is not None else []) + cleanup_errors
+    if all(isinstance(error, Exception) for error in errors):
+        raise RuntimeLifecycleError(message, cast(list[Exception], errors))
+    raise BaseExceptionGroup(message, errors)

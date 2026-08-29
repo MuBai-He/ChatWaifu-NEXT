@@ -1,9 +1,10 @@
 """Runtime HTTP request and status models."""
 
 from typing import Literal
+from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
 class CreateSessionRequest(BaseModel):
@@ -20,6 +21,23 @@ class RuntimeHealth(BaseModel):
     dropped_events: int
     providers: dict[str, str]
     resources: dict[str, object]
+
+
+class SessionRecoveryMessage(BaseModel):
+    turn_id: UUID
+    role: Literal["user", "assistant"]
+    committed_text: str
+    committed_at: AwareDatetime | None
+    created_at: AwareDatetime
+
+
+class SessionRecoveryResponse(BaseModel):
+    schema_version: Literal["1.0"] = "1.0"
+    session_id: UUID
+    messages: list[SessionRecoveryMessage]
+    after_sequence: int = Field(ge=0)
+    last_sequence: int = Field(ge=0)
+    active_generation_id: UUID | None
 
 
 class SubmitTextRequest(BaseModel):
@@ -44,6 +62,20 @@ class TtsProviderSelectionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
+
+
+class TtsConfigurationUpdateRequest(BaseModel):
+    """Provider-neutral top-level configuration patch.
+
+    Provider fields are intentionally accepted here and then validated against
+    the selected registration's strict Pydantic model. Secrets stay separate
+    from the durable configuration model and are write-only.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    api_key: str | None = Field(default=None, max_length=8192)
+    clear_api_key: bool = False
 
 
 class AliyunTtsConfigurationRequest(BaseModel):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +33,7 @@ class AudioStreamPacket:
 class AudioStreamSubscription:
     session_id: UUID
     queue_size: int
+    subscription_id: UUID = field(default_factory=uuid4)
     dropped: bool = False
     _queue: asyncio.Queue[AudioStreamPacket] = field(init=False)
     _closed: bool = False
@@ -90,9 +91,18 @@ class AudioStreamHub:
         self._subscriptions.discard(subscription)
 
     async def publish(self, packet: AudioStreamPacket) -> int:
+        return len(await self.publish_receipts(packet))
+
+    async def publish_receipts(self, packet: AudioStreamPacket) -> frozenset[UUID]:
+        """Return stable consumer identities that accepted this exact packet."""
+
         if self._closed:
-            return 0
-        return sum(subscription.offer(packet) for subscription in tuple(self._subscriptions))
+            return frozenset()
+        return frozenset(
+            subscription.subscription_id
+            for subscription in tuple(self._subscriptions)
+            if subscription.offer(packet)
+        )
 
     async def close(self) -> None:
         self._closed = True

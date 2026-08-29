@@ -350,6 +350,7 @@ export type GenericCoreEventType =
   | 'system.runtime_stopping'
   | 'system.component_health_changed'
   | 'session.closed'
+  | 'session.data_reset'
   | 'session.state_changed'
   | 'user.speech_progress'
   | 'assistant.text_delta'
@@ -450,6 +451,7 @@ export type LastTestedAt = string | null
 export type Name5 = string
 export type NetworkPolicy = 'deny' | 'loopback' | 'allow'
 export type SandboxBackend = string | null
+export type SandboxLimitsEnforced = string[]
 export type SandboxMode = 'required' | 'preferred' | 'disabled'
 export type Status = 'untested' | 'ready' | 'error' | 'disabled'
 export type TimeoutSeconds = number
@@ -590,6 +592,7 @@ export type Name7 = string
 export type NetworkPolicy2 = 'deny' | 'loopback' | 'allow'
 export type PluginId = string
 export type SandboxBackend1 = string | null
+export type SandboxLimitsEnforced1 = string[]
 export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
 export type UpdatedAt4 = string
@@ -646,6 +649,7 @@ export type SessionId22 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
 export type UpdatedAt5 = string
 export type BackgroundAllowed = boolean
+export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
 export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
 export type Description6 = string
@@ -663,6 +667,7 @@ export type PluginId2 = string | null
 export type SkillId1 = string
 export type Source14 = 'builtin' | 'plugin' | 'mcp_connection'
 export type Version2 = string
+export type Background = boolean
 export type Capability2 = string
 export type SkillId2 = string
 export type AvatarCues = AvatarCue[]
@@ -1306,6 +1311,7 @@ export interface McpConnectionSnapshot {
   name: Name5
   network_policy?: NetworkPolicy
   sandbox_backend?: SandboxBackend
+  sandbox_limits_enforced?: SandboxLimitsEnforced
   sandbox_mode?: SandboxMode
   status?: Status
   timeout_seconds?: TimeoutSeconds
@@ -1495,6 +1501,7 @@ export interface PluginSnapshot {
   network_policy?: NetworkPolicy2
   plugin_id: PluginId
   sandbox_backend?: SandboxBackend1
+  sandbox_limits_enforced?: SandboxLimitsEnforced1
   sandbox_mode?: SandboxMode2
   trust_level?: TrustLevel2
   updated_at: UpdatedAt4
@@ -1577,6 +1584,7 @@ export interface SkillDefinition {
   [k: string]: unknown
 }
 export interface SkillCapability {
+  adapter_operation?: AdapterOperation
   adapter_tool?: AdapterTool
   confirmation_required?: ConfirmationRequired
   description: Description6
@@ -1590,6 +1598,7 @@ export interface SkillCapability {
 }
 export interface SkillInvocation {
   arguments?: JsonObject
+  background?: Background
   capability: Capability2
   skill_id: SkillId2
   [k: string]: unknown

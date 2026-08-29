@@ -49,16 +49,19 @@ class UserTurnMemoryObservation:
     source_event_id: UUID
     character_id: str
     text: str
+    user_scope: str = "local"
 
 
 @dataclass(frozen=True, slots=True)
 class _QueuedProjection:
     observation: UserTurnMemoryObservation
     global_epoch: int
+    scope_epoch: int
 
 
 @dataclass(slots=True)
 class _ActiveProjection:
+    observation: UserTurnMemoryObservation
     task: asyncio.Task[list[MemoryProposal]]
 
 
@@ -91,7 +94,13 @@ class MemoryService:
         self._projection_worker: asyncio.Task[None] | None = None
         self._active_projection: _ActiveProjection | None = None
         self._projection_epoch = 0
+        self._scope_epochs: dict[tuple[str, str], int] = {}
         self._projection_stopping = False
+
+    @property
+    def projection_running(self) -> bool:
+        worker = self._projection_worker
+        return worker is not None and not worker.done()
 
     async def start(self) -> None:
         if self._projection_worker is not None and not self._projection_worker.done():
@@ -124,6 +133,9 @@ class MemoryService:
         queued = _QueuedProjection(
             observation=observation,
             global_epoch=self._projection_epoch,
+            scope_epoch=self._scope_epochs.get(
+                (observation.character_id, observation.user_scope), 0
+            ),
         )
         try:
             self._projection_queue.put_nowait(queued)
@@ -460,11 +472,48 @@ class MemoryService:
             await self._temporal_graph.delete(record.memory_id)
         return removed
 
+    async def clear_scope(self, character_id: str, user_scope: str = "local") -> int:
+        """Clear durable memory for one character/user pair and its pending projections."""
+
+        namespace = await self.prepare_scope_reset(character_id, user_scope)
+        removed = await self._repository.clear_scope(namespace)
+        await self.finalize_scope_reset(removed)
+        return len(removed)
+
+    async def prepare_scope_reset(self, character_id: str, user_scope: str) -> str:
+        """Fence stale background projections before an atomic reset transaction."""
+
+        await self._invalidate_scope_projections(character_id, user_scope)
+        return character_memory_namespace(character_id, user_scope)
+
+    async def finalize_scope_reset(self, memory_ids: tuple[UUID, ...] | list[UUID]) -> None:
+        """Remove replaceable indexes after the durable truth transaction commits."""
+
+        for memory_id in memory_ids:
+            try:
+                await self._semantic_index.delete(memory_id)
+                await self._temporal_graph.delete(memory_id)
+            except Exception:
+                logger.exception("failed to discard projection for reset memory %s", memory_id)
+
     async def _invalidate_all_projections(self) -> None:
         self._projection_epoch += 1
         active = self._active_projection
         if active is not None and not active.task.done():
             active.task.cancel("all_memory_reset")
+            await asyncio.gather(active.task, return_exceptions=True)
+
+    async def _invalidate_scope_projections(self, character_id: str, user_scope: str) -> None:
+        scope = (character_id, user_scope)
+        self._scope_epochs[scope] = self._scope_epochs.get(scope, 0) + 1
+        active = self._active_projection
+        if (
+            active is not None
+            and not active.task.done()
+            and active.observation.character_id == character_id
+            and active.observation.user_scope == user_scope
+        ):
+            active.task.cancel("memory_scope_reset")
             await asyncio.gather(active.task, return_exceptions=True)
 
     async def _run_projection_worker(self) -> None:
@@ -484,7 +533,7 @@ class MemoryService:
                     ),
                     name=f"memory-projection-{observation.turn_id}",
                 )
-                self._active_projection = _ActiveProjection(task)
+                self._active_projection = _ActiveProjection(observation, task)
                 try:
                     await task
                 except asyncio.CancelledError:
@@ -500,13 +549,21 @@ class MemoryService:
                         },
                     )
                 finally:
-                    if self._active_projection.task is task:
-                        self._active_projection = None
+                    self._release_active_projection(task)
             finally:
                 self._projection_queue.task_done()
 
     def _projection_is_stale(self, queued: _QueuedProjection) -> bool:
-        return queued.global_epoch != self._projection_epoch
+        scope = (queued.observation.character_id, queued.observation.user_scope)
+        return (
+            queued.global_epoch != self._projection_epoch
+            or queued.scope_epoch != self._scope_epochs.get(scope, 0)
+        )
+
+    def _release_active_projection(self, task: asyncio.Task[list[MemoryProposal]]) -> None:
+        active = self._active_projection
+        if active is not None and active.task is task:
+            self._active_projection = None
 
     async def reindex_all(self) -> int:
         records = await self._repository.list_records(limit=500)
@@ -710,4 +767,12 @@ def _normalize(content: str) -> str:
 
 
 def _namespaces(character_id: str) -> list[str]:
-    return [f"character/{character_id}/user/local", "user/local/global"]
+    return [character_memory_namespace(character_id, "local"), "user/local/global"]
+
+
+def character_memory_namespace(character_id: str, user_scope: str) -> str:
+    if not character_id or "/" in character_id:
+        raise ValueError("character_id must be a non-empty namespace segment")
+    if not user_scope or "/" in user_scope:
+        raise ValueError("user_scope must be a non-empty namespace segment")
+    return f"character/{character_id}/user/{user_scope}"

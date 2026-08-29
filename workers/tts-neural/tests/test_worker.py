@@ -249,6 +249,30 @@ class BlockingEngine(FakeEngine):
         self.release.set()
 
 
+class SerializedBlockingStreamEngine(FakeEngine):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first_started = threading.Event()
+        self.release_first = threading.Event()
+        self.cancel_calls = 0
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]:
+        if request.text == "第一轮":
+            self.first_started.set()
+            while not self.release_first.wait(timeout=0.01):
+                if cancel_event.is_set():
+                    raise asyncio.CancelledError
+        if cancel_event.is_set():
+            raise asyncio.CancelledError
+        yield EnginePcmChunk(pcm16=b"\x01\x00" * 120, sample_rate=24_000)
+
+    def cancel(self) -> None:
+        self.cancel_calls += 1
+        self.release_first.set()
+
+
 @pytest.mark.asyncio
 async def test_service_cancels_generation_and_rejects_late_audio(
     settings: WorkerSettings,
@@ -276,4 +300,62 @@ async def test_service_cancels_generation_and_rejects_late_audio(
         assert engine.cancelled is True
     finally:
         engine.release.set()
+        await service.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelling_queued_generation_does_not_cancel_active_engine_job(
+    settings: WorkerSettings,
+) -> None:
+    engine = SerializedBlockingStreamEngine()
+    service = SynthesisService(settings, engine_factory=lambda _: engine)
+
+    def request(text: str) -> TtsSynthesisRequest:
+        return TtsSynthesisRequest(
+            request_id=uuid4(),
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            job_id=uuid4(),
+            text=text,
+            language="zh",
+            voice_id="local-character",
+            speaker_id=0,
+            speed=1.0,
+        )
+
+    first = request("第一轮")
+    second = request("第二轮")
+    first_chunks: list[EnginePcmChunk] = []
+
+    async def collect(value: TtsSynthesisRequest, target: list[EnginePcmChunk]) -> None:
+        async for chunk in service.stream(value):
+            target.append(chunk)
+
+    first_task = asyncio.create_task(collect(first, first_chunks))
+    second_task: asyncio.Task[None] | None = None
+    try:
+        assert await asyncio.to_thread(engine.first_started.wait, 1)
+        second_task = asyncio.create_task(collect(second, []))
+        await asyncio.sleep(0)
+
+        assert service.cancel(second.generation_id) is True
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(second_task, timeout=1)
+        assert engine.cancel_calls == 0
+        assert first_task.done() is False
+
+        engine.release_first.set()
+        await asyncio.wait_for(first_task, timeout=1)
+        assert len(first_chunks) == 1
+        assert engine.cancel_calls == 0
+    finally:
+        engine.release_first.set()
+        for task in (first_task, second_task):
+            if task is not None and not task.done():
+                task.cancel()
+        await asyncio.gather(
+            *(task for task in (first_task, second_task) if task is not None),
+            return_exceptions=True,
+        )
         await service.close()

@@ -8,15 +8,15 @@ from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.commands import PlaybackAckCommand
+from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_protocol.skills import McpConnectionConfiguration, SkillInvocation
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.models import (
-    AliyunCosyVoiceTtsConfigurationRequest,
-    AliyunTtsConfigurationRequest,
     CharacterInteractionRequest,
     CreateSessionRequest,
     ExamplePluginRequest,
@@ -33,8 +33,11 @@ from chatwaifu_runtime.api.models import (
     PluginEnabledRequest,
     ResetSessionRequest,
     RuntimeHealth,
+    SessionRecoveryMessage,
+    SessionRecoveryResponse,
     SkillConfirmationDecisionRequest,
     SubmitTextRequest,
+    TtsConfigurationUpdateRequest,
     TtsProviderSelectionRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
@@ -42,10 +45,6 @@ from chatwaifu_runtime.api.models import (
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
-from chatwaifu_runtime.providers.tts_config import (
-    AliyunCosyVoiceTtsConfiguration,
-    AliyunTtsConfiguration,
-)
 
 router = APIRouter(prefix="/v1")
 
@@ -103,7 +102,7 @@ async def sleep_companion_resources(request: Request) -> dict[str, object]:
 
 @router.post("/companion/resources/wake")
 async def wake_companion_resources(request: Request) -> dict[str, object]:
-    return _container(request).resources.wake().model_dump(mode="json")
+    return (await _container(request).resources.wake()).model_dump(mode="json")
 
 
 @router.post("/sessions/{session_id}/companion/proactive")
@@ -201,6 +200,20 @@ async def get_session(request: Request, session_id: UUID) -> dict[str, object]:
     return snapshot.model_dump(mode="json")
 
 
+@router.get("/sessions/{session_id}/recovery", response_model=SessionRecoveryResponse)
+async def recover_session(request: Request, session_id: UUID) -> SessionRecoveryResponse:
+    if await _container(request).sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    recovery = await _container(request).conversation.recovery_state(session_id)
+    return SessionRecoveryResponse(
+        session_id=session_id,
+        messages=[SessionRecoveryMessage.model_validate(item) for item in recovery.messages],
+        after_sequence=recovery.after_sequence,
+        last_sequence=recovery.last_sequence,
+        active_generation_id=recovery.active_generation_id,
+    )
+
+
 @router.get("/sessions/{session_id}/character-state")
 async def read_character_state(request: Request, session_id: UUID) -> dict[str, object]:
     container = _container(request)
@@ -284,70 +297,63 @@ async def read_tts_providers(
     }
 
 
-@router.get("/tts/configurations/aliyun_qwen_realtime")
-async def read_aliyun_tts_configuration(request: Request) -> dict[str, object]:
-    return _container(request).tts_configurations.get().model_dump(mode="json")
+@router.get("/tts/configurations")
+async def list_tts_configurations(request: Request) -> dict[str, object]:
+    service = _container(request).tts_configurations
+    items = [
+        {
+            "provider_id": registration.provider_id,
+            "display_name": registration.display_name,
+            "configuration_schema": registration.schema(),
+            "ui_schema": registration.ui_schema(),
+            "configuration": service.get_for(registration.provider_id).model_dump(mode="json"),
+        }
+        for registration in service.registrations()
+    ]
+    return {"schema_version": "1.0", "items": items, "count": len(items)}
 
 
-@router.put("/tts/configurations/aliyun_qwen_realtime")
-async def update_aliyun_tts_configuration(
-    request: Request,
-    body: AliyunTtsConfigurationRequest,
-) -> dict[str, object]:
+@router.get("/tts/configurations/{provider_id}")
+async def read_tts_configuration(request: Request, provider_id: str) -> dict[str, object]:
     try:
-        configuration = AliyunTtsConfiguration(
-            **body.model_dump(exclude={"api_key", "clear_api_key"}),
-            updated_at=datetime.now(UTC),
-        )
-        updated = await _container(request).tts_configurations.update(
-            configuration,
+        configuration = _container(request).tts_configurations.get_for(provider_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="TTS configuration not found") from error
+    return configuration.model_dump(mode="json")
+
+
+@router.put("/tts/configurations/{provider_id}")
+async def update_tts_configuration(
+    request: Request,
+    provider_id: str,
+    body: TtsConfigurationUpdateRequest,
+) -> dict[str, object]:
+    service = _container(request).tts_configurations
+    try:
+        updated = await service.update_patch(
+            provider_id,
+            body.model_dump(
+                exclude={"api_key", "clear_api_key"},
+                exclude_unset=True,
+            ),
             api_key=body.api_key,
             clear_api_key=body.clear_api_key,
         )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="TTS configuration not found") from error
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     return updated.model_dump(mode="json")
 
 
-@router.post("/tts/configurations/aliyun_qwen_realtime/test")
-async def test_aliyun_tts_configuration(request: Request) -> dict[str, object]:
+@router.post("/tts/configurations/{provider_id}/test")
+async def test_tts_configuration(request: Request, provider_id: str) -> dict[str, object]:
     try:
-        return await _container(request).providers.tts.probe("aliyun_qwen_realtime")
+        return await _container(request).providers.tts.probe(provider_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="TTS provider not found") from error
     except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=502, detail=f"百炼语音测试失败: {error}") from error
-
-
-@router.get("/tts/configurations/aliyun_cosyvoice_realtime")
-async def read_aliyun_cosyvoice_tts_configuration(request: Request) -> dict[str, object]:
-    return _container(request).tts_configurations.get_cosyvoice().model_dump(mode="json")
-
-
-@router.put("/tts/configurations/aliyun_cosyvoice_realtime")
-async def update_aliyun_cosyvoice_tts_configuration(
-    request: Request,
-    body: AliyunCosyVoiceTtsConfigurationRequest,
-) -> dict[str, object]:
-    try:
-        configuration = AliyunCosyVoiceTtsConfiguration(
-            **body.model_dump(exclude={"api_key", "clear_api_key"}),
-            updated_at=datetime.now(UTC),
-        )
-        updated = await _container(request).tts_configurations.update(
-            configuration,
-            api_key=body.api_key,
-            clear_api_key=body.clear_api_key,
-        )
-    except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
-    return updated.model_dump(mode="json")
-
-
-@router.post("/tts/configurations/aliyun_cosyvoice_realtime/test")
-async def test_aliyun_cosyvoice_tts_configuration(request: Request) -> dict[str, object]:
-    try:
-        return await _container(request).providers.tts.probe("aliyun_cosyvoice_realtime")
-    except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=502, detail=f"CosyVoice 测试失败: {error}") from error
+        raise HTTPException(status_code=502, detail=f"TTS 测试失败: {error}") from error
 
 
 @router.put("/sessions/{session_id}/tts/provider")
@@ -517,6 +523,14 @@ async def reset_session_data(
         raise HTTPException(status_code=409, detail=str(error)) from error
     return {
         "session_id": str(result.session_id),
+        "scope": {
+            "character_id": result.character_id,
+            "user_scope": result.user_scope,
+            "conversation": "current_session",
+            "audio": "current_session",
+            "memory": "current_character_user",
+            "character_state": "current_character_user",
+        },
         "turns_deleted": result.turns_deleted,
         "events_deleted": result.events_deleted,
         "memories_deleted": result.memories_deleted,
@@ -870,36 +884,50 @@ async def read_mcp_capabilities(request: Request, connection_id: UUID) -> dict[s
     return snapshot.capabilities.model_dump(mode="json")
 
 
-@router.post("/mcp/connections/{connection_id}/resources/read")
+@router.post(
+    "/sessions/{session_id}/mcp/connections/{connection_id}/resources/read",
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def read_mcp_resource(
     request: Request,
+    session_id: UUID,
     connection_id: UUID,
     body: McpResourceReadRequest,
 ) -> dict[str, object]:
+    if await _container(request).sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
     try:
-        result = await _container(request).runtime_skills.read_mcp_resource(connection_id, body.uri)
-        return cast(dict[str, object], result)
+        snapshot = await _container(request).runtime_skills.read_mcp_resource(
+            session_id, connection_id, body.uri
+        )
+        return snapshot.model_dump(mode="json")
     except KeyError as error:
         raise HTTPException(status_code=404, detail="MCP connection not found") from error
     except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
-@router.post("/mcp/connections/{connection_id}/prompts/get")
+@router.post(
+    "/sessions/{session_id}/mcp/connections/{connection_id}/prompts/get",
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def get_mcp_prompt(
     request: Request,
+    session_id: UUID,
     connection_id: UUID,
     body: McpPromptGetRequest,
 ) -> dict[str, object]:
+    if await _container(request).sessions.get_session(session_id) is None:
+        raise HTTPException(status_code=404, detail="session not found")
     try:
-        result = await _container(request).runtime_skills.get_mcp_prompt(
-            connection_id, body.name, body.arguments
+        snapshot = await _container(request).runtime_skills.get_mcp_prompt(
+            session_id, connection_id, body.name, body.arguments
         )
-        return cast(dict[str, object], result)
+        return snapshot.model_dump(mode="json")
     except KeyError as error:
         raise HTTPException(status_code=404, detail="MCP connection not found") from error
     except (ValueError, RuntimeError) as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @router.post(
@@ -968,22 +996,70 @@ def _mcp_configuration(
 
 @router.websocket("/events")
 async def runtime_events(websocket: WebSocket) -> None:
-    await websocket.accept()
     container: RuntimeContainer = websocket.app.state.container
     requested_session = websocket.query_params.get("session_id")
+    requested_after = websocket.query_params.get("after_sequence", "0")
+    try:
+        after_sequence = int(requested_after)
+        if after_sequence < 0:
+            raise ValueError
+    except ValueError:
+        await websocket.close(code=1008, reason="invalid after_sequence")
+        return
+    session_id: UUID | None = None
+    if requested_session is not None:
+        try:
+            session_id = UUID(requested_session)
+        except ValueError:
+            await websocket.close(code=1008, reason="invalid session_id")
+            return
+        if await container.sessions.get_session(session_id) is None:
+            await websocket.close(code=1008, reason="session not found")
+            return
 
     def event_filter(event: dict[str, object]) -> bool:
         return requested_session is None or str(event.get("session_id")) == requested_session
 
+    # Subscribe before reading durable history. Events committed during replay
+    # enter this queue and are later de-duplicated by sequence, closing the
+    # snapshot/subscription gap without locking the publisher.
     subscription = container.event_hub.subscribe(event_filter)
+    await websocket.accept()
     await websocket.send_json(
-        {
-            "schema_version": "1.0",
-            "event_type": "system.runtime_started",
-            "payload": {"version": __version__},
-        }
+        GenericCoreEvent(
+            event_id=uuid4(),
+            event_type="system.runtime_started",
+            occurred_at=datetime.now(UTC),
+            source="runtime.api",
+            privacy=PrivacyLevel.LOCAL,
+            payload={"version": __version__},
+        ).model_dump(mode="json")
     )
+    last_sequence = after_sequence
+
+    async def replay_missing() -> None:
+        nonlocal last_sequence
+        if session_id is None:
+            return
+        while True:
+            events = await container.event_store.read_stream(
+                session_id, after_sequence=last_sequence, limit=500
+            )
+            if not events:
+                return
+            advanced = False
+            for event in events:
+                sequence = event.get("sequence")
+                if not isinstance(sequence, int) or sequence <= last_sequence:
+                    continue
+                await websocket.send_json(event)
+                last_sequence = sequence
+                advanced = True
+            if not advanced or len(events) < 500:
+                return
+
     try:
+        await replay_missing()
         while True:
             event_task = asyncio.create_task(subscription.receive())
             disconnect_task = asyncio.create_task(websocket.receive())
@@ -1001,7 +1077,17 @@ async def runtime_events(websocket: WebSocket) -> None:
                 if message["type"] == "websocket.disconnect":
                     break
                 continue
-            await websocket.send_json(event_task.result())
+            event = event_task.result()
+            sequence = event.get("sequence")
+            if isinstance(sequence, int):
+                if sequence <= last_sequence:
+                    continue
+                if sequence > last_sequence + 1:
+                    await replay_missing()
+                    if sequence <= last_sequence:
+                        continue
+                last_sequence = sequence
+            await websocket.send_json(event)
     except (WebSocketDisconnect, asyncio.CancelledError):
         pass
     finally:
@@ -1069,6 +1155,9 @@ async def runtime_audio_stream(websocket: WebSocket) -> None:
                     "reason": packet.reason,
                 }
             )
+            if packet.reason == "stream_backpressure_overflow":
+                await websocket.close(code=1013, reason="audio stream backpressure overflow")
+                break
     except (WebSocketDisconnect, asyncio.CancelledError):
         pass
     finally:

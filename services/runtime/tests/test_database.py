@@ -148,3 +148,33 @@ async def test_legacy_migration_ledger_is_upgraded_and_newer_database_is_rejecte
     older_runtime = Database(path, storage, migrations=((1, script),))
     with pytest.raises(MigrationCatalogError, match="newer"):
         await older_runtime.open()
+
+
+@pytest.mark.asyncio
+async def test_unknown_legacy_migration_is_rejected_before_ledger_upgrade(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "unknown-legacy-migration.db"
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY)")
+        connection.execute("INSERT INTO schema_migrations(version) VALUES (99)")
+
+    storage = StorageConfig(database_path=path)
+    database = Database(
+        path,
+        storage,
+        migrations=((1, "CREATE TABLE known_record (value TEXT NOT NULL);"),),
+    )
+    with pytest.raises(MigrationCatalogError, match="newer"):
+        await database.open()
+
+    with sqlite3.connect(path) as connection:
+        columns = [
+            str(row[1]) for row in connection.execute("PRAGMA table_info(schema_migrations)")
+        ]
+        tables = {
+            str(row[0])
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+    assert columns == ["version"]
+    assert "known_record" not in tables

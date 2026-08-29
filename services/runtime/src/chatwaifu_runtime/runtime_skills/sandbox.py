@@ -11,7 +11,7 @@ import json
 import os
 import shutil
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
@@ -36,6 +36,7 @@ class SandboxPlan:
     enforced: bool
     network_policy: NetworkPolicy
     diagnostic: str
+    resource_limits_enforced: tuple[str, ...] = ()
 
 
 class SandboxPlanner:
@@ -59,6 +60,8 @@ class SandboxPlanner:
         trust_level: TrustLevel,
         network_policy: NetworkPolicy = "deny",
         container_image: str | None = None,
+        read_only_roots: Sequence[Path] = (),
+        environment: Mapping[str, str] | None = None,
     ) -> SandboxPlan:
         normalized = _validate_command(command)
         root = working_dir.expanduser().resolve()
@@ -77,6 +80,7 @@ class SandboxPlanner:
                 enforced=False,
                 network_policy=network_policy,
                 diagnostic="Sandbox explicitly disabled for a trusted local server",
+                resource_limits_enforced=(),
             )
 
         plan = self._native_plan(
@@ -84,6 +88,8 @@ class SandboxPlanner:
             root=root,
             network_policy=network_policy,
             container_image=container_image,
+            read_only_roots=tuple(path.expanduser().resolve() for path in read_only_roots),
+            environment=environment or {},
         )
         if plan is not None:
             return plan
@@ -102,6 +108,7 @@ class SandboxPlanner:
             enforced=False,
             network_policy=network_policy,
             diagnostic="No OS sandbox backend is available; trusted process uses soft isolation",
+            resource_limits_enforced=(),
         )
 
     def capability(self, *, container_image: str | None = None) -> dict[str, object]:
@@ -120,37 +127,58 @@ class SandboxPlanner:
         root: Path,
         network_policy: NetworkPolicy,
         container_image: str | None,
+        read_only_roots: tuple[Path, ...],
+        environment: Mapping[str, str],
     ) -> SandboxPlan | None:
         if self._platform == "darwin":
             executable = self._which("sandbox-exec")
             if executable:
-                profile = _seatbelt_profile(command, root, network_policy)
+                profile = _seatbelt_profile(
+                    command, root, network_policy, read_only_roots=read_only_roots
+                )
                 return SandboxPlan(
                     command=(executable, "-p", profile, *command),
                     backend="macos_seatbelt",
                     enforced=True,
                     network_policy=network_policy,
                     diagnostic="Enforced by macOS Seatbelt",
+                    resource_limits_enforced=(),
                 )
         if self._platform.startswith("linux"):
             executable = self._which("bwrap")
             if executable:
                 return SandboxPlan(
-                    command=_bubblewrap_command(executable, command, root, network_policy),
+                    command=_bubblewrap_command(
+                        executable,
+                        command,
+                        root,
+                        network_policy,
+                        read_only_roots=read_only_roots,
+                    ),
                     backend="linux_bubblewrap",
                     enforced=True,
                     network_policy=network_policy,
                     diagnostic="Enforced by Linux bubblewrap namespaces",
+                    resource_limits_enforced=(),
                 )
         if container_image:
             runtime = self._which("docker") or self._which("podman")
             if runtime:
                 return SandboxPlan(
-                    command=_oci_command(runtime, container_image, command, root, network_policy),
+                    command=_oci_command(
+                        runtime,
+                        container_image,
+                        command,
+                        root,
+                        network_policy,
+                        read_only_roots=read_only_roots,
+                        environment=environment,
+                    ),
                     backend="oci",
                     enforced=True,
                     network_policy=network_policy,
                     diagnostic=f"Enforced by OCI runtime {Path(runtime).name}",
+                    resource_limits_enforced=("process_count", "memory", "cpu"),
                 )
         return None
 
@@ -205,6 +233,8 @@ class RuntimeSandboxLauncher:
                 trust_level=cast(TrustLevel, trust_level),
                 network_policy=effective_network,
                 container_image=self._container_image,
+                read_only_roots=command.read_only_roots,
+                environment=command.env,
             )
         except SandboxPolicyError as error:
             raise SkillExecutionError("sandbox_unavailable", str(error)) from error
@@ -213,7 +243,11 @@ class RuntimeSandboxLauncher:
             args=plan.command[1:],
             cwd=command.cwd,
             env=command.env,
-            sandbox_backend=plan.backend if plan.enforced else None,
+            # ``none`` is an observed backend too: it distinguishes an invoked
+            # trusted soft/disabled process from a plugin that has never run.
+            sandbox_backend=plan.backend,
+            sandbox_limits_enforced=plan.resource_limits_enforced,
+            read_only_roots=command.read_only_roots,
         )
 
 
@@ -226,7 +260,13 @@ def _validate_command(command: Sequence[str]) -> tuple[str, ...]:
     return normalized
 
 
-def _seatbelt_profile(command: tuple[str, ...], root: Path, network_policy: NetworkPolicy) -> str:
+def _seatbelt_profile(
+    command: tuple[str, ...],
+    root: Path,
+    network_policy: NetworkPolicy,
+    *,
+    read_only_roots: tuple[Path, ...] = (),
+) -> str:
     readable_roots = {
         Path("/System"),
         Path("/Library/Frameworks"),
@@ -236,6 +276,7 @@ def _seatbelt_profile(command: tuple[str, ...], root: Path, network_policy: Netw
         Path(sys.base_prefix).resolve(),
         Path(sys.prefix).resolve(),
         root,
+        *read_only_roots,
     }
     resolved_executable = _resolve_executable(command[0])
     if resolved_executable is not None:
@@ -269,6 +310,8 @@ def _bubblewrap_command(
     command: tuple[str, ...],
     root: Path,
     network_policy: NetworkPolicy,
+    *,
+    read_only_roots: tuple[Path, ...] = (),
 ) -> tuple[str, ...]:
     result = [
         executable,
@@ -294,6 +337,9 @@ def _bubblewrap_command(
             if Path(parent).exists()
         ):
             result.extend(("--ro-bind", str(python_root), str(python_root)))
+    for read_only_root in read_only_roots:
+        if read_only_root != root:
+            result.extend(("--ro-bind", str(read_only_root), str(read_only_root)))
     result.extend(("--bind", str(root), str(root), "--chdir", str(root), "--"))
     result.extend(command)
     return tuple(result)
@@ -305,12 +351,31 @@ def _oci_command(
     command: tuple[str, ...],
     root: Path,
     network_policy: NetworkPolicy,
+    *,
+    read_only_roots: tuple[Path, ...] = (),
+    environment: Mapping[str, str] | None = None,
 ) -> tuple[str, ...]:
     if not image.strip() or any(character.isspace() for character in image):
         raise SandboxPolicyError("OCI sandbox image is invalid")
     mapped_command = tuple(
-        f"/plugin/{part}" if index > 0 and Path(part).is_absolute() else part
+        _map_oci_command_part(
+            part,
+            index=index,
+            writable_root=root,
+            read_only_roots=read_only_roots,
+        )
         for index, part in enumerate(command)
+    )
+    read_only_mounts: tuple[str, ...] = tuple(
+        part
+        for index, path in enumerate(read_only_roots)
+        for part in ("--mount", f"type=bind,src={path},dst=/package-{index},readonly")
+    )
+    container_environment = _oci_environment(environment or {}, read_only_roots=read_only_roots)
+    environment_arguments: tuple[str, ...] = tuple(
+        part
+        for key, value in sorted(container_environment.items())
+        for part in ("--env", f"{key}={value}")
     )
     return (
         runtime,
@@ -332,6 +397,8 @@ def _oci_command(
         "1",
         "--mount",
         f"type=bind,src={root},dst=/plugin",
+        *read_only_mounts,
+        *environment_arguments,
         "--tmpfs",
         "/tmp:rw,noexec,nosuid,size=64m",
         "--workdir",
@@ -339,6 +406,60 @@ def _oci_command(
         image,
         *mapped_command,
     )
+
+
+def _map_oci_command_part(
+    part: str,
+    *,
+    index: int,
+    writable_root: Path,
+    read_only_roots: tuple[Path, ...],
+) -> str:
+    candidate = Path(part)
+    if not candidate.is_absolute():
+        return part
+    resolved = candidate.resolve()
+    if resolved.is_relative_to(writable_root):
+        relative = resolved.relative_to(writable_root).as_posix()
+        return f"/plugin/{relative}" if relative != "." else "/plugin"
+    for root_index, read_only_root in enumerate(read_only_roots):
+        if resolved.is_relative_to(read_only_root):
+            relative = resolved.relative_to(read_only_root).as_posix()
+            base = f"/package-{root_index}"
+            return f"{base}/{relative}" if relative != "." else base
+    if index == 0:
+        # The configured image owns its executable runtime.  Host interpreter
+        # paths are never valid inside an OCI filesystem.
+        return "python" if candidate.name.startswith("python") else candidate.name
+    return part
+
+
+def _oci_environment(
+    environment: Mapping[str, str],
+    *,
+    read_only_roots: tuple[Path, ...],
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key in (
+        "CHATWAIFU_MCP_SUBJECT_ID",
+        "CHATWAIFU_PLUGIN_DATA_DIR",
+        "CHATWAIFU_PLUGIN_PACKAGE_DIR",
+    ):
+        value = environment.get(key)
+        if not value:
+            continue
+        if key == "CHATWAIFU_PLUGIN_DATA_DIR":
+            result[key] = "/plugin"
+        elif key == "CHATWAIFU_PLUGIN_PACKAGE_DIR":
+            package_path = Path(value).resolve()
+            try:
+                root_index = read_only_roots.index(package_path)
+            except ValueError:
+                continue
+            result[key] = f"/package-{root_index}"
+        else:
+            result[key] = value
+    return result
 
 
 def _resolve_executable(command: str) -> Path | None:

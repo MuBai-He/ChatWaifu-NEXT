@@ -10,6 +10,8 @@ import {
   parseAvatarInteractionEvent,
   parseCommandEnvelope,
   parseEventEnvelope,
+  parseMcpCapabilitySnapshot,
+  parseSessionSnapshot,
 } from "../src/index";
 
 const root = path.resolve(
@@ -37,14 +39,49 @@ describe("cross-language protocol fixtures", () => {
     const eventTypes = fixture(
       "python-generic-core-event-types.json",
     ) as string[];
+    const specializedPayloads: Record<string, Record<string, unknown>> = {
+      "session.data_reset": {
+        character_id: "default-character",
+        user_scope: "local",
+        conversation: "current_session",
+        audio: "current_session",
+        memory: "current_character_user",
+        character_state: "current_character_user",
+      },
+      "assistant.text_delta": { text: "你" },
+      "assistant.generation_cancelled": { reason: "interrupted" },
+      "assistant.generation_completed": {
+        text: "你好",
+        assistant_turn_id: "00000000-0000-4000-8000-000000000302",
+      },
+      "conversation.interrupted": { reason: "interrupted" },
+    };
     for (const eventType of eventTypes) {
       expect(
         parseEventEnvelope({
           ...event,
           event_type: eventType,
-          payload: {},
+          payload: specializedPayloads[eventType] ?? {},
         }).event_type,
       ).toBe(eventType);
+    }
+  });
+
+  it("rejects malformed high-value realtime and reset payloads", () => {
+    const event = fixture("python-session-created-event.json") as Record<
+      string,
+      unknown
+    >;
+    for (const eventType of [
+      "session.data_reset",
+      "assistant.text_delta",
+      "assistant.generation_completed",
+      "assistant.generation_cancelled",
+      "conversation.interrupted",
+    ]) {
+      expect(() =>
+        parseEventEnvelope({ ...event, event_type: eventType, payload: {} }),
+      ).toThrow();
     }
   });
 
@@ -170,5 +207,27 @@ describe("cross-language protocol fixtures", () => {
         target: "touched_head",
       }).target,
     ).toBe("touched_head");
+  });
+
+  it("validates generated HTTP control-plane snapshots", () => {
+    const session = parseSessionSnapshot({
+      session_id: "00000000-0000-4000-8000-000000000801",
+      character_id: "nene",
+      state: "ready",
+      conversation_state: "idle",
+      revision: 2,
+      created_at: "2026-08-29T00:00:00Z",
+      updated_at: "2026-08-29T00:00:01Z",
+    });
+    expect(session.state).toBe("ready");
+    expect(() => parseSessionSnapshot({ ...session, revision: -1 })).toThrow();
+
+    const capabilities = parseMcpCapabilitySnapshot({
+      connection_id: "00000000-0000-4000-8000-000000000802",
+    });
+    expect(capabilities.tools).toEqual([]);
+    expect(() =>
+      parseMcpCapabilitySnapshot({ connection_id: "not-a-uuid" }),
+    ).toThrow();
   });
 });

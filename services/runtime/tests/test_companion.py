@@ -166,10 +166,15 @@ def test_companion_settings_round_trip_through_runtime(client: TestClient) -> No
 class _FakeTts:
     def __init__(self) -> None:
         self.unloads = 0
+        self.refreshes = 0
 
     async def deactivate_idle(self) -> bool:
         self.unloads += 1
         return True
+
+    async def refresh_capabilities(self) -> dict[str, str]:
+        self.refreshes += 1
+        return {"fake": "not_supported"}
 
 
 class _FakeStt:
@@ -199,13 +204,14 @@ async def test_resource_sleep_unloads_idle_models_and_wakes_lazily(tmp_path: Pat
     )
     try:
         sleeping = await resources.sleep_now()
-        awake = resources.wake()
+        awake = await resources.wake()
     finally:
         await database.close()
 
     assert sleeping.state == "sleeping"
     assert awake.state == "active"
     assert tts.unloads == 1
+    assert tts.refreshes == 1
     assert stt.unloads == 1
 
 

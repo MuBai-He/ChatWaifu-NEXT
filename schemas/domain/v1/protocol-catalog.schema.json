@@ -1971,6 +1971,7 @@
         "system.runtime_stopping",
         "system.component_health_changed",
         "session.closed",
+        "session.data_reset",
         "session.state_changed",
         "user.speech_progress",
         "assistant.text_delta",
@@ -2344,6 +2345,13 @@
           ],
           "default": null,
           "title": "Sandbox Backend"
+        },
+        "sandbox_limits_enforced": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sandbox Limits Enforced",
+          "type": "array"
         },
         "sandbox_mode": {
           "default": "required",
@@ -3803,6 +3811,13 @@
           "default": null,
           "title": "Sandbox Backend"
         },
+        "sandbox_limits_enforced": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sandbox Limits Enforced",
+          "type": "array"
+        },
         "sandbox_mode": {
           "default": "required",
           "enum": [
@@ -4544,6 +4559,16 @@
     },
     "SkillCapability": {
       "properties": {
+        "adapter_operation": {
+          "default": "invoke",
+          "enum": [
+            "invoke",
+            "resource_read",
+            "prompt_get"
+          ],
+          "title": "Adapter Operation",
+          "type": "string"
+        },
         "adapter_tool": {
           "anyOf": [
             {
@@ -4693,6 +4718,11 @@
       "properties": {
         "arguments": {
           "$ref": "#/$defs/JsonObject"
+        },
+        "background": {
+          "default": false,
+          "title": "Background",
+          "type": "boolean"
         },
         "capability": {
           "maxLength": 256,

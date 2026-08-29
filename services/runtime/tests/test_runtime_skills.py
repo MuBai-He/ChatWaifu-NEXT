@@ -1,5 +1,7 @@
 """Runtime Skill permission, MCP plugin, timeout, cancellation, and lifecycle tests."""
 
+import json
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -25,6 +27,7 @@ class RuntimeHttpClient(Protocol):
 
 def test_example_mcp_plugin_install_execute_confirm_disable_and_uninstall(
     client: TestClient,
+    runtime_settings: Settings,
 ) -> None:
     http = cast(RuntimeHttpClient, client)
     session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
@@ -32,7 +35,10 @@ def test_example_mcp_plugin_install_execute_confirm_disable_and_uninstall(
 
     installed = http.post("/v1/plugins/install-example", json={"example_id": "local-echo"})
     assert installed.status_code == 201
-    assert cast(dict[str, object], installed.json())["plugin_id"] == "local.echo"
+    installed_body = cast(dict[str, object], installed.json())
+    assert installed_body["plugin_id"] == "local.echo"
+    package_root = Path(str(installed_body["install_path"]))
+    assert all(path.stat().st_mode & 0o222 == 0 for path in package_root.rglob("*"))
 
     skills = cast(dict[str, object], http.get("/v1/skills").json())
     plugin_skill = next(
@@ -58,6 +64,10 @@ def test_example_mcp_plugin_install_execute_confirm_disable_and_uninstall(
         cast(dict[str, object], cast(dict[str, object], echoed["result"])["data"])["echo"]
         == "hello MCP"
     )
+    plugin_status = cast(dict[str, object], http.get("/v1/plugins").json())
+    plugin_item = cast(list[dict[str, object]], plugin_status["items"])[0]
+    assert plugin_item["sandbox_backend"] == "none"
+    assert plugin_item["sandbox_limits_enforced"] == []
 
     write = http.post(
         f"/v1/sessions/{session_id}/skill-runs",
@@ -78,6 +88,9 @@ def test_example_mcp_plugin_install_execute_confirm_disable_and_uninstall(
     assert allowed.status_code == 200
     written = _wait_for_run(http, str(waiting["skill_run_id"]))
     assert written["state"] == "succeeded"
+    assert not (package_root / "notes.log").exists()
+    data_note = runtime_settings.data_dir / "plugin-data" / "local.echo" / "notes.log"
+    assert data_note.read_text(encoding="utf-8") == "requires permission\n"
 
     again = http.post(
         f"/v1/sessions/{session_id}/skill-runs",
@@ -191,22 +204,97 @@ def test_persisted_stdio_mcp_host_discovers_and_routes_capabilities(
     assert len(cast(list[object], capabilities["resource_templates"])) == 1
     assert len(cast(list[object], capabilities["prompts"])) == 1
 
-    resource = http.post(
-        f"/v1/mcp/connections/{connection_id}/resources/read",
-        json={"uri": "chatwaifu://example/readme"},
-    )
-    assert resource.status_code == 200, resource.text
-    assert "example resource" in resource.text
-    prompt = http.post(
-        f"/v1/mcp/connections/{connection_id}/prompts/get",
-        json={"name": "greet", "arguments": {"name": "Nene"}},
-    )
-    assert prompt.status_code == 200, prompt.text
-    assert "Hello Nene" in prompt.text
-
     session_id = str(
         cast(dict[str, object], http.post("/v1/sessions", json={}).json())["session_id"]
     )
+    assert (
+        http.post(
+            f"/v1/mcp/connections/{connection_id}/resources/read",
+            json={"uri": "chatwaifu://example/readme"},
+        ).status_code
+        == 404
+    )
+    assert (
+        http.post(
+            f"/v1/mcp/connections/{connection_id}/prompts/get",
+            json={"name": "greet", "arguments": {"name": "Nene"}},
+        ).status_code
+        == 404
+    )
+    resource = http.post(
+        f"/v1/sessions/{session_id}/mcp/connections/{connection_id}/resources/read",
+        json={"uri": "chatwaifu://example/readme"},
+    )
+    resource_body = cast(dict[str, object], resource.json())
+    assert resource.status_code == 202, resource.text
+    assert resource_body["state"] == "waiting_for_confirmation"
+    resource_allowed = http.post(
+        f"/v1/skill-confirmations/{resource_body['confirmation_request_id']}",
+        json={"decision": "allow_always"},
+    )
+    assert resource_allowed.status_code == 200, resource_allowed.text
+    resource_run = _wait_for_run(http, str(resource_body["skill_run_id"]))
+    assert resource_run["state"] == "succeeded", resource_run
+    assert "example resource" in str(cast(dict[str, object], resource_run["result"])["data"])
+
+    granted_resource = cast(
+        dict[str, object],
+        http.post(
+            f"/v1/sessions/{session_id}/mcp/connections/{connection_id}/resources/read",
+            json={"uri": "chatwaifu://example/readme"},
+        ).json(),
+    )
+    assert granted_resource["state"] != "waiting_for_confirmation"
+    assert _wait_for_run(http, str(granted_resource["skill_run_id"]))["state"] == "succeeded"
+
+    prompt = http.post(
+        f"/v1/sessions/{session_id}/mcp/connections/{connection_id}/prompts/get",
+        json={"name": "greet", "arguments": {"name": "Nene"}},
+    )
+    prompt_body = cast(dict[str, object], prompt.json())
+    assert prompt.status_code == 202, prompt.text
+    assert prompt_body["state"] == "waiting_for_confirmation"
+    prompt_allowed = http.post(
+        f"/v1/skill-confirmations/{prompt_body['confirmation_request_id']}",
+        json={"decision": "allow_once"},
+    )
+    assert prompt_allowed.status_code == 200, prompt_allowed.text
+    prompt_run = _wait_for_run(http, str(prompt_body["skill_run_id"]))
+    assert prompt_run["state"] == "succeeded", prompt_run
+    assert "Hello Nene" in str(cast(dict[str, object], prompt_run["result"])["data"])
+
+    with sqlite3.connect(runtime_settings.database_path) as connection:
+        audited = connection.execute(
+            "SELECT sr.arguments_json, sr.result_json, st.request_json, st.response_json "
+            "FROM skill_runs sr JOIN skill_tool_calls st USING(skill_run_id) "
+            "WHERE sr.skill_run_id IN (?, ?)",
+            (str(resource_body["skill_run_id"]), str(prompt_body["skill_run_id"])),
+        ).fetchall()
+    audit_text = json.dumps(audited, ensure_ascii=False)
+    assert "chatwaifu://example/readme" not in audit_text
+    assert "Nene" not in audit_text
+    assert "example resource" not in audit_text
+    assert "Hello Nene" not in audit_text
+    assert "_audit_summary" in audit_text
+
+    # A connection retest changes its immutable revision and revokes the prior grant.
+    assert http.post(f"/v1/mcp/connections/{connection_id}/test", json={}).status_code == 200
+    invalidated = cast(
+        dict[str, object],
+        http.post(
+            f"/v1/sessions/{session_id}/mcp/connections/{connection_id}/resources/read",
+            json={"uri": "chatwaifu://example/readme"},
+        ).json(),
+    )
+    assert invalidated["state"] == "waiting_for_confirmation"
+    assert (
+        http.post(
+            f"/v1/skill-confirmations/{invalidated['confirmation_request_id']}",
+            json={"decision": "deny"},
+        ).status_code
+        == 200
+    )
+
     called = http.post(
         f"/v1/sessions/{session_id}/mcp/connections/{connection_id}/tools/call",
         json={"name": "local_echo", "arguments": {"text": "permissioned host"}},

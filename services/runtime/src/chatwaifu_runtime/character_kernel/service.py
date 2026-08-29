@@ -233,6 +233,23 @@ class CharacterKernelService:
             await relationship.close()
         return changed
 
+    async def clear_scope(self, character_id: str, user_scope: str = USER_SCOPE) -> int:
+        """Reset one character/user relationship without affecting other scopes."""
+
+        async with self._database.transaction() as connection:
+            affect = await connection.execute(
+                "DELETE FROM character_states WHERE character_id = ? AND user_scope = ?",
+                (character_id, user_scope),
+            )
+            relationship = await connection.execute(
+                "DELETE FROM relationship_states WHERE character_id = ? AND user_scope = ?",
+                (character_id, user_scope),
+            )
+            changed = max(affect.rowcount, 0) + max(relationship.rowcount, 0)
+            await affect.close()
+            await relationship.close()
+        return changed
+
     async def _initialize(
         self, character: CharacterProfile, now: datetime
     ) -> CharacterKernelSnapshot:

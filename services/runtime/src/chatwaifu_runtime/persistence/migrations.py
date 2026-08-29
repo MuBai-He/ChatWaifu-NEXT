@@ -550,4 +550,63 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         ALTER TABLE skill_plugins ADD COLUMN sandbox_backend TEXT;
         """,
     ),
+    (
+        12,
+        """
+        ALTER TABLE skill_runs ADD COLUMN execution_plan_json TEXT;
+        ALTER TABLE skill_runs ADD COLUMN execution_plan_fingerprint TEXT;
+
+        ALTER TABLE permission_requests ADD COLUMN expires_at TEXT;
+        UPDATE permission_requests
+        SET expires_at = datetime(requested_at, '+5 minutes')
+        WHERE expires_at IS NULL;
+        CREATE INDEX permission_requests_pending_expiry_idx
+            ON permission_requests(state, expires_at);
+
+        ALTER TABLE mcp_connections ADD COLUMN revision INTEGER NOT NULL DEFAULT 1
+            CHECK(revision >= 1);
+        """,
+    ),
+    (
+        13,
+        """
+        ALTER TABLE mcp_connections ADD COLUMN sandbox_limits_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE skill_plugins ADD COLUMN sandbox_limits_json TEXT NOT NULL DEFAULT '[]';
+        """,
+    ),
+    (
+        14,
+        """
+        ALTER TABLE permission_requests ADD COLUMN skill_version TEXT NOT NULL DEFAULT '';
+        ALTER TABLE permission_requests ADD COLUMN subject_fingerprint TEXT NOT NULL
+            DEFAULT 'legacy-invalid';
+        ALTER TABLE permission_requests ADD COLUMN plugin_id TEXT;
+        ALTER TABLE permission_requests ADD COLUMN plugin_fingerprint TEXT;
+        ALTER TABLE permission_requests ADD COLUMN mcp_connection_id TEXT;
+        ALTER TABLE permission_requests ADD COLUMN mcp_connection_revision INTEGER;
+
+        ALTER TABLE permission_grants ADD COLUMN skill_version TEXT NOT NULL DEFAULT '';
+        ALTER TABLE permission_grants ADD COLUMN subject_fingerprint TEXT NOT NULL
+            DEFAULT 'legacy-invalid';
+        ALTER TABLE permission_grants ADD COLUMN plugin_id TEXT;
+        ALTER TABLE permission_grants ADD COLUMN plugin_fingerprint TEXT;
+        ALTER TABLE permission_grants ADD COLUMN mcp_connection_id TEXT;
+        ALTER TABLE permission_grants ADD COLUMN mcp_connection_revision INTEGER;
+
+        UPDATE permission_grants
+        SET revoked_at = COALESCE(revoked_at, created_at)
+        WHERE subject_fingerprint = 'legacy-invalid';
+
+        DROP INDEX permission_grants_lookup_idx;
+        CREATE INDEX permission_grants_lookup_idx
+            ON permission_grants(
+                principal, skill_id, capability, permission,
+                subject_fingerprint, revoked_at
+            );
+        CREATE INDEX permission_grants_plugin_idx
+            ON permission_grants(plugin_id, revoked_at);
+        CREATE INDEX permission_grants_mcp_connection_idx
+            ON permission_grants(mcp_connection_id, revoked_at);
+        """,
+    ),
 )

@@ -10,6 +10,7 @@ import sys
 import wave
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import urlsplit, urlunsplit
@@ -49,6 +50,10 @@ logger = logging.getLogger(__name__)
 
 type WebSocketFactory = Callable[..., AbstractAsyncContextManager[Any]]
 DEFAULT_WEBSOCKET_FACTORY = cast(WebSocketFactory, websocket_connect)
+
+
+class _WorkerIdentityError(RuntimeError):
+    pass
 
 
 class FakeTtsProvider:
@@ -214,13 +219,16 @@ class WorkerTtsProvider:
         websocket_factory: WebSocketFactory = DEFAULT_WEBSOCKET_FACTORY,
         max_stream_audio_bytes: int = 64_000_000,
     ) -> None:
-        self._descriptor = descriptor
+        self._descriptor = replace(descriptor, native_streaming=False)
+        self._configured_native_streaming = descriptor.native_streaming
         self._base_url = base_url.rstrip("/")
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._client = client or httpx2.AsyncClient(timeout=timeout_seconds)
         self._websocket_factory = websocket_factory
         self._timeout_seconds = timeout_seconds
         self._max_stream_audio_bytes = max_stream_audio_bytes
+        self._capabilities_negotiated = False
+        self._capability_lock = asyncio.Lock()
 
     @property
     def kind(self) -> str:
@@ -264,20 +272,9 @@ class WorkerTtsProvider:
         )
 
     async def stream(self, request: SynthesisRequest) -> AsyncIterator[TtsStreamEvent]:
-        if not self._descriptor.native_streaming:
-            result = await self.synthesize(request)
-            chunks, sample_rate, channels = await asyncio.to_thread(
-                _read_pcm_wave_chunks, request.destination
-            )
-            for sequence, pcm16 in enumerate(chunks):
-                yield TtsPcmChunk(
-                    sequence=sequence,
-                    pcm16=pcm16,
-                    sample_rate=sample_rate,
-                    channels=channels,
-                    native_streaming=False,
-                )
-            yield TtsStreamCompleted(result=result)
+        if not await self._supports_pcm_v2():
+            async for event in self._stream_complete_wave(request):
+                yield event
             return
         body = self._worker_request(request)
         start = TtsStreamStart(request=body)
@@ -289,6 +286,7 @@ class WorkerTtsProvider:
         channels: int | None = None
         completion: WorkerTtsStreamCompleted | None = None
         headers = dict(self._headers)
+        ready_received = False
         try:
             async with self._websocket_factory(
                 _worker_stream_url(self._base_url),
@@ -305,6 +303,7 @@ class WorkerTtsProvider:
                     raise RuntimeError("TTS worker did not acknowledge the stream")
                 ready = WorkerTtsStreamReady.model_validate_json(ready_frame)
                 self._validate_stream_identity(body, ready)
+                ready_received = True
                 while True:
                     frame = await asyncio.wait_for(websocket.recv(), timeout=self._timeout_seconds)
                     if isinstance(frame, bytes):
@@ -353,8 +352,13 @@ class WorkerTtsProvider:
                     exc_info=True,
                 )
             raise
-        except BaseException:
+        except Exception as error:
             request.destination.unlink(missing_ok=True)
+            if not ready_received and not isinstance(error, _WorkerIdentityError):
+                self._disable_pcm_v2()
+                async for event in self._stream_complete_wave(request):
+                    yield event
+                return
             raise
         if sample_rate is None or channels is None or not audio:
             raise RuntimeError("TTS worker ended without completed PCM audio")
@@ -400,7 +404,7 @@ class WorkerTtsProvider:
             result.speaker_id,
         )
         if actual_identity != expected_identity:
-            raise RuntimeError("TTS worker returned mismatched request identity")
+            raise _WorkerIdentityError("TTS worker returned mismatched request identity")
 
     @staticmethod
     def _validate_stream_identity(body: TtsSynthesisRequest, event: Any) -> None:
@@ -419,7 +423,7 @@ class WorkerTtsProvider:
             event.job_id,
         )
         if actual_identity != expected_identity:
-            raise RuntimeError("TTS worker returned mismatched stream identity")
+            raise _WorkerIdentityError("TTS worker returned mismatched stream identity")
 
     @staticmethod
     def _worker_request(request: SynthesisRequest) -> TtsSynthesisRequest:
@@ -461,26 +465,72 @@ class WorkerTtsProvider:
         )
 
     async def refresh_descriptor(self) -> TtsProviderDescriptor:
-        response = await self._client.get(
-            f"{self._base_url}/v1/capabilities",
-            headers=self._headers,
+        return await self.refresh_capabilities()
+
+    async def refresh_capabilities(self) -> TtsProviderDescriptor:
+        """Negotiate optional protocols; old or sleeping workers remain valid v1 peers."""
+
+        async with self._capability_lock:
+            try:
+                response = await self._client.get(
+                    f"{self._base_url}/v1/capabilities",
+                    headers=self._headers,
+                    timeout=min(self._timeout_seconds, 2.0),
+                )
+                response.raise_for_status()
+                result = TtsWorkerCapabilities.model_validate(response.json())
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._disable_pcm_v2()
+                return self._descriptor
+            if result.provider_id != self.kind:
+                self._disable_pcm_v2()
+                raise _WorkerIdentityError("TTS worker returned mismatched provider identity")
+            self._descriptor = TtsProviderDescriptor(
+                provider_id=result.provider_id,
+                display_name=result.display_name,
+                model=result.model,
+                languages=tuple(result.languages),
+                supports_voice_cloning=result.supports_voice_cloning,
+                supports_style=result.supports_style,
+                supports_speed=result.supports_speed,
+                supports_pitch=result.supports_pitch,
+                native_streaming=(
+                    self._configured_native_streaming
+                    and result.native_streaming
+                    and "pcm.v2" in result.stream_protocols
+                ),
+                local_only=result.local_only,
+            )
+            self._capabilities_negotiated = True
+            return self._descriptor
+
+    async def _supports_pcm_v2(self) -> bool:
+        if not self._capabilities_negotiated:
+            await self.refresh_capabilities()
+        return self._descriptor.native_streaming
+
+    def _disable_pcm_v2(self) -> None:
+        self._descriptor = replace(self._descriptor, native_streaming=False)
+        self._capabilities_negotiated = True
+
+    async def _stream_complete_wave(
+        self, request: SynthesisRequest
+    ) -> AsyncIterator[TtsStreamEvent]:
+        result = await self.synthesize(request)
+        chunks, sample_rate, channels = await asyncio.to_thread(
+            _read_pcm_wave_chunks, request.destination
         )
-        response.raise_for_status()
-        result = TtsWorkerCapabilities.model_validate(response.json())
-        if result.provider_id != self.kind:
-            raise RuntimeError("TTS worker returned mismatched provider identity")
-        return TtsProviderDescriptor(
-            provider_id=result.provider_id,
-            display_name=result.display_name,
-            model=result.model,
-            languages=tuple(result.languages),
-            supports_voice_cloning=result.supports_voice_cloning,
-            supports_style=result.supports_style,
-            supports_speed=result.supports_speed,
-            supports_pitch=result.supports_pitch,
-            native_streaming=result.native_streaming and "pcm.v2" in result.stream_protocols,
-            local_only=result.local_only,
-        )
+        for sequence, pcm16 in enumerate(chunks):
+            yield TtsPcmChunk(
+                sequence=sequence,
+                pcm16=pcm16,
+                sample_rate=sample_rate,
+                channels=channels,
+                native_streaming=False,
+            )
+        yield TtsStreamCompleted(result=result)
 
     async def _cancel(self, generation_id: UUID) -> None:
         response = await self._client.post(
@@ -501,6 +551,10 @@ class WorkerTtsProvider:
             response.raise_for_status()
         except httpx2.ConnectError:
             return
+        finally:
+            # A sleeping/restarted worker may expose a different protocol set.
+            # Negotiate again on the next synthesis instead of trusting stale v2.
+            self._capabilities_negotiated = False
 
     async def close(self) -> None:
         await self._client.aclose()

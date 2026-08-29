@@ -29,6 +29,7 @@ from chatwaifu_runtime.providers import tts as tts_module
 from chatwaifu_runtime.providers.contracts import (
     SynthesisRequest,
     TtsPcmChunk,
+    TtsProvider,
     TtsProviderDescriptor,
     TtsStreamCompleted,
 )
@@ -46,6 +47,7 @@ from chatwaifu_runtime.providers.tts_config import (
     AliyunTtsConfiguration,
     TtsConfigurationService,
 )
+from chatwaifu_runtime.providers.tts_router import TtsRouter
 
 
 class _FakeProcess:
@@ -64,6 +66,17 @@ class _FakeProcess:
         return self.returncode or 0
 
 
+class _CloseProbeProvider:
+    def __init__(self, failure: Exception | None = None) -> None:
+        self.closed = False
+        self.failure = failure
+
+    async def close(self) -> None:
+        self.closed = True
+        if self.failure is not None:
+            raise self.failure
+
+
 def _wave_bytes() -> bytes:
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as output:
@@ -72,6 +85,23 @@ def _wave_bytes() -> bytes:
         output.setframerate(24_000)
         output.writeframes(b"\x00\x00" * 240)
     return buffer.getvalue()
+
+
+@pytest.mark.asyncio
+async def test_tts_router_closes_every_provider_and_aggregates_failures() -> None:
+    first = _CloseProbeProvider(RuntimeError("first close failed"))
+    second = _CloseProbeProvider()
+    third = _CloseProbeProvider(ValueError("third close failed"))
+    router = TtsRouter(
+        cast(dict[str, TtsProvider], {"first": first, "second": second, "third": third}),
+        "first",
+    )
+
+    with pytest.raises(BaseExceptionGroup) as raised:
+        await router.close()
+
+    assert first.closed and second.closed and third.closed
+    assert {type(error) for error in raised.value.exceptions} == {RuntimeError, ValueError}
 
 
 def _synthesis_request(destination: Path) -> SynthesisRequest:
@@ -87,6 +117,21 @@ def _synthesis_request(destination: Path) -> SynthesisRequest:
         speaker_id=3,
         speed=1.04,
     )
+
+
+def _worker_capabilities(*, streaming: bool = True) -> dict[str, object]:
+    return {
+        "schema_version": "1.0",
+        "provider_id": "qwen3_tts_mlx",
+        "display_name": "Qwen3-TTS",
+        "model": "local-qwen",
+        "languages": ["zh", "ja"],
+        "supports_voice_cloning": True,
+        "native_streaming": streaming,
+        "stream_protocols": ["pcm.v2"] if streaming else [],
+        "output_formats": ["wav"],
+        "local_only": True,
+    }
 
 
 class _FakeAliyunSocket:
@@ -222,6 +267,14 @@ class _FakeWorkerConnection:
 
     async def __aenter__(self) -> _FakeWorkerSocket:
         return self.socket
+
+    async def __aexit__(self, *_args: object) -> None:
+        return None
+
+
+class _UnavailableWorkerConnection:
+    async def __aenter__(self) -> object:
+        raise OSError("worker PCM endpoint unavailable")
 
     async def __aexit__(self, *_args: object) -> None:
         return None
@@ -759,6 +812,154 @@ async def test_worker_capability_does_not_claim_end_to_end_native_streaming() ->
 
 
 @pytest.mark.asyncio
+async def test_worker_capabilities_can_refresh_after_worker_wakes() -> None:
+    available = False
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        if not available:
+            return httpx2.Response(503)
+        return httpx2.Response(200, json=_worker_capabilities())
+
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+    )
+    try:
+        assert (await provider.refresh_capabilities()).native_streaming is False
+        available = True
+        assert (await provider.refresh_capabilities()).native_streaming is True
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("capability_status", [404, 503])
+async def test_old_or_unavailable_worker_capability_endpoint_falls_back_to_wav_v1(
+    tmp_path: Path, capability_status: int
+) -> None:
+    synthesis = _synthesis_request(tmp_path / f"worker-v1-{capability_status}.wav")
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == "/v1/capabilities":
+            return httpx2.Response(capability_status)
+        assert request.url.path == "/v1/synthesize"
+        payload = json.loads(request.content)
+        return httpx2.Response(
+            200,
+            json=TtsSynthesisResult(
+                request_id=UUID(str(payload["request_id"])),
+                session_id=synthesis.session_id,
+                turn_id=synthesis.turn_id,
+                generation_id=synthesis.generation_id,
+                job_id=synthesis.segment_id,
+                audio_base64=base64.b64encode(_wave_bytes()).decode("ascii"),
+                sample_rate=24_000,
+                duration_ms=10,
+                provider="qwen3_tts_mlx",
+                model="local-qwen",
+                speaker_id=3,
+            ).model_dump(mode="json"),
+        )
+
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+        websocket_factory=lambda *_args, **_kwargs: pytest.fail(
+            "v2 WebSocket must not be used without negotiated pcm.v2"
+        ),
+    )
+    try:
+        events = [event async for event in provider.stream(synthesis)]
+    finally:
+        await provider.close()
+
+    chunks = [event for event in events if isinstance(event, TtsPcmChunk)]
+    assert chunks and all(not chunk.native_streaming for chunk in chunks)
+    assert isinstance(events[-1], TtsStreamCompleted)
+    assert provider.descriptor.native_streaming is False
+
+
+@pytest.mark.asyncio
+async def test_negotiated_but_missing_pcm_endpoint_falls_back_to_wav_v1(
+    tmp_path: Path,
+) -> None:
+    synthesis = _synthesis_request(tmp_path / "missing-pcm-endpoint.wav")
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == "/v1/capabilities":
+            return httpx2.Response(200, json=_worker_capabilities())
+        payload = json.loads(request.content)
+        return httpx2.Response(
+            200,
+            json=TtsSynthesisResult(
+                request_id=UUID(str(payload["request_id"])),
+                session_id=synthesis.session_id,
+                turn_id=synthesis.turn_id,
+                generation_id=synthesis.generation_id,
+                job_id=synthesis.segment_id,
+                audio_base64=base64.b64encode(_wave_bytes()).decode("ascii"),
+                sample_rate=24_000,
+                duration_ms=10,
+                provider="qwen3_tts_mlx",
+                model="local-qwen",
+                speaker_id=3,
+            ).model_dump(mode="json"),
+        )
+
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+        websocket_factory=lambda *_args, **_kwargs: _UnavailableWorkerConnection(),
+    )
+    try:
+        events = [event async for event in provider.stream(synthesis)]
+    finally:
+        await provider.close()
+
+    assert any(isinstance(event, TtsPcmChunk) and not event.native_streaming for event in events)
+    assert provider.descriptor.native_streaming is False
+
+
+@pytest.mark.asyncio
 async def test_worker_v2_stream_delivers_pcm_before_persisting_wave(tmp_path: Path) -> None:
     synthesis = _synthesis_request(tmp_path / "streamed-worker.wav")
     socket = _FakeWorkerSocket()
@@ -777,7 +978,15 @@ async def test_worker_v2_stream_delivers_pcm_before_persisting_wave(tmp_path: Pa
         base_url="http://tts.test/base",
         token="ephemeral",
         timeout_seconds=1,
-        client=httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: httpx2.Response(200))),
+        client=httpx2.AsyncClient(
+            transport=httpx2.MockTransport(
+                lambda request: (
+                    httpx2.Response(200, json=_worker_capabilities())
+                    if request.url.path.endswith("/v1/capabilities")
+                    else httpx2.Response(500)
+                )
+            )
+        ),
         websocket_factory=lambda *_args, **_kwargs: _FakeWorkerConnection(socket),
     )
     events: list[TtsPcmChunk | TtsStreamCompleted] = []
@@ -806,6 +1015,8 @@ async def test_worker_v2_stream_cancellation_propagates_and_leaves_no_asset(
     cancelled = asyncio.Event()
 
     async def handler(request: httpx2.Request) -> httpx2.Response:
+        if request.url.path == "/v1/capabilities":
+            return httpx2.Response(200, json=_worker_capabilities())
         assert request.url.path == f"/v1/jobs/{synthesis.generation_id}/cancel"
         cancelled.set()
         return httpx2.Response(200, json={"cancelled": True})
@@ -864,7 +1075,15 @@ async def test_worker_v2_stream_rejects_out_of_order_late_audio(tmp_path: Path) 
         base_url="http://tts.test",
         token="ephemeral",
         timeout_seconds=1,
-        client=httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: httpx2.Response(200))),
+        client=httpx2.AsyncClient(
+            transport=httpx2.MockTransport(
+                lambda request: (
+                    httpx2.Response(200, json=_worker_capabilities())
+                    if request.url.path == "/v1/capabilities"
+                    else httpx2.Response(500)
+                )
+            )
+        ),
         websocket_factory=lambda *_args, **_kwargs: _FakeWorkerConnection(socket),
     )
     try:

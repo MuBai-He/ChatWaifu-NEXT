@@ -43,11 +43,22 @@ class McpStdioAdapter:
     def __init__(self, sandbox_launcher: SandboxLauncher | None = None) -> None:
         self._transport = McpClientTransport(sandbox_launcher)
 
+    def sandbox_backend(
+        self, plugin: PluginManifest, plugin_root: Path, data_root: Path
+    ) -> str | None:
+        return self._transport.plugin_sandbox_backend(plugin, plugin_root, data_root)
+
+    def sandbox_status(
+        self, plugin: PluginManifest, plugin_root: Path, data_root: Path
+    ) -> tuple[str | None, tuple[str, ...]]:
+        return self._transport.plugin_sandbox_status(plugin, plugin_root, data_root)
+
     async def invoke(
         self,
         *,
         plugin: PluginManifest,
         plugin_root: Path,
+        data_root: Path,
         tool: str,
         arguments: JsonObject,
         timeout_seconds: float,
@@ -57,7 +68,12 @@ class McpStdioAdapter:
         operation_timeout = max(0.1, timeout_seconds - min(0.25, timeout_seconds * 0.1))
         try:
             async with asyncio.timeout(operation_timeout):
-                async with self._transport.plugin_session(plugin, plugin_root) as (
+                async with self._transport.plugin_session(
+                    plugin,
+                    plugin_root,
+                    data_root,
+                    timeout_seconds=operation_timeout,
+                ) as (
                     session,
                     _,
                 ):
@@ -136,18 +152,12 @@ def normalize_tool_result(result: object) -> JsonObject:
     serialized = result.model_dump(mode="json", by_alias=True, exclude_none=True)
     enforce_mcp_json_payload_limit(serialized, boundary="tool result")
     if result.is_error:
-        raise SkillExecutionError("mcp_tool_failed", _content_text(result))
+        # Tool-provided error text is untrusted and may echo credentials from its
+        # input.  Keep the durable Runtime error generic; provider diagnostics stay
+        # inside the short-lived transport boundary.
+        raise SkillExecutionError("mcp_tool_failed", "MCP tool reported an error")
     structured_content = cast(object, result.structured_content)
     if isinstance(structured_content, dict):
         typed_content = cast(dict[str, object], structured_content)
         return cast(JsonObject, typed_content)
     return cast(JsonObject, {"content": serialized.get("content", [])})
-
-
-def _content_text(result: CallToolResult) -> str:
-    texts: list[str] = []
-    for item in result.content:
-        text = getattr(item, "text", None)
-        if isinstance(text, str):
-            texts.append(text)
-    return " ".join(texts) or "MCP tool reported an error"

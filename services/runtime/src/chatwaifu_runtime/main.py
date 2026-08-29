@@ -8,7 +8,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from chatwaifu_runtime.api.routes import router
-from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.bootstrap.container import (
+    RuntimeCleanupError,
+    RuntimeContainer,
+    RuntimeLifecycleError,
+)
 from chatwaifu_runtime.config.settings import Settings, load_settings
 from chatwaifu_runtime.mcp_server import RuntimeMcpServer
 from chatwaifu_runtime.observability.logging import configure_logging
@@ -23,15 +27,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         app.state.container = container
         app.state.mcp_server = mcp_server
-        await container.start()
+        primary: BaseException | None = None
         try:
+            await container.start()
             await mcp_server.start()
+            yield
+        except BaseException as error:
+            primary = error
+
+        cleanup_errors: list[BaseException] = []
+        for name, callback in (
+            ("mcp_server", mcp_server.stop),
+            ("runtime_container", container.stop),
+        ):
             try:
-                yield
-            finally:
-                await mcp_server.stop()
-        finally:
-            await container.stop()
+                await callback()
+            except BaseException as error:
+                cleanup_errors.append(
+                    RuntimeCleanupError(name, error) if isinstance(error, Exception) else error
+                )
+
+        if primary is not None and not cleanup_errors:
+            raise primary
+        errors = ([primary] if primary is not None else []) + cleanup_errors
+        if not errors:
+            return
+        if all(isinstance(error, Exception) for error in errors):
+            raise RuntimeLifecycleError(
+                "application lifespan and cleanup failed",
+                [error for error in errors if isinstance(error, Exception)],
+            )
+        raise BaseExceptionGroup("application lifespan and cleanup failed", errors)
 
     app = FastAPI(title="ChatWaifu NEXT Runtime", version="0.1.0", lifespan=lifespan)
     app.add_middleware(

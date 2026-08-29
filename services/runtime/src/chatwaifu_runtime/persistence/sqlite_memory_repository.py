@@ -329,6 +329,27 @@ class SQLiteMemoryRepository(MemoryRepository):
     async def list_recent(self, namespaces: Sequence[str], limit: int) -> list[MemoryRecord]:
         return await self._list_active_namespaces(namespaces, limit, pinned=None)
 
+    async def clear_scope(self, namespace: str) -> list[UUID]:
+        """Delete one character/user namespace without touching unrelated memory."""
+
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                DELETE FROM memory_proposals
+                WHERE target_memory_id IN (
+                    SELECT memory_id FROM memory_records WHERE namespace = ?
+                ) OR json_extract(candidate_json, '$.namespace') = ?
+                """,
+                (namespace, namespace),
+            )
+            cursor = await connection.execute(
+                "DELETE FROM memory_records WHERE namespace = ? RETURNING memory_id",
+                (namespace,),
+            )
+            removed = [UUID(str(row[0])) for row in await cursor.fetchall()]
+            await cursor.close()
+        return removed
+
     async def clear_all(self) -> int:
         async with self._database.transaction() as connection:
             cursor = await connection.execute("DELETE FROM memory_records")

@@ -132,10 +132,34 @@ class TtsRouter:
 
     async def close(self) -> None:
         self._session_providers.clear()
-        await asyncio.gather(
+        results = await asyncio.gather(
             *(provider.close() for provider in self._providers.values()),
-            return_exceptions=False,
+            return_exceptions=True,
         )
+        failures = [result for result in results if isinstance(result, BaseException)]
+        if failures:
+            raise BaseExceptionGroup("One or more TTS providers failed to close", failures)
+
+    async def refresh_capabilities(self) -> dict[str, str]:
+        """Refresh optional provider protocols without making v1 peers unavailable."""
+
+        results: dict[str, str] = {}
+        for provider_id, provider in self._providers.items():
+            refresh = getattr(provider, "refresh_capabilities", None)
+            if not callable(refresh):
+                results[provider_id] = "not_supported"
+                continue
+            try:
+                await cast(Any, refresh)()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                results[provider_id] = "v1_fallback"
+            else:
+                results[provider_id] = (
+                    "pcm.v2" if provider.descriptor.native_streaming else "wav.v1"
+                )
+        return results
 
     @property
     def active_jobs(self) -> int:

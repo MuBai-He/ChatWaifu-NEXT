@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
-import aiosqlite
 from chatwaifu_protocol.avatar import AvatarCue
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.character import ResponsePlan
@@ -26,30 +25,27 @@ from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionState
 
 from chatwaifu_runtime.audio.store import AudioAssetStore
-from chatwaifu_runtime.audio.streaming import AudioStreamHub, AudioStreamPacket
+from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import (
+    USER_SCOPE,
     CharacterKernelService,
     TurnCharacterContext,
 )
-from chatwaifu_runtime.characters.service import (
-    CharacterProfile,
-    CharacterService,
-    CharacterVoiceProfile,
+from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
+from chatwaifu_runtime.conversation.models import GenerationAccepted, SessionDataReset
+from chatwaifu_runtime.conversation.repository import (
+    ConversationRecoveryRecord,
+    ConversationRepository,
 )
+from chatwaifu_runtime.conversation.reset import ExperienceResetRepository
+from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
-from chatwaifu_runtime.persistence.database import Database
-from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.playback.service import PlaybackService
-from chatwaifu_runtime.providers.contracts import (
-    LlmRequest,
-    SynthesisRequest,
-    SynthesisResult,
-    TtsPcmChunk,
-)
+from chatwaifu_runtime.providers.contracts import LlmRequest
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -62,24 +58,6 @@ _PROACTIVE_PROMPT = (
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, slots=True)
-class GenerationAccepted:
-    session_id: UUID
-    turn_id: UUID
-    generation_id: UUID
-    audio_stream_id: UUID
-    state: GenerationState
-
-
-@dataclass(frozen=True, slots=True)
-class SessionDataReset:
-    session_id: UUID
-    turns_deleted: int
-    events_deleted: int
-    memories_deleted: int
-    audio_assets_deleted: int
-
-
 @dataclass(slots=True)
 class _ActiveGeneration:
     generation_id: UUID
@@ -89,8 +67,8 @@ class _ActiveGeneration:
 class ConversationService:
     def __init__(
         self,
-        database: Database,
-        event_store: EventStore,
+        repository: ConversationRepository,
+        reset_repository: ExperienceResetRepository,
         publisher: EventPublisher,
         sessions: SessionService,
         providers: ProviderSet,
@@ -102,16 +80,15 @@ class ConversationService:
         character_kernel: CharacterKernelService,
         prompt_compiler: PromptCompiler,
     ) -> None:
-        self._database = database
-        self._event_store = event_store
+        self._repository = repository
+        self._reset_repository = reset_repository
         self._publisher = publisher
         self._sessions = sessions
         self._providers = providers
         self._audio_assets = audio_assets
-        self._audio_streams = audio_streams
         self._characters = characters
         self._memory = memory
-        self._playback = playback
+        self._speech = ConversationSpeechPipeline(providers, audio_assets, audio_streams, playback)
         self._character_kernel = character_kernel
         self._prompt_compiler = prompt_compiler
         self._avatar_planner = SemanticAvatarCuePlanner()
@@ -272,7 +249,9 @@ class ConversationService:
         try:
             await active.task
         except asyncio.CancelledError:
-            pass
+            current = asyncio.current_task()
+            if current is not None and current.cancelling():
+                raise
         return True
 
     def active_generation_id(self, session_id: UUID) -> UUID | None:
@@ -282,7 +261,13 @@ class ConversationService:
         return active.generation_id
 
     async def reset(self, session_id: UUID) -> SessionDataReset:
-        """Return a ready session to a clean local-demo state."""
+        """Reset the current session and its character/user experience scope.
+
+        Conversation events, turns, and generated audio are session-owned. Long-term
+        memory plus Affect/Relationship state are owned by the current
+        ``character_id + user_scope`` pair. No unrelated session, character, or user
+        data is removed.
+        """
 
         async with self._start_lock:
             session = await self._sessions.get_session(session_id)
@@ -293,37 +278,60 @@ class ConversationService:
             await self.cancel(session_id, "session_data_reset")
             self._active.pop(session_id, None)
             now = datetime.now(UTC)
-            memories_deleted = await self._memory.clear_all()
-            await self._character_kernel.clear_all()
-            async with self._database.transaction() as connection:
-                events_cursor = await connection.execute(
-                    "DELETE FROM events WHERE session_id = ?", (str(session_id),)
+            audio_asset_ids = await self._reset_repository.audio_asset_ids(session_id)
+            staged_audio = self._audio_assets.stage_remove(audio_asset_ids)
+            try:
+                memory_namespace = await self._memory.prepare_scope_reset(
+                    session.character_id, USER_SCOPE
                 )
-                events_deleted = max(events_cursor.rowcount, 0)
-                await events_cursor.close()
-                turns_cursor = await connection.execute(
-                    "DELETE FROM turns WHERE session_id = ?", (str(session_id),)
+                reset = await self._reset_repository.reset(
+                    session_id,
+                    character_id=session.character_id,
+                    user_scope=USER_SCOPE,
+                    memory_namespace=memory_namespace,
+                    updated_at=now,
+                    reset_event=GenericCoreEvent(
+                        event_id=uuid4(),
+                        event_type="session.data_reset",
+                        session_id=session_id,
+                        occurred_at=now,
+                        source="runtime.conversation",
+                        privacy=PrivacyLevel.PRIVATE,
+                        payload={
+                            "character_id": session.character_id,
+                            "user_scope": USER_SCOPE,
+                            "conversation": "current_session",
+                            "audio": "current_session",
+                            "memory": "current_character_user",
+                            "character_state": "current_character_user",
+                        },
+                    ),
                 )
-                turns_deleted = max(turns_cursor.rowcount, 0)
-                await turns_cursor.close()
-                await connection.execute(
-                    "DELETE FROM ambient_actions WHERE session_id = ?", (str(session_id),)
-                )
-                await connection.execute(
-                    """
-                    UPDATE sessions
-                    SET conversation_state = 'idle', revision = revision + 1,
-                        next_sequence = 1, updated_at = ?
-                    WHERE session_id = ?
-                    """,
-                    (now.isoformat(), str(session_id)),
-                )
-            audio_assets_deleted = self._audio_assets.clear()
+            except BaseException as reset_error:
+                try:
+                    staged_audio.rollback()
+                except BaseException as rollback_error:
+                    raise BaseExceptionGroup(
+                        "experience reset and audio rollback both failed",
+                        [reset_error, rollback_error],
+                    ) from None
+                raise
+            audio_assets_deleted = staged_audio.commit()
+            await self._memory.finalize_scope_reset(reset.memory_ids)
+            try:
+                await self._publisher.publish_persisted(reset.reset_event)
+            except Exception:
+                # The reset event is already durable in the outbox. A later
+                # Runtime start will republish it; committed deletion must not
+                # be reported as failed merely because one live client vanished.
+                logger.exception("failed to publish durable session reset event")
             return SessionDataReset(
                 session_id=session_id,
-                turns_deleted=turns_deleted,
-                events_deleted=events_deleted,
-                memories_deleted=memories_deleted,
+                character_id=session.character_id,
+                user_scope=USER_SCOPE,
+                turns_deleted=reset.turns_deleted,
+                events_deleted=reset.events_deleted,
+                memories_deleted=len(reset.memory_ids),
                 audio_assets_deleted=audio_assets_deleted,
             )
 
@@ -336,17 +344,10 @@ class ConversationService:
         self._active.clear()
 
     async def list_messages(self, session_id: UUID, limit: int = 100) -> list[dict[str, object]]:
-        rows = await self._database.fetchall(
-            """
-            SELECT turn_id, role, committed_text, committed_at, created_at
-            FROM turns
-            WHERE session_id = ? AND committed_text IS NOT NULL
-                AND role IN ('user', 'assistant')
-            ORDER BY created_at ASC LIMIT ?
-            """,
-            (str(session_id), min(max(limit, 1), 500)),
-        )
-        return [dict(row) for row in rows]
+        return await self._repository.list_messages(session_id, limit=limit)
+
+    async def recovery_state(self, session_id: UUID) -> ConversationRecoveryRecord:
+        return await self._repository.recovery_state(session_id)
 
     async def _commit_user_turn(
         self,
@@ -358,68 +359,37 @@ class ConversationService:
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
         audio_stream_id = uuid4()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO turns(
-                    turn_id, session_id, role, committed_text, committed_at, created_at
-                )
-                VALUES (?, ?, 'user', ?, ?, ?)
-                """,
-                (str(turn_id), str(session_id), text, now.isoformat(), now.isoformat()),
-            )
-            await connection.execute(
-                """
-                INSERT INTO generations(
-                    generation_id, session_id, turn_id, state, backend_kind,
-                    audio_stream_id, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(generation_id),
-                    str(session_id),
-                    str(turn_id),
-                    GenerationState.RUNNING.value,
-                    self._providers.llm.kind,
-                    str(audio_stream_id),
-                    now.isoformat(),
-                ),
-            )
-            await connection.execute(
-                """
-                UPDATE sessions SET conversation_state = 'generating', updated_at = ?
-                WHERE session_id = ?
-                """,
-                (now.isoformat(), str(session_id)),
-            )
-            user_event = await self._event_store.append_in_transaction(
-                connection,
-                UserTurnCommittedEvent(
-                    event_id=uuid4(),
-                    session_id=session_id,
-                    turn_id=turn_id,
-                    generation_id=generation_id,
-                    occurred_at=now,
-                    source="runtime.conversation",
-                    privacy=PrivacyLevel.LOCAL,
-                    payload=UserTurnCommittedPayload(text=text),
-                ),
-            )
-            generation_event = await self._event_store.append_in_transaction(
-                connection,
-                AssistantGenerationStartedEvent(
-                    event_id=uuid4(),
-                    session_id=session_id,
-                    turn_id=turn_id,
-                    generation_id=generation_id,
-                    occurred_at=now,
-                    source="runtime.conversation",
-                    privacy=PrivacyLevel.LOCAL,
-                    payload=AssistantGenerationStartedPayload(
-                        backend_kind=self._providers.llm.kind
-                    ),
-                ),
-            )
+        user_event = UserTurnCommittedEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            payload=UserTurnCommittedPayload(text=text),
+        )
+        generation_event = AssistantGenerationStartedEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            payload=AssistantGenerationStartedPayload(backend_kind=self._providers.llm.kind),
+        )
+        events = await self._repository.commit_user_generation(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            audio_stream_id=audio_stream_id,
+            text=text,
+            backend_kind=self._providers.llm.kind,
+            occurred_at=now,
+            user_event=user_event,
+            generation_event=generation_event,
+        )
         return (
             GenerationAccepted(
                 session_id,
@@ -428,7 +398,7 @@ class ConversationService:
                 audio_stream_id,
                 GenerationState.RUNNING,
             ),
-            (user_event, generation_event),
+            events,
         )
 
     async def _commit_proactive_turn(
@@ -438,76 +408,40 @@ class ConversationService:
         turn_id = uuid4()
         generation_id = uuid4()
         audio_stream_id = uuid4()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO turns(
-                    turn_id, session_id, role, committed_text, committed_at, created_at
-                ) VALUES (?, ?, 'system', ?, ?, ?)
-                """,
-                (
-                    str(turn_id),
-                    str(session_id),
-                    _PROACTIVE_PROMPT,
-                    now.isoformat(),
-                    now.isoformat(),
-                ),
-            )
-            await connection.execute(
-                """
-                INSERT INTO generations(
-                    generation_id, session_id, turn_id, state, backend_kind,
-                    audio_stream_id, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(generation_id),
-                    str(session_id),
-                    str(turn_id),
-                    GenerationState.RUNNING.value,
-                    self._providers.llm.kind,
-                    str(audio_stream_id),
-                    now.isoformat(),
-                ),
-            )
-            await connection.execute(
-                """
-                UPDATE sessions SET conversation_state = 'generating', updated_at = ?
-                WHERE session_id = ?
-                """,
-                (now.isoformat(), str(session_id)),
-            )
-            proactive_event = await self._event_store.append_in_transaction(
-                connection,
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "companion.proactive_triggered",
-                        "session_id": session_id,
-                        "turn_id": turn_id,
-                        "generation_id": generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.companion",
-                        "privacy": PrivacyLevel.LOCAL,
-                        "payload": {"reason": reason},
-                    }
-                ),
-            )
-            generation_event = await self._event_store.append_in_transaction(
-                connection,
-                AssistantGenerationStartedEvent(
-                    event_id=uuid4(),
-                    session_id=session_id,
-                    turn_id=turn_id,
-                    generation_id=generation_id,
-                    occurred_at=now,
-                    source="runtime.conversation",
-                    privacy=PrivacyLevel.LOCAL,
-                    payload=AssistantGenerationStartedPayload(
-                        backend_kind=self._providers.llm.kind
-                    ),
-                ),
-            )
+        proactive_event = GenericCoreEvent.model_validate(
+            {
+                "event_id": uuid4(),
+                "event_type": "companion.proactive_triggered",
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "generation_id": generation_id,
+                "occurred_at": now,
+                "source": "runtime.companion",
+                "privacy": PrivacyLevel.LOCAL,
+                "payload": {"reason": reason},
+            }
+        )
+        generation_event = AssistantGenerationStartedEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            payload=AssistantGenerationStartedPayload(backend_kind=self._providers.llm.kind),
+        )
+        events = await self._repository.commit_proactive_generation(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            audio_stream_id=audio_stream_id,
+            prompt=_PROACTIVE_PROMPT,
+            backend_kind=self._providers.llm.kind,
+            occurred_at=now,
+            proactive_event=proactive_event,
+            generation_event=generation_event,
+        )
         return (
             GenerationAccepted(
                 session_id,
@@ -516,7 +450,7 @@ class ConversationService:
                 audio_stream_id,
                 GenerationState.RUNNING,
             ),
-            (proactive_event, generation_event),
+            events,
         )
 
     async def _run_generation(
@@ -538,12 +472,15 @@ class ConversationService:
 
         async def deliver_segment(text: str) -> None:
             nonlocal memory_projection_submitted, segment_index
-            await self._synthesize_segment(
+            await self._speech.synthesize_segment(
                 accepted,
                 text,
                 segment_index,
                 character.voice_profile,
-                _voice_style_instruction(character_context.plan),
+                style=_voice_style_instruction(character_context.plan),
+                ensure_current=self._ensure_current,
+                emit_generic=self._emit_generic,
+                emit_avatar=self._emit_avatar,
             )
             if not memory_projection_submitted and memory_observation is not None:
                 await self._memory.enqueue_user_turn(memory_observation)
@@ -626,209 +563,19 @@ class ConversationService:
     async def _recent_history(
         self, session_id: UUID, current_turn_id: UUID, limit: int = 16
     ) -> tuple[tuple[str, str], ...]:
-        rows = await self._database.fetchall(
-            """
-            SELECT role, committed_text
-            FROM turns
-            WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
-                AND role IN ('user', 'assistant')
-            ORDER BY created_at DESC
-            LIMIT ?
-            """,
-            (str(session_id), str(current_turn_id), limit),
-        )
-        return tuple((str(row["role"]), str(row["committed_text"])) for row in reversed(rows))
-
-    async def _synthesize_segment(
-        self,
-        accepted: GenerationAccepted,
-        text: str,
-        segment_index: int,
-        voice: CharacterVoiceProfile,
-        style: str | None = None,
-    ) -> None:
-        self._ensure_current(accepted)
-        await self._emit_generic(
-            accepted, "assistant.text_segment_committed", {"text": text.strip()}
-        )
-        asset = self._audio_assets.allocate()
-        await self._playback.register_segment(
-            session_id=accepted.session_id,
-            generation_id=accepted.generation_id,
-            stream_id=accepted.audio_stream_id,
-            segment_id=asset.asset_id,
-            segment_index=segment_index,
-            text=text.strip(),
-            duration_ms=0,
-            duration_finalized=False,
-        )
-        result: SynthesisResult | None = None
-        stream_started = False
-        native_streaming = False
-        streamed_audio_bytes = 0
-        stream_sample_rate = 24_000
-        stream_channels = 1
-        try:
-            stream = self._providers.tts.stream(
-                SynthesisRequest(
-                    session_id=accepted.session_id,
-                    turn_id=accepted.turn_id,
-                    generation_id=accepted.generation_id,
-                    segment_id=asset.asset_id,
-                    text=text.strip(),
-                    destination=asset.path,
-                    language=voice.language,
-                    voice_id=voice.voice_id,
-                    speaker_id=voice.speaker_id,
-                    speed=voice.speed,
-                    style=style,
-                )
-            )
-            async for event in stream:
-                self._ensure_current(accepted)
-                if isinstance(event, TtsPcmChunk):
-                    native_streaming = native_streaming or event.native_streaming
-                    streamed_audio_bytes += len(event.pcm16)
-                    stream_sample_rate = event.sample_rate
-                    stream_channels = event.channels
-                    if not stream_started:
-                        stream_started = True
-                        await self._audio_streams.publish(
-                            AudioStreamPacket(
-                                phase="started",
-                                session_id=accepted.session_id,
-                                turn_id=accepted.turn_id,
-                                generation_id=accepted.generation_id,
-                                stream_id=accepted.audio_stream_id,
-                                segment_id=asset.asset_id,
-                                segment_index=segment_index,
-                                text=text.strip(),
-                                sample_rate=event.sample_rate,
-                                channels=event.channels,
-                                native_streaming=event.native_streaming,
-                                provider_id=self._providers.tts.provider_for(accepted.session_id),
-                            )
-                        )
-                    await self._audio_streams.publish(
-                        AudioStreamPacket(
-                            phase="chunk",
-                            session_id=accepted.session_id,
-                            turn_id=accepted.turn_id,
-                            generation_id=accepted.generation_id,
-                            stream_id=accepted.audio_stream_id,
-                            segment_id=asset.asset_id,
-                            segment_index=segment_index,
-                            text=text.strip(),
-                            sequence=event.sequence,
-                            sample_rate=event.sample_rate,
-                            channels=event.channels,
-                            native_streaming=event.native_streaming,
-                            pcm16=event.pcm16,
-                            provider_id=self._providers.tts.provider_for(accepted.session_id),
-                        )
-                    )
-                else:
-                    result = event.result
-            if result is None:
-                raise RuntimeError("TTS provider ended without a completed result")
-        except BaseException:
-            asset.path.unlink(missing_ok=True)
-            if stream_started:
-                partial_duration_ms = (
-                    streamed_audio_bytes * 1000 // max(1, stream_sample_rate * stream_channels * 2)
-                )
-                await self._playback.finalize_segment(asset.asset_id, partial_duration_ms)
-                await self._audio_streams.publish(
-                    AudioStreamPacket(
-                        phase="cancelled",
-                        session_id=accepted.session_id,
-                        turn_id=accepted.turn_id,
-                        generation_id=accepted.generation_id,
-                        stream_id=accepted.audio_stream_id,
-                        segment_id=asset.asset_id,
-                        segment_index=segment_index,
-                        text=text.strip(),
-                        native_streaming=native_streaming,
-                        duration_ms=partial_duration_ms,
-                        reason="generation_cancelled",
-                    )
-                )
-            else:
-                await self._playback.discard_segment(asset.asset_id)
-            raise
-        self._ensure_current(accepted)
-        await self._playback.finalize_segment(asset.asset_id, result.duration_ms)
-        live_completion_consumers = await self._audio_streams.publish(
-            AudioStreamPacket(
-                phase="completed",
-                session_id=accepted.session_id,
-                turn_id=accepted.turn_id,
-                generation_id=accepted.generation_id,
-                stream_id=accepted.audio_stream_id,
-                segment_id=asset.asset_id,
-                segment_index=segment_index,
-                text=text.strip(),
-                sample_rate=result.sample_rate,
-                duration_ms=result.duration_ms,
-                native_streaming=native_streaming,
-                provider_id=result.provider_id,
-                model=result.model,
-            )
-        )
-        await self._emit_avatar(accepted, "speech", "speaking", priority=70)
-        await self._emit_generic(
-            accepted,
-            "assistant.audio_chunk_queued",
-            {
-                "asset_id": str(asset.asset_id),
-                "stream_id": str(accepted.audio_stream_id),
-                "segment_id": str(asset.asset_id),
-                "segment_index": segment_index,
-                "url": asset.url,
-                "text": text.strip(),
-                "media_type": result.media_type,
-                "sample_rate": result.sample_rate,
-                "duration_ms": result.duration_ms,
-                "tts_provider": result.provider_id,
-                "tts_model": result.model,
-                "streamed_live": stream_started
-                and native_streaming
-                and live_completion_consumers > 0,
-            },
-        )
+        return await self._repository.recent_history(session_id, current_turn_id, limit=limit)
 
     async def _complete(self, accepted: GenerationAccepted, output: str) -> None:
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO turns(
-                    turn_id, session_id, role, committed_text, committed_at, created_at
-                )
-                VALUES (?, ?, 'assistant', ?, ?, ?)
-                """,
-                (
-                    str(assistant_turn_id),
-                    str(accepted.session_id),
-                    output,
-                    now.isoformat(),
-                    now.isoformat(),
-                ),
-            )
-            await connection.execute(
-                """
-                UPDATE generations SET state = ?, output_text = ?, completed_at = ?
-                WHERE generation_id = ?
-                """,
-                (
-                    GenerationState.COMPLETED.value,
-                    output,
-                    now.isoformat(),
-                    str(accepted.generation_id),
-                ),
-            )
-            await self._set_idle_if_current(connection, accepted, now)
+        await self._repository.complete_generation(
+            session_id=accepted.session_id,
+            generation_id=accepted.generation_id,
+            assistant_turn_id=assistant_turn_id,
+            output=output,
+            occurred_at=now,
+            set_session_idle=self._is_current(accepted),
+        )
         await self._emit_generic(
             accepted,
             "assistant.generation_completed",
@@ -838,39 +585,24 @@ class ConversationService:
 
     async def _cancelled(self, accepted: GenerationAccepted, reason: str) -> None:
         now = datetime.now(UTC)
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                UPDATE generations SET state = ?, invalidated_at = ?
-                WHERE generation_id = ? AND state = ?
-                """,
-                (
-                    GenerationState.CANCELLED.value,
-                    now.isoformat(),
-                    str(accepted.generation_id),
-                    GenerationState.RUNNING.value,
-                ),
-            )
-            await self._set_idle_if_current(connection, accepted, now)
+        await self._repository.cancel_generation(
+            session_id=accepted.session_id,
+            generation_id=accepted.generation_id,
+            occurred_at=now,
+            set_session_idle=self._is_current(accepted),
+        )
         await self._emit_generic(accepted, "assistant.generation_cancelled", {"reason": reason})
         await self._emit_generic(accepted, "conversation.interrupted", {"reason": reason})
 
     async def _failed(self, accepted: GenerationAccepted, error: Exception) -> None:
         now = datetime.now(UTC)
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                UPDATE generations SET state = ?, error_code = ?, completed_at = ?
-                WHERE generation_id = ?
-                """,
-                (
-                    GenerationState.FAILED.value,
-                    "provider_error",
-                    now.isoformat(),
-                    str(accepted.generation_id),
-                ),
-            )
-            await self._set_idle_if_current(connection, accepted, now)
+        await self._repository.fail_generation(
+            session_id=accepted.session_id,
+            generation_id=accepted.generation_id,
+            error_code="provider_error",
+            occurred_at=now,
+            set_session_idle=self._is_current(accepted),
+        )
         await self._publisher.emit(
             ErrorRaisedEvent(
                 event_id=uuid4(),
@@ -890,21 +622,6 @@ class ConversationService:
                 ),
             )
         )
-
-    async def _set_idle_if_current(
-        self,
-        connection: aiosqlite.Connection,
-        accepted: GenerationAccepted,
-        now: datetime,
-    ) -> None:
-        if self._is_current(accepted):
-            await connection.execute(
-                """
-                UPDATE sessions SET conversation_state = 'idle', updated_at = ?
-                WHERE session_id = ?
-                """,
-                (now.isoformat(), str(accepted.session_id)),
-            )
 
     async def _emit_generic(
         self, accepted: GenerationAccepted, event_type: str, payload: dict[str, object]

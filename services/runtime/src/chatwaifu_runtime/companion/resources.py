@@ -15,6 +15,8 @@ from chatwaifu_runtime.companion.settings import CompanionSettingsService
 class IdleTtsController(Protocol):
     async def deactivate_idle(self) -> bool: ...
 
+    async def refresh_capabilities(self) -> dict[str, str]: ...
+
 
 class IdleSttController(Protocol):
     async def deactivate(self) -> bool: ...
@@ -85,7 +87,8 @@ class ResourceLifecycleService:
         self._last_sleep_at = datetime.now(UTC)
         return self.status()
 
-    def wake(self) -> ResourceStatus:
+    async def wake(self) -> ResourceStatus:
+        await self._tts.refresh_capabilities()
         self.touch()
         return self.status()
 

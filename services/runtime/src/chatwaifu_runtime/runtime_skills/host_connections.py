@@ -6,7 +6,8 @@ import asyncio
 import json
 import os
 import shutil
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import RLock
@@ -26,8 +27,8 @@ from chatwaifu_protocol.skills import (
 from mcp import ClientSession
 from mcp.types import PaginatedRequestParams
 
-from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.repository import McpConnectionRepository, Record
 from chatwaifu_runtime.runtime_skills.transports import (
     McpClientTransport,
     enforce_mcp_json_payload_limit,
@@ -41,6 +42,7 @@ class McpConnectionSecretStore:
 
     def __init__(self, path: Path) -> None:
         self._path = path
+        self._journal_path = path.with_name(f".{path.name}.journal")
         self._lock = RLock()
 
     def get(self, connection_id: UUID) -> str | None:
@@ -55,26 +57,45 @@ class McpConnectionSecretStore:
                 secrets[str(connection_id)] = value
             else:
                 secrets.pop(str(connection_id), None)
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self._path.with_name(f".{self._path.name}.tmp")
-            payload = json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            try:
-                with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
-                    secret_file.write(payload)
-                    secret_file.flush()
-                    os.fsync(secret_file.fileno())
-                os.replace(temporary, self._path)
-                os.chmod(self._path, 0o600)
-            finally:
-                if temporary.exists():
-                    temporary.unlink()
+            self._write_journaled(secrets)
+
+    def recover(self) -> None:
+        """Finish a secret-store replacement interrupted by process termination."""
+
+        with self._lock:
+            if not self._journal_path.exists():
+                return
+            target = self._read_path(self._journal_path)
+            self._write_main(target)
+            self._journal_path.unlink(missing_ok=True)
+
+    def configured_ids(self) -> set[str]:
+        with self._lock:
+            return set(self._read())
+
+    def retain(self, valid_ids: set[str]) -> None:
+        """Remove orphaned secrets after the authoritative DB is loaded."""
+
+        with self._lock:
+            current = self._read()
+            retained = {key: value for key, value in current.items() if key in valid_ids}
+            if retained != current:
+                self._write_journaled(retained)
 
     def _read(self) -> dict[str, str]:
+        if self._journal_path.exists():
+            # A complete journal is always the intended next state.  Recovery is
+            # idempotent and happens before serving a secret.
+            target = self._read_path(self._journal_path)
+            self._write_main(target)
+            self._journal_path.unlink(missing_ok=True)
         if not self._path.exists():
             return {}
+        return self._read_path(self._path)
+
+    def _read_path(self, path: Path) -> dict[str, str]:
         try:
-            value: object = json.loads(self._path.read_text(encoding="utf-8"))
+            value: object = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as error:
             raise SkillExecutionError(
                 "mcp_secret_store_corrupt",
@@ -95,32 +116,152 @@ class McpConnectionSecretStore:
             )
         return cast(dict[str, str], typed)
 
+    def _write_journaled(self, secrets: dict[str, str]) -> None:
+        self._write_file(self._journal_path, secrets)
+        self._write_main(secrets)
+        self._journal_path.unlink(missing_ok=True)
+
+    def _write_main(self, secrets: dict[str, str]) -> None:
+        temporary = self._path.with_name(f".{self._path.name}.tmp")
+        try:
+            self._write_file(temporary, secrets)
+            os.replace(temporary, self._path)
+            os.chmod(self._path, 0o600)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _write_file(path: Path, secrets: dict[str, str]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(secrets, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
+            secret_file.write(payload)
+            secret_file.flush()
+            os.fsync(secret_file.fileno())
+        os.chmod(path, 0o600)
+
+
+class McpSecretMutationJournal:
+    """Durable intent log spanning the secret file and SQLite configuration.
+
+    A file replacement and a database transaction cannot share one atomic commit.
+    The journal records both the previous and intended token until the database
+    mutation commits. Startup can therefore finish or compensate an interrupted
+    create, update, or delete without guessing from the configured flag.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self._store = McpConnectionSecretStore(path)
+
+    def prepare(
+        self,
+        connection_id: UUID,
+        *,
+        operation: str,
+        previous_token: str | None,
+        next_token: str | None,
+        previous_revision: int | None,
+    ) -> None:
+        if operation not in {"create", "update", "delete"}:
+            raise ValueError("invalid MCP secret mutation operation")
+        record = json.dumps(
+            {
+                "operation": operation,
+                "previous_token": previous_token,
+                "next_token": next_token,
+                "previous_revision": previous_revision,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        self._store.set(connection_id, record)
+
+    def discard(self, connection_id: UUID) -> None:
+        self._store.set(connection_id, None)
+
+    def entries(self) -> dict[UUID, dict[str, object]]:
+        result: dict[UUID, dict[str, object]] = {}
+        for raw_id in self._store.configured_ids():
+            try:
+                connection_id = UUID(raw_id)
+                serialized = self._store.get(connection_id)
+                value: object = json.loads(serialized or "")
+            except (ValueError, json.JSONDecodeError) as error:
+                raise SkillExecutionError(
+                    "mcp_secret_journal_corrupt",
+                    "MCP secret mutation journal is invalid; refusing startup",
+                ) from error
+            if not isinstance(value, dict):
+                raise SkillExecutionError(
+                    "mcp_secret_journal_corrupt",
+                    "MCP secret mutation journal is invalid; refusing startup",
+                )
+            record = cast(dict[str, object], value)
+            operation = record.get("operation")
+            previous_token = record.get("previous_token")
+            next_token = record.get("next_token")
+            previous_revision = record.get("previous_revision")
+            if (
+                operation not in {"create", "update", "delete"}
+                or (previous_token is not None and not isinstance(previous_token, str))
+                or (next_token is not None and not isinstance(next_token, str))
+                or (previous_revision is not None and not isinstance(previous_revision, int))
+            ):
+                raise SkillExecutionError(
+                    "mcp_secret_journal_corrupt",
+                    "MCP secret mutation journal has invalid entries; refusing startup",
+                )
+            result[connection_id] = record
+        return result
+
 
 class McpConnectionManager:
     def __init__(
         self,
-        database: Database,
+        repository: McpConnectionRepository,
         data_root: Path,
         transport: McpClientTransport,
     ) -> None:
-        self._database = database
+        self._repository = repository
         self._root = data_root / "mcp-connections"
         self._secrets = McpConnectionSecretStore(data_root / "mcp-secrets.json")
+        self._secret_mutations = McpSecretMutationJournal(data_root / "mcp-secret-mutations.json")
         self._transport = transport
+        self._operation_locks: dict[UUID, asyncio.Lock] = {}
+        self._operation_locks_guard = asyncio.Lock()
 
     async def start(self) -> None:
         await asyncio.to_thread(self._root.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(self._secrets.recover)
+        rows = await self._repository.list_mcp_connection_records()
+        await self._recover_secret_mutations(rows)
+        valid_ids = {str(row["connection_id"]) for row in rows}
+        await asyncio.to_thread(self._secrets.retain, valid_ids)
+        configured_ids = await asyncio.to_thread(self._secrets.configured_ids)
+        await self._repository.reconcile_mcp_secret_flags(configured_ids)
+
+    @asynccontextmanager
+    async def operation_lease(self, connection_id: UUID) -> AsyncGenerator[None]:
+        """Serialize invocation, mutation, discovery, and removal for one connection."""
+
+        async with self._operation_locks_guard:
+            lock = self._operation_locks.setdefault(connection_id, asyncio.Lock())
+        async with lock:
+            yield
+
+    async def revision(self, connection_id: UUID) -> int:
+        revision = await self._repository.mcp_connection_revision(connection_id)
+        if revision is None:
+            raise KeyError("MCP connection not found")
+        return revision
 
     async def list(self) -> list[McpConnectionSnapshot]:
-        rows = await self._database.fetchall(
-            "SELECT * FROM mcp_connections ORDER BY name COLLATE NOCASE, connection_id"
-        )
+        rows = await self._repository.list_mcp_connection_records()
         return [self._snapshot(row) for row in rows]
 
     async def get(self, connection_id: UUID) -> McpConnectionSnapshot:
-        row = await self._database.fetchone(
-            "SELECT * FROM mcp_connections WHERE connection_id = ?", (str(connection_id),)
-        )
+        row = await self._repository.mcp_connection_record(connection_id)
         if row is None:
             raise KeyError("MCP connection not found")
         return self._snapshot(row)
@@ -131,41 +272,51 @@ class McpConnectionManager:
         *,
         bearer_token: str | None = None,
     ) -> McpConnectionSnapshot:
-        if bearer_token and bearer_token.strip():
-            await asyncio.to_thread(self._secrets.get, config.connection_id)
-        now = _now()
-        capabilities = _empty_capabilities(config.connection_id)
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO mcp_connections(
-                    connection_id, name, transport, command_json, url, allow_remote,
-                    enabled, timeout_seconds, trust_level, sandbox_mode, network_policy,
-                    bearer_token_configured, status, capabilities_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(config.connection_id),
-                    config.name,
-                    config.transport,
-                    json.dumps(config.command, ensure_ascii=False),
-                    config.url,
-                    int(config.allow_remote),
-                    int(config.enabled),
-                    config.timeout_seconds,
-                    config.trust_level,
-                    config.sandbox_mode,
-                    config.network_policy,
-                    int(bool(bearer_token and bearer_token.strip())),
-                    "untested" if config.enabled else "disabled",
-                    capabilities.model_dump_json(),
-                    now.isoformat(),
-                    now.isoformat(),
-                ),
-            )
-        if bearer_token and bearer_token.strip():
-            await asyncio.to_thread(self._secrets.set, config.connection_id, bearer_token.strip())
-        return await self.get(config.connection_id)
+        async with self.operation_lease(config.connection_id):
+            token = bearer_token.strip() if bearer_token and bearer_token.strip() else None
+            previous_token = await asyncio.to_thread(self._secrets.get, config.connection_id)
+            if previous_token is not None:
+                raise ValueError("MCP connection secret already exists")
+            if token is not None:
+                await asyncio.to_thread(
+                    self._secret_mutations.prepare,
+                    config.connection_id,
+                    operation="create",
+                    previous_token=None,
+                    next_token=token,
+                    previous_revision=None,
+                )
+                await asyncio.to_thread(self._secrets.set, config.connection_id, token)
+            now = _now()
+            capabilities = _empty_capabilities(config.connection_id)
+            try:
+                await self._repository.insert_mcp_connection(
+                    {
+                        "connection_id": str(config.connection_id),
+                        "name": config.name,
+                        "transport": config.transport,
+                        "command_json": json.dumps(config.command, ensure_ascii=False),
+                        "url": config.url,
+                        "allow_remote": int(config.allow_remote),
+                        "enabled": int(config.enabled),
+                        "timeout_seconds": config.timeout_seconds,
+                        "trust_level": config.trust_level,
+                        "sandbox_mode": config.sandbox_mode,
+                        "network_policy": config.network_policy,
+                        "bearer_token_configured": int(token is not None),
+                        "status": "untested" if config.enabled else "disabled",
+                        "capabilities_json": capabilities.model_dump_json(),
+                        "created_at": now.isoformat(),
+                        "updated_at": now.isoformat(),
+                    }
+                )
+            except BaseException:
+                if token is not None:
+                    await self._compensate_secret(config.connection_id, None)
+                raise
+            if token is not None:
+                await asyncio.to_thread(self._secret_mutations.discard, config.connection_id)
+            return await self.get(config.connection_id)
 
     async def update(
         self,
@@ -174,71 +325,97 @@ class McpConnectionManager:
         bearer_token: str | None = None,
         clear_bearer_token: bool = False,
     ) -> McpConnectionSnapshot:
-        if clear_bearer_token or (bearer_token is not None and bearer_token.strip()):
-            await asyncio.to_thread(self._secrets.get, config.connection_id)
-        current = await self.get(config.connection_id)
-        now = _now()
-        configured = current.bearer_token_configured
-        if clear_bearer_token:
-            configured = False
-        elif bearer_token is not None and bearer_token.strip():
-            configured = True
-        async with self._database.transaction() as connection:
-            cursor = await connection.execute(
-                """
-                UPDATE mcp_connections SET
-                    name = ?, transport = ?, command_json = ?, url = ?, allow_remote = ?,
-                    enabled = ?, timeout_seconds = ?, trust_level = ?, sandbox_mode = ?,
-                    network_policy = ?, bearer_token_configured = ?, status = ?,
-                    capabilities_json = ?, sandbox_backend = NULL,
-                    last_error = NULL, last_tested_at = NULL,
-                    updated_at = ?
-                WHERE connection_id = ?
-                """,
-                (
-                    config.name,
-                    config.transport,
-                    json.dumps(config.command, ensure_ascii=False),
-                    config.url,
-                    int(config.allow_remote),
-                    int(config.enabled),
-                    config.timeout_seconds,
-                    config.trust_level,
-                    config.sandbox_mode,
-                    config.network_policy,
-                    int(configured),
-                    "untested" if config.enabled else "disabled",
-                    _empty_capabilities(config.connection_id).model_dump_json(),
-                    now.isoformat(),
-                    str(config.connection_id),
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise KeyError("MCP connection not found")
-        if clear_bearer_token:
-            await asyncio.to_thread(self._secrets.set, config.connection_id, None)
-        elif bearer_token is not None and bearer_token.strip():
-            await asyncio.to_thread(self._secrets.set, config.connection_id, bearer_token.strip())
-        return await self.get(config.connection_id)
+        async with self.operation_lease(config.connection_id):
+            current = await self.get(config.connection_id)
+            previous_token = await asyncio.to_thread(self._secrets.get, config.connection_id)
+            now = _now()
+            configured = current.bearer_token_configured
+            next_token = previous_token
+            if clear_bearer_token:
+                configured = False
+                next_token = None
+            elif bearer_token is not None and bearer_token.strip():
+                configured = True
+                next_token = bearer_token.strip()
+            if next_token != previous_token:
+                await asyncio.to_thread(
+                    self._secret_mutations.prepare,
+                    config.connection_id,
+                    operation="update",
+                    previous_token=previous_token,
+                    next_token=next_token,
+                    previous_revision=await self.revision(config.connection_id),
+                )
+                await asyncio.to_thread(self._secrets.set, config.connection_id, next_token)
+            try:
+                updated = await self._repository.update_mcp_connection(
+                    {
+                        "connection_id": str(config.connection_id),
+                        "name": config.name,
+                        "transport": config.transport,
+                        "command_json": json.dumps(config.command, ensure_ascii=False),
+                        "url": config.url,
+                        "allow_remote": int(config.allow_remote),
+                        "enabled": int(config.enabled),
+                        "timeout_seconds": config.timeout_seconds,
+                        "trust_level": config.trust_level,
+                        "sandbox_mode": config.sandbox_mode,
+                        "network_policy": config.network_policy,
+                        "bearer_token_configured": int(configured),
+                        "status": "untested" if config.enabled else "disabled",
+                        "capabilities_json": _empty_capabilities(
+                            config.connection_id
+                        ).model_dump_json(),
+                        "updated_at": now.isoformat(),
+                    }
+                )
+                if not updated:
+                    raise KeyError("MCP connection not found")
+            except BaseException:
+                if next_token != previous_token:
+                    await self._compensate_secret(config.connection_id, previous_token)
+                raise
+            if next_token != previous_token:
+                await asyncio.to_thread(self._secret_mutations.discard, config.connection_id)
+            return await self.get(config.connection_id)
 
     async def delete(self, connection_id: UUID) -> None:
-        await asyncio.to_thread(self._secrets.get, connection_id)
-        async with self._database.transaction() as connection:
-            cursor = await connection.execute(
-                "DELETE FROM mcp_connections WHERE connection_id = ?", (str(connection_id),)
-            )
-            if cursor.rowcount != 1:
-                raise KeyError("MCP connection not found")
-        await asyncio.to_thread(self._secrets.set, connection_id, None)
-        working_root = self.working_root(connection_id)
-        if await asyncio.to_thread(working_root.exists):
-            await asyncio.to_thread(shutil.rmtree, working_root)
+        async with self.operation_lease(connection_id):
+            previous_token = await asyncio.to_thread(self._secrets.get, connection_id)
+            if previous_token is not None:
+                await asyncio.to_thread(
+                    self._secret_mutations.prepare,
+                    connection_id,
+                    operation="delete",
+                    previous_token=previous_token,
+                    next_token=None,
+                    previous_revision=await self.revision(connection_id),
+                )
+                await asyncio.to_thread(self._secrets.set, connection_id, None)
+            try:
+                if not await self._repository.delete_mcp_connection(connection_id):
+                    raise KeyError("MCP connection not found")
+            except BaseException:
+                if previous_token is not None:
+                    await self._compensate_secret(connection_id, previous_token)
+                raise
+            if previous_token is not None:
+                await asyncio.to_thread(self._secret_mutations.discard, connection_id)
+            working_root = self.working_root(connection_id)
+            if await asyncio.to_thread(working_root.exists):
+                await asyncio.to_thread(shutil.rmtree, working_root)
 
     async def test(self, connection_id: UUID) -> McpConnectionSnapshot:
+        async with self.operation_lease(connection_id):
+            return await self._test_unlocked(connection_id)
+
+    async def _test_unlocked(self, connection_id: UUID) -> McpConnectionSnapshot:
         current = await self.get(connection_id)
         config = _configuration(current)
+        sandbox_backend: str | None = None
+        sandbox_limits: tuple[str, ...] = ()
         try:
-            sandbox_backend = self._transport.connection_sandbox_backend(
+            sandbox_backend, sandbox_limits = self._transport.connection_sandbox_status(
                 config,
                 working_root=self.working_root(connection_id),
             )
@@ -247,36 +424,27 @@ class McpConnectionManager:
             raise
         except Exception as error:
             message = (
-                error.structured.message if isinstance(error, SkillExecutionError) else str(error)
+                error.structured.message
+                if isinstance(error, SkillExecutionError)
+                else f"MCP connection test failed ({type(error).__name__})"
             )
             now = _now()
-            async with self._database.transaction() as connection:
-                await connection.execute(
-                    """
-                    UPDATE mcp_connections SET status = 'error', last_error = ?,
-                        sandbox_backend = NULL, last_tested_at = ?, updated_at = ?
-                    WHERE connection_id = ?
-                    """,
-                    (message[:2_000], now.isoformat(), now.isoformat(), str(connection_id)),
-                )
+            await self._repository.mark_mcp_test_error(
+                connection_id,
+                message,
+                sandbox_backend,
+                json.dumps(sandbox_limits),
+                now.isoformat(),
+            )
             raise
         now = _now()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                UPDATE mcp_connections SET status = 'ready', capabilities_json = ?,
-                    sandbox_backend = ?, last_error = NULL,
-                    last_tested_at = ?, updated_at = ?
-                WHERE connection_id = ?
-                """,
-                (
-                    capabilities.model_dump_json(),
-                    sandbox_backend,
-                    now.isoformat(),
-                    now.isoformat(),
-                    str(connection_id),
-                ),
-            )
+        await self._repository.mark_mcp_test_ready(
+            connection_id,
+            capabilities.model_dump_json(),
+            sandbox_backend,
+            json.dumps(sandbox_limits),
+            now.isoformat(),
+        )
         return await self.get(connection_id)
 
     async def discover(self, config: McpConnectionConfiguration) -> McpCapabilitySnapshot:
@@ -342,7 +510,26 @@ class McpConnectionManager:
         )
         return snapshot
 
-    async def read_resource(self, connection_id: UUID, uri: str) -> JsonObject:
+    async def read_resource(
+        self,
+        connection_id: UUID,
+        uri: str,
+        *,
+        expected_revision: int | None = None,
+    ) -> JsonObject:
+        async with self.operation_lease(connection_id):
+            if (
+                expected_revision is not None
+                and await self.revision(connection_id) != expected_revision
+            ):
+                raise SkillExecutionError(
+                    "approval_context_changed",
+                    "MCP connection changed after approval; invoke it again",
+                    retryable=True,
+                )
+            return await self._read_resource_unlocked(connection_id, uri)
+
+    async def _read_resource_unlocked(self, connection_id: UUID, uri: str) -> JsonObject:
         current = await self.get(connection_id)
         config = _configuration(current)
         token = await asyncio.to_thread(self._secrets.get, connection_id)
@@ -365,6 +552,26 @@ class McpConnectionManager:
         return serialized
 
     async def get_prompt(
+        self,
+        connection_id: UUID,
+        name: str,
+        arguments: dict[str, str],
+        *,
+        expected_revision: int | None = None,
+    ) -> JsonObject:
+        async with self.operation_lease(connection_id):
+            if (
+                expected_revision is not None
+                and await self.revision(connection_id) != expected_revision
+            ):
+                raise SkillExecutionError(
+                    "approval_context_changed",
+                    "MCP connection changed after approval; invoke it again",
+                    retryable=True,
+                )
+            return await self._get_prompt_unlocked(connection_id, name, arguments)
+
+    async def _get_prompt_unlocked(
         self, connection_id: UUID, name: str, arguments: dict[str, str]
     ) -> JsonObject:
         current = await self.get(connection_id)
@@ -394,6 +601,36 @@ class McpConnectionManager:
     def working_root(self, connection_id: UUID) -> Path:
         return self._root / str(connection_id)
 
+    async def _compensate_secret(self, connection_id: UUID, token: str | None) -> None:
+        """Restore the secret first; retain the journal if restoration fails."""
+
+        await asyncio.to_thread(self._secrets.set, connection_id, token)
+        await asyncio.to_thread(self._secret_mutations.discard, connection_id)
+
+    async def _recover_secret_mutations(self, rows: list[Record]) -> None:
+        entries = await asyncio.to_thread(self._secret_mutations.entries)
+        if not entries:
+            return
+        by_id = {UUID(str(row["connection_id"])): row for row in rows}
+        for connection_id, mutation in entries.items():
+            operation = str(mutation["operation"])
+            row = by_id.get(connection_id)
+            previous_revision = mutation.get("previous_revision")
+            committed = (
+                (operation == "create" and row is not None)
+                or (operation == "delete" and row is None)
+                or (
+                    operation == "update"
+                    and row is not None
+                    and isinstance(previous_revision, int)
+                    and int(cast(int | str, row["revision"])) > previous_revision
+                )
+            )
+            selected = mutation["next_token"] if committed else mutation["previous_token"]
+            token = str(selected) if isinstance(selected, str) and selected else None
+            await asyncio.to_thread(self._secrets.set, connection_id, token)
+            await asyncio.to_thread(self._secret_mutations.discard, connection_id)
+
     def _snapshot(self, row: object) -> McpConnectionSnapshot:
         values = cast(dict[str, object], row)
         connection_id = UUID(str(values["connection_id"]))
@@ -417,6 +654,7 @@ class McpConnectionManager:
                 "status": values["status"],
                 "bearer_token_configured": bool(values["bearer_token_configured"]),
                 "sandbox_backend": values["sandbox_backend"],
+                "sandbox_limits_enforced": json.loads(str(values["sandbox_limits_json"])),
                 "capabilities": capabilities,
                 "last_error": values["last_error"],
                 "last_tested_at": values["last_tested_at"],

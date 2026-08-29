@@ -15,6 +15,7 @@ import pytest
 from chatwaifu_protocol.skills import McpConnectionConfiguration
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.host_connections import (
     McpConnectionManager,
@@ -55,7 +56,7 @@ async def test_manager_persists_and_clears_actual_stdio_sandbox_backend(
     database = Database(database_path, StorageConfig(database_path=database_path))
     await database.open()
     manager = McpConnectionManager(
-        database,
+        SQLiteRuntimeSkillRepository(database),
         tmp_path / "data",
         McpClientTransport(_ReportingSandboxLauncher()),
     )
@@ -87,7 +88,9 @@ async def test_manager_persists_and_clears_actual_stdio_sandbox_backend(
             await manager.test(connection_id)
         failed = await manager.get(connection_id)
         assert failed.status == "error"
-        assert failed.sandbox_backend is None
+        # Discovery failed after the launcher selected this backend; retain the
+        # observed isolation fact instead of reverting to "untested".
+        assert failed.sandbox_backend == "test_enforcing_backend"
 
         shutil.copy2(fixture, server)
         restored = await manager.test(connection_id)

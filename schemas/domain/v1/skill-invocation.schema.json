@@ -43,6 +43,11 @@
     "arguments": {
       "$ref": "#/$defs/JsonObject"
     },
+    "background": {
+      "default": false,
+      "title": "Background",
+      "type": "boolean"
+    },
     "capability": {
       "maxLength": 256,
       "minLength": 1,

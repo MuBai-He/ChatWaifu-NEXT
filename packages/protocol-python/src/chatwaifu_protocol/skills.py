@@ -37,6 +37,7 @@ class SkillCapability(ProtocolModel):
     confirmation_required: bool = False
     timeout_seconds: float = Field(default=30, gt=0)
     adapter_tool: str | None = Field(default=None, min_length=1, max_length=256)
+    adapter_operation: Literal["invoke", "resource_read", "prompt_get"] = "invoke"
 
 
 class SkillDefinition(ProtocolModel):
@@ -90,6 +91,7 @@ class PluginSnapshot(ProtocolModel):
     sandbox_mode: Literal["required", "preferred", "disabled"] = "required"
     network_policy: Literal["deny", "loopback", "allow"] = "deny"
     sandbox_backend: str | None = None
+    sandbox_limits_enforced: list[str] = Field(default_factory=list[str])
     install_path: str
     installed_at: AwareDatetime
     updated_at: AwareDatetime
@@ -99,6 +101,7 @@ class SkillInvocation(ProtocolModel):
     skill_id: str = Field(min_length=1, max_length=128)
     capability: str = Field(min_length=1, max_length=256)
     arguments: JsonObject = Field(default_factory=dict)
+    background: bool = False
 
 
 class SkillRunSnapshot(ProtocolModel):
@@ -241,6 +244,7 @@ class McpConnectionSnapshot(McpConnectionConfiguration):
     status: Literal["untested", "ready", "error", "disabled"] = "untested"
     bearer_token_configured: bool = False
     sandbox_backend: str | None = None
+    sandbox_limits_enforced: list[str] = Field(default_factory=list[str])
     capabilities: McpCapabilitySnapshot
     last_error: str | None = None
     last_tested_at: AwareDatetime | None = None

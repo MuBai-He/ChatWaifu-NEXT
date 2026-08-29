@@ -38,4 +38,34 @@ async def test_audio_stream_hub_is_session_scoped_and_bounded() -> None:
     overflow = await subscription.receive()
     assert overflow.phase == "cancelled"
     assert overflow.reason == "stream_backpressure_overflow"
+    hub.unsubscribe(subscription)
+    replacement = hub.subscribe(session_id)
+    next_generation = replace(
+        first,
+        generation_id=uuid4(),
+        stream_id=uuid4(),
+        segment_id=uuid4(),
+        phase="started",
+    )
+    assert await hub.publish(next_generation) == 1
+    assert (await replacement.receive()).generation_id == next_generation.generation_id
+    await hub.close()
+
+
+@pytest.mark.asyncio
+async def test_audio_stream_receipts_distinguish_a_late_replacement_consumer() -> None:
+    session_id = uuid4()
+    hub = AudioStreamHub(queue_size=4)
+    original = hub.subscribe(session_id)
+    packet = _packet(sequence=0, session_id=session_id)
+
+    started = await hub.publish_receipts(replace(packet, phase="started"))
+    assert started == {original.subscription_id}
+    assert (await original.receive()).phase == "started"
+
+    hub.unsubscribe(original)
+    replacement = hub.subscribe(session_id)
+    completed = await hub.publish_receipts(replace(packet, phase="completed"))
+    assert completed == {replacement.subscription_id}
+    assert started.isdisjoint(completed)
     await hub.close()

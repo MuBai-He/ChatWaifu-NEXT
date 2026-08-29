@@ -3,6 +3,7 @@
   "system.runtime_stopping",
   "system.component_health_changed",
   "session.closed",
+  "session.data_reset",
   "session.state_changed",
   "user.speech_progress",
   "assistant.text_delta",

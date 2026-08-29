@@ -79,6 +79,7 @@ class Database:
         connection = self._require_connection()
         async with self._lock:
             catalog = _validated_catalog(self._migrations)
+            await self._reject_unknown_ledger_versions(connection, catalog)
             await self._prepare_migration_ledger(connection)
             rows = await connection.execute_fetchall(
                 "SELECT version, checksum FROM schema_migrations ORDER BY version"
@@ -105,6 +106,35 @@ class Database:
                 if version in applied:
                     continue
                 await self._apply_migration(connection, version, script, checksum)
+
+    async def _reject_unknown_ledger_versions(
+        self,
+        connection: aiosqlite.Connection,
+        catalog: tuple[tuple[int, str, str], ...],
+    ) -> None:
+        """Inspect an existing ledger without mutating a possibly newer database."""
+
+        table = await connection.execute_fetchall(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'"
+        )
+        if not table:
+            return
+        columns = {
+            str(row["name"])
+            for row in await connection.execute_fetchall("PRAGMA table_info(schema_migrations)")
+        }
+        if "version" not in columns:
+            raise MigrationCatalogError("schema_migrations ledger has no version column")
+        rows = await connection.execute_fetchall("SELECT version FROM schema_migrations")
+        known_versions = {version for version, _script, _checksum in catalog}
+        unknown_versions = sorted(
+            int(row["version"]) for row in rows if row["version"] not in known_versions
+        )
+        if unknown_versions:
+            raise MigrationCatalogError(
+                "database contains migration versions newer than this Runtime: "
+                + ", ".join(str(version) for version in unknown_versions)
+            )
 
     async def _prepare_migration_ledger(self, connection: aiosqlite.Connection) -> None:
         try:

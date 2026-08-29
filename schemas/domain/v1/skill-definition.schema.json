@@ -50,6 +50,16 @@
     },
     "SkillCapability": {
       "properties": {
+        "adapter_operation": {
+          "default": "invoke",
+          "enum": [
+            "invoke",
+            "resource_read",
+            "prompt_get"
+          ],
+          "title": "Adapter Operation",
+          "type": "string"
+        },
         "adapter_tool": {
           "anyOf": [
             {

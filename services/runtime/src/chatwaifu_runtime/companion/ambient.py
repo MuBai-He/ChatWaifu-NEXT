@@ -20,7 +20,8 @@ from chatwaifu_runtime.companion.models import (
     ResourceStatus,
 )
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
-from chatwaifu_runtime.conversation.service import ConversationService, GenerationAccepted
+from chatwaifu_runtime.conversation.models import GenerationAccepted
+from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.sessions.service import SessionService

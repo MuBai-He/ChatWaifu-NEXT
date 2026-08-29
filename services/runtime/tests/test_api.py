@@ -2,12 +2,16 @@
 
 import json
 import os
+import shutil
 import sqlite3
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol, cast
 from uuid import uuid4
 
+import pytest
+from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.main import create_app
 from fastapi.testclient import TestClient
@@ -97,7 +101,64 @@ def test_health_session_persistence_and_event_stream(client: TestClient) -> None
 def test_websocket_announces_runtime(client: TestClient) -> None:
     with client.websocket_connect("/v1/events") as websocket:
         event = cast(dict[str, object], websocket.receive_json())
+    validated = GenericCoreEvent.model_validate(event)
     assert event["event_type"] == "system.runtime_started"
+    assert validated.source == "runtime.api"
+
+
+def test_websocket_replays_durable_events_after_sequence_without_duplicates(
+    client: TestClient,
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "测试断线恢复")
+    events = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
+    )
+    assert len(events) > 2
+    cursor = int(str(events[-3]["sequence"]))
+
+    with client.websocket_connect(
+        f"/v1/events?session_id={session_id}&after_sequence={cursor}"
+    ) as websocket:
+        started = GenericCoreEvent.model_validate(websocket.receive_json())
+        replayed = [
+            cast(dict[str, object], websocket.receive_json()),
+            cast(dict[str, object], websocket.receive_json()),
+        ]
+
+    assert started.event_type == "system.runtime_started"
+    assert [int(str(event["sequence"])) for event in replayed] == [cursor + 1, cursor + 2]
+
+
+def test_recovery_snapshot_replays_from_an_active_generation(
+    runtime_settings: Settings,
+) -> None:
+    slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1_000})
+    settings = runtime_settings.model_copy(update={"llm": slow_llm})
+    with TestClient(create_app(settings)) as client:
+        http = cast(RuntimeHttpClient, client)
+        session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+        session_id = str(session["session_id"])
+        accepted = cast(
+            dict[str, object],
+            http.post(f"/v1/sessions/{session_id}/turns", json={"text": "生成中断线"}).json(),
+        )
+        recovery = cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/recovery").json())
+        assert recovery["active_generation_id"] == accepted["generation_id"]
+        assert int(str(recovery["after_sequence"])) < int(str(recovery["last_sequence"]))
+        messages = cast(list[dict[str, object]], recovery["messages"])
+        assert [message["role"] for message in messages] == ["user"]
+
+        with client.websocket_connect(
+            f"/v1/events?session_id={session_id}&after_sequence={recovery['after_sequence']}"
+        ) as websocket:
+            websocket.receive_json()
+            generation_started = cast(dict[str, object], websocket.receive_json())
+        assert generation_started["event_type"] == "assistant.generation_started"
+        assert generation_started["generation_id"] == accepted["generation_id"]
 
 
 def test_model_roles_are_independent_and_api_keys_never_echo(
@@ -149,6 +210,17 @@ def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     client: TestClient, runtime_settings: Settings
 ) -> None:
     http = cast(RuntimeHttpClient, client)
+    catalog = cast(dict[str, object], http.get("/v1/tts/configurations").json())
+    entries = cast(list[dict[str, object]], catalog["items"])
+    assert catalog["count"] == 2
+    assert {entry["provider_id"] for entry in entries} == {
+        "aliyun_qwen_realtime",
+        "aliyun_cosyvoice_realtime",
+    }
+    assert all("configuration_schema" in entry for entry in entries)
+    assert all("ui_schema" in entry for entry in entries)
+    assert all("configuration" in entry for entry in entries)
+
     current = cast(
         dict[str, object],
         http.get("/v1/tts/configurations/aliyun_qwen_realtime").json(),
@@ -183,6 +255,18 @@ def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     secret_file = runtime_settings.config_dir / "tts-secrets.json"
     if os.name == "posix":
         assert secret_file.stat().st_mode & 0o777 == 0o600
+
+    partial = http.put(
+        "/v1/tts/configurations/aliyun_qwen_realtime",
+        json={"speech_rate": 1.1},
+    )
+    assert partial.status_code == 200
+    assert cast(dict[str, object], partial.json())["speech_rate"] == 1.1
+    assert cast(dict[str, object], partial.json())["api_key_configured"] is True
+
+    assert http.get("/v1/tts/configurations/not-installed").status_code == 404
+    assert http.put("/v1/tts/configurations/not-installed", json={}).status_code == 404
+    assert http.post("/v1/tts/configurations/not-installed/test", json={}).status_code == 404
 
     cosy_current = cast(
         dict[str, object],
@@ -583,6 +667,14 @@ def test_reset_clears_conversation_memory_events_and_audio(
     reset = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
     assert reset.status_code == 200
     result = cast(dict[str, object], reset.json())
+    assert result["scope"] == {
+        "character_id": "default",
+        "user_scope": "local",
+        "conversation": "current_session",
+        "audio": "current_session",
+        "memory": "current_character_user",
+        "character_state": "current_character_user",
+    }
     assert result["turns_deleted"] == 6
     assert int(str(result["events_deleted"])) > 0
     assert result["memories_deleted"] == 2
@@ -591,9 +683,15 @@ def test_reset_clears_conversation_memory_events_and_audio(
         cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
         == 0
     )
-    assert (
-        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["count"] == 0
+    remaining_events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{session_id}/events").json(),
+        )["items"],
     )
+    assert [event["event_type"] for event in remaining_events] == ["session.data_reset"]
+    reset_sequence = int(str(remaining_events[0]["sequence"]))
     assert (
         cast(dict[str, object], http.get("/v1/memory?include_tombstoned=true").json())["count"] == 0
     )
@@ -604,7 +702,358 @@ def test_reset_clears_conversation_memory_events_and_audio(
         list[dict[str, object]],
         cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
     )
-    assert fresh_events[0]["sequence"] == 1
+    assert fresh_events[0]["event_type"] == "session.data_reset"
+    assert int(str(fresh_events[0]["sequence"])) == reset_sequence
+    assert int(str(fresh_events[-1]["sequence"])) > reset_sequence
+
+
+def test_reset_is_scoped_across_sessions_characters_users_and_audio(
+    runtime_settings: Settings, tmp_path: Path
+) -> None:
+    source_character = runtime_settings.characters_dir / "default"
+    characters_dir = tmp_path / "characters"
+    shutil.copytree(source_character, characters_dir / "default")
+    shutil.copytree(source_character, characters_dir / "alternate")
+    alternate_manifest = characters_dir / "alternate" / "character.yaml"
+    alternate_manifest.write_text(
+        alternate_manifest.read_text(encoding="utf-8").replace(
+            "character_id: default", "character_id: alternate", 1
+        ),
+        encoding="utf-8",
+    )
+    settings = runtime_settings.model_copy(update={"characters_dir": characters_dir})
+
+    with TestClient(create_app(settings)) as client:
+        http = cast(RuntimeHttpClient, client)
+        first = cast(
+            dict[str, object],
+            http.post("/v1/sessions", json={"character_id": "default"}).json(),
+        )
+        sibling = cast(
+            dict[str, object],
+            http.post("/v1/sessions", json={"character_id": "default"}).json(),
+        )
+        other_character = cast(
+            dict[str, object],
+            http.post("/v1/sessions", json={"character_id": "alternate"}).json(),
+        )
+        first_id = str(first["session_id"])
+        sibling_id = str(sibling["session_id"])
+        other_id = str(other_character["session_id"])
+
+        _submit_and_wait(http, first_id, "请记住我喜欢紫色")
+        _submit_and_wait(http, sibling_id, "同一个角色的另一个会话仍需保留")
+        _submit_and_wait(http, other_id, "请记住我喜欢绿色")
+        http.post(
+            f"/v1/sessions/{first_id}/character-interactions",
+            json={"kind": "avatar_touch", "region": "body"},
+        )
+        http.post(
+            f"/v1/sessions/{other_id}/character-interactions",
+            json={"kind": "avatar_touch", "region": "body"},
+        )
+        other_state_before = cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{other_id}/character-state").json(),
+        )
+
+        with sqlite3.connect(settings.database_path) as connection:
+            connection.row_factory = sqlite3.Row
+            audio_by_session = {
+                session_id: {
+                    str(row["segment_id"])
+                    for row in connection.execute(
+                        "SELECT segment_id FROM playback_segments WHERE session_id = ?",
+                        (session_id,),
+                    )
+                }
+                for session_id in (first_id, sibling_id, other_id)
+            }
+            connection.execute(
+                """
+                INSERT INTO character_states
+                SELECT character_id, 'other-user', valence, arousal, energy, attention,
+                       embarrassment, tension, revision, updated_at
+                FROM character_states
+                WHERE character_id = 'default' AND user_scope = 'local'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO relationship_states
+                SELECT character_id, 'other-user', familiarity, trust, affinity, comfort,
+                       recent_tension, interaction_count, stage, preferred_address,
+                       revision, updated_at
+                FROM relationship_states
+                WHERE character_id = 'default' AND user_scope = 'local'
+                """
+            )
+            local_memory = connection.execute(
+                """
+                SELECT * FROM memory_records
+                WHERE namespace = 'character/default/user/local'
+                LIMIT 1
+                """
+            ).fetchone()
+            assert local_memory is not None
+            other_user_memory_id = str(uuid4())
+            connection.execute(
+                """
+                INSERT INTO memory_records(
+                    memory_id, namespace, kind, subject_id, predicate, value_json,
+                    text, normalized_text, search_terms, observed_at, valid_from,
+                    valid_to, confidence, importance, sensitivity, state, supersedes,
+                    pinned, created_at, updated_at, tombstoned_at
+                ) VALUES (?, 'character/default/user/other-user', ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
+                """,
+                (
+                    other_user_memory_id,
+                    local_memory["kind"],
+                    local_memory["subject_id"],
+                    local_memory["predicate"],
+                    local_memory["value_json"],
+                    local_memory["text"],
+                    local_memory["normalized_text"],
+                    local_memory["search_terms"],
+                    local_memory["observed_at"],
+                    local_memory["valid_from"],
+                    local_memory["valid_to"],
+                    local_memory["confidence"],
+                    local_memory["importance"],
+                    local_memory["sensitivity"],
+                    local_memory["state"],
+                    local_memory["pinned"],
+                    local_memory["created_at"],
+                    local_memory["updated_at"],
+                    local_memory["tombstoned_at"],
+                ),
+            )
+            other_user_source_event = connection.execute(
+                """
+                SELECT event_id,
+                       json_extract(envelope_json, '$.turn_id') AS turn_id
+                FROM events
+                WHERE session_id = ? AND event_type = 'user.turn_committed'
+                ORDER BY sequence LIMIT 1
+                """,
+                (first_id,),
+            ).fetchone()
+            assert other_user_source_event is not None
+            connection.execute(
+                """
+                INSERT INTO memory_sources(
+                    source_id, memory_id, source_event_id, session_id, turn_id,
+                    source_kind, created_at
+                ) VALUES (?, ?, ?, ?, ?, 'user_turn', ?)
+                """,
+                (
+                    str(uuid4()),
+                    other_user_memory_id,
+                    other_user_source_event["event_id"],
+                    first_id,
+                    other_user_source_event["turn_id"],
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+
+        audio_root = settings.data_dir / "audio"
+        assert all(audio_by_session.values())
+        reset = http.post(f"/v1/sessions/{first_id}/reset", json={"confirm": True})
+        assert reset.status_code == 200
+        result = cast(dict[str, object], reset.json())
+        assert cast(dict[str, object], result["scope"])["character_id"] == "default"
+        assert result["audio_assets_deleted"] == len(audio_by_session[first_id])
+
+        assert (
+            cast(dict[str, object], http.get(f"/v1/sessions/{first_id}/messages").json())["count"]
+            == 0
+        )
+        assert (
+            cast(dict[str, object], http.get(f"/v1/sessions/{sibling_id}/messages").json())["count"]
+            == 2
+        )
+        assert (
+            cast(dict[str, object], http.get(f"/v1/sessions/{other_id}/messages").json())["count"]
+            == 2
+        )
+        assert all(
+            not (audio_root / f"{asset_id}.wav").exists() for asset_id in audio_by_session[first_id]
+        )
+        assert all(
+            (audio_root / f"{asset_id}.wav").is_file()
+            for asset_id in audio_by_session[sibling_id] | audio_by_session[other_id]
+        )
+
+        memories = cast(
+            list[dict[str, object]],
+            cast(dict[str, object], http.get("/v1/memory?include_tombstoned=true").json())["items"],
+        )
+        namespaces = {str(memory["namespace"]) for memory in memories}
+        assert "character/default/user/local" not in namespaces
+        assert "character/default/user/other-user" in namespaces
+        assert "character/alternate/user/local" in namespaces
+        other_state_after = cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{other_id}/character-state").json(),
+        )
+        assert other_state_after["revision"] == other_state_before["revision"]
+        assert (
+            cast(dict[str, object], other_state_after["relationship"])["interaction_count"]
+            == cast(dict[str, object], other_state_before["relationship"])["interaction_count"]
+        )
+        with sqlite3.connect(settings.database_path) as connection:
+            assert connection.execute(
+                """
+                SELECT COUNT(*) FROM character_states
+                WHERE character_id = 'default' AND user_scope = 'other-user'
+                """
+            ).fetchone() == (1,)
+            assert connection.execute(
+                """
+                SELECT COUNT(*) FROM relationship_states
+                WHERE character_id = 'default' AND user_scope = 'other-user'
+                """
+            ).fetchone() == (1,)
+
+        repeated = cast(
+            dict[str, object],
+            http.post(f"/v1/sessions/{first_id}/reset", json={"confirm": True}).json(),
+        )
+        assert repeated["turns_deleted"] == 0
+        assert repeated["events_deleted"] == 1
+        assert repeated["memories_deleted"] == 0
+        assert repeated["audio_assets_deleted"] == 0
+
+        retained_events = cast(
+            list[dict[str, object]],
+            cast(dict[str, object], http.get(f"/v1/sessions/{first_id}/events").json())["items"],
+        )
+        assert [event["event_type"] for event in retained_events] == [
+            "user.turn_committed",
+            "session.data_reset",
+        ]
+        retained_sequence = max(int(str(event["sequence"])) for event in retained_events)
+        _submit_and_wait(http, first_id, "重置之后继续聊天")
+        continued_events = cast(
+            list[dict[str, object]],
+            cast(dict[str, object], http.get(f"/v1/sessions/{first_id}/events").json())["items"],
+        )
+        continued_sequences = [int(str(event["sequence"])) for event in continued_events]
+        assert len(continued_sequences) == len(set(continued_sequences))
+        assert max(continued_sequences) > retained_sequence
+
+
+def test_reset_rolls_back_all_truth_and_audio_when_one_delete_fails(
+    client: TestClient, runtime_settings: Settings
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "请记住我喜欢蓝色")
+    http.post(
+        f"/v1/sessions/{session_id}/character-interactions",
+        json={"kind": "avatar_touch", "region": "body"},
+    )
+    messages_before = int(
+        str(
+            cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
+        )
+    )
+    memories_before = int(str(cast(dict[str, object], http.get("/v1/memory").json())["count"]))
+    audio_before = tuple((runtime_settings.data_dir / "audio").glob("*.wav"))
+    assert messages_before > 0
+    assert memories_before > 0
+    assert audio_before
+
+    with sqlite3.connect(runtime_settings.database_path) as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER inject_experience_reset_failure
+            BEFORE DELETE ON character_states
+            WHEN old.character_id = 'default' AND old.user_scope = 'local'
+            BEGIN
+                SELECT RAISE(ABORT, 'injected_experience_reset_failure');
+            END
+            """
+        )
+
+    with pytest.raises(Exception, match="injected_experience_reset_failure"):
+        http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
+
+    assert (
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
+        == messages_before
+    )
+    assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == memories_before
+    assert all(path.is_file() for path in audio_before)
+    assert not list((runtime_settings.data_dir / "audio" / "reset-quarantine").glob("*"))
+
+    with sqlite3.connect(runtime_settings.database_path) as connection:
+        connection.execute("DROP TRIGGER inject_experience_reset_failure")
+
+
+def test_reset_event_is_live_and_keeps_the_session_cursor_monotonic(
+    client: TestClient,
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+    session_id = str(session["session_id"])
+    _submit_and_wait(http, session_id, "跨窗口重置前的消息")
+    before = cast(
+        list[dict[str, object]],
+        cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
+    )
+    cursor = max(int(str(event["sequence"])) for event in before)
+
+    with client.websocket_connect(
+        f"/v1/events?session_id={session_id}&after_sequence={cursor}"
+    ) as websocket:
+        assert websocket.receive_json()["event_type"] == "system.runtime_started"
+        response = http.post(f"/v1/sessions/{session_id}/reset", json={"confirm": True})
+        assert response.status_code == 200
+        reset_event = cast(dict[str, object], websocket.receive_json())
+
+    assert reset_event["event_type"] == "session.data_reset"
+    assert int(str(reset_event["sequence"])) == cursor + 1
+    recovery = cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/recovery").json())
+    assert recovery["messages"] == []
+    assert recovery["after_sequence"] == cursor + 1
+    assert recovery["last_sequence"] == cursor + 1
+
+
+def test_startup_reconciles_crash_left_audio_quarantine_from_database_truth(
+    runtime_settings: Settings,
+) -> None:
+    with TestClient(create_app(runtime_settings)) as first_client:
+        http = cast(RuntimeHttpClient, first_client)
+        session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
+        session_id = str(session["session_id"])
+        _submit_and_wait(http, session_id, "生成一段用于崩溃恢复的语音")
+        with sqlite3.connect(runtime_settings.database_path) as connection:
+            row = connection.execute(
+                "SELECT segment_id FROM playback_segments WHERE session_id = ? LIMIT 1",
+                (session_id,),
+            ).fetchone()
+        assert row is not None
+        referenced_asset_id = str(row[0])
+
+    audio_root = runtime_settings.data_dir / "audio"
+    quarantine_batch = audio_root / "reset-quarantine" / str(uuid4())
+    quarantine_batch.mkdir(parents=True)
+    referenced_path = audio_root / f"{referenced_asset_id}.wav"
+    referenced_staged = quarantine_batch / referenced_path.name
+    referenced_path.replace(referenced_staged)
+    orphan_asset_id = str(uuid4())
+    orphan_staged = quarantine_batch / f"{orphan_asset_id}.wav"
+    orphan_staged.write_bytes(b"orphaned reset audio")
+
+    with TestClient(create_app(runtime_settings)) as restarted:
+        assert restarted.get("/v1/runtime/health").status_code == 200
+
+    assert referenced_path.is_file()
+    assert not orphan_staged.exists()
+    assert not (audio_root / "reset-quarantine").exists()
 
 
 def test_reset_cancels_an_active_generation(runtime_settings: Settings) -> None:
@@ -626,10 +1075,14 @@ def test_reset_cancels_an_active_generation(runtime_settings: Settings) -> None:
             cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
             == 0
         )
-        assert (
-            cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["count"]
-            == 0
+        reset_events = cast(
+            list[dict[str, object]],
+            cast(
+                dict[str, object],
+                http.get(f"/v1/sessions/{session_id}/events").json(),
+            )["items"],
         )
+        assert [event["event_type"] for event in reset_events] == ["session.data_reset"]
 
 
 def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) -> None:

@@ -14,11 +14,8 @@ from chatwaifu_runtime.providers.tts import (
     SherpaKokoroWorkerTtsProvider,
     WorkerTtsProvider,
 )
-from chatwaifu_runtime.providers.tts_aliyun import AliyunQwenRealtimeTtsProvider
-from chatwaifu_runtime.providers.tts_aliyun_cosyvoice import (
-    AliyunCosyVoiceRealtimeTtsProvider,
-)
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
+from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.providers.tts_router import TtsRouter
 
 
@@ -55,10 +52,8 @@ def build_providers(
     tts_kind = settings.tts.selected_provider
     tts_providers: dict[str, TtsProvider] = {}
     if tts_configurations is not None:
-        tts_providers["aliyun_qwen_realtime"] = AliyunQwenRealtimeTtsProvider(tts_configurations)
-        tts_providers["aliyun_cosyvoice_realtime"] = AliyunCosyVoiceRealtimeTtsProvider(
-            tts_configurations
-        )
+        for registration in TTS_PROVIDER_REGISTRATIONS:
+            tts_providers[registration.provider_id] = registration.build(tts_configurations)
     if settings.tts.provider is None:
         for provider_id, endpoint in settings.tts.workers.items():
             token = endpoint.token.get_secret_value() if endpoint.token else None
@@ -72,9 +67,7 @@ def build_providers(
                     supports_style=endpoint.supports_style,
                     supports_speed=endpoint.supports_speed,
                     supports_pitch=endpoint.supports_pitch,
-                    # Worker protocol v1 returns one complete WAV. Engine-level
-                    # incremental decoding is not end-to-end native streaming.
-                    native_streaming=False,
+                    native_streaming=endpoint.native_streaming,
                     local_only=True,
                 ),
                 base_url=endpoint.url,

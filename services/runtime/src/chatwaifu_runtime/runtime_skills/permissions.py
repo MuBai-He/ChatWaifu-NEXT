@@ -3,48 +3,42 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import SideEffect
 from chatwaifu_protocol.skills import SkillCapability
 
-from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.runtime_skills.execution_plan import ExecutionPlan
+from chatwaifu_runtime.runtime_skills.repository import PermissionRepository
+
+CONFIRMATION_TTL_SECONDS = 5 * 60
 
 
 class PermissionBroker:
-    def __init__(self, database: Database) -> None:
-        self._database = database
+    def __init__(self, repository: PermissionRepository) -> None:
+        self._repository = repository
 
     async def missing_permissions(
         self,
         *,
         principal: str,
         session_id: UUID,
-        skill_id: str,
-        capability: SkillCapability,
+        plan: ExecutionPlan,
     ) -> list[str]:
+        capability = plan.capability
         missing: list[str] = []
         for permission in capability.required_permissions:
-            row = await self._database.fetchone(
-                """
-                SELECT 1 FROM permission_grants
-                WHERE principal = ? AND skill_id = ? AND capability = ? AND permission = ?
-                  AND revoked_at IS NULL
-                  AND (expires_at IS NULL OR expires_at > ?)
-                  AND (scope = 'always' OR (scope = 'session' AND session_id = ?))
-                LIMIT 1
-                """,
-                (
-                    principal,
-                    skill_id,
-                    capability.name,
-                    permission,
-                    _now().isoformat(),
-                    str(session_id),
-                ),
+            granted = await self._repository.has_permission_grant(
+                principal=principal,
+                session_id=session_id,
+                skill_id=plan.skill_id,
+                capability=capability.name,
+                permission=permission,
+                subject_fingerprint=plan.permission_subject_fingerprint(),
+                now=_now().isoformat(),
             )
-            if row is None:
+            if not granted:
                 missing.append(permission)
         return missing
 
@@ -53,41 +47,36 @@ class PermissionBroker:
         *,
         skill_run_id: UUID,
         principal: str,
-        skill_id: str,
-        capability: SkillCapability,
+        plan: ExecutionPlan,
         missing_permissions: list[str],
     ) -> UUID:
+        capability = plan.capability
         request_id = uuid4()
-        now = _now().isoformat()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO permission_requests(
-                    request_id, skill_run_id, principal, skill_id, capability,
-                    permissions_json, side_effect, reason, state, requested_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-                """,
-                (
-                    str(request_id),
-                    str(skill_run_id),
-                    principal,
-                    skill_id,
-                    capability.name,
-                    json.dumps(missing_permissions),
-                    capability.side_effect.value,
-                    _reason(capability, missing_permissions),
-                    now,
+        requested_at = _now()
+        now = requested_at.isoformat()
+        expires_at = (requested_at + timedelta(seconds=CONFIRMATION_TTL_SECONDS)).isoformat()
+        await self._repository.create_permission_request(
+            {
+                "request_id": str(request_id),
+                "skill_run_id": str(skill_run_id),
+                "principal": principal,
+                "skill_id": plan.skill_id,
+                "skill_version": plan.skill_version,
+                "capability": capability.name,
+                "subject_fingerprint": plan.permission_subject_fingerprint(),
+                "plugin_id": plan.plugin_id,
+                "plugin_fingerprint": plan.plugin_fingerprint,
+                "mcp_connection_id": (
+                    str(plan.mcp_connection_id) if plan.mcp_connection_id is not None else None
                 ),
-            )
-            await connection.execute(
-                """
-                UPDATE skill_runs
-                SET state = 'waiting_for_confirmation', confirmation_request_id = ?,
-                    updated_at = ?
-                WHERE skill_run_id = ?
-                """,
-                (str(request_id), now, str(skill_run_id)),
-            )
+                "mcp_connection_revision": plan.mcp_connection_revision,
+                "permissions_json": json.dumps(missing_permissions),
+                "side_effect": capability.side_effect.value,
+                "reason": _reason(capability, missing_permissions),
+                "requested_at": now,
+                "expires_at": expires_at,
+            }
+        )
         return request_id
 
     async def decide(
@@ -98,13 +87,14 @@ class PermissionBroker:
         decided_by: str,
         session_id: UUID,
     ) -> tuple[UUID, bool]:
-        row = await self._database.fetchone(
-            "SELECT * FROM permission_requests WHERE request_id = ?", (str(request_id),)
-        )
+        row = await self._repository.permission_request(request_id)
         if row is None:
             raise KeyError("confirmation request not found")
         if str(row["state"]) != "pending":
             raise ValueError("confirmation request is no longer pending")
+        if datetime.fromisoformat(str(row["expires_at"])) <= _now():
+            await self._expire_request(request_id, UUID(str(row["skill_run_id"])))
+            raise ValueError("confirmation request has expired")
         side_effect = SideEffect(str(row["side_effect"]))
         if decision == "allow_always" and side_effect is not SideEffect.READ:
             raise ValueError("persistent grants are only allowed for read-only capabilities")
@@ -118,48 +108,21 @@ class PermissionBroker:
             raise ValueError("invalid confirmation decision")
         now = _now().isoformat()
         permissions = json.loads(str(row["permissions_json"]))
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                UPDATE permission_requests
-                SET state = 'decided', decision = ?, decided_by = ?, decided_at = ?
-                WHERE request_id = ?
-                """,
-                (decision, decided_by, now, str(request_id)),
-            )
-            if decision in {"allow_session", "allow_always"}:
-                scope = "session" if decision == "allow_session" else "always"
-                for permission in permissions:
-                    await connection.execute(
-                        """
-                        INSERT INTO permission_grants(
-                            grant_id, principal, skill_id, capability, permission,
-                            scope, session_id, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            str(uuid4()),
-                            str(row["principal"]),
-                            str(row["skill_id"]),
-                            str(row["capability"]),
-                            str(permission),
-                            scope,
-                            str(session_id) if scope == "session" else None,
-                            now,
-                        ),
-                    )
+        decided = await self._repository.decide_permission_request(
+            request_id=request_id,
+            decision=decision,
+            decided_by=decided_by,
+            decided_at=now,
+            session_id=session_id,
+            grants=[str(permission) for permission in permissions],
+        )
+        if not decided:
+            raise ValueError("confirmation request is no longer pending")
         return UUID(str(row["skill_run_id"])), decision != "deny"
 
     async def list_pending(self, session_id: UUID) -> list[dict[str, object]]:
-        rows = await self._database.fetchall(
-            """
-            SELECT pr.* FROM permission_requests pr
-            JOIN skill_runs sr ON sr.skill_run_id = pr.skill_run_id
-            WHERE sr.session_id = ? AND pr.state = 'pending'
-            ORDER BY pr.requested_at
-            """,
-            (str(session_id),),
-        )
+        await self.expire_pending()
+        rows = await self._repository.pending_permission_requests(session_id, _now().isoformat())
         return [
             {
                 "request_id": str(row["request_id"]),
@@ -170,9 +133,22 @@ class PermissionBroker:
                 "side_effect": str(row["side_effect"]),
                 "reason": str(row["reason"]),
                 "requested_at": str(row["requested_at"]),
+                "expires_at": str(row["expires_at"]),
             }
             for row in rows
         ]
+
+    async def expire_for_run(self, skill_run_id: UUID) -> None:
+        now = _now().isoformat()
+        await self._repository.expire_permission_for_run(skill_run_id, now)
+
+    async def expire_pending(self) -> None:
+        now = _now().isoformat()
+        await self._repository.expire_pending_permissions(now)
+
+    async def _expire_request(self, request_id: UUID, skill_run_id: UUID) -> None:
+        now = _now().isoformat()
+        await self._repository.expire_permission_for_run(skill_run_id, now)
 
 
 def _reason(capability: SkillCapability, missing_permissions: list[str]) -> str:

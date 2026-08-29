@@ -140,6 +140,41 @@ def test_oci_backend_is_available_on_windows_when_image_is_configured(tmp_path: 
     assert plan.enforced is True
     assert "none" in plan.command
     assert "no-new-privileges" in plan.command
+    assert plan.resource_limits_enforced == ("process_count", "memory", "cpu")
+
+
+def test_oci_maps_read_only_package_and_writable_data_paths(tmp_path: Path) -> None:
+    package_root = tmp_path / "package"
+    data_root = tmp_path / "data"
+    package_root.mkdir()
+    data_root.mkdir()
+    server = package_root / "server.py"
+    server.write_text("print('fixture')\n", encoding="utf-8")
+    planner = SandboxPlanner(
+        platform_name="win32",
+        which=lambda name: "C:/docker.exe" if name == "docker" else None,
+    )
+
+    plan = planner.prepare(
+        [sys.executable, str(server)],
+        working_dir=data_root,
+        mode="required",
+        trust_level="untrusted",
+        network_policy="deny",
+        container_image="python:3.12-alpine",
+        read_only_roots=(package_root,),
+        environment={
+            "CHATWAIFU_PLUGIN_PACKAGE_DIR": str(package_root),
+            "CHATWAIFU_PLUGIN_DATA_DIR": str(data_root),
+            "CHATWAIFU_MCP_SUBJECT_ID": "fixture",
+        },
+    )
+
+    assert "/package-0/server.py" in plan.command
+    assert f"type=bind,src={package_root},dst=/package-0,readonly" in plan.command
+    assert f"type=bind,src={data_root},dst=/plugin" in plan.command
+    assert "CHATWAIFU_PLUGIN_PACKAGE_DIR=/package-0" in plan.command
+    assert "CHATWAIFU_PLUGIN_DATA_DIR=/plugin" in plan.command
 
 
 def test_runtime_launcher_normalizes_required_backend_failure(tmp_path: Path) -> None:

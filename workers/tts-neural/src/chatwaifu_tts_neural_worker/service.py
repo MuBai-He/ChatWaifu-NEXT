@@ -48,6 +48,8 @@ class SynthesisService:
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=settings.provider_id)
         self._jobs: dict[UUID, asyncio.Task[Any]] = {}
         self._cancel_events: dict[UUID, threading.Event] = {}
+        self._engine_job_lock = threading.Lock()
+        self._engine_generation_id: UUID | None = None
 
     async def start(self) -> None:
         if self._settings.preload:
@@ -60,7 +62,7 @@ class SynthesisService:
             loop = asyncio.get_running_loop()
             audio, sample_rate, duration_ms = await loop.run_in_executor(
                 self._executor,
-                partial(engine.synthesize, request, cancel_event),
+                partial(self._synthesize_with_identity, engine, request, cancel_event),
             )
             if cancel_event.is_set():
                 raise asyncio.CancelledError("generation_cancelled")
@@ -90,6 +92,7 @@ class SynthesisService:
             maxsize=self._settings.stream_queue_size
         )
         producer: asyncio.Future[None] | None = None
+        consumer_aborted = False
         try:
             engine = await self._ensure_loaded()
             loop = asyncio.get_running_loop()
@@ -103,7 +106,12 @@ class SynthesisService:
             )
             emitted = False
             while True:
-                item = await asyncio.to_thread(output.get)
+                try:
+                    item = await asyncio.to_thread(output.get, True, 0.1)
+                except queue.Empty:
+                    if cancel_event.is_set():
+                        raise asyncio.CancelledError("generation_cancelled") from None
+                    continue
                 if item is _STREAM_DONE:
                     break
                 if isinstance(item, _StreamFailure):
@@ -119,23 +127,30 @@ class SynthesisService:
                 raise asyncio.CancelledError("generation_cancelled")
             if not emitted:
                 raise RuntimeError("TTS engine returned no streaming audio")
+        except (asyncio.CancelledError, GeneratorExit):
+            consumer_aborted = True
+            raise
         finally:
             cancel_event.set()
             try:
                 if producer is not None and not producer.done():
-                    engine = self._engine
-                    if engine is not None:
-                        engine.cancel()
-                    try:
-                        await asyncio.wait_for(asyncio.shield(producer), timeout=5)
-                    except TimeoutError:
-                        # The generation identity is removed below, so even a late
-                        # native chunk can no longer reach Runtime playback.
-                        pass
-                    except asyncio.CancelledError:
-                        raise
-                    except Exception:
-                        pass
+                    self._cancel_engine_if_active(request.generation_id)
+                    if consumer_aborted:
+                        # Do not hold cancellation behind another generation that
+                        # currently owns the serialized engine executor.  A queued
+                        # future can be cancelled without touching that owner.
+                        producer.cancel()
+                    else:
+                        try:
+                            await asyncio.wait_for(asyncio.shield(producer), timeout=5)
+                        except TimeoutError:
+                            # The generation identity is removed below, so even a late
+                            # native chunk can no longer reach Runtime playback.
+                            pass
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception:
+                            pass
             finally:
                 if self._jobs.get(request.generation_id) is current:
                     self._jobs.pop(request.generation_id, None)
@@ -147,8 +162,7 @@ class SynthesisService:
         if task is None or event is None or task.done():
             return False
         event.set()
-        if self._engine is not None:
-            self._engine.cancel()
+        self._cancel_engine_if_active(generation_id)
         task.cancel("generation_cancelled")
         return True
 
@@ -225,14 +239,17 @@ class SynthesisService:
         self._cancel_events[generation_id] = cancel_event
         return current, cancel_event
 
-    @staticmethod
     def _produce_stream(
+        self,
         engine: SynthesisEngine,
         request: TtsSynthesisRequest,
         cancel_event: threading.Event,
         output: queue.Queue[EnginePcmChunk | _StreamFailure | object],
     ) -> None:
         try:
+            if cancel_event.is_set():
+                raise SynthesisCancelled
+            self._set_engine_generation(request.generation_id)
             for chunk in engine.stream_pcm(request, cancel_event):
                 if cancel_event.is_set():
                     raise SynthesisCancelled
@@ -248,6 +265,39 @@ class SynthesisService:
             _put_terminal(output, _StreamFailure(error), cancel_event)
         else:
             _put_terminal(output, _STREAM_DONE, cancel_event)
+        finally:
+            self._clear_engine_generation(request.generation_id)
+
+    def _synthesize_with_identity(
+        self,
+        engine: SynthesisEngine,
+        request: TtsSynthesisRequest,
+        cancel_event: threading.Event,
+    ) -> tuple[bytes, int, int]:
+        if cancel_event.is_set():
+            raise SynthesisCancelled
+        self._set_engine_generation(request.generation_id)
+        try:
+            return engine.synthesize(request, cancel_event)
+        finally:
+            self._clear_engine_generation(request.generation_id)
+
+    def _set_engine_generation(self, generation_id: UUID) -> None:
+        with self._engine_job_lock:
+            self._engine_generation_id = generation_id
+
+    def _clear_engine_generation(self, generation_id: UUID) -> None:
+        with self._engine_job_lock:
+            if self._engine_generation_id == generation_id:
+                self._engine_generation_id = None
+
+    def _cancel_engine_if_active(self, generation_id: UUID) -> None:
+        with self._engine_job_lock:
+            if self._engine_generation_id != generation_id:
+                return
+            engine = self._engine
+            if engine is not None:
+                engine.cancel()
 
 
 def _put_terminal(
