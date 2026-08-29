@@ -15,9 +15,11 @@ def test_tauri_dev_server_binds_the_same_ipv4_url_it_waits_for() -> None:
     build = cast(dict[str, object], config["build"])
     command = str(build["beforeDevCommand"])
 
-    assert "exec vite --host 127.0.0.1 --port 5173" in command
+    assert "dev:desktop -- --host 127.0.0.1 --port 5173" in command
     assert "vite -- --host" not in command
     assert build["devUrl"] == "http://127.0.0.1:5173"
+    assert str(build["beforeBuildCommand"]).endswith("@chatwaifu/web build:desktop")
+    assert build["frontendDist"] == "../../web/dist/desktop"
 
 
 def test_windows_release_script_explicitly_targets_x64() -> None:

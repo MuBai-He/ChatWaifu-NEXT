@@ -1,13 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ChatWaifu NEXT",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "local.chatwaifu.next",
   "build": {
-    "beforeBuildCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web build",
-    "beforeDevCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web exec vite --host 127.0.0.1 --port 5173",
+    "beforeBuildCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web build:desktop",
+    "beforeDevCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web dev:desktop -- --host 127.0.0.1 --port 5173",
     "devUrl": "http://127.0.0.1:5173",
-    "frontendDist": "../../web/dist"
+    "frontendDist": "../../web/dist/desktop"
   },
   "app": {
     "macOSPrivateApi": true,

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "products": {
+    "web": {
+      "version": "0.2.0",
+      "tag_prefix": "web-v",
+      "frontend_mode": "web",
+      "frontend_output": "apps/web/dist/web"
+    },
+    "desktop": {
+      "version": "0.2.0",
+      "tag_prefix": "desktop-v",
+      "frontend_mode": "desktop",
+      "frontend_output": "apps/web/dist/desktop"
+    }
+  }
+}

@@ -4,7 +4,11 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "pnpm --filter @chatwaifu/web dev",
+    "dev:web": "pnpm --filter @chatwaifu/web dev:web",
+    "dev:desktop-ui": "pnpm --filter @chatwaifu/web dev:desktop",
     "build": "pnpm -r --if-present build",
+    "build:web": "pnpm --filter @chatwaifu/web build:web",
+    "build:desktop-ui": "pnpm --filter @chatwaifu/web build:desktop",
     "build:windows-x64": "pnpm --filter @chatwaifu/desktop build:windows-x64",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo desktop format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo desktop build-web build-desktop-ui verify-release format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -16,6 +16,15 @@ demo:
 
 desktop: bootstrap setup-stt-worker setup-neural-tts-workers
 	$(PNPM) --filter @chatwaifu/desktop dev
+
+build-web:
+	$(PNPM) --filter @chatwaifu/web build:web
+
+build-desktop-ui:
+	$(PNPM) --filter @chatwaifu/web build:desktop
+
+verify-release:
+	$(UV) run python tools/product_release.py verify --product $(PRODUCT) --tag $(TAG)
 
 format:
 	$(UV) run ruff format .

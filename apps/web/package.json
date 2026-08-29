@@ -1,16 +1,22 @@
 {
   "name": "@chatwaifu/web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --mode web",
+    "dev:web": "vite --mode web",
+    "dev:desktop": "vite --mode desktop",
+    "build": "pnpm run build:web",
+    "build:web": "tsc -b && vite build --mode web",
+    "build:desktop": "tsc -b && vite build --mode desktop",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc -b --pretty false",
-    "preview": "vite preview"
+    "preview": "vite preview --mode web",
+    "preview:web": "vite preview --mode web",
+    "preview:desktop": "vite preview --mode desktop"
   },
   "dependencies": {
     "@chatwaifu/avatar-sdk": "workspace:*",

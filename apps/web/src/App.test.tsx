@@ -8,13 +8,14 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import App from "./App";
 import type { ChatMessage, TtsProviderSnapshot } from "./features/chat/types";
 import type { SubtitlePlaybackProgress } from "./features/chat/subtitlePlayback";
 import type {
   VoiceActivationMode,
   VoiceConnectionState,
 } from "./features/chat/voiceClient";
+import { DesktopProductApp } from "./product/desktop/DesktopProductApp";
+import { WebProductApp } from "./product/web/WebProductApp";
 
 const nativeWindow = vi.hoisted(() => ({
   label: String("avatar-overlay"),
@@ -129,6 +130,15 @@ const defaultTtsProviders = session.ttsProviders.map((provider) => ({
   ...provider,
 }));
 
+function CurrentProduct() {
+  return window.location.pathname.startsWith("/desktop") ||
+    window.location.pathname === "/control-center" ? (
+    <DesktopProductApp />
+  ) : (
+    <WebProductApp />
+  );
+}
+
 vi.mock("./features/chat/useChatSession", () => ({
   useChatSession: () => session,
 }));
@@ -173,7 +183,7 @@ describe("ChatWaifu usable demo", () => {
   });
 
   it("renders the connected character conversation surface", () => {
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(
       screen.getByRole("link", { name: "ChatWaifu NEXT home" }),
@@ -207,7 +217,7 @@ describe("ChatWaifu usable demo", () => {
   it("renders the transparent desktop-pet surface on its dedicated route", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(screen.queryByText("NENE ONLINE")).toBeNull();
     expect(screen.getByText(/欢迎回来/)).toBeTruthy();
@@ -249,7 +259,7 @@ describe("ChatWaifu usable demo", () => {
         },
       ]);
 
-      render(<App />);
+      render(<CurrentProduct />);
 
       const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
       fireEvent.pointerDown(avatar, {
@@ -283,7 +293,7 @@ describe("ChatWaifu usable demo", () => {
     });
     session.hitTest.mockReturnValue([]);
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const avatar = screen.getByRole("button", { name: "摸摸绫地宁宁" });
     fireEvent.pointerDown(avatar, {
@@ -313,7 +323,7 @@ describe("ChatWaifu usable demo", () => {
     session.avatarWarning =
       "Cannot initialize WebGL2 with the current Windows graphics adapter.";
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(screen.getByRole("status").textContent).toBe(
       "Cannot initialize WebGL2 with the current Windows graphics adapter.",
@@ -325,7 +335,7 @@ describe("ChatWaifu usable demo", () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.voiceState = "unsupported";
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const voiceButton = screen.getByRole("button", {
       name: "检查麦克风不可用原因",
@@ -347,7 +357,7 @@ describe("ChatWaifu usable demo", () => {
       },
     ];
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(screen.queryByText(/欢迎回来/)).toBeNull();
     expect(
@@ -366,7 +376,7 @@ describe("ChatWaifu usable demo", () => {
         pending: true,
       },
     ];
-    const { rerender } = render(<App />);
+    const { rerender } = render(<CurrentProduct />);
     const dialogue = document.querySelector(".desktop-pet-dialogue p");
     if (!(dialogue instanceof HTMLParagraphElement))
       throw new Error("expected desktop-pet dialogue");
@@ -385,7 +395,7 @@ describe("ChatWaifu usable demo", () => {
       playedTextUnits: 8,
       phase: "playing",
     };
-    rerender(<App />);
+    rerender(<CurrentProduct />);
 
     expect(dialogue.scrollTop).toBe(80);
 
@@ -393,14 +403,14 @@ describe("ChatWaifu usable demo", () => {
       ...session.subtitlePlayback,
       playedTextUnits: 8.5,
     };
-    rerender(<App />);
+    rerender(<CurrentProduct />);
     expect(dialogue.scrollTop).toBe(80);
 
     session.subtitlePlayback = {
       ...session.subtitlePlayback,
       playedTextUnits: 10,
     };
-    rerender(<App />);
+    rerender(<CurrentProduct />);
     expect(dialogue.scrollTop).toBe(100);
   });
 
@@ -408,7 +418,7 @@ describe("ChatWaifu usable demo", () => {
     window.history.replaceState({}, "", "/desktop-pet");
     session.send.mockResolvedValueOnce(undefined);
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const messageBox = screen.getByRole("textbox", {
       name: "桌宠文字消息",
@@ -427,7 +437,7 @@ describe("ChatWaifu usable demo", () => {
   it("reveals desktop-pet controls from pointer presence without focus", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const petShell = document.querySelector(".desktop-pet-shell");
     if (!(petShell instanceof HTMLElement))
@@ -443,7 +453,7 @@ describe("ChatWaifu usable demo", () => {
   it("keeps the compact HUD limited to subtitle visibility", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const displaySettings = screen.getByRole("button", {
       name: "桌宠显示设置",
@@ -462,7 +472,7 @@ describe("ChatWaifu usable demo", () => {
   it("renders a dedicated desktop settings window without conversation controls", async () => {
     window.history.replaceState({}, "", "/desktop-settings");
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "桌宠" }),
@@ -496,7 +506,7 @@ describe("ChatWaifu usable demo", () => {
     });
     nativeWindow.label = "control-center";
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "桌宠" }),
@@ -518,7 +528,7 @@ describe("ChatWaifu usable demo", () => {
     });
     nativeWindow.label = "avatar-overlay";
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "桌宠" }),
@@ -539,7 +549,7 @@ describe("ChatWaifu usable demo", () => {
       },
     ];
 
-    render(<App />);
+    render(<CurrentProduct />);
 
     const dialogue = screen.getByRole("region", { name: "当前对话" });
     expect(dialogue.textContent).not.toContain("欢迎回来");
@@ -548,7 +558,7 @@ describe("ChatWaifu usable demo", () => {
 
   it("confirms before resetting conversation and memory", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<App />);
+    render(<CurrentProduct />);
 
     fireEvent.click(screen.getByRole("button", { name: "重置对话和记忆" }));
 
@@ -557,7 +567,7 @@ describe("ChatWaifu usable demo", () => {
   });
 
   it("defaults to intentional push-to-talk capture", () => {
-    render(<App />);
+    render(<CurrentProduct />);
     fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const activationMode = screen.getByRole("combobox", {
@@ -577,7 +587,7 @@ describe("ChatWaifu usable demo", () => {
   });
 
   it("defaults to Qwen TTS and can select GPT-SoVITS", () => {
-    render(<App />);
+    render(<CurrentProduct />);
     fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const framing = screen.getByRole("combobox", { name: "角色构图" });
@@ -631,7 +641,7 @@ describe("ChatWaifu usable demo", () => {
         },
       },
     );
-    render(<App />);
+    render(<CurrentProduct />);
     fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const tts = screen.getByRole("combobox", { name: "选择语音模型" });
@@ -651,7 +661,7 @@ describe("ChatWaifu usable demo", () => {
   it("only transmits while the push-to-talk control is held", () => {
     session.voiceState = "connected";
     session.voiceConnected = true;
-    render(<App />);
+    render(<CurrentProduct />);
 
     const pushToTalk = screen.getByRole("button", { name: "按住说话" });
     fireEvent.pointerDown(pushToTalk, { pointerId: 7 });
