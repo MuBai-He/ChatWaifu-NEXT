@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveWebSurface } from "./WebProductApp";
+import { resolveWebSurface } from "./webSurface";
 
 describe("Web product surfaces", () => {
   it("owns the browser application and Avatar Lab only", () => {

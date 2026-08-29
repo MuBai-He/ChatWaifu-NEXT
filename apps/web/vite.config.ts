@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import type { Plugin } from "vite";
+import { normalizePath, type Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
 type ProductMode = "web" | "desktop";
@@ -54,7 +54,8 @@ function productManifestPlugin(product: ProductMode): Plugin {
   return {
     name: "chatwaifu-product-manifest",
     generateBundle(_options, bundle) {
-      const sourceRoot = `${path.resolve(import.meta.dirname, "src")}${path.sep}`;
+      const sourceRoot = `${normalizePath(path.resolve(import.meta.dirname, "src"))}/`;
+      const webRoot = normalizePath(import.meta.dirname);
       const bundledModules: string[] = [];
       for (const output of Object.values(bundle)) {
         if (output.type === "chunk") {
@@ -62,12 +63,9 @@ function productManifestPlugin(product: ProductMode): Plugin {
         }
       }
       const modules = bundledModules
+        .map(normalizePath)
         .filter((moduleId) => moduleId.startsWith(sourceRoot))
-        .map((moduleId) =>
-          path
-            .relative(import.meta.dirname, moduleId)
-            .replaceAll(path.sep, "/"),
-        );
+        .map((moduleId) => path.posix.relative(webRoot, moduleId));
       this.emitFile({
         type: "asset",
         fileName: "chatwaifu-product.json",
