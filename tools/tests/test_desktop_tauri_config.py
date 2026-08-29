@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from typing import cast
 
@@ -46,9 +47,7 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
     installer = cast(
         dict[str, object],
         json.loads(
-            (ROOT / "apps/desktop/src-tauri/tauri.installer.conf.json").read_text(
-                encoding="utf-8"
-            )
+            (ROOT / "apps/desktop/src-tauri/tauri.installer.conf.json").read_text(encoding="utf-8")
         ),
     )
     base_bundle = cast(dict[str, object], base["bundle"])
@@ -88,3 +87,40 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "optimize_live2d_texture.ps1" in script
     assert "-TexturePath $Live2DTexture -MaxDimension 4096" in script
     assert '$ChecksumPath = "$FinalInstaller.sha256"' in script
+    assert "[System.Diagnostics.FileVersionInfo]::GetVersionInfo" in script
+    assert '$VersionInfo.FileDescription -ne "ChatWaifu NEXT Runtime"' in script
+    assert "Assert-RuntimeFileIdentity $RuntimeExecutable" in script
+
+
+def test_frozen_windows_runtime_uses_chatwaifu_file_identity_and_icon() -> None:
+    spec_path = ROOT / "packaging/windows/chatwaifu-runtime.spec"
+    spec = spec_path.read_text(encoding="utf-8")
+    compile(spec, str(spec_path), "exec")
+    build_script = (ROOT / "tools/windows/build_installer_x64.ps1").read_text(encoding="utf-8")
+    version_path = ROOT / "packaging/windows/runtime-version.txt"
+    version_info = version_path.read_text(encoding="utf-8")
+    compile(version_info, str(version_path), "eval")
+    runtime_package = tomllib.loads(
+        (ROOT / "services/runtime/pyproject.toml").read_text(encoding="utf-8")
+    )
+    runtime_version = str(runtime_package["project"]["version"])
+    version_tuple = (*[int(part) for part in runtime_version.split(".")], 0)
+    windows_version = f"{runtime_version}.0"
+    icon = ROOT / "apps/desktop/src-tauri/icons/icon.ico"
+
+    assert "from PyInstaller.compat import is_win" in spec
+    assert 'WINDOWS_RUNTIME_ICON = ROOT / "apps" / "desktop"' in spec
+    assert 'WINDOWS_RUNTIME_VERSION = ROOT / "packaging" / "windows"' in spec
+    assert "icon=str(WINDOWS_RUNTIME_ICON) if is_win else None" in spec
+    assert "version=str(WINDOWS_RUNTIME_VERSION) if is_win else None" in spec
+    assert icon.read_bytes().startswith(b"\x00\x00\x01\x00")
+    assert f"filevers={version_tuple}" in version_info
+    assert f"prodvers={version_tuple}" in version_info
+    assert f"StringStruct(u'FileVersion', u'{windows_version}')" in version_info
+    assert f"StringStruct(u'ProductVersion', u'{windows_version}')" in version_info
+    assert f'$VersionInfo.FileVersion -ne "{windows_version}"' in build_script
+    assert f'$VersionInfo.ProductVersion -ne "{windows_version}"' in build_script
+    assert "StringStruct(u'CompanyName', u'ChatWaifu NEXT')" in version_info
+    assert "StringStruct(u'FileDescription', u'ChatWaifu NEXT Runtime')" in version_info
+    assert "StringStruct(u'ProductName', u'ChatWaifu NEXT Runtime')" in version_info
+    assert "StringStruct(u'OriginalFilename', u'chatwaifu-runtime.exe')" in version_info

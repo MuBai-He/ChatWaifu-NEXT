@@ -64,6 +64,30 @@ function Assert-X64Pe {
     }
 }
 
+function Assert-RuntimeFileIdentity {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $VersionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($Path)
+    if ($VersionInfo.FileDescription -ne "ChatWaifu NEXT Runtime") {
+        throw "Unexpected Runtime file description: $($VersionInfo.FileDescription)"
+    }
+    if ($VersionInfo.ProductName -ne "ChatWaifu NEXT Runtime") {
+        throw "Unexpected Runtime product name: $($VersionInfo.ProductName)"
+    }
+    if ($VersionInfo.CompanyName -ne "ChatWaifu NEXT") {
+        throw "Unexpected Runtime company name: $($VersionInfo.CompanyName)"
+    }
+    if ($VersionInfo.OriginalFilename -ne "chatwaifu-runtime.exe") {
+        throw "Unexpected Runtime original filename: $($VersionInfo.OriginalFilename)"
+    }
+    if ($VersionInfo.FileVersion -ne "0.1.0.0") {
+        throw "Unexpected Runtime file version: $($VersionInfo.FileVersion)"
+    }
+    if ($VersionInfo.ProductVersion -ne "0.1.0.0") {
+        throw "Unexpected Runtime product version: $($VersionInfo.ProductVersion)"
+    }
+}
+
 if (-not (Test-Path $VenvPython -PathType Leaf)) {
     throw "Missing x64 .venv. Run tools/windows/bootstrap_x64.ps1 first."
 }
@@ -179,6 +203,7 @@ try {
     Assert-X64Pe $HostExecutable
     Assert-X64Pe $RuntimeExecutable
     Assert-X64Pe $HelperExecutable
+    Assert-RuntimeFileIdentity $RuntimeExecutable
 
     $NsisRoot = Join-Path $RepoRoot "target\$Target\release\bundle\nsis"
     $Installer = Get-ChildItem -Path $NsisRoot -Filter "*-setup.exe" -File |

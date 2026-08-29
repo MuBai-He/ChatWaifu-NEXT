@@ -2,11 +2,14 @@
 
 from pathlib import Path
 
+from PyInstaller.compat import is_win
 from PyInstaller.utils.hooks import collect_submodules, copy_metadata, get_package_paths
 
 
 ROOT = Path.cwd().resolve()
 PIPECAT_ROOT = Path(get_package_paths("pipecat")[1])
+WINDOWS_RUNTIME_ICON = ROOT / "apps" / "desktop" / "src-tauri" / "icons" / "icon.ico"
+WINDOWS_RUNTIME_VERSION = ROOT / "packaging" / "windows" / "runtime-version.txt"
 
 datas = [
     (str(ROOT / "config"), "config"),
@@ -63,6 +66,8 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
+    icon=str(WINDOWS_RUNTIME_ICON) if is_win else None,
+    version=str(WINDOWS_RUNTIME_VERSION) if is_win else None,
     codesign_identity=None,
     entitlements_file=None,
     contents_directory="_internal",
