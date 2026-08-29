@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MemoryControlCenter } from "./MemoryControlCenter";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
+import { SkillConfirmationPrompt } from "./SkillConfirmationPrompt";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import {
   buildTtsProviderChoices,
@@ -113,6 +114,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
 
   return (
     <main className="vn-shell">
+      <SkillConfirmationPrompt sessionId={sessionId} />
       <section className="vn-stage" aria-label="Conversation">
         <div className="vn-sky" aria-hidden="true">
           <i className="vn-moon" />

@@ -8,9 +8,15 @@ import { getSessionEvents } from "./runtime-client/sessionsClient";
 import { runtimeWebSocketUrl } from "./runtimeEndpoint";
 
 export const RUNTIME_EVENT_NOTIFICATION = "chatwaifu:runtime-event";
+export const RUNTIME_CONNECTION_NOTIFICATION = "chatwaifu:runtime-connection";
+export type RuntimeConnectionState = "connecting" | "connected" | "offline";
+export type RuntimeConnectionNotification = {
+  sessionId: string;
+  state: RuntimeConnectionState;
+};
 
 interface RuntimeSocketCallbacks {
-  onConnection: (state: "connecting" | "connected" | "offline") => void;
+  onConnection: (state: RuntimeConnectionState) => void;
   onEvent: (event: DomainEvent) => void;
   onAudio: (message: TtsStreamMessage) => void;
   onProtocolError: (message: string) => void;
@@ -40,7 +46,7 @@ export class RuntimeSocketClient {
     this.sessionId = sessionId;
     this.lastSequence = Math.max(0, afterSequence);
     this.eventPipeline = Promise.resolve();
-    this.callbacks.onConnection("connecting");
+    this.notifyConnection("connecting");
     void this.connectEvents(false, epoch);
     if (this.audioEnabled) void this.connectAudio(false, epoch);
   }
@@ -94,7 +100,7 @@ export class RuntimeSocketClient {
       this.eventSocket = socket;
       socket.onopen = () => {
         if (this.isEventSocketCurrent(socket, epoch, sessionId))
-          this.callbacks.onConnection("connected");
+          this.notifyConnection("connected");
       };
       socket.onmessage = (message) => {
         if (!this.isEventSocketCurrent(socket, epoch, sessionId)) return;
@@ -110,17 +116,17 @@ export class RuntimeSocketClient {
       };
       socket.onerror = () => {
         if (this.isEventSocketCurrent(socket, epoch, sessionId))
-          this.callbacks.onConnection("offline");
+          this.notifyConnection("offline");
       };
       socket.onclose = () => {
         if (!this.isEventSocketCurrent(socket, epoch, sessionId)) return;
         this.eventSocket = null;
-        this.callbacks.onConnection("connecting");
+        this.notifyConnection("connecting");
         this.scheduleEventReconnect(epoch, sessionId);
       };
     } catch (error: unknown) {
       if (!this.isCurrent(epoch, sessionId)) return;
-      this.callbacks.onConnection("offline");
+      this.notifyConnection("offline");
       this.callbacks.onProtocolError(
         messageText(error, "Runtime 事件连接失败。"),
       );
@@ -269,6 +275,18 @@ export class RuntimeSocketClient {
     );
   }
 
+  private notifyConnection(state: RuntimeConnectionState): void {
+    this.callbacks.onConnection(state);
+    const sessionId = this.sessionId;
+    if (!sessionId) return;
+    window.dispatchEvent(
+      new CustomEvent<RuntimeConnectionNotification>(
+        RUNTIME_CONNECTION_NOTIFICATION,
+        { detail: { sessionId, state } },
+      ),
+    );
+  }
+
   private isEventSocketCurrent(
     socket: WebSocket,
     epoch: number,
@@ -292,7 +310,7 @@ export class RuntimeSocketClient {
     this.eventReconnectTimer = window.setTimeout(() => {
       this.eventReconnectTimer = null;
       if (!this.isCurrent(epoch, sessionId)) return;
-      this.callbacks.onConnection("connecting");
+      this.notifyConnection("connecting");
       void this.eventPipeline.finally(() => this.connectEvents(true, epoch));
     }, this.reconnectDelayMs);
   }

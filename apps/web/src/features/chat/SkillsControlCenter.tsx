@@ -9,9 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ModalPortal } from "./ModalPortal";
 import {
   cancelSkillRun,
-  decideSkillConfirmation,
   getPlugins,
-  getSkillConfirmations,
   getSkillInstructions,
   getSkillRuns,
   getSkills,
@@ -21,7 +19,6 @@ import {
   setPluginEnabled,
   uninstallPlugin,
 } from "./runtimeClient";
-import type { SkillConfirmation } from "./runtimeClient";
 import { RUNTIME_EVENT_NOTIFICATION } from "./runtimeSocketClient";
 
 interface Selection {
@@ -38,7 +35,6 @@ export function SkillsControlCenter({
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
   const [plugins, setPlugins] = useState<PluginSnapshot[]>([]);
   const [runs, setRuns] = useState<SkillRunSnapshot[]>([]);
-  const [confirmations, setConfirmations] = useState<SkillConfirmation[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [argumentsText, setArgumentsText] = useState("{}");
   const [sourcePath, setSourcePath] = useState("");
@@ -48,17 +44,14 @@ export function SkillsControlCenter({
 
   const refresh = useCallback(async () => {
     if (!sessionId) return;
-    const [nextSkills, nextPlugins, nextRuns, nextConfirmations] =
-      await Promise.all([
-        getSkills(),
-        getPlugins(),
-        getSkillRuns(sessionId),
-        getSkillConfirmations(sessionId),
-      ]);
+    const [nextSkills, nextPlugins, nextRuns] = await Promise.all([
+      getSkills(),
+      getPlugins(),
+      getSkillRuns(sessionId),
+    ]);
     setSkills(nextSkills);
     setPlugins(nextPlugins);
     setRuns(nextRuns);
-    setConfirmations(nextConfirmations);
   }, [sessionId]);
 
   useEffect(() => {
@@ -369,94 +362,6 @@ export function SkillsControlCenter({
                   </article>
                 ))}
 
-                {confirmations.length ? (
-                  <div className="confirmation-stack">
-                    <div className="skills-section-title">
-                      <strong>等待确认</strong>
-                      <small>{confirmations.length}</small>
-                    </div>
-                    {confirmations.map((confirmation) => (
-                      <article key={confirmation.request_id}>
-                        <strong>
-                          {confirmation.skill_id}.{confirmation.capability}
-                        </strong>
-                        <p>{confirmation.reason}</p>
-                        <code>
-                          {confirmation.side_effect} ·{" "}
-                          {confirmation.permissions.join(", ") || "no grant"}
-                        </code>
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void act(
-                                `confirm:${confirmation.request_id}`,
-                                () =>
-                                  decideSkillConfirmation(
-                                    confirmation.request_id,
-                                    "allow_once",
-                                  ),
-                              )
-                            }
-                          >
-                            仅这次
-                          </button>
-                          {!dangerousSideEffect(confirmation.side_effect) ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void act(
-                                  `confirm:${confirmation.request_id}`,
-                                  () =>
-                                    decideSkillConfirmation(
-                                      confirmation.request_id,
-                                      "allow_session",
-                                    ),
-                                )
-                              }
-                            >
-                              本会话授权
-                            </button>
-                          ) : null}
-                          {confirmation.side_effect === "read" ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void act(
-                                  `confirm:${confirmation.request_id}`,
-                                  () =>
-                                    decideSkillConfirmation(
-                                      confirmation.request_id,
-                                      "allow_always",
-                                    ),
-                                )
-                              }
-                            >
-                              始终允许
-                            </button>
-                          ) : null}
-                          <button
-                            className="danger"
-                            type="button"
-                            onClick={() =>
-                              void act(
-                                `confirm:${confirmation.request_id}`,
-                                () =>
-                                  decideSkillConfirmation(
-                                    confirmation.request_id,
-                                    "deny",
-                                  ),
-                              )
-                            }
-                          >
-                            拒绝
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-
                 <div className="run-stack">
                   <div className="skills-section-title">
                     <strong>最近运行</strong>
@@ -509,12 +414,6 @@ function defaultArguments(skillId: string, capability: string): string {
   if (skillId === "local.echo" && capability === "wait")
     return '{\n  "seconds": 1\n}';
   return "{}";
-}
-
-function dangerousSideEffect(sideEffect: string): boolean {
-  return ["destructive", "external_communication", "device_control"].includes(
-    sideEffect,
-  );
 }
 
 function isTerminal(state: string): boolean {

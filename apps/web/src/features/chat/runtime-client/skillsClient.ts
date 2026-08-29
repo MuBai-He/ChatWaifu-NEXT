@@ -20,10 +20,27 @@ const skillConfirmationSchema = z
     side_effect: z.string(),
     reason: z.string(),
     requested_at: z.string().datetime({ offset: true }),
+    expires_at: z.string().datetime({ offset: true }),
+    allowed_decisions: z.array(
+      z.enum(["allow_once", "allow_session", "allow_always", "deny"]),
+    ),
+    argument_preview: z.object({
+      text: z
+        .string()
+        .max(4096)
+        .refine(
+          (text) => new TextEncoder().encode(text).byteLength <= 4096,
+          "argument preview exceeds 4096 UTF-8 bytes",
+        ),
+      truncated: z.boolean(),
+      redacted: z.boolean(),
+    }),
   })
   .passthrough();
 
 export type SkillConfirmation = z.infer<typeof skillConfirmationSchema>;
+export type SkillConfirmationDecision =
+  SkillConfirmation["allowed_decisions"][number];
 
 function listParser<Result>(parseItem: (input: unknown) => Result) {
   return runtimeParser((input: unknown): Result[] => {

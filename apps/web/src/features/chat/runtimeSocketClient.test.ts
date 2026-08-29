@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getSessionEvents } from "./runtime-client/sessionsClient";
 import { runtimeWebSocketUrl } from "./runtimeEndpoint";
-import { RuntimeSocketClient } from "./runtimeSocketClient";
+import {
+  RUNTIME_CONNECTION_NOTIFICATION,
+  RuntimeSocketClient,
+  type RuntimeConnectionNotification,
+} from "./runtimeSocketClient";
 
 vi.mock("./runtimeEndpoint", () => ({
   runtimeWebSocketUrl: vi.fn().mockResolvedValue("ws://runtime.test"),
@@ -153,6 +157,45 @@ describe("RuntimeSocketClient replay", () => {
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
     expect(runtimeWebSocketUrl).toHaveBeenLastCalledWith(true);
     client.stop();
+  });
+
+  it("announces the session when the event socket reconnects", async () => {
+    const notifications: RuntimeConnectionNotification[] = [];
+    const listener = (rawEvent: Event) => {
+      notifications.push(
+        (rawEvent as CustomEvent<RuntimeConnectionNotification>).detail,
+      );
+    };
+    window.addEventListener(RUNTIME_CONNECTION_NOTIFICATION, listener);
+    const client = new RuntimeSocketClient(
+      {
+        onConnection: vi.fn(),
+        onEvent: vi.fn(),
+        onAudio: vi.fn(),
+        onProtocolError: vi.fn(),
+      },
+      false,
+      0,
+    );
+
+    client.start(SESSION_ID);
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    FakeWebSocket.instances[0].onopen?.();
+    FakeWebSocket.instances[0].onclose?.();
+    await vi.runAllTimersAsync();
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(2));
+    FakeWebSocket.instances[1].onopen?.();
+
+    expect(
+      notifications.filter(
+        (notification) => notification.state === "connected",
+      ),
+    ).toEqual([
+      { sessionId: SESSION_ID, state: "connected" },
+      { sessionId: SESSION_ID, state: "connected" },
+    ]);
+    client.stop();
+    window.removeEventListener(RUNTIME_CONNECTION_NOTIFICATION, listener);
   });
 
   it("rejects a replay that is still discontinuous and reconnects from the last safe cursor", async () => {

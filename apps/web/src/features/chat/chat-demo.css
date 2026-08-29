@@ -597,7 +597,6 @@
 
 .skill-card,
 .plugin-card,
-.confirmation-stack article,
 .run-stack article,
 .skill-invoker {
   margin-bottom: 10px;
@@ -619,14 +618,12 @@
 
 .skill-card-heading strong,
 .plugin-card strong,
-.confirmation-stack strong,
 .run-stack strong {
   font-size: 0.78rem;
 }
 
 .skill-card-heading code,
-.plugin-card code,
-.confirmation-stack code {
+.plugin-card code {
   color: var(--faint);
   font: 0.58rem var(--mono);
 }
@@ -641,7 +638,6 @@
 
 .skill-card > p,
 .plugin-card > p,
-.confirmation-stack p,
 .run-stack p {
   margin: 8px 0;
   color: var(--muted);
@@ -658,7 +654,6 @@
 .capability-list button,
 .instructions-toggle,
 .plugin-card button,
-.confirmation-stack button,
 .run-stack button,
 .install-example,
 .local-plugin-install button,
@@ -750,19 +745,16 @@
   margin: 0;
 }
 
-.plugin-card > div:last-child,
-.confirmation-stack article > div {
+.plugin-card > div:last-child {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.plugin-card button.danger,
-.confirmation-stack button.danger {
+.plugin-card button.danger {
   color: #be123c;
 }
 
-.confirmation-stack,
 .run-stack {
   margin-top: 18px;
 }

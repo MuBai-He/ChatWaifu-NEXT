@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import { useChatSession } from "../chat/useChatSession";
 import {
   calculatePagedSubtitleScrollTop,
@@ -149,6 +150,7 @@ export function DesktopPetPage() {
       onPointerEnter={pointerPresence.onPointerEnter}
       onPointerLeave={pointerPresence.onPointerLeave}
     >
+      <SkillConfirmationPrompt sessionId={sessionId} />
       <button
         className="desktop-pet-avatar"
         type="button"

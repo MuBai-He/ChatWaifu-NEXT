@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  isNativeInteractionGuardActive,
+  NATIVE_INTERACTION_GUARD_NOTIFICATION,
+  type NativeInteractionGuardNotification,
+} from "../../nativeInteractionGuard";
 
 const POINTER_SAMPLE_INTERVAL_MS = 80;
 const MAX_CONSECUTIVE_SAMPLE_ERRORS = 3;
@@ -29,13 +34,18 @@ export function isPointInsideWindow(
 export function useDesktopPointerPresence() {
   const [pointerInside, setPointerInside] = useState(false);
   const pointerInsideRef = useRef(false);
+  const physicalPointerInsideRef = useRef(false);
+  const interactionGuardRef = useRef(false);
+  const nativePresenceSyncRef = useRef<Promise<void>>(Promise.resolve());
 
   const syncNativePresence = useCallback((inside: boolean) => {
     if (!("__TAURI_INTERNALS__" in window)) return;
-    void import("@tauri-apps/api/core")
-      .then(({ invoke }) =>
-        invoke("set_avatar_overlay_pointer_inside", { inside }),
-      )
+    nativePresenceSyncRef.current = nativePresenceSyncRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("set_avatar_overlay_pointer_inside", { inside });
+      })
       .catch(() => undefined);
   }, []);
 
@@ -48,6 +58,40 @@ export function useDesktopPointerPresence() {
     },
     [syncNativePresence],
   );
+
+  const updatePhysicalPointerInside = useCallback(
+    (inside: boolean) => {
+      physicalPointerInsideRef.current = inside;
+      updatePointerInside(
+        shouldKeepDesktopInteraction(inside, interactionGuardRef.current),
+      );
+    },
+    [updatePointerInside],
+  );
+
+  useEffect(() => {
+    const updateGuard = (rawEvent: Event) => {
+      const event = rawEvent as CustomEvent<NativeInteractionGuardNotification>;
+      interactionGuardRef.current = event.detail.active;
+      updatePointerInside(
+        shouldKeepDesktopInteraction(
+          physicalPointerInsideRef.current,
+          event.detail.active,
+        ),
+      );
+    };
+    window.addEventListener(NATIVE_INTERACTION_GUARD_NOTIFICATION, updateGuard);
+    const active = isNativeInteractionGuardActive();
+    interactionGuardRef.current = active;
+    updatePointerInside(
+      shouldKeepDesktopInteraction(physicalPointerInsideRef.current, active),
+    );
+    return () =>
+      window.removeEventListener(
+        NATIVE_INTERACTION_GUARD_NOTIFICATION,
+        updateGuard,
+      );
+  }, [updatePointerInside]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -72,7 +116,9 @@ export function useDesktopPointerPresence() {
             ]);
             if (cancelled) return;
             consecutiveErrors = 0;
-            updatePointerInside(isPointInsideWindow(pointer, origin, size));
+            updatePhysicalPointerInside(
+              isPointInsideWindow(pointer, origin, size),
+            );
           } catch {
             consecutiveErrors += 1;
             if (
@@ -81,7 +127,7 @@ export function useDesktopPointerPresence() {
             ) {
               window.clearInterval(intervalId);
               intervalId = null;
-              updatePointerInside(false);
+              updatePhysicalPointerInside(false);
             }
           } finally {
             sampleInFlight = false;
@@ -100,7 +146,7 @@ export function useDesktopPointerPresence() {
       cancelled = true;
       if (intervalId !== null) window.clearInterval(intervalId);
     };
-  }, [updatePointerInside]);
+  }, [updatePhysicalPointerInside]);
 
   useEffect(
     () => () => {
@@ -111,7 +157,14 @@ export function useDesktopPointerPresence() {
 
   return {
     pointerInside,
-    onPointerEnter: () => updatePointerInside(true),
-    onPointerLeave: () => updatePointerInside(false),
+    onPointerEnter: () => updatePhysicalPointerInside(true),
+    onPointerLeave: () => updatePhysicalPointerInside(false),
   };
+}
+
+export function shouldKeepDesktopInteraction(
+  pointerInside: boolean,
+  interactionGuardActive: boolean,
+): boolean {
+  return pointerInside || interactionGuardActive;
 }
