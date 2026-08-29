@@ -77,6 +77,7 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert 'if ($PythonPlatform -ne "win-amd64")' in script
     assert "tools/smoke_runtime_sidecar.py" in script
     assert '"--basetemp", $PytestBaseTemp' in script
+    assert "New-Item -ItemType Directory -Path (Split-Path $PytestBaseTemp)" in script
     assert "Assert-X64Pe $HostExecutable" in script
     assert "Assert-X64Pe $RuntimeExecutable" in script
     assert "Assert-X64Pe $HelperExecutable" in script

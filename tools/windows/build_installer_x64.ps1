@@ -144,6 +144,7 @@ try {
         if (Test-Path $PytestBaseTemp) {
             Remove-Item -Path $PytestBaseTemp -Recurse -Force
         }
+        New-Item -ItemType Directory -Path (Split-Path $PytestBaseTemp) -Force | Out-Null
         Invoke-Checked $VenvPython @(
             "-m", "pytest",
             "services/runtime/tests/test_desktop_sidecar.py",
