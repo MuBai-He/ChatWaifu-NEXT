@@ -1419,6 +1419,8 @@ context
 - SQLite 连接配置与独立只写 Bearer secret storage。
 - Tools、Resources、Resource Templates、Prompts 分页发现与显式读取。
 - 远程工具映射为 Runtime Skill，复用权限、确认、Schema、超时、取消和审计。
+- OpenAI-compatible structured tool calls 通过确定性 Top-K Router 映射到同一 Runtime Skill Gateway；
+  已连接 MCP tool 因此可由普通对话自然语言触发，但 resources/prompts 仍只允许显式读取。
 - 每次连接前 DNS/SSRF 校验，禁止凭证 URL、重定向和系统代理继承。
 - macOS Seatbelt、Linux bubblewrap 的强隔离；required 模式无后端时 fail closed。
 - Runtime 自身在 loopback `/mcp` 公开受策略过滤的 Streamable HTTP Server。
@@ -1799,7 +1801,12 @@ Provider-specific event 不泄漏到 Character、Memory 或 Frontend store。
 
 ## 13.5 Tool Bridge
 
-- Provider tool call 转 Skill/Tool Gateway。
+- Provider tool call 已转入独立 AgentTurnOrchestrator，再经 Skill/Tool Gateway 执行；Provider
+  不持有 MCP 或权限对象。
+- 工具决策轮先缓冲，权限拒绝、过期、取消和失败作为结构化 tool result 回灌；只有禁用
+  tools 的最终角色轮进入字幕与 TTS。
+- SkillRun 持久化 turn/generation/provider call lineage，抢话会取消本轮前台 SkillRun，迟到结果
+  由 CAS 终态和 generation gate 双重丢弃。
 - 长任务返回 job handle，而不是阻塞 realtime socket。
 - 不支持异步 function call 的 Provider 使用前脑确认 + 后脑 job。
 

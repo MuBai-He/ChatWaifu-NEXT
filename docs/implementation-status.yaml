@@ -250,7 +250,7 @@ phases:
       - The 0.6B pilot checkpoint converts to an 8-bit MLX CustomVoice model with the fixed ayachi_nene_local speaker and completes real Chinese/Japanese synthesis on Apple Silicon
   - id: 10
     name: runtime-skills-and-plugins
-    status: complete_permissioned_mcp_host_loopback_server_and_validated_windows_appcontainer
+    status: complete_permissioned_agent_tool_loop_mcp_host_and_validated_windows_appcontainer
     evidence:
       - SKILL.md and chatwaifu.yaml discovery validates ids, versions, schemas, paths, and duplicates
       - SQLite persists plugins, MCP connection profiles, runs, permission requests, grants, and audited tool calls
@@ -269,6 +269,11 @@ phases:
       - MCP bearer tokens are write-only, atomically stored mode-0600, and use a compensating cross-store mutation journal; corrupt secret or journal storage fails closed
       - Deny-by-default audit summaries retain only explicitly schema-whitelisted public fields, resolve local $ref/allOf sensitivity, keep real results process-local, and prevent secrets, file bodies, prompt arguments, PII, or arbitrary MCP payloads from entering runs, tool-call rows, events, or outbox
       - Input/output schema validation, collision-free tool publication, normalized errors, deadlines, confirmation TTL, background policy, cancellation, and restart expiry pass tests
+      - OpenAI-compatible chat parses bounded fragmented structured tool calls into provider-neutral events and fails tool-required turns explicitly when an endpoint is incompatible, without fabricating external lookup success
+      - A deterministic bilingual relevance router projects only enabled invoke capabilities through opaque 64-character-safe names, with strict tool-count and schema-size budgets; MCP resources and prompts remain explicit-only
+      - AgentTurnOrchestrator routes model calls exclusively through RuntimeSkillService, buffers the speculative tool-decision round, returns bounded untrusted results to the model, and streams only the final character reply into subtitles and TTS
+      - Agent SkillRuns persist turn, generation, origin, and provider call identity; cancellation invalidates pending confirmation atomically, terminal waits do not depend on lossy UI events, and late adapter completion cannot resurrect cancelled runs
+      - Global Web and desktop-pet confirmation prompts recover pending requests without opening the Skills panel, while Runtime supplies the authoritative allowed decisions for each side-effect class
       - Local Echo example covers read, confirmed write, timeout, cancellation, disable, and recoverable uninstall
       - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, plugin controls, and MCP connection/capability management
       - Real browser smoke completed MCP echo and denied a pending write without executing it

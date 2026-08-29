@@ -104,7 +104,10 @@ Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Ru
 - 方案 A 结构化记忆：明确普通记忆直接提交，普通对话候选进入“记忆中心”，敏感内容逐条确认
 - 记忆支持来源查看、FTS5 + 可重建 Embedding 混合召回、模型辅助提取、去重、冲突 supersede、修正、置顶与可审计 tombstone
 - `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
-- “Skills & 插件”控制中心支持按需加载说明、运行记录、权限确认、取消、启停和可恢复卸载
+- 支持 tools 的 OpenAI-compatible 聊天模型会从自然语言中选择相关 Runtime Skill 或已连接 MCP Tool；
+  普通闲聊不投影工具；需要工具时若模型不支持 OpenAI Tools，会明确提示未执行，绝不把纯文字回答伪装成联网结果
+- 权限确认会直接显示在普通聊天页与桌宠，不必预先打开“Skills & 插件”；控制中心继续提供按需加载说明、
+  运行记录、取消、启停和可恢复卸载
 - 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；“数据 → MCP 连接”还可管理
   任意 stdio、Streamable HTTP 或兼容 SSE 服务，并浏览 Tools、Resources、Resource Templates 与 Prompts
 - 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
@@ -122,7 +125,8 @@ Runtime 现在同时是 MCP Host 与受限 MCP Server。“数据 → MCP 连接
 或兼容 SSE 连接；Bearer Token 是只写字段，存入权限为 `0600` 的本地文件。连接测试会分页发现
 Tools、Resources、Resource Templates 与 Prompts，外部工具随后映射为 Runtime Skill，继续经过
 Schema 校验、Permission Broker、逐次副作用确认、超时、取消与审计，而不是由前端或模型绕过策略层
-直接调用。远程地址默认仅允许 loopback；显式允许远程后仍会在每次连接前重新解析 DNS，并拒绝
+直接调用。普通聊天只会按当前问题投影一小组相关 Tools；Resources 与 Prompts 不会自动注入模型，
+仍需在管理界面或 MCP API 显式读取。远程地址默认仅允许 loopback；显式允许远程后仍会在每次连接前重新解析 DNS，并拒绝
 link-local、metadata、reserved、重定向和系统代理继承。
 
 本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用系统 Seatbelt，Linux 使用系统
