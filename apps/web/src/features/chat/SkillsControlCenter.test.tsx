@@ -97,4 +97,29 @@ describe("SkillsControlCenter", () => {
     );
     await waitFor(() => expect(installExamplePlugin).toHaveBeenCalledOnce());
   });
+
+  it("shows the sandbox backend reported by Runtime", async () => {
+    vi.mocked(getPlugins).mockResolvedValue([
+      {
+        plugin_id: "local.echo",
+        version: "1.0.0",
+        name: "Local Echo",
+        description: "测试插件",
+        enabled: true,
+        install_path: "/plugins/local.echo",
+        trust_level: "untrusted",
+        sandbox_mode: "required",
+        network_policy: "deny",
+        sandbox_backend: "macos_seatbelt",
+        installed_at: "2026-08-29T00:00:00Z",
+        updated_at: "2026-08-29T00:00:00Z",
+      },
+    ]);
+
+    render(<SkillsControlCenter sessionId="session-1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Skills & 插件" }));
+
+    expect(await screen.findByText("隔离：macos_seatbelt")).toBeTruthy();
+    expect(screen.getByText(/隔离：macos_seatbelt · 网络：deny/)).toBeTruthy();
+  });
 });

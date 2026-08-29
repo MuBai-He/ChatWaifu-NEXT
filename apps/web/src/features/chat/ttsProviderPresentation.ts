@@ -1,7 +1,4 @@
-import type {
-  AliyunCloudTtsProviderId,
-  TtsProviderSnapshot,
-} from "./types";
+import type { AliyunCloudTtsProviderId, TtsProviderSnapshot } from "./types";
 
 export const ALIYUN_BAILIAN_ENTRY_ID = "aliyun_bailian";
 export const ALIYUN_TTS_PREFERENCE_KEY =
@@ -27,9 +24,7 @@ export interface TtsProviderChoice {
 export function isAliyunCloudTtsProviderId(
   providerId: string,
 ): providerId is AliyunCloudTtsProviderId {
-  return ALIYUN_PROVIDER_IDS.includes(
-    providerId as AliyunCloudTtsProviderId,
-  );
+  return ALIYUN_PROVIDER_IDS.includes(providerId as AliyunCloudTtsProviderId);
 }
 
 export function providerSelectorValue(providerId: string): string {
@@ -97,8 +92,7 @@ export function buildTtsProviderChoices(
   const presented =
     bailianProviders.find(
       (provider) => provider.provider_id === actualProviderId,
-    ) ??
-    bailianProviders[0];
+    ) ?? bailianProviders[0];
   const choices: TtsProviderChoice[] = [];
   let bailianAdded = false;
 
@@ -138,11 +132,9 @@ export function buildTtsProviderChoices(
 }
 
 export function readAliyunTtsPreference():
-  | AliyunCloudTtsProviderId
-  | undefined {
+  AliyunCloudTtsProviderId | undefined {
   if (typeof window === "undefined") return undefined;
-  const value =
-    window.localStorage?.getItem(ALIYUN_TTS_PREFERENCE_KEY) ?? "";
+  const value = window.localStorage?.getItem(ALIYUN_TTS_PREFERENCE_KEY) ?? "";
   return isAliyunCloudTtsProviderId(value) ? value : undefined;
 }
 

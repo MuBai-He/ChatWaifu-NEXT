@@ -623,9 +623,9 @@ describe("ChatWaifu usable demo", () => {
     fireEvent.click(screen.getByRole("button", { name: /CONFIG.*设置/ }));
 
     const tts = screen.getByRole("combobox", { name: "选择语音模型" });
-    expect(
-      screen.getAllByRole("option", { name: "阿里云百炼" }),
-    ).toHaveLength(1);
+    expect(screen.getAllByRole("option", { name: "阿里云百炼" })).toHaveLength(
+      1,
+    );
     fireEvent.change(tts, { target: { value: "aliyun_bailian" } });
     expect(session.changeTtsProvider).toHaveBeenCalledWith(
       "aliyun_cosyvoice_realtime",

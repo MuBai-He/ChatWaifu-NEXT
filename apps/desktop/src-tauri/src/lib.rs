@@ -113,9 +113,9 @@ fn refresh_development_window(_app: &AppHandle, _window: &WebviewWindow) -> Resu
     Ok(())
 }
 
-fn control_center_entry(app: &AppHandle) -> WebviewUrl {
+fn control_center_entry(_app: &AppHandle) -> WebviewUrl {
     #[cfg(debug_assertions)]
-    if let Some(dev_url) = development_control_center_url(app) {
+    if let Some(dev_url) = development_control_center_url(_app) {
         return WebviewUrl::External(dev_url);
     }
     WebviewUrl::App(APP_ENTRY.into())

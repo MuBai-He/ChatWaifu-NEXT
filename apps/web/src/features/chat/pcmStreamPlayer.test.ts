@@ -55,13 +55,16 @@ describe("PCM stream player", () => {
   it("accepts ordered PCM16 chunks and completes one playback segment", () => {
     const context = new FakeContext();
     const started = vi.fn();
+    const accepted = vi.fn();
     const stopped = vi.fn();
     const failed = vi.fn();
     const player = new PcmStreamPlayer(
       () => context as unknown as AudioContext,
       {
         isGenerationActive: () => true,
-        onStreamAccepted: vi.fn(),
+        onStreamAccepted: accepted,
+        onStreamRejected: vi.fn(),
+        onStreamActivity: vi.fn(),
         onPlaybackStart: started,
         onPlaybackProgress: vi.fn(),
         onPlaybackStop: stopped,
@@ -80,7 +83,9 @@ describe("PCM stream player", () => {
       channels: 1,
       nativeStreaming: true,
     });
+    expect(accepted).not.toHaveBeenCalled();
     player.push("segment-1", 0, new Uint8Array([0, 0, 255, 127]));
+    expect(accepted).toHaveBeenCalledOnce();
     player.push("segment-1", 1, new Uint8Array([0, 128, 0, 0]));
     player.complete("segment-1", 10);
     context.currentTime = 1;
@@ -103,6 +108,8 @@ describe("PCM stream player", () => {
       {
         isGenerationActive: () => true,
         onStreamAccepted: vi.fn(),
+        onStreamRejected: vi.fn(),
+        onStreamActivity: vi.fn(),
         onPlaybackStart: vi.fn(),
         onPlaybackProgress: vi.fn(),
         onPlaybackStop: vi.fn(),
@@ -122,6 +129,86 @@ describe("PCM stream player", () => {
     });
     player.push("segment-1", 2, new Uint8Array([0, 0]));
     expect(failed).toHaveBeenCalledOnce();
+    expect(context.sources).toHaveLength(0);
+  });
+
+  it("rejects before accepting when AudioContext creation fails", () => {
+    const accepted = vi.fn();
+    const rejected = vi.fn();
+    const failed = vi.fn();
+    const player = new PcmStreamPlayer(
+      () => {
+        throw new Error("AudioContext unavailable");
+      },
+      {
+        isGenerationActive: () => true,
+        onStreamAccepted: accepted,
+        onStreamRejected: rejected,
+        onStreamActivity: vi.fn(),
+        onPlaybackStart: vi.fn(),
+        onPlaybackProgress: vi.fn(),
+        onPlaybackStop: vi.fn(),
+        onPlaybackError: failed,
+      },
+    );
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "测试",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+    player.push("segment-1", 0, new Uint8Array([0, 0]));
+
+    expect(accepted).not.toHaveBeenCalled();
+    expect(rejected).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-1" }),
+    );
+    expect(failed).toHaveBeenCalledOnce();
+  });
+
+  it("does not accept playback while a suspended AudioContext cannot resume", async () => {
+    const context = new FakeContext();
+    context.state = "suspended";
+    context.resume.mockRejectedValueOnce(new Error("autoplay blocked"));
+    const accepted = vi.fn();
+    const rejected = vi.fn();
+    const player = new PcmStreamPlayer(
+      () => context as unknown as AudioContext,
+      {
+        isGenerationActive: () => true,
+        onStreamAccepted: accepted,
+        onStreamRejected: rejected,
+        onStreamActivity: vi.fn(),
+        onPlaybackStart: vi.fn(),
+        onPlaybackProgress: vi.fn(),
+        onPlaybackStop: vi.fn(),
+        onPlaybackError: vi.fn(),
+      },
+    );
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "测试",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+
+    player.push("segment-1", 0, new Uint8Array([0, 0]));
+    expect(accepted).not.toHaveBeenCalled();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(accepted).not.toHaveBeenCalled();
+    expect(rejected).toHaveBeenCalledOnce();
     expect(context.sources).toHaveLength(0);
   });
 

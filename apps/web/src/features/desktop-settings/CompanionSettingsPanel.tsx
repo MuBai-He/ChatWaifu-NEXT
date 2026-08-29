@@ -126,11 +126,10 @@ export function CompanionSettingsPanel() {
   };
 
   const restartRuntime = async () => {
-    const updated = await run(
-      "restart",
-      restartDesktopRuntime,
-      { success: "本地服务已重新启动。", error: "无法重启本地服务" },
-    );
+    const updated = await run("restart", restartDesktopRuntime, {
+      success: "本地服务已重新启动。",
+      error: "无法重启本地服务",
+    });
     if (updated) setHost(updated);
   };
 

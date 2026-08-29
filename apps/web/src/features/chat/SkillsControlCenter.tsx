@@ -1,4 +1,5 @@
 import type {
+  DomainEvent,
   PluginSnapshot,
   SkillCapability,
   SkillDefinition,
@@ -21,6 +22,7 @@ import {
   uninstallPlugin,
 } from "./runtimeClient";
 import type { SkillConfirmation } from "./runtimeClient";
+import { RUNTIME_EVENT_NOTIFICATION } from "./runtimeSocketClient";
 
 interface Selection {
   skillId: string;
@@ -64,12 +66,23 @@ export function SkillsControlCenter({
     const initial = window.setTimeout(() => {
       void refresh().catch((error: unknown) => setNotice(errorMessage(error)));
     }, 0);
+    const refreshFromEvent = (rawEvent: Event) => {
+      const event = rawEvent as CustomEvent<DomainEvent>;
+      const eventType = event.detail.event_type;
+      if (
+        typeof eventType === "string" &&
+        (eventType.startsWith("skill.") || eventType.startsWith("tool."))
+      )
+        void refresh().catch(() => undefined);
+    };
+    window.addEventListener(RUNTIME_EVENT_NOTIFICATION, refreshFromEvent);
     const timer = window.setInterval(() => {
       void refresh().catch(() => undefined);
-    }, 900);
+    }, 15_000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(timer);
+      window.removeEventListener(RUNTIME_EVENT_NOTIFICATION, refreshFromEvent);
     };
   }, [open, refresh]);
 
@@ -80,6 +93,7 @@ export function SkillsControlCenter({
     () => runs.filter((run) => !isTerminal(String(run.state))),
     [runs],
   );
+  const sandboxSummary = useMemo(() => summarizeSandbox(plugins), [plugins]);
 
   const act = async (key: string, action: () => Promise<unknown>) => {
     setBusy(key);
@@ -188,7 +202,16 @@ export function SkillsControlCenter({
               <div className="skills-column">
                 <div className="skills-section-title">
                   <strong>已发现 Skills</strong>
-                  <small>{skills.length}</small>
+                  <small>
+                    {skills.length} ·{" "}
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => void refresh()}
+                    >
+                      刷新
+                    </button>
+                  </small>
                 </div>
                 {skills.map((skill) => (
                   <article
@@ -268,7 +291,7 @@ export function SkillsControlCenter({
               <div className="skills-column">
                 <div className="skills-section-title">
                   <strong>插件管理</strong>
-                  <small>stdio MCP · 软隔离</small>
+                  <small>{sandboxSummary}</small>
                 </div>
                 {!installedExample ? (
                   <button
@@ -310,6 +333,10 @@ export function SkillsControlCenter({
                       </code>
                     </div>
                     <p>{plugin.description}</p>
+                    <small>
+                      隔离：{pluginSandboxLabel(plugin)} · 网络：
+                      {plugin.network_policy ?? "deny"}
+                    </small>
                     <div>
                       <button
                         type="button"
@@ -496,4 +523,16 @@ function isTerminal(state: string): boolean {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Skills 控制中心操作失败";
+}
+
+function pluginSandboxLabel(plugin: PluginSnapshot): string {
+  if (plugin.sandbox_mode === "disabled") return "已关闭";
+  if (plugin.sandbox_backend) return plugin.sandbox_backend;
+  return plugin.sandbox_mode === "required" ? "等待受控启动" : "尚未验证";
+}
+
+function summarizeSandbox(plugins: PluginSnapshot[]): string {
+  if (!plugins.length) return "隔离状态将在安装后显示";
+  const backends = new Set(plugins.map((plugin) => pluginSandboxLabel(plugin)));
+  return `隔离：${[...backends].join(" / ")}`;
 }

@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import { SettingsIcon, type SettingsIconName } from "./SettingsIcon";
 
-export { SettingsSecretField, SettingsStatus } from "../settings/SettingsFields";
+export {
+  SettingsSecretField,
+  SettingsStatus,
+} from "../settings/SettingsFields";
 
 export function SettingsSectionIntro({
   icon,

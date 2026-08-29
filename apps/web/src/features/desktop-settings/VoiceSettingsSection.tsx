@@ -10,7 +10,7 @@ import {
   saveAliyunTtsPreference,
 } from "../chat/ttsProviderPresentation";
 import type { AliyunCloudTtsProviderId } from "../chat/types";
-import { AliyunTtsSettingsPanel } from "./AliyunTtsSettingsPanel";
+import { TtsConfigurationPanel } from "./AliyunTtsSettingsPanel";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 
@@ -55,10 +55,12 @@ export function VoiceSettingsSection({
     }
     await voice.changeTtsProvider(nextProviderId);
   };
-  const changeBailianApi = async (next: AliyunCloudTtsProviderId) => {
-    setBailianProviderId(next);
-    saveAliyunTtsPreference(next);
-    if (isAliyunCloudTtsProviderId(voice.ttsProviderId))
+  const changeConfiguredProvider = async (next: string) => {
+    if (isAliyunCloudTtsProviderId(next)) {
+      setBailianProviderId(next);
+      saveAliyunTtsPreference(next);
+    }
+    if (voice.ttsProviders.some((provider) => provider.provider_id === next))
       await voice.changeTtsProvider(next);
   };
 
@@ -124,9 +126,9 @@ export function VoiceSettingsSection({
         )}
       </SettingsGroup>
 
-      <AliyunTtsSettingsPanel
-        providerId={activeBailianProviderId}
-        onProviderIdChange={changeBailianApi}
+      <TtsConfigurationPanel
+        preferredProviderId={activeBailianProviderId}
+        onProviderIdChange={changeConfiguredProvider}
         onSaved={voice.refreshTtsProviders}
       />
 

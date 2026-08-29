@@ -3,10 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 export type AppSurface =
   "application" | "avatar-lab" | "desktop-pet" | "desktop-settings";
 
-type NativeAppSurface = Extract<
-  AppSurface,
-  "desktop-pet" | "desktop-settings"
->;
+type NativeAppSurface = Extract<AppSurface, "desktop-pet" | "desktop-settings">;
 
 declare global {
   interface Window {
@@ -56,9 +53,7 @@ function currentQueryNativeSurface(): NativeAppSurface | null {
 }
 
 function normalizeNativeSurface(value: unknown): NativeAppSurface | null {
-  return value === "desktop-pet" || value === "desktop-settings"
-    ? value
-    : null;
+  return value === "desktop-pet" || value === "desktop-settings" ? value : null;
 }
 
 function currentNativeWindowLabel(): string | null {

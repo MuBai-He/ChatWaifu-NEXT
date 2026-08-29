@@ -1,158 +1,146 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import {
-  getAliyunTtsConfiguration,
-  testAliyunTtsConfiguration,
-  updateAliyunTtsConfiguration,
+  getTtsConfiguration,
+  getTtsConfigurationRegistrations,
+  testTtsConfiguration,
+  updateTtsConfiguration,
 } from "../chat/runtimeClient";
 import type {
-  AliyunCloudTtsConfiguration,
-  AliyunCloudTtsProviderId,
+  TtsConfigurationRegistration,
+  TtsConfigurationSnapshot,
+  TtsConfigurationUiField,
 } from "../chat/types";
-import { SettingsSecretField } from "./SettingsPrimitives";
 import { useSettingsOperation } from "../settings/useSettingsOperation";
+import { SettingsSecretField } from "./SettingsPrimitives";
 
-type UpdatePayload = Parameters<typeof updateAliyunTtsConfiguration>[0];
+const INTERNAL_FIELDS = new Set(["provider_id", "updated_at"]);
 
-const PROVIDERS: Array<{
-  providerId: AliyunCloudTtsProviderId;
-  title: string;
-  description: string;
-  models: string[];
-  emotionControl: boolean;
-}> = [
-  {
-    providerId: "aliyun_qwen_realtime",
-    title: "Qwen3-TTS VC · 实时复刻",
-    description: "复刻声线支持实时流式；当前 VC 模型不支持情绪指令。",
-    models: [
-      "qwen3-tts-vc-realtime-2026-01-15",
-      "qwen3-tts-vc-realtime-2025-11-27",
-    ],
-    emotionControl: false,
-  },
-  {
-    providerId: "aliyun_cosyvoice_realtime",
-    title: "CosyVoice 3.5 · 实时情绪复刻",
-    description: "边生成边播放，并自动叠加 Character Kernel 的当前情绪。",
-    models: [
-      "cosyvoice-v3.5-plus",
-      "cosyvoice-v3.5-flash",
-      "cosyvoice-v3-plus",
-      "cosyvoice-v3-flash",
-      "cosyvoice-v2",
-    ],
-    emotionControl: true,
-  },
-];
-
-const COSYVOICE_INSTRUCTION_MODELS = new Set([
-  "cosyvoice-v3.5-plus",
-  "cosyvoice-v3.5-flash",
-  "cosyvoice-v3-flash",
-]);
-
-export function AliyunTtsSettingsPanel({
-  providerId,
+export function TtsConfigurationPanel({
+  preferredProviderId,
   onProviderIdChange,
   onSaved,
 }: {
-  providerId: AliyunCloudTtsProviderId;
-  onProviderIdChange: (
-    providerId: AliyunCloudTtsProviderId,
-  ) => Promise<void> | void;
+  preferredProviderId?: string;
+  onProviderIdChange?: (providerId: string) => Promise<void> | void;
   onSaved: () => Promise<void>;
 }) {
-  const provider = PROVIDERS.find((item) => item.providerId === providerId);
-  if (!provider) return null;
-  return (
-    <AliyunTtsSettingsCard
-      key={provider.providerId}
-      {...provider}
-      onProviderIdChange={onProviderIdChange}
-      onSaved={onSaved}
-    />
-  );
-}
-
-function AliyunTtsSettingsCard({
-  providerId,
-  title,
-  description,
-  models,
-  emotionControl,
-  onProviderIdChange,
-  onSaved,
-}: (typeof PROVIDERS)[number] & {
-  onProviderIdChange: (
-    providerId: AliyunCloudTtsProviderId,
-  ) => Promise<void> | void;
-  onSaved: () => Promise<void>;
-}) {
+  const [registrations, setRegistrations] = useState<
+    TtsConfigurationRegistration[]
+  >([]);
+  const [providerId, setProviderId] = useState(preferredProviderId ?? "");
   const [configuration, setConfiguration] =
-    useState<AliyunCloudTtsConfiguration | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [clearApiKey, setClearApiKey] = useState(false);
+    useState<TtsConfigurationSnapshot | null>(null);
+  const [secretValues, setSecretValues] = useState<Record<string, string>>({});
+  const [clearedSecrets, setClearedSecrets] = useState<Set<string>>(
+    () => new Set(),
+  );
   const { busy, notice, setNotice, run } = useSettingsOperation<
     "save" | "test"
   >();
 
   useEffect(() => {
-    let disposed = false;
-    void getAliyunTtsConfiguration(providerId)
-      .then((item) => {
-        if (!disposed) setConfiguration(item);
+    let active = true;
+    void getTtsConfigurationRegistrations()
+      .then((items) => {
+        if (!active) return;
+        setRegistrations(items);
+        const selected =
+          items.find((item) => item.provider_id === preferredProviderId) ??
+          items[0];
+        setProviderId(selected?.provider_id ?? "");
+        setConfiguration(selected?.configuration ?? null);
+        setNotice(null);
       })
       .catch((error: unknown) => {
-        if (!disposed)
+        if (!active) return;
+        setNotice({
+          tone: "error",
+          text: errorMessage(error, "读取 TTS 配置注册表失败"),
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [preferredProviderId, setNotice]);
+
+  useEffect(() => {
+    if (!providerId) return;
+    let active = true;
+    void getTtsConfiguration(providerId)
+      .then((item) => {
+        if (active) setConfiguration(item);
+      })
+      .catch((error: unknown) => {
+        if (active)
           setNotice({
             tone: "error",
-            text:
-              error instanceof Error ? error.message : "读取百炼配置失败",
+            text: errorMessage(error, "读取 TTS 配置失败"),
           });
       });
     return () => {
-      disposed = true;
+      active = false;
     };
-  }, [providerId, setNotice]);
+  }, [providerId, registrations, setNotice]);
 
-  const change = <Key extends keyof AliyunCloudTtsConfiguration>(
-    key: Key,
-    value: AliyunCloudTtsConfiguration[Key],
-  ) => {
+  const registration = useMemo(
+    () => registrations.find((item) => item.provider_id === providerId) ?? null,
+    [providerId, registrations],
+  );
+
+  const selectProvider = async (nextProviderId: string) => {
+    setProviderId(nextProviderId);
+    setSecretValues({});
+    setClearedSecrets(new Set());
+    await onProviderIdChange?.(nextProviderId);
+  };
+
+  const change = (field: string, value: string | number | boolean) => {
     setConfiguration((current) =>
-      current ? { ...current, [key]: value } : current,
+      current ? { ...current, [field]: value } : current,
     );
   };
 
   const persist = async () => {
-    if (!configuration) throw new Error("百炼配置尚未加载");
-    const updated = await updateAliyunTtsConfiguration({
-      ...editableConfiguration(configuration),
-      api_key: apiKey.trim() || undefined,
-      clear_api_key: clearApiKey,
-    });
+    if (!configuration || !registration) throw new Error("TTS 配置尚未加载");
+    const updated = await updateTtsConfiguration(
+      registration.provider_id,
+      editableConfiguration(
+        configuration,
+        registration.ui_schema.fields,
+        secretValues,
+        clearedSecrets,
+      ),
+    );
     setConfiguration(updated);
-    setApiKey("");
-    setClearApiKey(false);
+    setRegistrations((current) =>
+      current.map((item) =>
+        item.provider_id === updated.provider_id
+          ? { ...item, configuration: updated }
+          : item,
+      ),
+    );
+    setSecretValues({});
+    setClearedSecrets(new Set());
     await onSaved();
     return updated;
   };
 
   const save = async () => {
-    if (!configuration || busy) return;
+    if (!configuration || !registration || busy) return;
     await run("save", persist, {
-      success: `${title}配置已保存。`,
+      success: `${registration.display_name}配置已保存。`,
       error: "保存失败",
     });
   };
 
   const test = async () => {
-    if (!configuration || busy) return;
+    if (!configuration || !registration || busy) return;
     await run(
       "test",
       async () => {
         const updated = await persist();
-        return testAliyunTtsConfiguration(updated.provider_id);
+        return testTtsConfiguration(updated.provider_id);
       },
       {
         pending: "正在保存配置并生成一小段测试语音…",
@@ -165,202 +153,127 @@ function AliyunTtsSettingsCard({
     );
   };
 
-  if (!configuration || configuration.provider_id !== providerId)
-    return (
-      <section className="aliyun-tts-panel" aria-label="阿里云百炼 API 设置">
-        <header>
-          <div>
-            <h2>阿里云百炼</h2>
-            <p>选择具体实时语音 API，再填写对应模型和克隆音色。</p>
-          </div>
-          <AliyunApiSelector
-            providerId={providerId}
-            disabled={Boolean(busy)}
-            onChange={onProviderIdChange}
-          />
-        </header>
-        <p className="desktop-settings-empty">
-          {notice?.text ?? `正在读取${title}配置…`}
-        </p>
-      </section>
-    );
-
-  const cosyVoice = configuration.provider_id === "aliyun_cosyvoice_realtime";
-  const supportsEmotionInstruction =
-    emotionControl && COSYVOICE_INSTRUCTION_MODELS.has(configuration.model);
-
-  const changeModel = (model: string) => {
-    setConfiguration((current) =>
-      current
-        ? {
-            ...current,
-            model,
-            instruction:
-              emotionControl && !COSYVOICE_INSTRUCTION_MODELS.has(model)
-                ? ""
-                : current.instruction,
-          }
-        : current,
-    );
-  };
-
   return (
-    <section className="aliyun-tts-panel" aria-label="阿里云百炼 API 设置">
+    <section className="aliyun-tts-panel" aria-label="TTS Provider 设置">
       <header>
         <div>
-          <h2>阿里云百炼</h2>
-          <p>{title}：{description} 仅发送当前待朗读句段。</p>
+          <h2>TTS Provider</h2>
+          <p>
+            {registration?.display_name ?? "正在读取配置注册表"}
+            {registration?.configuration_schema.description
+              ? `：${registration.configuration_schema.description}`
+              : ""}
+          </p>
         </div>
-        <AliyunApiSelector
-          providerId={providerId}
-          disabled={Boolean(busy)}
-          onChange={onProviderIdChange}
-        />
-        <label className="desktop-settings-switch">
-          <input
-            type="checkbox"
-            checked={configuration.enabled}
-            onChange={(event) => change("enabled", event.currentTarget.checked)}
-          />
-          <span />
-        </label>
-      </header>
-
-      <div className="aliyun-tts-fields">
-        <label>
-          <span>声音复刻音色 ID</span>
-          <input
-            value={configuration.voice_id}
-            placeholder={cosyVoice ? "cosyvoice-v3.5-plus-…" : "qwen-tts-vc-…"}
-            onChange={(event) => change("voice_id", event.currentTarget.value)}
-          />
-        </label>
-        <label>
-          <span>基础模型</span>
+        <label className="aliyun-tts-api-selector">
+          <span>配置入口</span>
           <select
-            value={configuration.model}
-            onChange={(event) => changeModel(event.currentTarget.value)}
+            aria-label="TTS 配置入口"
+            value={providerId}
+            disabled={Boolean(busy) || !registrations.length}
+            onChange={(event) => void selectProvider(event.currentTarget.value)}
           >
-            {models.map((model) => (
-              <option value={model} key={model}>
-                {model}
+            {registrations.map((item) => (
+              <option value={item.provider_id} key={item.provider_id}>
+                {item.display_name}
               </option>
             ))}
           </select>
-          <small>音色的 target_model 必须与这里完全一致。</small>
         </label>
-        <label>
-          <span>服务区域</span>
-          <select
-            value={configuration.region}
-            onChange={(event) =>
-              change(
-                "region",
-                event.currentTarget
-                  .value as AliyunCloudTtsConfiguration["region"],
-              )
-            }
-          >
-            <option value="beijing">华北 2（北京）</option>
-            <option value="singapore">新加坡</option>
-          </select>
-        </label>
-        <label>
-          <span>语言</span>
-          <select
-            value={configuration.language_type}
-            onChange={(event) =>
-              change(
-                "language_type",
-                event.currentTarget
-                  .value as AliyunCloudTtsConfiguration["language_type"],
-              )
-            }
-          >
-            <option value={cosyVoice ? "auto" : "Auto"}>
-              自动（中日混合）
-            </option>
-            <option value={cosyVoice ? "zh" : "Chinese"}>中文</option>
-            <option value={cosyVoice ? "ja" : "Japanese"}>日语</option>
-            <option value={cosyVoice ? "en" : "English"}>英语</option>
-          </select>
-        </label>
-        <SettingsSecretField
-          ariaLabel="阿里云百炼 API Key"
-          configured={configuration.api_key_configured}
-          value={apiKey}
-          disabled={Boolean(busy)}
-          help="同地域的 Qwen 与 CosyVoice 可以复用已保存的百炼 Key。"
-          onChange={setApiKey}
-        />
-        <label>
-          <span>业务空间 ID（可选）</span>
-          <input
-            value={configuration.workspace_id}
-            onChange={(event) =>
-              change("workspace_id", event.currentTarget.value)
-            }
-          />
-        </label>
-        {supportsEmotionInstruction ? (
-          <label className="aliyun-tts-wide-field">
-            <span>基础情绪指令</span>
-            <textarea
-              rows={2}
-              value={configuration.instruction}
+        {configuration &&
+        registration?.ui_schema.fields.some(
+          (field) => field.key === "enabled" && field.control === "toggle",
+        ) ? (
+          <label className="desktop-settings-switch">
+            <input
+              type="checkbox"
+              checked={configuration.enabled === true}
               onChange={(event) =>
-                change("instruction", event.currentTarget.value)
+                change("enabled", event.currentTarget.checked)
               }
             />
-            <small>
-              每次回复还会叠加 Character Kernel
-              的语气和表情，合并后自动限制在官方长度内。
-            </small>
+            <span />
           </label>
-        ) : emotionControl ? (
-          <p className="aliyun-tts-wide-field aliyun-tts-model-note">
-            当前型号不接受情绪指令；切回 CosyVoice v3.5 Plus / Flash 或 v3 Flash
-            后可恢复该能力。
-          </p>
         ) : null}
-        <label>
-          <span>语速 · {configuration.speech_rate.toFixed(2)}</span>
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.05"
-            value={configuration.speech_rate}
-            onChange={(event) =>
-              change("speech_rate", Number(event.currentTarget.value))
-            }
-          />
-        </label>
-        <label>
-          <span>音量 · {configuration.volume}</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={configuration.volume}
-            onChange={(event) =>
-              change("volume", Number(event.currentTarget.value))
-            }
-          />
-        </label>
-      </div>
+      </header>
 
-      {configuration.api_key_configured ? (
-        <label className="aliyun-tts-clear-key">
-          <input
-            type="checkbox"
-            checked={clearApiKey}
-            onChange={(event) => setClearApiKey(event.currentTarget.checked)}
-          />
-          移除此语音单独保存的 API Key
-        </label>
-      ) : null}
+      {configuration && registration ? (
+        <div className="aliyun-tts-fields">
+          {regularFields(registration.ui_schema.fields).map((field) =>
+            field.control === "secret" ? (
+              <SettingsSecretField
+                key={field.key}
+                ariaLabel={field.label}
+                configured={configuration[`${field.key}_configured`] === true}
+                value={secretValues[field.key] ?? ""}
+                disabled={Boolean(busy)}
+                help={field.help_text}
+                onChange={(value) =>
+                  setSecretValues((current) => ({
+                    ...current,
+                    [field.key]: value,
+                  }))
+                }
+              />
+            ) : (
+              <ConfigurationField
+                key={field.key}
+                field={field}
+                value={configuration[field.key]}
+                onChange={(value) => change(field.key, value)}
+              />
+            ),
+          )}
+          {advancedFields(registration.ui_schema.fields).length ? (
+            <details className="aliyun-tts-wide-field">
+              <summary>高级设置</summary>
+              <div className="aliyun-tts-fields">
+                {advancedFields(registration.ui_schema.fields).map((field) => (
+                  <ConfigurationField
+                    key={field.key}
+                    field={field}
+                    value={configuration[field.key]}
+                    onChange={(value) => change(field.key, value)}
+                  />
+                ))}
+              </div>
+            </details>
+          ) : null}
+        </div>
+      ) : (
+        <p className="desktop-settings-empty">
+          {notice?.text ?? "正在读取可配置的 TTS Provider…"}
+        </p>
+      )}
+
+      {configuration && registration
+        ? registration.ui_schema.fields
+            .filter(
+              (field) =>
+                field.control === "secret" &&
+                configuration[`${field.key}_configured`] === true,
+            )
+            .map((field) => (
+              <label
+                className="aliyun-tts-clear-key"
+                key={`clear-${field.key}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={clearedSecrets.has(field.key)}
+                  onChange={(event) =>
+                    setClearedSecrets((current) => {
+                      const next = new Set(current);
+                      if (event.currentTarget.checked) next.add(field.key);
+                      else next.delete(field.key);
+                      return next;
+                    })
+                  }
+                />
+                移除此 Provider 单独保存的 {field.label}
+              </label>
+            ))
+        : null}
 
       <footer>
         <span role={notice ? "status" : undefined} data-tone={notice?.tone}>
@@ -369,14 +282,14 @@ function AliyunTtsSettingsCard({
         <div>
           <button
             type="button"
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || !configuration}
             onClick={() => void test()}
           >
             {busy === "test" ? "测试中…" : "保存并测试"}
           </button>
           <button
             type="button"
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || !configuration}
             onClick={() => void save()}
           >
             {busy === "save" ? "保存中…" : "保存配置"}
@@ -385,62 +298,163 @@ function AliyunTtsSettingsCard({
       </footer>
 
       <p className="desktop-settings-info">
-        云端模式不会发送对话历史、结构化记忆、系统提示词或模型密钥。取消或抢话时，当前
-        generation 的迟到音频会被丢弃。
+        Provider 的字段、枚举与范围由 Runtime
+        注册表提供。新增语音后，设置页不再需要添加专属 Qwen/CosyVoice 分支。
       </p>
     </section>
   );
 }
 
-function AliyunApiSelector({
-  providerId,
-  disabled,
+// Compatibility export for callers that still use the previous component name.
+export const AliyunTtsSettingsPanel = TtsConfigurationPanel;
+
+function ConfigurationField({
+  field,
+  value,
   onChange,
 }: {
-  providerId: AliyunCloudTtsProviderId;
-  disabled: boolean;
-  onChange: (providerId: AliyunCloudTtsProviderId) => Promise<void> | void;
+  field: TtsConfigurationUiField;
+  value: unknown;
+  onChange: (value: string | number | boolean) => void;
 }) {
+  if (field.control === "toggle") {
+    return (
+      <label>
+        <span>{field.label}</span>
+        <input
+          type="checkbox"
+          checked={value === true}
+          onChange={(event) => onChange(event.currentTarget.checked)}
+        />
+        {field.help_text ? <small>{field.help_text}</small> : null}
+      </label>
+    );
+  }
+  if (field.control === "select") {
+    return (
+      <label>
+        <span>{field.label}</span>
+        <select
+          value={scalarText(value)}
+          onChange={(event) =>
+            onChange(
+              optionValue(field.options ?? [], event.currentTarget.value),
+            )
+          }
+        >
+          {field.options.map((option) => (
+            <option value={String(option.value)} key={String(option.value)}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {field.help_text ? <small>{field.help_text}</small> : null}
+      </label>
+    );
+  }
+  if (field.control === "number") {
+    return (
+      <label>
+        <span>{field.label}</span>
+        <input
+          type="number"
+          value={typeof value === "number" ? value : ""}
+          min={field.minimum ?? undefined}
+          max={field.maximum ?? undefined}
+          step={field.step ?? "any"}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+        />
+        {field.help_text ? <small>{field.help_text}</small> : null}
+      </label>
+    );
+  }
+  if (field.control === "textarea") {
+    return (
+      <label className="aliyun-tts-wide-field">
+        <span>{field.label}</span>
+        <textarea
+          rows={2}
+          value={scalarText(value)}
+          placeholder={field.placeholder}
+          onChange={(event) => onChange(event.currentTarget.value)}
+        />
+        {field.help_text ? <small>{field.help_text}</small> : null}
+      </label>
+    );
+  }
   return (
-    <label className="aliyun-tts-api-selector">
-      <span>百炼语音 API</span>
-      <select
-        aria-label="百炼语音 API"
-        value={providerId}
-        disabled={disabled}
-        onChange={(event) =>
-          void onChange(event.currentTarget.value as AliyunCloudTtsProviderId)
-        }
-      >
-        {PROVIDERS.map((provider) => (
-          <option value={provider.providerId} key={provider.providerId}>
-            {provider.providerId === "aliyun_cosyvoice_realtime"
-              ? "CosyVoice（情绪）"
-              : "Qwen3-TTS VC"}
-          </option>
-        ))}
-      </select>
+    <label>
+      <span>{field.label}</span>
+      <input
+        value={scalarText(value)}
+        placeholder={field.placeholder}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
+      {field.help_text ? <small>{field.help_text}</small> : null}
     </label>
   );
 }
 
+function regularFields(fields: TtsConfigurationUiField[]) {
+  return fields.filter(
+    (field) =>
+      !field.advanced &&
+      field.key !== "enabled" &&
+      !INTERNAL_FIELDS.has(field.key),
+  );
+}
+
+function advancedFields(fields: TtsConfigurationUiField[]) {
+  return fields.filter(
+    (field) =>
+      field.advanced &&
+      field.control !== "secret" &&
+      !INTERNAL_FIELDS.has(field.key),
+  );
+}
+
 function editableConfiguration(
-  configuration: AliyunCloudTtsConfiguration,
-): UpdatePayload {
-  return {
-    provider_id: configuration.provider_id,
-    enabled: configuration.enabled,
-    model: configuration.model,
-    voice_id: configuration.voice_id,
-    region: configuration.region,
-    workspace_id: configuration.workspace_id,
-    language_type: configuration.language_type,
-    sample_rate: configuration.sample_rate,
-    speech_rate: configuration.speech_rate,
-    volume: configuration.volume,
-    pitch_rate: configuration.pitch_rate,
-    instruction: configuration.instruction,
-    timeout_seconds: configuration.timeout_seconds,
-    max_audio_bytes: configuration.max_audio_bytes,
-  };
+  configuration: TtsConfigurationSnapshot,
+  fields: TtsConfigurationUiField[],
+  secretValues: Record<string, string>,
+  clearedSecrets: ReadonlySet<string>,
+): Record<string, unknown> {
+  const payload = Object.fromEntries(
+    fields
+      .filter(
+        (field) =>
+          field.control !== "secret" &&
+          !INTERNAL_FIELDS.has(field.key) &&
+          field.key in configuration,
+      )
+      .map((field) => [field.key, configuration[field.key]]),
+  );
+  for (const field of fields.filter(
+    (candidate) => candidate.control === "secret",
+  )) {
+    const secret = secretValues[field.key]?.trim();
+    if (secret) payload[field.key] = secret;
+    if (clearedSecrets.has(field.key)) payload[`clear_${field.key}`] = true;
+  }
+  return payload;
+}
+
+function scalarText(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "";
+}
+
+function optionValue(
+  options: Array<{ value: string | number | boolean }>,
+  selected: string,
+): string | number | boolean {
+  return (
+    options.find((option) => String(option.value) === selected)?.value ??
+    selected
+  );
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }

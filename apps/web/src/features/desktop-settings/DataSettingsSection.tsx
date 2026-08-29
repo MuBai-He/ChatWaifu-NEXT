@@ -39,7 +39,7 @@ export function DataSettingsSection({
           </span>
           <h2>MCP 连接</h2>
           <p>连接本地或远程 MCP 服务，检查工具、资源和 Prompt 能力。</p>
-          <McpConnectionsPanel />
+          <McpConnectionsPanel sessionId={data.sessionId} />
         </article>
       </div>
 

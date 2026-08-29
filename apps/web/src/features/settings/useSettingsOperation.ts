@@ -17,7 +17,7 @@ export function useSettingsOperation<Key extends string>() {
   const [notice, setNotice] = useState<SettingsNotice | null>(null);
 
   const run = useCallback(
-    async <Result,>(
+    async <Result>(
       key: Key,
       operation: () => Promise<Result>,
       messages: SettingsOperationMessages<Result>,

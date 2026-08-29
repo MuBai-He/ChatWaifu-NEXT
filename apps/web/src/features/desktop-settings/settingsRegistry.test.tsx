@@ -41,14 +41,18 @@ describe("settings registry", () => {
     ]);
 
     expect(
-      visibleSettingsSections(registry, { featureEnabled: false }, "browser").map(
-        (item) => item.id,
-      ),
+      visibleSettingsSections(
+        registry,
+        { featureEnabled: false },
+        "browser",
+      ).map((item) => item.id),
     ).toEqual(["common"]);
     expect(
-      visibleSettingsSections(registry, { featureEnabled: true }, "desktop").map(
-        (item) => item.id,
-      ),
+      visibleSettingsSections(
+        registry,
+        { featureEnabled: true },
+        "desktop",
+      ).map((item) => item.id),
     ).toEqual(["common", "desktop-only", "conditional"]);
   });
 

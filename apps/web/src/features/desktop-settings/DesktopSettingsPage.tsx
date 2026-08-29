@@ -1,8 +1,7 @@
 import { useState } from "react";
 
-import { useChatSession } from "../chat/useChatSession";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
-import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import type { SettingsRuntimeContext } from "./DesktopSettingsContext";
 import {
   desktopSettingsRegistry,
   type DesktopSettingsSectionId,
@@ -12,9 +11,10 @@ import {
   settingsSectionAvailability,
   visibleSettingsSections,
 } from "./settingsRegistry";
+import { useSettingsRuntime } from "./useSettingsRuntime";
 
 export function DesktopSettingsPage() {
-  const chat = useChatSession({ playbackEnabled: false });
+  const runtime = useSettingsRuntime();
   const desktop = useDesktopPreferences();
   const [sectionId, setSectionId] =
     useState<DesktopSettingsSectionId>("appearance");
@@ -26,34 +26,34 @@ export function DesktopSettingsPage() {
       )
     )
       return;
-    await chat.resetAll();
+    await runtime.resetAll();
   };
-  const context: DesktopSettingsContext = {
-    canvasRef: chat.canvasRef,
+  const context: SettingsRuntimeContext = {
+    canvasRef: runtime.canvasRef,
     appearance: {
-      snapshot: chat.snapshot,
-      rendererKind: chat.rendererKind,
-      character: chat.character,
+      snapshot: runtime.snapshot,
+      rendererKind: runtime.rendererKind,
+      character: runtime.character,
     },
     voice: {
-      sessionId: chat.sessionId,
-      ttsProviders: chat.ttsProviders,
-      ttsProviderId: chat.ttsProviderId,
-      ttsSwitching: chat.ttsSwitching,
-      changeTtsProvider: chat.changeTtsProvider,
-      refreshTtsProviders: chat.refreshTtsProviders,
+      sessionId: runtime.sessionId,
+      ttsProviders: runtime.ttsProviders,
+      ttsProviderId: runtime.ttsProviderId,
+      ttsSwitching: runtime.ttsSwitching,
+      changeTtsProvider: runtime.changeTtsProvider,
+      refreshTtsProviders: runtime.refreshTtsProviders,
     },
     data: {
-      sessionId: chat.sessionId,
-      resetting: chat.resetting,
-      refreshMemories: chat.refreshMemories,
+      sessionId: runtime.sessionId,
+      resetting: runtime.resetting,
+      refreshMemories: runtime.refreshMemories,
     },
     runtime: {
-      connection: chat.connection,
-      health: chat.health,
-      error: chat.error,
+      connection: runtime.connection,
+      health: runtime.health,
+      error: runtime.error,
     },
-    sessionId: chat.sessionId,
+    sessionId: runtime.sessionId,
     desktop,
     resetConversationAndMemory,
   };
@@ -94,9 +94,7 @@ export function DesktopSettingsPage() {
                 onClick={() =>
                   setSectionId(section.id as DesktopSettingsSectionId)
                 }
-                aria-current={
-                  selected.id === section.id ? "page" : undefined
-                }
+                aria-current={selected.id === section.id ? "page" : undefined}
               >
                 <span>
                   <SettingsIcon name={section.icon} />

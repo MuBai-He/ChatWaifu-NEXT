@@ -17,7 +17,8 @@
     "@chatwaifu/protocol": "workspace:*",
     "@tauri-apps/api": "2.11.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

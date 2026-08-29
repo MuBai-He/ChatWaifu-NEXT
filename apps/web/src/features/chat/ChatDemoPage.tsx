@@ -278,8 +278,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               >
                 {ttsProviderChoices.length === 0 ? (
                   <option value={providerSelectorValue(ttsProviderId)}>
-                    {providerSelectorValue(ttsProviderId) ===
-                    "aliyun_bailian"
+                    {providerSelectorValue(ttsProviderId) === "aliyun_bailian"
                       ? "阿里云百炼"
                       : ttsProviderId}
                   </option>

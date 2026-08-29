@@ -31,6 +31,15 @@ vi.mock("../chat/runtimeClient", () => ({
   updateMcpConnection: vi.fn(),
 }));
 
+const emptyCapabilities = (connectionId: string) => ({
+  connection_id: connectionId,
+  protocol_version: "2025-11-25",
+  tools: [],
+  resources: [],
+  resource_templates: [],
+  prompts: [],
+});
+
 const localConnection: McpConnectionSnapshot = {
   connection_id: "11111111-1111-4111-8111-111111111111",
   name: "本地笔记",
@@ -45,7 +54,11 @@ const localConnection: McpConnectionSnapshot = {
   bearer_token_configured: false,
   status: "ready",
   sandbox_backend: "macos_seatbelt",
+  capabilities: emptyCapabilities("11111111-1111-4111-8111-111111111111"),
+  created_at: "2026-08-29T00:00:00Z",
+  updated_at: "2026-08-29T00:00:00Z",
 };
+const sessionId = "33333333-3333-4333-8333-333333333333";
 
 describe("McpConnectionsPanel", () => {
   afterEach(() => {
@@ -57,16 +70,9 @@ describe("McpConnectionsPanel", () => {
     vi.clearAllMocks();
     vi.mocked(getMcpConnections).mockResolvedValue([]);
     vi.mocked(deleteMcpConnection).mockResolvedValue();
-    vi.mocked(testMcpConnection).mockResolvedValue({
-      status: "ready",
-      latency_ms: 18,
-      protocol_version: "2025-11-25",
-    });
+    vi.mocked(testMcpConnection).mockResolvedValue(localConnection);
     vi.mocked(getMcpCapabilities).mockResolvedValue({
-      tools: [],
-      resources: [],
-      resource_templates: [],
-      prompts: [],
+      ...emptyCapabilities(localConnection.connection_id),
     });
   });
 
@@ -85,10 +91,13 @@ describe("McpConnectionsPanel", () => {
       network_policy: "allow",
       bearer_token_configured: true,
       status: "untested",
+      capabilities: emptyCapabilities(connectionId),
+      created_at: "2026-08-29T00:00:00Z",
+      updated_at: "2026-08-29T00:00:00Z",
     };
     vi.mocked(createMcpConnection).mockResolvedValue(saved);
 
-    render(<McpConnectionsPanel />);
+    render(<McpConnectionsPanel sessionId={sessionId} />);
     fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
     await screen.findByRole("dialog", { name: "MCP 连接管理" });
 
@@ -129,6 +138,7 @@ describe("McpConnectionsPanel", () => {
         screen.getByLabelText<HTMLInputElement>("MCP Bearer Token").value,
       ).toBe(""),
     );
+    expect(screen.getByText("MCP 连接已创建")).toBeTruthy();
     expect(screen.getByText("令牌已保存")).toBeTruthy();
     expect(screen.getByText("沙箱：已关闭")).toBeTruthy();
     expect(screen.queryByDisplayValue("secret-token")).toBeNull();
@@ -259,6 +269,7 @@ describe("McpConnectionsPanel", () => {
       enabled: false,
     });
     vi.mocked(getMcpCapabilities).mockResolvedValue({
+      connection_id: localConnection.connection_id,
       tools: [
         {
           name: "notes.search",
@@ -297,7 +308,7 @@ describe("McpConnectionsPanel", () => {
     });
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    render(<McpConnectionsPanel />);
+    render(<McpConnectionsPanel sessionId={sessionId} />);
     fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
     expect(await screen.findByDisplayValue("本地笔记")).toBeTruthy();
     expect(screen.getByText("沙箱：macos_seatbelt")).toBeTruthy();
@@ -330,6 +341,7 @@ describe("McpConnectionsPanel", () => {
     );
     await waitFor(() =>
       expect(readMcpResource).toHaveBeenCalledWith(
+        sessionId,
         localConnection.connection_id,
         "notes://profile/nene",
       ),
@@ -344,12 +356,18 @@ describe("McpConnectionsPanel", () => {
     );
     await waitFor(() =>
       expect(getMcpPrompt).toHaveBeenCalledWith(
+        sessionId,
         localConnection.connection_id,
         "greeting",
         { name: "木白" },
       ),
     );
     expect(await screen.findByText(/向木白问好/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭 MCP 连接管理" }));
+    fireEvent.click(screen.getByRole("button", { name: "MCP 连接" }));
+    await screen.findByRole("dialog", { name: "MCP 连接管理" });
+    expect(screen.queryByText(/向木白问好/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "停用" }));
     await waitFor(() =>

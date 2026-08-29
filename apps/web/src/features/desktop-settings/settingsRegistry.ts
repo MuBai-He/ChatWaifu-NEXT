@@ -9,7 +9,10 @@ export interface SettingsSectionAvailability {
   reason?: string;
 }
 
-export interface SettingsSectionDefinition<Context, Id extends string = string> {
+export interface SettingsSectionDefinition<
+  Context,
+  Id extends string = string,
+> {
   id: Id;
   label: string;
   description: string;

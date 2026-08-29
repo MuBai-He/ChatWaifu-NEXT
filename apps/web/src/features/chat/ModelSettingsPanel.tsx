@@ -306,25 +306,26 @@ function CharacterStateCard({
           <strong>角色状态</strong>
         </div>
         <span>
-          {stageLabel(relationship.stage)} · #{snapshot.revision}
+          {stageLabel(relationship.stage ?? "acquaintance")} · #
+          {snapshot.revision}
         </span>
       </header>
       <div className="kernel-metrics">
-        <Metric label="熟悉" value={relationship.familiarity} />
-        <Metric label="信任" value={relationship.trust} />
-        <Metric label="好感" value={relationship.affinity} />
-        <Metric label="舒适" value={relationship.comfort} />
+        <Metric label="熟悉" value={relationship.familiarity ?? 0} />
+        <Metric label="信任" value={relationship.trust ?? 0} />
+        <Metric label="好感" value={relationship.affinity ?? 0} />
+        <Metric label="舒适" value={relationship.comfort ?? 0} />
       </div>
       <p>
         当前情绪：
-        {affect.valence >= 0.25
+        {(affect.valence ?? 0) >= 0.25
           ? "温暖"
-          : affect.valence < -0.1
+          : (affect.valence ?? 0) < -0.1
             ? "低落"
             : "平静"}
-        {affect.embarrassment >= 0.35 ? " · 害羞" : ""}
-        {affect.tension >= 0.35 ? " · 紧张" : ""}
-        ；互动 {relationship.interaction_count} 回合
+        {(affect.embarrassment ?? 0) >= 0.35 ? " · 害羞" : ""}
+        {(affect.tension ?? 0) >= 0.35 ? " · 紧张" : ""}
+        ；互动 {relationship.interaction_count ?? 0} 回合
       </p>
     </section>
   );
@@ -345,6 +346,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 function stageLabel(
   stage: CharacterKernelSnapshot["relationship"]["stage"],
 ): string {
+  if (!stage) return "初识";
   return {
     acquaintance: "初识",
     familiar: "熟悉",

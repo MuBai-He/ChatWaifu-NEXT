@@ -29,25 +29,37 @@ describe("PlaybackAckReporter", () => {
     ]);
   });
 
-  it("continues after a failed receipt", async () => {
+  it("retries a transient failure without letting the terminal receipt overtake it", async () => {
+    vi.useFakeTimers();
     const sent: string[] = [];
     const onError = vi.fn();
-    const reporter = new PlaybackAckReporter({
-      send: (item) => {
-        sent.push(item.phase);
-        if (item.phase === "started")
-          return Promise.reject(new Error("offline"));
-        return Promise.resolve();
+    let startedAttempts = 0;
+    const reporter = new PlaybackAckReporter(
+      {
+        send: (item) => {
+          sent.push(item.phase);
+          if (item.phase === "started" && ++startedAttempts < 3)
+            return Promise.reject(new Error("offline"));
+          return Promise.resolve();
+        },
+        onError,
       },
-      onError,
-    });
+      64,
+      [10, 20],
+    );
 
     reporter.report(receipt("started", 0));
     reporter.report(receipt("stopped", 1000));
     await flushPromises();
+    expect(sent).toEqual(["started"]);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(sent).toEqual(["started", "started"]);
+    await vi.advanceTimersByTimeAsync(20);
+    await flushPromises();
 
-    expect(sent).toEqual(["started", "stopped"]);
-    expect(onError).toHaveBeenCalledOnce();
+    expect(sent).toEqual(["started", "started", "started", "stopped"]);
+    expect(onError).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
 
