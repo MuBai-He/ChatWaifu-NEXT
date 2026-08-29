@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Literal
+from pathlib import Path
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.base import JsonObject, JsonValue
 from chatwaifu_protocol.skills import (
+    McpConnectionConfiguration,
     SkillInvocation,
     SkillResult,
     SkillRunSnapshot,
@@ -30,6 +34,10 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolCallRequested,
 )
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
+
+_LOCAL_ECHO_SERVER = (
+    Path(__file__).resolve().parents[3] / "plugins" / "examples" / "local-echo" / "server.py"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,6 +339,91 @@ async def test_agent_executes_builtin_through_real_runtime_skill_gateway(
         assert payload["origin"] == "agent"
         assert payload["provider_tool_call_id"] == "call_real"
         container.event_hub.unsubscribe(subscription)
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_agent_executes_connected_mcp_tool_through_confirmation_gateway(
+    runtime_settings: Settings,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        await container.runtime_skills.create_mcp_connection(
+            McpConnectionConfiguration(
+                connection_id=connection_id,
+                name="Agent Echo",
+                transport="stdio",
+                command=[sys.executable, str(_LOCAL_ECHO_SERVER)],
+                trust_level="trusted",
+                sandbox_mode="disabled",
+                network_policy="allow",
+                timeout_seconds=5,
+            )
+        )
+        ready = await container.runtime_skills.test_mcp_connection(connection_id)
+        assert ready.status == "ready"
+
+        session = await container.sessions.create_session("ayachi_nene")
+        router = RuntimeSkillRouter(container.runtime_skills.list)
+        projection = next(
+            tool
+            for tool in router.select("请让 Agent Echo 把 integration 原样返回")
+            if tool.capability == "local_echo"
+        )
+        call = LlmToolCall(
+            call_id="call_mcp_echo",
+            name=projection.name,
+            arguments={"text": "integration"},
+        )
+        llm = _ScriptedLlm(
+            [
+                (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+                (LlmTextDelta("MCP 已返回 integration。"), LlmResponseCompleted("stop")),
+            ]
+        )
+        agent = AgentTurnOrchestrator(llm, container.runtime_skills, router)
+        confirmation_events = container.event_hub.subscribe(
+            lambda event: event.get("event_type") == "skill.confirmation_requested",
+            queue_size=2,
+        )
+        turn: asyncio.Task[list[str]] | None = None
+        try:
+            turn = asyncio.create_task(
+                _collect(
+                    agent,
+                    _request("请让 Agent Echo 把 integration 原样返回"),
+                    session.session_id,
+                )
+            )
+
+            requested = await asyncio.wait_for(confirmation_events.receive(), timeout=2)
+            payload = cast(dict[str, object], requested["payload"])
+            await container.runtime_skills.decide_confirmation(
+                UUID(str(payload["request_id"])), "allow_once"
+            )
+            chunks = await asyncio.wait_for(turn, timeout=5)
+
+            assert chunks == ["MCP 已返回 integration。"]
+            exchange = llm.requests[1].tool_exchanges[0]
+            assert exchange.results[0].is_error is False
+            content = exchange.results[0].content
+            assert isinstance(content, dict)
+            assert content["ok"] is True
+            data = content["data"]
+            assert isinstance(data, dict)
+            assert data["echo"] == "integration"
+            runs = await container.runtime_skills.list_runs(session.session_id)
+            assert runs[0].mcp_connection_id == connection_id
+            assert runs[0].origin == "agent"
+        finally:
+            if turn is not None and not turn.done():
+                turn.cancel()
+                with suppress(asyncio.CancelledError):
+                    await turn
+            container.event_hub.unsubscribe(confirmation_events)
     finally:
         await container.stop()
 
