@@ -196,7 +196,7 @@ fn revoke_profile(
         for root in &manifest.roots {
             if root.path.exists() {
                 paths::validate_journal_root(&root.path)?;
-                acl::revoke_root(&root.path, &sid, root.original_dacl_control)?;
+                acl::revoke_tree(&root.path, &sid, root.original_dacl_control)?;
             }
         }
         delete_profile_idempotent(profile_name)?;

@@ -156,6 +156,50 @@ pub(super) fn revoke_root(
     Ok(())
 }
 
+/// Revoke this AppContainer SID from a root and every ordinary descendant.
+///
+/// `grant_to_package` uses inheritable ACEs for directories. Windows can leave
+/// already materialized inherited ACEs on children after the root ACE is
+/// removed, so revocation must walk the tree. The root is cleaned first to
+/// prevent its ACE from being propagated again while child DACLs are updated.
+/// Reparse points are skipped so a plugin-controlled junction cannot extend
+/// cleanup beyond the journaled root.
+pub(super) fn revoke_tree(
+    path: &Path,
+    sid: &str,
+    original_dacl_control: Option<u16>,
+) -> Result<()> {
+    revoke_root(path, sid, original_dacl_control)?;
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.is_dir() || is_reparse_point(&metadata) {
+        return Ok(());
+    }
+    revoke_descendants(path, sid)
+}
+
+fn revoke_descendants(directory: &Path, sid: &str) -> Result<()> {
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        let metadata = entry.metadata()?;
+        if is_reparse_point(&metadata) {
+            continue;
+        }
+        revoke_root(&path, sid, None)?;
+        if metadata.is_dir() {
+            revoke_descendants(&path, sid)?;
+        }
+    }
+    Ok(())
+}
+
+fn is_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
 pub(super) fn dacl_control(path: &Path) -> Result<u16> {
     use windows::Win32::Security::Authorization::{GetNamedSecurityInfoW, SE_FILE_OBJECT};
     use windows::Win32::Security::{
@@ -201,12 +245,58 @@ fn apply_dacl_with_control(
     dacl: *mut windows::Win32::Security::ACL,
     original: u16,
 ) -> Result<()> {
+    if original
+        & (windows::Win32::Security::SE_DACL_AUTO_INHERITED.0
+            | windows::Win32::Security::SE_DACL_AUTO_INHERIT_REQ.0)
+        == 0
+    {
+        return apply_dacl_without_auto_inherit(path, dacl, original);
+    }
+
+    use windows::Win32::Security::Authorization::{SE_FILE_OBJECT, SetNamedSecurityInfoW};
     use windows::Win32::Security::{
-        DACL_SECURITY_INFORMATION, InitializeSecurityDescriptor,
-        PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, SE_DACL_AUTO_INHERIT_REQ,
-        SE_DACL_AUTO_INHERITED, SE_DACL_PROTECTED, SECURITY_DESCRIPTOR,
-        SECURITY_DESCRIPTOR_CONTROL, SetFileSecurityW, SetSecurityDescriptorControl,
-        SetSecurityDescriptorDacl, UNPROTECTED_DACL_SECURITY_INFORMATION,
+        DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, SE_DACL_AUTO_INHERIT_REQ,
+        SE_DACL_AUTO_INHERITED, SE_DACL_PROTECTED, UNPROTECTED_DACL_SECURITY_INFORMATION,
+    };
+    use windows::core::PWSTR;
+
+    let mut information = DACL_SECURITY_INFORMATION;
+    if original & SE_DACL_PROTECTED.0 != 0 {
+        information |= PROTECTED_DACL_SECURITY_INFORMATION;
+    } else if original & (SE_DACL_AUTO_INHERITED.0 | SE_DACL_AUTO_INHERIT_REQ.0) != 0 {
+        // SetNamedSecurityInfo is the filesystem API that runs the automatic
+        // inheritance algorithm and therefore restores the AI control bit.
+        information |= UNPROTECTED_DACL_SECURITY_INFORMATION;
+    }
+    let status = unsafe {
+        SetNamedSecurityInfoW(
+            PWSTR(path.as_ptr().cast_mut()),
+            SE_FILE_OBJECT,
+            information,
+            None,
+            None,
+            Some(dacl.cast_const()),
+            None,
+        )
+    };
+    if status.0 != 0 {
+        return Err(HostError::AppContainer(format!(
+            "SetNamedSecurityInfoW(DACL revoke) failed: {}",
+            status.0
+        )));
+    }
+    Ok(())
+}
+
+fn apply_dacl_without_auto_inherit(
+    path: &[u16],
+    dacl: *mut windows::Win32::Security::ACL,
+    original: u16,
+) -> Result<()> {
+    use windows::Win32::Security::{
+        DACL_SECURITY_INFORMATION, InitializeSecurityDescriptor, PSECURITY_DESCRIPTOR,
+        SE_DACL_PROTECTED, SECURITY_DESCRIPTOR, SECURITY_DESCRIPTOR_CONTROL, SetFileSecurityW,
+        SetSecurityDescriptorControl, SetSecurityDescriptorDacl,
     };
     use windows::core::PCWSTR;
 
@@ -217,23 +307,22 @@ fn apply_dacl_with_control(
     })?;
     unsafe { SetSecurityDescriptorDacl(descriptor_pointer, true, Some(dacl), false) }
         .map_err(|error| HostError::AppContainer(format!("SetSecurityDescriptorDacl: {error}")))?;
-
-    let control_mask = SECURITY_DESCRIPTOR_CONTROL(
-        SE_DACL_PROTECTED.0 | SE_DACL_AUTO_INHERITED.0 | SE_DACL_AUTO_INHERIT_REQ.0,
-    );
-    let original_bits = SECURITY_DESCRIPTOR_CONTROL(original & control_mask.0);
-    unsafe { SetSecurityDescriptorControl(descriptor_pointer, control_mask, original_bits) }
-        .map_err(|error| {
-            HostError::AppContainer(format!("SetSecurityDescriptorControl: {error}"))
-        })?;
-    let mut information = DACL_SECURITY_INFORMATION;
-    if original & SE_DACL_PROTECTED.0 != 0 {
-        information |= PROTECTED_DACL_SECURITY_INFORMATION;
-    } else {
-        information |= UNPROTECTED_DACL_SECURITY_INFORMATION;
+    let protected = SECURITY_DESCRIPTOR_CONTROL(original & SE_DACL_PROTECTED.0);
+    unsafe {
+        SetSecurityDescriptorControl(
+            descriptor_pointer,
+            SECURITY_DESCRIPTOR_CONTROL(SE_DACL_PROTECTED.0),
+            protected,
+        )
     }
-    let applied =
-        unsafe { SetFileSecurityW(PCWSTR(path.as_ptr()), information, descriptor_pointer) };
+    .map_err(|error| HostError::AppContainer(format!("SetSecurityDescriptorControl: {error}")))?;
+    let applied = unsafe {
+        SetFileSecurityW(
+            PCWSTR(path.as_ptr()),
+            DACL_SECURITY_INFORMATION,
+            descriptor_pointer,
+        )
+    };
     if !applied.as_bool() {
         return Err(HostError::AppContainer(format!(
             "SetFileSecurityW(DACL revoke) failed: {}",
