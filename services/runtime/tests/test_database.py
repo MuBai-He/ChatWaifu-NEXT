@@ -54,6 +54,108 @@ async def test_concurrent_append_assigns_unique_monotonic_sequences(
 
 
 @pytest.mark.asyncio
+async def test_startup_drains_more_than_one_outbox_page(runtime_settings: Settings) -> None:
+    seeded = RuntimeContainer(runtime_settings)
+    await seeded.start()
+    try:
+        session = await seeded.sessions.create_session("default")
+        for index in range(105):
+            await seeded.event_store.append(
+                GenericCoreEvent(
+                    event_id=uuid4(),
+                    event_type="assistant.text_delta",
+                    session_id=session.session_id,
+                    occurred_at=datetime.now(UTC),
+                    source="test.outbox_recovery",
+                    privacy=PrivacyLevel.LOCAL,
+                    payload={"text": f"pending-{index}"},
+                )
+            )
+        assert len(await seeded.event_store.pending_outbox(limit=200)) == 105
+    finally:
+        await seeded.stop()
+
+    restarted = RuntimeContainer(runtime_settings)
+    published: list[str] = []
+    original_publish = restarted.event_hub.publish
+
+    async def observe_publish(event: dict[str, object]) -> None:
+        published.append(str(event["event_id"]))
+        await original_publish(event)
+
+    restarted.event_hub.publish = observe_publish  # type: ignore[method-assign]
+    await restarted.start()
+    try:
+        assert len(published) == 105
+        assert len(set(published)) == 105
+        assert await restarted.event_store.pending_outbox(limit=200) == []
+    finally:
+        await restarted.stop()
+
+
+@pytest.mark.asyncio
+async def test_startup_outbox_publish_failure_retries_remaining_rows_on_next_start(
+    runtime_settings: Settings,
+) -> None:
+    seeded = RuntimeContainer(runtime_settings)
+    await seeded.start()
+    try:
+        session = await seeded.sessions.create_session("default")
+        for index in range(105):
+            await seeded.event_store.append(
+                GenericCoreEvent(
+                    event_id=uuid4(),
+                    event_type="assistant.text_delta",
+                    session_id=session.session_id,
+                    occurred_at=datetime.now(UTC),
+                    source="test.outbox_recovery",
+                    privacy=PrivacyLevel.LOCAL,
+                    payload={"text": f"retry-{index}"},
+                )
+            )
+    finally:
+        await seeded.stop()
+
+    interrupted = RuntimeContainer(runtime_settings)
+    original_publish = interrupted.event_hub.publish
+    publish_attempts = 0
+
+    async def fail_mid_page(event: dict[str, object]) -> None:
+        nonlocal publish_attempts
+        publish_attempts += 1
+        if publish_attempts == 51:
+            raise RuntimeError("injected outbox publish failure")
+        await original_publish(event)
+
+    interrupted.event_hub.publish = fail_mid_page  # type: ignore[method-assign]
+    with pytest.raises(RuntimeError, match="outbox publish failure"):
+        await interrupted.start()
+    assert publish_attempts == 51
+
+    with sqlite3.connect(runtime_settings.database_path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM outbox WHERE published_at IS NULL"
+        ).fetchone() == (55,)
+
+    recovered = RuntimeContainer(runtime_settings)
+    recovered_ids: list[str] = []
+    recovered_publish = recovered.event_hub.publish
+
+    async def observe_recovery(event: dict[str, object]) -> None:
+        recovered_ids.append(str(event["event_id"]))
+        await recovered_publish(event)
+
+    recovered.event_hub.publish = observe_recovery  # type: ignore[method-assign]
+    await recovered.start()
+    try:
+        assert len(recovered_ids) == 55
+        assert len(set(recovered_ids)) == 55
+        assert await recovered.event_store.pending_outbox(limit=200) == []
+    finally:
+        await recovered.stop()
+
+
+@pytest.mark.asyncio
 async def test_failed_migration_rolls_back_schema_and_can_retry(tmp_path: Path) -> None:
     path = tmp_path / "atomic-migration.db"
     storage = StorageConfig(database_path=path)

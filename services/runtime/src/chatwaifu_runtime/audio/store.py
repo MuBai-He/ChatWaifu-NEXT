@@ -1,9 +1,13 @@
 """Safe local paths for browser-playable generated speech."""
 
+import errno
+import logging
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID, uuid4
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,38 +20,109 @@ class AudioAsset:
         return f"/v1/audio/{self.asset_id}.wav"
 
 
+@dataclass(frozen=True, slots=True)
+class AudioRemovalCommit:
+    deleted_count: int
+    pending_count: int
+    cleanup_complete: bool
+
+
 @dataclass(slots=True)
 class StagedAudioRemoval:
     directory: Path | None
     entries: tuple[tuple[Path, Path], ...]
     finished: bool = False
+    _commit_started: bool = False
+    _purged: set[Path] = field(default_factory=lambda: set[Path](), repr=False)
 
     @property
     def count(self) -> int:
         return len(self.entries)
 
-    def commit(self) -> int:
+    def commit(self) -> AudioRemovalCommit:
         if self.finished:
-            return self.count
+            return AudioRemovalCommit(
+                deleted_count=len(self._purged),
+                pending_count=0,
+                cleanup_complete=True,
+            )
+
+        self._commit_started = True
         for _original, staged in self.entries:
+            if staged in self._purged:
+                continue
+            if not staged.exists():
+                self._purged.add(staged)
+                continue
             try:
-                staged.unlink(missing_ok=True)
-            except OSError:
-                # It is already outside the public asset namespace.  Startup
-                # cleanup retries an interrupted or permission-blocked purge.
-                pass
-        if self.directory is not None:
+                staged.unlink()
+            except OSError as error:
+                logger.warning(
+                    "audio asset purge failed; retaining quarantine entry for retry",
+                    extra={
+                        "audio_asset_id": staged.stem,
+                        "quarantine_batch": (
+                            self.directory.name if self.directory is not None else None
+                        ),
+                        "error": type(error).__name__,
+                    },
+                    exc_info=True,
+                )
+            else:
+                self._purged.add(staged)
+
+        pending_count = sum(
+            staged not in self._purged and staged.exists() for _original, staged in self.entries
+        )
+        cleanup_complete = pending_count == 0
+        if cleanup_complete and self.directory is not None:
             try:
                 self.directory.rmdir()
-                self.directory.parent.rmdir()
-            except OSError:
+            except FileNotFoundError:
                 pass
-        self.finished = True
-        return self.count
+            except OSError as error:
+                cleanup_complete = False
+                logger.warning(
+                    "audio quarantine batch cleanup failed; retaining it for retry",
+                    extra={
+                        "quarantine_batch": self.directory.name,
+                        "error": type(error).__name__,
+                    },
+                    exc_info=True,
+                )
+
+            if not self.directory.exists():
+                try:
+                    self.directory.parent.rmdir()
+                except FileNotFoundError:
+                    pass
+                except OSError as error:
+                    # Another staged reset can legitimately keep the shared
+                    # quarantine root non-empty. Other failures need to remain
+                    # visible and will be retried by startup reconciliation.
+                    if error.errno not in {errno.EEXIST, errno.ENOTEMPTY}:
+                        cleanup_complete = False
+                        logger.warning(
+                            "audio quarantine root cleanup failed; retaining it for retry",
+                            extra={
+                                "quarantine_root": self.directory.parent.name,
+                                "error": type(error).__name__,
+                            },
+                            exc_info=True,
+                        )
+
+        self.finished = cleanup_complete
+        return AudioRemovalCommit(
+            deleted_count=len(self._purged),
+            pending_count=pending_count,
+            cleanup_complete=cleanup_complete,
+        )
 
     def rollback(self) -> None:
         if self.finished:
             return
+        if self._commit_started:
+            raise RuntimeError("cannot restore audio assets after purge has started")
         errors: list[Exception] = []
         for original, staged in reversed(self.entries):
             if not staged.exists():

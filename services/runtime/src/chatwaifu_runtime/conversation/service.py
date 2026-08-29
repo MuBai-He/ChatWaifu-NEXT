@@ -316,7 +316,16 @@ class ConversationService:
                         [reset_error, rollback_error],
                     ) from None
                 raise
-            audio_assets_deleted = staged_audio.commit()
+            audio_commit = staged_audio.commit()
+            if not audio_commit.cleanup_complete:
+                logger.warning(
+                    "experience reset committed with deferred audio quarantine cleanup",
+                    extra={
+                        "session_id": str(session_id),
+                        "audio_assets_deleted": audio_commit.deleted_count,
+                        "audio_assets_pending": audio_commit.pending_count,
+                    },
+                )
             await self._memory.finalize_scope_reset(reset.memory_ids)
             try:
                 await self._publisher.publish_persisted(reset.reset_event)
@@ -332,7 +341,9 @@ class ConversationService:
                 turns_deleted=reset.turns_deleted,
                 events_deleted=reset.events_deleted,
                 memories_deleted=len(reset.memory_ids),
-                audio_assets_deleted=audio_assets_deleted,
+                audio_assets_deleted=audio_commit.deleted_count,
+                audio_assets_pending_cleanup=audio_commit.pending_count,
+                audio_cleanup_complete=audio_commit.cleanup_complete,
             )
 
     async def stop(self) -> None:

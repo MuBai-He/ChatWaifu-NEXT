@@ -186,6 +186,7 @@ class RuntimeContainer:
                 self.audio_assets.recover_staged_removals(
                     await self.experience_reset_repository.all_audio_asset_ids()
                 )
+                await self._drain_pending_outbox()
                 await self.companion_settings.start()
                 await self.model_configurations.start()
                 await self.tts_configurations.start()
@@ -195,12 +196,6 @@ class RuntimeContainer:
                 await self.runtime_skills.start()
                 await self.resources.start()
                 await self.ambient.start()
-
-                for event in await self.event_store.pending_outbox():
-                    await self.event_hub.publish(event)
-                    event_id = event.get("event_id")
-                    if event_id is not None:
-                        await self.event_store.mark_published(str(event_id))
             except BaseException as error:
                 failed, cleanup_errors = await _drain_cleanup_steps(self._cleanup_steps)
                 self._cleanup_steps = failed
@@ -212,6 +207,25 @@ class RuntimeContainer:
                 raise
 
             self._state = "started"
+
+    async def _drain_pending_outbox(self, page_size: int = 100) -> None:
+        """Republish every durable event left by an interrupted Runtime.
+
+        Each row is marked only after the Hub accepted it. A failure therefore
+        aborts startup with the failed row and the rest of the page still pending;
+        constructing a fresh container safely resumes from that durable boundary.
+        """
+
+        while True:
+            pending = await self.event_store.pending_outbox(limit=page_size)
+            if not pending:
+                return
+            for event in pending:
+                event_id = event.get("event_id")
+                if not isinstance(event_id, str) or not event_id:
+                    raise RuntimeError("pending outbox event is missing a valid event_id")
+                await self.event_hub.publish(event)
+                await self.event_store.mark_published(event_id)
 
     async def stop(self) -> None:
         async with self._lifecycle_lock:

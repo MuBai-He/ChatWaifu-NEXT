@@ -23,8 +23,11 @@ state.
   `assistant.generation_started` event so its transient text/playback state can be rebuilt.
 - The browser retains its last delivered sequence across reconnects, serializes event handling,
   de-duplicates repeats, and independently fills a detected gap through the HTTP event endpoint.
-- Reset explicitly restarts the subscription from sequence zero because the reset contract creates
-  a fresh session-local event sequence.
+- Reset deletes only reset-owned history, keeps `sessions.next_sequence` monotonic, and appends a
+  durable `session.data_reset` event in the same SQLite transaction. Every connected client consumes
+  that next sequence and clears its projection without restarting its subscription or reusing a
+  cursor; provenance events retained for another memory scope therefore cannot collide with new
+  events.
 
 ## Consequences
 

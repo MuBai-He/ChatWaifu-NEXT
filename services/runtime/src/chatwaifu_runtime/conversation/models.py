@@ -24,3 +24,5 @@ class SessionDataReset:
     events_deleted: int
     memories_deleted: int
     audio_assets_deleted: int
+    audio_assets_pending_cleanup: int
+    audio_cleanup_complete: bool
