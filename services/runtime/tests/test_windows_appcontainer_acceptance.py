@@ -584,6 +584,24 @@ def _send_json(process: subprocess.Popen[str], value: dict[str, Any]) -> None:
     process.stdin.flush()
 
 
+def _receive_or_report_exit(
+    process: subprocess.Popen[str],
+    reader: _JsonLineReader,
+    *,
+    timeout: float,
+) -> dict[str, Any]:
+    try:
+        return reader.receive(timeout=timeout)
+    except (AssertionError, queue.Empty) as error:
+        if process.poll() is None:
+            raise
+        assert process.stderr is not None
+        detail = process.stderr.read()
+        raise AssertionError(
+            f"sandboxed process exited with {process.returncode}: {detail}"
+        ) from error
+
+
 def test_official_mcp_stdio_round_trip_and_eof(layout: _Layout) -> None:
     shutil.copy2(MCP_FIXTURE, layout.package / "mcp_server.py")
     child = [sys.executable, "-I", "-B", str(layout.package / "mcp_server.py")]
@@ -724,7 +742,8 @@ def test_killing_host_terminates_the_entire_child_tree(layout: _Layout) -> None:
     descendant_pid: int | None = None
     try:
         assert process.stdout is not None
-        ready = _JsonLineReader(process.stdout).receive(timeout=20)
+        reader = _JsonLineReader(process.stdout)
+        ready = _receive_or_report_exit(process, reader, timeout=20)
         descendant_pid = int(ready["descendant_pid"])
         assert marker.read_text(encoding="ascii") == str(descendant_pid)
         assert not _wait_for_process_exit(descendant_pid, 0)
@@ -768,7 +787,8 @@ def test_parent_stdin_eof_terminates_the_entire_child_tree(layout: _Layout) -> N
     descendant_pid: int | None = None
     try:
         assert process.stdout is not None
-        ready = _JsonLineReader(process.stdout).receive(timeout=20)
+        reader = _JsonLineReader(process.stdout)
+        ready = _receive_or_report_exit(process, reader, timeout=20)
         descendant_pid = int(ready["descendant_pid"])
         assert not _wait_for_process_exit(descendant_pid, 0)
         assert process.stdin is not None
