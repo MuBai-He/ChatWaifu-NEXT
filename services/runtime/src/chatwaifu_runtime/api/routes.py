@@ -269,6 +269,7 @@ async def read_tts_providers(
     for snapshot in await container.providers.tts.snapshots(session_id):
         descriptor = snapshot.descriptor
         health = snapshot.health
+        registration = container.tts_configurations.registration_for(descriptor.provider_id)
         items.append(
             {
                 "provider_id": descriptor.provider_id,
@@ -287,6 +288,9 @@ async def read_tts_providers(
                 "device": health.device,
                 "detail": health.detail,
                 "selected": snapshot.selected,
+                "presentation": (
+                    registration.presentation.public() if registration is not None else None
+                ),
             }
         )
     return {
@@ -304,8 +308,11 @@ async def list_tts_configurations(request: Request) -> dict[str, object]:
         {
             "provider_id": registration.provider_id,
             "display_name": registration.display_name,
+            "configuration_schema_version": registration.configuration_schema_version,
             "configuration_schema": registration.schema(),
             "ui_schema": registration.ui_schema(),
+            "credential": registration.credential(),
+            "presentation": registration.presentation.public(),
             "configuration": service.get_for(registration.provider_id).model_dump(mode="json"),
         }
         for registration in service.registrations()

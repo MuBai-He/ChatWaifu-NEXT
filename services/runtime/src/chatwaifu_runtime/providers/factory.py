@@ -15,7 +15,6 @@ from chatwaifu_runtime.providers.tts import (
     WorkerTtsProvider,
 )
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
-from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.providers.tts_router import TtsRouter
 
 
@@ -52,7 +51,7 @@ def build_providers(
     tts_kind = settings.tts.selected_provider
     tts_providers: dict[str, TtsProvider] = {}
     if tts_configurations is not None:
-        for registration in TTS_PROVIDER_REGISTRATIONS:
+        for registration in tts_configurations.registrations():
             tts_providers[registration.provider_id] = registration.build(tts_configurations)
     if settings.tts.provider is None:
         for provider_id, endpoint in settings.tts.workers.items():

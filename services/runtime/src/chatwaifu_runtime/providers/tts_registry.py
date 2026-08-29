@@ -11,6 +11,7 @@ from chatwaifu_runtime.providers.tts_config import (
     AliyunCosyVoiceTtsConfiguration,
     AliyunTtsConfiguration,
     TtsConfigurationService,
+    TtsProviderPresentation,
     TtsProviderRegistration,
     TtsUiField,
     TtsUiOption,
@@ -129,6 +130,11 @@ TTS_PROVIDER_REGISTRATIONS = (
             _MAX_AUDIO,
             _API_KEY,
         ),
+        presentation=TtsProviderPresentation(
+            group_id="aliyun_bailian",
+            group_display_name="阿里云百炼",
+            variant_label="Qwen3-TTS VC",
+        ),
     ),
     TtsProviderRegistration(
         provider_id=ALIYUN_COSYVOICE_TTS_PROVIDER_ID,
@@ -184,6 +190,12 @@ TTS_PROVIDER_REGISTRATIONS = (
             _MAX_AUDIO,
             _API_KEY,
         ),
-        secret_fallback_provider_id=ALIYUN_QWEN_TTS_PROVIDER_ID,
+        api_key_fallback_provider_id=ALIYUN_QWEN_TTS_PROVIDER_ID,
+        presentation=TtsProviderPresentation(
+            group_id="aliyun_bailian",
+            group_display_name="阿里云百炼",
+            variant_label="CosyVoice",
+            group_default=True,
+        ),
     ),
 )

@@ -609,4 +609,15 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON permission_grants(mcp_connection_id, revoked_at);
         """,
     ),
+    (
+        15,
+        """
+        CREATE TABLE tts_provider_configs (
+            provider_id TEXT PRIMARY KEY,
+            schema_version TEXT NOT NULL,
+            configuration_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """,
+    ),
 )
