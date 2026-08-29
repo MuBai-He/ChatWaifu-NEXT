@@ -208,6 +208,53 @@ def _spawn_once(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _set_inherited_event(args: argparse.Namespace) -> int:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.SetEvent.argtypes = [wintypes.HANDLE]
+    kernel32.SetEvent.restype = wintypes.BOOL
+    try:
+        allowed = bool(kernel32.SetEvent(wintypes.HANDLE(args.handle)))
+        winerror = 0 if allowed else ctypes.get_last_error()
+    except OSError as error:
+        allowed = False
+        winerror = error.winerror
+    print(
+        json.dumps(
+            {
+                "allowed": allowed,
+                "winerror": winerror,
+            },
+            ensure_ascii=True,
+        ),
+        flush=True,
+    )
+    return 0
+
+
+def _memory_pressure(_args: argparse.Namespace) -> int:
+    allocations: list[bytearray] = []
+    try:
+        for _ in range(128):
+            allocations.append(bytearray(8 * 1024 * 1024))
+    except MemoryError:
+        print(
+            json.dumps(
+                {"limited": True, "allocated_chunks": len(allocations)},
+                ensure_ascii=True,
+            ),
+            flush=True,
+        )
+        return 0
+    print(
+        json.dumps(
+            {"limited": False, "allocated_chunks": len(allocations)},
+            ensure_ascii=True,
+        ),
+        flush=True,
+    )
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
@@ -231,6 +278,13 @@ def _parser() -> argparse.ArgumentParser:
 
     spawn_once = commands.add_parser("spawn-once")
     spawn_once.set_defaults(run=_spawn_once)
+
+    inherited_event = commands.add_parser("set-inherited-event")
+    inherited_event.add_argument("--handle", type=int, required=True)
+    inherited_event.set_defaults(run=_set_inherited_event)
+
+    memory_pressure = commands.add_parser("memory-pressure")
+    memory_pressure.set_defaults(run=_memory_pressure)
     return parser
 
 

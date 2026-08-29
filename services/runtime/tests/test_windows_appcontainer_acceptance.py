@@ -238,6 +238,7 @@ def _run_child_with_open_stdin(
     command: list[str],
     *,
     timeout: float = 30.0,
+    close_fds: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     """Run a finite child without turning parent stdin into cancellation.
 
@@ -255,6 +256,7 @@ def _run_child_with_open_stdin(
         text=True,
         encoding="utf-8",
         errors="replace",
+        close_fds=close_fds,
     )
     try:
         returncode = process.wait(timeout=timeout)
@@ -832,3 +834,78 @@ def test_job_active_process_limit(
     assert result.returncode == 0, result.stderr
     payload = cast(dict[str, Any], json.loads(result.stdout))
     assert payload["allowed"] is expected_allowed
+
+
+def test_handle_allowlist_excludes_unrelated_inheritable_handle(layout: _Layout) -> None:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateEventW.argtypes = [
+        ctypes.c_void_p,
+        wintypes.BOOL,
+        wintypes.BOOL,
+        wintypes.LPCWSTR,
+    ]
+    kernel32.CreateEventW.restype = wintypes.HANDLE
+    kernel32.SetHandleInformation.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.DWORD,
+    ]
+    kernel32.SetHandleInformation.restype = wintypes.BOOL
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.CreateEventW(None, True, False, None)
+    assert handle, ctypes.WinError(ctypes.get_last_error(), "CreateEventW")
+    try:
+        handle_flag_inherit = 0x0000_0001
+        assert kernel32.SetHandleInformation(
+            handle,
+            handle_flag_inherit,
+            handle_flag_inherit,
+        ), ctypes.WinError(ctypes.get_last_error(), "SetHandleInformation")
+        shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
+        result = _run_child_with_open_stdin(
+            _run_command(
+                layout,
+                [
+                    str(BASE_PYTHON),
+                    "-I",
+                    "-B",
+                    str(layout.package / "probe.py"),
+                    "set-inherited-event",
+                    "--handle",
+                    str(int(handle)),
+                ],
+            ),
+            close_fds=False,
+        )
+        assert result.returncode == 0, result.stderr
+        payload = cast(dict[str, Any], json.loads(result.stdout))
+        assert payload["allowed"] is False
+        assert kernel32.WaitForSingleObject(handle, 0) == WAIT_TIMEOUT
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def test_job_memory_limit_rejects_excess_allocation(layout: _Layout) -> None:
+    shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
+    result = _run_child_with_open_stdin(
+        _run_command(
+            layout,
+            [
+                str(BASE_PYTHON),
+                "-I",
+                "-B",
+                str(layout.package / "probe.py"),
+                "memory-pressure",
+            ],
+            memory_bytes=128 * 1024 * 1024,
+        ),
+        timeout=45,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = cast(dict[str, Any], json.loads(result.stdout))
+    assert payload["limited"] is True
+    assert 0 < payload["allocated_chunks"] < 128
