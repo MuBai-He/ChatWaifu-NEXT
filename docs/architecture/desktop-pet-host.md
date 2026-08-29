@@ -110,6 +110,28 @@ specific restart or system-update recovery instead of presenting an inert disabl
 All existing generation, cancellation, late-output, and playback-ACK invariants stay in the Web and
 Runtime layers. Tauri does not reinterpret conversation events.
 
+## Windows installed product boundary
+
+ADR 0027 defines the Windows x64 release layout. The first installer is an NSIS current-user package;
+it embeds the Desktop frontend, maps the complete PyInstaller onedir Runtime to
+`$RESOURCE/runtime-sidecar/`, and maps the x64 AppContainer helper to
+`$RESOURCE/bin/chatwaifu-appcontainer-host.exe`. Release startup resolves these paths through
+Tauri's path API and fails explicitly when either component is absent. It never falls back to a
+source checkout, system Python, `uv`, or PATH lookup.
+
+Runtime receives Tauri-owned per-user config, local-data, and log roots before its Python modules are
+imported. Built-in code, characters, Skills, VAD/tokenizer data, and frozen libraries stay immutable
+under `$RESOURCE`; SQLite, provider settings and secrets, generated audio, installed plugin data,
+and future model caches remain outside the installation tree. Ordinary uninstall removes product
+resources but preserves these user roots. AppContainer profiles and ChatWaifu-owned ACL grants must
+be reconciled without deleting plugin data before an installed build can pass release acceptance.
+
+The redistributable base does not contain CUDA/PyTorch environments, local model weights, trained or
+cloned voices, or private Live2D assets. It remains usable through Demo and configured cloud
+providers and uses the safe avatar fallback when vendor assets are absent. A local operator may
+explicitly overlay ignored Live2D assets into a private test build, but that output cannot enter CI,
+tags, or a public release.
+
 The audio-element fallback may create a silent user-gesture probe before asynchronous TTS is ready.
 That probe is never allowed to hold the playback queue indefinitely: arrival of the first real,
 active-generation segment immediately promotes the probe element to real playback. A late probe
@@ -139,8 +161,9 @@ emits progress acknowledgements.
 - The service stack also watches the owning Rust PID, so an abrupt development hot reload still
   tears down workers even when Tauri cannot deliver its normal exit callback.
 
-Frozen release sidecars, signed installers, automatic updates, autostart, and Store-compatible
-non-transparent profiles are intentionally excluded from this slice.
+The frozen Runtime and NSIS assembly are a separate packaging slice governed by ADR 0027. Real
+installed launch/uninstall acceptance, signed public delivery, automatic updates, autostart, and
+Store-compatible non-transparent profiles remain outside the validated desktop-host slice.
 
 ## Verification
 

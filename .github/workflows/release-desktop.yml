@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "desktop-v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,10 +15,11 @@ concurrency:
 
 jobs:
   desktop-components:
+    if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -64,17 +66,9 @@ jobs:
       - name: Build Runtime sidecar component wheel
         run: uv build --package chatwaifu-runtime --wheel --clear --out-dir dist/runtime-sidecar
       - name: Build unsigned Tauri host
-        if: runner.os != 'Windows'
         run: pnpm --filter @chatwaifu/desktop build
-      - name: Build unsigned Windows x64 Tauri host
-        if: runner.os == 'Windows'
-        run: pnpm --filter @chatwaifu/desktop build:windows-x64
-      - name: Build Windows x64 AppContainer helper
-        if: runner.os == 'Windows'
-        run: cargo build --release --locked --package chatwaifu-appcontainer-host --target x86_64-pc-windows-msvc
       - run: uv run python tools/verify_product_artifacts.py --product desktop
       - name: Upload Unix developer components
-        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v6
         with:
           name: chatwaifu-${{ github.ref_name }}-${{ runner.os }}-developer-components
@@ -83,17 +77,6 @@ jobs:
             dist/runtime-sidecar/*.whl
             target/release/chatwaifu-desktop-host
           if-no-files-found: error
-      - name: Upload Windows x64 developer components
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v6
-        with:
-          name: chatwaifu-${{ github.ref_name }}-Windows-x64-developer-components
-          path: |
-            apps/web/dist/desktop
-            dist/runtime-sidecar/*.whl
-            target/x86_64-pc-windows-msvc/release/chatwaifu-desktop-host.exe
-            target/x86_64-pc-windows-msvc/release/chatwaifu-appcontainer-host.exe
-          if-no-files-found: error
       - name: Record the remaining production gate
         shell: bash
         run: |
@@ -101,5 +84,111 @@ jobs:
             echo "### Desktop candidate only"
             echo
             echo "The compiled host, isolated Desktop frontend, and Runtime wheel are CI components."
-            echo "No installable release is published until the frozen sidecar, resources, Tauri bundle, signing, and installation smoke gates pass."
+            echo "The Windows job builds the unsigned NSIS candidate separately; signing, installed-device smoke, and asset-license review still gate publication."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  windows-installer-x64:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Require tagged releases to be reachable from main
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Desktop release tags must point to a commit reachable from main."
+          }
+      - name: Reject private Live2D and local model overlays
+        shell: pwsh
+        run: |
+          $forbidden = @(
+            "apps/web/public/vendor/live2d",
+            ".local/live2d",
+            ".local/models",
+            ".local/training",
+            ".local/vendors"
+          )
+          $present = @($forbidden | Where-Object { Test-Path $_ })
+          if ($present.Count -ne 0) {
+            throw "Private or unreviewed assets are forbidden in public CI: $($present -join ', ')"
+          }
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98.0"
+          components: clippy
+          target: x86_64-pc-windows-msvc
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12.5"
+          enable-cache: true
+      - uses: pnpm/setup@v1
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+      - name: Bootstrap pinned Windows x64 toolchain
+        shell: pwsh
+        run: ./tools/windows/bootstrap_x64.ps1 -RecreateEnvironment
+      - name: Prove Python and Rust release targets
+        shell: pwsh
+        run: |
+          $pythonPlatform = (& ./.venv/Scripts/python.exe -c "import sysconfig; print(sysconfig.get_platform())").Trim()
+          if ($pythonPlatform -ne "win-amd64") {
+            throw "Expected win-amd64 Python, received $pythonPlatform."
+          }
+          $rustTargets = @(rustup target list --installed)
+          if ($LASTEXITCODE -ne 0 -or $rustTargets -notcontains "x86_64-pc-windows-msvc") {
+            throw "The x86_64-pc-windows-msvc Rust target is not installed."
+          }
+      - name: Verify desktop product version
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe tools/product_release.py verify --product desktop
+      - name: Verify desktop release tag and version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe tools/product_release.py verify --product desktop --tag $env:GITHUB_REF_NAME
+      - name: Build and smoke frozen Runtime plus unsigned NSIS installer
+        shell: pwsh
+        run: ./tools/windows/build_installer_x64.ps1
+      - name: Verify isolated Desktop frontend artifact
+        shell: pwsh
+        run: ./.venv/Scripts/python.exe tools/verify_product_artifacts.py --product desktop
+      - name: Create installer SHA256
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path "dist/windows/installer" -Filter "*-setup.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one unsigned NSIS installer, received $($installers.Count)."
+          }
+          $installer = $installers[0]
+          $sha256 = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = "$($installer.FullName).sha256"
+          "$sha256 *$($installer.Name)" | Set-Content -Path $checksum -Encoding ascii -NoNewline
+          "WINDOWS_INSTALLER=$($installer.FullName)" >> $env:GITHUB_ENV
+          "WINDOWS_INSTALLER_SHA256=$checksum" >> $env:GITHUB_ENV
+      - name: Upload unsigned Windows x64 installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: chatwaifu-desktop-Windows-x64-unsigned-${{ github.run_id }}
+          path: |
+            ${{ env.WINDOWS_INSTALLER }}
+            ${{ env.WINDOWS_INSTALLER_SHA256 }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record unsigned candidate scope
+        shell: pwsh
+        run: |
+          @"
+          ### Unsigned Windows x64 installer candidate
+
+          The uploaded NSIS installer contains the frozen Runtime and x64 AppContainer helper.
+          It intentionally excludes private Live2D, voice, training, and local model assets.
+          This candidate is unsigned and is not published as a GitHub Release.
+          "@ >> $env:GITHUB_STEP_SUMMARY

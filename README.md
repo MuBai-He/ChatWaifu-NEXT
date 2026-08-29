@@ -60,11 +60,24 @@ PowerShell 中准备 x64 Python/Rust 目标，然后使用开发脚本启动带�
 转写、使用确定性语音回退；支持的云端 TTS 仍可在设置界面配置。按 `Ctrl+C` 会停止桌面程序、
 Runtime 和开发服务器。若本地 Live2D 使用超过 4096 像素的纹理，开发脚本会保留 `.source.png`
 原图并生成仅限本机的 4K 运行副本，避免 Windows 虚拟显卡因 8K 纹理解码超时而落入安全回退。
-模型与两份纹理仍位于 Git 忽略目录，不会提交。准备发布文件时再执行带测试和 PE 架构校验的构建：
+模型与两份纹理仍位于 Git 忽略目录，不会提交。只验证 Windows x64 开发 Host 与
+AppContainer helper 时运行：
 
 ```powershell
 .\tools\windows\build_x64.ps1
 ```
+
+构建包含冻结 Runtime 的 NSIS current-user 安装候选包时运行：
+
+```powershell
+.\tools\windows\build_installer_x64.ps1
+```
+
+候选包输出到 `dist\windows\installer\`，构建会校验 Host、Runtime 和 AppContainer helper
+均为 PE `0x8664`。基础包不包含 CUDA/PyTorch、本地模型权重、训练音色或私有 Live2D；缺少本地
+Worker 时仍可使用 Demo 与设置好的云端模型/语音。仅在拥有相应本地资产且不上传产物时，才可用
+`-Live2DSource "C:\path\to\private\live2d"` 构建 owner-only 测试包。安装布局、用户数据保留与
+验收边界见 [ADR 0027](docs/adr/0027-windows-installed-desktop-runtime-layout.md)。
 
 若仓库中已有其他架构的 `.venv`，首次准备时增加 `-RecreateEnvironment`。Node、Git、uv 或
 rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust target 与桌面 EXE 仍会被脚本
@@ -225,8 +238,9 @@ make check-generated    # 协议受控产物无漂移检查
 ```
 
 Web 与 Desktop 使用独立版本和 tag，例如 `web-v0.2.0` 与 `desktop-v0.2.0`。Web tag 会发布
-纯浏览器静态产物；Desktop tag 当前只生成三个平台的开发组件并明确停在发布门前，因为冻结 Runtime
-sidecar、资源装配、安装包、签名与安装后 smoke 尚未完成。不会把裸 Host + wheel 标成可安装发行版。
+纯浏览器静态产物。Windows 已有单独的冻结 Runtime 与 NSIS 候选构建入口，但在真实安装、退出、
+卸载、用户数据保留、AppContainer、许可证与签名 smoke 完成前，Desktop tag 不得把候选包或裸
+Host + wheel 标成可分发发行版。
 
 `punkt_tab` 会从 NLTK 官方数据仓库的固定提交下载到 Git 忽略的 `.local/nltk_data`，并在
 解压前校验 SHA-256。Runtime 会在导入 Pipecat 前使用该本地目录，因此代理 Fake-IP 模式不会
@@ -239,9 +253,9 @@ sidecar、资源装配、安装包、签名与安装后 smoke 尚未完成。不
 ## 当前边界
 
 这是基础可用 Demo，不声称已经完成：可再发行的 Live2D 资产包与自定义角色模型、RTVI
-数据通道与公网 TURN、生产级插件沙箱、训练后的自定义音色、向量/图记忆后端、签名并可分发的
-Tauri 安装包、冻结发布版 sidecar、长时间语音压力测试或远端 CI 矩阵。这些能力都有
-独立边界，不会伪装成已经交付。
+数据通道与公网 TURN、训练后的可分发自定义音色、向量/图记忆后端、通过真实安装/卸载验收且
+完成签名的 Windows 发行包、长时间语音压力测试或远端 CI 矩阵。这些能力都有独立边界，不会把
+本地安装候选伪装成已经交付的公开发行版。
 
 架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
 `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。
