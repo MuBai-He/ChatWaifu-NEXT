@@ -49,6 +49,20 @@ def test_browser_cors_allows_memory_mutation_methods(
     assert {"PUT", "PATCH", "DELETE"}.issubset(allowed)
 
 
+def test_packaged_tauri_origin_can_call_runtime(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    response = http.options(
+        "/v1/runtime/health",
+        headers={
+            "Origin": "http://tauri.localhost",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://tauri.localhost"
+
+
 def test_health_session_persistence_and_event_stream(client: TestClient) -> None:
     http = cast(RuntimeHttpClient, client)
     health = http.get("/v1/runtime/health")

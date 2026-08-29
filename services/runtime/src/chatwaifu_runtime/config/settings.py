@@ -12,7 +12,17 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+
+def _resource_root() -> Path:
+    """Resolve immutable product resources for source and frozen runtimes."""
+
+    configured = os.environ.get("CHATWAIFU_RESOURCE_ROOT", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path(__file__).resolve().parents[5]
+
+
+PROJECT_ROOT = _resource_root()
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 
 
