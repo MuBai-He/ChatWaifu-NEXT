@@ -143,7 +143,9 @@ link-local、metadata、reserved、重定向和系统代理继承。
 
 页面默认选择本地 Qwen3-TTS MLX，GPT-SoVITS 是可切换的独立重模型 Worker；两者通过同一
 Runtime TTS provider contract 运行，不会把模型 SDK 或路径暴露给 Web。切换会先取消当前
-generation，并在不再使用旧 provider 时卸载模型。Kokoro 和 macOS 系统语音保留为轻量回退。
+generation，并在不再使用旧 provider 时卸载模型。两者都通过 Worker Protocol v2 直接发送有界、
+带 generation/job/sequence 身份的 PCM16 分片；完整 WAV 只保留为断线和历史回退。Kokoro 和
+macOS 系统语音保留为轻量回退。
 
 当前 Qwen 使用官方 0.6B Base 的 MLX 8-bit 推理版本，仍是公开基础声线。仓库提供一个本地、
 不可分发的宁宁数据审计与 Colab 微调包生成器；训练数据、WAV、checkpoint 和评测音频全部位于
@@ -157,7 +159,9 @@ generation，并在不再使用旧 provider 时卸载模型。Kokoro 和 macOS �
 页保存，API Key 使用独立的本地权限文件且不会回显。百炼仅接收当前待朗读句段，并通过有界 PCM
 流输出；完整 WAV 继续作为断线回退。流式合约、取消和云端出站边界见
 [ADR 0017](docs/adr/0017-provider-neutral-streaming-tts.md)。百炼复刻音色与创建时的
-`target_model` 严格绑定；设置页填写的实时模型必须与该字段完全一致。
+`target_model` 严格绑定；设置页填写的实时模型必须与该字段完全一致。可配置 TTS 的严格模型、
+Adapter 工厂、只写密钥策略与设置字段都来自同一个注册表，通用 API/设置页会自动发现新增项；见
+[ADR 0023](docs/adr/0023-registry-driven-tts-provider-configuration.md)。
 
 实时语音的数据流、进程边界和取消语义见
 [Realtime voice demo slice](docs/architecture/realtime-voice-demo.md)。

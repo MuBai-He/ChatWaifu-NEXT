@@ -1,33 +1,40 @@
-name: Phase 2 Avatar Lab Smoke
+name: Web E2E and Architecture Boundaries
 
 on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v1
         with:
           version: 11.19.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: pnpm
+          runtime: node@22
+          cache: true
+          install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @chatwaifu/web exec playwright install --with-deps chromium
-      - run: make test-e2e
+      # The browser smoke is a Node-only gate. Override Make's local uv-backed
+      # pnpm wrapper so a missing Python environment cannot break this job.
+      - run: make test-e2e PNPM=pnpm
 
-  phase-boundary:
+  architecture-boundaries:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Reject dependencies outside the Phase 2 boundary
-        shell: bash
-        run: |
-          if rg -n 'pipecat|webrtc|kafka|postgres|redis|openai|anthropic|gemini' --glob 'package.json' --glob 'pyproject.toml' --glob 'Cargo.toml'; then
-            echo 'A dependency from a later phase was introduced.'
-            exit 1
-          fi
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python tools/check_architecture_boundaries.py

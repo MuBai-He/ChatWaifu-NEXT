@@ -89,7 +89,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Six GitHub Actions workflows are configured
-      - Sixteen ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
+      - Twenty-four ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -165,14 +165,18 @@ phases:
       - Demo and OpenAI-compatible LLM providers share a cancellation-aware streaming contract
       - Session-scoped TtsRouter selects normalized Qwen or GPT-SoVITS workers while macOS say and fake remain test/fallback paths
       - Browser WebSocket renders lossless text deltas, queues generation-scoped audio, and applies AvatarCue
+      - Browser event subscriptions use a durable per-session sequence cursor, atomic recovery snapshot, paged replay, gap repair, and de-duplication across startup, overflow, and reconnect
       - Audio-element playback promotes a hanging user-gesture probe as soon as real TTS arrives so WKWebView cannot leave active-generation segments queued forever
       - A bounded adaptive Web projector smooths network/provider text bursts without delaying Runtime or leaking cancelled-generation text
       - The fixed character greeting is limited to truly empty conversations and is not reused as pending-generation text
       - Interrupt cancels Runtime work and clears stale browser playback and avatar state
       - Runtime persists idempotent segment playback acknowledgements and projects only completely heard sentences into generation spoken_text
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
-      - Confirmed reset cancels generation and clears current turns/events, all memories, and WAV assets
-      - Reset keeps the session ready and rejects late output before a fresh sequence starts at one
+      - Confirmed reset quarantines owned WAVs, atomically clears current-session turns/events plus current character/user memory and relationship truth, restores audio on transaction failure, and preserves unrelated scopes
+      - Reset keeps the session ready, rejects late output, and resumes from a collision-free event sequence while retaining any cross-scope provenance event that must remain auditable
+      - SQLite migrations apply script plus checksummed ledger entry atomically, reject edited or newer versions, and recover cleanly after injected failure
+      - Runtime startup rolls back every successfully started component on failure; shutdown aggregates cleanup errors, continues teardown, and retries only failed steps
+      - Conversation orchestration depends on a persistence port and a dedicated generation-scoped speech pipeline instead of issuing SQL or owning PCM/playback details
       - Manifest-driven runtime.status skill reports actual providers with read-only side effect
       - make demo preflights fixed ports before worker creation and cleans Runtime, Web, STT, and TTS process groups after Ctrl+C, SIGTERM, or SIGHUP
   - id: 5
@@ -221,7 +225,9 @@ phases:
       - Public Kokoro model completed real Chinese 24 kHz synthesis on macOS arm64 CPU
       - Qwen3-TTS 0.6B Base completed real Chinese and Japanese MLX synthesis on Apple Silicon
       - GPT-SoVITS Roxy v2ProPlus completed real Chinese and Japanese CPUFast synthesis as a local integration model
-      - Provider-neutral TTS streaming now carries ordered PCM16 fragments with bounded ephemeral fan-out, cancellation, provisional playback ACK duration, and complete WAV fallback
+      - Worker Protocol v2 streams identity-scoped ordered PCM16 over an authenticated WebSocket from Qwen MLX and GPT-SoVITS instead of waiting for a complete WAV
+      - Provider-neutral TTS streaming uses bounded ephemeral fan-out, cancellation, provisional playback ACK duration, complete WAV fallback, and stable consumer receipts across reconnects
+      - One TTS provider registry now owns strict configuration defaults, adapter factories, write-only secret policy, settings field descriptors, and provider-neutral list/read/update/test APIs
       - Aliyun Bailian Qwen VC Realtime is configurable from the local voice settings page with write-only mode-0600 API-key storage and regional voice-to-target-model preflight
       - Aliyun Bailian CosyVoice Realtime is independently selectable and maps Character Kernel voice style to supported provider instructions without changing the Qwen VC route
       - Web and desktop settings expose one Aliyun Bailian provider entry, with the concrete Qwen VC or CosyVoice adapter selected inside the shared API panel and resolved before the Runtime session command
@@ -248,14 +254,18 @@ phases:
     evidence:
       - SKILL.md and chatwaifu.yaml discovery validates ids, versions, schemas, paths, and duplicates
       - SQLite persists plugins, MCP connection profiles, runs, permission requests, grants, and audited tool calls
-      - Permission grants remain separate from per-invocation side-effect confirmation
+      - Runtime Skill domain services use repository ports for run, permission, plugin, connection, and audit persistence; SQLite statements remain inside one adapter
+      - Reusable permission grants bind skill version, full capability policy, plugin package fingerprint, and MCP connection revision; plugin/connection mutation transactionally revokes affected grants
+      - Five-minute confirmations use one conditional transaction and approve an immutable ExecutionPlan covering schemas, adapter target, package digest, connection revision, argument digest, and background/cancellation policy
       - The official MCP 2.1.1 SDK hosts stdio, Streamable HTTP, and compatibility SSE connections and accepts non-Python executables
-      - Capability discovery paginates tools, resources, resource templates, and prompts; resources and prompts remain explicit reads and are never silently injected into character context
-      - Remote URLs default to loopback and are revalidated before every connection with DNS, SSRF, redirect, credential, and system-proxy defenses
-      - Untrusted local stdio defaults to required OS isolation and denied networking; macOS Seatbelt read/network denial is exercised against a real child process and Linux bubblewrap is fail-closed when unavailable
+      - Capability discovery paginates tools, resources, resource templates, and prompts; resource/prompt reads are session-scoped typed SkillRuns with immutable plans, permission confirmation, audit, deadlines, cancellation, and no direct adapter route
+      - Remote URLs default to loopback; every network session pins its policy-validated DNS addresses into TCP dialing while preserving the original Host, TLS SNI, certificate, peer, redirect, credential, and system-proxy defenses
+      - Untrusted local stdio defaults to required OS isolation and denied networking; installed package roots are read-only while per-plugin data roots are separately writable
+      - Sandbox snapshots persist the actual backend and only resource limits it really enforces; OCI enforces process, memory, and CPU limits while Seatbelt/bubblewrap report no portable resource-limit claim
       - Runtime publishes a policy-filtered standard Streamable HTTP MCP server at /mcp with loopback Host and Origin protection, optional Bearer authentication, and no adapter bypass
-      - MCP bearer tokens are write-only, atomically stored mode-0600, and corrupt secret storage fails closed
-      - Input/output schema validation, normalized errors, timeout, cancellation, and restart expiry pass tests
+      - MCP bearer tokens are write-only, atomically stored mode-0600, and use a compensating cross-store mutation journal; corrupt secret or journal storage fails closed
+      - Deny-by-default audit summaries retain only explicitly schema-whitelisted public fields, resolve local $ref/allOf sensitivity, keep real results process-local, and prevent secrets, file bodies, prompt arguments, PII, or arbitrary MCP payloads from entering runs, tool-call rows, events, or outbox
+      - Input/output schema validation, collision-free tool publication, normalized errors, deadlines, confirmation TTL, background policy, cancellation, and restart expiry pass tests
       - Local Echo example covers read, confirmed write, timeout, cancellation, disable, and recoverable uninstall
       - Web control center provides progressive SKILL.md loading, invocation, confirmation, run, plugin controls, and MCP connection/capability management
       - Real browser smoke completed MCP echo and denied a pending write without executing it

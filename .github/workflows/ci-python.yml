@@ -4,16 +4,26 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
+          version: "0.12.5"
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --all-packages --all-groups --locked
@@ -21,3 +31,29 @@ jobs:
       - run: uv run ruff check .
       - run: uv run pyright
       - run: uv run pytest
+
+  neural-worker:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: workers/tts-neural/uv.lock
+      - run: uv sync --all-groups --locked
+        working-directory: workers/tts-neural
+      - run: uv run ruff format --check .
+        working-directory: workers/tts-neural
+      - run: uv run ruff check .
+        working-directory: workers/tts-neural
+      - run: uv run pyright
+        working-directory: workers/tts-neural
+      - run: uv run pytest
+        working-directory: workers/tts-neural
