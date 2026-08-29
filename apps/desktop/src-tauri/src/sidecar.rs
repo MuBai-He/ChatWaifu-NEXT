@@ -377,6 +377,18 @@ fn spawn_service_stack() -> Result<Child, String> {
             .current_dir(root);
         command
     };
+    #[cfg(target_os = "windows")]
+    if std::env::var_os("CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER").is_none()
+        && let Ok(current_executable) = std::env::current_exe()
+    {
+        let launcher = adjacent_appcontainer_launcher(&current_executable);
+        if launcher.is_file() {
+            command.env(
+                "CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER",
+                launcher,
+            );
+        }
+    }
     command
         .env(
             "CHATWAIFU_DESKTOP_PARENT_PID",
@@ -393,6 +405,11 @@ fn spawn_service_stack() -> Result<Child, String> {
     command
         .spawn()
         .map_err(|error| format!("无法启动本地服务：{error}"))
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn adjacent_appcontainer_launcher(current_executable: &std::path::Path) -> PathBuf {
+    current_executable.with_file_name("chatwaifu-appcontainer-host.exe")
 }
 
 fn workspace_root() -> PathBuf {
@@ -446,8 +463,12 @@ fn lock<'a, T>(value: &'a Mutex<T>, label: &str) -> Result<MutexGuard<'a, T>, St
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_AUTOMATIC_RESTARTS, restart_backoff, should_request_start};
+    use super::{
+        MAX_AUTOMATIC_RESTARTS, adjacent_appcontainer_launcher, restart_backoff,
+        should_request_start,
+    };
     use crate::runtime_health::RuntimeLifecycleState;
+    use std::path::Path;
     use std::time::Duration;
 
     #[test]
@@ -465,5 +486,13 @@ mod tests {
         assert!(!should_request_start(&RuntimeLifecycleState::Starting));
         assert!(!should_request_start(&RuntimeLifecycleState::Ready));
         assert!(!should_request_start(&RuntimeLifecycleState::Backoff));
+    }
+
+    #[test]
+    fn packaged_appcontainer_launcher_is_discovered_next_to_desktop_host() {
+        assert_eq!(
+            adjacent_appcontainer_launcher(Path::new("/opt/chatwaifu/chatwaifu-desktop-host.exe")),
+            Path::new("/opt/chatwaifu/chatwaifu-appcontainer-host.exe")
+        );
     }
 }

@@ -45,6 +45,7 @@ class SecurityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     admin_token: SecretStr | None = None
+    windows_appcontainer_launcher: Path | None = None
 
 
 class LlmConfig(BaseModel):

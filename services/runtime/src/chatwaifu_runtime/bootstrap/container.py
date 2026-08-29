@@ -35,6 +35,7 @@ from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
+from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -105,6 +106,14 @@ class RuntimeContainer:
             self.database, self.event_store
         )
         self.stt = build_stt_backend(settings)
+        sandbox_launcher = RuntimeSandboxLauncher(
+            SandboxPlanner(
+                windows_launcher=settings.security.windows_appcontainer_launcher,
+                windows_state_dir=(
+                    settings.data_dir / "runtime-skills" / "windows-appcontainer"
+                ).resolve(),
+            )
+        )
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
             settings.data_dir,
@@ -113,6 +122,7 @@ class RuntimeContainer:
             self.providers,
             self.stt.kind,
             __version__,
+            sandbox_launcher=sandbox_launcher,
         )
         self.conversation = ConversationService(
             self.conversation_repository,

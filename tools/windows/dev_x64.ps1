@@ -11,6 +11,7 @@ $Live2DModel = Join-Path $RepoRoot "apps\web\public\vendor\live2d\model\avatar.m
 $Live2DTexture = Join-Path $RepoRoot "apps\web\public\vendor\live2d\model\texture\texture_00.png"
 $Live2DTextureOptimizer = Join-Path $RepoRoot "tools\windows\optimize_live2d_texture.ps1"
 $Target = "x86_64-pc-windows-msvc"
+$AppContainerLauncher = Join-Path $RepoRoot "target\$Target\debug\chatwaifu-appcontainer-host.exe"
 
 if (-not (Test-Path $VenvPython)) {
     throw "Missing .venv. Run tools/windows/bootstrap_x64.ps1 first."
@@ -22,6 +23,7 @@ if ($PythonPlatform -ne "win-amd64") {
 }
 
 $Rustup = (Get-Command rustup -ErrorAction Stop).Source
+$Cargo = (Get-Command cargo -ErrorAction Stop).Source
 
 Push-Location $RepoRoot
 try {
@@ -29,11 +31,16 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "rustup target add $Target exited with code $LASTEXITCODE"
     }
+    & $Cargo build --package chatwaifu-appcontainer-host --target $Target
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $AppContainerLauncher)) {
+        throw "Windows AppContainer launcher build failed."
+    }
 
     # Windows development must remain usable before optional local model workers are installed.
     # The Runtime starts with deterministic fallback providers; cloud providers can still be
     # configured through the normal settings UI.
     $env:CHATWAIFU_DESKTOP_OPTIONAL_LOCAL_WORKERS = "true"
+    $env:CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER = $AppContainerLauncher
     $SessionId = (Get-Process -Id $PID).SessionId
     if ($SessionId -eq 0) {
         Write-Warning "This shell is not attached to the visible Windows desktop. Run this script inside the Parallels Windows PowerShell window."
@@ -56,5 +63,6 @@ try {
     }
 } finally {
     Remove-Item Env:CHATWAIFU_DESKTOP_OPTIONAL_LOCAL_WORKERS -ErrorAction SilentlyContinue
+    Remove-Item Env:CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER -ErrorAction SilentlyContinue
     Pop-Location
 }

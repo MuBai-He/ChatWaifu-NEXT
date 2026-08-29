@@ -177,6 +177,253 @@ def test_oci_maps_read_only_package_and_writable_data_paths(tmp_path: Path) -> N
     assert "CHATWAIFU_PLUGIN_DATA_DIR=/plugin" in plan.command
 
 
+def test_windows_plan_uses_configured_appcontainer_launcher_and_stable_identity(
+    tmp_path: Path,
+) -> None:
+    launcher = tmp_path / "trusted tools" / "chatwaifu-appcontainer-host.exe"
+    launcher.parent.mkdir()
+    launcher.write_bytes(b"fixture")
+    state_dir = tmp_path / "sandbox-state"
+    package_root = tmp_path / "plugin package"
+    data_root = tmp_path / "plugin data"
+    package_root.mkdir()
+    data_root.mkdir()
+    server = package_root / "server.py"
+    server.write_text("print('fixture')\n", encoding="utf-8")
+    planner = SandboxPlanner(
+        platform_name="win32",
+        which=lambda _: str(tmp_path / "attacker-controlled.exe"),
+        windows_launcher=launcher,
+        windows_state_dir=state_dir,
+    )
+
+    plan = planner.prepare(
+        [sys.executable, str(server), "argument with spaces"],
+        working_dir=data_root,
+        mode="required",
+        trust_level="untrusted",
+        network_policy="deny",
+        read_only_roots=(package_root,),
+        subject_id="local.echo",
+    )
+    second = planner.prepare(
+        [sys.executable, str(server)],
+        working_dir=data_root,
+        mode="required",
+        trust_level="untrusted",
+        subject_id="local.echo",
+    )
+
+    assert plan.backend == "windows_appcontainer"
+    assert plan.enforced is True
+    assert plan.command[0] == str(launcher.resolve())
+    assert plan.command[1] == "run"
+    assert plan.command[plan.command.index("--network") + 1] == "deny"
+    assert plan.command[plan.command.index("--writable") + 1] == str(data_root.resolve())
+    assert str(package_root.resolve()) in plan.command
+    separator = plan.command.index("--")
+    assert plan.command[separator + 1 :] == (
+        sys.executable,
+        str(server),
+        "argument with spaces",
+    )
+    profile = plan.command[plan.command.index("--profile-name") + 1]
+    second_profile = second.command[second.command.index("--profile-name") + 1]
+    assert profile.startswith("ChatWaifu.")
+    assert profile == second_profile
+    assert plan.resource_limits_enforced == ("process_count", "memory")
+
+
+def test_windows_planner_does_not_grant_paths_from_untrusted_plugin_arguments(
+    tmp_path: Path,
+) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    package_root = tmp_path / "package"
+    data_root = tmp_path / "data"
+    unrelated_root = tmp_path / "unrelated"
+    for path in (package_root, data_root, unrelated_root):
+        path.mkdir()
+    server = package_root / "server.py"
+    server.write_text("print('fixture')\n", encoding="utf-8")
+    secret = unrelated_root / "secret.txt"
+    secret.write_text("do not grant this", encoding="utf-8")
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=tmp_path / "state",
+    )
+
+    plan = planner.prepare(
+        [sys.executable, str(server), str(secret)],
+        working_dir=data_root,
+        mode="required",
+        trust_level="untrusted",
+        read_only_roots=(package_root,),
+        subject_id="plugin:untrusted.fixture",
+    )
+
+    separator = plan.command.index("--")
+    policy_arguments = plan.command[:separator]
+    assert str(package_root.resolve()) in policy_arguments
+    assert str(unrelated_root.resolve()) not in policy_arguments
+
+
+def test_windows_profiles_are_isolated_per_subject(tmp_path: Path) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=tmp_path / "state",
+    )
+
+    profiles: list[str] = []
+    for subject_id in ("local.echo", "another.plugin"):
+        plan = planner.prepare(
+            [sys.executable, "-c", "pass"],
+            working_dir=data_root,
+            mode="required",
+            trust_level="untrusted",
+            subject_id=subject_id,
+        )
+        profiles.append(plan.command[plan.command.index("--profile-name") + 1])
+
+    assert profiles[0] != profiles[1]
+
+
+def test_windows_launcher_requires_immutable_subject_id(tmp_path: Path) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=tmp_path / "state",
+    )
+
+    with pytest.raises(SandboxPolicyError, match="subject id"):
+        planner.prepare(
+            [sys.executable, "-c", "pass"],
+            working_dir=tmp_path,
+            mode="required",
+            trust_level="untrusted",
+        )
+
+
+def test_windows_policy_revoke_and_reconcile_use_trusted_launcher(tmp_path: Path) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    captured: list[tuple[str, ...]] = []
+
+    def run_command(
+        command: Any,
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        assert check is False
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        captured.append(tuple(command))
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=state_dir,
+        command_runner=run_command,
+    )
+    plan = planner.prepare(
+        [sys.executable, "-c", "pass"],
+        working_dir=tmp_path,
+        mode="required",
+        trust_level="untrusted",
+        subject_id="local.echo",
+    )
+    profile = plan.command[plan.command.index("--profile-name") + 1]
+    (state_dir / f"{profile}.json").write_text("{}", encoding="utf-8")
+
+    planner.revoke("local.echo")
+    planner.reconcile(["local.echo", "another.plugin"])
+
+    assert captured[0] == (
+        str(launcher.resolve()),
+        "revoke",
+        "--profile-name",
+        profile,
+        "--state-dir",
+        str(state_dir.resolve()),
+    )
+    assert captured[1][1] == "reconcile"
+    assert captured[1].count("--active-profile-name") == 2
+
+
+def test_windows_policy_cleanup_fails_closed_when_launcher_disappears(tmp_path: Path) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=state_dir,
+    )
+    plan = planner.prepare(
+        [sys.executable, "-c", "pass"],
+        working_dir=tmp_path,
+        mode="required",
+        trust_level="untrusted",
+        subject_id="local.echo",
+    )
+    profile = plan.command[plan.command.index("--profile-name") + 1]
+    (state_dir / f"{profile}.json").write_text("{}", encoding="utf-8")
+    launcher.unlink()
+
+    with pytest.raises(SandboxPolicyError, match="launcher is missing"):
+        planner.revoke("local.echo")
+    with pytest.raises(SandboxPolicyError, match="launcher is missing"):
+        planner.reconcile([])
+
+
+def test_windows_revoke_calls_helper_even_without_a_journal(tmp_path: Path) -> None:
+    launcher = tmp_path / "chatwaifu-appcontainer-host.exe"
+    launcher.write_bytes(b"fixture")
+    state_dir = tmp_path / "state"
+    captured: list[tuple[str, ...]] = []
+
+    def run_command(
+        command: Any,
+        *,
+        check: bool,
+        capture_output: bool,
+        text: bool,
+        timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        del check, capture_output, text, timeout
+        captured.append(tuple(command))
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    planner = SandboxPlanner(
+        platform_name="win32",
+        windows_launcher=launcher,
+        windows_state_dir=state_dir,
+        command_runner=run_command,
+    )
+
+    planner.revoke("plugin:local.echo")
+
+    assert len(captured) == 1
+    assert captured[0][1] == "revoke"
+    assert captured[0][-2:] == ("--state-dir", str(state_dir.resolve()))
+
+
 def test_runtime_launcher_normalizes_required_backend_failure(tmp_path: Path) -> None:
     launcher = RuntimeSandboxLauncher(SandboxPlanner(platform_name="win32", which=lambda _: None))
     command = PreparedStdioCommand(command="server", args=(), cwd=tmp_path, env={})

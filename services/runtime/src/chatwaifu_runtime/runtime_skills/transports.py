@@ -18,6 +18,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Protocol, cast
 from urllib.parse import urlsplit
+from uuid import UUID
 
 import httpcore2
 import httpx2
@@ -43,6 +44,7 @@ class PreparedStdioCommand:
     sandbox_backend: str | None = None
     sandbox_limits_enforced: tuple[str, ...] = ()
     read_only_roots: tuple[Path, ...] = ()
+    sandbox_subject_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +67,10 @@ class SandboxLauncher(Protocol):
         sandbox_mode: str,
         network_policy: str,
     ) -> PreparedStdioCommand: ...
+
+    def revoke(self, subject_id: str) -> None: ...
+
+    def reconcile(self, active_subject_ids: Iterable[str]) -> None: ...
 
 
 class NoopSandboxLauncher:
@@ -93,6 +99,24 @@ class NoopSandboxLauncher:
                 "Soft isolation cannot enforce the requested restricted network policy",
             )
         return command
+
+    def revoke(self, subject_id: str) -> None:
+        del subject_id
+
+    def reconcile(self, active_subject_ids: Iterable[str]) -> None:
+        del active_subject_ids
+
+
+def plugin_sandbox_subject_id(plugin_id: str) -> str:
+    """Return the collision-free OS sandbox identity for one installed plugin."""
+
+    return f"plugin:{plugin_id}"
+
+
+def mcp_connection_sandbox_subject_id(connection_id: UUID | str) -> str:
+    """Return the collision-free OS sandbox identity for one MCP connection."""
+
+    return f"mcp-connection:{connection_id}"
 
 
 class McpClientTransport:
@@ -548,6 +572,7 @@ def _plugin_command(
             "CHATWAIFU_PLUGIN_DATA_DIR": str(resolved_data),
         },
         read_only_roots=(resolved_package,),
+        sandbox_subject_id=plugin_sandbox_subject_id(plugin.plugin_id),
     )
     return sandbox.prepare(
         prepared,
@@ -563,12 +588,20 @@ def _connection_command(
     sandbox: SandboxLauncher,
 ) -> PreparedStdioCommand:
     root.mkdir(parents=True, exist_ok=True)
-    command, arguments = _resolve_command(config.command, root.resolve(), restrict_to_root=False)
+    resolved_root = root.resolve()
+    command, arguments = _resolve_command(config.command, resolved_root, restrict_to_root=False)
     prepared = PreparedStdioCommand(
         command=command,
         args=tuple(arguments),
-        cwd=root.resolve(),
+        cwd=resolved_root,
         env=_clean_environment(str(config.connection_id)),
+        # A user-managed stdio connection may deliberately point at a script or
+        # asset outside its writable connection directory. Make those declared
+        # absolute argument roots explicit here. Installed plugin manifests do
+        # not receive this privilege: their only readable tree is the copied,
+        # immutable package root.
+        read_only_roots=_declared_connection_roots(arguments, resolved_root),
+        sandbox_subject_id=mcp_connection_sandbox_subject_id(config.connection_id),
     )
     return sandbox.prepare(
         prepared,
@@ -576,6 +609,19 @@ def _connection_command(
         sandbox_mode=config.sandbox_mode,
         network_policy=config.network_policy,
     )
+
+
+def _declared_connection_roots(arguments: list[str], writable_root: Path) -> tuple[Path, ...]:
+    roots: set[Path] = set()
+    for argument in arguments:
+        candidate = Path(argument).expanduser()
+        if not candidate.is_absolute() or not candidate.exists():
+            continue
+        resolved = candidate.resolve()
+        if resolved.is_relative_to(writable_root):
+            continue
+        roots.add(resolved if resolved.is_dir() else resolved.parent)
+    return tuple(sorted(roots, key=str))
 
 
 def _resolve_command(

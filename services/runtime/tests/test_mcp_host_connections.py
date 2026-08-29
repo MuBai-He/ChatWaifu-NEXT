@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import sys
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
@@ -46,6 +47,12 @@ class _ReportingSandboxLauncher:
     ) -> PreparedStdioCommand:
         del trust_level, sandbox_mode, network_policy
         return replace(command, sandbox_backend="test_enforcing_backend")
+
+    def revoke(self, subject_id: str) -> None:
+        del subject_id
+
+    def reconcile(self, active_subject_ids: Iterable[str]) -> None:
+        del active_subject_ids
 
 
 @pytest.mark.asyncio

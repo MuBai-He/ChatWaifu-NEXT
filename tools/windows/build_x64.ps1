@@ -55,6 +55,12 @@ try {
     Invoke-Checked $Cargo @("fmt", "--all", "--check")
     Invoke-Checked $Cargo @("clippy", "--workspace", "--all-targets", "--target", $Target, "--", "-D", "warnings")
     Invoke-Checked $Cargo @("test", "--workspace", "--target", $Target)
+    Invoke-Checked $Cargo @(
+        "build",
+        "--package", "chatwaifu-appcontainer-host",
+        "--release",
+        "--target", $Target
+    )
     Invoke-Checked $VenvPython @("tools/run_pnpm.py", "build:windows-x64")
 
     $Executable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-desktop-host.exe"
@@ -66,7 +72,17 @@ try {
         throw ("Expected PE machine 0x8664 (x64), received 0x{0:X4}." -f $Machine)
     }
 
+    $SandboxExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
+    if (-not (Test-Path $SandboxExecutable)) {
+        throw "The expected Windows x64 AppContainer launcher was not produced: $SandboxExecutable"
+    }
+    $SandboxMachine = Get-PeMachine $SandboxExecutable
+    if ($SandboxMachine -ne 0x8664) {
+        throw ("Expected AppContainer launcher PE machine 0x8664 (x64), received 0x{0:X4}." -f $SandboxMachine)
+    }
+
     Write-Host "Windows x64 desktop build verified: $Executable"
+    Write-Host "Windows x64 AppContainer launcher verified: $SandboxExecutable"
 } finally {
     Pop-Location
 }

@@ -9,6 +9,7 @@ import shutil
 import sqlite3
 import time
 import urllib.request
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -41,7 +42,12 @@ from chatwaifu_runtime.runtime_skills.host_connections import (
     McpConnectionSecretStore,
     McpSecretMutationJournal,
 )
-from chatwaifu_runtime.runtime_skills.transports import McpClientTransport
+from chatwaifu_runtime.runtime_skills.transports import (
+    McpClientTransport,
+    PreparedStdioCommand,
+    mcp_connection_sandbox_subject_id,
+    plugin_sandbox_subject_id,
+)
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
@@ -52,6 +58,49 @@ class RuntimeHttpClient(Protocol):
     def post(self, url: str, *, json: object) -> Response: ...
 
     def put(self, url: str, *, json: object) -> Response: ...
+
+
+class _RecordingSandboxLauncher:
+    def __init__(self) -> None:
+        self.reconciled: list[tuple[str, ...]] = []
+        self.revoked: list[str] = []
+
+    def prepare(
+        self,
+        command: PreparedStdioCommand,
+        *,
+        trust_level: str,
+        sandbox_mode: str,
+        network_policy: str,
+    ) -> PreparedStdioCommand:
+        del trust_level, sandbox_mode, network_policy
+        return command
+
+    def revoke(self, subject_id: str) -> None:
+        self.revoked.append(subject_id)
+
+    def reconcile(self, active_subject_ids: Iterable[str]) -> None:
+        self.reconciled.append(tuple(active_subject_ids))
+
+
+def _prepare_sandbox_lifecycle_plugin(destination: Path) -> None:
+    shutil.copytree(
+        Path(__file__).resolve().parents[3] / "plugins" / "examples" / "local-echo",
+        destination,
+    )
+    manifest_path = destination / "plugin.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["transport"].update(
+        {
+            "trust_level": "untrusted",
+            "sandbox_mode": "required",
+            "network_policy": "deny",
+        }
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def test_audit_payload_is_schema_aware_redacted_and_bounded() -> None:
@@ -355,6 +404,74 @@ async def test_permission_setup_failure_compensates_created_skill_run(
         )
     finally:
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_runtime_reconciles_and_revokes_durable_sandbox_subjects(
+    runtime_settings: Settings,
+) -> None:
+    connection_id = uuid4()
+    first = RuntimeContainer(runtime_settings)
+    first_launcher = _RecordingSandboxLauncher()
+    first.runtime_skills._sandbox_launcher = first_launcher  # pyright: ignore[reportPrivateUsage]
+    await first.start()
+    try:
+        assert first_launcher.reconciled == [()]
+        plugin_source = runtime_settings.data_dir / "sandbox-lifecycle-plugin"
+        await asyncio.to_thread(_prepare_sandbox_lifecycle_plugin, plugin_source)
+        await first.runtime_skills.install_plugin(plugin_source)
+        await first.runtime_skills.create_mcp_connection(
+            McpConnectionConfiguration(
+                connection_id=connection_id,
+                name="Sandbox lifecycle fixture",
+                transport="stdio",
+                command=["fixture-server"],
+                trust_level="untrusted",
+                sandbox_mode="required",
+                network_policy="deny",
+            )
+        )
+    finally:
+        await first.stop()
+
+    second = RuntimeContainer(runtime_settings)
+    second_launcher = _RecordingSandboxLauncher()
+    second.runtime_skills._sandbox_launcher = (  # pyright: ignore[reportPrivateUsage]
+        second_launcher
+    )
+    await second.start()
+    try:
+        assert second_launcher.reconciled == [
+            (
+                plugin_sandbox_subject_id("local.echo"),
+                mcp_connection_sandbox_subject_id(connection_id),
+            )
+        ]
+
+        await second.runtime_skills.set_plugin_enabled("local.echo", False)
+        await second.runtime_skills.set_plugin_enabled("local.echo", True)
+        await second.runtime_skills.update_mcp_connection(
+            McpConnectionConfiguration(
+                connection_id=connection_id,
+                name="Updated sandbox lifecycle fixture",
+                transport="stdio",
+                command=["fixture-server"],
+                trust_level="untrusted",
+                sandbox_mode="required",
+                network_policy="deny",
+            )
+        )
+        await second.runtime_skills.uninstall_plugin("local.echo")
+        await second.runtime_skills.delete_mcp_connection(connection_id)
+
+        assert second_launcher.revoked == [
+            plugin_sandbox_subject_id("local.echo"),
+            mcp_connection_sandbox_subject_id(connection_id),
+            plugin_sandbox_subject_id("local.echo"),
+            mcp_connection_sandbox_subject_id(connection_id),
+        ]
+    finally:
+        await second.stop()
 
 
 def test_confirmation_expiry_marks_run_terminal_and_rejects_decision(

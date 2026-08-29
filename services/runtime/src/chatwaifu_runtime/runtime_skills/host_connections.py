@@ -6,7 +6,7 @@ import asyncio
 import json
 import os
 import shutil
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -35,6 +35,7 @@ from chatwaifu_runtime.runtime_skills.transports import (
 )
 
 MAX_DISCOVERED_ITEMS = 2_000
+McpConnectionMutationHook = Callable[[], Awaitable[None]]
 
 
 class McpConnectionSecretStore:
@@ -324,9 +325,12 @@ class McpConnectionManager:
         *,
         bearer_token: str | None = None,
         clear_bearer_token: bool = False,
+        before_change: McpConnectionMutationHook | None = None,
     ) -> McpConnectionSnapshot:
         async with self.operation_lease(config.connection_id):
             current = await self.get(config.connection_id)
+            if before_change is not None:
+                await before_change()
             previous_token = await asyncio.to_thread(self._secrets.get, config.connection_id)
             now = _now()
             configured = current.bearer_token_configured
@@ -379,8 +383,16 @@ class McpConnectionManager:
                 await asyncio.to_thread(self._secret_mutations.discard, config.connection_id)
             return await self.get(config.connection_id)
 
-    async def delete(self, connection_id: UUID) -> None:
+    async def delete(
+        self,
+        connection_id: UUID,
+        *,
+        before_change: McpConnectionMutationHook | None = None,
+    ) -> None:
         async with self.operation_lease(connection_id):
+            await self.get(connection_id)
+            if before_change is not None:
+                await before_change()
             previous_token = await asyncio.to_thread(self._secrets.get, connection_id)
             if previous_token is not None:
                 await asyncio.to_thread(

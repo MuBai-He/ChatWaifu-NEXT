@@ -62,7 +62,12 @@ from chatwaifu_runtime.runtime_skills.registry import (
 )
 from chatwaifu_runtime.runtime_skills.repository import RuntimeSkillRepository
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher
-from chatwaifu_runtime.runtime_skills.transports import McpClientTransport, SandboxLauncher
+from chatwaifu_runtime.runtime_skills.transports import (
+    McpClientTransport,
+    SandboxLauncher,
+    mcp_connection_sandbox_subject_id,
+    plugin_sandbox_subject_id,
+)
 
 TERMINAL_STATES = {
     SkillRunState.SUCCEEDED,
@@ -113,6 +118,7 @@ class RuntimeSkillService:
         self._builtin = BuiltinAdapter()
         self._builtin.register("runtime_status", self._runtime_status)
         launcher = sandbox_launcher or RuntimeSandboxLauncher()
+        self._sandbox_launcher = launcher
         self._mcp = McpStdioAdapter(launcher)
         mcp_transport = McpClientTransport(launcher)
         self._mcp_connections = McpConnectionManager(repository, data_dir, mcp_transport)
@@ -127,6 +133,22 @@ class RuntimeSkillService:
     async def start(self) -> None:
         await self._plugins.start()
         await self._mcp_connections.start()
+        plugin_subjects = [
+            plugin_sandbox_subject_id(plugin.plugin_id)
+            for plugin in await self._plugins.list()
+            if plugin.enabled and plugin.sandbox_mode != "disabled"
+        ]
+        connection_subjects = [
+            mcp_connection_sandbox_subject_id(connection.connection_id)
+            for connection in await self._mcp_connections.list()
+            if connection.enabled
+            and connection.transport == "stdio"
+            and connection.sandbox_mode != "disabled"
+        ]
+        await asyncio.to_thread(
+            self._sandbox_launcher.reconcile,
+            (*plugin_subjects, *connection_subjects),
+        )
         await self._repository.expire_nonterminal_runs(
             StructuredError(
                 code="runtime_restarted",
@@ -181,18 +203,31 @@ class RuntimeSkillService:
         bearer_token: str | None = None,
         clear_bearer_token: bool = False,
     ) -> McpConnectionSnapshot:
+        async def revoke_current_sandbox() -> None:
+            await asyncio.to_thread(
+                self._sandbox_launcher.revoke,
+                mcp_connection_sandbox_subject_id(config.connection_id),
+            )
+
         snapshot = await self._mcp_connections.update(
             config,
             bearer_token=bearer_token,
             clear_bearer_token=clear_bearer_token,
+            before_change=revoke_current_sandbox,
         )
         await self._reload_registry_serialized()
         return snapshot
 
     async def delete_mcp_connection(self, connection_id: UUID) -> None:
-        if await self._repository.has_active_reference("mcp_connection_id", str(connection_id)):
-            raise ValueError("MCP connection has an active skill run")
-        await self._mcp_connections.delete(connection_id)
+        async def require_no_active_run() -> None:
+            if await self._repository.has_active_reference("mcp_connection_id", str(connection_id)):
+                raise ValueError("MCP connection has an active skill run")
+            await asyncio.to_thread(
+                self._sandbox_launcher.revoke,
+                mcp_connection_sandbox_subject_id(connection_id),
+            )
+
+        await self._mcp_connections.delete(connection_id, before_change=require_no_active_run)
         await self._reload_registry_serialized()
 
     async def test_mcp_connection(self, connection_id: UUID) -> McpConnectionSnapshot:
@@ -251,16 +286,28 @@ class RuntimeSkillService:
         return await self.install_plugin(source)
 
     async def set_plugin_enabled(self, plugin_id: str, enabled: bool) -> PluginSnapshot:
+        async def apply_lifecycle_change() -> None:
+            await self._reload_registry_serialized()
+            if not enabled:
+                await asyncio.to_thread(
+                    self._sandbox_launcher.revoke,
+                    plugin_sandbox_subject_id(plugin_id),
+                )
+
         return await self._plugins.set_enabled(
             plugin_id,
             enabled,
-            after_change=self._reload_registry_serialized,
+            after_change=apply_lifecycle_change,
         )
 
     async def uninstall_plugin(self, plugin_id: str) -> Path:
         async def require_no_active_run() -> None:
             if await self._repository.has_active_reference("plugin_id", plugin_id):
                 raise ValueError("plugin has an active skill run")
+            await asyncio.to_thread(
+                self._sandbox_launcher.revoke,
+                plugin_sandbox_subject_id(plugin_id),
+            )
 
         return await self._plugins.uninstall(
             plugin_id,
