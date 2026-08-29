@@ -679,6 +679,8 @@ def test_reset_clears_conversation_memory_events_and_audio(
     assert int(str(result["events_deleted"])) > 0
     assert result["memories_deleted"] == 2
     assert int(str(result["audio_assets_deleted"])) > 0
+    assert result["audio_assets_pending_cleanup"] == 0
+    assert result["audio_cleanup_complete"] is True
     assert (
         cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/messages").json())["count"]
         == 0

@@ -535,6 +535,8 @@ async def reset_session_data(
         "events_deleted": result.events_deleted,
         "memories_deleted": result.memories_deleted,
         "audio_assets_deleted": result.audio_assets_deleted,
+        "audio_assets_pending_cleanup": result.audio_assets_pending_cleanup,
+        "audio_cleanup_complete": result.audio_cleanup_complete,
     }
 
 
