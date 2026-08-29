@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/desktop/src-tauri"]
+members = ["apps/desktop/src-tauri", "crates/windows-appcontainer-host"]
 resolver = "2"
 
 [workspace.package]
