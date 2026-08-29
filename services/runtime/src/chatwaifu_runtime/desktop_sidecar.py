@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import runpy
 import signal
 import socket
 import sys
@@ -21,9 +22,55 @@ STACK_VERSION = "1.0"
 STARTUP_TIMEOUT_SECONDS = 120.0
 WINDOWS_SYNCHRONIZE = 0x00100000
 WINDOWS_WAIT_TIMEOUT = 0x00000102
+WINDOWS_JOB_OBJECT_LIMIT_KILL_ON_CLOSE = 0x00002000
+WINDOWS_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+_PROCESS_JOB_HANDLE: int | None = None
 
 
-def main() -> int:
+class _WindowsJobBasicLimitInformation(ctypes.Structure):
+    _fields_ = [
+        ("PerProcessUserTimeLimit", ctypes.c_int64),
+        ("PerJobUserTimeLimit", ctypes.c_int64),
+        ("LimitFlags", ctypes_wintypes.DWORD),
+        ("MinimumWorkingSetSize", ctypes.c_size_t),
+        ("MaximumWorkingSetSize", ctypes.c_size_t),
+        ("ActiveProcessLimit", ctypes_wintypes.DWORD),
+        ("Affinity", ctypes.c_size_t),
+        ("PriorityClass", ctypes_wintypes.DWORD),
+        ("SchedulingClass", ctypes_wintypes.DWORD),
+    ]
+
+
+class _WindowsIoCounters(ctypes.Structure):
+    _fields_ = [
+        ("ReadOperationCount", ctypes.c_uint64),
+        ("WriteOperationCount", ctypes.c_uint64),
+        ("OtherOperationCount", ctypes.c_uint64),
+        ("ReadTransferCount", ctypes.c_uint64),
+        ("WriteTransferCount", ctypes.c_uint64),
+        ("OtherTransferCount", ctypes.c_uint64),
+    ]
+
+
+class _WindowsJobExtendedLimitInformation(ctypes.Structure):
+    _fields_ = [
+        ("BasicLimitInformation", _WindowsJobBasicLimitInformation),
+        ("IoInfo", _WindowsIoCounters),
+        ("ProcessMemoryLimit", ctypes.c_size_t),
+        ("JobMemoryLimit", ctypes.c_size_t),
+        ("PeakProcessMemoryUsed", ctypes.c_size_t),
+        ("PeakJobMemoryUsed", ctypes.c_size_t),
+    ]
+
+
+def main(arguments: list[str] | None = None) -> int:
+    resolved_arguments = list(sys.argv[1:] if arguments is None else arguments)
+    if resolved_arguments[:1] == ["--plugin-python"]:
+        return _run_plugin_python(resolved_arguments[1:])
+    if resolved_arguments:
+        raise RuntimeError(f"Unknown packaged Runtime arguments: {resolved_arguments!r}")
+
+    _install_windows_process_job()
     environment = prepare_environment()
     listener = _loopback_listener()
     runtime_port = cast(tuple[str, int], listener.getsockname())[1]
@@ -49,6 +96,7 @@ def main() -> int:
     )
     stopped = threading.Event()
     _install_signal_handlers(stopped)
+    _start_stdin_watchdog(stopped)
     _start_parent_watchdog(environment, stopped)
     server_thread = threading.Thread(
         target=server.run,
@@ -76,6 +124,30 @@ def main() -> int:
         server.should_exit = True
         server_thread.join(timeout=10)
         listener.close()
+
+
+def _run_plugin_python(arguments: list[str]) -> int:
+    """Run a declared Python MCP entrypoint without recursing into Runtime startup."""
+
+    if not arguments:
+        raise RuntimeError("--plugin-python requires a script path")
+    script = Path(arguments[0]).expanduser().resolve()
+    if not script.is_file() or script.suffix.casefold() != ".py":
+        raise RuntimeError("--plugin-python only accepts an existing .py script")
+    sys.dont_write_bytecode = True
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="strict", write_through=True)
+    previous_arguments = sys.argv
+    sys.argv = [str(script), *arguments[1:]]
+    try:
+        runpy.run_path(str(script), run_name="__main__")
+    except SystemExit as error:
+        return error.code if isinstance(error.code, int) else int(error.code is not None)
+    finally:
+        sys.argv = previous_arguments
+    return 0
 
 
 def prepare_environment(
@@ -156,6 +228,70 @@ def _install_signal_handlers(stopped: threading.Event) -> None:
         candidate = getattr(signal, name, None)
         if isinstance(candidate, signal.Signals):
             signal.signal(candidate, request_stop)
+
+
+def _start_stdin_watchdog(stopped: threading.Event) -> None:
+    def watch() -> None:
+        try:
+            stream = getattr(sys.stdin, "buffer", sys.stdin)
+            while not stopped.is_set():
+                if not stream.read(1):
+                    stopped.set()
+                    return
+        except (OSError, ValueError):
+            stopped.set()
+
+    threading.Thread(target=watch, name="desktop-stdin-watchdog", daemon=True).start()
+
+
+def _install_windows_process_job() -> None:
+    """Contain Runtime and plugin descendants in a kill-on-close Windows Job."""
+
+    global _PROCESS_JOB_HANDLE
+    if os.name != "nt" or _PROCESS_JOB_HANDLE is not None:
+        return
+    windll = cast(Any, getattr(ctypes, "windll", None))
+    if windll is None:
+        raise RuntimeError("Windows process APIs are unavailable")
+    kernel32 = windll.kernel32
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, ctypes_wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = ctypes_wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        ctypes_wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        ctypes_wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = ctypes_wintypes.BOOL
+    kernel32.GetCurrentProcess.argtypes = []
+    kernel32.GetCurrentProcess.restype = ctypes_wintypes.HANDLE
+    kernel32.AssignProcessToJobObject.argtypes = [
+        ctypes_wintypes.HANDLE,
+        ctypes_wintypes.HANDLE,
+    ]
+    kernel32.AssignProcessToJobObject.restype = ctypes_wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [ctypes_wintypes.HANDLE]
+    kernel32.CloseHandle.restype = ctypes_wintypes.BOOL
+
+    handle = kernel32.CreateJobObjectW(None, None)
+    if not handle:
+        raise ctypes.WinError()
+    limits = _WindowsJobExtendedLimitInformation()
+    limits.BasicLimitInformation.LimitFlags = WINDOWS_JOB_OBJECT_LIMIT_KILL_ON_CLOSE
+    if not kernel32.SetInformationJobObject(
+        handle,
+        WINDOWS_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+        ctypes.byref(limits),
+        ctypes.sizeof(limits),
+    ):
+        error = ctypes.WinError()
+        kernel32.CloseHandle(handle)
+        raise error
+    if not kernel32.AssignProcessToJobObject(handle, kernel32.GetCurrentProcess()):
+        error = ctypes.WinError()
+        kernel32.CloseHandle(handle)
+        raise error
+    _PROCESS_JOB_HANDLE = int(handle)
 
 
 def _start_parent_watchdog(environment: MutableMapping[str, str], stopped: threading.Event) -> None:

@@ -2,8 +2,9 @@ use crate::runtime_health::{
     RuntimeBootstrap, RuntimeLifecycleState, RuntimeStatus, parse_bootstrap_line,
 };
 use std::{
+    fs::{self, OpenOptions},
     io::{BufRead, BufReader},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
         Arc, Mutex, MutexGuard,
@@ -12,11 +13,12 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 pub const RUNTIME_STATUS_CHANGED_EVENT: &str = "desktop-runtime-status-changed";
 const MAX_AUTOMATIC_RESTARTS: u32 = 5;
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
+const SIDECAR_LOG_MAX_BYTES: u64 = 5 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug)]
 enum SupervisorCommand {
@@ -144,7 +146,7 @@ fn supervise(
                 ..RuntimeStatus::default()
             },
         );
-        let mut child = match spawn_service_stack() {
+        let mut child = match spawn_service_stack(&app) {
             Ok(child) => child,
             Err(error) => {
                 if !recover_or_wait(
@@ -363,9 +365,19 @@ fn update_status(app: &AppHandle, status: &Arc<Mutex<RuntimeStatus>>, next: Runt
     let _ = app.emit(RUNTIME_STATUS_CHANGED_EVENT, next);
 }
 
-fn spawn_service_stack() -> Result<Child, String> {
+fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
     let mut command = if let Ok(executable) = std::env::var("CHATWAIFU_DESKTOP_SERVICE_EXECUTABLE")
     {
+        Command::new(executable)
+    } else if cfg!(not(debug_assertions)) {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("无法定位打包 Runtime：{error}"))?;
+        let executable = packaged_runtime_executable(&resource_dir);
+        if !executable.is_file() {
+            return Err(format!("打包 Runtime 不存在：{}", executable.display()));
+        }
         Command::new(executable)
     } else {
         let root = workspace_root();
@@ -377,12 +389,41 @@ fn spawn_service_stack() -> Result<Child, String> {
             .current_dir(root);
         command
     };
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| format!("桌宠配置目录不可用：{error}"))?
+        .join("runtime");
+    let data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|error| format!("桌宠数据目录不可用：{error}"))?
+        .join("runtime");
+    command
+        .env("CHATWAIFU_CONFIG_DIR", config_dir)
+        .env("CHATWAIFU_DATA_DIR", data_dir);
+
     #[cfg(target_os = "windows")]
-    if std::env::var_os("CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER").is_none()
-        && let Ok(current_executable) = std::env::current_exe()
-    {
-        let launcher = adjacent_appcontainer_launcher(&current_executable);
-        if launcher.is_file() {
+    if std::env::var_os("CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER").is_none() {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("无法定位 AppContainer helper 资源目录：{error}"))?;
+        let packaged_launcher = packaged_appcontainer_launcher(&resource_dir);
+        let launcher = if packaged_launcher.is_file() {
+            Some(packaged_launcher)
+        } else if cfg!(debug_assertions) {
+            std::env::current_exe()
+                .ok()
+                .map(|current| adjacent_appcontainer_launcher(&current))
+                .filter(|candidate| candidate.is_file())
+        } else {
+            return Err(format!(
+                "打包 AppContainer helper 不存在：{}",
+                packaged_launcher.display()
+            ));
+        };
+        if let Some(launcher) = launcher {
             command.env(
                 "CHATWAIFU_SECURITY__WINDOWS_APPCONTAINER_LAUNCHER",
                 launcher,
@@ -394,9 +435,23 @@ fn spawn_service_stack() -> Result<Child, String> {
             "CHATWAIFU_DESKTOP_PARENT_PID",
             std::process::id().to_string(),
         )
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
+        .stdout(Stdio::piped());
+    if cfg!(debug_assertions) {
+        command.stdin(Stdio::null());
+    } else {
+        command.stdin(Stdio::piped());
+    }
+    if cfg!(debug_assertions) {
+        command.stderr(Stdio::inherit());
+    } else {
+        command.stderr(Stdio::from(open_sidecar_log(app)?));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -410,6 +465,43 @@ fn spawn_service_stack() -> Result<Child, String> {
 #[cfg(any(target_os = "windows", test))]
 fn adjacent_appcontainer_launcher(current_executable: &std::path::Path) -> PathBuf {
     current_executable.with_file_name("chatwaifu-appcontainer-host.exe")
+}
+
+fn packaged_runtime_executable(resource_dir: &Path) -> PathBuf {
+    resource_dir
+        .join("runtime-sidecar")
+        .join("chatwaifu-runtime.exe")
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn packaged_appcontainer_launcher(resource_dir: &Path) -> PathBuf {
+    resource_dir
+        .join("bin")
+        .join("chatwaifu-appcontainer-host.exe")
+}
+
+fn open_sidecar_log(app: &AppHandle) -> Result<std::fs::File, String> {
+    let directory = app
+        .path()
+        .app_log_dir()
+        .map_err(|error| format!("桌宠日志目录不可用：{error}"))?;
+    fs::create_dir_all(&directory).map_err(|error| format!("无法创建桌宠日志目录：{error}"))?;
+    let current = directory.join("runtime-sidecar.log");
+    if current
+        .metadata()
+        .map(|metadata| metadata.len() >= SIDECAR_LOG_MAX_BYTES)
+        .unwrap_or(false)
+    {
+        let previous = directory.join("runtime-sidecar.previous.log");
+        let _ = fs::remove_file(&previous);
+        fs::rename(&current, &previous)
+            .map_err(|error| format!("无法轮换 Runtime 日志：{error}"))?;
+    }
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(current)
+        .map_err(|error| format!("无法打开 Runtime 日志：{error}"))
 }
 
 fn workspace_root() -> PathBuf {
@@ -435,6 +527,15 @@ fn spawn_stdout_reader(stdout: impl std::io::Read + Send + 'static) -> Receiver<
 fn terminate_child(child: &mut Child) {
     if child.try_wait().ok().flatten().is_some() {
         return;
+    }
+    if child.stdin.take().is_some() {
+        let graceful_deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < graceful_deadline {
+            if child.try_wait().ok().flatten().is_some() {
+                return;
+            }
+            thread::sleep(Duration::from_millis(50));
+        }
     }
     #[cfg(unix)]
     unsafe {
@@ -464,8 +565,8 @@ fn lock<'a, T>(value: &'a Mutex<T>, label: &str) -> Result<MutexGuard<'a, T>, St
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_AUTOMATIC_RESTARTS, adjacent_appcontainer_launcher, restart_backoff,
-        should_request_start,
+        MAX_AUTOMATIC_RESTARTS, adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
+        packaged_runtime_executable, restart_backoff, should_request_start,
     };
     use crate::runtime_health::RuntimeLifecycleState;
     use std::path::Path;
@@ -493,6 +594,19 @@ mod tests {
         assert_eq!(
             adjacent_appcontainer_launcher(Path::new("/opt/chatwaifu/chatwaifu-desktop-host.exe")),
             Path::new("/opt/chatwaifu/chatwaifu-appcontainer-host.exe")
+        );
+    }
+
+    #[test]
+    fn packaged_components_are_resolved_from_the_tauri_resource_root() {
+        let resources = Path::new("C:/Program Files/ChatWaifu NEXT/resources");
+        assert_eq!(
+            packaged_runtime_executable(resources),
+            resources.join("runtime-sidecar/chatwaifu-runtime.exe")
+        );
+        assert_eq!(
+            packaged_appcontainer_launcher(resources),
+            resources.join("bin/chatwaifu-appcontainer-host.exe")
         );
     }
 }

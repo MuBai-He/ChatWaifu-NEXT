@@ -641,7 +641,10 @@ def _resolve_command(
                     "unsafe_plugin_command", "Plugin entrypoint escapes install root"
                 )
             arguments[0] = str(entrypoint)
-        arguments = ["-X", "utf8", "-I", "-B", "-u", *arguments]
+        if getattr(sys, "frozen", False):
+            arguments = ["--plugin-python", *arguments]
+        else:
+            arguments = ["-X", "utf8", "-I", "-B", "-u", *arguments]
         return executable, arguments
 
     candidate = Path(executable).expanduser()
@@ -668,5 +671,8 @@ def _clean_environment(subject_id: str) -> dict[str, str]:
         "PATH": os.environ.get("PATH", os.defpath),
         "LANG": os.environ.get("LANG", "C.UTF-8"),
         "LC_ALL": os.environ.get("LC_ALL", "C.UTF-8"),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
         "CHATWAIFU_MCP_SUBJECT_ID": subject_id,
     }
