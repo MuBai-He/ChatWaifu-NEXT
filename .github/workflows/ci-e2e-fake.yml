@@ -23,11 +23,57 @@ jobs:
           runtime: node@22
           cache: true
           install: false
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --all-packages --all-groups --locked
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @chatwaifu/web exec playwright install --with-deps chromium
-      # The browser smoke is a Node-only gate. Override Make's local uv-backed
-      # pnpm wrapper so a missing Python environment cannot break this job.
-      - run: make test-e2e PNPM=pnpm
+      - name: Start deterministic Runtime
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/chatwaifu-e2e/config" "$RUNNER_TEMP/chatwaifu-e2e/data"
+          env \
+            CHATWAIFU_CONFIG_DIR="$RUNNER_TEMP/chatwaifu-e2e/config" \
+            CHATWAIFU_DATA_DIR="$RUNNER_TEMP/chatwaifu-e2e/data" \
+            CHATWAIFU_RUNTIME__PORT=8765 \
+            CHATWAIFU_RUNTIME__WEB_ORIGIN=http://127.0.0.1:4173 \
+            CHATWAIFU_LLM__PROVIDER=demo \
+            CHATWAIFU_LLM__MODEL=chatwaifu-ci-demo \
+            CHATWAIFU_LLM__API_KEY=null \
+            CHATWAIFU_REALTIME__ENABLED=false \
+            CHATWAIFU_STT__PROVIDER=disabled \
+            CHATWAIFU_TTS__PROVIDER=fake \
+            CHATWAIFU_TTS__DEFAULT_PROVIDER=fake \
+            CHATWAIFU_TTS__WORKERS='{}' \
+            nohup uv run python tools/run_runtime.py \
+              > "$RUNNER_TEMP/chatwaifu-runtime.log" 2>&1 &
+          echo "CHATWAIFU_RUNTIME_PID=$!" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8765/v1/runtime/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$!" 2>/dev/null; then
+              cat "$RUNNER_TEMP/chatwaifu-runtime.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/chatwaifu-runtime.log"
+          exit 1
+      - name: Run Runtime-backed browser smoke
+        env:
+          CHATWAIFU_E2E_RUNTIME: "1"
+        run: make test-e2e PNPM=pnpm
+      - name: Stop deterministic Runtime
+        if: always()
+        shell: bash
+        run: |
+          kill "$CHATWAIFU_RUNTIME_PID" 2>/dev/null || true
+          wait "$CHATWAIFU_RUNTIME_PID" 2>/dev/null || true
+          cat "$RUNNER_TEMP/chatwaifu-runtime.log"
 
   architecture-boundaries:
     runs-on: ubuntu-latest

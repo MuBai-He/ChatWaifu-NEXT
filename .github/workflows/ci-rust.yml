@@ -38,10 +38,28 @@ jobs:
         with:
           toolchain: "1.98.0"
           components: rustfmt, clippy
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: pnpm/setup@v1
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+      - run: uv sync --all-packages --all-groups --locked
+      - run: pnpm install --frozen-lockfile
       - run: cargo fetch --locked
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
-      # Compile the actual desktop host on every supported runner without
-      # producing/signing an installer bundle.
-      - run: cargo build --workspace --release --locked
+      # Exercise Tauri's real build graph, including beforeBuildCommand,
+      # frontendDist, resources, capabilities, and native startup metadata.
+      - name: Build unsigned Tauri host
+        if: runner.os != 'Windows'
+        run: pnpm --filter @chatwaifu/desktop build
+      - name: Build unsigned Windows x64 Tauri host
+        if: runner.os == 'Windows'
+        run: pnpm --filter @chatwaifu/desktop build:windows-x64
