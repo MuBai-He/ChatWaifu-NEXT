@@ -6,6 +6,15 @@ bootstrap:
 demo:
     make demo
 
+build-web:
+    make build-web
+
+build-desktop-ui:
+    make build-desktop-ui
+
+verify-release product tag:
+    make verify-release PRODUCT={{product}} TAG={{tag}}
+
 format:
     make format
 
