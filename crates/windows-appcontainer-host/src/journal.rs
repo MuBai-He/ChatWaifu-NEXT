@@ -37,6 +37,10 @@ pub(crate) struct RootGrant {
     /// DACL control bits observed before this profile's first grant.
     #[serde(default)]
     pub(crate) original_dacl_control: Option<u16>,
+    /// Set only after protected descendants have received explicit ACEs.
+    /// A false value is persisted before mutation so a crash retries safely.
+    #[serde(default)]
+    pub(crate) recursive_grant_complete: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,7 +70,11 @@ impl ProfileJournal {
             merged
                 .entry(key)
                 .and_modify(|existing| {
-                    existing.access = existing.access.merge(root.access);
+                    let merged_access = existing.access.merge(root.access);
+                    if merged_access != existing.access {
+                        existing.recursive_grant_complete = false;
+                    }
+                    existing.access = merged_access;
                     if existing.original_dacl_control.is_none() {
                         existing.original_dacl_control = root.original_dacl_control;
                     }
@@ -277,17 +285,20 @@ mod tests {
                 path: path.clone(),
                 access: RootAccess::ReadOnly,
                 original_dacl_control: Some(0),
+                recursive_grant_complete: true,
             }],
         );
         journal.merge_roots([RootGrant {
             path: path.clone(),
             access: RootAccess::Writable,
             original_dacl_control: Some(0x0400),
+            recursive_grant_complete: false,
         }]);
         assert_eq!(journal.roots.len(), 1);
         assert_eq!(journal.roots[0].path, path);
         assert_eq!(journal.roots[0].access, RootAccess::Writable);
         assert_eq!(journal.roots[0].original_dacl_control, Some(0));
+        assert!(!journal.roots[0].recursive_grant_complete);
     }
 
     #[test]

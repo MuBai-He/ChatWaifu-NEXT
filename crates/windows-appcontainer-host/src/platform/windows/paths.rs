@@ -66,6 +66,7 @@ pub(super) fn prepare_run(args: RunArgs, state_dir: PathBuf) -> Result<PreparedR
             path: canonical_sandbox_path(&path, path.is_dir())?,
             access: RootAccess::ReadOnly,
             original_dacl_control: None,
+            recursive_grant_complete: false,
         });
     }
     for path in args.writable {
@@ -73,6 +74,7 @@ pub(super) fn prepare_run(args: RunArgs, state_dir: PathBuf) -> Result<PreparedR
             path: canonical_sandbox_path(&path, path.is_dir())?,
             access: RootAccess::Writable,
             original_dacl_control: None,
+            recursive_grant_complete: false,
         });
     }
     if roots.is_empty() {

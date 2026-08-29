@@ -71,9 +71,8 @@ fn run(args: RunArgs) -> Result<i32> {
             reason: "created profile SID differs from its derived SID".to_owned(),
         });
     }
-    for root in &manifest.roots {
-        paths::validate_journal_root(&root.path)?;
-        acl::grant_tree(&root.path, &sid, root.access)?;
+    if ensure_manifest_grants(&mut manifest, &sid)? {
+        journal::write_durable(&state_dir, &manifest)?;
     }
 
     // Reconcile/revoke must not overlap the policy mutation above. The
@@ -139,7 +138,7 @@ fn reconcile(args: ReconcileArgs) -> Result<()> {
     Ok(())
 }
 
-fn repair_profile(state_dir: &Path, path: PathBuf, manifest: ProfileJournal) -> Result<()> {
+fn repair_profile(state_dir: &Path, path: PathBuf, mut manifest: ProfileJournal) -> Result<()> {
     let profile_name = manifest.profile_name.clone();
     let sid = derive_sid_from_name(&profile_name)
         .map_err(|error| HostError::AppContainer(error.to_string()))?
@@ -164,11 +163,25 @@ fn repair_profile(state_dir: &Path, path: PathBuf, manifest: ProfileJournal) -> 
             reason: "reconciled profile SID differs from its derived SID".to_owned(),
         });
     }
-    for root in &manifest.roots {
-        paths::validate_journal_root(&root.path)?;
-        acl::grant_tree(&root.path, &sid, root.access)?;
+    if ensure_manifest_grants(&mut manifest, &sid)? {
+        journal::write_durable(state_dir, &manifest)?;
     }
     Ok(())
+}
+
+fn ensure_manifest_grants(manifest: &mut ProfileJournal, sid: &str) -> Result<bool> {
+    let mut changed = false;
+    for root in &mut manifest.roots {
+        paths::validate_journal_root(&root.path)?;
+        if root.recursive_grant_complete {
+            acl::grant_root(&root.path, sid, root.access)?;
+            continue;
+        }
+        acl::grant_tree(&root.path, sid, root.access)?;
+        root.recursive_grant_complete = true;
+        changed = true;
+    }
+    Ok(changed)
 }
 
 fn revoke_profile(
