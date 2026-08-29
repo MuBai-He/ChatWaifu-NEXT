@@ -491,23 +491,29 @@ def test_token_filesystem_loopback_and_exact_dacl_revoke(layout: _Layout) -> Non
 
 
 def test_explicit_network_allow_reaches_private_lan_but_not_loopback(layout: _Layout) -> None:
-    host_ip = socket.gethostbyname(socket.gethostname())
-    if host_ip.startswith("127."):
-        pytest.skip("Windows host has no discoverable non-loopback IPv4 address")
+    configured_probe = os.environ.get("CHATWAIFU_APPCONTAINER_LAN_PROBE")
+    if not configured_probe:
+        pytest.skip(
+            "set CHATWAIFU_APPCONTAINER_LAN_PROBE=host:port to prove private LAN access"
+        )
+    try:
+        host_ip, port_text = configured_probe.rsplit(":", 1)
+        probe_port = int(port_text)
+    except ValueError as error:
+        raise AssertionError(
+            "CHATWAIFU_APPCONTAINER_LAN_PROBE must be an IPv4 host:port"
+        ) from error
     expected_sid = _profile_sid(layout.profile)
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.bind((host_ip, 0))
-    listener.listen(2)
     loopback = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     loopback.bind(("127.0.0.1", 0))
     loopback.listen(1)
     try:
-        denied = _security_cycle(layout, host_ip, listener.getsockname()[1])
+        denied = _security_cycle(layout, host_ip, probe_port)
         _assert_security_result(denied, expected_sid, network_allowed=False)
         allowed = _security_cycle(
             layout,
             host_ip,
-            listener.getsockname()[1],
+            probe_port,
             network="allow",
         )
         _assert_security_result(allowed, expected_sid, network_allowed=True)
@@ -519,7 +525,6 @@ def test_explicit_network_allow_reaches_private_lan_but_not_loopback(layout: _La
         )
         _assert_security_result(still_no_loopback, expected_sid, network_allowed=False)
     finally:
-        listener.close()
         loopback.close()
 
 

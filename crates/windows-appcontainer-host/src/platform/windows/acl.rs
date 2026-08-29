@@ -35,6 +35,42 @@ pub(super) fn grant_root(path: &Path, sid: &str, access: RootAccess) -> Result<(
         .map_err(|error| HostError::AppContainer(format!("grant {}: {error}", path.display())))
 }
 
+/// Grant a root and any protected descendants that cannot inherit its ACE.
+///
+/// Python wheels and other plugin packages can contain files with protected
+/// DACLs. Granting only the package directory leaves those native extensions
+/// unreadable to the AppContainer and makes otherwise valid plugins fail at
+/// import time. Ordinary descendants are covered by the root's inheritable
+/// ACE; only protected objects receive an additional explicit grant.
+pub(super) fn grant_tree(path: &Path, sid: &str, access: RootAccess) -> Result<()> {
+    grant_root(path, sid, access)?;
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.is_dir() || is_reparse_point(&metadata) {
+        return Ok(());
+    }
+    grant_protected_descendants(path, sid, access)
+}
+
+fn grant_protected_descendants(directory: &Path, sid: &str, access: RootAccess) -> Result<()> {
+    use windows::Win32::Security::SE_DACL_PROTECTED;
+
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        let metadata = entry.metadata()?;
+        if is_reparse_point(&metadata) {
+            continue;
+        }
+        if dacl_control(&path)? & SE_DACL_PROTECTED.0 != 0 {
+            grant_root(&path, sid, access)?;
+        }
+        if metadata.is_dir() {
+            grant_protected_descendants(&path, sid, access)?;
+        }
+    }
+    Ok(())
+}
+
 /// Remove only ACEs belonging to this exact AppContainer SID.
 ///
 /// This deliberately does not restore a previously captured DACL because that

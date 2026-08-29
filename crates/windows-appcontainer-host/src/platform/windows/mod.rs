@@ -73,7 +73,7 @@ fn run(args: RunArgs) -> Result<i32> {
     }
     for root in &manifest.roots {
         paths::validate_journal_root(&root.path)?;
-        acl::grant_root(&root.path, &sid, root.access)?;
+        acl::grant_tree(&root.path, &sid, root.access)?;
     }
 
     // Reconcile/revoke must not overlap the policy mutation above. The
@@ -166,7 +166,7 @@ fn repair_profile(state_dir: &Path, path: PathBuf, manifest: ProfileJournal) -> 
     }
     for root in &manifest.roots {
         paths::validate_journal_root(&root.path)?;
-        acl::grant_root(&root.path, &sid, root.access)?;
+        acl::grant_tree(&root.path, &sid, root.access)?;
     }
     Ok(())
 }
