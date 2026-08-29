@@ -11,12 +11,12 @@
       "binaries/chatwaifu-appcontainer-host-x86_64-pc-windows-msvc.exe": "bin/chatwaifu-appcontainer-host.exe"
     },
     "windows": {
+      "allowDowngrades": false,
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       },
       "nsis": {
-        "installMode": "currentUser",
-        "allowDowngrades": false
+        "installMode": "currentUser"
       }
     }
   }

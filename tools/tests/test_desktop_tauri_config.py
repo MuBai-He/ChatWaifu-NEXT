@@ -67,7 +67,8 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
         ),
     }
     assert windows["webviewInstallMode"] == {"type": "downloadBootstrapper"}
-    assert nsis == {"installMode": "currentUser", "allowDowngrades": False}
+    assert windows["allowDowngrades"] is False
+    assert nsis == {"installMode": "currentUser"}
 
 
 def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> None:
