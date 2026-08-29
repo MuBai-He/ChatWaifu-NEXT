@@ -250,7 +250,7 @@ phases:
       - The 0.6B pilot checkpoint converts to an 8-bit MLX CustomVoice model with the fixed ayachi_nene_local speaker and completes real Chinese/Japanese synthesis on Apple Silicon
   - id: 10
     name: runtime-skills-and-plugins
-    status: complete_permissioned_mcp_host_and_loopback_server_with_platform_sandbox
+    status: complete_permissioned_mcp_host_loopback_server_and_validated_windows_appcontainer
     evidence:
       - SKILL.md and chatwaifu.yaml discovery validates ids, versions, schemas, paths, and duplicates
       - SQLite persists plugins, MCP connection profiles, runs, permission requests, grants, and audited tool calls
@@ -262,6 +262,9 @@ phases:
       - Remote URLs default to loopback; every network session pins its policy-validated DNS addresses into TCP dialing while preserving the original Host, TLS SNI, certificate, peer, redirect, credential, and system-proxy defenses
       - Untrusted local stdio defaults to required OS isolation and denied networking; installed package roots are read-only while per-plugin data roots are separately writable
       - Sandbox snapshots persist the actual backend and only resource limits it really enforces; OCI enforces process, memory, and CPU limits while Seatbelt/bubblewrap report no portable resource-limit claim
+      - ADR 0025 accepts a ChatWaifu-owned x64 Windows AppContainer host with stable permission-subject profiles, durable ACL journals and reconciliation, protected-descendant grants, restricted stdio inheritance, creation-time Job-list containment, and explicit network capabilities
+      - An unelevated x64 helper (PE 0x8664) passed real Windows 11 token, filesystem, ACL cleanup, external-LAN deny/allow, loopback denial, inherited-handle exclusion, MCP stdio, process-count, Job-memory, launcher-kill, parent-EOF, and reconciliation probes on 2026-08-29
+      - Windows required-sandbox execution discovers the sibling helper and fails closed when it is missing or policy preparation fails; signed installer and frozen-sidecar validation remain release work
       - Runtime publishes a policy-filtered standard Streamable HTTP MCP server at /mcp with loopback Host and Origin protection, optional Bearer authentication, and no adapter bypass
       - MCP bearer tokens are write-only, atomically stored mode-0600, and use a compensating cross-store mutation journal; corrupt secret or journal storage fails closed
       - Deny-by-default audit summaries retain only explicitly schema-whitelisted public fields, resolve local $ref/allOf sensitivity, keep real results process-local, and prevent secrets, file bodies, prompt arguments, PII, or arbitrary MCP payloads from entering runs, tool-call rows, events, or outbox
@@ -314,7 +317,7 @@ entry_blockers:
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
   - Signed packaged Tauri delivery and a frozen release sidecar remain pending
-  - Windows still lacks an approved AppContainer backend for untrusted local stdio MCP; macOS Seatbelt and Linux bubblewrap fail closed when unavailable
+  - The Windows x64 AppContainer helper passed developer acceptance, but signed installer delivery and frozen Windows Runtime sidecar validation remain pending
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id

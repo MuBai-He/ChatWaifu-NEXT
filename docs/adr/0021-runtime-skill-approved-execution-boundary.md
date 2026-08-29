@@ -68,12 +68,14 @@ closes DNS-rebinding time-of-check/time-of-use without weakening hostname authen
 
 Installed plugin packages and mutable data use different roots. Package files are copied after
 bounded regular-file validation and made owner-read-only; the package root is mounted read-only by
-Seatbelt, bubblewrap, or OCI. The separate per-plugin data root is the process working directory and
-the only plugin-specific writable mount. Snapshot fields persist the backend that was actually
-planned or used, including explicit `none`, and separately list only resource limits the backend
-really enforces. The OCI supervisor contract enforces process-count, memory, and CPU limits; current
+Seatbelt, bubblewrap, or OCI. On Windows, the ADR 0025 host grants its stable per-subject
+AppContainer SID read/execute access to the package/runtime roots and write access only to the
+separate per-plugin data root. Snapshot fields persist the backend that was actually planned or
+used, including explicit `none`, and separately list only resource limits the backend really
+enforces. The OCI supervisor contract enforces process-count, memory, and CPU limits; current
 Seatbelt and bubblewrap launchers truthfully report no resource-limit enforcement instead of
-claiming a portable limit they do not provide.
+claiming a portable limit they do not provide. Windows may report AppContainer/Job limits only
+after its host confirms their application for that child.
 
 MCP bearer tokens remain outside SQLite. A mode-0600 mutation journal records previous and intended
 token state until the related SQLite create, update, or delete commits. Ordinary failures compensate
@@ -95,9 +97,12 @@ replay log. Full successful results are process-local and disappear on Runtime r
 also expire because their original arguments are intentionally unavailable.
 
 Plugin authors must write through `CHATWAIFU_PLUGIN_DATA_DIR` or their working directory and treat
-`CHATWAIFU_PLUGIN_PACKAGE_DIR` as immutable. Windows still cannot execute an untrusted required-sandbox
-stdio plugin without an approved native backend or explicitly configured OCI runtime. The API reports
-that limitation instead of silently falling back to a cleaned environment.
+`CHATWAIFU_PLUGIN_PACKAGE_DIR` as immutable. ADR 0025 accepts and validates the Windows native
+backend with real x64 filesystem, network, inherited-handle, Job, memory, MCP lifecycle,
+cancellation, and reconciliation probes. The API still rejects untrusted required-sandbox stdio
+whenever the sibling helper is missing or cannot enforce the immutable plan; it never silently
+falls back to a cleaned environment. Signed installer and frozen-sidecar validation remain separate
+release gates.
 
 The SQLite adapter remains replaceable behind the domain port. Moving to another durable store must
 preserve conditional confirmation decisions, connection revisions, leases, secret-journal recovery,

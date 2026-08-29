@@ -84,8 +84,26 @@ session and WebSocket so the user can start again immediately.
     state return to their initial values and a new turn
     can be sent in the same session.
 
-Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`. This is a soft
-child-process boundary, not an OS sandbox; only install trusted local plugins in the current Demo.
+Plugin uninstall is recoverable and moves files into `.local/data/plugin-trash/`; that recovery
+mechanism is separate from process isolation. On macOS and Linux, an available required Seatbelt or
+bubblewrap backend is an OS sandbox and missing enforcement fails closed. ADR 0025 defines the
+real-Windows-tested x64 AppContainer/Job backend. Development builds discover the sibling helper
+automatically; a missing/wrong-architecture helper or failed policy preparation rejects untrusted
+required-sandbox stdio. Signed installer/frozen-sidecar validation remains pending. Explicitly trusted
+profiles that disable isolation are still a soft boundary and should run only trusted code.
+
+For a real Windows developer acceptance run, start a TCP listener on a different LAN peer, then use
+an unelevated x64 PowerShell after `tools/windows/bootstrap_x64.ps1`:
+
+```powershell
+cargo build --package chatwaifu-appcontainer-host --target x86_64-pc-windows-msvc
+$env:CHATWAIFU_APPCONTAINER_HOST = "$PWD\target\x86_64-pc-windows-msvc\debug\chatwaifu-appcontainer-host.exe"
+$env:CHATWAIFU_APPCONTAINER_LAN_PROBE = "<external-lan-host>:<port>"
+.\.venv\Scripts\python.exe -m pytest services\runtime\tests\test_windows_appcontainer_acceptance.py -q
+```
+
+The LAN endpoint must be another machine/VM host; Windows treats connections back to its own NIC as
+loopback isolation even when the address is not `127.0.0.1`.
 
 `按住说话` is the safe default. `自由对话（会听到附近人声）` keeps the outbound track enabled and
 is intended for quiet, single-user environments. Silero VAD detects speech boundaries, not whether

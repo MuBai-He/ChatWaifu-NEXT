@@ -48,13 +48,17 @@
 - faster-whisper runs in an independently locked worker environment and returns versioned SDK models.
 - `sherpa-onnx` and all model bundles are optional worker/runtime dependencies, never base CI inputs.
 - MCP Host connections use the official SDK over stdio, Streamable HTTP, or compatibility SSE.
-  Untrusted local processes require an enforcing macOS Seatbelt or Linux bubblewrap sandbox and
-  fail closed when one is unavailable; network transports are revalidated against SSRF policy.
+  Untrusted local processes require an enforcing macOS Seatbelt, Linux bubblewrap, validated Windows
+  AppContainer host, or explicit OCI backend and fail closed when one is unavailable. ADR 0025
+  defines the Windows x64 profile/ACL/Job/stdio boundary and records its real-Windows developer acceptance.
+  Network transports are independently revalidated against SSRF policy.
 - Tauri remains a thin host for Runtime lifecycle and shared Web assets.
 
 ## Release exclusions
 
-The basic demo does not claim a Windows AppContainer sandbox, public TURN/RTVI data-channel control, trained
-custom voice weights, cloud realtime, multi-machine workers, proactive ambient behavior, semantic
-vector retrieval, temporal graph reasoning, or a completed LongMemEval gate. Playback acknowledgements
-and long-running multi-turn voice stress tests remain hardening work rather than hidden completed features.
+The basic demo includes a real-Windows-tested x64 AppContainer backend, but does not yet claim a
+signed installer or frozen Windows Runtime sidecar. It also does not claim public TURN/RTVI
+data-channel control, trained custom voice weights, cloud realtime,
+multi-machine workers, proactive ambient behavior, semantic vector retrieval, temporal graph
+reasoning, or a completed LongMemEval gate. Playback acknowledgements and long-running multi-turn
+voice stress tests remain hardening work rather than hidden completed features.

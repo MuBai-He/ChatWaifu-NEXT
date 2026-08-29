@@ -125,11 +125,13 @@ Schema 校验、Permission Broker、逐次副作用确认、超时、取消与�
 直接调用。远程地址默认仅允许 loopback；显式允许远程后仍会在每次连接前重新解析 DNS，并拒绝
 link-local、metadata、reserved、重定向和系统代理继承。
 
-本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用 Seatbelt，Linux 使用 bubblewrap；
-缺少可强制执行的后端时会 fail closed。Windows 当前没有批准的原生 AppContainer 后端，因此
-`sandbox_mode=required` 的不可信 stdio 服务会被拒绝；远程 MCP 与用户显式标为可信的本地连接仍可用。
-连接测试后设置页会显示实际隔离后端；显式关闭沙箱时网络策略只能是“允许”，不会把进程清理或环境
-变量过滤误报成网络隔离。
+本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用系统 Seatbelt，Linux 使用系统
+bubblewrap，Windows 使用项目随桌面 Host 构建的 x64 AppContainer/Job Host；缺少可强制执行的后端
+时会 fail closed。Windows 开发构建会自动发现同目录的 `chatwaifu-appcontainer-host.exe`，不需要用户
+填写路径；它不存在、架构错误或策略准备失败时，不可信服务会被拒绝。连接测试后设置页会显示实际
+隔离后端；显式关闭沙箱时网络策略只能是“允许”，不会把进程清理或环境变量过滤误报成网络隔离。
+Windows 原生边界与真实系统验收见 [ADR 0025](docs/adr/0025-windows-appcontainer-runtime-skill-launcher.md)；
+签名安装包和冻结 Runtime sidecar 仍是发布工作，不属于本次开发构建验收。
 运行中的 ChatWaifu Runtime 还在同一个 loopback 端口公开标准 Streamable HTTP `/mcp`：匿名模式仅发布
 安全只读能力，配置 Runtime 管理 Token 后才认证发布副作用工具，而且调用仍要求有效会话并可能进入
 本地确认队列。完整边界见 [ADR 0018](docs/adr/0018-complete-mcp-host-server-and-sandbox.md)。
