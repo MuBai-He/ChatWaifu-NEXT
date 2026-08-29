@@ -72,6 +72,7 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
 
 def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> None:
     script = (ROOT / "tools/windows/build_installer_x64.ps1").read_text(encoding="utf-8")
+    bootstrap = (ROOT / "tools/windows/bootstrap_x64.ps1").read_text(encoding="utf-8")
 
     assert '$Target = "x86_64-pc-windows-msvc"' in script
     assert 'if ($PythonPlatform -ne "win-amd64")' in script
@@ -90,6 +91,14 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "[System.Diagnostics.FileVersionInfo]::GetVersionInfo" in script
     assert '$VersionInfo.FileDescription -ne "ChatWaifu NEXT Runtime"' in script
     assert "Assert-RuntimeFileIdentity $RuntimeExecutable" in script
+    assert '$UvPythonInstallDir = Join-Path $RepoRoot ".local\\toolchains\\uv-python"' in bootstrap
+    assert "$env:UV_PYTHON_INSTALL_DIR = $UvPythonInstallDir" in bootstrap
+    assert 'Join-Path (Join-Path $UvPythonInstallDir $PythonRequest) "python.exe"' in bootstrap
+    assert "Get-PythonPlatform $VenvPython" in bootstrap
+    assert '$UvPythonInstallDir = Join-Path $RepoRoot ".local\\toolchains\\uv-python"' in script
+    assert 'Join-Path (Join-Path $UvPythonInstallDir $PythonRequest) "python.exe"' in script
+    assert '"--python", $PythonExe' in script
+    assert "Remove-Item -Path $PackagingEnvironment -Recurse -Force" in script
 
 
 def test_frozen_windows_runtime_uses_chatwaifu_file_identity_and_icon() -> None:

@@ -14,6 +14,8 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $PackagingEnvironment = Join-Path $RepoRoot ".packaging\windows-x64"
 $PackagingPython = Join-Path $PackagingEnvironment "Scripts\python.exe"
+$PythonRequest = "cpython-3.12.10-windows-x86_64-none"
+$UvPythonInstallDir = Join-Path $RepoRoot ".local\toolchains\uv-python"
 $Target = "x86_64-pc-windows-msvc"
 $RuntimeExecutable = Join-Path $RepoRoot "dist\windows\runtime-sidecar\chatwaifu-runtime.exe"
 $HelperExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
@@ -88,13 +90,26 @@ function Assert-RuntimeFileIdentity {
     }
 }
 
+function Get-PythonPlatform {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        return ""
+    }
+    $Platform = & $Path -c "import sysconfig; print(sysconfig.get_platform())" 2>$null
+    if ($LASTEXITCODE -ne 0 -or $null -eq $Platform) {
+        return ""
+    }
+    return ([string]$Platform).Trim()
+}
+
 if (-not (Test-Path $VenvPython -PathType Leaf)) {
     throw "Missing x64 .venv. Run tools/windows/bootstrap_x64.ps1 first."
 }
 
-$PythonPlatform = (& $VenvPython -c "import sysconfig; print(sysconfig.get_platform())").Trim()
+$PythonPlatform = Get-PythonPlatform $VenvPython
 if ($PythonPlatform -ne "win-amd64") {
-    throw "Expected win-amd64 .venv, received $PythonPlatform."
+    throw "Expected a working win-amd64 .venv. Run tools/windows/bootstrap_x64.ps1 -RecreateEnvironment."
 }
 
 $Uv = (Get-Command uv -ErrorAction Stop).Source
@@ -103,6 +118,7 @@ $Rustup = (Get-Command rustup -ErrorAction Stop).Source
 
 Push-Location $RepoRoot
 $PreviousUvEnvironment = $env:UV_PROJECT_ENVIRONMENT
+$PreviousUvPythonInstallDir = $env:UV_PYTHON_INSTALL_DIR
 try {
     # The ignored development model must never leak into a base installer. Move it
     # out for the duration of every build, then restore it in finally. An explicit
@@ -147,9 +163,19 @@ try {
         Write-Host "Private Live2D overlay staged locally; it will not be committed or uploaded."
     }
 
+    $env:UV_PYTHON_INSTALL_DIR = $UvPythonInstallDir
+    $PythonExe = Join-Path (Join-Path $UvPythonInstallDir $PythonRequest) "python.exe"
+    if (-not (Test-Path $PythonExe -PathType Leaf)) {
+        throw "The repository-local Windows x64 Python is missing. Run tools/windows/bootstrap_x64.ps1."
+    }
+    if ((Get-PythonPlatform $PackagingPython) -ne "win-amd64" -and
+        (Test-Path $PackagingEnvironment -PathType Container)) {
+        Remove-Item -Path $PackagingEnvironment -Recurse -Force
+    }
     $env:UV_PROJECT_ENVIRONMENT = $PackagingEnvironment
     Invoke-Checked $Uv @(
         "sync",
+        "--python", $PythonExe,
         "--package", "chatwaifu-runtime",
         "--group", "packaging",
         "--no-dev",
@@ -231,6 +257,11 @@ try {
         Remove-Item Env:UV_PROJECT_ENVIRONMENT -ErrorAction SilentlyContinue
     } else {
         $env:UV_PROJECT_ENVIRONMENT = $PreviousUvEnvironment
+    }
+    if ($null -eq $PreviousUvPythonInstallDir) {
+        Remove-Item Env:UV_PYTHON_INSTALL_DIR -ErrorAction SilentlyContinue
+    } else {
+        $env:UV_PYTHON_INSTALL_DIR = $PreviousUvPythonInstallDir
     }
     if ($Live2DDestinationTemporarilyOwned -and (Test-Path $Live2DDestination)) {
         Remove-Item -Path $Live2DDestination -Recurse -Force

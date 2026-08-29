@@ -11,6 +11,7 @@ if ($env:OS -ne "Windows_NT") {
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $PythonRequest = "cpython-3.12.10-windows-x86_64-none"
+$UvPythonInstallDir = Join-Path $RepoRoot ".local\toolchains\uv-python"
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
 function Invoke-Checked {
@@ -25,25 +26,44 @@ function Invoke-Checked {
     }
 }
 
+function Get-PythonPlatform {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        return ""
+    }
+    $Platform = & $Path -c "import sysconfig; print(sysconfig.get_platform())" 2>$null
+    if ($LASTEXITCODE -ne 0 -or $null -eq $Platform) {
+        return ""
+    }
+    return ([string]$Platform).Trim()
+}
+
 $Uv = (Get-Command uv -ErrorAction Stop).Source
 $Rustup = (Get-Command rustup -ErrorAction Stop).Source
 $Cargo = (Get-Command cargo -ErrorAction Stop).Source
 
 Push-Location $RepoRoot
+$PreviousUvPythonInstallDir = $env:UV_PYTHON_INSTALL_DIR
 try {
+    # Keep the release interpreter on the repository's native NTFS path. Roaming
+    # profiles can be redirected by VM software, and current uv correctly refuses
+    # to execute a Python reached through an untrusted mount point.
+    $env:UV_PYTHON_INSTALL_DIR = $UvPythonInstallDir
+    New-Item -ItemType Directory -Path $UvPythonInstallDir -Force | Out-Null
     Invoke-Checked $Uv @("python", "install", $PythonRequest)
-    $PythonExe = (& $Uv python find $PythonRequest | Select-Object -Last 1).Trim()
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $PythonExe)) {
-        throw "uv did not resolve the requested Windows x64 Python interpreter."
+    $PythonExe = Join-Path (Join-Path $UvPythonInstallDir $PythonRequest) "python.exe"
+    if (-not (Test-Path $PythonExe -PathType Leaf)) {
+        throw "uv did not install the requested Windows x64 Python interpreter."
     }
 
-    $PythonPlatform = (& $PythonExe -c "import sysconfig; print(sysconfig.get_platform())").Trim()
+    $PythonPlatform = Get-PythonPlatform $PythonExe
     if ($PythonPlatform -ne "win-amd64") {
         throw "Expected win-amd64 Python, received $PythonPlatform."
     }
 
     if (Test-Path $VenvPython) {
-        $VenvPlatform = (& $VenvPython -c "import sysconfig; print(sysconfig.get_platform())").Trim()
+        $VenvPlatform = Get-PythonPlatform $VenvPython
         if ($VenvPlatform -ne "win-amd64") {
             if (-not $RecreateEnvironment) {
                 throw "The existing .venv is $VenvPlatform. Re-run with -RecreateEnvironment."
@@ -68,5 +88,10 @@ try {
 
     Write-Host "Windows x64 toolchain is ready. Python platform: $PythonPlatform"
 } finally {
+    if ($null -eq $PreviousUvPythonInstallDir) {
+        Remove-Item Env:UV_PYTHON_INSTALL_DIR -ErrorAction SilentlyContinue
+    } else {
+        $env:UV_PYTHON_INSTALL_DIR = $PreviousUvPythonInstallDir
+    }
     Pop-Location
 }
