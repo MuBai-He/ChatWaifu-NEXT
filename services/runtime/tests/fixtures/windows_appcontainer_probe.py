@@ -177,8 +177,9 @@ def _tree_parent(args: argparse.Namespace) -> int:
             "--marker",
             args.marker,
         ],
-        stdin=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # AppContainer processes cannot rely on opening the DOS NUL device.
+        # An owned pipe proves descendant creation without widening device ACLs.
+        stdin=subprocess.PIPE,
     )
     threading.Event().wait()
     return 0
