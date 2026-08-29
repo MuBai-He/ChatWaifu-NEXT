@@ -52,25 +52,52 @@ describe("runtime HTTP client", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
   });
 
-  it("bounds desktop endpoint resolution with the same request deadline", async () => {
+  it("starts the request timeout only after a slow desktop endpoint resolves", async () => {
     vi.useFakeTimers();
+    vi.mocked(resolveRuntimeUrl).mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          window.setTimeout(() => resolve("http://runtime.test"), 100);
+        }),
+    );
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = requestRuntime(
+      "/v1/playback/ack",
+      { parse: (payload) => payload as { ok: boolean } },
+      { timeoutMs: 25 },
+    );
+    await vi.advanceTimersByTimeAsync(99);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(request).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("lets the caller cancel while waiting for the desktop endpoint", async () => {
     vi.mocked(resolveRuntimeUrl).mockImplementation(
       () => new Promise<string>(() => undefined),
     );
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    const reason = new DOMException("navigation cancelled", "AbortError");
 
     const request = requestRuntime(
-      "/v1/playback/ack",
+      "/v1/runtime/health",
       { parse: () => ({ ok: true }) },
-      { timeoutMs: 25 },
+      { signal: controller.signal, timeoutMs: 25 },
     );
-    const rejection = expect(request).rejects.toThrow(
-      "Runtime 请求超时：/v1/playback/ack",
-    );
-    await vi.advanceTimersByTimeAsync(25);
+    controller.abort(reason);
 
-    await rejection;
+    await expect(request).rejects.toBe(reason);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
