@@ -2,10 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: "**/desktop-product.spec.ts",
-  // Real Cubism/WebGL cases are intentionally serialized in this shared local
-  // server: parallel contexts can starve requestAnimationFrame long enough to
-  // hide short semantic cues and create machine-load-dependent results.
+  testMatch: "**/desktop-product.spec.ts",
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
@@ -16,13 +13,13 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
+      name: "chromium-desktop-product",
       use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {
-    command: "pnpm dev:web --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173/avatar-lab",
+    command: "pnpm dev:desktop --host 127.0.0.1 --port 4173",
+    url: "http://127.0.0.1:4173/desktop-pet",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

@@ -1,8 +1,36 @@
-name: Web CI
+name: Web Product CI
 
 on:
   push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ci-web.yml"
+      - "apps/web/**"
+      - "packages/avatar-sdk/**"
+      - "packages/protocol-typescript/**"
+      - "schemas/domain/v1/**"
+      - "tools/live2d_bridge/**"
+      - "tools/product_release.py"
+      - "tools/verify_product_artifacts.py"
+      - "release/products.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   pull_request:
+    paths:
+      - ".github/workflows/ci-web.yml"
+      - "apps/web/**"
+      - "packages/avatar-sdk/**"
+      - "packages/protocol-typescript/**"
+      - "schemas/domain/v1/**"
+      - "tools/live2d_bridge/**"
+      - "tools/product_release.py"
+      - "tools/verify_product_artifacts.py"
+      - "release/products.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,13 +55,14 @@ jobs:
           runtime: node@22
           cache: true
           install: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      # Native Tauri compilation belongs to Rust CI. Keep this gate focused on
-      # the three browser-consumed TypeScript packages.
-      - run: pnpm --filter @chatwaifu/protocol build
-      - run: pnpm --filter @chatwaifu/avatar-sdk build
-      - run: pnpm --filter @chatwaifu/web build
+      - run: pnpm exec prettier --check apps/web release/products.json
+      - run: pnpm --filter @chatwaifu/web lint
+      - run: pnpm --filter @chatwaifu/web typecheck
+      - run: pnpm --filter @chatwaifu/web test
+      - run: python tools/product_release.py verify --product web
+      - run: pnpm --filter @chatwaifu/web build:web
+      - run: python tools/verify_product_artifacts.py --product web

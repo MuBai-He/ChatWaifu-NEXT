@@ -2,7 +2,33 @@ name: Protocol Contract CI
 
 on:
   push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ci-contract.yml"
+      - "packages/protocol-python/**"
+      - "packages/protocol-typescript/**"
+      - "schemas/domain/v1/**"
+      - "tests/contract/**"
+      - "tests/fixtures/protocol/**"
+      - "tools/generate_protocol_schemas.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "package.json"
+      - "pnpm-lock.yaml"
   pull_request:
+    paths:
+      - ".github/workflows/ci-contract.yml"
+      - "packages/protocol-python/**"
+      - "packages/protocol-typescript/**"
+      - "schemas/domain/v1/**"
+      - "tests/contract/**"
+      - "tests/fixtures/protocol/**"
+      - "tools/generate_protocol_schemas.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
 
 permissions:
   contents: read

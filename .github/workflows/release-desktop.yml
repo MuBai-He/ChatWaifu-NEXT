@@ -1,0 +1,105 @@
+name: Build Desktop Product Candidate
+
+on:
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  desktop-components:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Require a commit reachable from main
+        shell: bash
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Install Linux Tauri build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            build-essential \
+            libayatana-appindicator3-dev \
+            libgtk-3-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            patchelf
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98.0"
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: pnpm/setup@v1
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+      - run: uv sync --all-packages --all-groups --locked
+      - run: pnpm install --frozen-lockfile
+      - name: Verify tag and product version
+        shell: bash
+        run: uv run python tools/product_release.py verify --product desktop --tag "$GITHUB_REF_NAME"
+      - name: Build Runtime sidecar component wheel
+        run: uv build --package chatwaifu-runtime --wheel --clear --out-dir dist/runtime-sidecar
+      - name: Build unsigned Tauri host
+        if: runner.os != 'Windows'
+        run: pnpm --filter @chatwaifu/desktop build
+      - name: Build unsigned Windows x64 Tauri host
+        if: runner.os == 'Windows'
+        run: pnpm --filter @chatwaifu/desktop build:windows-x64
+      - name: Build Windows x64 AppContainer helper
+        if: runner.os == 'Windows'
+        run: cargo build --release --locked --package chatwaifu-appcontainer-host --target x86_64-pc-windows-msvc
+      - run: uv run python tools/verify_product_artifacts.py --product desktop
+      - name: Upload Unix developer components
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v6
+        with:
+          name: chatwaifu-${{ github.ref_name }}-${{ runner.os }}-developer-components
+          path: |
+            apps/web/dist/desktop
+            dist/runtime-sidecar/*.whl
+            target/release/chatwaifu-desktop-host
+          if-no-files-found: error
+      - name: Upload Windows x64 developer components
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v6
+        with:
+          name: chatwaifu-${{ github.ref_name }}-Windows-x64-developer-components
+          path: |
+            apps/web/dist/desktop
+            dist/runtime-sidecar/*.whl
+            target/x86_64-pc-windows-msvc/release/chatwaifu-desktop-host.exe
+            target/x86_64-pc-windows-msvc/release/chatwaifu-appcontainer-host.exe
+          if-no-files-found: error
+      - name: Record the remaining production gate
+        shell: bash
+        run: |
+          {
+            echo "### Desktop candidate only"
+            echo
+            echo "The compiled host, isolated Desktop frontend, and Runtime wheel are CI components."
+            echo "No installable release is published until the frozen sidecar, resources, Tauri bundle, signing, and installation smoke gates pass."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -5,6 +5,11 @@ ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当
 SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、结构化长期记忆，以及带权限与
 确认的 Runtime Skills/MCP 插件链路已接通。
 
+仓库只维护一个 `main`，但不是一个混合前端包：浏览器 Galgame 与原生桌宠分别从编译期入口
+生成 `apps/web/dist/web` 和 `apps/web/dist/desktop`。两者共享 Runtime、会话、Live2D、语音、
+记忆和设置实现，不共享产品页面；发行约定见
+[Web/Desktop product profiles](docs/architecture/product-release-profiles.md)。
+
 ## 直接运行 Demo
 
 环境要求：Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22+（含 npm）、
@@ -200,6 +205,8 @@ make build-live2d-bridge
 ```bash
 make demo               # 一次启动 Runtime + Web
 make desktop            # 一次启动 Runtime + Web + Tauri 桌宠
+make build-web           # 只构建浏览器产品到 apps/web/dist/web
+make build-desktop-ui    # 只构建桌宠前端到 apps/web/dist/desktop
 make setup-nltk-data    # 准备 Pipecat 断句所需的本地 NLTK 数据
 make setup-stt-worker   # 只准备隔离的 faster-whisper worker 环境
 make setup-tts-worker   # 只准备 Kokoro worker 并校验/下载公开模型
@@ -207,7 +214,7 @@ make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
 make dev-web            # 只启动 Web（127.0.0.1:5173）
 make test-runtime       # Runtime/API/取消/记忆专项测试
 make test-avatar        # Avatar SDK 与 Web 单元测试
-make test-e2e           # Chromium Avatar Lab 验收
+make test-e2e           # 分别启动 Web/Desktop profile 做 Chromium 验收
 make setup-live2d-vendor # 从 Downloads 安装并构建本地 Live2D vendor
 make check-live2d-vendor # 检查 Framework/Core/桥接/模型是否齐全
 make format             # Python、TypeScript、Rust 格式化
@@ -216,6 +223,10 @@ make typecheck          # Pyright、tsc、cargo check
 make test               # Python、TypeScript、Rust 测试
 make check-generated    # 协议受控产物无漂移检查
 ```
+
+Web 与 Desktop 使用独立版本和 tag，例如 `web-v0.2.0` 与 `desktop-v0.2.0`。Web tag 会发布
+纯浏览器静态产物；Desktop tag 当前只生成三个平台的开发组件并明确停在发布门前，因为冻结 Runtime
+sidecar、资源装配、安装包、签名与安装后 smoke 尚未完成。不会把裸 Host + wheel 标成可安装发行版。
 
 `punkt_tab` 会从 NLTK 官方数据仓库的固定提交下载到 Git 忽略的 `.local/nltk_data`，并在
 解压前校验 SHA-256。Runtime 会在导入 Pipecat 前使用该本地目录，因此代理 Fake-IP 模式不会

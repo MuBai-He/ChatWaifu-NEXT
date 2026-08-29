@@ -16,13 +16,19 @@ private character assets, or generated local data.
 - Python CI validates the workspace on Linux, macOS, and Windows. The neural TTS
   worker is an independent uv project and is checked from its own lockfile on the
   same platform matrix; model weights and optional inference SDKs are not CI inputs.
-- Web CI owns formatting, lint, unit/type checks, and production builds for the
-  protocol, avatar SDK, and Web packages. It does not recursively build Tauri.
-- Rust CI installs the documented Tauri Linux prerequisites, runs the workspace
-  checks on all three desktop platforms, and compiles the release desktop host
-  without creating or signing an installer.
-- Browser E2E uses only pnpm and the Fake avatar path. It must remain independent
-  of uv, Runtime services, proprietary Cubism files, and local model assets.
+- Web Product CI owns the `web` React graph only. It runs the Web package's
+  formatting, lint, unit/type checks, build, and product-manifest isolation gate;
+  it never invokes Tauri or Runtime builds.
+- Desktop Product CI installs the documented Tauri prerequisites, builds the
+  `desktop` React graph through Tauri, builds the Runtime component wheel used as
+  installer input, and compiles the unsigned host on all three platforms. A wheel
+  plus naked host is not a frozen sidecar or installable release.
+- Browser E2E starts the Web and Desktop Vite profiles separately. Runtime-backed
+  scenarios use deterministic providers and remain independent of proprietary
+  Cubism files and local model assets.
+- Ordinary product CI is path-filtered. Tags are not path-filtered: `web-v*` and
+  `desktop-v*` always run their complete release gate from a commit reachable from
+  `main`.
 - `tools/check_architecture_boundaries.py` is the focused static guard for the
   currently enforced boundaries: no heavy model SDK inside Runtime, repository
   ports in conversation and Runtime Skills, and no direct provider integration in

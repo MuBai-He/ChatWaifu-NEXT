@@ -2,7 +2,47 @@ name: Python CI
 
 on:
   push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ci-python.yml"
+      - "**/*.py"
+      - "services/**"
+      - "packages/**"
+      - "workers/**"
+      - "tools/**"
+      - "tests/**"
+      - "config/**"
+      - "characters/**"
+      - "skills/**"
+      - "schemas/**"
+      - "release/products.json"
+      - "apps/web/package.json"
+      - "apps/desktop/package.json"
+      - "apps/desktop/src-tauri/Cargo.toml"
+      - "apps/desktop/src-tauri/tauri.conf.json"
+      - "pyproject.toml"
+      - "uv.lock"
   pull_request:
+    paths:
+      - ".github/workflows/ci-python.yml"
+      - "**/*.py"
+      - "services/**"
+      - "packages/**"
+      - "workers/**"
+      - "tools/**"
+      - "tests/**"
+      - "config/**"
+      - "characters/**"
+      - "skills/**"
+      - "schemas/**"
+      - "release/products.json"
+      - "apps/web/package.json"
+      - "apps/desktop/package.json"
+      - "apps/desktop/src-tauri/Cargo.toml"
+      - "apps/desktop/src-tauri/tauri.conf.json"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
 
 permissions:
   contents: read

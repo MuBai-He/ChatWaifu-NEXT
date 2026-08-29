@@ -33,6 +33,8 @@ validation:
     - make build-live2d-bridge
     - make check-live2d-vendor
     - pnpm build
+    - make build-web plus isolated Web artifact verification
+    - make build-desktop-ui plus isolated Desktop artifact verification
     - uv run python tools/run_demo.py --no-open
     - real aiortc Chinese audio through Pipecat VAD, faster-whisper STT, generation, and WebRTC TTS
     - two-utterance barge-in cancels the first generation and completes the second generation
@@ -88,8 +90,8 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
-      - Six GitHub Actions workflows are configured
-      - Twenty-four ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012
+      - Eight GitHub Actions workflows are configured, including independent Web and Desktop tag gates
+      - Twenty-six ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012 and ADR 0026 defines product release profiles
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -123,12 +125,15 @@ phases:
       - Main chat selects real Live2D and safely remounts Fake when vendor loading fails
       - Desktop chat presents a fixed visual-novel stage with selectable upper-body or full-body framing while only the optional backlog scrolls
       - Skills and memory dialogs escape the visual-novel menu stacking context through a page-level modal portal, while their content scroll stays contained
-      - Production Web build succeeds without Runtime, Tauri, Pipecat, or proprietary vendor files
+      - The compile-time Web product graph owns only conversation and Avatar Lab and emits apps/web/dist/web with a verified module manifest
+      - Production Web build succeeds without Runtime, Tauri, Pipecat, desktop-pet/settings modules, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
     status: desktop_pet_and_native_runtime_supervision_implemented_pending_packaging
     evidence:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
+      - The compile-time Desktop product graph owns only desktop-pet and control-center surfaces, emits apps/web/dist/desktop, and is the only frontend Tauri consumes
+      - Web and Desktop have independent 0.2.0 release trains and exact web-v*/desktop-v* tag validation while sharing one main branch
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
       - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page

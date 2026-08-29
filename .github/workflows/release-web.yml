@@ -1,0 +1,64 @@
+name: Release Web Product
+
+on:
+  push:
+    tags:
+      - "web-v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Require a commit reachable from main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: pnpm/setup@v1
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - name: Verify tag and product version
+        run: python tools/product_release.py verify --product web --tag "$GITHUB_REF_NAME"
+      - name: Build isolated Web product
+        run: pnpm --filter @chatwaifu/web build:web
+      - run: python tools/verify_product_artifacts.py --product web
+      - name: Archive Web product
+        run: |
+          archive="chatwaifu-${GITHUB_REF_NAME}.tar.gz"
+          tar --create --gzip --file "$archive" --directory apps/web/dist/web .
+          sha256sum "$archive" > "$archive.sha256"
+          echo "WEB_RELEASE_ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: chatwaifu-${{ github.ref_name }}
+          path: |
+            ${{ env.WEB_RELEASE_ARCHIVE }}
+            ${{ env.WEB_RELEASE_ARCHIVE }}.sha256
+          if-no-files-found: error
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "$WEB_RELEASE_ARCHIVE" \
+            "$WEB_RELEASE_ARCHIVE.sha256" \
+            --verify-tag \
+            --title "ChatWaifu Web ${GITHUB_REF_NAME#web-v}" \
+            --generate-notes
