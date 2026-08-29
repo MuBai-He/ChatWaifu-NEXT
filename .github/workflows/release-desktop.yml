@@ -84,7 +84,7 @@ jobs:
             echo "### Desktop candidate only"
             echo
             echo "The compiled host, isolated Desktop frontend, and Runtime wheel are CI components."
-            echo "The Windows job builds the unsigned NSIS candidate separately; signing, installed-device smoke, and asset-license review still gate publication."
+            echo "The Windows job builds and installed-smokes the unsigned NSIS candidate separately; signing, native-device acceptance, and asset-license review still gate publication."
           } >> "$GITHUB_STEP_SUMMARY"
 
   windows-installer-x64:
@@ -157,6 +157,14 @@ jobs:
       - name: Build and smoke frozen Runtime plus unsigned NSIS installer
         shell: pwsh
         run: ./tools/windows/build_installer_x64.ps1
+      - name: Install, launch, and uninstall the Windows x64 candidate
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path "dist/windows/installer" -Filter "*-setup.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one unsigned NSIS installer, received $($installers.Count)."
+          }
+          ./tools/windows/smoke_installed_x64.ps1 -InstallerPath $installers[0].FullName
       - name: Verify isolated Desktop frontend artifact
         shell: pwsh
         run: ./.venv/Scripts/python.exe tools/verify_product_artifacts.py --product desktop

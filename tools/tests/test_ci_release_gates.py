@@ -70,11 +70,31 @@ def test_desktop_candidate_builds_a_self_contained_unsigned_windows_x64_installe
     assert '$rustTargets -notcontains "x86_64-pc-windows-msvc"' in workflow
     assert "tools/windows/build_installer_x64.ps1" in workflow
     assert "Build and smoke frozen Runtime plus unsigned NSIS installer" in workflow
+    assert "Install, launch, and uninstall the Windows x64 candidate" in workflow
+    assert "tools/windows/smoke_installed_x64.ps1" in workflow
     assert 'Get-ChildItem -Path "dist/windows/installer" -Filter "*-setup.exe"' in workflow
     assert "Get-FileHash -Path $installer.FullName -Algorithm SHA256" in workflow
     assert "Upload unsigned Windows x64 installer" in workflow
     assert "${{ env.WINDOWS_INSTALLER_SHA256 }}" in workflow
     assert "gh release create" not in workflow
+
+
+def test_windows_installed_product_smoke_covers_layout_lifecycle_and_data() -> None:
+    smoke = (ROOT / "tools/windows/smoke_installed_x64.ps1").read_text(encoding="utf-8")
+
+    assert "Get-CurrentUserUninstallEntries" in smoke
+    assert "ExpectedMachine = 0x8664" in smoke
+    assert "runtime-sidecar\\chatwaifu-runtime.exe" in smoke
+    assert "bin\\chatwaifu-appcontainer-host.exe" in smoke
+    assert "ChatWaifu NEXT Runtime" in smoke
+    assert "Start Menu\\Programs\\$ProductName.lnk" in smoke
+    assert "/v1/runtime/health" in smoke
+    assert "Stop-Process -Id $HostProcess.Id -Force" in smoke
+    assert "Assert-RuntimeStopped" in smoke
+    assert 'ArgumentList "/S"' in smoke
+    assert "Wait-ForPathRemoval" in smoke
+    assert "Silent uninstall removed the preservation marker" in smoke
+    assert "test-owned markers were removed after verification" in smoke
 
 
 def test_desktop_candidate_rejects_private_character_and_model_overlays() -> None:
