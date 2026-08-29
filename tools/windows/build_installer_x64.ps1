@@ -110,6 +110,15 @@ try {
         if (-not (Test-Path $RequiredAvatar -PathType Leaf)) {
             throw "Private Live2D overlay is missing model/avatar.model3.json."
         }
+        $Live2DTexture = Join-Path $Live2DDestination "model\texture\texture_00.png"
+        if (Test-Path $Live2DTexture -PathType Leaf) {
+            & (Join-Path $RepoRoot "tools\windows\optimize_live2d_texture.ps1") `
+                -TexturePath $Live2DTexture -MaxDimension 4096
+            $PrivateSourceTexture = Join-Path (
+                Split-Path $Live2DTexture
+            ) "texture_00.source.png"
+            Remove-Item -Path $PrivateSourceTexture -Force -ErrorAction SilentlyContinue
+        }
         Write-Host "Private Live2D overlay staged locally; it will not be committed or uploaded."
     }
 

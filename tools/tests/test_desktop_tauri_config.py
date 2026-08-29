@@ -82,4 +82,6 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "$Live2DDestinationTemporarilyOwned" in script
     assert "Move-Item -Path $Live2DDestination -Destination $OriginalLive2DBackup" in script
     assert "Move-Item -Path $OriginalLive2DBackup -Destination $Live2DDestination" in script
+    assert "optimize_live2d_texture.ps1" in script
+    assert "-TexturePath $Live2DTexture -MaxDimension 4096" in script
     assert '$ChecksumPath = "$FinalInstaller.sha256"' in script
