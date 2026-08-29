@@ -236,6 +236,43 @@ def _revoke(layout: _Layout, *, check: bool = True) -> subprocess.CompletedProce
     return result
 
 
+def _run_child_with_open_stdin(
+    command: list[str],
+    *,
+    timeout: float = 30.0,
+) -> subprocess.CompletedProcess[str]:
+    """Run a finite child without turning parent stdin into cancellation.
+
+    Runtime keeps the helper's stdin pipe open for the lifetime of an MCP
+    session. ``subprocess.run`` inherits an already-closed stdin under some CI
+    and Parallels command channels, which correctly asks the helper to cancel.
+    This harness holds an explicit pipe open until the child exits.
+    """
+
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    try:
+        returncode = process.wait(timeout=timeout)
+        assert process.stdout is not None
+        assert process.stderr is not None
+        stdout = process.stdout.read()
+        stderr = process.stderr.read()
+        return subprocess.CompletedProcess(command, returncode, stdout, stderr)
+    finally:
+        if process.stdin is not None:
+            process.stdin.close()
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+
+
 def _profile_sid(profile: str) -> str:
     userenv = ctypes.WinDLL("userenv", use_last_error=True)
     advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
@@ -397,15 +434,7 @@ def _security_cycle(
         "--connect-port",
         str(connect_port),
     ]
-    result = subprocess.run(
-        _run_command(layout, child, network=network),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=30,
-        check=False,
-    )
+    result = _run_child_with_open_stdin(_run_command(layout, child, network=network))
     assert result.returncode == 0, result.stderr
     lines = [line for line in result.stdout.splitlines() if line.strip()]
     assert len(lines) == 1, f"unexpected stdout framing: {result.stdout!r}"
@@ -589,7 +618,13 @@ def test_official_mcp_stdio_round_trip_and_eof(layout: _Layout) -> None:
                 },
             },
         )
-        initialized = reader.response(1)
+        try:
+            initialized = reader.response(1)
+        except AssertionError as error:
+            process.wait(timeout=5)
+            stderr_thread.join(timeout=2)
+            detail = "".join(stderr)
+            raise AssertionError(f"MCP child failed before initialize: {detail}") from error
         assert "error" not in initialized, initialized
         _send_json(
             process,
@@ -758,7 +793,7 @@ def test_job_active_process_limit(
     expected_allowed: bool,
 ) -> None:
     shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
-    result = subprocess.run(
+    result = _run_child_with_open_stdin(
         _run_command(
             layout,
             [
@@ -769,13 +804,7 @@ def test_job_active_process_limit(
                 "spawn-once",
             ],
             max_processes=max_processes,
-        ),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=30,
-        check=False,
+        )
     )
     assert result.returncode == 0, result.stderr
     payload = cast(dict[str, Any], json.loads(result.stdout))
