@@ -9,20 +9,27 @@ import gc
 import os
 import sys
 import threading
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterator
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Literal, Protocol, cast
 
 import numpy as np
 from chatwaifu_model_worker import TtsSynthesisRequest
-from numpy.typing import NDArray
 
-from chatwaifu_tts_neural_worker.audio import wave_bytes
+from chatwaifu_tts_neural_worker.audio import pcm16_bytes, wave_bytes_from_pcm
 from chatwaifu_tts_neural_worker.config import WorkerSettings
 
 
 class SynthesisCancelled(Exception):
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class EnginePcmChunk:
+    pcm16: bytes
+    sample_rate: int
+    channels: Literal[1, 2] = 1
 
 
 class SynthesisEngine(Protocol):
@@ -32,6 +39,10 @@ class SynthesisEngine(Protocol):
     def synthesize(
         self, request: TtsSynthesisRequest, cancel_event: threading.Event
     ) -> tuple[bytes, int, int]: ...
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]: ...
 
     def cancel(self) -> None: ...
 
@@ -70,6 +81,20 @@ class QwenMlxEngine:
     def synthesize(
         self, request: TtsSynthesisRequest, cancel_event: threading.Event
     ) -> tuple[bytes, int, int]:
+        chunks = list(self.stream_pcm(request, cancel_event))
+        if not chunks:
+            raise RuntimeError("Qwen3-TTS returned no audio")
+        sample_rate = chunks[0].sample_rate
+        if any(chunk.sample_rate != sample_rate or chunk.channels != 1 for chunk in chunks):
+            raise RuntimeError("Qwen3-TTS changed PCM format during one synthesis")
+        audio, duration_ms = wave_bytes_from_pcm(
+            b"".join(chunk.pcm16 for chunk in chunks), sample_rate, channels=1
+        )
+        return audio, sample_rate, duration_ms
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]:
         language = {"zh": "Chinese", "ja": "Japanese", "en": "English"}.get(
             request.language, "Auto"
         )
@@ -94,23 +119,18 @@ class QwenMlxEngine:
         else:
             generation_options["voice"] = self._voice
         generator: Generator[Any, None, None] = self._model.generate(**generation_options)
-        chunks: list[NDArray[np.float32]] = []
-        sample_rate = int(self._model.sample_rate)
         try:
             for result in generator:
                 if cancel_event.is_set():
                     raise SynthesisCancelled
-                sample_rate = int(result.sample_rate)
-                chunks.append(np.asarray(result.audio, dtype=np.float32))
+                pcm16 = pcm16_bytes(np.asarray(result.audio, dtype=np.float32))
+                if pcm16:
+                    yield EnginePcmChunk(pcm16=pcm16, sample_rate=int(result.sample_rate))
             if cancel_event.is_set():
                 raise SynthesisCancelled
         finally:
             generator.close()
             self._reset_streaming_state()
-        if not chunks:
-            raise RuntimeError("Qwen3-TTS returned no audio")
-        audio, duration_ms = wave_bytes(np.concatenate(chunks), sample_rate)
-        return audio, sample_rate, duration_ms
 
     def cancel(self) -> None:
         return None
@@ -167,6 +187,20 @@ class GptSovitsEngine:
     def synthesize(
         self, request: TtsSynthesisRequest, cancel_event: threading.Event
     ) -> tuple[bytes, int, int]:
+        chunks = list(self.stream_pcm(request, cancel_event))
+        if not chunks:
+            raise RuntimeError("GPT-SoVITS returned no audio")
+        sample_rate = chunks[0].sample_rate
+        if any(chunk.sample_rate != sample_rate or chunk.channels != 1 for chunk in chunks):
+            raise RuntimeError("GPT-SoVITS changed PCM format during one synthesis")
+        audio, duration_ms = wave_bytes_from_pcm(
+            b"".join(chunk.pcm16 for chunk in chunks), sample_rate, channels=1
+        )
+        return audio, sample_rate, duration_ms
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]:
         language = request.language if request.language in {"zh", "ja", "en"} else "auto"
         generator = self._pipeline.run(
             {
@@ -192,21 +226,30 @@ class GptSovitsEngine:
                 "parallel_infer": True,
                 "vits_parallel_infer": True,
                 "repetition_penalty": 1.35,
-                "return_fragment": False,
-                "streaming_mode": False,
+                "return_fragment": True,
+                "streaming_mode": True,
             }
         )
+        emitted = False
         try:
-            sample_rate, samples = next(generator)
+            for sample_rate, samples in generator:
+                if cancel_event.is_set():
+                    raise SynthesisCancelled
+                samples_array = np.asarray(samples)
+                if samples_array.size == 0:
+                    continue
+                if float(np.max(np.abs(samples_array))) == 0:
+                    continue
+                pcm16 = pcm16_bytes(samples_array)
+                if pcm16:
+                    emitted = True
+                    yield EnginePcmChunk(pcm16=pcm16, sample_rate=int(sample_rate))
             if cancel_event.is_set():
                 raise SynthesisCancelled
         finally:
             generator.close()
-        samples_array = np.asarray(samples)
-        if samples_array.size == 0 or float(np.max(np.abs(samples_array))) == 0:
+        if not emitted:
             raise RuntimeError("GPT-SoVITS returned silent fallback audio")
-        audio, duration_ms = wave_bytes(samples_array, int(sample_rate))
-        return audio, int(sample_rate), duration_ms
 
     def cancel(self) -> None:
         pipeline = self._pipeline

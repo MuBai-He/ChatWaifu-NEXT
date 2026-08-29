@@ -1,31 +1,54 @@
 """Dependency-light speech adapters with subprocess cancellation."""
 
 import asyncio
+import json
 import logging
 import math
 import shutil
 import struct
 import sys
 import wave
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
+from typing import Any, cast
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID, uuid4
 
 import httpx2
 from chatwaifu_model_worker import (
+    TtsStreamCompleted as WorkerTtsStreamCompleted,
+)
+from chatwaifu_model_worker import (
+    TtsStreamFailed as WorkerTtsStreamFailed,
+)
+from chatwaifu_model_worker import (
+    TtsStreamReady as WorkerTtsStreamReady,
+)
+from chatwaifu_model_worker import (
+    TtsStreamStart,
     TtsSynthesisRequest,
     TtsSynthesisResult,
     TtsWorkerCapabilities,
     WorkerHealth,
+    unpack_tts_pcm_frame,
 )
+from websockets.asyncio.client import connect as websocket_connect
 
 from chatwaifu_runtime.providers.contracts import (
     SynthesisRequest,
     SynthesisResult,
+    TtsPcmChunk,
     TtsProviderDescriptor,
     TtsProviderHealth,
+    TtsStreamCompleted,
+    TtsStreamEvent,
 )
 
 logger = logging.getLogger(__name__)
+
+type WebSocketFactory = Callable[..., AbstractAsyncContextManager[Any]]
+DEFAULT_WEBSOCKET_FACTORY = cast(WebSocketFactory, websocket_connect)
 
 
 class FakeTtsProvider:
@@ -188,11 +211,16 @@ class WorkerTtsProvider:
         token: str | None,
         timeout_seconds: float,
         client: httpx2.AsyncClient | None = None,
+        websocket_factory: WebSocketFactory = DEFAULT_WEBSOCKET_FACTORY,
+        max_stream_audio_bytes: int = 64_000_000,
     ) -> None:
         self._descriptor = descriptor
         self._base_url = base_url.rstrip("/")
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._client = client or httpx2.AsyncClient(timeout=timeout_seconds)
+        self._websocket_factory = websocket_factory
+        self._timeout_seconds = timeout_seconds
+        self._max_stream_audio_bytes = max_stream_audio_bytes
 
     @property
     def kind(self) -> str:
@@ -203,20 +231,7 @@ class WorkerTtsProvider:
         return self._descriptor
 
     async def synthesize(self, request: SynthesisRequest) -> SynthesisResult:
-        body = TtsSynthesisRequest(
-            request_id=uuid4(),
-            session_id=request.session_id,
-            turn_id=request.turn_id,
-            generation_id=request.generation_id,
-            job_id=request.segment_id,
-            text=request.text,
-            language=request.language,
-            voice_id=request.voice_id,
-            speaker_id=request.speaker_id,
-            speed=request.speed,
-            style=request.style,
-            pitch=request.pitch,
-        )
+        body = self._worker_request(request)
         try:
             response = await self._client.post(
                 f"{self._base_url}/v1/synthesize",
@@ -235,13 +250,146 @@ class WorkerTtsProvider:
                 )
             raise
         result = TtsSynthesisResult.model_validate(response.json())
+        self._validate_identity(body, result)
+        audio = result.audio_bytes()
+        request.destination.parent.mkdir(parents=True, exist_ok=True)
+        request.destination.write_bytes(audio)
+        return SynthesisResult(
+            request.destination,
+            result.media_type,
+            result.sample_rate,
+            result.duration_ms,
+            self.kind,
+            result.model,
+        )
+
+    async def stream(self, request: SynthesisRequest) -> AsyncIterator[TtsStreamEvent]:
+        if not self._descriptor.native_streaming:
+            result = await self.synthesize(request)
+            chunks, sample_rate, channels = await asyncio.to_thread(
+                _read_pcm_wave_chunks, request.destination
+            )
+            for sequence, pcm16 in enumerate(chunks):
+                yield TtsPcmChunk(
+                    sequence=sequence,
+                    pcm16=pcm16,
+                    sample_rate=sample_rate,
+                    channels=channels,
+                    native_streaming=False,
+                )
+            yield TtsStreamCompleted(result=result)
+            return
+        body = self._worker_request(request)
+        start = TtsStreamStart(request=body)
+        request.destination.parent.mkdir(parents=True, exist_ok=True)
+        request.destination.unlink(missing_ok=True)
+        audio = bytearray()
+        expected_sequence = 0
+        sample_rate: int | None = None
+        channels: int | None = None
+        completion: WorkerTtsStreamCompleted | None = None
+        headers = dict(self._headers)
+        try:
+            async with self._websocket_factory(
+                _worker_stream_url(self._base_url),
+                additional_headers=headers,
+                open_timeout=self._timeout_seconds,
+                close_timeout=2,
+                max_size=4_100_000,
+            ) as websocket:
+                await websocket.send(start.model_dump_json())
+                ready_frame = await asyncio.wait_for(
+                    websocket.recv(), timeout=self._timeout_seconds
+                )
+                if not isinstance(ready_frame, str):
+                    raise RuntimeError("TTS worker did not acknowledge the stream")
+                ready = WorkerTtsStreamReady.model_validate_json(ready_frame)
+                self._validate_stream_identity(body, ready)
+                while True:
+                    frame = await asyncio.wait_for(websocket.recv(), timeout=self._timeout_seconds)
+                    if isinstance(frame, bytes):
+                        chunk = unpack_tts_pcm_frame(frame)
+                        if (
+                            chunk.generation_id != request.generation_id
+                            or chunk.job_id != request.segment_id
+                        ):
+                            raise RuntimeError("TTS worker returned a stale PCM frame")
+                        if chunk.sequence != expected_sequence:
+                            raise RuntimeError("TTS worker returned an out-of-order PCM frame")
+                        if sample_rate is None:
+                            sample_rate, channels = chunk.sample_rate, chunk.channels
+                        elif (sample_rate, channels) != (chunk.sample_rate, chunk.channels):
+                            raise RuntimeError("TTS worker changed PCM format during one stream")
+                        if len(audio) + len(chunk.pcm16) > self._max_stream_audio_bytes:
+                            raise RuntimeError("TTS worker stream exceeded the safety limit")
+                        audio.extend(chunk.pcm16)
+                        yield TtsPcmChunk(
+                            sequence=chunk.sequence,
+                            pcm16=chunk.pcm16,
+                            sample_rate=chunk.sample_rate,
+                            channels=chunk.channels,
+                            native_streaming=True,
+                        )
+                        expected_sequence += 1
+                        continue
+                    event = json.loads(frame)
+                    if event.get("event") == "tts.stream.failed":
+                        failed = WorkerTtsStreamFailed.model_validate(event)
+                        self._validate_stream_identity(body, failed)
+                        raise RuntimeError(f"TTS worker {failed.code}: {failed.detail}")
+                    if event.get("event") != "tts.stream.completed":
+                        raise RuntimeError("TTS worker returned an unknown stream event")
+                    completion = WorkerTtsStreamCompleted.model_validate(event)
+                    self._validate_stream_identity(body, completion)
+                    break
+        except asyncio.CancelledError:
+            request.destination.unlink(missing_ok=True)
+            try:
+                await asyncio.shield(self._cancel(request.generation_id))
+            except Exception:
+                logger.warning(
+                    "failed to propagate streaming TTS cancellation for generation %s",
+                    request.generation_id,
+                    exc_info=True,
+                )
+            raise
+        except BaseException:
+            request.destination.unlink(missing_ok=True)
+            raise
+        if sample_rate is None or channels is None or not audio:
+            raise RuntimeError("TTS worker ended without completed PCM audio")
+        if (
+            completion.chunk_count != expected_sequence
+            or completion.sample_rate != sample_rate
+            or completion.channels != channels
+        ):
+            raise RuntimeError("TTS worker completion metadata does not match the PCM stream")
+        await asyncio.to_thread(
+            _write_pcm_wave,
+            request.destination,
+            bytes(audio),
+            sample_rate,
+            channels,
+        )
+        result = SynthesisResult(
+            request.destination,
+            "audio/wav",
+            sample_rate,
+            completion.duration_ms,
+            completion.provider,
+            completion.model,
+        )
+        yield TtsStreamCompleted(result=result)
+
+    @staticmethod
+    def _validate_identity(body: TtsSynthesisRequest, result: TtsSynthesisResult) -> None:
         expected_identity = (
             body.request_id,
-            request.session_id,
-            request.turn_id,
-            request.generation_id,
-            request.segment_id,
-            request.speaker_id,
+            body.session_id,
+            body.turn_id,
+            body.generation_id,
+            body.job_id,
+            body.speaker_id,
         )
         actual_identity = (
             result.request_id,
@@ -253,16 +401,41 @@ class WorkerTtsProvider:
         )
         if actual_identity != expected_identity:
             raise RuntimeError("TTS worker returned mismatched request identity")
-        audio = result.audio_bytes()
-        request.destination.parent.mkdir(parents=True, exist_ok=True)
-        request.destination.write_bytes(audio)
-        return SynthesisResult(
-            request.destination,
-            result.media_type,
-            result.sample_rate,
-            result.duration_ms,
-            self.kind,
-            result.model,
+
+    @staticmethod
+    def _validate_stream_identity(body: TtsSynthesisRequest, event: Any) -> None:
+        expected_identity = (
+            body.request_id,
+            body.session_id,
+            body.turn_id,
+            body.generation_id,
+            body.job_id,
+        )
+        actual_identity = (
+            event.request_id,
+            event.session_id,
+            event.turn_id,
+            event.generation_id,
+            event.job_id,
+        )
+        if actual_identity != expected_identity:
+            raise RuntimeError("TTS worker returned mismatched stream identity")
+
+    @staticmethod
+    def _worker_request(request: SynthesisRequest) -> TtsSynthesisRequest:
+        return TtsSynthesisRequest(
+            request_id=uuid4(),
+            session_id=request.session_id,
+            turn_id=request.turn_id,
+            generation_id=request.generation_id,
+            job_id=request.segment_id,
+            text=request.text,
+            language=request.language,
+            voice_id=request.voice_id,
+            speaker_id=request.speaker_id,
+            speed=request.speed,
+            style=request.style,
+            pitch=request.pitch,
         )
 
     async def health(self) -> TtsProviderHealth:
@@ -305,9 +478,7 @@ class WorkerTtsProvider:
             supports_style=result.supports_style,
             supports_speed=result.supports_speed,
             supports_pitch=result.supports_pitch,
-            # `/v1/synthesize` is a complete-WAV boundary in worker protocol v1.
-            # Do not expose an engine-internal streaming flag as delivery latency.
-            native_streaming=False,
+            native_streaming=result.native_streaming and "pcm.v2" in result.stream_protocols,
             local_only=result.local_only,
         )
 
@@ -366,3 +537,35 @@ class SherpaKokoroWorkerTtsProvider(WorkerTtsProvider):
 def _wave_duration_ms(path: Path) -> int:
     with wave.open(str(path), "rb") as audio:
         return round(audio.getnframes() * 1000 / audio.getframerate())
+
+
+def _worker_stream_url(base_url: str) -> str:
+    parsed = urlsplit(base_url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("TTS worker base URL must use http or https")
+    scheme = "wss" if parsed.scheme == "https" else "ws"
+    path = f"{parsed.path.rstrip('/')}/v2/stream/tts"
+    return urlunsplit((scheme, parsed.netloc, path, "", ""))
+
+
+def _write_pcm_wave(path: Path, pcm16: bytes, sample_rate: int, channels: int) -> None:
+    if len(pcm16) % (channels * 2):
+        raise ValueError("PCM16 stream is not frame aligned")
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(channels)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(pcm16)
+
+
+def _read_pcm_wave_chunks(path: Path, chunk_ms: int = 100) -> tuple[list[bytes], int, int]:
+    with wave.open(str(path), "rb") as source:
+        if source.getsampwidth() != 2:
+            raise ValueError("worker WAV fallback requires PCM16 audio")
+        sample_rate = source.getframerate()
+        channels = source.getnchannels()
+        frames_per_chunk = max(1, sample_rate * chunk_ms // 1000)
+        chunks: list[bytes] = []
+        while chunk := source.readframes(frames_per_chunk):
+            chunks.append(chunk)
+        return chunks, sample_rate, channels

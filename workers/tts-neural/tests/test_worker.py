@@ -10,15 +10,23 @@ import wave
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
-from chatwaifu_model_worker import TtsSynthesisRequest
+from chatwaifu_model_worker import (
+    TtsStreamStart,
+    TtsSynthesisRequest,
+    unpack_tts_pcm_frame,
+)
 from fastapi.testclient import TestClient
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
-from chatwaifu_tts_neural_worker.engines import QwenMlxEngine, SynthesisEngine
+from chatwaifu_tts_neural_worker.engines import (
+    EnginePcmChunk,
+    QwenMlxEngine,
+    SynthesisEngine,
+)
 from chatwaifu_tts_neural_worker.main import create_app
 from chatwaifu_tts_neural_worker.service import SynthesisService
 
@@ -47,6 +55,14 @@ class FakeEngine(SynthesisEngine):
         assert request.text == "欢迎回来。"
         assert not cancel_event.is_set()
         return _wave_bytes(), 24_000, 10
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]:
+        assert request.text == "欢迎回来。"
+        assert not cancel_event.is_set()
+        yield EnginePcmChunk(pcm16=b"\x01\x00" * 120, sample_rate=24_000)
+        yield EnginePcmChunk(pcm16=b"\x02\x00" * 120, sample_rate=24_000)
 
     def cancel(self) -> None:
         return None
@@ -178,6 +194,38 @@ def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> 
     assert client.get("/v1/health", headers=headers).json()["model_loaded"] is True
     assert client.post("/v1/model/unload", headers=headers).json()["unloaded"] is True
     assert client.get("/v1/health", headers=headers).json()["model_loaded"] is False
+
+
+def test_worker_v2_streams_ordered_identity_scoped_pcm(client: TestClient) -> None:
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="local-character",
+        speaker_id=0,
+        speed=1.0,
+    )
+    with client.websocket_connect(
+        "/v2/stream/tts", headers={"Authorization": "Bearer test-token"}
+    ) as websocket:
+        websocket.send_text(TtsStreamStart(request=request).model_dump_json())
+        ready = websocket.receive_json()
+        first = unpack_tts_pcm_frame(websocket.receive_bytes())
+        second = unpack_tts_pcm_frame(websocket.receive_bytes())
+        completed = websocket.receive_json()
+
+    assert ready["event"] == "tts.stream.ready"
+    assert UUID(ready["generation_id"]) == request.generation_id
+    assert (first.sequence, second.sequence) == (0, 1)
+    assert first.generation_id == second.generation_id == request.generation_id
+    assert first.job_id == second.job_id == request.job_id
+    assert completed["event"] == "tts.stream.completed"
+    assert completed["chunk_count"] == 2
+    assert completed["duration_ms"] == 10
 
 
 class BlockingEngine(FakeEngine):

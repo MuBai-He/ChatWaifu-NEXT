@@ -7,6 +7,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 WORKER_SCHEMA_VERSION = "1.0"
+WORKER_STREAM_SCHEMA_VERSION = "2.0"
+
+
+def _empty_stream_protocols() -> list[Literal["pcm.v2"]]:
+    return []
 
 
 class WorkerModel(BaseModel):
@@ -96,6 +101,64 @@ class TtsSynthesisResult(WorkerModel):
             raise ValueError("audio_base64 is not valid base64") from error
 
 
+class TtsStreamStart(WorkerModel):
+    """Start envelope for the binary PCM worker protocol.
+
+    The nested synthesis request deliberately keeps the v1 schema so an adapter
+    can retry the same immutable job through the complete-WAV endpoint without
+    changing any request identity.
+    """
+
+    schema_version: Literal["2.0"] = WORKER_STREAM_SCHEMA_VERSION
+    event: Literal["tts.stream.start"] = "tts.stream.start"
+    request: TtsSynthesisRequest
+
+
+class TtsStreamReady(WorkerModel):
+    schema_version: Literal["2.0"] = WORKER_STREAM_SCHEMA_VERSION
+    event: Literal["tts.stream.ready"] = "tts.stream.ready"
+    request_id: UUID
+    session_id: UUID
+    turn_id: UUID
+    generation_id: UUID
+    job_id: UUID
+
+
+class TtsStreamCompleted(WorkerModel):
+    schema_version: Literal["2.0"] = WORKER_STREAM_SCHEMA_VERSION
+    event: Literal["tts.stream.completed"] = "tts.stream.completed"
+    request_id: UUID
+    session_id: UUID
+    turn_id: UUID
+    generation_id: UUID
+    job_id: UUID
+    sample_rate: int = Field(ge=8_000, le=48_000)
+    channels: Literal[1, 2]
+    duration_ms: int = Field(ge=0)
+    chunk_count: int = Field(ge=1)
+    provider: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    speaker_id: int = Field(ge=0, le=1024)
+
+
+class TtsStreamFailed(WorkerModel):
+    schema_version: Literal["2.0"] = WORKER_STREAM_SCHEMA_VERSION
+    event: Literal["tts.stream.failed"] = "tts.stream.failed"
+    request_id: UUID
+    session_id: UUID
+    turn_id: UUID
+    generation_id: UUID
+    job_id: UUID
+    code: Literal[
+        "invalid_request",
+        "unauthorized",
+        "generation_busy",
+        "generation_cancelled",
+        "synthesis_failed",
+    ]
+    detail: str = Field(min_length=1, max_length=500)
+
+
 class TtsWorkerCapabilities(WorkerModel):
     """Provider-neutral discovery metadata exposed by every TTS worker."""
 
@@ -109,6 +172,7 @@ class TtsWorkerCapabilities(WorkerModel):
     supports_speed: bool = True
     supports_pitch: bool = False
     native_streaming: bool = False
+    stream_protocols: list[Literal["pcm.v2"]] = Field(default_factory=_empty_stream_protocols)
     output_formats: list[Literal["wav"]] = Field(default_factory=lambda: ["wav"])
     local_only: bool = True
 

@@ -33,6 +33,8 @@ class WorkerSettings(BaseSettings):
     device: str = "mps"
     preload: bool = False
     streaming_interval: float = Field(default=0.5, ge=0.08, le=4.0)
+    stream_queue_size: int = Field(default=8, ge=1, le=64)
+    max_stream_audio_bytes: int = Field(default=64_000_000, ge=1_000_000, le=256_000_000)
     temperature: float = Field(default=0.7, ge=0.1, le=2.0)
 
     @model_validator(mode="after")

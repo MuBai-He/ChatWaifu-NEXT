@@ -12,6 +12,11 @@ from numpy.typing import NDArray
 
 
 def wave_bytes(samples: NDArray[Any], sample_rate: int) -> tuple[bytes, int]:
+    pcm = pcm16_bytes(samples)
+    return wave_bytes_from_pcm(pcm, sample_rate, channels=1)
+
+
+def pcm16_bytes(samples: NDArray[Any]) -> bytes:
     source = np.asarray(samples).reshape(-1)
     if source.dtype == np.dtype(np.int16):
         # GPT-SoVITS already returns PCM16. Treating these values as normalized
@@ -27,13 +32,21 @@ def wave_bytes(samples: NDArray[Any], sample_rate: int) -> tuple[bytes, int]:
         pcm = _normalized_float_to_pcm16(source.astype(np.float64, copy=False))
     else:
         raise TypeError(f"unsupported audio sample dtype: {source.dtype}")
+    return pcm.tobytes()
+
+
+def wave_bytes_from_pcm(pcm16: bytes, sample_rate: int, channels: int) -> tuple[bytes, int]:
+    if channels not in (1, 2):
+        raise ValueError("channels must be 1 or 2")
+    if not pcm16 or len(pcm16) % (channels * 2):
+        raise ValueError("PCM16 audio must contain aligned frames")
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as output:
-        output.setnchannels(1)
+        output.setnchannels(channels)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
-        output.writeframes(pcm.tobytes())
-    duration_ms = round(len(pcm) * 1000 / sample_rate)
+        output.writeframes(pcm16)
+    duration_ms = round(len(pcm16) * 1000 / (sample_rate * channels * 2))
     return buffer.getvalue(), duration_ms
 
 

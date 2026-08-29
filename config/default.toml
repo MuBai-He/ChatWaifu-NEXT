@@ -45,7 +45,7 @@ supports_voice_cloning = true
 supports_style = false
 supports_speed = false
 supports_pitch = false
-native_streaming = false
+native_streaming = true
 
 [realtime]
 enabled = true

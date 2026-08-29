@@ -13,7 +13,18 @@ from uuid import UUID, uuid4
 
 import httpx2
 import pytest
-from chatwaifu_model_worker import TtsSynthesisResult
+from chatwaifu_model_worker import (
+    TtsPcmFrame,
+    TtsStreamStart,
+    TtsSynthesisResult,
+    pack_tts_pcm_frame,
+)
+from chatwaifu_model_worker import (
+    TtsStreamCompleted as WorkerTtsStreamCompleted,
+)
+from chatwaifu_model_worker import (
+    TtsStreamReady as WorkerTtsStreamReady,
+)
 from chatwaifu_runtime.providers import tts as tts_module
 from chatwaifu_runtime.providers.contracts import (
     SynthesisRequest,
@@ -143,6 +154,73 @@ class _FakeCosyVoiceConnection:
         self.socket = socket
 
     async def __aenter__(self) -> _FakeCosyVoiceSocket:
+        return self.socket
+
+    async def __aexit__(self, *_args: object) -> None:
+        return None
+
+
+class _FakeWorkerSocket:
+    def __init__(self, *, block_after_ready: bool = False, sequence_offset: int = 0) -> None:
+        self.start: TtsStreamStart | None = None
+        self.index = 0
+        self.waiting = asyncio.Event()
+        self.block_after_ready = block_after_ready
+        self.sequence_offset = sequence_offset
+
+    async def send(self, value: str) -> None:
+        self.start = TtsStreamStart.model_validate_json(value)
+
+    async def recv(self) -> str | bytes:
+        assert self.start is not None
+        request = self.start.request
+        if self.index == 0:
+            self.index += 1
+            return WorkerTtsStreamReady(
+                request_id=request.request_id,
+                session_id=request.session_id,
+                turn_id=request.turn_id,
+                generation_id=request.generation_id,
+                job_id=request.job_id,
+            ).model_dump_json()
+        if self.block_after_ready:
+            self.waiting.set()
+            await asyncio.Event().wait()
+        if self.index in (1, 2):
+            sequence = self.index - 1 + self.sequence_offset
+            self.index += 1
+            return pack_tts_pcm_frame(
+                TtsPcmFrame(
+                    generation_id=request.generation_id,
+                    job_id=request.job_id,
+                    sequence=sequence,
+                    sample_rate=24_000,
+                    channels=1,
+                    pcm16=bytes([sequence + 1, 0]) * 120,
+                )
+            )
+        self.index += 1
+        return WorkerTtsStreamCompleted(
+            request_id=request.request_id,
+            session_id=request.session_id,
+            turn_id=request.turn_id,
+            generation_id=request.generation_id,
+            job_id=request.job_id,
+            sample_rate=24_000,
+            channels=1,
+            duration_ms=10,
+            chunk_count=2,
+            provider="qwen3_tts_mlx",
+            model="local-qwen",
+            speaker_id=request.speaker_id,
+        ).model_dump_json()
+
+
+class _FakeWorkerConnection:
+    def __init__(self, socket: _FakeWorkerSocket) -> None:
+        self.socket = socket
+
+    async def __aenter__(self) -> _FakeWorkerSocket:
         return self.socket
 
     async def __aexit__(self, *_args: object) -> None:
@@ -678,6 +756,125 @@ async def test_worker_capability_does_not_claim_end_to_end_native_streaming() ->
         await provider.close()
 
     assert descriptor.native_streaming is False
+
+
+@pytest.mark.asyncio
+async def test_worker_v2_stream_delivers_pcm_before_persisting_wave(tmp_path: Path) -> None:
+    synthesis = _synthesis_request(tmp_path / "streamed-worker.wav")
+    socket = _FakeWorkerSocket()
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test/base",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: httpx2.Response(200))),
+        websocket_factory=lambda *_args, **_kwargs: _FakeWorkerConnection(socket),
+    )
+    events: list[TtsPcmChunk | TtsStreamCompleted] = []
+    try:
+        async for event in provider.stream(synthesis):
+            if isinstance(event, TtsPcmChunk):
+                assert not synthesis.destination.exists()
+            events.append(event)
+    finally:
+        await provider.close()
+
+    chunks = [event for event in events if isinstance(event, TtsPcmChunk)]
+    completed = [event for event in events if isinstance(event, TtsStreamCompleted)]
+    assert [chunk.sequence for chunk in chunks] == [0, 1]
+    assert all(chunk.native_streaming for chunk in chunks)
+    assert len(completed) == 1
+    assert synthesis.destination.read_bytes().startswith(b"RIFF")
+
+
+@pytest.mark.asyncio
+async def test_worker_v2_stream_cancellation_propagates_and_leaves_no_asset(
+    tmp_path: Path,
+) -> None:
+    synthesis = _synthesis_request(tmp_path / "cancelled-worker-stream.wav")
+    socket = _FakeWorkerSocket(block_after_ready=True)
+    cancelled = asyncio.Event()
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        assert request.url.path == f"/v1/jobs/{synthesis.generation_id}/cancel"
+        cancelled.set()
+        return httpx2.Response(200, json={"cancelled": True})
+
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=5,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+        websocket_factory=lambda *_args, **_kwargs: _FakeWorkerConnection(socket),
+    )
+
+    async def consume() -> None:
+        async for _ in provider.stream(synthesis):
+            pass
+
+    task = asyncio.create_task(consume())
+    try:
+        await asyncio.wait_for(socket.waiting.wait(), timeout=1)
+        task.cancel("test_interruption")
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert cancelled.is_set()
+        assert not synthesis.destination.exists()
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_worker_v2_stream_rejects_out_of_order_late_audio(tmp_path: Path) -> None:
+    synthesis = _synthesis_request(tmp_path / "stale-worker-stream.wav")
+    socket = _FakeWorkerSocket(sequence_offset=1)
+    provider = WorkerTtsProvider(
+        descriptor=TtsProviderDescriptor(
+            provider_id="qwen3_tts_mlx",
+            display_name="Qwen3-TTS",
+            model="local-qwen",
+            languages=("zh", "ja"),
+            supports_voice_cloning=True,
+            supports_style=False,
+            supports_speed=False,
+            supports_pitch=False,
+            native_streaming=True,
+        ),
+        base_url="http://tts.test",
+        token="ephemeral",
+        timeout_seconds=1,
+        client=httpx2.AsyncClient(transport=httpx2.MockTransport(lambda _: httpx2.Response(200))),
+        websocket_factory=lambda *_args, **_kwargs: _FakeWorkerConnection(socket),
+    )
+    try:
+        with pytest.raises(RuntimeError, match="out-of-order"):
+            async for _ in provider.stream(synthesis):
+                pass
+    finally:
+        await provider.close()
+
+    assert not synthesis.destination.exists()
 
 
 @pytest.mark.asyncio

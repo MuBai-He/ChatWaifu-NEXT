@@ -6,9 +6,13 @@ from uuid import uuid4
 import pytest
 from chatwaifu_model_worker import (
     SttTranscriptionRequest,
+    TtsPcmFrame,
+    TtsStreamStart,
     TtsSynthesisRequest,
     TtsSynthesisResult,
     TtsWorkerCapabilities,
+    pack_tts_pcm_frame,
+    unpack_tts_pcm_frame,
 )
 from pydantic import ValidationError
 
@@ -98,10 +102,55 @@ def test_tts_worker_capabilities_are_provider_neutral() -> None:
         languages=["zh", "ja"],
         supports_voice_cloning=True,
         native_streaming=True,
+        stream_protocols=["pcm.v2"],
     )
 
     assert capabilities.output_formats == ["wav"]
     assert capabilities.local_only is True
+    assert capabilities.stream_protocols == ["pcm.v2"]
+
+
+def test_tts_v2_pcm_frame_round_trips_generation_identity() -> None:
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="nene",
+        speaker_id=0,
+        speed=1.0,
+    )
+    start = TtsStreamStart(request=request)
+    frame = TtsPcmFrame(
+        generation_id=request.generation_id,
+        job_id=request.job_id,
+        sequence=7,
+        sample_rate=24_000,
+        channels=1,
+        pcm16=b"\x01\x00" * 240,
+    )
+
+    decoded = unpack_tts_pcm_frame(pack_tts_pcm_frame(frame))
+
+    assert start.schema_version == "2.0"
+    assert decoded == frame
+
+
+def test_tts_v2_pcm_frame_rejects_unaligned_payload() -> None:
+    with pytest.raises(ValueError, match="aligned"):
+        pack_tts_pcm_frame(
+            TtsPcmFrame(
+                generation_id=uuid4(),
+                job_id=uuid4(),
+                sequence=0,
+                sample_rate=24_000,
+                channels=1,
+                pcm16=b"odd",
+            )
+        )
 
 
 def test_tts_result_rejects_non_wave_audio() -> None:
