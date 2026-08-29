@@ -22,6 +22,7 @@ from pathlib import Path
 TOKEN_QUERY = 0x0008
 TOKEN_IS_APP_CONTAINER = 29
 TOKEN_APP_CONTAINER_SID = 31
+ERROR_INSUFFICIENT_BUFFER = 122
 
 
 class _TokenAppContainerInformation(ctypes.Structure):
@@ -75,15 +76,29 @@ def _token_identity() -> tuple[bool, str]:
         ):
             raise _last_error("GetTokenInformation(TokenIsAppContainer)")
 
-        information = _TokenAppContainerInformation()
+        required = wintypes.DWORD()
+        first = advapi32.GetTokenInformation(
+            token,
+            TOKEN_APP_CONTAINER_SID,
+            None,
+            0,
+            ctypes.byref(required),
+        )
+        if first or ctypes.get_last_error() != ERROR_INSUFFICIENT_BUFFER or required.value == 0:
+            raise _last_error("GetTokenInformation(TokenAppContainerSid)")
+        buffer = ctypes.create_string_buffer(required.value)
         if not advapi32.GetTokenInformation(
             token,
             TOKEN_APP_CONTAINER_SID,
-            ctypes.byref(information),
-            ctypes.sizeof(information),
+            buffer,
+            required,
             ctypes.byref(returned),
         ):
-            raise _last_error("GetTokenInformation(TokenAppContainerSid)")
+            raise _last_error("GetTokenInformation(TokenAppContainerSid data)")
+        information = ctypes.cast(
+            buffer,
+            ctypes.POINTER(_TokenAppContainerInformation),
+        ).contents
         if not information.token_app_container:
             return bool(is_app_container.value), ""
 

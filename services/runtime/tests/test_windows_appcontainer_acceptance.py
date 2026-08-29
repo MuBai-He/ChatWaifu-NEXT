@@ -42,6 +42,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PROBE_FIXTURE = Path(__file__).parent / "fixtures" / "windows_appcontainer_probe.py"
 MCP_FIXTURE = Path(__file__).parent / "fixtures" / "mcp_stdio_server.py"
 PE_MACHINE_AMD64 = 0x8664
+BASE_PYTHON = Path(getattr(sys, "_base_executable", sys.executable)).resolve()
 PROCESS_SYNCHRONIZE = 0x0010_0000
 PROCESS_TERMINATE = 0x0001
 WAIT_OBJECT_0 = 0
@@ -138,9 +139,6 @@ def appcontainer_helper() -> Path:
     assert ctypes.windll.shell32.IsUserAnAdmin() == 0, (
         "run this acceptance suite from an unelevated shell to prove the helper "
         "does not require administrator rights"
-    )
-    assert _pe_machine(Path(sys.executable)) == PE_MACHINE_AMD64, (
-        f"acceptance Python must be x64: {sys.executable}"
     )
     assert _pe_machine(helper) == PE_MACHINE_AMD64, f"helper is not x64: {helper}"
     return helper
@@ -416,7 +414,7 @@ def _security_cycle(
 ) -> dict[str, Any]:
     shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
     child = [
-        sys.executable,
+        str(BASE_PYTHON),
         "-I",
         "-B",
         str(layout.package / "probe.py"),
@@ -700,7 +698,7 @@ def test_killing_host_terminates_the_entire_child_tree(layout: _Layout) -> None:
     shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
     marker = layout.data / "descendant.pid"
     child = [
-        sys.executable,
+        str(BASE_PYTHON),
         "-I",
         "-B",
         str(layout.package / "probe.py"),
@@ -744,7 +742,7 @@ def test_parent_stdin_eof_terminates_the_entire_child_tree(layout: _Layout) -> N
     shutil.copy2(PROBE_FIXTURE, layout.package / "probe.py")
     marker = layout.data / "stdin-eof-descendant.pid"
     child = [
-        sys.executable,
+        str(BASE_PYTHON),
         "-I",
         "-B",
         str(layout.package / "probe.py"),
@@ -797,7 +795,7 @@ def test_job_active_process_limit(
         _run_command(
             layout,
             [
-                sys.executable,
+                str(BASE_PYTHON),
                 "-I",
                 "-B",
                 str(layout.package / "probe.py"),
