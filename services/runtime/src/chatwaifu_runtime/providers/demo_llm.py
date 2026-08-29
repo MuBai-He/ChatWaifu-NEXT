@@ -3,22 +3,29 @@
 import asyncio
 from collections.abc import AsyncIterator
 
-from chatwaifu_runtime.providers.contracts import LlmRequest
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    LlmResponseCompleted,
+    LlmStreamEvent,
+    LlmTextDelta,
+)
 
 
 class DemoLlmProvider:
     kind = "demo"
+    supports_tool_calling = False
 
     def __init__(self, chunk_delay_ms: int = 25) -> None:
         self._delay_seconds = chunk_delay_ms / 1000
 
-    async def stream(self, request: LlmRequest) -> AsyncIterator[str]:
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         if request.trigger == "proactive":
             response = "那个……忙了这么久，也别忘了稍微休息一下哦。想聊点什么的话，我就在这里。"
             for chunk in _chunks(response):
                 if self._delay_seconds:
                     await asyncio.sleep(self._delay_seconds)
-                yield chunk
+                yield LlmTextDelta(chunk)
+            yield LlmResponseCompleted("stop")
             return
         remembered = next(
             (
@@ -38,7 +45,8 @@ class DemoLlmProvider:
         for chunk in _chunks(response):
             if self._delay_seconds:
                 await asyncio.sleep(self._delay_seconds)
-            yield chunk
+            yield LlmTextDelta(chunk)
+        yield LlmResponseCompleted("stop")
 
 
 def _chunks(text: str) -> tuple[str, ...]:

@@ -12,7 +12,16 @@ from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.commands import PlaybackAckCommand
 from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_protocol.skills import McpConnectionConfiguration, SkillInvocation
-from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
@@ -739,7 +748,10 @@ async def cancel_skill_run(request: Request, skill_run_id: UUID) -> dict[str, ob
 
 
 @router.get("/sessions/{session_id}/skill-confirmations")
-async def read_skill_confirmations(request: Request, session_id: UUID) -> dict[str, object]:
+async def read_skill_confirmations(
+    request: Request, response: Response, session_id: UUID
+) -> dict[str, object]:
+    response.headers["Cache-Control"] = "no-store"
     items = await _container(request).runtime_skills.pending_confirmations(session_id)
     return {"items": items, "count": len(items)}
 

@@ -19,6 +19,14 @@ class SQLiteRuntimeSkillRepository:
         async with self._database.transaction() as connection:
             await connection.execute(
                 """
+                UPDATE permission_requests
+                SET state = 'expired', decided_at = ?
+                WHERE state = 'pending'
+                """,
+                (now,),
+            )
+            await connection.execute(
+                """
                 UPDATE skill_runs SET state = 'expired', error_json = ?, updated_at = ?,
                     completed_at = ?
                 WHERE state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
@@ -43,8 +51,10 @@ class SQLiteRuntimeSkillRepository:
                 INSERT INTO skill_runs(
                     skill_run_id, session_id, skill_id, skill_version, capability,
                     plugin_id, mcp_connection_id, state, arguments_json,
-                    execution_plan_json, execution_plan_fingerprint, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, ?, ?, ?, ?)
+                    execution_plan_json, execution_plan_fingerprint,
+                    turn_id, generation_id, origin, provider_tool_call_id,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 tuple(
                     values[key]
@@ -59,6 +69,10 @@ class SQLiteRuntimeSkillRepository:
                         "arguments_json",
                         "execution_plan_json",
                         "execution_plan_fingerprint",
+                        "turn_id",
+                        "generation_id",
+                        "origin",
+                        "provider_tool_call_id",
                         "created_at",
                         "updated_at",
                     )
@@ -88,45 +102,104 @@ class SQLiteRuntimeSkillRepository:
             )
         )
 
-    async def mark_run_cancelling(self, run_id: UUID, now: str) -> None:
-        await self._update_run(
-            "cancel_requested = 1, state = 'cancelling', updated_at = ?", (now,), run_id
+    async def mark_run_cancelling(self, run_id: UUID, now: str, *, allow_running: bool) -> bool:
+        cancellable_states = (
+            "state IN ('created', 'waiting_for_confirmation', 'running')"
+            if allow_running
+            else "state IN ('created', 'waiting_for_confirmation')"
+        )
+        return await self._compare_and_set_run(
+            "cancel_requested = 1, state = 'cancelling', updated_at = ?",
+            (now,),
+            run_id,
+            cancellable_states,
         )
 
-    async def mark_run_running(self, run_id: UUID, now: str) -> None:
-        await self._update_run(
+    async def mark_run_running(self, run_id: UUID, now: str) -> bool:
+        return await self._compare_and_set_run(
             "state = 'running', started_at = COALESCE(started_at, ?), updated_at = ?",
             (now, now),
             run_id,
+            "state = 'created' AND cancel_requested = 0",
         )
 
-    async def complete_run(self, run_id: UUID, result_json: str, now: str) -> None:
-        await self._update_run(
+    async def complete_run(self, run_id: UUID, result_json: str, now: str) -> bool:
+        return await self._compare_and_set_run(
             "state = 'succeeded', progress = 1, result_json = ?, updated_at = ?, completed_at = ?",
             (result_json, now, now),
             run_id,
+            "state = 'running' AND cancel_requested = 0",
         )
 
-    async def fail_run(self, run_id: UUID, error_json: str, now: str) -> None:
-        await self._update_run(
-            "state = 'failed', error_json = ?, updated_at = ?, completed_at = ?",
-            (error_json, now, now),
-            run_id,
-        )
-
-    async def cancel_run(self, run_id: UUID, now: str) -> None:
-        await self._update_run(
-            "state = 'cancelled', updated_at = ?, completed_at = ?", (now, now), run_id
-        )
-
-    async def _update_run(
-        self, assignment: str, parameters: tuple[object, ...], run_id: UUID
-    ) -> None:
+    async def fail_run(self, run_id: UUID, error_json: str, now: str) -> bool:
         async with self._database.transaction() as connection:
-            await connection.execute(
-                f"UPDATE skill_runs SET {assignment} WHERE skill_run_id = ?",
+            cursor = await connection.execute(
+                """
+                UPDATE skill_runs
+                SET state = 'failed', error_json = ?, updated_at = ?, completed_at = ?
+                WHERE skill_run_id = ?
+                  AND state IN ('created', 'waiting_for_confirmation', 'running')
+                  AND cancel_requested = 0
+                """,
+                (error_json, now, now, str(run_id)),
+            )
+            transitioned = cursor.rowcount == 1
+            if transitioned:
+                await connection.execute(
+                    """
+                    UPDATE permission_requests
+                    SET state = 'expired', decided_at = ?
+                    WHERE skill_run_id = ? AND state = 'pending'
+                    """,
+                    (now, str(run_id)),
+                )
+            return transitioned
+
+    async def cancel_run(self, run_id: UUID, now: str) -> bool:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE skill_runs
+                SET state = 'cancelled', cancel_requested = 1,
+                    updated_at = ?, completed_at = ?
+                WHERE skill_run_id = ?
+                  AND state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+                """,
+                (now, now, str(run_id)),
+            )
+            transitioned = cursor.rowcount == 1
+            if transitioned:
+                await connection.execute(
+                    """
+                    UPDATE permission_requests
+                    SET state = 'expired', decided_at = ?
+                    WHERE skill_run_id = ? AND state = 'pending'
+                    """,
+                    (now, str(run_id)),
+                )
+                await connection.execute(
+                    """
+                    UPDATE skill_tool_calls
+                    SET status = 'cancelled', completed_at = ?
+                    WHERE skill_run_id = ? AND status = 'running'
+                    """,
+                    (now, str(run_id)),
+                )
+            return transitioned
+
+    async def _compare_and_set_run(
+        self,
+        assignment: str,
+        parameters: tuple[object, ...],
+        run_id: UUID,
+        predicate: str,
+    ) -> bool:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                f"UPDATE skill_runs SET {assignment} WHERE skill_run_id = ? AND {predicate}",
                 (*parameters, str(run_id)),
             )
+            return cursor.rowcount == 1
 
     async def start_tool_call(self, values: Mapping[str, object]) -> None:
         async with self._database.transaction() as connection:
@@ -150,12 +223,12 @@ class SQLiteRuntimeSkillRepository:
                 ),
             )
 
-    async def finish_tool_call(self, values: Mapping[str, object]) -> None:
+    async def finish_tool_call(self, values: Mapping[str, object]) -> bool:
         async with self._database.transaction() as connection:
-            await connection.execute(
+            cursor = await connection.execute(
                 """
                 UPDATE skill_tool_calls SET status = ?, response_json = ?, error_json = ?,
-                    completed_at = ? WHERE tool_call_id = ?
+                    completed_at = ? WHERE tool_call_id = ? AND status = 'running'
                 """,
                 tuple(
                     values[key]
@@ -168,6 +241,7 @@ class SQLiteRuntimeSkillRepository:
                     )
                 ),
             )
+            return cursor.rowcount == 1
 
     async def has_permission_grant(
         self,
@@ -234,11 +308,14 @@ class SQLiteRuntimeSkillRepository:
                     )
                 ),
             )
-            await connection.execute(
+            cursor = await connection.execute(
                 "UPDATE skill_runs SET state = 'waiting_for_confirmation', "
-                "confirmation_request_id = ?, updated_at = ? WHERE skill_run_id = ?",
+                "confirmation_request_id = ?, updated_at = ? WHERE skill_run_id = ? "
+                "AND state = 'created' AND cancel_requested = 0",
                 (values["request_id"], values["requested_at"], values["skill_run_id"]),
             )
+            if cursor.rowcount != 1:
+                raise RuntimeError("skill run is no longer awaiting permission setup")
 
     async def permission_request(self, request_id: UUID) -> Record | None:
         return _record(
@@ -270,11 +347,29 @@ class SQLiteRuntimeSkillRepository:
                 UPDATE permission_requests SET state = 'decided', decision = ?,
                     decided_by = ?, decided_at = ?
                 WHERE request_id = ? AND state = 'pending' AND expires_at > ?
+                  AND EXISTS (
+                      SELECT 1 FROM skill_runs sr
+                      WHERE sr.skill_run_id = permission_requests.skill_run_id
+                        AND sr.state = 'waiting_for_confirmation'
+                        AND sr.cancel_requested = 0
+                  )
                 """,
                 (decision, decided_by, decided_at, str(request_id), decided_at),
             )
             if cursor.rowcount != 1:
                 return False
+            if decision != "deny":
+                run_cursor = await connection.execute(
+                    """
+                    UPDATE skill_runs
+                    SET state = 'created', updated_at = ?
+                    WHERE skill_run_id = ? AND state = 'waiting_for_confirmation'
+                      AND cancel_requested = 0
+                    """,
+                    (decided_at, request["skill_run_id"]),
+                )
+                if run_cursor.rowcount != 1:
+                    raise RuntimeError("confirmed skill run changed during permission decision")
             scope = "session" if decision == "allow_session" else "always"
             if decision in {"allow_session", "allow_always"}:
                 for permission in grants:
@@ -313,13 +408,14 @@ class SQLiteRuntimeSkillRepository:
                 SELECT pr.* FROM permission_requests pr
                 JOIN skill_runs sr ON sr.skill_run_id = pr.skill_run_id
                 WHERE sr.session_id = ? AND pr.state = 'pending' AND pr.expires_at > ?
+                  AND sr.state = 'waiting_for_confirmation' AND sr.cancel_requested = 0
                 ORDER BY pr.requested_at
                 """,
                 (str(session_id), now),
             )
         )
 
-    async def expire_permission_for_run(self, run_id: UUID, now: str) -> None:
+    async def expire_permission_for_run(self, run_id: UUID, now: str) -> bool:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 "UPDATE permission_requests SET state = 'expired', decided_at = ? "
@@ -327,11 +423,13 @@ class SQLiteRuntimeSkillRepository:
                 (now, str(run_id)),
             )
             if cursor.rowcount == 1:
-                await connection.execute(
+                run_cursor = await connection.execute(
                     "UPDATE skill_runs SET state = 'expired', updated_at = ?, completed_at = ? "
                     "WHERE skill_run_id = ? AND state = 'waiting_for_confirmation'",
                     (now, now, str(run_id)),
                 )
+                return run_cursor.rowcount == 1
+            return False
 
     async def expire_pending_permissions(self, now: str) -> list[UUID]:
         async with self._database.transaction() as connection:
@@ -345,13 +443,16 @@ class SQLiteRuntimeSkillRepository:
                 "WHERE state = 'pending' AND expires_at <= ?",
                 (now, now),
             )
+            expired_run_ids: list[UUID] = []
             for row in rows:
-                await connection.execute(
+                cursor = await connection.execute(
                     "UPDATE skill_runs SET state = 'expired', updated_at = ?, completed_at = ? "
                     "WHERE skill_run_id = ? AND state = 'waiting_for_confirmation'",
                     (now, now, row["skill_run_id"]),
                 )
-        return [UUID(str(row["skill_run_id"])) for row in rows]
+                if cursor.rowcount == 1:
+                    expired_run_ids.append(UUID(str(row["skill_run_id"])))
+        return expired_run_ids
 
     async def list_plugin_records(self) -> list[Record]:
         return _records(

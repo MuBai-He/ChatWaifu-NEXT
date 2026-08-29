@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from chatwaifu_runtime import __version__
+from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
@@ -35,6 +36,7 @@ from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
+from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
@@ -124,6 +126,11 @@ class RuntimeContainer:
             __version__,
             sandbox_launcher=sandbox_launcher,
         )
+        self.agent = AgentTurnOrchestrator(
+            self.providers.llm,
+            self.runtime_skills,
+            RuntimeSkillRouter(self.runtime_skills.list),
+        )
         self.conversation = ConversationService(
             self.conversation_repository,
             self.experience_reset_repository,
@@ -137,6 +144,7 @@ class RuntimeContainer:
             self.playback,
             self.character_kernel,
             self.prompt_compiler,
+            self.agent,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,

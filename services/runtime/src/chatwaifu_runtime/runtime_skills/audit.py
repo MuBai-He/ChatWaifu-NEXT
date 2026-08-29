@@ -12,13 +12,23 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import re
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Final, cast
 
 from chatwaifu_protocol.base import JsonObject, JsonValue
 
 MAX_AUDIT_PAYLOAD_BYTES = 64 * 1024
+MAX_CONFIRMATION_ARGUMENT_PREVIEW_BYTES = 4 * 1024
+_MAX_CONFIRMATION_PREVIEW_DEPTH = 12
+_MAX_CONFIRMATION_PREVIEW_NODES = 256
+_MAX_CONFIRMATION_PREVIEW_PROPERTIES = 32
+_MAX_CONFIRMATION_PREVIEW_ITEMS = 16
+_MAX_CONFIRMATION_PREVIEW_STRING_CHARACTERS = 2_048
+_REDACTED_PREVIEW_VALUE = "[REDACTED]"
+_TRUNCATED_PREVIEW_VALUE = "[TRUNCATED]"
 _AUDIT_PUBLIC = "x-chatwaifu-audit-public"
 _SECRET_KEY = re.compile(
     r"(?:^|[_-])(api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret|password|"
@@ -46,6 +56,8 @@ _PRIVATE_KEY = re.compile(
 )
 _SECRET_COMPACT_SUFFIXES = {
     "apikey",
+    "token",
+    "secret",
     "accesstoken",
     "refreshtoken",
     "bearertoken",
@@ -107,6 +119,188 @@ def payload_digest(value: JsonValue, *, key: bytes) -> str:
     if not key:
         raise ValueError("audit digest key must not be empty")
     return hmac.new(key, _encode(value), hashlib.sha256).hexdigest()
+
+
+def confirmation_argument_preview(
+    arguments: JsonObject,
+    schema: JsonObject,
+    *,
+    max_bytes: int = MAX_CONFIRMATION_ARGUMENT_PREVIEW_BYTES,
+) -> JsonObject:
+    """Render an informed-consent preview without exposing credential fields.
+
+    Unlike durable audit summaries, this value is returned only by the local
+    confirmation endpoint and deliberately keeps ordinary outbound text visible.
+    Secrets remain redacted by field name or schema annotation, while depth, node,
+    collection, string, and final UTF-8 byte limits keep untrusted arguments bounded.
+    """
+
+    if max_bytes <= 0:
+        raise ValueError("confirmation argument preview limit must be positive")
+    state = _ConfirmationPreviewState()
+    preview = _confirmation_preview_value(
+        arguments,
+        [schema],
+        root=schema,
+        key=None,
+        depth=0,
+        state=state,
+    )
+    text = json.dumps(preview, ensure_ascii=False, indent=2, allow_nan=False, sort_keys=True)
+    text, byte_truncated = _truncate_preview_text(text, max_bytes=max_bytes)
+    return {
+        "text": text,
+        "truncated": state.truncated or byte_truncated,
+        "redacted": state.redacted,
+    }
+
+
+@dataclass(slots=True)
+class _ConfirmationPreviewState:
+    nodes: int = 0
+    truncated: bool = False
+    redacted: bool = False
+
+
+def _confirmation_preview_value(
+    value: object,
+    schemas: list[JsonObject],
+    *,
+    root: JsonObject,
+    key: str | None,
+    depth: int,
+    state: _ConfirmationPreviewState,
+) -> JsonValue:
+    expanded = list(_expand_schemas(schemas, root))
+    if (
+        (key is not None and _key_is_secret(key))
+        or any(_schema_is_secret_for_preview(item) for item in expanded)
+        or any(_has_unresolved_reference(item, root) for item in expanded)
+    ):
+        state.redacted = True
+        return _REDACTED_PREVIEW_VALUE
+    if depth > _MAX_CONFIRMATION_PREVIEW_DEPTH or state.nodes >= _MAX_CONFIRMATION_PREVIEW_NODES:
+        state.truncated = True
+        return _TRUNCATED_PREVIEW_VALUE
+    state.nodes += 1
+
+    if isinstance(value, dict):
+        document = cast(dict[str, object], value)
+        keys = sorted(document)[:_MAX_CONFIRMATION_PREVIEW_PROPERTIES]
+        if len(document) > len(keys):
+            state.truncated = True
+        return {
+            child_key: _confirmation_preview_value(
+                document[child_key],
+                _preview_property_schemas(expanded, child_key),
+                root=root,
+                key=child_key,
+                depth=depth + 1,
+                state=state,
+            )
+            for child_key in keys
+        }
+    if isinstance(value, list):
+        items = cast(list[object], value)
+        bounded_items = items[:_MAX_CONFIRMATION_PREVIEW_ITEMS]
+        if len(items) > len(bounded_items):
+            state.truncated = True
+        return [
+            _confirmation_preview_value(
+                item,
+                _preview_item_schemas(expanded, index),
+                root=root,
+                key=None,
+                depth=depth + 1,
+                state=state,
+            )
+            for index, item in enumerate(bounded_items)
+        ]
+    if isinstance(value, str):
+        if len(value) <= _MAX_CONFIRMATION_PREVIEW_STRING_CHARACTERS:
+            return value
+        state.truncated = True
+        return value[:_MAX_CONFIRMATION_PREVIEW_STRING_CHARACTERS] + "…"
+    if value is None or isinstance(value, bool | int):
+        return value
+    if isinstance(value, float):
+        if math.isfinite(value):
+            return value
+        state.truncated = True
+        return _TRUNCATED_PREVIEW_VALUE
+    state.truncated = True
+    return _TRUNCATED_PREVIEW_VALUE
+
+
+def _preview_property_schemas(schemas: list[JsonObject], key: str) -> list[JsonObject]:
+    result = _property_schemas(schemas, key)
+    for schema in schemas:
+        patterns = schema.get("patternProperties")
+        if not isinstance(patterns, dict):
+            continue
+        for pattern, candidate in patterns.items():
+            if not isinstance(candidate, dict):
+                continue
+            try:
+                matches = re.search(pattern, key) is not None
+            except re.error:
+                matches = False
+            if matches:
+                result.append(cast(JsonObject, candidate))
+    if result:
+        return result
+    additional: list[JsonObject] = []
+    for schema in schemas:
+        for keyword in ("additionalProperties", "unevaluatedProperties"):
+            candidate = schema.get(keyword)
+            if isinstance(candidate, dict):
+                additional.append(cast(JsonObject, candidate))
+    return additional
+
+
+def _preview_item_schemas(schemas: list[JsonObject], index: int) -> list[JsonObject]:
+    result = _item_schemas(schemas)
+    for schema in schemas:
+        prefix_items = schema.get("prefixItems")
+        if isinstance(prefix_items, list) and index < len(prefix_items):
+            candidate = prefix_items[index]
+            if isinstance(candidate, dict):
+                result.append(cast(JsonObject, candidate))
+        for keyword in ("contains", "unevaluatedItems"):
+            candidate = schema.get(keyword)
+            if isinstance(candidate, dict):
+                result.append(cast(JsonObject, candidate))
+    return result
+
+
+def _schema_is_secret_for_preview(schema: JsonObject) -> bool:
+    if schema.get("writeOnly") is True:
+        return True
+    if schema.get("x-sensitive") is True or schema.get("x-chatwaifu-sensitive") is True:
+        return True
+    if schema.get("contentEncoding") is not None or schema.get("contentMediaType") is not None:
+        return True
+    value_format = schema.get("format")
+    return isinstance(value_format, str) and value_format.lower() in _SECRET_FORMATS
+
+
+def _key_is_secret(key: str) -> bool:
+    if _SECRET_KEY.search(key):
+        return True
+    compact = re.sub(r"[^a-z0-9]", "", key.lower())
+    return any(compact.endswith(suffix) for suffix in _SECRET_COMPACT_SUFFIXES)
+
+
+def _truncate_preview_text(value: str, *, max_bytes: int) -> tuple[str, bool]:
+    encoded = value.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return value, False
+    suffix = "\n… (参数预览已截断)"
+    suffix_bytes = suffix.encode("utf-8")
+    if len(suffix_bytes) >= max_bytes:
+        return suffix_bytes[:max_bytes].decode("utf-8", errors="ignore"), True
+    prefix = encoded[: max_bytes - len(suffix_bytes)].decode("utf-8", errors="ignore")
+    return prefix + suffix, True
 
 
 def _collect_public(

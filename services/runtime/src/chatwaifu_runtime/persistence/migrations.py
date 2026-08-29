@@ -620,4 +620,17 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        16,
+        """
+        ALTER TABLE skill_runs ADD COLUMN turn_id TEXT;
+        ALTER TABLE skill_runs ADD COLUMN generation_id TEXT;
+        ALTER TABLE skill_runs ADD COLUMN origin TEXT NOT NULL DEFAULT 'manual'
+            CHECK(origin IN ('manual', 'agent', 'external_mcp'));
+        ALTER TABLE skill_runs ADD COLUMN provider_tool_call_id TEXT;
+
+        CREATE INDEX skill_runs_generation_idx
+            ON skill_runs(generation_id, created_at DESC);
+        """,
+    ),
 )

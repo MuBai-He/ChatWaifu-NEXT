@@ -370,6 +370,7 @@ export type GenericCoreEventType =
   | 'skill.run_completed'
   | 'skill.run_failed'
   | 'skill.run_cancelled'
+  | 'skill.run_expired'
   | 'tool.call_started'
   | 'tool.call_completed'
   | 'tool.call_failed'
@@ -681,9 +682,12 @@ export type Capability3 = string
 export type CompletedAt1 = string | null
 export type ConfirmationRequestId = string | null
 export type CreatedAt6 = string
+export type GenerationId22 = string | null
 export type McpConnectionId1 = string | null
+export type Origin = 'manual' | 'agent' | 'external_mcp'
 export type PluginId3 = string | null
 export type Progress = number | null
+export type ProviderToolCallId = string | null
 export type SessionId23 = string
 export type SkillId3 = string
 export type SkillRunId14 = string
@@ -701,17 +705,18 @@ export type SkillRunState =
   | 'cancelling'
   | 'cancelled'
   | 'expired'
+export type TurnId20 = string | null
 export type UpdatedAt6 = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
 export type SceneSnapshotId = string | null
 export type SessionId24 = string
-export type TurnId20 = string
+export type TurnId21 = string
 export type ByteLength1 = number
 export type Codec1 = 'jpeg' | 'png' | 'h264' | 'vp8'
 export type EndOfStream1 = boolean
-export type GenerationId22 = string | null
+export type GenerationId23 = string | null
 export type Height = number
 export type PtsMs1 = number
 export type Sequence15 = number
@@ -1628,9 +1633,12 @@ export interface SkillRunSnapshot {
   confirmation_request_id?: ConfirmationRequestId
   created_at: CreatedAt6
   error?: StructuredError | null
+  generation_id?: GenerationId22
   mcp_connection_id?: McpConnectionId1
+  origin?: Origin
   plugin_id?: PluginId3
   progress?: Progress
+  provider_tool_call_id?: ProviderToolCallId
   result?: SkillResult | null
   session_id: SessionId23
   skill_id: SkillId3
@@ -1638,6 +1646,7 @@ export interface SkillRunSnapshot {
   skill_version: SkillVersion
   started_at?: StartedAt1
   state: SkillRunState
+  turn_id?: TurnId20
   updated_at: UpdatedAt6
   [k: string]: unknown
 }
@@ -1647,14 +1656,14 @@ export interface TurnSnapshot {
   committed_text?: CommittedText
   scene_snapshot_id?: SceneSnapshotId
   session_id: SessionId24
-  turn_id: TurnId20
+  turn_id: TurnId21
   [k: string]: unknown
 }
 export interface VideoFrameHeader {
   byte_length: ByteLength1
   codec: Codec1
   end_of_stream?: EndOfStream1
-  generation_id?: GenerationId22
+  generation_id?: GenerationId23
   height: Height
   pts_ms: PtsMs1
   sequence: Sequence15

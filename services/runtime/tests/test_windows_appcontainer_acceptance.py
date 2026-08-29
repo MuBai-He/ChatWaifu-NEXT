@@ -367,10 +367,7 @@ def _dacl_sddl(path: Path) -> str:
 
 
 def _root_dacls(layout: _Layout) -> dict[Path, str]:
-    return {
-        root: _dacl_sddl(root)
-        for root in (*layout.runtime_roots, layout.package, layout.data)
-    }
+    return {root: _dacl_sddl(root) for root in (*layout.runtime_roots, layout.package, layout.data)}
 
 
 def _grant_unrelated_read_ace(path: Path) -> None:
@@ -495,9 +492,7 @@ def test_token_filesystem_loopback_and_exact_dacl_revoke(layout: _Layout) -> Non
 def test_explicit_network_allow_reaches_private_lan_but_not_loopback(layout: _Layout) -> None:
     configured_probe = os.environ.get("CHATWAIFU_APPCONTAINER_LAN_PROBE")
     if not configured_probe:
-        pytest.skip(
-            "set CHATWAIFU_APPCONTAINER_LAN_PROBE=host:port to prove private LAN access"
-        )
+        pytest.skip("set CHATWAIFU_APPCONTAINER_LAN_PROBE=host:port to prove private LAN access")
     try:
         host_ip, port_text = configured_probe.rsplit(":", 1)
         probe_port = int(port_text)

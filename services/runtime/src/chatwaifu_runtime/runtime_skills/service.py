@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import secrets
 from collections import OrderedDict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import NoReturn, cast
+from typing import Literal, NoReturn, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import JsonObject, JsonValue, PrivacyLevel
@@ -40,7 +41,11 @@ from chatwaifu_runtime.runtime_skills.adapters import (
     McpConnectionAdapter,
     McpStdioAdapter,
 )
-from chatwaifu_runtime.runtime_skills.audit import payload_digest, sanitize_audit_payload
+from chatwaifu_runtime.runtime_skills.audit import (
+    confirmation_argument_preview,
+    payload_digest,
+    sanitize_audit_payload,
+)
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.execution_plan import (
     ExecutionPlan,
@@ -77,6 +82,9 @@ TERMINAL_STATES = {
 }
 logger = logging.getLogger(__name__)
 MAX_EPHEMERAL_RESULTS = 64
+CANCELLATION_GRACE_SECONDS = 0.25
+STOP_GRACE_SECONDS = 0.5
+MAX_PROVIDER_TOOL_CALL_ID_CHARACTERS = 256
 
 
 def _deny_schema_retrieval(uri: str) -> NoReturn:
@@ -125,8 +133,10 @@ class RuntimeSkillService:
         self._mcp_connection_adapter = McpConnectionAdapter(mcp_transport)
         self._tasks: dict[UUID, asyncio.Task[None]] = {}
         self._pending_arguments: dict[UUID, JsonObject] = {}
+        self._outcome_ready: set[UUID] = set()
         self._ephemeral_results: OrderedDict[UUID, SkillResult] = OrderedDict()
         self._confirmation_expiry_tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._terminal_waiters: dict[UUID, set[asyncio.Future[None]]] = {}
         self._audit_digest_key = secrets.token_bytes(32)
         self._registry_reload_lock = asyncio.Lock()
 
@@ -161,14 +171,45 @@ class RuntimeSkillService:
         await self._reload_registry_serialized()
 
     async def stop(self) -> None:
-        tasks = [*self._tasks.values(), *self._confirmation_expiry_tasks.values()]
+        run_tasks = list(self._tasks.items())
+        confirmation_tasks = list(self._confirmation_expiry_tasks.items())
+        tasks = [
+            *(task for _, task in run_tasks),
+            *(task for _, task in confirmation_tasks),
+        ]
         for task in tasks:
             task.cancel()
         if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            _, pending = await asyncio.wait(tasks, timeout=STOP_GRACE_SECONDS)
+            for task in pending:
+                task.cancel()
+            if pending:
+                logger.warning(
+                    "Runtime Skill shutdown detached %d task(s) that ignored cancellation",
+                    len(pending),
+                )
+        # A task that ignores cancellation must not keep its durable run active or
+        # later resurrect it after the Runtime has reported shutdown complete.
+        for run_id, _ in run_tasks:
+            try:
+                await self._finish_cancelled(run_id)
+            except Exception:
+                logger.exception("Could not terminalize Runtime Skill during shutdown")
+        for request_id, _ in confirmation_tasks:
+            try:
+                row = await self._repository.run_for_confirmation(request_id)
+                if row is not None:
+                    await self._finish_cancelled(UUID(str(row["skill_run_id"])))
+            except Exception:
+                logger.exception("Could not terminalize Runtime Skill confirmation during shutdown")
         self._tasks.clear()
         self._confirmation_expiry_tasks.clear()
+        for waiters in self._terminal_waiters.values():
+            for waiter in waiters:
+                waiter.cancel()
+        self._terminal_waiters.clear()
         self._pending_arguments.clear()
+        self._outcome_ready.clear()
         self._ephemeral_results.clear()
 
     def list(self) -> list[SkillDefinition]:
@@ -321,7 +362,16 @@ class RuntimeSkillService:
         invocation: SkillInvocation,
         *,
         principal: str = "local_user",
+        turn_id: UUID | None = None,
+        generation_id: UUID | None = None,
+        origin: Literal["manual", "agent", "external_mcp"] = "manual",
+        provider_tool_call_id: str | None = None,
     ) -> SkillRunSnapshot:
+        if (
+            provider_tool_call_id is not None
+            and len(provider_tool_call_id) > MAX_PROVIDER_TOOL_CALL_ID_CHARACTERS
+        ):
+            raise ValueError("provider tool call id exceeded the size limit")
         entry = self._registry.get(invocation.skill_id)
         if entry is None:
             raise KeyError("skill not found")
@@ -364,13 +414,19 @@ class RuntimeSkillService:
                     "arguments_json": json.dumps(plan.arguments_summary, ensure_ascii=False),
                     "execution_plan_json": plan.model_dump_json(),
                     "execution_plan_fingerprint": plan.fingerprint(),
+                    "turn_id": str(turn_id) if turn_id is not None else None,
+                    "generation_id": (str(generation_id) if generation_id is not None else None),
+                    "origin": origin,
+                    "provider_tool_call_id": provider_tool_call_id,
                     "created_at": now,
                     "updated_at": now,
                 }
             )
-        except BaseException:
-            self._pending_arguments.pop(run_id, None)
-            raise
+        except BaseException as creation_error:
+            # SQLite commits are cancellation-safe: cancellation may be observed
+            # after the INSERT committed. Compensation is therefore idempotent and
+            # required even when create_run appeared to fail to its caller.
+            await self._compensate_created_run(run_id, creation_error)
         try:
             missing = await self._permissions.missing_permissions(
                 principal=principal,
@@ -385,7 +441,7 @@ class RuntimeSkillService:
                     missing_permissions=missing,
                 )
                 self._schedule_confirmation_expiry(request_id, run_id)
-                await self._emit(
+                await self._emit_best_effort(
                     session_id,
                     "skill.confirmation_requested",
                     {
@@ -419,17 +475,16 @@ class RuntimeSkillService:
             await self._resolve_current_plan(run_row)
         except SkillExecutionError as error:
             self._cancel_confirmation_expiry(request_id)
-            await self._permissions.expire_for_run(run_id)
-            await self._finish_failed(run_id, error.structured)
-            await self._emit(
-                session_id,
-                "skill.run_failed",
-                {
-                    "skill_run_id": str(run_id),
-                    "error": error.structured.model_dump(mode="json"),
-                },
-                run_id,
-            )
+            if await self._finish_failed(run_id, error.structured):
+                await self._emit_best_effort(
+                    session_id,
+                    "skill.run_failed",
+                    {
+                        "skill_run_id": str(run_id),
+                        "error": error.structured.model_dump(mode="json"),
+                    },
+                    run_id,
+                )
             self._pending_arguments.pop(run_id, None)
             return await self.get_run(run_id)
         try:
@@ -441,6 +496,15 @@ class RuntimeSkillService:
             )
         except (KeyError, ValueError):
             await self._prune_terminal_arguments()
+            current = await self.get_run(run_id)
+            if current.state in TERMINAL_STATES:
+                self._notify_terminal(run_id)
+            raise
+        except BaseException:
+            # The permission transaction may commit and only then observe task
+            # cancellation. Reconcile the durable decision before propagating so
+            # a decided request can never strand its run in ``created``.
+            await self._reconcile_interrupted_confirmation(request_id, run_id)
             raise
         self._cancel_confirmation_expiry(request_id)
         if allowed:
@@ -452,18 +516,48 @@ class RuntimeSkillService:
                 retryable=False,
                 component="runtime.skills",
             )
-            await self._finish_failed(run_id, error)
-            await self._emit(
-                session_id,
-                "skill.run_failed",
-                {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
-                run_id,
-            )
+            if await self._finish_failed(run_id, error):
+                await self._emit_best_effort(
+                    session_id,
+                    "skill.run_failed",
+                    {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
+                    run_id,
+                )
             self._pending_arguments.pop(run_id, None)
         return await self.get_run(run_id)
 
     async def pending_confirmations(self, session_id: UUID) -> list[dict[str, object]]:
-        pending = await self._permissions.list_pending(session_id)
+        pending, expired_run_ids = await self._permissions.list_pending(session_id)
+        for run_id in expired_run_ids:
+            self._notify_terminal(run_id)
+            snapshot = await self.get_run(run_id)
+            await self._emit_best_effort(
+                snapshot.session_id,
+                "skill.run_expired",
+                {
+                    "skill_id": snapshot.skill_id,
+                    "skill_run_id": str(run_id),
+                    "reason": "confirmation_timeout",
+                },
+                run_id,
+            )
+        for item in pending:
+            run_id = UUID(str(item["skill_run_id"]))
+            arguments = self._pending_arguments.get(run_id)
+            row = await self._repository.run(run_id)
+            if arguments is None or row is None:
+                item["argument_preview"] = _unavailable_confirmation_preview()
+                item["allowed_decisions"] = ["deny"]
+                continue
+            try:
+                plan = self._load_execution_plan(row)
+            except SkillExecutionError:
+                item["argument_preview"] = _unavailable_confirmation_preview()
+                item["allowed_decisions"] = ["deny"]
+                continue
+            item["argument_preview"] = confirmation_argument_preview(
+                arguments, plan.capability.input_schema
+            )
         await self._prune_terminal_arguments()
         return pending
 
@@ -479,39 +573,146 @@ class RuntimeSkillService:
             if snapshot.state in TERMINAL_STATES:
                 self._pending_arguments.pop(run_id, None)
 
+    async def _reconcile_interrupted_confirmation(self, request_id: UUID, run_id: UUID) -> None:
+        request = await self._repository.permission_request(request_id)
+        if request is None or str(request["state"]) != "decided":
+            # The transaction did not commit. Its existing expiry task remains the
+            # durable convergence path for the still-pending confirmation.
+            return
+        self._cancel_confirmation_expiry(request_id)
+        durable_decision = str(request["decision"])
+        if durable_decision == "deny":
+            await self._finish_failed(
+                run_id,
+                StructuredError(
+                    code="permission_denied",
+                    message="Skill invocation was denied",
+                    retryable=False,
+                    component="runtime.skills",
+                ),
+            )
+        else:
+            # Approval was durable, but its request handler did not survive long
+            # enough to schedule execution. Cancelling is safer than executing a
+            # side effect from a detached/shutting-down request.
+            await self._finish_cancelled(run_id)
+        self._pending_arguments.pop(run_id, None)
+
     async def cancel(self, run_id: UUID) -> SkillRunSnapshot:
         snapshot = await self.get_run(run_id)
         if snapshot.state in TERMINAL_STATES:
             return snapshot
+        if snapshot.confirmation_request_id is not None:
+            self._cancel_confirmation_expiry(snapshot.confirmation_request_id)
         row = await self._repository.run(run_id)
         if row is None:
             raise KeyError("skill run not found")
+        interruptible = True
         plan_value = row["execution_plan_json"]
         if plan_value:
             try:
                 plan = ExecutionPlan.model_validate_json(str(plan_value))
             except PydanticValidationError as error:
                 raise ValueError("skill execution plan is invalid") from error
-            if snapshot.state is SkillRunState.RUNNING and not plan.interruptible:
-                raise ValueError("skill run is not interruptible")
-        await self._repository.mark_run_cancelling(run_id, _now().isoformat())
+            interruptible = plan.interruptible
         task = self._tasks.get(run_id)
-        if task is not None:
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-            current = await self.get_run(run_id)
-            if current.state not in TERMINAL_STATES:
-                await self._finish_cancelled(run_id)
-        else:
-            await self._finish_cancelled(run_id)
+        if run_id in self._outcome_ready:
+            # The adapter has returned a validated business outcome. Let its
+            # cancellation-shielded CAS decide success before reporting cancel.
+            return await self.wait_for_terminal(run_id)
+        try:
+            transitioned = await self._repository.mark_run_cancelling(
+                run_id,
+                _now().isoformat(),
+                allow_running=interruptible,
+            )
+            if not transitioned:
+                current = await self.get_run(run_id)
+                if current.state in TERMINAL_STATES:
+                    self._notify_terminal(run_id)
+                    return current
+                if current.state is SkillRunState.RUNNING and not interruptible:
+                    raise ValueError("skill run is not interruptible")
+                if current.state is not SkillRunState.CANCELLING:
+                    return current
+            await self._cancel_task_bounded(task)
+            if await self._finish_cancelled(run_id):
+                await self._emit_best_effort(
+                    snapshot.session_id,
+                    "skill.run_cancelled",
+                    {"skill_id": snapshot.skill_id, "skill_run_id": str(run_id)},
+                    run_id,
+                )
+            self._pending_arguments.pop(run_id, None)
+            return await self.get_run(run_id)
+        except BaseException:
+            # mark_run_cancelling can commit before its caller observes task
+            # cancellation. Re-read and converge any durable cancelling state.
+            await self._reconcile_interrupted_cancel(run_id, interruptible)
+            raise
+
+    async def _cancel_task_bounded(self, task: asyncio.Task[None] | None) -> None:
+        if task is None or task.done():
+            return
+        task.cancel()
+        await asyncio.wait({task}, timeout=CANCELLATION_GRACE_SECONDS)
+
+    async def _reconcile_interrupted_cancel(self, run_id: UUID, interruptible: bool) -> None:
+        snapshot = await self.get_run(run_id)
+        if snapshot.state in TERMINAL_STATES:
+            self._notify_terminal(run_id)
+            return
+        if snapshot.state is SkillRunState.RUNNING and run_id in self._outcome_ready:
+            await self.wait_for_terminal(run_id)
+            return
+        if snapshot.state is SkillRunState.RUNNING and not interruptible:
+            return
+        if snapshot.state is not SkillRunState.CANCELLING:
+            transitioned = await self._repository.mark_run_cancelling(
+                run_id,
+                _now().isoformat(),
+                allow_running=interruptible,
+            )
+            if not transitioned:
+                snapshot = await self.get_run(run_id)
+                if snapshot.state in TERMINAL_STATES:
+                    self._notify_terminal(run_id)
+                    return
+                if snapshot.state is not SkillRunState.CANCELLING:
+                    return
+        await self._cancel_task_bounded(self._tasks.get(run_id))
+        await self._finish_cancelled(run_id)
         self._pending_arguments.pop(run_id, None)
-        return await self.get_run(run_id)
 
     async def get_run(self, run_id: UUID) -> SkillRunSnapshot:
         row = await self._repository.run(run_id)
         if row is None:
             raise KeyError("skill run not found")
         return _snapshot(row, result_override=self._ephemeral_results.get(run_id))
+
+    async def wait_for_terminal(self, run_id: UUID) -> SkillRunSnapshot:
+        """Wait for one persisted run without relying on the lossy broadcast event queue."""
+
+        snapshot = await self.get_run(run_id)
+        if snapshot.state in TERMINAL_STATES:
+            return snapshot
+        waiter = asyncio.get_running_loop().create_future()
+        waiters = self._terminal_waiters.setdefault(run_id, set())
+        waiters.add(waiter)
+        try:
+            # Register first, then re-read: a transition in either side of this
+            # read is observed through the persisted state or the waiter signal.
+            snapshot = await self.get_run(run_id)
+            if snapshot.state in TERMINAL_STATES:
+                return snapshot
+            await waiter
+            return await self.get_run(run_id)
+        finally:
+            run_waiters = self._terminal_waiters.get(run_id)
+            if run_waiters is not None:
+                run_waiters.discard(waiter)
+                if not run_waiters:
+                    self._terminal_waiters.pop(run_id, None)
 
     async def list_runs(self, session_id: UUID, limit: int = 50) -> list[SkillRunSnapshot]:
         rows = await self._repository.runs_for_session(session_id, limit)
@@ -554,7 +755,7 @@ class RuntimeSkillService:
             raise RuntimeError("skill run is already scheduled")
         task = asyncio.create_task(self._execute(run_id), name=f"skill-run:{run_id}")
         self._tasks[run_id] = task
-        task.add_done_callback(lambda _: self._execution_finished(run_id))
+        task.add_done_callback(lambda completed: self._execution_finished(run_id, completed))
 
     def _schedule_confirmation_expiry(self, request_id: UUID, run_id: UUID) -> None:
         task = asyncio.create_task(
@@ -573,7 +774,19 @@ class RuntimeSkillService:
 
     async def _expire_confirmation_after_ttl(self, run_id: UUID) -> None:
         await asyncio.sleep(CONFIRMATION_TTL_SECONDS)
-        await self._permissions.expire_for_run(run_id)
+        if await self._permissions.expire_for_run(run_id):
+            self._notify_terminal(run_id)
+            snapshot = await self.get_run(run_id)
+            await self._emit_best_effort(
+                snapshot.session_id,
+                "skill.run_expired",
+                {
+                    "skill_id": snapshot.skill_id,
+                    "skill_run_id": str(run_id),
+                    "reason": "confirmation_timeout",
+                },
+                run_id,
+            )
         self._pending_arguments.pop(run_id, None)
 
     def _confirmation_expiry_finished(self, request_id: UUID, task: asyncio.Task[None]) -> None:
@@ -586,9 +799,22 @@ class RuntimeSkillService:
                     exc_info=(type(error), error, error.__traceback__),
                 )
 
-    def _execution_finished(self, run_id: UUID) -> None:
+    def _execution_finished(self, run_id: UUID, task: asyncio.Task[None]) -> None:
         self._tasks.pop(run_id, None)
         self._pending_arguments.pop(run_id, None)
+        self._outcome_ready.discard(run_id)
+        if not task.cancelled():
+            error = task.exception()
+            if error is not None:
+                logger.error(
+                    "Runtime Skill execution task escaped its lifecycle boundary",
+                    exc_info=(type(error), error, error.__traceback__),
+                )
+
+    def _notify_terminal(self, run_id: UUID) -> None:
+        for waiter in self._terminal_waiters.pop(run_id, set()):
+            if not waiter.done():
+                waiter.set_result(None)
 
     async def _resolve_current_plan(
         self, row: object
@@ -661,20 +887,33 @@ class RuntimeSkillService:
         return plan
 
     async def _execute(self, run_id: UUID) -> None:
-        row = await self._repository.run(run_id)
-        if row is None:
-            return
-        session_id = UUID(str(row["session_id"]))
         try:
+            row = await self._repository.run(run_id)
+            if row is None:
+                return
+            session_id = UUID(str(row["session_id"]))
             persisted_plan = self._load_execution_plan(row)
+            if persisted_plan.plugin_id is not None:
+                async with self._plugins.operation_lease(persisted_plan.plugin_id):
+                    await self._execute_current_plan(run_id, row, session_id)
+                return
+            await self._execute_current_plan(run_id, row, session_id)
+        except asyncio.CancelledError:
+            await self._finish_cancelled(run_id)
+            raise
         except SkillExecutionError as error:
-            await self._fail_before_tool(run_id, session_id, error.structured)
-            return
-        if persisted_plan.plugin_id is not None:
-            async with self._plugins.operation_lease(persisted_plan.plugin_id):
-                await self._execute_current_plan(run_id, row, session_id)
-            return
-        await self._execute_current_plan(run_id, row, session_id)
+            await self._finish_failed(run_id, error.structured)
+        except Exception as error:
+            await self._finish_failed(
+                run_id,
+                StructuredError(
+                    code="skill_internal_error",
+                    message="Skill execution failed safely",
+                    retryable=False,
+                    component="runtime.skills",
+                    details={"exception_type": type(error).__name__},
+                ),
+            )
 
     async def _execute_current_plan(self, run_id: UUID, row: object, session_id: UUID) -> None:
         try:
@@ -697,20 +936,21 @@ class RuntimeSkillService:
                 ),
             )
             return
-        now = _now().isoformat()
-        await self._repository.mark_run_running(run_id, now)
-        await self._emit(
-            session_id,
-            "skill.run_started",
-            {
-                "skill_id": entry.definition.skill_id,
-                "capability": capability.name,
-                "skill_run_id": str(run_id),
-            },
-            run_id,
-        )
         tool_call_id: UUID | None = None
         try:
+            now = _now().isoformat()
+            if not await self._repository.mark_run_running(run_id, now):
+                return
+            await self._emit_best_effort(
+                session_id,
+                "skill.run_started",
+                {
+                    "skill_id": entry.definition.skill_id,
+                    "capability": capability.name,
+                    "skill_run_id": str(run_id),
+                },
+                run_id,
+            )
             tool_call_id = await self._tool_call_started(
                 session_id, run_id, entry, capability, arguments
             )
@@ -800,49 +1040,60 @@ class RuntimeSkillService:
                     "avatar_cues": [],
                 }
             )
-            await self._tool_call_finished(
-                session_id,
+            # From this synchronous point onward the external/builtin adapter has
+            # returned a schema-valid outcome. Cancellation must not turn that
+            # already-performed action into a retryable-looking cancelled run.
+            self._outcome_ready.add(run_id)
+            completed = await self._commit_success_outcome(
                 run_id,
-                tool_call_id,
-                response=data,
-                response_schema=capability.output_schema,
-                allow_schema_public=plan.audit_public_fields_allowed,
+                persisted_result.model_dump_json(),
+                result,
             )
-            completed_at = _now().isoformat()
-            self._remember_result(run_id, result)
-            await self._repository.complete_run(
-                run_id, persisted_result.model_dump_json(), completed_at
-            )
-            await self._emit(
-                session_id,
-                "skill.run_completed",
-                {
-                    "skill_id": entry.definition.skill_id,
-                    "skill_run_id": str(run_id),
-                    "result": persisted_result.model_dump(mode="json"),
-                },
-                run_id,
-            )
-        except asyncio.CancelledError:
-            if tool_call_id is not None:
+            try:
                 await self._tool_call_finished(
                     session_id,
                     run_id,
                     tool_call_id,
-                    error=StructuredError(
+                    response=data,
+                    response_schema=capability.output_schema,
+                    allow_schema_public=plan.audit_public_fields_allowed,
+                )
+            except Exception:
+                # The adapter has already returned and the business result CAS has
+                # completed. Audit degradation must not reclassify a successful
+                # external side effect as failed and encourage a duplicate retry.
+                logger.exception("Could not persist Runtime Skill tool-call completion audit")
+            if completed:
+                await self._emit_best_effort(
+                    session_id,
+                    "skill.run_completed",
+                    {
+                        "skill_id": entry.definition.skill_id,
+                        "skill_run_id": str(run_id),
+                        "result": persisted_result.model_dump(mode="json"),
+                    },
+                    run_id,
+                )
+        except asyncio.CancelledError:
+            if tool_call_id is not None:
+                await self._finish_tool_call_best_effort(
+                    session_id,
+                    run_id,
+                    tool_call_id,
+                    StructuredError(
                         code="skill_cancelled",
                         message="Skill invocation was cancelled",
                         retryable=True,
                         component="runtime.skills",
                     ),
                 )
-            await self._finish_cancelled(run_id)
-            await self._emit(
-                session_id,
-                "skill.run_cancelled",
-                {"skill_id": entry.definition.skill_id, "skill_run_id": str(run_id)},
-                run_id,
-            )
+            if await self._finish_cancelled(run_id):
+                await self._emit_best_effort(
+                    session_id,
+                    "skill.run_cancelled",
+                    {"skill_id": entry.definition.skill_id, "skill_run_id": str(run_id)},
+                    run_id,
+                )
             raise
         except TimeoutError:
             await self._fail_execution(
@@ -903,14 +1154,14 @@ class RuntimeSkillService:
         error: StructuredError,
     ) -> None:
         if tool_call_id is not None:
-            await self._tool_call_finished(session_id, run_id, tool_call_id, error=error)
-        await self._finish_failed(run_id, error)
-        await self._emit(
-            session_id,
-            "skill.run_failed",
-            {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
-            run_id,
-        )
+            await self._finish_tool_call_best_effort(session_id, run_id, tool_call_id, error)
+        if await self._finish_failed(run_id, error):
+            await self._emit_best_effort(
+                session_id,
+                "skill.run_failed",
+                {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
+                run_id,
+            )
 
     async def _fail_before_tool(
         self,
@@ -918,13 +1169,13 @@ class RuntimeSkillService:
         session_id: UUID,
         error: StructuredError,
     ) -> None:
-        await self._finish_failed(run_id, error)
-        await self._emit(
-            session_id,
-            "skill.run_failed",
-            {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
-            run_id,
-        )
+        if await self._finish_failed(run_id, error):
+            await self._emit_best_effort(
+                session_id,
+                "skill.run_failed",
+                {"skill_run_id": str(run_id), "error": error.model_dump(mode="json")},
+                run_id,
+            )
 
     async def _compensate_created_run(
         self,
@@ -936,11 +1187,7 @@ class RuntimeSkillService:
         self._pending_arguments.pop(run_id, None)
         failures: list[BaseException] = []
         try:
-            await self._permissions.expire_for_run(run_id)
-        except BaseException as error:
-            failures.append(error)
-        try:
-            await self._repository.fail_run(
+            await self._finish_failed(
                 run_id,
                 StructuredError(
                     code="skill_invocation_setup_failed",
@@ -948,8 +1195,7 @@ class RuntimeSkillService:
                     retryable=True,
                     component="runtime.skills",
                     details={"exception_type": type(primary).__name__},
-                ).model_dump_json(),
-                _now().isoformat(),
+                ),
             )
         except BaseException as error:
             failures.append(error)
@@ -960,15 +1206,63 @@ class RuntimeSkillService:
             ) from None
         raise primary
 
-    async def _finish_failed(self, run_id: UUID, error: StructuredError) -> None:
+    async def _finish_failed(self, run_id: UUID, error: StructuredError) -> bool:
         self._ephemeral_results.pop(run_id, None)
         now = _now().isoformat()
-        await self._repository.fail_run(run_id, error.model_dump_json(), now)
+        try:
+            transitioned = await self._repository.fail_run(run_id, error.model_dump_json(), now)
+        except BaseException:
+            await self._notify_if_persisted_terminal(run_id)
+            raise
+        if transitioned:
+            self._notify_terminal(run_id)
+        return transitioned
 
-    async def _finish_cancelled(self, run_id: UUID) -> None:
+    async def _commit_success_outcome(
+        self,
+        run_id: UUID,
+        persisted_result_json: str,
+        result: SkillResult,
+    ) -> bool:
+        commit = asyncio.create_task(
+            self._repository.complete_run(
+                run_id,
+                persisted_result_json,
+                _now().isoformat(),
+            ),
+            name=f"commit-skill-outcome:{run_id}",
+        )
+        try:
+            transitioned = await asyncio.shield(commit)
+        except asyncio.CancelledError:
+            # The state write owns the cancellation boundary: finish it, publish
+            # the local waiter signal, then preserve the caller's cancellation.
+            transitioned = await commit
+            if transitioned:
+                self._remember_result(run_id, result)
+                self._notify_terminal(run_id)
+            raise
+        if transitioned:
+            self._remember_result(run_id, result)
+            self._notify_terminal(run_id)
+        return transitioned
+
+    async def _finish_cancelled(self, run_id: UUID) -> bool:
         self._ephemeral_results.pop(run_id, None)
         now = _now().isoformat()
-        await self._repository.cancel_run(run_id, now)
+        try:
+            transitioned = await self._repository.cancel_run(run_id, now)
+        except BaseException:
+            await self._notify_if_persisted_terminal(run_id)
+            raise
+        if transitioned:
+            self._notify_terminal(run_id)
+        return transitioned
+
+    async def _notify_if_persisted_terminal(self, run_id: UUID) -> None:
+        row = await self._repository.run(run_id)
+        if row is not None and SkillRunState(str(row["state"])) in TERMINAL_STATES:
+            self._notify_terminal(run_id)
 
     async def _tool_call_started(
         self,
@@ -995,7 +1289,7 @@ class RuntimeSkillService:
                 "started_at": now,
             }
         )
-        await self._emit(
+        await self._emit_best_effort(
             session_id,
             "tool.call_started",
             {
@@ -1017,7 +1311,7 @@ class RuntimeSkillService:
         response_schema: JsonObject | None = None,
         allow_schema_public: bool = False,
         error: StructuredError | None = None,
-    ) -> None:
+    ) -> bool:
         now = _now().isoformat()
         audit_response = (
             sanitize_audit_payload(
@@ -1031,7 +1325,7 @@ class RuntimeSkillService:
         audit_error = (
             sanitize_audit_payload(error.model_dump(mode="json")) if error is not None else None
         )
-        await self._repository.finish_tool_call(
+        transitioned = await self._repository.finish_tool_call(
             {
                 "status": "failed" if error else "succeeded",
                 "response_json": (
@@ -1046,16 +1340,35 @@ class RuntimeSkillService:
                 "tool_call_id": str(call_id),
             }
         )
-        await self._emit(
-            session_id,
-            "tool.call_failed" if error else "tool.call_completed",
-            {
-                "tool_call_id": str(call_id),
-                "status": "failed" if error else "succeeded",
-                "error": error.model_dump(mode="json") if error else None,
-            },
-            run_id,
-        )
+        if transitioned:
+            await self._emit_best_effort(
+                session_id,
+                "tool.call_failed" if error else "tool.call_completed",
+                {
+                    "tool_call_id": str(call_id),
+                    "status": "failed" if error else "succeeded",
+                    "error": error.model_dump(mode="json") if error else None,
+                },
+                run_id,
+            )
+        return transitioned
+
+    async def _finish_tool_call_best_effort(
+        self,
+        session_id: UUID,
+        run_id: UUID,
+        call_id: UUID,
+        error: StructuredError,
+    ) -> None:
+        try:
+            await self._tool_call_finished(
+                session_id,
+                run_id,
+                call_id,
+                error=error,
+            )
+        except Exception:
+            logger.exception("Could not persist Runtime Skill tool-call failure audit")
 
     def _remember_result(self, run_id: UUID, result: SkillResult) -> None:
         self._ephemeral_results[run_id] = result
@@ -1084,19 +1397,42 @@ class RuntimeSkillService:
         payload: dict[str, object],
         skill_run_id: UUID,
     ) -> None:
+        row = await self._repository.run(skill_run_id)
+        lineage = cast(dict[str, object], row) if row is not None else {}
         event = GenericCoreEvent.model_validate(
             {
                 "event_id": uuid4(),
                 "event_type": event_type,
                 "session_id": session_id,
+                "turn_id": lineage.get("turn_id"),
+                "generation_id": lineage.get("generation_id"),
                 "skill_run_id": skill_run_id,
                 "occurred_at": _now(),
                 "source": "runtime.skills",
                 "privacy": PrivacyLevel.LOCAL,
-                "payload": payload,
+                "payload": {
+                    **payload,
+                    "origin": lineage.get("origin", "manual"),
+                    "provider_tool_call_id": lineage.get("provider_tool_call_id"),
+                },
             }
         )
         await self._publisher.emit(event)
+
+    async def _emit_best_effort(
+        self,
+        session_id: UUID,
+        event_type: str,
+        payload: dict[str, object],
+        skill_run_id: UUID,
+    ) -> None:
+        try:
+            await self._emit(session_id, event_type, payload, skill_run_id)
+        except Exception:
+            logger.exception(
+                "Could not emit Runtime Skill lifecycle event",
+                extra={"event_type": event_type, "skill_run_id": str(skill_run_id)},
+            )
 
 
 def _snapshot(row: object, *, result_override: SkillResult | None = None) -> SkillRunSnapshot:
@@ -1110,6 +1446,10 @@ def _snapshot(row: object, *, result_override: SkillResult | None = None) -> Ski
             "plugin_id": values["plugin_id"],
             "mcp_connection_id": values["mcp_connection_id"],
             "session_id": values["session_id"],
+            "turn_id": values.get("turn_id"),
+            "generation_id": values.get("generation_id"),
+            "origin": values.get("origin", "manual"),
+            "provider_tool_call_id": values.get("provider_tool_call_id"),
             "state": values["state"],
             "progress": values["progress"],
             "confirmation_request_id": values["confirmation_request_id"],
@@ -1135,6 +1475,7 @@ def _capability(entry: RegistryEntry, name: str) -> SkillCapability:
 
 
 def _validate_schema(schema: JsonObject, value: object, boundary: str) -> None:
+    _reject_nonfinite_numbers(value, boundary=boundary)
     try:
         _reject_nonlocal_schema_references(schema)
         Draft202012Validator.check_schema(schema)
@@ -1159,6 +1500,26 @@ def _validate_schema(schema: JsonObject, value: object, boundary: str) -> None:
         ) from error
 
 
+def _reject_nonfinite_numbers(
+    value: object,
+    *,
+    boundary: str,
+    path: tuple[str | int, ...] = (),
+) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise SkillExecutionError(
+            f"invalid_skill_{boundary}",
+            f"Skill {boundary} contains a non-finite number",
+            details={"path": list(path)},
+        )
+    if isinstance(value, dict):
+        for key, child in cast(dict[object, object], value).items():
+            _reject_nonfinite_numbers(child, boundary=boundary, path=(*path, str(key)))
+    elif isinstance(value, list):
+        for index, child in enumerate(cast(list[object], value)):
+            _reject_nonfinite_numbers(child, boundary=boundary, path=(*path, index))
+
+
 def _reject_nonlocal_schema_references(value: object) -> None:
     if isinstance(value, dict):
         document = cast(dict[str, object], value)
@@ -1181,6 +1542,14 @@ def _spoken_summary(data: JsonValue) -> str | None:
         return None
     summary = data.get("spoken_summary")
     return summary if isinstance(summary, str) else None
+
+
+def _unavailable_confirmation_preview() -> JsonObject:
+    return {
+        "text": "参数预览不可用，请拒绝后重新发起。",
+        "truncated": True,
+        "redacted": True,
+    }
 
 
 def _now() -> datetime:

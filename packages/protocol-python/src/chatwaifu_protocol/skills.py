@@ -112,6 +112,10 @@ class SkillRunSnapshot(ProtocolModel):
     plugin_id: str | None = None
     mcp_connection_id: UUID | None = None
     session_id: UUID
+    turn_id: UUID | None = None
+    generation_id: UUID | None = None
+    origin: Literal["manual", "agent", "external_mcp"] = "manual"
+    provider_tool_call_id: str | None = Field(default=None, max_length=256)
     state: SkillRunState
     progress: float | None = Field(default=None, ge=0, le=1)
     confirmation_request_id: UUID | None = None

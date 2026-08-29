@@ -1382,6 +1382,7 @@
         "skill.run_completed",
         "skill.run_failed",
         "skill.run_cancelled",
+        "skill.run_expired",
         "tool.call_started",
         "tool.call_completed",
         "tool.call_failed",

@@ -10,11 +10,10 @@ their existing ownership.
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import hmac
 import json
 import re
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import Mapping
 from contextlib import AbstractAsyncContextManager
 from copy import deepcopy
 from pathlib import PurePath
@@ -40,8 +39,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.tool_names import allocate_tool_names
 
-_TERMINAL_EVENTS = frozenset({"skill.run_completed", "skill.run_failed", "skill.run_cancelled"})
 _TERMINAL_STATES = frozenset(
     {
         SkillRunState.SUCCEEDED,
@@ -50,7 +49,6 @@ _TERMINAL_STATES = frozenset(
         SkillRunState.EXPIRED,
     }
 )
-_MCP_TOOL_NAME = re.compile(r"[^A-Za-z0-9_-]+")
 _WINDOWS_ABSOLUTE_PATH = re.compile(r"^[A-Za-z]:[\\/]")
 _SECRET_KEYS = frozenset(
     {
@@ -438,10 +436,6 @@ class RuntimeMcpServer:
         session_id: UUID,
         arguments: dict[str, Any],
     ) -> mcp_types.CallToolResult:
-        subscription = self._container.event_hub.subscribe(
-            lambda event: event.get("event_type") in _TERMINAL_EVENTS,
-            queue_size=64,
-        )
         run_id: UUID | None = None
         try:
             snapshot = await self._container.runtime_skills.invoke(
@@ -452,6 +446,7 @@ class RuntimeMcpServer:
                     arguments=cast(JsonObject, arguments),
                 ),
                 principal="mcp_admin" if self._admin_token is not None else "mcp_readonly",
+                origin="external_mcp",
             )
             run_id = snapshot.skill_run_id
             if snapshot.state is SkillRunState.WAITING_FOR_CONFIRMATION:
@@ -461,11 +456,8 @@ class RuntimeMcpServer:
 
             try:
                 async with asyncio.timeout(capability.timeout_seconds + 2):
-                    async for event in _subscription_events(subscription):
-                        if str(event.get("skill_run_id")) != str(run_id):
-                            continue
-                        completed = await self._container.runtime_skills.get_run(run_id)
-                        return self._run_result(completed)
+                    completed = await self._container.runtime_skills.wait_for_terminal(run_id)
+                    return self._run_result(completed)
             except TimeoutError:
                 if not skill.interruptible:
                     current = await self._container.runtime_skills.get_run(run_id)
@@ -480,8 +472,6 @@ class RuntimeMcpServer:
             return _error_result(error.structured.code, _sanitize_text(error.structured.message))
         except (KeyError, ValueError) as error:
             return _error_result("skill_rejected", _sanitize_text(str(error)))
-        finally:
-            self._container.event_hub.unsubscribe(subscription)
         return _error_result("skill_incomplete", "Runtime Skill did not produce a terminal result.")
 
     def _run_result(
@@ -558,48 +548,19 @@ class _BearerTokenMiddleware:
         await self._app(scope, receive, send)
 
 
-async def _subscription_events(subscription: Any) -> AsyncIterator[dict[str, object]]:
-    while True:
-        yield cast(dict[str, object], await subscription.receive())
-
-
-def _tool_name(skill: SkillDefinition, capability: SkillCapability) -> str:
-    normalized = _MCP_TOOL_NAME.sub("_", f"{skill.skill_id}__{capability.name}").strip("_")
-    return normalized[:128]
-
-
 def allocate_mcp_tool_names(
     capabilities: list[tuple[SkillDefinition, SkillCapability]],
 ) -> list[tuple[SkillDefinition, SkillCapability, str]]:
     """Allocate stable MCP names without normalization or truncation collisions."""
 
-    grouped: dict[str, list[tuple[SkillDefinition, SkillCapability]]] = {}
-    for skill, capability in capabilities:
-        grouped.setdefault(_tool_name(skill, capability), []).append((skill, capability))
-    reserved = set(grouped)
-    used: set[str] = set()
-    result: list[tuple[SkillDefinition, SkillCapability, str]] = []
-    for base_name, entries in grouped.items():
-        if len(entries) == 1 and base_name not in used:
-            skill, capability = entries[0]
-            used.add(base_name)
-            result.append((skill, capability, base_name))
-            continue
-        for skill, capability in entries:
-            identity = f"{skill.skill_id}\0{capability.name}".encode()
-            digest = hashlib.sha256(identity).hexdigest()
-            suffix_length = 12
-            while True:
-                suffix = digest[:suffix_length]
-                candidate = f"{base_name[: 126 - suffix_length]}__{suffix}"
-                if candidate not in used and candidate not in reserved:
-                    break
-                suffix_length += 2
-                if suffix_length > len(digest):
-                    raise RuntimeError("MCP tool-name collision could not be resolved")
-            used.add(candidate)
-            result.append((skill, capability, candidate))
-    return result
+    names = allocate_tool_names(
+        [(skill.skill_id, capability.name) for skill, capability in capabilities],
+        max_length=128,
+    )
+    return [
+        (skill, capability, name)
+        for (skill, capability), name in zip(capabilities, names, strict=True)
+    ]
 
 
 def _supports_mcp_input(schema: Mapping[str, JsonValue]) -> bool:

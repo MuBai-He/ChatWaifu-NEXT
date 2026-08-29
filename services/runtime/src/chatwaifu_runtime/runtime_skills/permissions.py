@@ -120,31 +120,35 @@ class PermissionBroker:
             raise ValueError("confirmation request is no longer pending")
         return UUID(str(row["skill_run_id"])), decision != "deny"
 
-    async def list_pending(self, session_id: UUID) -> list[dict[str, object]]:
-        await self.expire_pending()
+    async def list_pending(self, session_id: UUID) -> tuple[list[dict[str, object]], list[UUID]]:
+        expired_run_ids = await self.expire_pending()
         rows = await self._repository.pending_permission_requests(session_id, _now().isoformat())
-        return [
-            {
-                "request_id": str(row["request_id"]),
-                "skill_run_id": str(row["skill_run_id"]),
-                "skill_id": str(row["skill_id"]),
-                "capability": str(row["capability"]),
-                "permissions": json.loads(str(row["permissions_json"])),
-                "side_effect": str(row["side_effect"]),
-                "reason": str(row["reason"]),
-                "requested_at": str(row["requested_at"]),
-                "expires_at": str(row["expires_at"]),
-            }
-            for row in rows
-        ]
+        return (
+            [
+                {
+                    "request_id": str(row["request_id"]),
+                    "skill_run_id": str(row["skill_run_id"]),
+                    "skill_id": str(row["skill_id"]),
+                    "capability": str(row["capability"]),
+                    "permissions": json.loads(str(row["permissions_json"])),
+                    "side_effect": str(row["side_effect"]),
+                    "reason": str(row["reason"]),
+                    "requested_at": str(row["requested_at"]),
+                    "expires_at": str(row["expires_at"]),
+                    "allowed_decisions": _allowed_decisions(SideEffect(str(row["side_effect"]))),
+                }
+                for row in rows
+            ],
+            expired_run_ids,
+        )
 
-    async def expire_for_run(self, skill_run_id: UUID) -> None:
+    async def expire_for_run(self, skill_run_id: UUID) -> bool:
         now = _now().isoformat()
-        await self._repository.expire_permission_for_run(skill_run_id, now)
+        return await self._repository.expire_permission_for_run(skill_run_id, now)
 
-    async def expire_pending(self) -> None:
+    async def expire_pending(self) -> list[UUID]:
         now = _now().isoformat()
-        await self._repository.expire_pending_permissions(now)
+        return await self._repository.expire_pending_permissions(now)
 
     async def _expire_request(self, request_id: UUID, skill_run_id: UUID) -> None:
         now = _now().isoformat()
@@ -155,6 +159,19 @@ def _reason(capability: SkillCapability, missing_permissions: list[str]) -> str:
     if missing_permissions:
         return f"{capability.description} 需要权限: {', '.join(missing_permissions)}"
     return f"{capability.description} 会产生 {capability.side_effect.value} 副作用"
+
+
+def _allowed_decisions(side_effect: SideEffect) -> list[str]:
+    decisions = ["deny", "allow_once"]
+    if side_effect not in {
+        SideEffect.DESTRUCTIVE,
+        SideEffect.EXTERNAL_COMMUNICATION,
+        SideEffect.DEVICE_CONTROL,
+    }:
+        decisions.insert(1, "allow_session")
+    if side_effect is SideEffect.READ:
+        decisions.insert(-1, "allow_always")
+    return decisions
 
 
 def _now() -> datetime:

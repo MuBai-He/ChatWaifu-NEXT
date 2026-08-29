@@ -6,6 +6,70 @@ from pathlib import Path
 from typing import Literal, Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.base import JsonObject, JsonValue
+
+
+class LlmToolCallingUnavailableError(RuntimeError):
+    """The selected provider cannot honor a requested structured tool round."""
+
+
+@dataclass(frozen=True, slots=True)
+class LlmToolDefinition:
+    """One provider-neutral function exposed to a reasoning backend."""
+
+    name: str
+    description: str
+    input_schema: JsonObject
+
+
+@dataclass(frozen=True, slots=True)
+class LlmToolCall:
+    """A complete, validated tool request assembled by a provider adapter."""
+
+    call_id: str
+    name: str
+    arguments: JsonObject
+
+
+@dataclass(frozen=True, slots=True)
+class LlmToolResult:
+    """Bounded Runtime Skill result returned to the reasoning backend."""
+
+    call_id: str
+    name: str
+    content: JsonValue
+    is_error: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class LlmToolExchange:
+    """One assistant tool-request message and all of its tool results."""
+
+    assistant_text: str
+    calls: tuple[LlmToolCall, ...]
+    results: tuple[LlmToolResult, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LlmTextDelta:
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class LlmToolCallRequested:
+    call: LlmToolCall
+
+
+type LlmFinishReason = Literal["stop", "tool_calls", "length", "content_filter", "other"]
+
+
+@dataclass(frozen=True, slots=True)
+class LlmResponseCompleted:
+    finish_reason: LlmFinishReason
+
+
+type LlmStreamEvent = LlmTextDelta | LlmToolCallRequested | LlmResponseCompleted
+
 
 @dataclass(frozen=True, slots=True)
 class LlmRequest:
@@ -16,13 +80,18 @@ class LlmRequest:
     context: tuple[tuple[str, str], ...] = ()
     history: tuple[tuple[str, str], ...] = ()
     trigger: Literal["user", "proactive"] = "user"
+    tools: tuple[LlmToolDefinition, ...] = ()
+    tool_exchanges: tuple[LlmToolExchange, ...] = ()
 
 
 class LlmProvider(Protocol):
     @property
     def kind(self) -> str: ...
 
-    def stream(self, request: LlmRequest) -> AsyncIterator[str]: ...
+    @property
+    def supports_tool_calling(self) -> bool: ...
+
+    def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]: ...
 
 
 @dataclass(frozen=True, slots=True)

@@ -17,7 +17,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.database import Database
-from chatwaifu_runtime.providers.contracts import LlmProvider, LlmRequest
+from chatwaifu_runtime.providers.contracts import (
+    LlmProvider,
+    LlmRequest,
+    LlmStreamEvent,
+    LlmTextDelta,
+)
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
@@ -324,14 +329,16 @@ class ModelConfigurationService:
             return {"status": "ok" if result else "disabled", "characters": len(result)}
         provider = self.chat_provider()
         chunks: list[str] = []
-        async for chunk in provider.stream(
+        async for event in provider.stream(
             LlmRequest(
                 generation_id=uuid4(),
                 user_text="Reply with OK.",
                 system_prompt="This is a connectivity probe.",
             )
         ):
-            chunks.append(chunk)
+            if not isinstance(event, LlmTextDelta):
+                continue
+            chunks.append(event.text)
             if sum(len(item) for item in chunks) >= 256:
                 break
         return {"status": "ok", "characters": sum(len(item) for item in chunks)}
@@ -407,7 +414,13 @@ class ConfigurableChatModel:
             return "configurable"
         return self._configurations.get("chat").provider
 
-    def stream(self, request: LlmRequest) -> AsyncIterator[str]:
+    @property
+    def supports_tool_calling(self) -> bool:
+        if not self._configurations.started:
+            return False
+        return self._configurations.get("chat").provider == "openai_compatible"
+
+    def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         return self._configurations.chat_provider().stream(request)
 
 

@@ -133,6 +133,27 @@ async def test_authenticated_mcp_requires_session_and_returns_pending_confirmati
 
 
 @pytest.mark.asyncio
+async def test_mcp_tool_waits_on_run_lifecycle_instead_of_lossy_event_subscription(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = create_app(runtime_settings)
+    async with app.router.lifespan_context(app):
+        container = cast(RuntimeContainer, app.state.container)
+
+        def reject_subscription(*_args: object, **_kwargs: object) -> object:
+            raise AssertionError("MCP tool execution must not subscribe to EventHub")
+
+        monkeypatch.setattr(container.event_hub, "subscribe", reject_subscription)
+        async with _mcp_session(app) as session:
+            result = await session.call_tool("runtime_status__read", {})
+
+        assert result.is_error is False
+        body = cast(dict[str, Any], result.structured_content)
+        assert body["status"] == "succeeded"
+
+
+@pytest.mark.asyncio
 async def test_mcp_rejects_non_loopback_host_and_origin(runtime_settings: Settings) -> None:
     app = create_app(runtime_settings)
     async with app.router.lifespan_context(app):

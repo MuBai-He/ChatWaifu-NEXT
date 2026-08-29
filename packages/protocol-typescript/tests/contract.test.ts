@@ -12,6 +12,7 @@ import {
   parseEventEnvelope,
   parseMcpCapabilitySnapshot,
   parseSessionSnapshot,
+  parseSkillRunSnapshot,
 } from "../src/index";
 
 const root = path.resolve(
@@ -228,6 +229,29 @@ describe("cross-language protocol fixtures", () => {
     expect(capabilities.tools).toEqual([]);
     expect(() =>
       parseMcpCapabilitySnapshot({ connection_id: "not-a-uuid" }),
+    ).toThrow();
+  });
+
+  it("validates Runtime Skill lineage at the TypeScript boundary", () => {
+    const run = parseSkillRunSnapshot({
+      skill_run_id: "00000000-0000-4000-8000-000000000901",
+      session_id: "00000000-0000-4000-8000-000000000902",
+      turn_id: "00000000-0000-4000-8000-000000000903",
+      generation_id: "00000000-0000-4000-8000-000000000904",
+      origin: "agent",
+      provider_tool_call_id: "call_weather",
+      skill_id: "weather.search",
+      skill_version: "1.0.0",
+      capability: "lookup",
+      state: "running",
+      created_at: "2026-08-29T00:00:00Z",
+      updated_at: "2026-08-29T00:00:01Z",
+    });
+    expect(run.origin).toBe("agent");
+    expect(run.provider_tool_call_id).toBe("call_weather");
+    expect(() => parseSkillRunSnapshot({ ...run, origin: "model" })).toThrow();
+    expect(() =>
+      parseSkillRunSnapshot({ ...run, turn_id: "not-a-uuid" }),
     ).toThrow();
   });
 });

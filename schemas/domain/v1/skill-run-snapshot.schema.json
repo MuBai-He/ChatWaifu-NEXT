@@ -302,6 +302,19 @@
       ],
       "default": null
     },
+    "generation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
     "mcp_connection_id": {
       "anyOf": [
         {
@@ -314,6 +327,16 @@
       ],
       "default": null,
       "title": "Mcp Connection Id"
+    },
+    "origin": {
+      "default": "manual",
+      "enum": [
+        "manual",
+        "agent",
+        "external_mcp"
+      ],
+      "title": "Origin",
+      "type": "string"
     },
     "plugin_id": {
       "anyOf": [
@@ -340,6 +363,19 @@
       ],
       "default": null,
       "title": "Progress"
+    },
+    "provider_tool_call_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider Tool Call Id"
     },
     "result": {
       "anyOf": [
@@ -385,6 +421,19 @@
     },
     "state": {
       "$ref": "#/$defs/SkillRunState"
+    },
+    "turn_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Turn Id"
     },
     "updated_at": {
       "format": "date-time",

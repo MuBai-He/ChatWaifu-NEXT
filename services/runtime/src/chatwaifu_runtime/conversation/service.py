@@ -24,6 +24,7 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionState
 
+from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
@@ -79,6 +80,7 @@ class ConversationService:
         playback: PlaybackService,
         character_kernel: CharacterKernelService,
         prompt_compiler: PromptCompiler,
+        agent: AgentTurnOrchestrator,
     ) -> None:
         self._repository = repository
         self._reset_repository = reset_repository
@@ -91,6 +93,7 @@ class ConversationService:
         self._speech = ConversationSpeechPipeline(providers, audio_assets, audio_streams, playback)
         self._character_kernel = character_kernel
         self._prompt_compiler = prompt_compiler
+        self._agent = agent
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
@@ -539,7 +542,13 @@ class ConversationService:
                 history=compilation.history,
                 trigger=trigger,
             )
-            async for delta in self._providers.llm.stream(request):
+            async for delta in self._agent.stream(
+                request,
+                session_id=accepted.session_id,
+                turn_id=accepted.turn_id,
+                ensure_current=lambda: self._ensure_current(accepted),
+                allow_tools=trigger == "user",
+            ):
                 self._ensure_current(accepted)
                 output += delta
                 await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})

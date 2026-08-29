@@ -26,6 +26,7 @@ from chatwaifu_protocol.skills import (
     SkillCapability,
     SkillDefinition,
     SkillInvocation,
+    SkillRunState,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
@@ -35,7 +36,10 @@ from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSki
 from chatwaifu_runtime.runtime_skills import permissions as permission_policy
 from chatwaifu_runtime.runtime_skills import service as runtime_skill_service
 from chatwaifu_runtime.runtime_skills.adapters import normalize_tool_result
-from chatwaifu_runtime.runtime_skills.audit import sanitize_audit_payload
+from chatwaifu_runtime.runtime_skills.audit import (
+    confirmation_argument_preview,
+    sanitize_audit_payload,
+)
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.host_connections import (
     McpConnectionManager,
@@ -167,6 +171,62 @@ def test_audit_payload_is_schema_aware_redacted_and_bounded() -> None:
     assert len(json.dumps(bounded).encode()) <= 128
 
 
+def test_confirmation_argument_preview_is_informative_secret_safe_and_bounded() -> None:
+    secret = "do-not-show-this-token"
+    arguments: JsonObject = {
+        "query": "搜索 Python 的最新消息",
+        "message": "把这段普通文本发送给搜索服务",
+        "url": "https://search.example.invalid/",
+        "api_key": secret,
+        "sessionToken": secret,
+        "nested": {"providerClientSecret": secret},
+        "opaque_field": secret,
+        "positional": [secret, "visible item"],
+    }
+    schema: JsonObject = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "message": {"type": "string"},
+            "url": {"type": "string", "format": "uri"},
+            "api_key": {"type": "string", "writeOnly": True},
+            "nested": {
+                "type": "object",
+                "properties": {"providerClientSecret": {"type": "string"}},
+            },
+            "opaque_field": {"type": "string"},
+            "positional": {
+                "type": "array",
+                "prefixItems": [
+                    {"type": "string", "writeOnly": True},
+                    {"type": "string"},
+                ],
+            },
+        },
+        "patternProperties": {"^opaque_": {"type": "string", "x-chatwaifu-sensitive": True}},
+    }
+
+    preview = confirmation_argument_preview(arguments, schema)
+    text = cast(str, preview["text"])
+
+    assert "搜索 Python 的最新消息" in text
+    assert "把这段普通文本发送给搜索服务" in text
+    assert "https://search.example.invalid/" in text
+    assert "visible item" in text
+    assert secret not in text
+    assert text.count("[REDACTED]") == 5
+    assert preview["redacted"] is True
+    assert preview["truncated"] is False
+
+    bounded = confirmation_argument_preview(
+        {"message": "宁宁" * 4_096},
+        {"type": "object", "properties": {"message": {"type": "string"}}},
+        max_bytes=256,
+    )
+    assert bounded["truncated"] is True
+    assert len(cast(str, bounded["text"]).encode("utf-8")) <= 256
+
+
 def test_external_schema_references_are_rejected_without_io(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -200,6 +260,58 @@ def test_external_schema_references_are_rejected_without_io(
         "input",
     )
     assert io_attempts == []
+
+
+@pytest.mark.parametrize("boundary", ["input", "output"])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_runtime_skill_schema_gateway_rejects_non_finite_numbers(
+    boundary: str, value: float
+) -> None:
+    with pytest.raises(SkillExecutionError) as raised:
+        runtime_skill_service._validate_schema(  # pyright: ignore[reportPrivateUsage]
+            {
+                "type": "object",
+                "properties": {"nested": {"type": "array", "items": {"type": "number"}}},
+            },
+            {"nested": [value]},
+            boundary,
+        )
+
+    assert raised.value.structured.code == f"invalid_skill_{boundary}"
+    assert raised.value.structured.details == {"path": ["nested", 0]}
+
+
+@pytest.mark.asyncio
+async def test_runtime_skill_gateway_rejects_oversized_provider_call_id_before_persistence(
+    runtime_settings: Settings,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        with pytest.raises(ValueError, match="provider tool call id exceeded"):
+            await container.runtime_skills.invoke(
+                session.session_id,
+                SkillInvocation(skill_id="runtime.status", capability="read", arguments={}),
+                origin="agent",
+                provider_tool_call_id="x" * 257,
+            )
+        with pytest.raises(SkillExecutionError) as non_finite:
+            await container.runtime_skills.invoke(
+                session.session_id,
+                SkillInvocation(
+                    skill_id="runtime.status",
+                    capability="read",
+                    arguments={"value": float("nan")},
+                ),
+                origin="agent",
+                provider_tool_call_id="call_finite_guard",
+            )
+
+        assert non_finite.value.structured.code == "invalid_skill_input"
+        assert await container.runtime_skills.list_runs(session.session_id) == []
+    finally:
+        await container.stop()
 
 
 def test_mcp_error_mapping_does_not_echo_untrusted_content() -> None:
@@ -577,6 +689,145 @@ def test_confirmation_ttl_expires_without_a_poll_or_decision(
     assert state == "expired"
 
 
+@pytest.mark.asyncio
+async def test_cancelling_pending_confirmation_atomically_invalidates_decision_and_waiter(
+    runtime_settings: Settings,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        service = container.runtime_skills
+        await service.install_example_plugin("local-echo")
+        session = await container.sessions.create_session("default")
+        waiting = await service.invoke(
+            session.session_id,
+            SkillInvocation(
+                skill_id="local.echo",
+                capability="append_note",
+                arguments={"text": "must never execute"},
+            ),
+        )
+        assert waiting.state is SkillRunState.WAITING_FOR_CONFIRMATION
+        assert waiting.confirmation_request_id is not None
+        terminal_waiter = asyncio.create_task(service.wait_for_terminal(waiting.skill_run_id))
+
+        cancelled = await service.cancel(waiting.skill_run_id)
+        terminal = await asyncio.wait_for(terminal_waiter, timeout=1)
+
+        assert cancelled.state is SkillRunState.CANCELLED
+        assert terminal.state is SkillRunState.CANCELLED
+        request = await service._repository.permission_request(  # pyright: ignore[reportPrivateUsage]
+            waiting.confirmation_request_id
+        )
+        assert request is not None
+        assert request["state"] == "expired"
+        with pytest.raises(ValueError, match="no longer pending"):
+            await service.decide_confirmation(waiting.confirmation_request_id, "allow_once")
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_bounded_cancel_prevents_late_adapter_success_from_resurrecting_run(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    release_adapter = asyncio.Event()
+    await container.start()
+    try:
+        service = container.runtime_skills
+        session = await container.sessions.create_session("default")
+        adapter_started = asyncio.Event()
+        cancellation_swallowed = asyncio.Event()
+        original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
+
+        async def stubborn_invoke(name: str, arguments: JsonObject) -> JsonObject:
+            adapter_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancellation_swallowed.set()
+            await release_adapter.wait()
+            return await original_invoke(name, arguments)
+
+        monkeypatch.setattr(
+            service._builtin,  # pyright: ignore[reportPrivateUsage]
+            "invoke",
+            stubborn_invoke,
+        )
+        running = await service.invoke(
+            session.session_id,
+            SkillInvocation(skill_id="runtime.status", capability="read", arguments={}),
+        )
+        await asyncio.wait_for(adapter_started.wait(), timeout=1)
+
+        started_at = time.monotonic()
+        cancelled = await asyncio.wait_for(service.cancel(running.skill_run_id), timeout=1)
+        elapsed = time.monotonic() - started_at
+
+        assert elapsed < 0.75
+        assert cancelled.state is SkillRunState.CANCELLED
+        assert cancelled.result is None
+        await asyncio.wait_for(cancellation_swallowed.wait(), timeout=1)
+
+        release_adapter.set()
+        task = service._tasks.get(running.skill_run_id)  # pyright: ignore[reportPrivateUsage]
+        if task is not None:
+            await asyncio.wait_for(task, timeout=1)
+        late = await service.wait_for_terminal(running.skill_run_id)
+        assert late.state is SkillRunState.CANCELLED
+        assert late.result is None
+    finally:
+        release_adapter.set()
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_wait_for_terminal_observes_both_future_and_already_committed_transition(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    release_adapter = asyncio.Event()
+    await container.start()
+    try:
+        service = container.runtime_skills
+        session = await container.sessions.create_session("default")
+        adapter_started = asyncio.Event()
+        original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
+
+        async def delayed_invoke(name: str, arguments: JsonObject) -> JsonObject:
+            adapter_started.set()
+            await release_adapter.wait()
+            return await original_invoke(name, arguments)
+
+        monkeypatch.setattr(
+            service._builtin,  # pyright: ignore[reportPrivateUsage]
+            "invoke",
+            delayed_invoke,
+        )
+        running = await service.invoke(
+            session.session_id,
+            SkillInvocation(skill_id="runtime.status", capability="read", arguments={}),
+        )
+        await asyncio.wait_for(adapter_started.wait(), timeout=1)
+        waiter = asyncio.create_task(service.wait_for_terminal(running.skill_run_id))
+        await asyncio.sleep(0)
+        release_adapter.set()
+
+        completed = await asyncio.wait_for(waiter, timeout=1)
+        already_committed = await asyncio.wait_for(
+            service.wait_for_terminal(running.skill_run_id), timeout=0.1
+        )
+
+        assert completed.state is SkillRunState.SUCCEEDED
+        assert already_committed.state is SkillRunState.SUCCEEDED
+    finally:
+        release_adapter.set()
+        await container.stop()
+
+
 def test_plugin_mutation_invalidates_waiting_approval(
     client: TestClient,
 ) -> None:
@@ -597,6 +848,13 @@ def test_plugin_mutation_invalidates_waiting_approval(
             },
         ).json(),
     )
+    confirmation_response = http.get(f"/v1/sessions/{session['session_id']}/skill-confirmations")
+    assert confirmation_response.headers["cache-control"] == "no-store"
+    confirmations = cast(dict[str, object], confirmation_response.json())
+    confirmation = cast(list[dict[str, object]], confirmations["items"])[0]
+    argument_preview = cast(dict[str, object], confirmation["argument_preview"])
+    assert "must not execute after mutation" in cast(str, argument_preview["text"])
+    assert len(cast(str, argument_preview["text"]).encode("utf-8")) <= 4 * 1024
     server = Path(str(installed["install_path"])) / "server.py"
     server.chmod(0o644)
     server.write_text(server.read_text(encoding="utf-8") + "\n# changed after approval\n")
