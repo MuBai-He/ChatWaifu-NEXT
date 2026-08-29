@@ -18,6 +18,7 @@ $Target = "x86_64-pc-windows-msvc"
 $RuntimeExecutable = Join-Path $RepoRoot "dist\windows\runtime-sidecar\chatwaifu-runtime.exe"
 $HelperExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
 $StagedHelper = Join-Path $RepoRoot "apps\desktop\src-tauri\binaries\chatwaifu-appcontainer-host-$Target.exe"
+$PytestBaseTemp = Join-Path $RepoRoot "build\pytest\windows-installer"
 $Live2DDestination = Join-Path $RepoRoot "apps\web\public\vendor\live2d"
 $Live2DStagingRoot = $null
 $OriginalLive2DBackup = $null
@@ -140,7 +141,14 @@ try {
 
     Invoke-Checked $Rustup @("target", "add", $Target)
     if (-not $SkipChecks) {
-        Invoke-Checked $VenvPython @("-m", "pytest", "services/runtime/tests/test_desktop_sidecar.py")
+        if (Test-Path $PytestBaseTemp) {
+            Remove-Item -Path $PytestBaseTemp -Recurse -Force
+        }
+        Invoke-Checked $VenvPython @(
+            "-m", "pytest",
+            "services/runtime/tests/test_desktop_sidecar.py",
+            "--basetemp", $PytestBaseTemp
+        )
         Invoke-Checked $Cargo @(
             "clippy",
             "--package", "chatwaifu-desktop-host",
