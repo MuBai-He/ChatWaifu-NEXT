@@ -3,20 +3,19 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   lang: "zh-CN",
   title: "ChatWaifu NEXT",
-  description:
-    "Local-first 实时 AI 角色 Runtime：语音、记忆、Live2D、Skills 与桌宠。",
+  description: "把喜欢的角色留在桌面上。她会听你说话，也会记得。",
   base: "/ChatWaifu-NEXT-docs/",
   cleanUrls: true,
   lastUpdated: true,
   head: [
-    ["meta", { name: "theme-color", content: "#2a172e" }],
+    ["meta", { name: "theme-color", content: "#17111c" }],
     ["meta", { name: "color-scheme", content: "light dark" }],
     [
       "link",
       {
         rel: "icon",
-        type: "image/svg+xml",
-        href: "/ChatWaifu-NEXT-docs/logo.svg",
+        type: "image/png",
+        href: "/ChatWaifu-NEXT-docs/brand/chatwaifu-mark-small.png",
       },
     ],
   ],
@@ -24,7 +23,7 @@ export default defineConfig({
     hostname: "https://mubai-he.github.io/ChatWaifu-NEXT-docs/",
   },
   themeConfig: {
-    logo: "/logo.svg",
+    logo: "/brand/chatwaifu-mark-small.png",
     siteTitle: "ChatWaifu NEXT",
     nav: [
       { text: "首页", link: "/" },
@@ -32,7 +31,7 @@ export default defineConfig({
       { text: "配置", link: "/guide/configuration" },
       { text: "二次开发", link: "/guide/customization" },
       {
-        text: "v0.2",
+        text: "发行说明",
         items: [
           { text: "Windows 发行状态", link: "/guide/windows" },
           { text: "本地模型包", link: "/guide/worker-packs" },
@@ -89,7 +88,8 @@ export default defineConfig({
     lightModeSwitchTitle: "切换到浅色模式",
     darkModeSwitchTitle: "切换到深色模式",
     footer: {
-      message: "Local-first by design · 角色资产与模型权利归各自权利人所有",
+      message:
+        "为那些想把角色留在身边的人而做 · 角色与模型权利归各自权利人所有",
       copyright: "ChatWaifu NEXT documentation",
     },
   },
