@@ -12,6 +12,12 @@ from chatwaifu_protocol.events import (
     GenericCoreEvent,
     UserTurnCommittedEvent,
 )
+from chatwaifu_protocol.session import GenerationState
+
+from chatwaifu_runtime.conversation.models import (
+    ConversationHistoryEntry,
+    ConversationSourceContext,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +28,16 @@ class ConversationRecoveryRecord:
     active_generation_id: UUID | None
 
 
+@dataclass(frozen=True, slots=True)
+class ConversationGenerationRecord:
+    generation_id: UUID
+    session_id: UUID
+    turn_id: UUID
+    state: GenerationState
+    output_text: str | None
+    error_code: str | None
+
+
 class ConversationRepository(Protocol):
     async def recovery_state(self, session_id: UUID) -> ConversationRecoveryRecord: ...
 
@@ -29,7 +45,11 @@ class ConversationRepository(Protocol):
 
     async def recent_history(
         self, session_id: UUID, current_turn_id: UUID, *, limit: int
-    ) -> tuple[tuple[str, str], ...]: ...
+    ) -> tuple[ConversationHistoryEntry, ...]: ...
+
+    async def generation_result(
+        self, generation_id: UUID
+    ) -> ConversationGenerationRecord | None: ...
 
     async def commit_user_generation(
         self,
@@ -40,6 +60,7 @@ class ConversationRepository(Protocol):
         audio_stream_id: UUID,
         text: str,
         backend_kind: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         user_event: UserTurnCommittedEvent,
         generation_event: AssistantGenerationStartedEvent,
@@ -66,6 +87,7 @@ class ConversationRepository(Protocol):
         generation_id: UUID,
         assistant_turn_id: UUID,
         output: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
     ) -> None: ...

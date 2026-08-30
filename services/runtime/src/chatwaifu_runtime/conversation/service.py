@@ -35,7 +35,13 @@ from chatwaifu_runtime.character_kernel.service import (
     TurnCharacterContext,
 )
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
-from chatwaifu_runtime.conversation.models import GenerationAccepted, SessionDataReset
+from chatwaifu_runtime.conversation.models import (
+    ConversationHistoryEntry,
+    ConversationSourceContext,
+    ConversationTurnOptions,
+    GenerationAccepted,
+    SessionDataReset,
+)
 from chatwaifu_runtime.conversation.repository import (
     ConversationRecoveryRecord,
     ConversationRepository,
@@ -102,8 +108,22 @@ class ConversationService:
     def active_count(self) -> int:
         return sum(not item.task.done() for item in self._active.values())
 
-    async def submit_text(self, session_id: UUID, text: str) -> GenerationAccepted:
-        return await self._submit(session_id, text, turn_id=uuid4(), generation_id=uuid4())
+    async def submit_text(
+        self,
+        session_id: UUID,
+        text: str,
+        *,
+        options: ConversationTurnOptions | None = None,
+        turn_id: UUID | None = None,
+        generation_id: UUID | None = None,
+    ) -> GenerationAccepted:
+        return await self._submit(
+            session_id,
+            text,
+            turn_id=turn_id or uuid4(),
+            generation_id=generation_id or uuid4(),
+            options=options or ConversationTurnOptions(),
+        )
 
     async def submit_voice_transcript(
         self,
@@ -120,6 +140,7 @@ class ConversationService:
             text,
             turn_id=turn_id,
             generation_id=generation_id,
+            options=ConversationTurnOptions(origin="voice"),
         )
 
     async def submit_proactive(
@@ -163,6 +184,10 @@ class ConversationService:
                     memory_context,
                     history,
                     trigger="proactive",
+                    options=ConversationTurnOptions(
+                        origin="proactive",
+                        allow_tools=False,
+                    ),
                 ),
                 name=f"proactive-generation-{accepted.generation_id}",
             )
@@ -176,6 +201,7 @@ class ConversationService:
         *,
         turn_id: UUID,
         generation_id: UUID,
+        options: ConversationTurnOptions,
     ) -> GenerationAccepted:
         normalized = text.strip()
         if not normalized:
@@ -192,56 +218,75 @@ class ConversationService:
                 normalized,
                 turn_id=turn_id,
                 generation_id=generation_id,
+                options=options,
             )
-            for event in events:
-                await self._publisher.publish_persisted(event)
-            character = self._characters.get(session.character_id)
-            if character is None:
-                raise RuntimeError(f"character is not installed: {session.character_id}")
-            memory_observation: UserTurnMemoryObservation | None = None
-            if self._memory.parse_explicit_command(normalized) is not None:
-                await self._memory.observe_user_turn(
+            try:
+                for event in events:
+                    await self._publisher.publish_persisted(event)
+                character = self._characters.get(session.character_id)
+                if character is None:
+                    raise RuntimeError(f"character is not installed: {session.character_id}")
+                memory_observation: UserTurnMemoryObservation | None = None
+                if self._memory.parse_explicit_command(normalized) is not None:
+                    await self._memory.observe_user_turn(
+                        session_id,
+                        accepted.turn_id,
+                        events[0].event_id,
+                        character.character_id,
+                        normalized,
+                    )
+                else:
+                    memory_observation = UserTurnMemoryObservation(
+                        session_id=session_id,
+                        turn_id=accepted.turn_id,
+                        source_event_id=events[0].event_id,
+                        character_id=character.character_id,
+                        text=normalized,
+                    )
+                memory_context = await self._memory.retrieve_context(
                     session_id,
                     accepted.turn_id,
-                    events[0].event_id,
                     character.character_id,
                     normalized,
                 )
-            else:
-                memory_observation = UserTurnMemoryObservation(
+                history = await self._recent_history(session_id, accepted.turn_id)
+                character_context = await self._character_kernel.observe_user_turn(
                     session_id=session_id,
                     turn_id=accepted.turn_id,
-                    source_event_id=events[0].event_id,
+                    generation_id=accepted.generation_id,
                     character_id=character.character_id,
                     text=normalized,
                 )
-            memory_context = await self._memory.retrieve_context(
-                session_id,
-                accepted.turn_id,
-                character.character_id,
-                normalized,
-            )
-            history = await self._recent_history(session_id, accepted.turn_id)
-            character_context = await self._character_kernel.observe_user_turn(
-                session_id=session_id,
-                turn_id=accepted.turn_id,
-                generation_id=accepted.generation_id,
-                character_id=character.character_id,
-                text=normalized,
-            )
-            task = asyncio.create_task(
-                self._run_generation(
+                task = asyncio.create_task(
+                    self._run_generation(
+                        accepted,
+                        normalized,
+                        character,
+                        character_context,
+                        memory_context,
+                        history,
+                        memory_observation=memory_observation,
+                        options=options,
+                    ),
+                    name=f"generation-{accepted.generation_id}",
+                )
+                self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
+            except asyncio.CancelledError:
+                await self._cancelled(
                     accepted,
-                    normalized,
-                    character,
-                    character_context,
-                    memory_context,
-                    history,
-                    memory_observation=memory_observation,
-                ),
-                name=f"generation-{accepted.generation_id}",
-            )
-            self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
+                    "generation_admission_cancelled",
+                    set_session_idle=True,
+                )
+                raise
+            except Exception as error:
+                await self._failed(
+                    accepted,
+                    error,
+                    error_code="generation_admission_failed",
+                    retryable=False,
+                    set_session_idle=True,
+                )
+                raise
             return accepted
 
     async def cancel(self, session_id: UUID, reason: str = "user_interruption") -> bool:
@@ -370,6 +415,7 @@ class ConversationService:
         *,
         turn_id: UUID,
         generation_id: UUID,
+        options: ConversationTurnOptions,
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
         audio_stream_id = uuid4()
@@ -400,6 +446,7 @@ class ConversationService:
             audio_stream_id=audio_stream_id,
             text=text,
             backend_kind=self._providers.llm.kind,
+            source_context=options.source_context,
             occurred_at=now,
             user_event=user_event,
             generation_event=generation_event,
@@ -474,18 +521,21 @@ class ConversationService:
         character: CharacterProfile,
         character_context: TurnCharacterContext,
         memory_context: MemoryContextPacket,
-        history: tuple[tuple[str, str], ...],
+        history: tuple[ConversationHistoryEntry, ...],
         *,
         trigger: Literal["user", "proactive"] = "user",
         memory_observation: UserTurnMemoryObservation | None = None,
+        options: ConversationTurnOptions,
     ) -> None:
         output = ""
-        segmenter = StreamingTextSegmenter()
+        segmenter = StreamingTextSegmenter() if options.emits("audio") else None
         segment_index = 0
         memory_projection_submitted = memory_observation is None
 
         async def deliver_segment(text: str) -> None:
             nonlocal memory_projection_submitted, segment_index
+            if not options.emits("audio"):
+                return
             await self._speech.synthesize_segment(
                 accepted,
                 text,
@@ -502,24 +552,26 @@ class ConversationService:
             segment_index += 1
 
         try:
-            await self._emit_generic(
-                accepted,
-                "assistant.audio_stream_started",
-                {"stream_id": str(accepted.audio_stream_id)},
-            )
-            for planned in self._avatar_planner.plan_response(
-                accepted.session_id,
-                character_context.plan,
-                character.avatar_capabilities,
-            ):
-                await self._emit_avatar(
+            if options.emits("audio"):
+                await self._emit_generic(
                     accepted,
-                    planned.kind,
-                    planned.name,
-                    priority=planned.priority,
-                    duration_ms=planned.duration_ms,
+                    "assistant.audio_stream_started",
+                    {"stream_id": str(accepted.audio_stream_id)},
                 )
-            await self._emit_avatar(accepted, "state", "thinking", priority=60)
+            if options.emits("avatar"):
+                for planned in self._avatar_planner.plan_response(
+                    accepted.session_id,
+                    character_context.plan,
+                    character.avatar_capabilities,
+                ):
+                    await self._emit_avatar(
+                        accepted,
+                        planned.kind,
+                        planned.name,
+                        priority=planned.priority,
+                        duration_ms=planned.duration_ms,
+                    )
+                await self._emit_avatar(accepted, "state", "thinking", priority=60)
             compilation = await self._prompt_compiler.compile(
                 character=character,
                 kernel=character_context.snapshot,
@@ -527,6 +579,7 @@ class ConversationService:
                 memory=memory_context,
                 history=history,
                 user_text=user_text,
+                source_context=options.source_context,
             )
             await self._emit_generic(
                 accepted,
@@ -547,17 +600,24 @@ class ConversationService:
                 session_id=accepted.session_id,
                 turn_id=accepted.turn_id,
                 ensure_current=lambda: self._ensure_current(accepted),
-                allow_tools=trigger == "user",
+                allow_tools=trigger == "user" and options.allow_tools,
             ):
                 self._ensure_current(accepted)
                 output += delta
                 await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})
-                for segment in segmenter.feed(delta):
+                if segmenter is not None:
+                    for segment in segmenter.feed(delta):
+                        await deliver_segment(segment)
+            if segmenter is not None:
+                for segment in segmenter.flush():
                     await deliver_segment(segment)
-            for segment in segmenter.flush():
-                await deliver_segment(segment)
             self._ensure_current(accepted)
-            await self._complete(accepted, output)
+            await self._complete(
+                accepted,
+                output,
+                emit_avatar=options.emits("avatar"),
+                source_context=options.source_context,
+            )
         except asyncio.CancelledError as error:
             reason = str(error.args[0]) if error.args else "interrupted"
             await self._cancelled(accepted, reason)
@@ -582,10 +642,17 @@ class ConversationService:
 
     async def _recent_history(
         self, session_id: UUID, current_turn_id: UUID, limit: int = 16
-    ) -> tuple[tuple[str, str], ...]:
+    ) -> tuple[ConversationHistoryEntry, ...]:
         return await self._repository.recent_history(session_id, current_turn_id, limit=limit)
 
-    async def _complete(self, accepted: GenerationAccepted, output: str) -> None:
+    async def _complete(
+        self,
+        accepted: GenerationAccepted,
+        output: str,
+        *,
+        emit_avatar: bool,
+        source_context: ConversationSourceContext | None,
+    ) -> None:
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
         await self._repository.complete_generation(
@@ -593,6 +660,7 @@ class ConversationService:
             generation_id=accepted.generation_id,
             assistant_turn_id=assistant_turn_id,
             output=output,
+            source_context=source_context,
             occurred_at=now,
             set_session_idle=self._is_current(accepted),
         )
@@ -601,27 +669,46 @@ class ConversationService:
             "assistant.generation_completed",
             {"text": output, "assistant_turn_id": str(assistant_turn_id)},
         )
-        await self._emit_avatar(accepted, "state", "idle", priority=90)
+        if emit_avatar:
+            await self._emit_avatar(accepted, "state", "idle", priority=90)
 
-    async def _cancelled(self, accepted: GenerationAccepted, reason: str) -> None:
+    async def _cancelled(
+        self,
+        accepted: GenerationAccepted,
+        reason: str,
+        *,
+        set_session_idle: bool | None = None,
+    ) -> None:
         now = datetime.now(UTC)
         await self._repository.cancel_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             occurred_at=now,
-            set_session_idle=self._is_current(accepted),
+            set_session_idle=(
+                self._is_current(accepted) if set_session_idle is None else set_session_idle
+            ),
         )
         await self._emit_generic(accepted, "assistant.generation_cancelled", {"reason": reason})
         await self._emit_generic(accepted, "conversation.interrupted", {"reason": reason})
 
-    async def _failed(self, accepted: GenerationAccepted, error: Exception) -> None:
+    async def _failed(
+        self,
+        accepted: GenerationAccepted,
+        error: Exception,
+        *,
+        error_code: str = "provider_error",
+        retryable: bool = True,
+        set_session_idle: bool | None = None,
+    ) -> None:
         now = datetime.now(UTC)
         await self._repository.fail_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
-            error_code="provider_error",
+            error_code=error_code,
             occurred_at=now,
-            set_session_idle=self._is_current(accepted),
+            set_session_idle=(
+                self._is_current(accepted) if set_session_idle is None else set_session_idle
+            ),
         )
         await self._publisher.emit(
             ErrorRaisedEvent(
@@ -634,9 +721,9 @@ class ConversationService:
                 privacy=PrivacyLevel.LOCAL,
                 payload=ErrorRaisedPayload(
                     error=StructuredError(
-                        code="provider_error",
+                        code=error_code,
                         message=str(error),
-                        retryable=True,
+                        retryable=retryable,
                         component="conversation",
                     )
                 ),

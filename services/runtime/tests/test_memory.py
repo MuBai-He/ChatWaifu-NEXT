@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.base import PrivacyLevel
-from chatwaifu_protocol.memory import MemoryRecord
+from chatwaifu_protocol.memory import MemoryChannelAttribution, MemoryRecord, MemorySource
 from chatwaifu_runtime.memory.extractor import ExtractedMemoryCandidate
 from chatwaifu_runtime.memory.inference import LlmMemoryCandidateExtractor
 from chatwaifu_runtime.memory.policy import MemoryPolicy
@@ -315,11 +315,32 @@ async def test_semantic_and_temporal_ports_contribute_without_owning_records() -
     assert excerpt.semantic_relevance == 0.8
     assert excerpt.temporal_relevance == 0.6
     assert excerpt.retrieval_sources == ["semantic", "temporal"]
+    assert excerpt.channel_attributions[0].provider_id == "weixin_ilink"
+    assert excerpt.channel_attributions[0].conversation_key == "wechat-direct-owner"
 
 
 class _PortRepository:
     def __init__(self, record: MemoryRecord) -> None:
         self.record = record
+        self.source = MemorySource(
+            source_id=uuid4(),
+            memory_id=record.memory_id,
+            source_event_id=record.source_event_ids[0],
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            source_kind="user_turn",
+            created_at=datetime.now(UTC),
+            channel_attribution=MemoryChannelAttribution(
+                provider_id="weixin_ilink",
+                connection_id=uuid4(),
+                account_key="wechat-owner-account",
+                principal_scope="local",
+                chat_type="direct",
+                conversation_key="wechat-direct-owner",
+                sender_key="wechat-owner-sender",
+                received_at=datetime.now(UTC),
+            ),
+        )
 
     async def list_pinned(self, namespaces: list[str], limit: int) -> list[MemoryRecord]:
         del namespaces, limit
@@ -337,6 +358,9 @@ class _PortRepository:
     async def list_recent(self, namespaces: list[str], limit: int) -> list[MemoryRecord]:
         del namespaces, limit
         return []
+
+    async def list_sources_many(self, memory_ids: list[UUID]) -> dict[UUID, list[MemorySource]]:
+        return {self.record.memory_id: [self.source]} if self.record.memory_id in memory_ids else {}
 
 
 class _SemanticPort:

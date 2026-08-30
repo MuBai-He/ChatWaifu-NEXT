@@ -688,6 +688,7 @@ class MemoryService:
                     else "memory_management"
                 ),
                 created_at=now,
+                channel_attribution=item.channel_attribution,
             )
             for item in evidence
         ]

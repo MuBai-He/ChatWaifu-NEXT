@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from chatwaifu_protocol.memory import (
+    MemoryChannelAttribution,
     MemoryContextPacket,
     MemoryExcerpt,
     MemoryRecord,
@@ -102,7 +103,7 @@ class MemoryRetriever:
                 item.sources.add("recent")
 
         ranked = sorted(candidates.values(), key=lambda item: item.score, reverse=True)
-        excerpts: list[tuple[MemoryRecord, MemoryExcerpt]] = []
+        selected: list[_Candidate] = []
         budget_used = 0
         for item in ranked:
             record = item.record
@@ -112,6 +113,27 @@ class MemoryRetriever:
             if budget_used + estimated_tokens > token_budget:
                 continue
             budget_used += estimated_tokens
+            selected.append(item)
+            if len(selected) >= limit:
+                break
+
+        sources_by_memory = await self._repository.list_sources_many(
+            [item.record.memory_id for item in selected]
+        )
+        excerpts: list[tuple[MemoryRecord, MemoryExcerpt]] = []
+        for item in selected:
+            record = item.record
+            attributions: list[MemoryChannelAttribution] = []
+            seen_attributions: set[str] = set()
+            for source in sources_by_memory.get(record.memory_id, []):
+                attribution = source.channel_attribution
+                if attribution is None:
+                    continue
+                fingerprint = attribution.model_dump_json()
+                if fingerprint in seen_attributions:
+                    continue
+                seen_attributions.add(fingerprint)
+                attributions.append(attribution)
             excerpts.append(
                 (
                     record,
@@ -124,11 +146,10 @@ class MemoryRetriever:
                         semantic_relevance=item.semantic,
                         temporal_relevance=item.temporal,
                         retrieval_sources=sorted(item.sources),
+                        channel_attributions=attributions,
                     ),
                 )
             )
-            if len(excerpts) >= limit:
-                break
 
         return MemoryContextPacket(
             pinned_facts=[excerpt for record, excerpt in excerpts if record.pinned],

@@ -1,6 +1,7 @@
 """Persistence, sequence, and outbox tests."""
 
 import asyncio
+import json
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,6 +18,7 @@ from chatwaifu_runtime.persistence.database import (
     MigrationCatalogError,
     MigrationChecksumError,
 )
+from chatwaifu_runtime.persistence.migrations import MIGRATIONS
 
 
 @pytest.mark.asyncio
@@ -196,6 +198,131 @@ async def test_failed_migration_rolls_back_schema_and_can_retry(tmp_path: Path) 
         assert connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rolled_back_record'"
         ).fetchone() == (1,)
+
+
+@pytest.mark.asyncio
+async def test_channel_memory_attribution_migration_backfills_legacy_sources(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "channel-memory-attribution.db"
+    storage = StorageConfig(database_path=path)
+    legacy = Database(
+        path,
+        storage,
+        migrations=tuple(item for item in MIGRATIONS if item[0] <= 17),
+    )
+    await legacy.open()
+    await legacy.close()
+
+    session_id = str(uuid4())
+    turn_id = str(uuid4())
+    event_id = str(uuid4())
+    memory_id = str(uuid4())
+    source_id = str(uuid4())
+    occurred_at = datetime(2026, 8, 31, 8, 1, tzinfo=UTC).isoformat()
+    source_created_at = datetime(2026, 8, 31, 8, 2, tzinfo=UTC).isoformat()
+    source_context = {
+        "provider_id": "weixin_ilink",
+        "connection_id": str(uuid4()),
+        "account_key": "wechat-owner-account",
+        "chat_type": "direct",
+        "conversation_key": "wechat-direct-owner",
+        "sender_key": "wechat-owner-sender",
+        "conversation_label": "与木白的微信私聊",
+        "sender_display_name": "木白",
+    }
+    envelope = {
+        "event_id": event_id,
+        "event_type": "user.turn_committed",
+        "schema_version": "1.0",
+        "session_id": session_id,
+        "turn_id": turn_id,
+        "occurred_at": occurred_at,
+        "source": "test",
+        "payload": {"text": "请记住晚上继续聊 Python"},
+    }
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            """
+            INSERT INTO sessions(
+                session_id, character_id, state, conversation_state,
+                revision, next_sequence, created_at, updated_at
+            ) VALUES (?, 'default', 'ready', 'idle', 0, 2, ?, ?)
+            """,
+            (session_id, occurred_at, occurred_at),
+        )
+        connection.execute(
+            """
+            INSERT INTO turns(
+                turn_id, session_id, role, committed_text, committed_at,
+                created_at, source_context_json
+            ) VALUES (?, ?, 'user', '请记住晚上继续聊 Python', ?, ?, ?)
+            """,
+            (
+                turn_id,
+                session_id,
+                occurred_at,
+                occurred_at,
+                json.dumps(source_context, ensure_ascii=False),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO events(
+                event_id, session_id, sequence, event_type, schema_version,
+                occurred_at, source, payload_json, envelope_json
+            ) VALUES (?, ?, 1, 'user.turn_committed', '1.0', ?, 'test', ?, ?)
+            """,
+            (
+                event_id,
+                session_id,
+                occurred_at,
+                json.dumps(envelope["payload"], ensure_ascii=False),
+                json.dumps(envelope, ensure_ascii=False),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO memory_records(
+                memory_id, namespace, kind, subject_id, predicate, value_json,
+                text, normalized_text, search_terms, observed_at, valid_from,
+                confidence, importance, sensitivity, state, pinned,
+                created_at, updated_at
+            ) VALUES (
+                ?, 'character/default/user/local', 'semantic.fact', 'user',
+                'conversation.plan', 'null', '晚上继续聊 Python',
+                '晚上继续聊 python', '晚上 继续 聊 python', ?, ?,
+                0.9, 0.8, 'private', 'active', 0, ?, ?
+            )
+            """,
+            (memory_id, occurred_at, occurred_at, occurred_at, occurred_at),
+        )
+        connection.execute(
+            """
+            INSERT INTO memory_sources(
+                source_id, memory_id, source_event_id, session_id, turn_id,
+                source_kind, created_at
+            ) VALUES (?, ?, ?, ?, ?, 'user_turn', ?)
+            """,
+            (source_id, memory_id, event_id, session_id, turn_id, source_created_at),
+        )
+
+    upgraded = Database(path, storage)
+    await upgraded.open()
+    await upgraded.close()
+    with sqlite3.connect(path) as connection:
+        raw = connection.execute(
+            "SELECT channel_attribution_json FROM memory_sources WHERE source_id = ?",
+            (source_id,),
+        ).fetchone()
+    assert raw is not None
+    attribution = json.loads(str(raw[0]))
+    assert attribution["schema_version"] == "1.0"
+    assert attribution["provider_id"] == "weixin_ilink"
+    assert attribution["principal_scope"] == "local"
+    assert attribution["conversation_key"] == "wechat-direct-owner"
+    assert attribution["sender_key"] == "wechat-owner-sender"
+    assert attribution["received_at"] == source_created_at
 
 
 @pytest.mark.asyncio

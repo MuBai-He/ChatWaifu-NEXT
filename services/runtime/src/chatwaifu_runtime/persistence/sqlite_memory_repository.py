@@ -9,7 +9,12 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from chatwaifu_protocol.memory import MemoryProposal, MemoryRecord, MemorySource
+from chatwaifu_protocol.memory import (
+    MemoryChannelAttribution,
+    MemoryProposal,
+    MemoryRecord,
+    MemorySource,
+)
 
 from chatwaifu_runtime.memory.repository import (
     MemoryEventEvidence,
@@ -45,20 +50,32 @@ class SQLiteMemoryRepository(MemoryRepository):
 
     async def event_evidence(self, event_id: UUID) -> MemoryEventEvidence | None:
         row = await self._database.fetchone(
-            "SELECT event_id, event_type, session_id, occurred_at, envelope_json "
-            "FROM events WHERE event_id = ?",
+            """
+            SELECT event.event_id, event.event_type, event.session_id,
+                   event.occurred_at, event.envelope_json,
+                   turn.source_context_json
+            FROM events AS event
+            LEFT JOIN turns AS turn
+              ON turn.session_id = event.session_id
+             AND turn.turn_id = json_extract(event.envelope_json, '$.turn_id')
+            WHERE event.event_id = ?
+            """,
             (str(event_id),),
         )
         if row is None:
             return None
         envelope = cast(dict[str, object], json.loads(str(row["envelope_json"])))
         turn_id = envelope.get("turn_id")
+        occurred_at = datetime.fromisoformat(str(row["occurred_at"]))
         return MemoryEventEvidence(
             event_id=UUID(str(row["event_id"])),
             session_id=UUID(str(row["session_id"])),
             turn_id=UUID(str(turn_id)) if turn_id else None,
-            occurred_at=datetime.fromisoformat(str(row["occurred_at"])),
+            occurred_at=occurred_at,
             event_type=str(row["event_type"]),
+            channel_attribution=_channel_attribution_from_source_context(
+                row["source_context_json"], fallback_received_at=occurred_at
+            ),
         )
 
     async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None:
@@ -154,8 +171,8 @@ class SQLiteMemoryRepository(MemoryRepository):
                     """
                     INSERT INTO memory_sources(
                         source_id, memory_id, source_event_id, session_id,
-                        turn_id, source_kind, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        turn_id, source_kind, created_at, channel_attribution_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         str(source.source_id),
@@ -165,6 +182,11 @@ class SQLiteMemoryRepository(MemoryRepository):
                         str(source.turn_id) if source.turn_id else None,
                         source.source_kind,
                         source.created_at.isoformat(),
+                        (
+                            source.channel_attribution.model_dump_json()
+                            if source.channel_attribution is not None
+                            else None
+                        ),
                     ),
                 )
 
@@ -274,11 +296,25 @@ class SQLiteMemoryRepository(MemoryRepository):
         return [_record_from_row(dict(row)) for row in rows]
 
     async def list_sources(self, memory_id: UUID) -> list[MemorySource]:
+        return (await self.list_sources_many((memory_id,))).get(memory_id, [])
+
+    async def list_sources_many(self, memory_ids: Sequence[UUID]) -> dict[UUID, list[MemorySource]]:
+        if not memory_ids:
+            return {}
+        placeholders = ", ".join("?" for _ in memory_ids)
         rows = await self._database.fetchall(
-            "SELECT * FROM memory_sources WHERE memory_id = ? ORDER BY created_at",
-            (str(memory_id),),
+            f"""
+            SELECT * FROM memory_sources
+            WHERE memory_id IN ({placeholders})
+            ORDER BY created_at, source_id
+            """,
+            tuple(str(memory_id) for memory_id in memory_ids),
         )
-        return [_source_from_row(dict(row)) for row in rows]
+        grouped = {memory_id: list[MemorySource]() for memory_id in memory_ids}
+        for row in rows:
+            source = _source_from_row(dict(row))
+            grouped.setdefault(source.memory_id, []).append(source)
+        return grouped
 
     async def search_fts(
         self, query: str, namespaces: Sequence[str], limit: int
@@ -427,7 +463,41 @@ def _proposal_from_row(row: dict[str, object]) -> MemoryProposal:
 
 
 def _source_from_row(row: dict[str, object]) -> MemorySource:
-    return MemorySource.model_validate(row)
+    attribution_json = row.get("channel_attribution_json")
+    return MemorySource.model_validate(
+        {
+            **row,
+            "channel_attribution": (
+                json.loads(str(attribution_json)) if attribution_json is not None else None
+            ),
+        }
+    )
+
+
+def _channel_attribution_from_source_context(
+    raw: object, *, fallback_received_at: datetime
+) -> MemoryChannelAttribution | None:
+    if raw is None:
+        return None
+    try:
+        payload = cast(dict[str, object], json.loads(str(raw)))
+        return MemoryChannelAttribution.model_validate(
+            {
+                "schema_version": "1.0",
+                "provider_id": payload["provider_id"],
+                "connection_id": payload["connection_id"],
+                "account_key": payload.get("account_key"),
+                "principal_scope": payload.get("principal_scope", "local"),
+                "chat_type": payload["chat_type"],
+                "conversation_key": payload["conversation_key"],
+                "sender_key": payload["sender_key"],
+                "received_at": payload.get("received_at") or fallback_received_at,
+                "conversation_label": payload.get("conversation_label"),
+                "sender_display_name": payload.get("sender_display_name"),
+            }
+        )
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+        raise ValueError("persisted channel source context is invalid") from error
 
 
 def _normalize(text: str) -> str:

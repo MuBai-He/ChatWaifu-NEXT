@@ -5,7 +5,12 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from chatwaifu_protocol.memory import MemoryProposal, MemoryRecord, MemorySource
+from chatwaifu_protocol.memory import (
+    MemoryChannelAttribution,
+    MemoryProposal,
+    MemoryRecord,
+    MemorySource,
+)
 
 
 class MemorySearchHit:
@@ -17,7 +22,14 @@ class MemorySearchHit:
 
 
 class MemoryEventEvidence:
-    __slots__ = ("event_id", "event_type", "occurred_at", "session_id", "turn_id")
+    __slots__ = (
+        "channel_attribution",
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "session_id",
+        "turn_id",
+    )
 
     def __init__(
         self,
@@ -26,12 +38,14 @@ class MemoryEventEvidence:
         turn_id: UUID | None,
         occurred_at: datetime,
         event_type: str = "user.turn_committed",
+        channel_attribution: MemoryChannelAttribution | None = None,
     ) -> None:
         self.event_id = event_id
         self.session_id = session_id
         self.turn_id = turn_id
         self.occurred_at = occurred_at
         self.event_type = event_type
+        self.channel_attribution = channel_attribution
 
 
 class MemoryRepository(Protocol):
@@ -86,6 +100,10 @@ class MemoryRepository(Protocol):
     ) -> list[MemoryRecord]: ...
 
     async def list_sources(self, memory_id: UUID) -> list[MemorySource]: ...
+
+    async def list_sources_many(
+        self, memory_ids: Sequence[UUID]
+    ) -> dict[UUID, list[MemorySource]]: ...
 
     async def search_fts(
         self, query: str, namespaces: Sequence[str], limit: int

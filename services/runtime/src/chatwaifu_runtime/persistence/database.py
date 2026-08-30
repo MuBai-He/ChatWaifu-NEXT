@@ -257,6 +257,15 @@ class Database:
             await cursor.close()
             return list(rows)
 
+    async def execute(self, query: str, parameters: Sequence[object] = ()) -> int:
+        """Execute one mutation inside the shared atomic transaction boundary."""
+
+        async with self.transaction() as connection:
+            cursor = await connection.execute(query, parameters)
+            rowcount = cursor.rowcount
+            await cursor.close()
+        return rowcount
+
     def _require_connection(self) -> aiosqlite.Connection:
         if self._connection is None:
             raise RuntimeError("database is not open")

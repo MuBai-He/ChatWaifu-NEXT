@@ -13,12 +13,19 @@ from chatwaifu_protocol.events import (
 )
 from chatwaifu_protocol.session import GenerationState
 
+from chatwaifu_runtime.conversation.models import (
+    ConversationHistoryEntry,
+    ConversationSourceContext,
+)
 from chatwaifu_runtime.conversation.repository import (
+    ConversationGenerationRecord,
     ConversationRecoveryRecord,
     ConversationRepository,
 )
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+
+_LOCAL_OWNER_SCOPE = "local"
 
 
 class SQLiteConversationRepository(ConversationRepository):
@@ -101,10 +108,10 @@ class SQLiteConversationRepository(ConversationRepository):
 
     async def recent_history(
         self, session_id: UUID, current_turn_id: UUID, *, limit: int
-    ) -> tuple[tuple[str, str], ...]:
-        rows = await self._database.fetchall(
+    ) -> tuple[ConversationHistoryEntry, ...]:
+        local_rows = await self._database.fetchall(
             """
-            SELECT role, committed_text
+            SELECT role, committed_text, source_context_json, committed_at
             FROM turns
             WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
                 AND role IN ('user', 'assistant')
@@ -112,7 +119,74 @@ class SQLiteConversationRepository(ConversationRepository):
             """,
             (str(session_id), str(current_turn_id), limit),
         )
-        return tuple((str(row["role"]), str(row["committed_text"])) for row in reversed(rows))
+        # Keep a small, durable cross-surface ledger beside the current session
+        # history. This lets a later desktop turn understand that a recent
+        # exchange happened through WeChat (and, in future, another channel)
+        # without merging independent provider sessions or trusting display
+        # labels as identity. V1 has one owner principal_scope and joins only the
+        # same character.
+        sourced_rows = await self._database.fetchall(
+            """
+            SELECT turn.role, turn.committed_text, turn.source_context_json,
+                   turn.committed_at
+            FROM turns AS turn
+            JOIN sessions AS source_session
+              ON source_session.session_id = turn.session_id
+            JOIN sessions AS current_session
+              ON current_session.session_id = ?
+            WHERE turn.session_id != ?
+              AND source_session.character_id = current_session.character_id
+              AND turn.source_context_json IS NOT NULL
+              AND COALESCE(
+                    json_extract(turn.source_context_json, '$.principal_scope'),
+                    'local'
+                  ) = ?
+              AND turn.committed_text IS NOT NULL
+              AND turn.role IN ('user', 'assistant')
+            ORDER BY turn.committed_at DESC, turn.created_at DESC
+            LIMIT ?
+            """,
+            (str(session_id), str(session_id), _LOCAL_OWNER_SCOPE, min(12, limit)),
+        )
+        rows = sorted(
+            (*local_rows, *sourced_rows),
+            key=lambda row: str(row["committed_at"]),
+        )
+        entries: list[ConversationHistoryEntry] = []
+        for row in rows:
+            raw_source = row["source_context_json"]
+            source = (
+                ConversationSourceContext.from_json(str(raw_source))
+                if raw_source is not None
+                else None
+            )
+            entries.append(
+                ConversationHistoryEntry(
+                    role=str(row["role"]),
+                    text=str(row["committed_text"]),
+                    source_context=source,
+                )
+            )
+        return tuple(entries)
+
+    async def generation_result(self, generation_id: UUID) -> ConversationGenerationRecord | None:
+        row = await self._database.fetchone(
+            """
+            SELECT generation_id, session_id, turn_id, state, output_text, error_code
+            FROM generations WHERE generation_id = ?
+            """,
+            (str(generation_id),),
+        )
+        if row is None:
+            return None
+        return ConversationGenerationRecord(
+            generation_id=UUID(str(row["generation_id"])),
+            session_id=UUID(str(row["session_id"])),
+            turn_id=UUID(str(row["turn_id"])),
+            state=GenerationState(str(row["state"])),
+            output_text=str(row["output_text"]) if row["output_text"] is not None else None,
+            error_code=str(row["error_code"]) if row["error_code"] is not None else None,
+        )
 
     async def commit_user_generation(
         self,
@@ -123,6 +197,7 @@ class SQLiteConversationRepository(ConversationRepository):
         audio_stream_id: UUID,
         text: str,
         backend_kind: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         user_event: UserTurnCommittedEvent,
         generation_event: AssistantGenerationStartedEvent,
@@ -137,6 +212,7 @@ class SQLiteConversationRepository(ConversationRepository):
                 role="user",
                 text=text,
                 backend_kind=backend_kind,
+                source_context=source_context,
                 occurred_at=occurred_at,
             )
             persisted_user = await self._event_store.append_in_transaction(connection, user_event)
@@ -168,6 +244,7 @@ class SQLiteConversationRepository(ConversationRepository):
                 role="system",
                 text=prompt,
                 backend_kind=backend_kind,
+                source_context=None,
                 occurred_at=occurred_at,
             )
             persisted_proactive = await self._event_store.append_in_transaction(
@@ -185,6 +262,7 @@ class SQLiteConversationRepository(ConversationRepository):
         generation_id: UUID,
         assistant_turn_id: UUID,
         output: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
     ) -> None:
@@ -192,8 +270,9 @@ class SQLiteConversationRepository(ConversationRepository):
             await connection.execute(
                 """
                 INSERT INTO turns(
-                    turn_id, session_id, role, committed_text, committed_at, created_at
-                ) VALUES (?, ?, 'assistant', ?, ?, ?)
+                    turn_id, session_id, role, committed_text, committed_at, created_at,
+                    source_context_json
+                ) VALUES (?, ?, 'assistant', ?, ?, ?, ?)
                 """,
                 (
                     str(assistant_turn_id),
@@ -201,6 +280,7 @@ class SQLiteConversationRepository(ConversationRepository):
                     output,
                     occurred_at.isoformat(),
                     occurred_at.isoformat(),
+                    source_context.to_json() if source_context is not None else None,
                 ),
             )
             await connection.execute(
@@ -275,12 +355,15 @@ class SQLiteConversationRepository(ConversationRepository):
         role: str,
         text: str,
         backend_kind: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
     ) -> None:
         await connection.execute(
             """
-            INSERT INTO turns(turn_id, session_id, role, committed_text, committed_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO turns(
+                turn_id, session_id, role, committed_text, committed_at, created_at,
+                source_context_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(turn_id),
@@ -289,6 +372,7 @@ class SQLiteConversationRepository(ConversationRepository):
                 text,
                 occurred_at.isoformat(),
                 occurred_at.isoformat(),
+                source_context.to_json() if source_context is not None else None,
             ),
         )
         await connection.execute(
