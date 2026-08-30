@@ -16,12 +16,16 @@ $PackagingEnvironment = Join-Path $RepoRoot ".packaging\windows-x64"
 $PackagingPython = Join-Path $PackagingEnvironment "Scripts\python.exe"
 $PythonRequest = "cpython-3.12.10-windows-x86_64-none"
 $UvPythonInstallDir = Join-Path $RepoRoot ".local\toolchains\uv-python"
+$TauriCli = Join-Path $RepoRoot "apps\desktop\node_modules\@tauri-apps\cli\tauri.js"
+$ViteCli = Join-Path $RepoRoot "apps\web\node_modules\vite\bin\vite.js"
 $Target = "x86_64-pc-windows-msvc"
 $RuntimeExecutable = Join-Path $RepoRoot "dist\windows\runtime-sidecar\chatwaifu-runtime.exe"
 $HelperExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
 $StagedHelper = Join-Path $RepoRoot "apps\desktop\src-tauri\binaries\chatwaifu-appcontainer-host-$Target.exe"
 $PytestBaseTemp = Join-Path $RepoRoot "build\pytest\windows-installer"
 $Live2DDestination = Join-Path $RepoRoot "apps\web\public\vendor\live2d"
+$NsisRoot = Join-Path $RepoRoot "target\$Target\release\bundle\nsis"
+$InstallerOutput = Join-Path $RepoRoot "dist\windows\installer"
 $Live2DStagingRoot = $null
 $OriginalLive2DBackup = $null
 $Live2DDestinationTemporarilyOwned = $false
@@ -96,12 +100,69 @@ function Get-PythonPlatform {
     if (-not (Test-Path $Path -PathType Leaf)) {
         return ""
     }
-    $Platform = & $Path -c "import sysconfig; print(sysconfig.get_platform())" 2>$null
-    if ($LASTEXITCODE -ne 0 -or $null -eq $Platform) {
+    $PreviousPreference = $ErrorActionPreference
+    $ExitCode = -1
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        $Platform = & $Path -c "import sysconfig; print(sysconfig.get_platform())" 2>$null
+        $ExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $PreviousPreference
+    }
+    if ($ExitCode -ne 0 -or $null -eq $Platform) {
         return ""
     }
     return ([string]$Platform).Trim()
 }
+
+function Test-JavaScriptCli {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $false
+    }
+    $PreviousPreference = $ErrorActionPreference
+    $ExitCode = -1
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        & $Node $Path "--version" *> $null
+        $ExitCode = $LASTEXITCODE
+    } catch {
+        $ExitCode = -1
+    } finally {
+        $ErrorActionPreference = $PreviousPreference
+    }
+    return ($ExitCode -eq 0)
+}
+
+function Copy-DirectoryContents {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    foreach ($Entry in @(Get-ChildItem -LiteralPath $Source -Force)) {
+        Copy-Item -LiteralPath $Entry.FullName -Destination $Destination -Recurse -Force
+    }
+}
+
+function Remove-GeneratedInstallerArtifacts {
+    param(
+        [Parameter(Mandatory = $true)][string]$Directory,
+        [Parameter(Mandatory = $true)][string[]]$Filters
+    )
+
+    if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
+        return
+    }
+    foreach ($Filter in $Filters) {
+        foreach ($Artifact in @(Get-ChildItem -LiteralPath $Directory -Filter $Filter -File)) {
+            Remove-Item -LiteralPath $Artifact.FullName -Force
+        }
+    }
+}
+
+$Node = (Get-Command node -ErrorAction Stop).Source
 
 if (-not (Test-Path $VenvPython -PathType Leaf)) {
     throw "Missing x64 .venv. Run tools/windows/bootstrap_x64.ps1 first."
@@ -111,15 +172,22 @@ $PythonPlatform = Get-PythonPlatform $VenvPython
 if ($PythonPlatform -ne "win-amd64") {
     throw "Expected a working win-amd64 .venv. Run tools/windows/bootstrap_x64.ps1 -RecreateEnvironment."
 }
+if (-not (Test-JavaScriptCli $TauriCli) -or
+    -not (Test-JavaScriptCli $ViteCli)) {
+    throw "Tauri/Vite CLIs are missing or unusable. Run tools/windows/bootstrap_x64.ps1 before the installer build."
+}
 
 $Uv = (Get-Command uv -ErrorAction Stop).Source
 $Cargo = (Get-Command cargo -ErrorAction Stop).Source
 $Rustup = (Get-Command rustup -ErrorAction Stop).Source
 
 Push-Location $RepoRoot
+$PreviousUvProject = $env:UV_PROJECT
 $PreviousUvEnvironment = $env:UV_PROJECT_ENVIRONMENT
 $PreviousUvPythonInstallDir = $env:UV_PYTHON_INSTALL_DIR
 try {
+    $env:UV_PROJECT = $RepoRoot
+    $env:UV_PROJECT_ENVIRONMENT = $PackagingEnvironment
     # The ignored development model must never leak into a base installer. Move it
     # out for the duration of every build, then restore it in finally. An explicit
     # owner-only overlay is first copied to a temporary snapshot so source and
@@ -131,11 +199,14 @@ try {
         New-Item -ItemType Directory -Path $Live2DStagingRoot -Force | Out-Null
     }
     if ($Live2DSource) {
-        $ResolvedLive2DSource = (Resolve-Path $Live2DSource).Path
+        if (-not (Test-Path -LiteralPath $Live2DSource -PathType Container)) {
+            throw "Private Live2D overlay source must be an existing directory: $Live2DSource"
+        }
+        $ResolvedLive2DSource = (Resolve-Path -LiteralPath $Live2DSource).Path
         $Live2DSourceSnapshot = Join-Path $Live2DStagingRoot "source"
         New-Item -ItemType Directory -Path $Live2DSourceSnapshot -Force | Out-Null
-        Copy-Item -Path (Join-Path $ResolvedLive2DSource "*") `
-            -Destination $Live2DSourceSnapshot -Recurse -Force
+        Copy-DirectoryContents -Source $ResolvedLive2DSource `
+            -Destination $Live2DSourceSnapshot
     }
     if (Test-Path $Live2DDestination -PathType Container) {
         $OriginalLive2DBackup = Join-Path $Live2DStagingRoot "original"
@@ -145,8 +216,8 @@ try {
     if ($Live2DSource) {
         $Live2DDestinationTemporarilyOwned = $true
         New-Item -ItemType Directory -Path $Live2DDestination -Force | Out-Null
-        Copy-Item -Path (Join-Path $Live2DSourceSnapshot "*") `
-            -Destination $Live2DDestination -Recurse -Force
+        Copy-DirectoryContents -Source $Live2DSourceSnapshot `
+            -Destination $Live2DDestination
         $RequiredAvatar = Join-Path $Live2DDestination "model\avatar.model3.json"
         if (-not (Test-Path $RequiredAvatar -PathType Leaf)) {
             throw "Private Live2D overlay is missing model/avatar.model3.json."
@@ -172,9 +243,9 @@ try {
         (Test-Path $PackagingEnvironment -PathType Container)) {
         Remove-Item -Path $PackagingEnvironment -Recurse -Force
     }
-    $env:UV_PROJECT_ENVIRONMENT = $PackagingEnvironment
     Invoke-Checked $Uv @(
         "sync",
+        "--project", $RepoRoot,
         "--python", $PythonExe,
         "--package", "chatwaifu-runtime",
         "--group", "packaging",
@@ -216,9 +287,14 @@ try {
         "--locked",
         "--target", $Target
     )
+    Remove-Item -LiteralPath $StagedHelper -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path (Split-Path $StagedHelper) -Force | Out-Null
     Copy-Item -Path $HelperExecutable -Destination $StagedHelper -Force
 
+    Remove-GeneratedInstallerArtifacts -Directory $NsisRoot `
+        -Filters @("*-setup.exe")
+    Remove-GeneratedInstallerArtifacts -Directory $InstallerOutput `
+        -Filters @("*-setup.exe", "*-setup.exe.sha256")
     Invoke-Checked $VenvPython @(
         "tools/run_pnpm.py",
         "--filter", "@chatwaifu/desktop",
@@ -231,14 +307,11 @@ try {
     Assert-X64Pe $HelperExecutable
     Assert-RuntimeFileIdentity $RuntimeExecutable
 
-    $NsisRoot = Join-Path $RepoRoot "target\$Target\release\bundle\nsis"
-    $Installer = Get-ChildItem -Path $NsisRoot -Filter "*-setup.exe" -File |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-    if ($null -eq $Installer) {
-        throw "Tauri did not produce an NSIS installer under $NsisRoot"
+    $Installers = @(Get-ChildItem -LiteralPath $NsisRoot -Filter "*-setup.exe" -File)
+    if ($Installers.Count -ne 1) {
+        throw "Tauri must produce exactly one fresh NSIS installer under $NsisRoot; received $($Installers.Count)."
     }
-    $InstallerOutput = Join-Path $RepoRoot "dist\windows\installer"
+    $Installer = $Installers[0]
     New-Item -ItemType Directory -Path $InstallerOutput -Force | Out-Null
     $FinalInstaller = Join-Path $InstallerOutput $Installer.Name
     Copy-Item -Path $Installer.FullName -Destination $FinalInstaller -Force
@@ -253,6 +326,12 @@ try {
     Write-Host "Windows x64 installer: $FinalInstaller"
     Write-Host "SHA256: $($Digest.Hash.ToLowerInvariant())"
 } finally {
+    Remove-Item -LiteralPath $StagedHelper -Force -ErrorAction SilentlyContinue
+    if ($null -eq $PreviousUvProject) {
+        Remove-Item Env:UV_PROJECT -ErrorAction SilentlyContinue
+    } else {
+        $env:UV_PROJECT = $PreviousUvProject
+    }
     if ($null -eq $PreviousUvEnvironment) {
         Remove-Item Env:UV_PROJECT_ENVIRONMENT -ErrorAction SilentlyContinue
     } else {
