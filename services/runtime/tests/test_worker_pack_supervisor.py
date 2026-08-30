@@ -1,4 +1,4 @@
-"""Installed Worker Pack discovery, selection, and Runtime wiring."""
+"""Installed Worker Pack discovery, selection, and Runtime supervision."""
 
 # pyright: reportPrivateUsage=false
 
