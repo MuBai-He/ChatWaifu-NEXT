@@ -13,6 +13,7 @@ __pycache__/
 htmlcov/
 node_modules/
 dist/
+docs-site/.vitepress/cache/
 coverage/
 target/
 *.tsbuildinfo

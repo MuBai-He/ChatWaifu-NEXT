@@ -1,0 +1,49 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs-site/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs-site/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+
+      - name: Build documentation
+        run: pnpm docs:build

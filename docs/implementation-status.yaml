@@ -35,6 +35,7 @@ validation:
     - pnpm build
     - make build-web plus isolated Web artifact verification
     - make build-desktop-ui plus isolated Desktop artifact verification
+    - make build-docs
     - uv run python tools/run_demo.py --no-open
     - real aiortc Chinese audio through Pipecat VAD, faster-whisper STT, generation, and WebRTC TTS
     - two-utterance barge-in cancels the first generation and completes the second generation
@@ -90,7 +91,8 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
-      - Eight GitHub Actions workflows are configured, including independent Web and Desktop tag gates
+      - Nine GitHub Actions workflows are configured, including independent Web and Desktop tag gates plus a GitHub Pages documentation gate
+      - A VitePress installation and extension site builds at the repository Pages base; remote publication remains pending Pages enablement and a main-branch workflow run
       - Twenty-eight ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, and ADR 0028 defines versioned local AI Worker Packs
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
