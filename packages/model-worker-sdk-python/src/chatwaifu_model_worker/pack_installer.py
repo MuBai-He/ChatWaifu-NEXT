@@ -12,7 +12,7 @@ import struct
 import tempfile
 import zipfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal, cast
 
@@ -102,6 +102,9 @@ _PRIVATE_KEY_MARKERS = (
 )
 _DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _WINDOWS_REPARSE_POINT_ATTRIBUTE = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+# `datetime.UTC` was added in Python 3.11, while the shared worker SDK is also
+# installed into the supported Python 3.10 GPT-SoVITS environment.
+_UTC = timezone.utc  # noqa: UP017
 
 
 class WorkerPackError(RuntimeError):
@@ -757,7 +760,7 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
             version=verified.manifest.version,
             manifest_sha256=verified.manifest_sha256,
             archive_sha256=verified.archive_sha256,
-            installed_at=datetime.now(UTC),
+            installed_at=datetime.now(_UTC),
             verified_file_count=len(verified.manifest.files),
         )
         _write_json_file(
