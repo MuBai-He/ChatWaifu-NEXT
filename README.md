@@ -79,6 +79,15 @@ Worker 时仍可使用 Demo 与设置好的云端模型/语音。仅在拥有相
 `-Live2DSource "C:\path\to\private\live2d"` 构建 owner-only 测试包。安装布局、用户数据保留与
 验收边界见 [ADR 0027](docs/adr/0027-windows-installed-desktop-runtime-layout.md)。
 
+需要 Windows 本地 AI 时，使用独立、版本化的 `.cwpack`，不要把模型环境塞进基础安装包：
+`build_faster_whisper_worker_pack_x64.ps1` 构建离线 faster-whisper Base CPU int8 pack，
+`build_qwen3_tts_worker_pack_x64.ps1` 构建带 Torch/CUDA 12.6 与本地宁宁 checkpoint 的
+Qwen3-TTS pack。Runtime 会校验、原子安装、选择版本并监管动态端口、令牌、健康、卸载和重启；
+目标账户无需手动安装 Python、uv 或创建 venv。完整命令、目录和验收边界见
+[Windows x64 local AI Worker Packs](docs/operations/windows-local-ai-worker-packs.md)。当前 macOS
+仅验证了 pack 合约、构建脚本/安装器与宿主无关测试；尚未完成真实 Windows x64 CUDA pack 构建，
+也尚未在目标 CUDA 笔记本完成安装态推理验收。
+
 在没有现存 ChatWaifu 安装和进程的 Windows 测试账户中，可对候选包运行基础安装 smoke：
 
 ```powershell
@@ -102,8 +111,8 @@ rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust t
 
 `make demo`/`make desktop` 的源码开发路径会按配置下载公开的多语言 `faster-whisper base`
 （约 150 MB）和本地语音模型，之后复用 `.local/models/` 缓存。基础 Windows 安装包不包含也
-不会自动安装 CUDA、PyTorch、本地 Qwen/GPT-SoVITS TTS 或 faster-whisper Worker；这些能力需要
-未来独立的 Worker/Model Pack。已安装的基础版仍可使用 Demo 和用户配置的云端提供方。配置了本地
+不会自动安装 CUDA、PyTorch、本地 Qwen/GPT-SoVITS TTS 或 faster-whisper Worker；这些能力通过
+独立的 Worker/Model Pack 管理。已安装的基础版仍可使用 Demo 和用户配置的云端提供方。配置了本地
 Worker 时，STT/TTS 推理在独立进程中运行，麦克风音频不会发往
 云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
 VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式

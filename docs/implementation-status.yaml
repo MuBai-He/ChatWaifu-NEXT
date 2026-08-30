@@ -91,7 +91,7 @@ phases:
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
       - Eight GitHub Actions workflows are configured, including independent Web and Desktop tag gates
-      - Twenty-seven ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, and ADR 0027 fixes the Windows installed-resource and user-data boundary
+      - Twenty-eight ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, and ADR 0028 defines versioned local AI Worker Packs
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -222,7 +222,7 @@ phases:
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
-    status: stt_and_dual_neural_tts_worker_slices_implemented_other_workers_pending
+    status: stt_and_dual_neural_tts_worker_slices_and_versioned_windows_pack_contract_implemented_target_build_pending
     evidence:
       - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
@@ -242,6 +242,9 @@ phases:
       - Web and desktop settings expose one Aliyun Bailian provider entry, with the concrete Qwen VC or CosyVoice adapter selected inside the shared API panel and resolved before the Runtime session command
       - The configured cosyvoice-v3.5-plus cloned voice passed regional target-model preflight, a real six-fragment PCM conversation stream, generation completion, and 206 WAV fallback retrieval
       - The supplied Nene voice ID is bound to batch qwen3-tts-vc-2026-01-22 and is rejected by the realtime adapter until a voice is created for qwen3-tts-vc-realtime-2026-01-15
+      - Versioned `.cwpack` contract, canonical Zip64/SHA-256 build and install paths, PE x64 checks, atomic activation, dynamic endpoint/token injection, health/inference smoke, unload, restart, and Runtime supervision are implemented for independently managed local workers
+      - Windows builders exist for offline faster-whisper Base CPU int8 and Qwen3-TTS Torch/CUDA 12.6 with a supplied local CustomVoice checkpoint; the target account does not need Python, uv, or a manually created venv
+      - On the current macOS host, real Windows x64 CUDA pack construction and installed inference on the intended CUDA laptop have not been run; x64-emulated/base-host checks do not count as CUDA acceptance
   - id: 9
     name: real-cascade-models
     status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset

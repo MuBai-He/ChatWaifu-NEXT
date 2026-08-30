@@ -1,4 +1,5 @@
 .DS_Store
+.idea/
 .env
 .venv/
 .packaging/
@@ -16,6 +17,8 @@ coverage/
 target/
 *.tsbuildinfo
 *.log
+*.cwpack
+*.cwmodel
 apps/web/.env.local
 apps/web/playwright-report/
 apps/web/test-results/
