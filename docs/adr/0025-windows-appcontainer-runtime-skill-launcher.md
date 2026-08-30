@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-29
-- Validation state: Developer acceptance passed on real Windows; signed release packaging pending
+- Validation state: Developer acceptance and packaged-helper presence passed on real Windows; installed execution/reconciliation and signed release pending
 
 ## Context
 
@@ -126,11 +126,13 @@ eight-case full run and two added limit/handle cases, covered:
   root/descendant ACE and profile cleanup without changing unrelated DACL entries.
 
 This validates the enforcing development backend and allows Runtime to select it whenever the
-sibling helper is present. It is not a claim that a signed installer or frozen Windows Runtime
-sidecar has been produced. Release acceptance still requires building both sibling executables in
-the packaging pipeline, installing them into their final layout, repeating the smoke suite from the
-installed app, and adding real junction/reparse probes, broader mutation-point fault injection, and
-long-running multi-subject concurrency tests.
+sibling helper is present. ADR 0027 subsequently produced the frozen Runtime and packaged helper;
+an owner-only NSIS candidate passed an x64-emulated basic installed smoke that verified the helper's
+fixed path and `0x8664` PE header. That smoke did not execute MCP through the installed helper or
+create and reconcile its profile/ACL state. Release acceptance therefore still requires repeating
+the AppContainer/MCP smoke from installed paths, uninstall reconciliation, signed packaging, real
+junction/reparse probes, broader mutation-point fault injection, and long-running multi-subject
+concurrency tests.
 
 ## Consequences
 

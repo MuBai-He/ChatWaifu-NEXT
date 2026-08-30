@@ -129,7 +129,7 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, desktop-pet/settings modules, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: desktop_pet_runtime_supervision_and_windows_installer_candidate_implemented_pending_installed_smoke
+    status: desktop_pet_runtime_supervision_and_windows_installer_basic_smoke_passed_pending_full_release_acceptance
     evidence:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
       - The compile-time Desktop product graph owns only desktop-pet and control-center surfaces, emits apps/web/dist/desktop, and is the only frontend Tauri consumes
@@ -162,7 +162,9 @@ phases:
       - Windows parent-watchdog liveness checks use a non-signaling process handle instead of POSIX kill-zero semantics; a real x64 development smoke remains alive through Runtime readiness and cleans host plus listeners on intentional Ctrl+C
       - A real Windows x64 Tauri smoke renders the local Ayachi Nene Live2D model transparently after the launcher bounds the ignored 8192px source texture to a preserved 4096px runtime copy
       - ADR 0027 fixes NSIS current-user delivery, a PyInstaller onedir Runtime under the Tauri resource root, immutable-resource versus per-user-data ownership, retained data on uninstall, and the exclusion of CUDA weights and private Live2D/voice assets from the redistributable base
-      - A Windows-only packaging slice defines frozen-Runtime collection and smoke, x64 PE checks, fixed Runtime/helper resource staging, NSIS assembly, and a private explicit Live2D overlay; no clean installed launch/uninstall acceptance or signed release has been recorded yet
+      - A Windows-only packaging slice defines frozen-Runtime collection and smoke, x64 PE checks, fixed Runtime/helper resource staging, NSIS assembly, and a private explicit Live2D overlay
+      - On 2026-08-30 an unsigned owner-only private-overlay candidate passed a real current-user install on a Windows 11 ARM VM under x64 emulation, covering registry and Start Menu layout, Host/Runtime/helper PE 0x8664, Runtime identity and dynamic-port health, Tauri user roots plus SQLite, forced-host Runtime/listener cleanup, uninstall removal of immutable resources, and byte-identical config/data marker retention
+      - That basic installed smoke is not full release acceptance; clean-account foreground UI/chat/settings/memory/audio, normal exit, update/reinstall reuse, installed AppContainer/MCP execution and profile/ACL reconciliation, native x64/CUDA hardware, asset/license review, signing, and remote publication remain pending
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
@@ -271,7 +273,7 @@ phases:
       - Sandbox snapshots persist the actual backend and only resource limits it really enforces; OCI enforces process, memory, and CPU limits while Seatbelt/bubblewrap report no portable resource-limit claim
       - ADR 0025 accepts a ChatWaifu-owned x64 Windows AppContainer host with stable permission-subject profiles, durable ACL journals and reconciliation, protected-descendant grants, restricted stdio inheritance, creation-time Job-list containment, and explicit network capabilities
       - An unelevated x64 helper (PE 0x8664) passed real Windows 11 token, filesystem, ACL cleanup, external-LAN deny/allow, loopback denial, inherited-handle exclusion, MCP stdio, process-count, Job-memory, launcher-kill, parent-EOF, and reconciliation probes on 2026-08-29
-      - Windows required-sandbox execution fails closed when the configured helper is missing or policy preparation fails; frozen installed-layout and uninstall reconciliation validation remain release work
+      - Windows required-sandbox execution fails closed when the configured helper is missing or policy preparation fails; the frozen installed layout and Runtime health passed a basic x64-emulated smoke, while installed AppContainer execution and uninstall profile/ACL reconciliation remain release work
       - Runtime publishes a policy-filtered standard Streamable HTTP MCP server at /mcp with loopback Host and Origin protection, optional Bearer authentication, and no adapter bypass
       - MCP bearer tokens are write-only, atomically stored mode-0600, and use a compensating cross-store mutation journal; corrupt secret or journal storage fails closed
       - Deny-by-default audit summaries retain only explicitly schema-whitelisted public fields, resolve local $ref/allOf sensitivity, keep real results process-local, and prevent secrets, file bodies, prompt arguments, PII, or arbitrary MCP payloads from entering runs, tool-call rows, events, or outbox
@@ -328,8 +330,8 @@ entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
-  - Clean-account installed launch, update, exit, uninstall, retained-user-data, and signed Tauri delivery acceptance remain pending for the Windows NSIS candidate
-  - The Windows x64 AppContainer helper passed developer acceptance, but its frozen installed-resource path and uninstall profile/ACL reconciliation remain pending real Windows acceptance
+  - Native x64/CUDA clean-account foreground product UX, normal exit, update/reinstall reuse, license review, and signed Tauri delivery remain pending for the Windows NSIS candidate; x64-emulated basic install/start/health/forced-exit/uninstall/data-retention smoke has passed
+  - The Windows x64 AppContainer helper passed developer acceptance and its packaged path/PE identity were checked after install, but installed MCP execution and profile/ACL reconciliation remain pending real Windows acceptance
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id

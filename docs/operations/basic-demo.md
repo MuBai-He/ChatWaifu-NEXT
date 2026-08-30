@@ -89,8 +89,10 @@ mechanism is separate from process isolation. On macOS and Linux, an available r
 bubblewrap backend is an OS sandbox and missing enforcement fails closed. ADR 0025 defines the
 real-Windows-tested x64 AppContainer/Job backend. Development builds discover the sibling helper
 automatically; a missing/wrong-architecture helper or failed policy preparation rejects untrusted
-required-sandbox stdio. Signed installer/frozen-sidecar validation remains pending. Explicitly trusted
-profiles that disable isolation are still a soft boundary and should run only trusted code.
+required-sandbox stdio. Frozen-sidecar packaging and basic installed health/uninstall/data-retention
+smoke have passed under Windows x64 emulation. Signed delivery, native x64/CUDA testing, and installed
+AppContainer execution plus profile/ACL reconciliation remain pending. Explicitly trusted profiles
+that disable isolation are still a soft boundary and should run only trusted code.
 
 For a real Windows developer acceptance run, start a TCP listener on a different LAN peer, then use
 an unelevated x64 PowerShell after `tools/windows/bootstrap_x64.ps1`:

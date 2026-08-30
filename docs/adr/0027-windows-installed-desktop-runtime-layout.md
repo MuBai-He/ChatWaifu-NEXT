@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Validation state: Packaging implementation present; real installed launch, uninstall, and signing acceptance pending
+- Validation state: Unsigned owner-only basic installed smoke passed under Windows x64 emulation; full release and signing acceptance pending
 
 ## Context
 
@@ -104,13 +104,13 @@ remain usable. It does not pretend that CUDA acceleration or a local neural voic
 Tauri is the authority for writable roots and passes them to Runtime before importing provider or
 Pipecat modules:
 
-| Data class | Root | Policy |
-| --- | --- | --- |
-| Product code, built-in characters/Skills, NLTK and VAD data | `$RESOURCE/runtime-sidecar` | Immutable; replaced only by an application update |
-| Runtime/provider configuration and write-only secret stores | `app_config_dir/runtime` | Per-user, mutable, never packaged |
+| Data class                                                                                   | Root                         | Policy                                            |
+| -------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------- |
+| Product code, built-in characters/Skills, NLTK and VAD data                                  | `$RESOURCE/runtime-sidecar`  | Immutable; replaced only by an application update |
+| Runtime/provider configuration and write-only secret stores                                  | `app_config_dir/runtime`     | Per-user, mutable, never packaged                 |
 | SQLite, generated audio, installed plugin packages/data/trash, future model manifests/caches | `app_local_data_dir/runtime` | Per-user, mutable, never written into `$RESOURCE` |
-| Runtime sidecar diagnostics | `app_log_dir` | Per-user, bounded and rotated |
-| WebView profile/cache | Tauri platform path | Owned by Tauri, not by Runtime |
+| Runtime sidecar diagnostics                                                                  | `app_log_dir`                | Per-user, bounded and rotated                     |
+| WebView profile/cache                                                                        | Tauri platform path          | Owned by Tauri, not by Runtime                    |
 
 The packaging staging area must reject `.env`, `.local`, database/WAL files, generated audio, provider
 tokens, downloaded user plugins, training data, and model caches. Default configuration is immutable
@@ -156,6 +156,27 @@ An artifact is only an installer candidate until a clean current-user installati
 - normal exit, forced host exit, and uninstall leave no Runtime, plugin, or listener orphan;
 - uninstall removes immutable files, retains user data, and revokes owned AppContainer state; and
 - a reinstall/update reuses the retained data without a schema or path split.
+
+### Observed owner-only basic installed smoke
+
+On 2026-08-30 an unsigned owner-only candidate with an explicit private Live2D overlay passed the
+automated basic installed smoke on a Windows 11 ARM VM while the Host and frozen Runtime ran as x64
+under Windows emulation; the installed helper was present and independently verified as x64 but was
+not executed. The run proved current-user registration and installation below `LOCALAPPDATA`, the
+Start Menu shortcut target, installed resource presence, `0x8664` PE headers for the Host, Runtime,
+and helper, branded Runtime `VERSIONINFO`, dynamic-loopback
+Runtime health with a ready database, Tauri-owned config/data/log roots and SQLite creation, Runtime
+and listener cleanup after forced Host termination, removal of the registry entry, shortcut, and
+immutable install tree during uninstall, and byte-identical retention of test-owned config/data
+markers plus the per-user roots.
+
+That result is compatibility evidence for the packaged path, not completion of the release list
+above. It did not prove a clean account without a checkout/toolchain, foreground product UX,
+Demo/cloud conversation, settings/memory/audio persistence, normal exit, reinstall/update reuse, or
+execution and profile/ACL reconciliation of the installed AppContainer helper. It also does not
+replace native Windows x64/CUDA-laptop validation, asset/license review, executable and installer
+signing, or the remote release gate. Because the candidate contains a private overlay, it remains a
+local owner-only artifact and cannot be redistributed.
 
 Unsigned local candidates are permitted for owner testing and will carry the expected Windows trust
 warning. A public `desktop-v*` release additionally requires a selected project license, reviewed

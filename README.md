@@ -79,6 +79,20 @@ Worker 时仍可使用 Demo 与设置好的云端模型/语音。仅在拥有相
 `-Live2DSource "C:\path\to\private\live2d"` 构建 owner-only 测试包。安装布局、用户数据保留与
 验收边界见 [ADR 0027](docs/adr/0027-windows-installed-desktop-runtime-layout.md)。
 
+在没有现存 ChatWaifu 安装和进程的 Windows 测试账户中，可对候选包运行基础安装 smoke：
+
+```powershell
+$installer = Get-ChildItem .\dist\windows\installer\*-setup.exe | Select-Object -First 1
+.\tools\windows\smoke_installed_x64.ps1 -InstallerPath $installer.FullName
+```
+
+该脚本会真实安装并启动候选包，检查 current-user 注册表、开始菜单快捷方式、三个 x64 PE、冻结
+Runtime 健康状态、用户目录与 SQLite，然后强制结束 Host、确认 Runtime/端口清理、静默卸载并
+确认安装目录已删除而配置、数据和日志目录仍保留。2026-08-30，一个包含本地私有 Live2D overlay
+的未签名 owner-only 候选包在 Windows 11 ARM 虚拟机的 x64 模拟环境中通过了这组基础 smoke。
+这不是公开发行验收：原生 x64/CUDA 笔记本、干净账户中的完整 UI/对话/设置/记忆/音频流程、正常
+退出、升级/重装、安装态 AppContainer/MCP 执行与 ACL/profile 回收、许可证和签名仍待验证。
+
 若仓库中已有其他架构的 `.venv`，首次准备时增加 `-RecreateEnvironment`。Node、Git、uv 或
 rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust target 与桌面 EXE 仍会被脚本
 分别校验为 `win-amd64`、`x86_64-pc-windows-msvc` 和 PE `0x8664`。
@@ -86,8 +100,11 @@ rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust t
 桌面版使用“月牙与星芒”应用标识；macOS 菜单栏使用同主题的单色模板图标，可随系统浅色/深色
 菜单栏自动着色，不再显示单字托盘标题。
 
-首次启动会下载公开的多语言 `faster-whisper base`（约 150 MB）和已配置的本地语音模型，
-之后复用 `.local/models/` 缓存。STT/TTS 推理都在独立本地 worker 中运行，麦克风音频不会发往
+`make demo`/`make desktop` 的源码开发路径会按配置下载公开的多语言 `faster-whisper base`
+（约 150 MB）和本地语音模型，之后复用 `.local/models/` 缓存。基础 Windows 安装包不包含也
+不会自动安装 CUDA、PyTorch、本地 Qwen/GPT-SoVITS TTS 或 faster-whisper Worker；这些能力需要
+未来独立的 Worker/Model Pack。已安装的基础版仍可使用 Demo 和用户配置的云端提供方。配置了本地
+Worker 时，STT/TTS 推理在独立进程中运行，麦克风音频不会发往
 云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
 VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式
 默认要求在句首叫“宁宁”或设置中的其他称呼，本地 STT 确认称呼后才会抢话并提交回合，旁边未叫
@@ -238,9 +255,10 @@ make check-generated    # 协议受控产物无漂移检查
 ```
 
 Web 与 Desktop 使用独立版本和 tag，例如 `web-v0.2.0` 与 `desktop-v0.2.0`。Web tag 会发布
-纯浏览器静态产物。Windows 已有单独的冻结 Runtime 与 NSIS 候选构建入口，但在真实安装、退出、
-卸载、用户数据保留、AppContainer、许可证与签名 smoke 完成前，Desktop tag 不得把候选包或裸
-Host + wheel 标成可分发发行版。
+纯浏览器静态产物。Windows 已有单独的冻结 Runtime 与 NSIS 候选构建入口，x64 模拟环境中的基础
+安装、启动/健康、强制退出清理、卸载和用户目录保留 smoke 也已记录；但在原生 x64/CUDA、干净
+账户产品流程、正常退出、升级/重装、安装态 AppContainer、许可证与签名验收完成前，Desktop tag
+不得把该未签名 owner-only 候选包或裸 Host + wheel 标成可分发发行版。
 
 `punkt_tab` 会从 NLTK 官方数据仓库的固定提交下载到 Git 忽略的 `.local/nltk_data`，并在
 解压前校验 SHA-256。Runtime 会在导入 Pipecat 前使用该本地目录，因此代理 Fake-IP 模式不会

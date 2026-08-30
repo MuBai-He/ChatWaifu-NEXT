@@ -3,10 +3,10 @@
 ChatWaifu NEXT uses one repository and one `main` branch, but produces two independently versioned
 frontend graphs.
 
-| Product | Owned surfaces | Build command | Frontend artifact | Tag |
-| --- | --- | --- | --- | --- |
-| Web | Galgame conversation, Avatar Lab | `make build-web` | `apps/web/dist/web` | `web-vX.Y.Z` |
-| Desktop | Desktop pet, control center | `make build-desktop-ui` | `apps/web/dist/desktop` | `desktop-vX.Y.Z` |
+| Product | Owned surfaces                   | Build command           | Frontend artifact       | Tag              |
+| ------- | -------------------------------- | ----------------------- | ----------------------- | ---------------- |
+| Web     | Galgame conversation, Avatar Lab | `make build-web`        | `apps/web/dist/web`     | `web-vX.Y.Z`     |
+| Desktop | Desktop pet, control center      | `make build-desktop-ui` | `apps/web/dist/desktop` | `desktop-vX.Y.Z` |
 
 Both artifacts contain shared conversation, Runtime-client, Live2D, voice, memory, and settings
 modules only when their owned surface needs them. `chatwaifu-product.json` records the actual source
@@ -50,15 +50,39 @@ An owner-only build can explicitly overlay ignored local Live2D assets:
 ```
 
 That candidate is private and must not be uploaded to CI, a tag, or a public release. The base
-installer contains neither private Live2D/voice assets nor CUDA model weights and safely falls back
-when local model workers are absent.
+installer contains neither private Live2D/voice assets nor a CUDA runtime, PyTorch environment,
+local Qwen/GPT-SoVITS TTS or faster-whisper workers, or their model weights. It safely falls back
+when local model workers are absent; those capabilities require a separately versioned Worker/Model
+Pack or a future user-approved Model Manager download.
 
 Creating `dist\windows\installer\*.exe` is not the Desktop release gate. A `desktop-v*` artifact may
 be described as installable only after a clean Windows account installs it, launches the embedded
 Runtime without developer tools, exercises settings/data persistence and AppContainer execution,
 exits without orphan processes, uninstalls while retaining user data, and passes license/signing
-policy. Until that installed-path smoke is recorded, the output is an unsigned local installer
-candidate rather than a distributable release.
+policy. The recorded owner-only basic smoke below covers only a subset of that matrix, so the output
+remains an unsigned local installer candidate rather than a distributable release.
+
+### Automated basic installed smoke
+
+On a Windows test account with no existing ChatWaifu installation or process, run:
+
+```powershell
+$installer = Get-ChildItem .\dist\windows\installer\*-setup.exe | Select-Object -First 1
+.\tools\windows\smoke_installed_x64.ps1 -InstallerPath $installer.FullName
+```
+
+This smoke performs a real current-user install, validates the registry entry, Start Menu shortcut,
+installed resources, x64 Host/Runtime/helper, Runtime identity and health, Tauri user roots and
+SQLite, forces the Host to prove Runtime/listener cleanup, uninstalls, and verifies removal of the
+immutable product plus retention of config/data/log roots and test-owned markers. It is destructive
+to the test installation and deliberately refuses to run when a ChatWaifu install or process already
+exists.
+
+An unsigned owner-only private-overlay candidate passed this smoke on 2026-08-30 in a Windows 11 ARM
+VM using x64 emulation. The automated smoke is not a clean-account product acceptance and does not
+exercise foreground UI/chat/settings/memory/audio, normal exit, reinstall/update, installed
+AppContainer/MCP execution or profile/ACL cleanup, native x64/CUDA hardware, licensing, signing, or
+publication. Those remain part of the full run below.
 
 ### Windows installer acceptance run
 

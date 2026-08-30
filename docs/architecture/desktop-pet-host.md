@@ -161,9 +161,12 @@ emits progress acknowledgements.
 - The service stack also watches the owning Rust PID, so an abrupt development hot reload still
   tears down workers even when Tauri cannot deliver its normal exit callback.
 
-The frozen Runtime and NSIS assembly are a separate packaging slice governed by ADR 0027. Real
-installed launch/uninstall acceptance, signed public delivery, automatic updates, autostart, and
-Store-compatible non-transparent profiles remain outside the validated desktop-host slice.
+The frozen Runtime and NSIS assembly are a separate packaging slice governed by ADR 0027. An
+unsigned owner-only candidate has passed basic install, Runtime health, forced-exit cleanup,
+uninstall, and user-root retention under Windows x64 emulation. Clean-account product UX, normal
+exit, update/reinstall, installed AppContainer execution and reconciliation, native x64/CUDA
+hardware, signed public delivery, automatic updates, autostart, and Store-compatible
+non-transparent profiles remain outside the validated desktop-host slice.
 
 ## Verification
 
