@@ -21,10 +21,17 @@ datas = [
         "pipecat/audio/vad/data",
     ),
 ]
-for distribution in ("pipecat-ai", "httpx2", "httpcore2"):
+for distribution in (
+    "pipecat-ai",
+    "httpx2",
+    "httpcore2",
+    "httpx",
+    "httpcore",
+    "keyring",
+):
     datas += copy_metadata(distribution)
 
-hiddenimports = []
+hiddenimports = collect_submodules("keyring.backends")
 for package in (
     "chatwaifu_runtime",
     "chatwaifu_protocol",

@@ -16,7 +16,7 @@ def test_tauri_dev_server_binds_the_same_ipv4_url_it_waits_for() -> None:
     build = cast(dict[str, object], config["build"])
     command = str(build["beforeDevCommand"])
 
-    assert "exec vite --mode desktop --host 127.0.0.1 --port 5173" in command
+    assert "exec vite --mode desktop --host 127.0.0.1 --port 5173 --strictPort" in command
     assert "vite -- --host" not in command
     assert build["devUrl"] == "http://127.0.0.1:5173"
     assert str(build["beforeBuildCommand"]).endswith("@chatwaifu/web build:desktop")
@@ -147,6 +147,9 @@ def test_frozen_windows_runtime_uses_chatwaifu_file_identity_and_icon() -> None:
     assert 'WINDOWS_RUNTIME_VERSION = ROOT / "packaging" / "windows"' in spec
     assert "icon=str(WINDOWS_RUNTIME_ICON) if is_win else None" in spec
     assert "version=str(WINDOWS_RUNTIME_VERSION) if is_win else None" in spec
+    for distribution in ("httpx", "httpcore", "keyring"):
+        assert f'    "{distribution}",' in spec
+    assert 'hiddenimports = collect_submodules("keyring.backends")' in spec
     assert icon.read_bytes().startswith(b"\x00\x00\x01\x00")
     assert f"filevers={version_tuple}" in version_info
     assert f"prodvers={version_tuple}" in version_info

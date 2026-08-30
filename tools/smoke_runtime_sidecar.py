@@ -113,6 +113,7 @@ def _smoke_runtime(executable: Path, root: Path, timeout: float) -> str:
 
 
 def _smoke_plugin_runner(executable: Path, root: Path) -> None:
+    _smoke_packaged_channel_dependencies(executable, root)
     output = root / "plugin-result.txt"
     script = root / "plugin.py"
     script.write_text(
@@ -173,6 +174,56 @@ def _smoke_plugin_runner(executable: Path, root: Path) -> None:
         raise RuntimeError(f"Frozen MCP UTF-8 round trip failed: {response}")
 
     _smoke_silero_vad(executable, root)
+
+
+def _smoke_packaged_channel_dependencies(executable: Path, root: Path) -> None:
+    """Prove native-channel dependencies survive PyInstaller collection.
+
+    ``keyring`` discovers platform backends from package metadata and dynamic
+    imports, while ``httpx`` needs its bundled CA roots for TLS. Importing only
+    the top-level packages is therefore weaker than exercising both discovery
+    paths inside the frozen interpreter.
+    """
+
+    script = root / "channel-dependencies-smoke.py"
+    script.write_text(
+        "import asyncio\n"
+        "import ssl\n"
+        "import sys\n"
+        "import certifi\n"
+        "import httpx\n"
+        "import keyring\n"
+        "\n"
+        "async def probe_httpx():\n"
+        "    context = ssl.create_default_context(cafile=certifi.where())\n"
+        "    async with httpx.AsyncClient(verify=context, trust_env=False) as client:\n"
+        "        assert client is not None\n"
+        "\n"
+        "asyncio.run(probe_httpx())\n"
+        "backend = keyring.get_keyring()\n"
+        "backend_module = type(backend).__module__\n"
+        "assert backend_module.startswith('keyring.backends.'), backend_module\n"
+        "if sys.platform in {'darwin', 'win32'}:\n"
+        "    assert float(backend.priority) > 0, backend_module\n"
+        "print(backend_module)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [str(executable), "--plugin-python", str(script)],
+        cwd=root,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Frozen channel dependency probe failed "
+            f"({result.returncode}): {result.stderr[-2_000:]}"
+        )
 
 
 def _smoke_silero_vad(executable: Path, root: Path) -> None:

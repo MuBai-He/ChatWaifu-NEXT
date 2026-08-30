@@ -48,7 +48,6 @@ def main() -> int:
     ports = _allocate_ports(tuple(tts_profiles), include_stt=stt_python is not None)
     tokens = {name: secrets.token_urlsafe(32) for name in ports if name != "runtime"}
     processes: list[subprocess.Popen[bytes]] = []
-
     signal.signal(signal.SIGTERM, _raise_termination)
     hangup = getattr(signal, "SIGHUP", None)
     if isinstance(hangup, signal.Signals):
