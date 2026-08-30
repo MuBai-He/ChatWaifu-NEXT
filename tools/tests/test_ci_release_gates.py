@@ -88,6 +88,7 @@ def test_windows_installed_product_smoke_covers_layout_lifecycle_and_data() -> N
     assert "bin\\chatwaifu-appcontainer-host.exe" in smoke
     assert "ChatWaifu NEXT Runtime" in smoke
     assert "Start Menu\\Programs\\$ProductName.lnk" in smoke
+    assert "$UnquotedPath = $Path.Trim().Trim('\"')" in smoke
     assert "/v1/runtime/health" in smoke
     assert "Stop-Process -Id $HostProcess.Id -Force" in smoke
     assert "Assert-RuntimeStopped" in smoke

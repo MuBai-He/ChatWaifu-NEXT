@@ -67,7 +67,12 @@ $UninstallCompleted = $false
 function Get-NormalizedPath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    return [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
+    # Tauri's NSIS registry values are quoted (for example,
+    # `"C:\Users\...\ChatWaifu NEXT"`). GetFullPath treats the quote as an
+    # illegal path character, so normalize registry and shortcut values at
+    # this single boundary before comparing installation paths.
+    $UnquotedPath = $Path.Trim().Trim('"')
+    return [System.IO.Path]::GetFullPath($UnquotedPath).TrimEnd([char[]]@('\', '/'))
 }
 
 function Test-PathEqual {
