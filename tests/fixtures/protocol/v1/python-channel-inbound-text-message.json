@@ -1,0 +1,16 @@
+{
+  "account_key": "provider-account-001",
+  "chat_type": "direct",
+  "connection_id": "00000000-0000-4000-8000-000000000801",
+  "conversation_key": "provider-direct-conversation-001",
+  "conversation_label": "与宁宁的测试会话",
+  "external_message_id": "provider-message-001",
+  "kind": "text",
+  "principal_scope": "owner/local",
+  "received_at": "2026-08-23T08:00:00Z",
+  "reply_to_external_message_id": null,
+  "schema_version": "1.0",
+  "sender_display_name": "木白",
+  "sender_key": "provider-sender-001",
+  "text": "宁宁，今天也请多关照。"
+}

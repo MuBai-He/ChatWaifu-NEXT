@@ -1,6 +1,6 @@
 """Provenance-preserving structured memory and retrieval contracts."""
 
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -21,6 +21,28 @@ type MemoryState = Literal["active", "superseded", "contradicted", "tombstoned"]
 type MemoryOperation = Literal["add", "update", "supersede", "contradict", "forget", "ignore"]
 type MemoryProposalStatus = Literal["pending", "accepted", "rejected", "ignored"]
 type MemoryRetrievalSource = Literal["pinned", "fts", "semantic", "temporal", "recent"]
+
+
+class MemoryChannelAttribution(ProtocolModel):
+    """Immutable, provider-neutral attribution for one memory source.
+
+    Stable provider-scoped keys preserve where an observation came from after
+    the originating transcript falls out of the recent-history window. Display
+    labels are optional untrusted presentation data and never identity or
+    instructions.
+    """
+
+    schema_version: Literal["1.0"] = "1.0"
+    provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{1,127}$")
+    connection_id: UUID
+    account_key: str | None = Field(default=None, min_length=1, max_length=512)
+    principal_scope: str = Field(min_length=1, max_length=256)
+    chat_type: Literal["direct", "group"]
+    conversation_key: str = Field(min_length=1, max_length=512)
+    sender_key: str = Field(min_length=1, max_length=512)
+    received_at: AwareDatetime
+    conversation_label: Annotated[str, Field(min_length=1, max_length=256)] | None = None
+    sender_display_name: Annotated[str, Field(min_length=1, max_length=256)] | None = None
 
 
 class MemoryRecordDraft(ProtocolModel):
@@ -83,6 +105,9 @@ class MemoryExcerpt(ProtocolModel):
     retrieval_sources: list[MemoryRetrievalSource] = Field(
         default_factory=lambda: list[MemoryRetrievalSource]()
     )
+    channel_attributions: list[MemoryChannelAttribution] = Field(
+        default_factory=lambda: list[MemoryChannelAttribution]()
+    )
 
 
 class MemorySource(ProtocolModel):
@@ -93,6 +118,7 @@ class MemorySource(ProtocolModel):
     turn_id: UUID | None = None
     source_kind: Literal["user_turn", "assistant_spoken", "memory_management", "migration"]
     created_at: AwareDatetime
+    channel_attribution: MemoryChannelAttribution | None = None
 
 
 class MemoryContextPacket(ProtocolModel):

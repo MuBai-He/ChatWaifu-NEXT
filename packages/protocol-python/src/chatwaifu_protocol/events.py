@@ -211,6 +211,7 @@ type GenericCoreEventType = Literal[
     "voice.utterance_ignored",
     "companion.proactive_triggered",
     "companion.proactive_deferred",
+    "channel.delivery_acknowledged",
     "resource.models_slept",
     "resource.models_woke",
 ]
@@ -263,6 +264,7 @@ GENERIC_CORE_EVENT_TYPES: tuple[GenericCoreEventType, ...] = (
     "voice.utterance_ignored",
     "companion.proactive_triggered",
     "companion.proactive_deferred",
+    "channel.delivery_acknowledged",
     "resource.models_slept",
     "resource.models_woke",
 )

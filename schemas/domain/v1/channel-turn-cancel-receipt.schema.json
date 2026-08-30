@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "ChannelTurnStatus": {
+      "enum": [
+        "accepted",
+        "processing",
+        "completed",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "timed_out"
+      ],
+      "title": "ChannelTurnStatus",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-turn-cancel-receipt.schema.json",
+  "properties": {
+    "accepted": {
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "acknowledged_at": {
+      "format": "date-time",
+      "title": "Acknowledged At",
+      "type": "string"
+    },
+    "channel_turn_id": {
+      "format": "uuid",
+      "title": "Channel Turn Id",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ChannelTurnStatus"
+    }
+  },
+  "required": [
+    "channel_turn_id",
+    "accepted",
+    "status",
+    "revision",
+    "acknowledged_at"
+  ],
+  "title": "ChannelTurnCancelReceipt",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

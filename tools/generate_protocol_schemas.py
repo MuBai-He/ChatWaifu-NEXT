@@ -27,6 +27,7 @@ def main() -> None:
     # Keep generation runnable from a fresh monorepo checkout even when the local
     # Python installation ignores editable-install .pth files.
     sys.path.insert(0, str(PROTOCOL_SOURCE))
+    from chatwaifu_protocol.channels import ChannelInboundTextMessage
     from chatwaifu_protocol.events import (
         GENERIC_CORE_EVENT_TYPES,
         SessionCreatedEvent,
@@ -65,6 +66,21 @@ def main() -> None:
     write_json(
         FIXTURE_DIR / "python-generic-core-event-types.json",
         list(GENERIC_CORE_EVENT_TYPES),
+    )
+    write_json(
+        FIXTURE_DIR / "python-channel-inbound-text-message.json",
+        ChannelInboundTextMessage(
+            connection_id=UUID("00000000-0000-4000-8000-000000000801"),
+            account_key="provider-account-001",
+            external_message_id="provider-message-001",
+            conversation_key="provider-direct-conversation-001",
+            sender_key="provider-sender-001",
+            principal_scope="owner/local",
+            text="宁宁，今天也请多关照。",
+            conversation_label="与宁宁的测试会话",
+            sender_display_name="木白",
+            received_at=FIXED_TIME,
+        ),
     )
 
 

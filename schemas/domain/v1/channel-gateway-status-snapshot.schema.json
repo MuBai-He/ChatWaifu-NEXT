@@ -1,0 +1,50 @@
+{
+  "$defs": {
+    "ChannelGatewayStatus": {
+      "enum": [
+        "ready",
+        "degraded",
+        "error"
+      ],
+      "title": "ChannelGatewayStatus",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-gateway-status-snapshot.schema.json",
+  "description": "Aggregate health for the provider-neutral channel gateway.",
+  "properties": {
+    "checked_at": {
+      "format": "date-time",
+      "title": "Checked At",
+      "type": "string"
+    },
+    "enabled_connection_count": {
+      "minimum": 0,
+      "title": "Enabled Connection Count",
+      "type": "integer"
+    },
+    "provider_count": {
+      "minimum": 0,
+      "title": "Provider Count",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ChannelGatewayStatus"
+    }
+  },
+  "required": [
+    "status",
+    "provider_count",
+    "enabled_connection_count",
+    "checked_at"
+  ],
+  "title": "ChannelGatewayStatusSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

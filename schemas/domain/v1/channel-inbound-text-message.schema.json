@@ -1,0 +1,148 @@
+{
+  "$defs": {
+    "ChannelChatType": {
+      "description": "Conversation shapes understood by this schema major.",
+      "enum": [
+        "direct",
+        "group"
+      ],
+      "title": "ChannelChatType",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-inbound-text-message.schema.json",
+  "description": "Normalized text message admitted by a trusted adapter.\n\nIdentity fields are opaque and provider-scoped:\n\n* ``external_message_id`` identifies one inbound message and is the\n  idempotency key within a connection. It must remain stable across retries.\n* ``conversation_key`` identifies the provider conversation, not a Runtime\n  session id.\n* ``sender_key`` identifies the provider peer, not a display name.\n* ``principal_scope`` is assigned by Runtime connection policy and must\n  equal the configured connection scope; adapters must not accept it from\n  untrusted user content.\n\n``conversation_label`` and ``sender_display_name`` are untrusted display\nhints only. They must never be used for identity, authorization, memory\nscope, prompt instructions, or idempotency.",
+  "properties": {
+    "account_key": {
+      "anyOf": [
+        {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Opaque provider-scoped account identity copied from the connection; the gateway must reject a mismatch",
+      "title": "Account Key"
+    },
+    "chat_type": {
+      "$ref": "#/$defs/ChannelChatType",
+      "default": "direct"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "conversation_key": {
+      "description": "Opaque provider-scoped direct-conversation identity",
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Conversation Key",
+      "type": "string"
+    },
+    "conversation_label": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Untrusted display label; never identity, authorization, or instruction",
+      "title": "Conversation Label"
+    },
+    "external_message_id": {
+      "description": "Opaque provider-scoped inbound message identity used for idempotency; stable across retries within the connection",
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "External Message Id",
+      "type": "string"
+    },
+    "kind": {
+      "const": "text",
+      "default": "text",
+      "title": "Kind",
+      "type": "string"
+    },
+    "principal_scope": {
+      "description": "Runtime-owned privacy and memory isolation key copied from the connection; the gateway must reject a mismatch",
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Principal Scope",
+      "type": "string"
+    },
+    "received_at": {
+      "format": "date-time",
+      "title": "Received At",
+      "type": "string"
+    },
+    "reply_to_external_message_id": {
+      "anyOf": [
+        {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reply To External Message Id"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sender_display_name": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Untrusted display label; never identity, authorization, or instruction",
+      "title": "Sender Display Name"
+    },
+    "sender_key": {
+      "description": "Opaque provider-scoped sender identity; never a display name",
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Sender Key",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 20000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "connection_id",
+    "external_message_id",
+    "conversation_key",
+    "sender_key",
+    "principal_scope",
+    "text",
+    "received_at"
+  ],
+  "title": "ChannelInboundTextMessage",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

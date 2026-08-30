@@ -1,0 +1,90 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-connection-configuration.schema.json",
+  "description": "Non-secret Runtime configuration for one external channel account.\n\n``principal_scope`` is the Runtime-owned privacy, relationship, and memory\nisolation key. It is not a provider user id and must never be derived from\nmessage text. Provider credentials and login state are intentionally absent.",
+  "properties": {
+    "account_key": {
+      "anyOf": [
+        {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Opaque provider-scoped account identity; never a credential",
+      "title": "Account Key"
+    },
+    "allowed_sender_keys": {
+      "description": "Opaque provider-scoped sender identities admitted by this connection; an empty list admits no senders",
+      "items": {
+        "maxLength": 512,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Allowed Sender Keys",
+      "type": "array"
+    },
+    "character_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Character Id",
+      "type": "string"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "enabled": {
+      "default": true,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "name": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "principal_scope": {
+      "description": "Runtime-owned stable isolation key for persona relationship and memory state; it is not a provider identity and must match the configured connection",
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Principal Scope",
+      "type": "string"
+    },
+    "provider_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "timeout_seconds": {
+      "default": 120,
+      "description": "Recent authenticated adapter activity window used by local health presentation; it is not a generation or provider-delivery deadline",
+      "exclusiveMinimum": 0,
+      "maximum": 600,
+      "title": "Timeout Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "connection_id",
+    "provider_id",
+    "name",
+    "character_id",
+    "principal_scope"
+  ],
+  "title": "ChannelConnectionConfiguration",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

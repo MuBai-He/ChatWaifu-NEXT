@@ -1340,6 +1340,1453 @@
       "title": "AvatarInteractionEvent",
       "type": "object"
     },
+    "ChannelAuthorizationMethod": {
+      "description": "Interactive authorization methods exposed to trusted local clients.",
+      "enum": [
+        "qr_code"
+      ],
+      "title": "ChannelAuthorizationMethod",
+      "type": "string"
+    },
+    "ChannelAuthorizationSnapshot": {
+      "description": "Sanitized state of a short-lived provider authorization session.",
+      "properties": {
+        "auth_session_id": {
+          "format": "uuid",
+          "title": "Auth Session Id",
+          "type": "string"
+        },
+        "connection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelConnectionSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "method": {
+          "$ref": "#/$defs/ChannelAuthorizationMethod",
+          "default": "qr_code"
+        },
+        "poll_after_ms": {
+          "anyOf": [
+            {
+              "maximum": 60000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Poll After Ms"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "qr_code_content": {
+          "anyOf": [
+            {
+              "maxLength": 8192,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Opaque content rendered as a QR code by the trusted local settings client",
+          "title": "Qr Code Content"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelAuthorizationStatus"
+        },
+        "status_message": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Message"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "verification_required": {
+          "default": false,
+          "title": "Verification Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "auth_session_id",
+        "provider_id",
+        "status",
+        "expires_at",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelAuthorizationSnapshot",
+      "type": "object"
+    },
+    "ChannelAuthorizationStartRequest": {
+      "description": "Start one local, short-lived provider authorization session.\n\nProvider credentials and account identities must never be accepted from the\nbrowser. A successful adapter authorization derives them and returns only a\nsanitized ``ChannelConnectionSnapshot``.",
+      "properties": {
+        "character_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "connection_name": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Connection Name"
+        },
+        "method": {
+          "$ref": "#/$defs/ChannelAuthorizationMethod",
+          "default": "qr_code"
+        },
+        "principal_scope": {
+          "default": "local",
+          "description": "Runtime-owned relationship and memory scope, never a provider identity",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_id",
+        "character_id"
+      ],
+      "title": "ChannelAuthorizationStartRequest",
+      "type": "object"
+    },
+    "ChannelAuthorizationStatus": {
+      "description": "Provider-neutral state for one short-lived authorization session.",
+      "enum": [
+        "pending",
+        "scanned",
+        "verification_required",
+        "confirmed",
+        "expired",
+        "cancelled",
+        "failed"
+      ],
+      "title": "ChannelAuthorizationStatus",
+      "type": "string"
+    },
+    "ChannelAuthorizationVerificationRequest": {
+      "description": "Submit a short pairing code requested by the provider authorization flow.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "verification_code": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[0-9A-Za-z-]+$",
+          "title": "Verification Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verification_code"
+      ],
+      "title": "ChannelAuthorizationVerificationRequest",
+      "type": "object"
+    },
+    "ChannelChatType": {
+      "description": "Conversation shapes understood by this schema major.",
+      "enum": [
+        "direct",
+        "group"
+      ],
+      "title": "ChannelChatType",
+      "type": "string"
+    },
+    "ChannelConnectionConfiguration": {
+      "description": "Non-secret Runtime configuration for one external channel account.\n\n``principal_scope`` is the Runtime-owned privacy, relationship, and memory\nisolation key. It is not a provider user id and must never be derived from\nmessage text. Provider credentials and login state are intentionally absent.",
+      "properties": {
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Opaque provider-scoped account identity; never a credential",
+          "title": "Account Key"
+        },
+        "allowed_sender_keys": {
+          "description": "Opaque provider-scoped sender identities admitted by this connection; an empty list admits no senders",
+          "items": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Allowed Sender Keys",
+          "type": "array"
+        },
+        "character_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "principal_scope": {
+          "description": "Runtime-owned stable isolation key for persona relationship and memory state; it is not a provider identity and must match the configured connection",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 120,
+          "description": "Recent authenticated adapter activity window used by local health presentation; it is not a generation or provider-delivery deadline",
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "connection_id",
+        "provider_id",
+        "name",
+        "character_id",
+        "principal_scope"
+      ],
+      "title": "ChannelConnectionConfiguration",
+      "type": "object"
+    },
+    "ChannelConnectionSnapshot": {
+      "description": "Persisted connection state safe to expose to local settings clients.\n\n``account_key`` and ``allowed_sender_keys`` remain local, non-secret,\nprovider-scoped identifiers. They are never credentials and should not be\nforwarded to a conversation peer.",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/ChannelProviderCapabilities"
+        },
+        "configuration": {
+          "$ref": "#/$defs/ChannelConnectionConfiguration"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Seen At"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelConnectionStatus",
+          "default": "untested"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "configuration",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelConnectionSnapshot",
+      "type": "object"
+    },
+    "ChannelConnectionStatus": {
+      "enum": [
+        "untested",
+        "ready",
+        "degraded",
+        "error",
+        "disabled"
+      ],
+      "title": "ChannelConnectionStatus",
+      "type": "string"
+    },
+    "ChannelDeliveryAcknowledgement": {
+      "description": "Idempotent adapter acknowledgement for one outbound delivery.",
+      "properties": {
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lease_id": {
+          "format": "uuid",
+          "title": "Lease Id",
+          "type": "string"
+        },
+        "provider_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Message Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "delivered",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "channel_turn_id",
+        "lease_id",
+        "status",
+        "acknowledged_at"
+      ],
+      "title": "ChannelDeliveryAcknowledgement",
+      "type": "object"
+    },
+    "ChannelDeliveryClaimRequest": {
+      "description": "Acquire a short server-timed lease before invoking a provider send API.",
+      "properties": {
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "lease_id": {
+          "format": "uuid",
+          "title": "Lease Id",
+          "type": "string"
+        },
+        "lease_seconds": {
+          "default": 60,
+          "maximum": 300,
+          "minimum": 5,
+          "title": "Lease Seconds",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "channel_turn_id",
+        "lease_id"
+      ],
+      "title": "ChannelDeliveryClaimRequest",
+      "type": "object"
+    },
+    "ChannelDeliverySnapshot": {
+      "properties": {
+        "attempt": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Expires At"
+        },
+        "lease_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Id"
+        },
+        "provider_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Message Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelDeliveryStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "channel_turn_id",
+        "connection_id",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelDeliverySnapshot",
+      "type": "object"
+    },
+    "ChannelDeliveryStatus": {
+      "enum": [
+        "pending",
+        "sending",
+        "delivered",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ChannelDeliveryStatus",
+      "type": "string"
+    },
+    "ChannelErrorResponse": {
+      "description": "Normalized gateway failure safe for HTTP and plugin boundaries.",
+      "properties": {
+        "channel_turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Channel Turn Id"
+        },
+        "error": {
+          "$ref": "#/$defs/StructuredError"
+        },
+        "external_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Message Id"
+        },
+        "retry_after_ms": {
+          "anyOf": [
+            {
+              "maximum": 600000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Ms"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "ChannelErrorResponse",
+      "type": "object"
+    },
+    "ChannelGatewayStatus": {
+      "enum": [
+        "ready",
+        "degraded",
+        "error"
+      ],
+      "title": "ChannelGatewayStatus",
+      "type": "string"
+    },
+    "ChannelGatewayStatusSnapshot": {
+      "description": "Aggregate health for the provider-neutral channel gateway.",
+      "properties": {
+        "checked_at": {
+          "format": "date-time",
+          "title": "Checked At",
+          "type": "string"
+        },
+        "enabled_connection_count": {
+          "minimum": 0,
+          "title": "Enabled Connection Count",
+          "type": "integer"
+        },
+        "provider_count": {
+          "minimum": 0,
+          "title": "Provider Count",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelGatewayStatus"
+        }
+      },
+      "required": [
+        "status",
+        "provider_count",
+        "enabled_connection_count",
+        "checked_at"
+      ],
+      "title": "ChannelGatewayStatusSnapshot",
+      "type": "object"
+    },
+    "ChannelInboundTextMessage": {
+      "description": "Normalized text message admitted by a trusted adapter.\n\nIdentity fields are opaque and provider-scoped:\n\n* ``external_message_id`` identifies one inbound message and is the\n  idempotency key within a connection. It must remain stable across retries.\n* ``conversation_key`` identifies the provider conversation, not a Runtime\n  session id.\n* ``sender_key`` identifies the provider peer, not a display name.\n* ``principal_scope`` is assigned by Runtime connection policy and must\n  equal the configured connection scope; adapters must not accept it from\n  untrusted user content.\n\n``conversation_label`` and ``sender_display_name`` are untrusted display\nhints only. They must never be used for identity, authorization, memory\nscope, prompt instructions, or idempotency.",
+      "properties": {
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Opaque provider-scoped account identity copied from the connection; the gateway must reject a mismatch",
+          "title": "Account Key"
+        },
+        "chat_type": {
+          "$ref": "#/$defs/ChannelChatType",
+          "default": "direct"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "description": "Opaque provider-scoped direct-conversation identity",
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "conversation_label": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label; never identity, authorization, or instruction",
+          "title": "Conversation Label"
+        },
+        "external_message_id": {
+          "description": "Opaque provider-scoped inbound message identity used for idempotency; stable across retries within the connection",
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "External Message Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "principal_scope": {
+          "description": "Runtime-owned privacy and memory isolation key copied from the connection; the gateway must reject a mismatch",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "reply_to_external_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To External Message Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_display_name": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label; never identity, authorization, or instruction",
+          "title": "Sender Display Name"
+        },
+        "sender_key": {
+          "description": "Opaque provider-scoped sender identity; never a display name",
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_id",
+        "external_message_id",
+        "conversation_key",
+        "sender_key",
+        "principal_scope",
+        "text",
+        "received_at"
+      ],
+      "title": "ChannelInboundTextMessage",
+      "type": "object"
+    },
+    "ChannelMessageKind": {
+      "description": "Message payload kinds understood by this schema major.",
+      "enum": [
+        "text"
+      ],
+      "title": "ChannelMessageKind",
+      "type": "string"
+    },
+    "ChannelProviderCapabilities": {
+      "description": "Transport behavior advertised by one provider adapter.\n\nThe first provider advertises only direct text by default. ``group`` is a\nprotocol capability for future adapters, but a Runtime must reject it until\nits provider registration and local policy explicitly enable group chat.",
+      "properties": {
+        "authorization_methods": {
+          "description": "Interactive authorization methods implemented by the local adapter; an empty list means connection provisioning is external",
+          "items": {
+            "$ref": "#/$defs/ChannelAuthorizationMethod"
+          },
+          "maxItems": 8,
+          "title": "Authorization Methods",
+          "type": "array"
+        },
+        "chat_types": {
+          "items": {
+            "$ref": "#/$defs/ChannelChatType"
+          },
+          "minItems": 1,
+          "title": "Chat Types",
+          "type": "array"
+        },
+        "inbound_message_kinds": {
+          "items": {
+            "$ref": "#/$defs/ChannelMessageKind"
+          },
+          "minItems": 1,
+          "title": "Inbound Message Kinds",
+          "type": "array"
+        },
+        "max_text_chars": {
+          "default": 20000,
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Text Chars",
+          "type": "integer"
+        },
+        "outbound_message_kinds": {
+          "items": {
+            "$ref": "#/$defs/ChannelMessageKind"
+          },
+          "minItems": 1,
+          "title": "Outbound Message Kinds",
+          "type": "array"
+        },
+        "supports_cancellation": {
+          "default": true,
+          "title": "Supports Cancellation",
+          "type": "boolean"
+        },
+        "supports_delivery_ack": {
+          "default": true,
+          "title": "Supports Delivery Ack",
+          "type": "boolean"
+        },
+        "supports_partial_replies": {
+          "default": false,
+          "title": "Supports Partial Replies",
+          "type": "boolean"
+        },
+        "supports_proactive_messages": {
+          "default": false,
+          "title": "Supports Proactive Messages",
+          "type": "boolean"
+        },
+        "supports_typing": {
+          "default": false,
+          "title": "Supports Typing",
+          "type": "boolean"
+        }
+      },
+      "title": "ChannelProviderCapabilities",
+      "type": "object"
+    },
+    "ChannelProviderRegistration": {
+      "description": "Discoverable definition for a provider-neutral channel adapter.",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/ChannelProviderCapabilities"
+        },
+        "description": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_id",
+        "version",
+        "name",
+        "description"
+      ],
+      "title": "ChannelProviderRegistration",
+      "type": "object"
+    },
+    "ChannelTurnCancelReceipt": {
+      "properties": {
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        },
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelTurnStatus"
+        }
+      },
+      "required": [
+        "channel_turn_id",
+        "accepted",
+        "status",
+        "revision",
+        "acknowledged_at"
+      ],
+      "title": "ChannelTurnCancelReceipt",
+      "type": "object"
+    },
+    "ChannelTurnCancelRequest": {
+      "properties": {
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "requested_at": {
+          "format": "date-time",
+          "title": "Requested At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "requested_at"
+      ],
+      "title": "ChannelTurnCancelRequest",
+      "type": "object"
+    },
+    "ChannelTurnReceipt": {
+      "description": "Admission receipt returned before or while a channel turn is processed.",
+      "properties": {
+        "accepted_at": {
+          "format": "date-time",
+          "title": "Accepted At",
+          "type": "string"
+        },
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Key"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "chat_type": {
+          "$ref": "#/$defs/ChannelChatType",
+          "default": "direct"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "conversation_label": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label only",
+          "title": "Conversation Label"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "external_message_id": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "External Message Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "poll_after_ms": {
+          "anyOf": [
+            {
+              "maximum": 60000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Poll After Ms"
+        },
+        "principal_scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_display_name": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label only",
+          "title": "Sender Display Name"
+        },
+        "sender_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelTurnStatus"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_turn_id",
+        "connection_id",
+        "external_message_id",
+        "conversation_key",
+        "sender_key",
+        "principal_scope",
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "status",
+        "revision",
+        "accepted_at"
+      ],
+      "title": "ChannelTurnReceipt",
+      "type": "object"
+    },
+    "ChannelTurnSnapshot": {
+      "description": "Current durable result for one normalized inbound message.",
+      "properties": {
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Key"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "chat_type": {
+          "$ref": "#/$defs/ChannelChatType",
+          "default": "direct"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "conversation_label": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label only",
+          "title": "Conversation Label"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivery_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivery Id"
+        },
+        "delivery_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelDeliveryStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "external_message_id": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "External Message Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "principal_scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply Text"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_display_name": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Untrusted display label only",
+          "title": "Sender Display Name"
+        },
+        "sender_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelTurnStatus"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_turn_id",
+        "connection_id",
+        "external_message_id",
+        "conversation_key",
+        "sender_key",
+        "principal_scope",
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "status",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelTurnSnapshot",
+      "type": "object"
+    },
+    "ChannelTurnStatus": {
+      "enum": [
+        "accepted",
+        "processing",
+        "completed",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "timed_out"
+      ],
+      "title": "ChannelTurnStatus",
+      "type": "string"
+    },
     "CharacterKernelSnapshot": {
       "properties": {
         "affect": {
@@ -2014,6 +3461,7 @@
         "voice.utterance_ignored",
         "companion.proactive_triggered",
         "companion.proactive_deferred",
+        "channel.delivery_acknowledged",
         "resource.models_slept",
         "resource.models_woke"
       ],
@@ -2656,6 +4104,111 @@
       "title": "McpToolDescriptor",
       "type": "object"
     },
+    "MemoryChannelAttribution": {
+      "description": "Immutable, provider-neutral attribution for one memory source.\n\nStable provider-scoped keys preserve where an observation came from after\nthe originating transcript falls out of the recent-history window. Display\nlabels are optional untrusted presentation data and never identity or\ninstructions.",
+      "properties": {
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Key"
+        },
+        "chat_type": {
+          "enum": [
+            "direct",
+            "group"
+          ],
+          "title": "Chat Type",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "conversation_label": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation Label"
+        },
+        "principal_scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_display_name": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sender Display Name"
+        },
+        "sender_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Sender Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_id",
+        "connection_id",
+        "principal_scope",
+        "chat_type",
+        "conversation_key",
+        "sender_key",
+        "received_at"
+      ],
+      "title": "MemoryChannelAttribution",
+      "type": "object"
+    },
     "MemoryContextPacket": {
       "properties": {
         "open_commitments": {
@@ -2715,6 +4268,13 @@
     },
     "MemoryExcerpt": {
       "properties": {
+        "channel_attributions": {
+          "items": {
+            "$ref": "#/$defs/MemoryChannelAttribution"
+          },
+          "title": "Channel Attributions",
+          "type": "array"
+        },
         "entity_relevance": {
           "default": 0,
           "maximum": 1,
@@ -3144,6 +4704,17 @@
     },
     "MemorySource": {
       "properties": {
+        "channel_attribution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MemoryChannelAttribution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "created_at": {
           "format": "date-time",
           "title": "Created At",
@@ -6160,6 +7731,54 @@
     "avatar_interaction": {
       "$ref": "#/$defs/AvatarInteractionEvent"
     },
+    "channel_authorization": {
+      "$ref": "#/$defs/ChannelAuthorizationSnapshot"
+    },
+    "channel_authorization_start_request": {
+      "$ref": "#/$defs/ChannelAuthorizationStartRequest"
+    },
+    "channel_authorization_verification_request": {
+      "$ref": "#/$defs/ChannelAuthorizationVerificationRequest"
+    },
+    "channel_connection": {
+      "$ref": "#/$defs/ChannelConnectionSnapshot"
+    },
+    "channel_connection_configuration": {
+      "$ref": "#/$defs/ChannelConnectionConfiguration"
+    },
+    "channel_delivery": {
+      "$ref": "#/$defs/ChannelDeliverySnapshot"
+    },
+    "channel_delivery_acknowledgement": {
+      "$ref": "#/$defs/ChannelDeliveryAcknowledgement"
+    },
+    "channel_delivery_claim_request": {
+      "$ref": "#/$defs/ChannelDeliveryClaimRequest"
+    },
+    "channel_error": {
+      "$ref": "#/$defs/ChannelErrorResponse"
+    },
+    "channel_gateway_status": {
+      "$ref": "#/$defs/ChannelGatewayStatusSnapshot"
+    },
+    "channel_inbound_text": {
+      "$ref": "#/$defs/ChannelInboundTextMessage"
+    },
+    "channel_provider": {
+      "$ref": "#/$defs/ChannelProviderRegistration"
+    },
+    "channel_turn": {
+      "$ref": "#/$defs/ChannelTurnSnapshot"
+    },
+    "channel_turn_cancel_receipt": {
+      "$ref": "#/$defs/ChannelTurnCancelReceipt"
+    },
+    "channel_turn_cancel_request": {
+      "$ref": "#/$defs/ChannelTurnCancelRequest"
+    },
+    "channel_turn_receipt": {
+      "$ref": "#/$defs/ChannelTurnReceipt"
+    },
     "character_kernel": {
       "$ref": "#/$defs/CharacterKernelSnapshot"
     },
@@ -6203,6 +7822,9 @@
     },
     "memory": {
       "$ref": "#/$defs/MemoryRecord"
+    },
+    "memory_channel_attribution": {
+      "$ref": "#/$defs/MemoryChannelAttribution"
     },
     "memory_context": {
       "$ref": "#/$defs/MemoryContextPacket"
@@ -6277,10 +7899,27 @@
     "character_kernel",
     "response_plan",
     "prompt_budget",
+    "channel_authorization_start_request",
+    "channel_authorization_verification_request",
+    "channel_authorization",
+    "channel_provider",
+    "channel_connection_configuration",
+    "channel_connection",
+    "channel_gateway_status",
+    "channel_inbound_text",
+    "channel_turn_receipt",
+    "channel_turn",
+    "channel_delivery_acknowledgement",
+    "channel_delivery_claim_request",
+    "channel_delivery",
+    "channel_turn_cancel_request",
+    "channel_turn_cancel_receipt",
+    "channel_error",
     "skill",
     "skill_run",
     "skill_result",
     "memory",
+    "memory_channel_attribution",
     "memory_proposal",
     "memory_context",
     "memory_source",

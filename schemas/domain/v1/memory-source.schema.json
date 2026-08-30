@@ -1,6 +1,124 @@
 {
+  "$defs": {
+    "MemoryChannelAttribution": {
+      "description": "Immutable, provider-neutral attribution for one memory source.\n\nStable provider-scoped keys preserve where an observation came from after\nthe originating transcript falls out of the recent-history window. Display\nlabels are optional untrusted presentation data and never identity or\ninstructions.",
+      "properties": {
+        "account_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Key"
+        },
+        "chat_type": {
+          "enum": [
+            "direct",
+            "group"
+          ],
+          "title": "Chat Type",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "conversation_label": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation Label"
+        },
+        "principal_scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Principal Scope",
+          "type": "string"
+        },
+        "provider_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_display_name": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sender Display Name"
+        },
+        "sender_key": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Sender Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_id",
+        "connection_id",
+        "principal_scope",
+        "chat_type",
+        "conversation_key",
+        "sender_key",
+        "received_at"
+      ],
+      "title": "MemoryChannelAttribution",
+      "type": "object"
+    }
+  },
   "$id": "https://chatwaifu.local/schemas/domain/v1/memory-source.schema.json",
   "properties": {
+    "channel_attribution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MemoryChannelAttribution"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "created_at": {
       "format": "date-time",
       "title": "Created At",
