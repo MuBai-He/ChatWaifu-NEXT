@@ -273,5 +273,8 @@ make build-desktop-ui
 - [Web/Desktop 发行模型](docs/architecture/product-release-profiles.md)
 - [Windows Worker Packs](docs/operations/windows-local-ai-worker-packs.md)
 
+文档规范源保留在本 private monorepo；`make publish-docs` 只把经过路径、密钥和私有资产审计的静态产物
+发布到 public Pages 镜像，不复制产品源码或本地资产。
+
 感谢上一代 [cjyaddone/ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 对语音角色交互方向的早期探索。
 NEXT 是一次架构重写，不与上一代配置、模型目录或启动脚本保持兼容。

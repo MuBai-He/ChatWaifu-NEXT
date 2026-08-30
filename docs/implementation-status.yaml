@@ -91,8 +91,8 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
-      - Nine GitHub Actions workflows are configured, including independent Web and Desktop tag gates plus a GitHub Pages documentation gate
-      - A VitePress installation and extension site builds at the repository Pages base; remote publication remains pending Pages enablement and a main-branch workflow run
+      - Nine GitHub Actions workflows are configured, including independent Web and Desktop tag gates plus a documentation build and dependency-audit gate
+      - A VitePress installation and extension site builds locally and is publicly served from an audited static Pages mirror while the canonical product source remains private
       - Twenty-eight ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, and ADR 0028 defines versioned local AI Worker Packs
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
