@@ -25,6 +25,8 @@ from chatwaifu_tts_neural_worker.config import WorkerSettings
 from chatwaifu_tts_neural_worker.engines import (
     EnginePcmChunk,
     QwenMlxEngine,
+    QwenTorchEngine,
+    SynthesisCancelled,
     SynthesisEngine,
 )
 from chatwaifu_tts_neural_worker.main import create_app
@@ -165,6 +167,130 @@ def test_qwen_custom_voice_rejects_missing_profile_speaker(settings: WorkerSetti
     model = FakeCustomVoiceQwenModel()
     with pytest.raises(RuntimeError, match="requires qwen_voice"):
         QwenMlxEngine(settings, model_loader=lambda _: model)
+
+
+class FakeTorchQwenModel:
+    def __init__(self, *, cancel_event: threading.Event | None = None) -> None:
+        self.calls: list[tuple[str, dict[str, object]]] = []
+        self._cancel_event = cancel_event
+
+    def get_supported_speakers(self) -> list[str]:
+        return ["ayachi_nene_local"]
+
+    def generate_custom_voice(self, **kwargs: object) -> tuple[list[np.ndarray], int]:
+        self.calls.append(("custom", kwargs))
+        if self._cancel_event is not None:
+            self._cancel_event.set()
+        return [np.ones(2_400, dtype=np.float32) * 0.1], 24_000
+
+    def generate_voice_clone(self, **kwargs: object) -> tuple[list[np.ndarray], int]:
+        self.calls.append(("clone", kwargs))
+        return [np.ones(1_200, dtype=np.float32) * 0.1], 24_000
+
+
+def _torch_settings(tmp_path: Path, *, qwen_voice: str | None) -> WorkerSettings:
+    reference = tmp_path / "reference.wav"
+    reference.write_bytes(_wave_bytes())
+    return WorkerSettings(
+        port=8767,
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        backend="qwen3_tts_torch",
+        provider_id="qwen3_tts_torch",
+        display_name="Qwen3-TTS · CUDA",
+        worker_id="tts-qwen-cuda-test",
+        model="nene-qwen3-0.6b",
+        model_dir=tmp_path,
+        qwen_voice=qwen_voice,
+        reference_audio=None if qwen_voice else reference,
+        reference_text=None if qwen_voice else "参考文本。",
+        device="cuda:0",
+        preload=False,
+    )
+
+
+def test_qwen_torch_custom_voice_uses_trained_speaker_and_complete_wave(
+    tmp_path: Path,
+) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel()
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="ayachi_nene_local",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    audio, sample_rate, duration_ms = engine.synthesize(request, threading.Event())
+
+    assert audio.startswith(b"RIFF")
+    assert sample_rate == 24_000
+    assert duration_ms == 100
+    method, options = model.calls[0]
+    assert method == "custom"
+    assert options["speaker"] == "ayachi_nene_local"
+    assert options["language"] == "Chinese"
+    assert "ref_audio" not in options
+    capabilities = SynthesisService(settings, engine_factory=lambda _: engine).capabilities()
+    assert capabilities.supports_voice_cloning is False
+    assert capabilities.native_streaming is False
+    assert capabilities.stream_protocols == []
+
+
+def test_qwen_torch_base_uses_reference_voice_clone(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice=None)
+    model = FakeTorchQwenModel()
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="おかえりなさい。",
+        language="ja",
+        voice_id="reference",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    engine.synthesize(request, threading.Event())
+
+    method, options = model.calls[0]
+    assert method == "clone"
+    assert options["language"] == "Japanese"
+    assert options["ref_audio"] == str(settings.reference_audio)
+    assert options["ref_text"] == "参考文本。"
+
+
+def test_qwen_torch_drops_native_result_after_generation_is_cancelled(
+    tmp_path: Path,
+) -> None:
+    cancel_event = threading.Event()
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel(cancel_event=cancel_event)
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="ayachi_nene_local",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    with pytest.raises(SynthesisCancelled):
+        engine.synthesize(request, cancel_event)
 
 
 def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> None:

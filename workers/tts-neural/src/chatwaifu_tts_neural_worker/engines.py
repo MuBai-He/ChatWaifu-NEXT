@@ -52,6 +52,8 @@ class SynthesisEngine(Protocol):
 def build_engine(settings: WorkerSettings) -> SynthesisEngine:
     if settings.backend == "qwen3_tts_mlx":
         return QwenMlxEngine(settings)
+    if settings.backend == "qwen3_tts_torch":
+        return QwenTorchEngine(settings)
     return GptSovitsEngine(settings)
 
 
@@ -63,7 +65,7 @@ class QwenMlxEngine:
     ) -> None:
         self._settings = settings
         if model_loader is None:
-            _prepend_import_path(settings.vendor_dir)
+            _prepend_import_path(cast(Path, settings.vendor_dir))
             from tqdm import tqdm
 
             tqdm.monitor_interval = 0
@@ -112,8 +114,8 @@ class QwenMlxEngine:
         if self._voice is None:
             generation_options.update(
                 {
-                    "ref_audio": str(self._settings.reference_audio),
-                    "ref_text": self._settings.reference_text,
+                    "ref_audio": str(cast(Path, self._settings.reference_audio)),
+                    "ref_text": cast(str, self._settings.reference_text),
                 }
             )
         else:
@@ -156,15 +158,125 @@ class QwenMlxEngine:
             reset()
 
 
+class QwenTorchEngine:
+    """Official Qwen3-TTS PyTorch adapter for Windows/Linux CUDA workers.
+
+    The upstream wrapper currently returns a complete waveform.  ``stream_pcm``
+    therefore emits one terminal PCM chunk and the capability endpoint advertises
+    ``native_streaming=false``.  Cancellation still invalidates the generation
+    immediately; a late native result is discarded before it can cross the Worker
+    boundary.
+    """
+
+    def __init__(
+        self,
+        settings: WorkerSettings,
+        model_loader: Callable[[Path], Any] | None = None,
+    ) -> None:
+        self._settings = settings
+        model_dir = Path(cast(Path, settings.model_dir))
+        if model_loader is None:
+            import torch
+            from qwen_tts import Qwen3TTSModel
+
+            dtype = _resolve_torch_dtype(torch, settings.device, settings.qwen_dtype)
+
+            def load(path: Path) -> Any:
+                return Qwen3TTSModel.from_pretrained(
+                    str(path),
+                    device_map=settings.device,
+                    dtype=dtype,
+                    attn_implementation=settings.qwen_attn_implementation,
+                )
+
+            model_loader = load
+        self._model: Any = model_loader(model_dir)
+        self._voice = _resolve_torch_qwen_voice(self._model, settings.qwen_voice)
+
+    @property
+    def device(self) -> str:
+        return self._settings.device
+
+    def synthesize(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> tuple[bytes, int, int]:
+        chunk = self._generate_pcm(request, cancel_event)
+        audio, duration_ms = wave_bytes_from_pcm(
+            chunk.pcm16, chunk.sample_rate, channels=chunk.channels
+        )
+        return audio, chunk.sample_rate, duration_ms
+
+    def stream_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> Iterator[EnginePcmChunk]:
+        yield self._generate_pcm(request, cancel_event)
+
+    def cancel(self) -> None:
+        # The official wrapper does not expose a generation stopping criterion.
+        # SynthesisService invalidates the generation and serializes the native
+        # call, so this no-op cannot leak late audio or overlap another request.
+        return None
+
+    def unload(self) -> None:
+        self._model = None
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
+    def _generate_pcm(
+        self, request: TtsSynthesisRequest, cancel_event: threading.Event
+    ) -> EnginePcmChunk:
+        if cancel_event.is_set():
+            raise SynthesisCancelled
+        language = {"zh": "Chinese", "ja": "Japanese", "en": "English"}.get(
+            request.language, "Auto"
+        )
+        generation_options: dict[str, Any] = {
+            "text": request.text,
+            "language": language,
+            "non_streaming_mode": True,
+            "do_sample": True,
+            "temperature": self._settings.temperature,
+        }
+        if self._voice is not None:
+            generation_options["speaker"] = self._voice
+            wavs, sample_rate = self._model.generate_custom_voice(**generation_options)
+        else:
+            generation_options.update(
+                {
+                    "ref_audio": str(cast(Path, self._settings.reference_audio)),
+                    "ref_text": cast(str, self._settings.reference_text),
+                }
+            )
+            wavs, sample_rate = self._model.generate_voice_clone(**generation_options)
+        if cancel_event.is_set():
+            raise SynthesisCancelled
+        if not wavs:
+            raise RuntimeError("Qwen3-TTS Torch returned no audio")
+        samples = np.asarray(wavs[0], dtype=np.float32).reshape(-1)
+        if samples.size == 0 or not np.isfinite(samples).all():
+            raise RuntimeError("Qwen3-TTS Torch returned invalid audio")
+        pcm16 = pcm16_bytes(samples)
+        if not pcm16:
+            raise RuntimeError("Qwen3-TTS Torch returned empty PCM")
+        return EnginePcmChunk(pcm16=pcm16, sample_rate=int(sample_rate))
+
+
 class GptSovitsEngine:
     def __init__(self, settings: WorkerSettings) -> None:
         self._settings = settings
-        _prepend_import_path(settings.vendor_dir)
-        _prepend_import_path(settings.vendor_dir / "GPT_SoVITS")
-        os.chdir(settings.vendor_dir)
+        vendor_dir = cast(Path, settings.vendor_dir)
+        _prepend_import_path(vendor_dir)
+        _prepend_import_path(vendor_dir / "GPT_SoVITS")
+        os.chdir(vendor_dir)
         from GPT_SoVITS.TTS_infer_pack.TTS import TTS, TTS_Config
 
-        pretrained = settings.vendor_dir / "GPT_SoVITS" / "pretrained_models"
+        pretrained = vendor_dir / "GPT_SoVITS" / "pretrained_models"
         config = TTS_Config(
             {
                 "custom": {
@@ -287,3 +399,24 @@ def _resolve_qwen_voice(model: Any, configured_voice: str | None) -> str | None:
             f"Qwen voice {configured_voice!r} is not in the checkpoint speakers: {supported}"
         )
     return configured_voice
+
+
+def _resolve_torch_qwen_voice(model: Any, configured_voice: str | None) -> str | None:
+    if configured_voice is None:
+        return None
+    supported = [str(voice) for voice in model.get_supported_speakers()]
+    if supported and configured_voice.casefold() not in {voice.casefold() for voice in supported}:
+        raise RuntimeError(
+            f"Qwen voice {configured_voice!r} is not in the checkpoint speakers: {supported}"
+        )
+    return configured_voice
+
+
+def _resolve_torch_dtype(torch: Any, device: str, configured: str) -> Any:
+    if configured != "auto":
+        return getattr(torch, configured)
+    if not device.startswith("cuda"):
+        return torch.float32
+    if torch.cuda.is_bf16_supported():
+        return torch.bfloat16
+    return torch.float16

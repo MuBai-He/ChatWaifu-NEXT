@@ -194,8 +194,9 @@ class SynthesisService:
         )
 
     def capabilities(self) -> TtsWorkerCapabilities:
-        qwen = self._settings.backend == "qwen3_tts_mlx"
+        qwen = self._settings.backend in {"qwen3_tts_mlx", "qwen3_tts_torch"}
         fixed_qwen_voice = qwen and self._settings.qwen_voice is not None
+        native_streaming = self._settings.backend != "qwen3_tts_torch"
         return TtsWorkerCapabilities(
             provider_id=self._settings.provider_id,
             display_name=self._settings.display_name,
@@ -205,8 +206,8 @@ class SynthesisService:
             supports_style=False,
             supports_speed=False,
             supports_pitch=False,
-            native_streaming=True,
-            stream_protocols=["pcm.v2"],
+            native_streaming=native_streaming,
+            stream_protocols=["pcm.v2"] if native_streaming else [],
             local_only=True,
         )
 
