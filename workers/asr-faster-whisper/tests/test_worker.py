@@ -1,5 +1,5 @@
 # Starlette's TestClient methods inherit partially untyped httpx compatibility overloads.
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+# pyright: reportPrivateUsage=false, reportUnknownMemberType=false, reportUnknownVariableType=false
 
 import asyncio
 import base64
@@ -15,7 +15,11 @@ from fastapi.testclient import TestClient
 
 from chatwaifu_asr_worker.config import WorkerSettings
 from chatwaifu_asr_worker.main import create_app
-from chatwaifu_asr_worker.service import TranscriptionEngine, TranscriptionService
+from chatwaifu_asr_worker.service import (
+    TranscriptionEngine,
+    TranscriptionService,
+    _resolve_model_source,
+)
 
 
 @pytest.fixture
@@ -63,6 +67,36 @@ def test_worker_requires_ephemeral_token(client: TestClient) -> None:
         "supports_word_timestamps": False,
         "local_only": True,
     }
+
+
+def test_offline_pack_resolves_the_materialized_model_directory(tmp_path: Path) -> None:
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "config.json").write_text("{}", encoding="utf-8")
+    (model_dir / "model.bin").write_bytes(b"weights")
+    (model_dir / "tokenizer.json").write_text("{}", encoding="utf-8")
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model="base",
+        model_dir=model_dir,
+        local_files_only=True,
+        preload=False,
+    )
+
+    assert _resolve_model_source(settings) == str(model_dir.resolve())
+
+
+def test_offline_pack_rejects_an_incomplete_model_directory(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model="base",
+        model_dir=tmp_path / "missing-model",
+        local_files_only=True,
+        preload=False,
+    )
+
+    with pytest.raises(RuntimeError, match=r"config.json, model.bin, tokenizer.json"):
+        _resolve_model_source(settings)
 
 
 def test_worker_transcribes_pcm_with_generation_identity(client: TestClient) -> None:

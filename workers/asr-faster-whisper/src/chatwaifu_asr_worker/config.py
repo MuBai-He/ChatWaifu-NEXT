@@ -21,6 +21,7 @@ class WorkerSettings(BaseSettings):
     display_name: str = "faster-whisper · 本地"
     model: str = "base"
     model_dir: Path = Path(".local/models/faster-whisper")
+    local_files_only: bool = False
     device: str = "cpu"
     compute_type: str = "int8"
     preload: bool = True

@@ -36,11 +36,13 @@ class FasterWhisperEngine:
     def __init__(self, settings: WorkerSettings) -> None:
         from faster_whisper import WhisperModel
 
+        model_source = _resolve_model_source(settings)
         self._model = WhisperModel(
-            settings.model,
+            model_source,
             device=settings.device,
             compute_type=settings.compute_type,
             download_root=str(settings.model_dir),
+            local_files_only=settings.local_files_only,
         )
 
     def transcribe(
@@ -58,6 +60,23 @@ class FasterWhisperEngine:
         )
         text = "".join(segment.text for segment in segments).strip()
         return text, info.language or language
+
+
+def _resolve_model_source(settings: WorkerSettings) -> str:
+    if not settings.local_files_only:
+        return settings.model
+    model_dir = settings.model_dir.resolve()
+    required = (
+        model_dir / "config.json",
+        model_dir / "model.bin",
+        model_dir / "tokenizer.json",
+    )
+    missing = [path.name for path in required if not path.is_file()]
+    if missing:
+        raise RuntimeError(
+            "offline faster-whisper model directory is incomplete; missing " + ", ".join(missing)
+        )
+    return str(model_dir)
 
 
 class TranscriptionService:
