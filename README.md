@@ -1,288 +1,277 @@
-# ChatWaifu NEXT
+<p align="center">
+  <img src="docs/assets/readme-hero.svg" alt="ChatWaifu NEXT — local-first realtime character runtime" width="100%" />
+</p>
 
-ChatWaifu NEXT（ChatWaifuV2）是 local-first 的 AI 角色 Runtime。仓库当前包含一个可直接
-运行的绫地宁宁主题基础 Demo：文字与真实麦克风对话、VAD 自动回合、本地 STT/角色 TTS、Pipecat
-SmallWebRTC 全双工音频、语义 Avatar、抢话打断、SQLite 会话历史、结构化长期记忆，以及带权限与
-确认的 Runtime Skills/MCP 插件链路已接通。
+<p align="center">
+  <img alt="Status" src="https://img.shields.io/badge/status-usable_demo-c16d9f?style=flat-square" />
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-6e4d7e?style=flat-square&logo=python&logoColor=white" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-6e4d7e?style=flat-square&logo=react&logoColor=white" />
+  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-6e4d7e?style=flat-square&logo=tauri&logoColor=white" />
+  <img alt="Local first" src="https://img.shields.io/badge/privacy-local--first-4f7c70?style=flat-square" />
+</p>
 
-仓库只维护一个 `main`，但不是一个混合前端包：浏览器 Galgame 与原生桌宠分别从编译期入口
-生成 `apps/web/dist/web` 和 `apps/web/dist/desktop`。两者共享 Runtime、会话、Live2D、语音、
-记忆和设置实现，不共享产品页面；发行约定见
-[Web/Desktop product profiles](docs/architecture/product-release-profiles.md)。
+<p align="center">
+  <a href="https://mubai-he.github.io/ChatWaifu-NEXT-docs/">文档</a>
+  · <a href="#快速体验">快速体验</a>
+  · <a href="#二次开发">二次开发</a>
+  · <a href="docs/implementation-status.yaml">实现状态</a>
+  · <a href="CONTRIBUTING.md">贡献指南</a>
+</p>
 
-## 直接运行 Demo
+ChatWaifu NEXT（ChatWaifuV2）是一个 **local-first、可替换 Provider、面向实时交互** 的 AI 角色
+Runtime。它把对话、真实语音、长期记忆、Character Kernel、Runtime Skills/MCP 与语义 Avatar
+组合成同一条可取消、可恢复、可审计的角色体验，并同时提供 Galgame Web 界面和原生桌宠。
 
-环境要求：Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22+（含 npm）、
-GNU Make。项目会自动在 `.local/tooling/` 准备固定版本的 pnpm，无需全局安装。首次检出可直接运行：
+当前默认 Demo 围绕绫地宁宁主题构建，但角色人格、语音、模型和 Avatar 都是可替换边界。仓库不分裂
+Web/Pet 长期分支：一个 `main` 保存唯一真相源，`web-v*` 与 `desktop-v*` 使用独立版本、Tag 和构建门；
+Web 可以发布静态产物，Desktop 目前仍只生成未签名安装候选。
+
+> **项目状态**：基础可用 Demo，仍在活跃开发。发行许可证尚未选定；宁宁 Live2D、训练音色、
+> checkpoint、Cubism Core 和其他 owner-only 资产不随源码分发。公开发布或二开分发前请先阅读
+> [许可与资产边界](LICENSES.md)。
+
+## 为什么是 NEXT
+
+上一代 [ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 验证了“LLM + 角色语音 + Live2D”可以形成
+有趣的陪伴体验。NEXT 保留这个方向，但不再把不同语言、模型和输入方式拆成多份启动脚本，而是重写为
+可维护的 Runtime：Provider 可替换、状态可持久化、实时输出可取消，Web 与桌面共享领域能力。
+
+|     | 能力               | 现在的实现                                                                                                                |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 🎙️  | **真正的语音回合** | 浏览器麦克风、Silero VAD、faster-whisper、唤醒词门控、自动结束和抢话打断                                                  |
+| 🌙  | **会动的角色**     | typed `AvatarCue`、动作状态机、表情/注视/口型、Live2D 与 Fake renderer 安全回退                                           |
+| 🧠  | **有边界的记忆**   | SQLite WAL + FTS5、结构化提取、审核、去重、冲突修正、来源、隐私和可重建语义投影                                           |
+| 💗  | **持续的人格关系** | Affect/Relationship reducer、关系阶段、Prompt 预算和跨 LLM 的 persona 约束                                                |
+| 🔊  | **可选择的声音**   | 本地 Qwen3-TTS / GPT-SoVITS 与百炼 Qwen VC / CosyVoice 共用 TTS contract；Kokoro、macOS say、Fake 作为可配置 adapter/回退 |
+| 🧩  | **安全的扩展能力** | Runtime Skills、OpenAI tool calling、MCP Host/Server、权限确认、超时、取消、审计和平台沙箱                                |
+| 🖥️  | **两种产品形态**   | Galgame Web 与 Tauri 桌宠独立编译，复用 Runtime、会话、语音、记忆和 Avatar SDK                                            |
+
+## 产品形态
+
+| 产品          | 面向用户的界面                               | 开发/构建入口                              | 产物                    |
+| ------------- | -------------------------------------------- | ------------------------------------------ | ----------------------- |
+| Web           | Galgame 对话、Live2D、Avatar Lab             | `make dev-web` / `make build-web`          | `apps/web/dist/web`     |
+| Desktop UI    | 透明桌宠、独立设置、托盘                     | `make build-desktop-ui`                    | `apps/web/dist/desktop` |
+| Desktop Host  | Tauri 窗口、sidecar、安装生命周期            | `make desktop` / `make build-desktop-host` | 原生开发 Host           |
+| Windows x64   | Desktop + 冻结 Runtime + AppContainer helper | `tools\windows\build_installer_x64.ps1`    | NSIS 安装候选           |
+| Local AI Pack | 隔离 Python、模型 SDK、权重、CUDA            | Windows Worker Pack builders               | 独立 `.cwpack`          |
+
+Web 与桌宠不是同一个页面套皮。它们从 `apps/web/src/main.web.tsx` 与
+`apps/web/src/main.desktop.tsx` 两个编译期入口生成不同依赖图，并由
+`chatwaifu-product.json` 记录实际组成。详细发行边界见
+[ADR 0026](docs/adr/0026-monorepo-product-release-profiles.md)。
+
+## 快速体验
+
+### 1. 无私有模型的最小开发模式
+
+需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22/npm、Rust/cargo 和 GNU Make。
+项目会在 `.local/tooling/` 准备固定 pnpm，不要求全局安装 pnpm。
+
+```bash
+git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
+cd ChatWaifu-NEXT
+make bootstrap
+```
+
+在第一个终端启动使用确定性轻量 TTS 的 Runtime：
+
+```bash
+CHATWAIFU_TTS__PROVIDER=fake \
+CHATWAIFU_TTS__DEFAULT_PROVIDER=fake \
+CHATWAIFU_TTS__WORKERS='{}' \
+make dev-runtime
+```
+
+在第二个终端启动 Web，然后访问 <http://127.0.0.1:5173>：
+
+```bash
+make dev-web
+```
+
+这一模式不需要宁宁模型、参考音频、CUDA 或第三方 API Key，适合验证 UI、对话、记忆、Skills 和
+Fake Avatar。默认聊天模型是明确标注的离线 Demo；真实模型在页面“模型”设置中配置。
+
+### 2. 完整本地语音 Demo
+
+`make demo` 会监督 faster-whisper、Qwen3-TTS、GPT-SoVITS、Runtime 与 Web，但它需要本机已有
+`.local/config/tts-profiles.toml`、对应隔离环境和合法取得的模型资产。它会自动准备/缓存公开的
+faster-whisper Base；**不会下载私有 Qwen/GPT-SoVITS 声音权重**。
+
+先按[本地神经 TTS 指南](docs/operations/neural-tts.md)准备本地 profile，再运行：
 
 ```bash
 make demo
+# 不自动打开浏览器：make demo DEMO_ARGS=--no-open
 ```
 
-命令也会自动安装或校验前端依赖；`.env` 只保留端口、数据目录等部署覆盖，不再是产品模型
-设置入口。需要时可创建：
-
-```bash
-cp .env.example .env
-```
-
-命令会监督启动隔离的 faster-whisper、Qwen3-TTS、GPT-SoVITS worker、Runtime 与 Web，等待全部
-健康后打开 <http://127.0.0.1:5173>；按 `Ctrl+C` 会同时停止全部进程。若不想自动打开浏览器：
-
-```bash
-make demo DEMO_ARGS=--no-open
-```
-
-macOS 桌宠开发版可改用一个命令启动同一套本地 Runtime 与透明 Tauri 角色窗口：
+桌宠开发版在本地语音环境准备完成后运行：
 
 ```bash
 make desktop
 ```
 
-按住宁宁角色任意有效部位并移动鼠标可拖动桌宠，单击人物仍会触发角色互动；右下角 `◇` 打开桌宠设置，
-`◉` 连接麦克风。HUD 只控制字幕显示，不再显示在线文字和装饰线。
-菜单栏的月牙图标提供显示/隐藏角色、打开桌宠设置、切换鼠标穿透和退出。独立设置窗口包含桌宠、
-声音、模型、陪伴和数据五类设置，不再复用 Galgame 对话界面。窗口位置、尺寸、置顶、鼠标穿透与
-字幕状态保存在系统应用配置目录，不进入仓库；设置变更会实时同步到悬浮窗。设置窗口不会成为第二个
-语音播放端，因此不会与桌宠重叠播放 TTS。透明 macOS 窗口依赖 Tauri private API，只用于桌宠发行
-profile，不满足 Mac App Store 上架条件。Tauri 会以动态端口启动并监督本地 Runtime/Worker 服务栈；
-异常退出会限次自动重启，连续失败后可从“陪伴”设置或托盘手动恢复。
+更完整的 macOS、Windows、Live2D、模型和故障排查步骤放在
+[ChatWaifu NEXT 文档站](https://mubai-he.github.io/ChatWaifu-NEXT-docs/guide/getting-started)，README 只保留
+可验证的最短入口。
 
-Windows 发布目标固定为 x64。即使在 Windows 11 ARM 虚拟机中调试，也不生成 ARM 应用；首次在
-PowerShell 中准备 x64 Python/Rust 目标，然后使用开发脚本启动带热更新和终端日志的桌面程序：
+## 配置模型、语音与角色
+
+模型配置不再依赖 `.env`。在 Web 或桌宠设置中可以分别配置：
+
+- `chat`：主对话与 OpenAI-compatible tool calling；
+- `memory_extraction`：记忆候选提取；
+- `memory_summary`：长期对话压缩；
+- `embedding`：可重建语义索引。
+
+API Key 是只写字段：浏览器不持久化也不会拿回明文，Runtime 保存到 Git 忽略的本地权限文件。TTS
+同样通过统一设置面板选择本地 Worker 或百炼 Provider。Qwen MLX、GPT-SoVITS 和百炼适配器可以使用
+原生 PCM 流；Windows Qwen3-TTS Torch/CUDA pack 目前由官方 wrapper 先生成完整波形，因此诚实报告
+`native_streaming=false`。
+
+默认角色包位于 `characters/default/`。它只提交 persona、关系策略、语义动作能力和逻辑 voice
+profile；Live2D 模型、参考音频与 checkpoint 继续保留在本机。当前多角色 Runtime 可以发现角色包，
+但 Live2D 前端仍使用固定 manifest，完整的多角色资产注册/切换尚未完成。
+
+## 系统架构
+
+```mermaid
+flowchart LR
+    Web[Web Galgame] -->|HTTP / WS / WebRTC| Runtime
+    Desktop[Desktop Pet + Settings] -->|HTTP / WS / WebRTC| Runtime
+    Runtime --> Conversation[Conversation Coordinator]
+    Conversation --> Kernel[Character Kernel]
+    Conversation --> Memory[Structured Memory]
+    Conversation --> Skills[Runtime Skills / MCP]
+    Conversation --> Ports[LLM / STT / TTS Ports]
+    Ports --> Cloud[OpenAI-compatible / Bailian]
+    Ports --> Workers[Isolated Local Workers]
+    Runtime --> SQLite[(SQLite WAL + FTS5)]
+    Conversation -->|semantic AvatarCue| Avatar[Avatar SDK]
+    Avatar --> Renderer[Live2D / Fake Renderer]
+```
+
+主要技术栈：Python 3.12 + FastAPI/Pydantic/Pipecat/SQLite、TypeScript + React/Vite、Rust + Tauri 2。
+仓库采用 modular monolith，在保持一次本地运行体验的同时，把实时媒体、会话、模型、角色、记忆、
+Skills、Avatar、前端和持久化分成可测试边界。
+
+| 路径                                | 所有权                                                                |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `apps/web/`                         | Web/Desktop UI、设置和 typed Runtime clients                          |
+| `apps/desktop/`                     | Tauri Host、窗口/托盘、Runtime sidecar 和安装器                       |
+| `services/runtime/`                 | 会话、实时链路、Character Kernel、记忆、Skills/MCP、Provider adapters |
+| `packages/protocol-python/`         | 跨进程/跨语言协议的唯一源                                             |
+| `packages/protocol-typescript/`     | 生成类型与手写信任边界 parser                                         |
+| `packages/avatar-sdk/`              | AvatarCue 调度、动作状态机、口型与 renderer 接口                      |
+| `packages/model-worker-sdk-python/` | Worker DTO、PCM v2 与 `.cwpack` 合约                                  |
+| `workers/`                          | faster-whisper、Qwen/GPT-SoVITS、Kokoro 等隔离模型进程                |
+| `characters/`                       | 可审计角色包；不存放私有模型资产                                      |
+| `skills/`                           | 产品 Runtime Skills；与 `.agents/skills/` 开发指南严格分开            |
+
+架构决策以 [ADR](docs/adr/) 为准；当前完成度和仍未验证的部分以
+[`docs/implementation-status.yaml`](docs/implementation-status.yaml) 为准。
+
+## 二次开发
+
+扩展链路应保持为：
+
+```text
+Web / Desktop UI
+  → typed Runtime API + boundary parser
+  → application service
+  → domain port / provider-neutral contract
+  → adapter / repository / isolated Worker
+```
+
+| 要扩展的内容 | 从这里开始                                                                                               | 关键规则                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 角色         | `characters/<id>/`、`services/runtime/src/chatwaifu_runtime/characters/service.py`                       | 六文件包严格校验；真实资产、路径、密钥不进角色包                   |
+| LLM          | `providers/contracts.py`、`providers/model_config.py`                                                    | OpenAI-compatible 通常零代码；新协议封装在 adapter                 |
+| 云端 TTS     | `providers/tts_registry.py`                                                                              | 注册一次生成通用配置/API/UI，禁止复制 Provider 专属设置页          |
+| 本地 TTS/STT | `packages/model-worker-sdk-python/`、`workers/`                                                          | 重型 SDK 不进入 Runtime；能力、取消、离线和真实音频 smoke 必须通过 |
+| Avatar       | Protocol `AvatarCue`、`services/runtime/src/chatwaifu_runtime/avatar/planner.py`、`packages/avatar-sdk/` | Agent 只发语义 cue；Live2D 参数/文件名只属于 renderer              |
+| Memory       | `memory/` ports/policy/retrieval、`persistence/` adapter                                                 | 模型只能提候选；写入必须经过策略、去重、冲突、来源与隐私           |
+| Skill/MCP    | `skills/`、`runtime_skills/`                                                                             | schema、权限、副作用、确认、超时、取消、审计、沙箱缺一不可         |
+| 设置         | `desktopSettingsRegistry.tsx`                                                                            | 新 section 通过 registry/typed context 注册，不修改页面大 switch   |
+| 协议         | `packages/protocol-python/`                                                                              | Python 是唯一源，生成 Schema/TS，边界做 Zod parse                  |
+
+几个不能破坏的约束：
+
+1. 前端不直接调用 LLM、STT、TTS 或 MCP 供应商。
+2. 每个实时 generation 都携带 `session_id`、`turn_id`、`generation_id`，只有当前 generation 可播放。
+3. 新流式实现必须覆盖取消、迟到/乱序 chunk、有界缓冲、重连和 teardown。
+4. Memory 与 Runtime Skills 依赖 repository port，不从业务服务直接写 SQLite。
+5. Provider SDK 对象留在 adapter；模型权重和 CUDA 留在 Worker/Pack。
+6. 不手改 `schemas/domain/v1/` 或生成的 TypeScript；协议变更运行 `make generate-protocol` 和
+   `make check-generated`。
+
+逐类扩展步骤、文件清单、测试门和二开发行检查表见
+[二次开发文档](https://mubai-he.github.io/ChatWaifu-NEXT-docs/guide/customization) 与
+[Contributing](CONTRIBUTING.md)。现阶段 TTS 已有统一 Provider registry；LLM 的 OpenAI-compatible
+入口稳定，但非兼容协议和 STT Provider 尚未达到同样的单点自动注册程度。
+
+## Windows 与本地模型包
+
+基础 Windows 安装包刻意不塞入 CUDA、PyTorch、模型权重和私有声音。它包含桌宠前端、Tauri x64
+Host、冻结 Runtime、AppContainer helper 与必要资源；Qwen3-TTS 和 faster-whisper 通过独立、版本化、
+可校验的 `.cwpack` 安装。这避免每次更新 UI 都重新分发数 GB 模型，也允许 Runtime 在 Worker 不可用时
+安全回退。
 
 ```powershell
 .\tools\windows\bootstrap_x64.ps1
-.\tools\windows\dev_x64.ps1
-```
-
-缺少 Windows 本地模型 Worker 时，开发脚本会启动可连接的 Demo Runtime，并暂时禁用本地麦克风
-转写、使用确定性语音回退；支持的云端 TTS 仍可在设置界面配置。按 `Ctrl+C` 会停止桌面程序、
-Runtime 和开发服务器。若本地 Live2D 使用超过 4096 像素的纹理，开发脚本会保留 `.source.png`
-原图并生成仅限本机的 4K 运行副本，避免 Windows 虚拟显卡因 8K 纹理解码超时而落入安全回退。
-模型与两份纹理仍位于 Git 忽略目录，不会提交。只验证 Windows x64 开发 Host 与
-AppContainer helper 时运行：
-
-```powershell
-.\tools\windows\build_x64.ps1
-```
-
-构建包含冻结 Runtime 的 NSIS current-user 安装候选包时运行：
-
-```powershell
 .\tools\windows\build_installer_x64.ps1
 ```
 
-候选包输出到 `dist\windows\installer\`，构建会校验 Host、Runtime 和 AppContainer helper
-均为 PE `0x8664`。基础包不包含 CUDA/PyTorch、本地模型权重、训练音色或私有 Live2D；缺少本地
-Worker 时仍可使用 Demo 与设置好的云端模型/语音。仅在拥有相应本地资产且不上传产物时，才可用
-`-Live2DSource "C:\path\to\private\live2d"` 构建 owner-only 测试包。安装布局、用户数据保留与
-验收边界见 [ADR 0027](docs/adr/0027-windows-installed-desktop-runtime-layout.md)。
+完整的安装、pack 构建和验收命令见 [Windows 安装指南](docs/operations/windows-local-ai-worker-packs.md)。
+目前 owner-only 未签名 NSIS 候选已在 Windows 11 ARM 的 x64 模拟环境通过基础安装 smoke；原生
+x64/CUDA 笔记本上的 pack 构建/安装态推理、干净账户完整 UI/语音流程、正常退出、升级重装、安装态
+MCP/AppContainer、许可证审查和签名仍待完成，因此不能标记为公开发行版。
 
-需要 Windows 本地 AI 时，使用独立、版本化的 `.cwpack`，不要把模型环境塞进基础安装包：
-`build_faster_whisper_worker_pack_x64.ps1` 构建离线 faster-whisper Base CPU int8 pack，
-`build_qwen3_tts_worker_pack_x64.ps1` 构建带 Torch/CUDA 12.6 与本地宁宁 checkpoint 的
-Qwen3-TTS pack。Runtime 会校验、原子安装、选择版本并监管动态端口、令牌、健康、卸载和重启；
-目标账户无需手动安装 Python、uv 或创建 venv。完整命令、目录和验收边界见
-[Windows x64 local AI Worker Packs](docs/operations/windows-local-ai-worker-packs.md)。当前 macOS
-仅验证了 pack 合约、构建脚本/安装器与宿主无关测试；尚未完成真实 Windows x64 CUDA pack 构建，
-也尚未在目标 CUDA 笔记本完成安装态推理验收。
-
-在没有现存 ChatWaifu 安装和进程的 Windows 测试账户中，可对候选包运行基础安装 smoke：
-
-```powershell
-$installer = Get-ChildItem .\dist\windows\installer\*-setup.exe | Select-Object -First 1
-.\tools\windows\smoke_installed_x64.ps1 -InstallerPath $installer.FullName
-```
-
-该脚本会真实安装并启动候选包，检查 current-user 注册表、开始菜单快捷方式、三个 x64 PE、冻结
-Runtime 健康状态、用户目录与 SQLite，然后强制结束 Host、确认 Runtime/端口清理、静默卸载并
-确认安装目录已删除而配置、数据和日志目录仍保留。2026-08-30，一个包含本地私有 Live2D overlay
-的未签名 owner-only 候选包在 Windows 11 ARM 虚拟机的 x64 模拟环境中通过了这组基础 smoke。
-这不是公开发行验收：原生 x64/CUDA 笔记本、干净账户中的完整 UI/对话/设置/记忆/音频流程、正常
-退出、升级/重装、安装态 AppContainer/MCP 执行与 ACL/profile 回收、许可证和签名仍待验证。
-
-若仓库中已有其他架构的 `.venv`，首次准备时增加 `-RecreateEnvironment`。Node、Git、uv 或
-rustup 启动器本身可以是 ARM64 工具，最终 Runtime 解释器、Rust target 与桌面 EXE 仍会被脚本
-分别校验为 `win-amd64`、`x86_64-pc-windows-msvc` 和 PE `0x8664`。
-
-桌面版使用“月牙与星芒”应用标识；macOS 菜单栏使用同主题的单色模板图标，可随系统浅色/深色
-菜单栏自动着色，不再显示单字托盘标题。
-
-`make demo`/`make desktop` 的源码开发路径会按配置下载公开的多语言 `faster-whisper base`
-（约 150 MB）和本地语音模型，之后复用 `.local/models/` 缓存。基础 Windows 安装包不包含也
-不会自动安装 CUDA、PyTorch、本地 Qwen/GPT-SoVITS TTS 或 faster-whisper Worker；这些能力通过
-独立的 Worker/Model Pack 管理。已安装的基础版仍可使用 Demo 和用户配置的云端提供方。配置了本地
-Worker 时，STT/TTS 推理在独立进程中运行，麦克风音频不会发往
-云端。页面就绪后点击“开启语音”并允许麦克风，默认按住“说话”讲话，松开约 650 ms 后由
-VAD 自动结束回合，不需要再按发送。只有明确切换到“自由对话”后才会持续送入麦克风；该模式
-默认要求在句首叫“宁宁”或设置中的其他称呼，本地 STT 确认称呼后才会抢话并提交回合，旁边未叫
-到她的交谈会被忽略。该门控可在“陪伴”设置中关闭。
-
-“陪伴”设置还提供跨午夜安静时段、主动问候冷却/每日预算和空闲模型休眠。主动问候默认关闭；
-开启后只在会话空闲且不处于安静时段时生成短问候。ASR/TTS 权重休眠不会关闭桌宠、Runtime、
-记忆或会话，下一次交互会按需重新加载。
-
-Demo 默认使用明确标注的离线 Demo LLM。打开页面的 `CONFIG / 设置`，可以分别设置聊天、记忆
-提取、记忆总结与 Embedding 模型；它们可指向本机 Ollama、LM Studio、vLLM 或用户明确选择的
-OpenAI-compatible 端点，保存后立即生效而无需重启。API Key 是只写字段：Web 不保存、不回显，
-Runtime 只将它写入 Git 忽略的 `.local/config/model-secrets.json`（权限 `0600`）。旧 `.env`
-聊天字段仅作为首次迁移兼容，不再是推荐入口。
-
-默认角色为绫地宁宁主题人格，近期已提交对话会作为下一轮上下文。角色提示词约束为日常
-Galgame 节奏和短回复，不复述原作长对白，也不会把未写入 Runtime 记忆的内容当成事实。
-
-## Demo 能做什么
-
-- WebSocket 增量文本和 SQLite append-only 事件流
-- 浏览器麦克风与输入设备选择、默认按住说话、可选自由对话、Silero VAD 和本地
-  faster-whisper 转写
-- Pipecat SmallWebRTC 双向音频；分段生成本地 WAV 后通过远端音轨播放
-- 按住说话时开口抢话，或点击“打断”，会取消旧 generation、丢弃迟到输出并清空播放队列
-- 桌面页面固定为显示区域高度，右侧历史独立滚动，左侧 Live2D 始终留在视口内
-- “重置”经确认后清空当前对话、全部明确记忆、事件历史和本地生成语音
-- `AvatarCue` 驱动 thinking、speaking、idle、表情、角色动作与口型状态；明确的对话意图和
-  角色触摸可触发宁宁的 `headpat`、`stare`、`flustered`、`sing`，不会随机播放长动作
-- 绫地宁宁主题人格、开场白、角色声线、动作能力与关系策略来自 `characters/default/` 六文件角色包
-- 持久化 Character Kernel 管理情绪、熟悉度、信任、好感、关系阶段、响应语义与 Prompt 分区预算
-- 方案 A 结构化记忆：明确普通记忆直接提交，普通对话候选进入“记忆中心”，敏感内容逐条确认
-- 记忆支持来源查看、FTS5 + 可重建 Embedding 混合召回、模型辅助提取、去重、冲突 supersede、修正、置顶与可审计 tombstone
-- `runtime.status` Runtime Skill 通过版本化 manifest 注册，只读返回实际 provider 状态
-- 支持 tools 的 OpenAI-compatible 聊天模型会从自然语言中选择相关 Runtime Skill 或已连接 MCP Tool；
-  普通闲聊不投影工具；需要工具时若模型不支持 OpenAI Tools，会明确提示未执行，绝不把纯文字回答伪装成联网结果
-- 权限确认会直接显示在普通聊天页与桌宠，不必预先打开“Skills & 插件”；控制中心继续提供按需加载说明、
-  运行记录、取消、启停和可恢复卸载
-- 内置 Local Echo 示例验证 MCP stdio、Schema、超时、取消与写操作确认；“数据 → MCP 连接”还可管理
-  任意 stdio、Streamable HTTP 或兼容 SSE 服务，并浏览 Tools、Resources、Resource Templates 与 Prompts
-- 安装本地 Cubism vendor 后，主聊天和 `/avatar-lab` 会使用真实 Live2D；缺失时自动回退 Fake
-
-数据默认写入 `.local/data/chatwaifu.db`、`.local/data/audio/` 与本地模型密钥文件，均不会提交到 Git。
-
-## Runtime Skills、MCP Host 与 MCP Server
-
-产品 Runtime Skills 位于 `skills/`，Codex 开发技能位于 `.agents/skills/`，两者不会互相加载。
-页面左侧打开“Skills & 插件”，可安装仓库内 Local Echo 测试插件，或填写一个本地插件目录的
-绝对路径。插件需要 `plugin.json`、`SKILL.md` 与 `chatwaifu.yaml`；安装时拒绝 symlink、越界
-路径和过大文件。
-
-Runtime 现在同时是 MCP Host 与受限 MCP Server。“数据 → MCP 连接”可保存 stdio、Streamable HTTP
-或兼容 SSE 连接；Bearer Token 是只写字段，存入权限为 `0600` 的本地文件。连接测试会分页发现
-Tools、Resources、Resource Templates 与 Prompts，外部工具随后映射为 Runtime Skill，继续经过
-Schema 校验、Permission Broker、逐次副作用确认、超时、取消与审计，而不是由前端或模型绕过策略层
-直接调用。普通聊天只会按当前问题投影一小组相关 Tools；Resources 与 Prompts 不会自动注入模型，
-仍需在管理界面或 MCP API 显式读取。远程地址默认仅允许 loopback；显式允许远程后仍会在每次连接前重新解析 DNS，并拒绝
-link-local、metadata、reserved、重定向和系统代理继承。
-
-本地不可信 stdio 连接默认要求 OS 级隔离且禁止网络：macOS 使用系统 Seatbelt，Linux 使用系统
-bubblewrap，Windows 使用项目随桌面 Host 构建的 x64 AppContainer/Job Host；缺少可强制执行的后端
-时会 fail closed。Windows 开发构建会自动发现同目录的 `chatwaifu-appcontainer-host.exe`，不需要用户
-填写路径；它不存在、架构错误或策略准备失败时，不可信服务会被拒绝。连接测试后设置页会显示实际
-隔离后端；显式关闭沙箱时网络策略只能是“允许”，不会把进程清理或环境变量过滤误报成网络隔离。
-Windows 原生边界与真实系统验收见 [ADR 0025](docs/adr/0025-windows-appcontainer-runtime-skill-launcher.md)；
-签名安装包和冻结 Runtime sidecar 仍是发布工作，不属于本次开发构建验收。
-运行中的 ChatWaifu Runtime 还在同一个 loopback 端口公开标准 Streamable HTTP `/mcp`：匿名模式仅发布
-安全只读能力，配置 Runtime 管理 Token 后才认证发布副作用工具，而且调用仍要求有效会话并可能进入
-本地确认队列。完整边界见 [ADR 0018](docs/adr/0018-complete-mcp-host-server-and-sandbox.md)。
-
-方案 A 已作为 SQLite WAL + FTS5 的唯一记忆真值落地；方案 B 语义索引与方案 C 时序图仅保留
-禁用端口，不下载向量模型或引入图数据库。实现边界见
-[结构化记忆内核](docs/architecture/structured-memory-kernel.md)，后续评估门见
-[记忆系统方案调研](docs/research/memory-system-options.md)。
-
-## TTS 选择
-
-页面默认选择本地 Qwen3-TTS MLX，GPT-SoVITS 是可切换的独立重模型 Worker；两者通过同一
-Runtime TTS provider contract 运行，不会把模型 SDK 或路径暴露给 Web。切换会先取消当前
-generation，并在不再使用旧 provider 时卸载模型。两者都通过 Worker Protocol v2 直接发送有界、
-带 generation/job/sequence 身份的 PCM16 分片；完整 WAV 只保留为断线和历史回退。Kokoro 和
-macOS 系统语音保留为轻量回退。
-
-当前 Qwen 使用官方 0.6B Base 的 MLX 8-bit 推理版本，仍是公开基础声线。仓库提供一个本地、
-不可分发的宁宁数据审计与 Colab 微调包生成器；训练数据、WAV、checkpoint 和评测音频全部位于
-`.local/`，不会提交。使用方法和训练后评测门见
-[Qwen3-TTS 角色微调](docs/operations/qwen3-tts-character-finetuning.md)。统一接口、懒加载与
-本地模型边界见 [ADR 0014](docs/adr/0014-unified-selectable-neural-tts.md)。
-
-声音设置还可分别启用阿里云百炼 Qwen VC Realtime 或 CosyVoice Realtime 声音复刻。两者都能
-边生成边播放；Qwen VC 保留复刻声线但不接受情绪指令，CosyVoice 3.5 Plus/Flash 还能把基础
-情绪指令与 Character Kernel 的当前语气合并。音色 ID、基础模型、区域、语种、语速和音量在设置
-页保存，API Key 使用独立的本地权限文件且不会回显。百炼仅接收当前待朗读句段，并通过有界 PCM
-流输出；完整 WAV 继续作为断线回退。流式合约、取消和云端出站边界见
-[ADR 0017](docs/adr/0017-provider-neutral-streaming-tts.md)。百炼复刻音色与创建时的
-`target_model` 严格绑定；设置页填写的实时模型必须与该字段完全一致。可配置 TTS 的严格模型、
-Adapter 工厂、只写密钥策略与设置字段都来自同一个注册表，通用 API/设置页会自动发现新增项；见
-[ADR 0023](docs/adr/0023-registry-driven-tts-provider-configuration.md)。
-
-实时语音的数据流、进程边界和取消语义见
-[Realtime voice demo slice](docs/architecture/realtime-voice-demo.md)。
-
-## Live2D 安装
-
-已解压官方 Cubism SDK for Web 5 R5 到 `~/Downloads/CubismSdkForWeb-5-r.5` 时，运行：
+## 开发质量门
 
 ```bash
-make setup-live2d-vendor
-make demo
+make format-check       # Python / TypeScript / Rust 格式
+make lint               # Ruff / ESLint / Clippy
+make typecheck          # Pyright / tsc / cargo check
+make test               # Python / TypeScript / Rust tests
+make test-contract      # Python ↔ JSON Schema ↔ TypeScript
+make test-e2e           # Web 与 Desktop profile 浏览器验收
+make check-generated    # 受控协议产物无漂移
+make build-web
+make build-desktop-ui
 ```
 
-命令会使用 SDK 内公开测试模型 Natori，构建官方 Framework 适配桥，并把 Core、桥接产物和
-模型放进 Git 忽略目录。主聊天会自动显示 Live2D；也可打开 `/avatar-lab` 验证表情、动作、
-口型与点击命中。换 SDK 路径或样例模型的方法见
-[Live2D vendor 说明](vendor/live2d/README.md)。发布或商用前仍需单独复核 Core 与模型许可。
-
-当前本机也可从用户提供且仅限本地的 `~/Downloads/AYACHI NENE.7z` 安装宁宁模型：
-
-```bash
-uv run python tools/setup_ayachi_nene_model.py
-make build-live2d-bridge
-```
-
-该命令只写入 Git 忽略的 vendor 目录，模型资产不会被提交；再发行前必须自行确认授权。
-
-## 常用开发命令
-
-```bash
-make demo               # 一次启动 Runtime + Web
-make desktop            # 一次启动 Runtime + Web + Tauri 桌宠
-make build-web           # 只构建浏览器产品到 apps/web/dist/web
-make build-desktop-ui    # 只构建桌宠前端到 apps/web/dist/desktop
-make setup-nltk-data    # 准备 Pipecat 断句所需的本地 NLTK 数据
-make setup-stt-worker   # 只准备隔离的 faster-whisper worker 环境
-make setup-tts-worker   # 只准备 Kokoro worker 并校验/下载公开模型
-make dev-runtime        # 只启动 FastAPI Runtime（127.0.0.1:8765）
-make dev-web            # 只启动 Web（127.0.0.1:5173）
-make test-runtime       # Runtime/API/取消/记忆专项测试
-make test-avatar        # Avatar SDK 与 Web 单元测试
-make test-e2e           # 分别启动 Web/Desktop profile 做 Chromium 验收
-make setup-live2d-vendor # 从 Downloads 安装并构建本地 Live2D vendor
-make check-live2d-vendor # 检查 Framework/Core/桥接/模型是否齐全
-make format             # Python、TypeScript、Rust 格式化
-make lint               # Ruff、ESLint、Clippy
-make typecheck          # Pyright、tsc、cargo check
-make test               # Python、TypeScript、Rust 测试
-make check-generated    # 协议受控产物无漂移检查
-```
-
-Web 与 Desktop 使用独立版本和 tag，例如 `web-v0.2.0` 与 `desktop-v0.2.0`。Web tag 会发布
-纯浏览器静态产物。Windows 已有单独的冻结 Runtime 与 NSIS 候选构建入口，x64 模拟环境中的基础
-安装、启动/健康、强制退出清理、卸载和用户目录保留 smoke 也已记录；但在原生 x64/CUDA、干净
-账户产品流程、正常退出、升级/重装、安装态 AppContainer、许可证与签名验收完成前，Desktop tag
-不得把该未签名 owner-only 候选包或裸 Host + wheel 标成可分发发行版。
-
-`punkt_tab` 会从 NLTK 官方数据仓库的固定提交下载到 Git 忽略的 `.local/nltk_data`，并在
-解压前校验 SHA-256。Runtime 会在导入 Pipecat 前使用该本地目录，因此代理 Fake-IP 模式不会
-触发 NLTK 的 SSRF 告警；常规启动不会重复下载。
-
-协议以 `packages/protocol-python/src/chatwaifu_protocol/` 为源；不要手工编辑
-`schemas/domain/v1/` 或生成的 TypeScript domain 文件。专有 Cubism Core 与有授权的角色模型
-不进入仓库，缺失时 Fake avatar 仍然完整可用。
+实时、记忆、Skill、协议或安装器改动还需要运行对应专项测试和目标平台 smoke。构建成功不等于产品验收；
+请在真实浏览器、Tauri 窗口或目标 Windows/CUDA 机器上验证用户可见路径。
 
 ## 当前边界
 
-这是基础可用 Demo，不声称已经完成：可再发行的 Live2D 资产包与自定义角色模型、RTVI
-数据通道与公网 TURN、训练后的可分发自定义音色、向量/图记忆后端、通过真实安装/卸载验收且
-完成签名的 Windows 发行包、长时间语音压力测试或远端 CI 矩阵。这些能力都有独立边界，不会把
-本地安装候选伪装成已经交付的公开发行版。
+- 已实现 Scheme A 结构化记忆与 SQLite 可重建 Scheme B 语义投影；外部向量数据库和 Scheme C 时序图未实现。
+- 本地/云 TTS 有统一 contract，但 Windows Qwen Torch 还不是真正首 chunk 流式。
+- 多标签页共享一个 session 时，播放事实尚未按浏览器 client ID 隔离。
+- Playback ACK 目前按句段，不是逐词边界；长时间多轮语音压力测试仍待完成。
+- 通用 RTVI、公网 TURN 和多机恢复尚未完成。
+- Windows 基础安装 smoke 已通过；原生 x64/CUDA、完整安装态产品流程、签名和可分发资产仍是 release gate。
 
-架构、执行顺序和交接约束见 `CHATWAIFU_NEXT_ARCHITECTURE.md`、
-`CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`、`CODEX_HANDOFF.md` 与 `docs/implementation-status.yaml`。
+## 安全、隐私与许可
+
+- 不提交 API Key、token、用户记忆、数据库、参考音频、模型权重、私有 Live2D 或 OS keychain 导出。
+- 密钥由 Runtime 只写保存，不进入浏览器 local storage；本地模型 Worker 使用动态 loopback token。
+- 不可信插件必须通过真实 OS 沙箱；无法强制执行时 fail closed，不静默退化成“软隔离”。
+- 本项目是非官方同人技术 Demo，与 YUZUSOFT/JUNOS、Live2D Inc. 或声优本人无隶属关系。
+- 仓库发行许可证尚未选定。在 [LICENSES.md](LICENSES.md) 更新前，不要公开再分发仓库或 owner-only 资产。
+
+安全问题请按 [SECURITY.md](SECURITY.md) 通过私有渠道报告。
+
+## 文档与项目沿革
+
+- [安装与使用 Wiki](https://mubai-he.github.io/ChatWaifu-NEXT-docs/)
+- [架构方案](CHATWAIFU_NEXT_ARCHITECTURE.md)
+- [实现计划](CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md)
+- [交接与不变量](CODEX_HANDOFF.md)
+- [实现状态](docs/implementation-status.yaml)
+- [Web/Desktop 发行模型](docs/architecture/product-release-profiles.md)
+- [Windows Worker Packs](docs/operations/windows-local-ai-worker-packs.md)
+
+感谢上一代 [cjyaddone/ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 对语音角色交互方向的早期探索。
+NEXT 是一次架构重写，不与上一代配置、模型目录或启动脚本保持兼容。
