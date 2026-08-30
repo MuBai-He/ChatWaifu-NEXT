@@ -86,8 +86,7 @@ def _verify_pinned_nltk_root(root: Path) -> None:
     tokenizer_entries = {path.name for path in (root / "tokenizers").iterdir()}
     if tokenizer_entries != {"punkt_tab"}:
         raise RuntimeError(
-            "NLTK tokenizer bundle must contain only punkt_tab, "
-            f"received {tokenizer_entries}"
+            f"NLTK tokenizer bundle must contain only punkt_tab, received {tokenizer_entries}"
         )
 
 

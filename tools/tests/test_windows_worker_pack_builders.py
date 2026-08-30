@@ -39,7 +39,7 @@ def test_qwen_pack_is_pinned_cuda_126_and_smokes_both_languages() -> None:
     assert 'CudaVariant = "cu126"' in builder
     assert "https://download.pytorch.org/whl/$CudaVariant" in builder
     assert 'torch.version.cuda == "12.6"' in builder
-    assert 'torch.cuda.is_available()' in builder
+    assert "torch.cuda.is_available()" in builder
     assert 'torch.ones(1, device="cuda")' in builder
     assert "qwen3_tts_torch" in builder
     assert "${PACK_ROOT}/payload/models/default" in builder

@@ -107,9 +107,7 @@ def _install_test_pack(
     executable = root / "payload" / "worker.exe"
     executable.parent.mkdir(parents=True)
     executable.write_bytes(_x64_pe())
-    prefix = (
-        "CHATWAIFU_NEURAL_TTS_WORKER_" if kind == "tts" else "CHATWAIFU_STT_WORKER_"
-    )
+    prefix = "CHATWAIFU_NEURAL_TTS_WORKER_" if kind == "tts" else "CHATWAIFU_STT_WORKER_"
     manifest = WorkerPackManifest(
         pack_id=pack_id,
         version=version,
@@ -399,11 +397,7 @@ def test_explicit_port_collision_retries_with_a_new_process(
         return next(assigned_ports)
 
     def fake_probe(url: str, _token: str) -> object:
-        return (
-            _health_payload()
-            if url.endswith("/v1/health")
-            else _tts_capabilities_payload()
-        )
+        return _health_payload() if url.endswith("/v1/health") else _tts_capabilities_payload()
 
     monkeypatch.setattr(worker_pack_module.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(worker_pack_module, "_free_loopback_port", next_port)
@@ -441,13 +435,11 @@ def test_stt_and_tts_start_concurrently_with_one_shared_deadline(
         deadlines.append(startup_deadline)
         barrier.wait(timeout=2)
         if pack.manifest.worker.kind == "stt":
-            capabilities: SttWorkerCapabilities | TtsWorkerCapabilities = (
-                SttWorkerCapabilities(
-                    provider_id="faster-whisper",
-                    display_name="Local worker",
-                    model="test-model",
-                    languages=["auto"],
-                )
+            capabilities: SttWorkerCapabilities | TtsWorkerCapabilities = SttWorkerCapabilities(
+                provider_id="faster-whisper",
+                display_name="Local worker",
+                model="test-model",
+                languages=["auto"],
             )
         else:
             capabilities = TtsWorkerCapabilities(

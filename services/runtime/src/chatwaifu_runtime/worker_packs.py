@@ -266,9 +266,7 @@ class WorkerPackSupervisor:
         self,
         installed: list[InstalledWorkerPack],
     ) -> dict[WorkerKind, InstalledWorkerPack]:
-        by_identity = {
-            (pack.manifest.pack_id, pack.manifest.version): pack for pack in installed
-        }
+        by_identity = {(pack.manifest.pack_id, pack.manifest.version): pack for pack in installed}
         config_path = self._config_root / "local-ai-selection.json"
         if config_path.is_file():
             config = WorkerPackActivationConfig.model_validate_json(config_path.read_bytes())
@@ -503,9 +501,7 @@ class WorkerPackSupervisor:
             if return_code is not None:
                 raise RuntimeError(f"Worker process exited with code {return_code}")
             try:
-                health = WorkerHealth.model_validate(
-                    _probe_json(base_url + health_path, token)
-                )
+                health = WorkerHealth.model_validate(_probe_json(base_url + health_path, token))
                 if health.status in {"ready", "busy"}:
                     payload = _probe_json(base_url + capabilities_path, token)
                     if kind == "stt":
