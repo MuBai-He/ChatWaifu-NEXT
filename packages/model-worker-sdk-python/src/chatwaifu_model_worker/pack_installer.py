@@ -19,6 +19,9 @@ from typing import Any, Literal, cast
 from pydantic import ValidationError
 
 from chatwaifu_model_worker.packages import (
+    WORKER_PACK_MAX_EXPANDED_BYTES,
+    WORKER_PACK_MAX_FILE_BYTES,
+    WORKER_PACK_MAX_FILE_COUNT,
     WorkerPackActivationConfig,
     WorkerPackActiveSelection,
     WorkerPackInstallReceipt,
@@ -30,7 +33,11 @@ MANIFEST_NAME = "manifest.json"
 RECEIPT_NAME = "install-receipt.json"
 SELECTION_NAME = "local-ai-selection.json"
 MAX_MANIFEST_BYTES = 4 * 1024 * 1024
+MAX_RECEIPT_BYTES = 1024 * 1024
 COPY_CHUNK_BYTES = 4 * 1024 * 1024
+MAX_ARCHIVE_MEMBER_COUNT = WORKER_PACK_MAX_FILE_COUNT * 2 + 2
+MIN_FREE_SPACE_HEADROOM_BYTES = 512 * 1024 * 1024
+FREE_SPACE_HEADROOM_PERCENT = 5
 _WINDOWS_PE_MACHINE = {"x86_64": 0x8664, "arm64": 0xAA64}
 _WINDOWS_NATIVE_SUFFIXES = frozenset({".exe", ".dll", ".pyd"})
 _ALREADY_COMPRESSED_OR_LARGE_BINARY_SUFFIXES = frozenset(
@@ -70,16 +77,31 @@ _FORBIDDEN_STAGING_PARTS = frozenset(
 _FORBIDDEN_STAGING_NAMES = frozenset(
     {
         ".ds_store",
+        ".netrc",
+        ".npmrc",
+        ".pypirc",
+        "auth.json",
         "credentials.json",
         "install-receipt.json",
         "manifest.json",
+        "pip.conf",
+        "pip.ini",
         "thumbs.db",
     }
 )
 _FORBIDDEN_STAGING_SUFFIXES = frozenset(
-    {".db", ".key", ".p12", ".pem", ".pfx", ".sqlite", ".sqlite3", ".token"}
+    {".db", ".key", ".p12", ".pfx", ".sqlite", ".sqlite3", ".token"}
+)
+_PRIVATE_KEY_MARKERS = (
+    b"-----BEGIN PRIVATE KEY-----",
+    b"-----BEGIN ENCRYPTED PRIVATE KEY-----",
+    b"-----BEGIN RSA PRIVATE KEY-----",
+    b"-----BEGIN DSA PRIVATE KEY-----",
+    b"-----BEGIN EC PRIVATE KEY-----",
+    b"-----BEGIN OPENSSH PRIVATE KEY-----",
 )
 _DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+_WINDOWS_REPARSE_POINT_ATTRIBUTE = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 
 
 class WorkerPackError(RuntimeError):
@@ -100,6 +122,87 @@ class InstalledWorkerPack:
     root: Path
     manifest: WorkerPackManifest
     receipt: WorkerPackInstallReceipt
+
+
+def _path_is_link_or_reparse(path: Path) -> bool:
+    """Detect POSIX symlinks and Windows junction/reparse points without following them."""
+
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    except OSError as error:
+        raise WorkerPackError(f"could not inspect filesystem path: {path}") from error
+    if stat.S_ISLNK(metadata.st_mode):
+        return True
+    file_attributes = cast(int, getattr(metadata, "st_file_attributes", 0))
+    if file_attributes & _WINDOWS_REPARSE_POINT_ATTRIBUTE:
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if callable(is_junction):
+        try:
+            return bool(is_junction())
+        except OSError as error:
+            raise WorkerPackError(f"could not inspect filesystem junction: {path}") from error
+    return False
+
+
+def _reject_link_or_reparse(path: Path, *, label: str) -> None:
+    if _path_is_link_or_reparse(path):
+        raise WorkerPackError(
+            f"{label} must not be symlinked and must not be a junction or reparse point: {path}"
+        )
+
+
+def _reject_reparse_ancestors(path: Path, *, label: str) -> None:
+    """Reject an existing reparse point anywhere in an untrusted path's ancestry."""
+
+    current = path.expanduser().absolute()
+    while True:
+        _reject_link_or_reparse(current, label=label)
+        parent = current.parent
+        if parent == current:
+            return
+        current = parent
+
+
+def _require_real_directory(path: Path, *, label: str) -> None:
+    _reject_link_or_reparse(path, label=label)
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError as error:
+        raise WorkerPackError(f"could not inspect {label}: {path}") from error
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise WorkerPackError(f"{label} must be a real directory: {path}")
+
+
+def _require_regular_file(path: Path, *, label: str) -> None:
+    _reject_link_or_reparse(path, label=label)
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError as error:
+        raise WorkerPackError(f"could not inspect {label}: {path}") from error
+    if not stat.S_ISREG(metadata.st_mode):
+        raise WorkerPackError(f"{label} must be a regular file: {path}")
+
+
+def _preflight_free_space(destination: Path, *, expanded_bytes: int, operation: str) -> None:
+    headroom = max(
+        MIN_FREE_SPACE_HEADROOM_BYTES,
+        expanded_bytes * FREE_SPACE_HEADROOM_PERCENT // 100,
+    )
+    required = expanded_bytes + headroom
+    try:
+        available = shutil.disk_usage(destination).free
+    except OSError as error:
+        raise WorkerPackError(
+            f"could not determine free space for {operation}: {destination}"
+        ) from error
+    if available < required:
+        raise WorkerPackError(
+            f"insufficient free space for {operation}: required at least {required} bytes "
+            f"including headroom, available {available} bytes"
+        )
 
 
 def _manifest_json(manifest: WorkerPackManifest) -> bytes:
@@ -172,10 +275,30 @@ def _read_manifest(
 
 
 def _archive_members(archive: zipfile.ZipFile) -> dict[str, zipfile.ZipInfo]:
+    members = archive.infolist()
+    if len(members) > MAX_ARCHIVE_MEMBER_COUNT:
+        raise WorkerPackError(
+            "worker pack archive contains too many members: "
+            f"maximum {MAX_ARCHIVE_MEMBER_COUNT}, received {len(members)}"
+        )
     files: dict[str, zipfile.ZipInfo] = {}
     seen: dict[str, str] = {}
-    for member in archive.infolist():
+    expanded_bytes = 0
+    for member in members:
         path, is_directory = _validate_zip_member(member)
+        member_limit = (
+            MAX_MANIFEST_BYTES if path.casefold() == MANIFEST_NAME else WORKER_PACK_MAX_FILE_BYTES
+        )
+        if member.file_size < 0 or member.file_size > member_limit:
+            raise WorkerPackError(
+                f"archive member exceeds the expanded size limit: {member.filename!r}"
+            )
+        expanded_bytes += member.file_size
+        if expanded_bytes > WORKER_PACK_MAX_EXPANDED_BYTES + MAX_MANIFEST_BYTES:
+            raise WorkerPackError(
+                "worker pack archive exceeds the total expanded size limit "
+                f"of {WORKER_PACK_MAX_EXPANDED_BYTES} bytes"
+            )
         folded = path.casefold()
         if folded in seen:
             raise WorkerPackError(
@@ -297,6 +420,12 @@ def verify_archive(archive_path: Path) -> VerifiedWorkerPackArchive:
                     "archive payload does not match manifest; "
                     f"missing={missing}, unexpected={unexpected}"
                 )
+            expanded_payload = sum(members[path].file_size for path in expected)
+            if expanded_payload > WORKER_PACK_MAX_EXPANDED_BYTES:
+                raise WorkerPackError(
+                    "worker pack archive exceeds the total expanded size limit "
+                    f"of {WORKER_PACK_MAX_EXPANDED_BYTES} bytes"
+                )
             for path, file in expected.items():
                 member = members[path]
                 if member.file_size != file.size:
@@ -349,6 +478,18 @@ def _reject_forbidden_staging_path(relative: str) -> None:
         raise WorkerPackError(f"staging contains a forbidden secret or database file: {relative!r}")
 
 
+def _reject_private_key_material(path: Path, *, relative: str) -> None:
+    if path.suffix.casefold() != ".pem":
+        return
+    try:
+        with path.open("rb") as source:
+            header = source.read(64 * 1024)
+    except OSError as error:
+        raise WorkerPackError(f"could not inspect PEM payload: {relative!r}") from error
+    if any(marker in header for marker in _PRIVATE_KEY_MARKERS):
+        raise WorkerPackError(f"staging contains private-key material: {relative!r}")
+
+
 def _infer_file_role(path: str, *, executable: str) -> str:
     relative = PurePosixPath(path)
     folded_parts = tuple(part.casefold() for part in relative.parts)
@@ -368,25 +509,25 @@ def _infer_file_role(path: str, *, executable: str) -> str:
 
 
 def _scan_staging(staging: Path, *, executable: str) -> list[dict[str, Any]]:
-    if staging.is_symlink() or not staging.is_dir():
-        raise WorkerPackError(f"worker pack staging root must be a real directory: {staging}")
+    _require_real_directory(staging, label="worker pack staging root")
     files: list[dict[str, Any]] = []
     seen: dict[str, str] = {}
     for directory, directory_names, file_names in os.walk(staging, followlinks=False):
         directory_path = Path(directory)
+        _require_real_directory(directory_path, label="staging directory")
         for name in [*directory_names, *file_names]:
             candidate = directory_path / name
             relative = candidate.relative_to(staging).as_posix()
             _portable_archive_path(relative)
             _reject_forbidden_staging_path(relative)
-            if candidate.is_symlink():
-                raise WorkerPackError(f"staging must not contain symlinks: {relative!r}")
+            _reject_link_or_reparse(candidate, label=f"staging entry {relative!r}")
         for name in file_names:
             candidate = directory_path / name
             relative = candidate.relative_to(staging).as_posix()
             mode = candidate.stat(follow_symlinks=False).st_mode
             if not stat.S_ISREG(mode):
                 raise WorkerPackError(f"staging entry is not a regular file: {relative!r}")
+            _reject_private_key_material(candidate, relative=relative)
             folded = relative.casefold()
             if folded in seen:
                 raise WorkerPackError(
@@ -407,8 +548,8 @@ def _scan_staging(staging: Path, *, executable: str) -> list[dict[str, Any]]:
 
 
 def _load_manifest_template(path: Path) -> dict[str, Any]:
-    if path.is_symlink() or not path.is_file():
-        raise WorkerPackError(f"manifest template must be a regular JSON file: {path}")
+    _reject_reparse_ancestors(path, label="manifest template path")
+    _require_regular_file(path, label="manifest template")
     try:
         parsed = cast(object, json.loads(path.read_text(encoding="utf-8")))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
@@ -442,9 +583,13 @@ def build_archive(
 ) -> VerifiedWorkerPackArchive:
     """Create one deterministic Zip64 pack from an already materialized payload tree."""
 
-    resolved_staging = staging.expanduser().resolve(strict=True)
-    resolved_output = output.expanduser().resolve()
-    if resolved_output.exists() or resolved_output.is_symlink():
+    expanded_staging = staging.expanduser()
+    _reject_reparse_ancestors(expanded_staging, label="worker pack staging path")
+    resolved_staging = expanded_staging.resolve(strict=True)
+    expanded_output = output.expanduser()
+    _reject_reparse_ancestors(expanded_output.parent, label="worker pack output path")
+    resolved_output = expanded_output.resolve()
+    if resolved_output.exists() or _path_is_link_or_reparse(resolved_output):
         raise WorkerPackError(f"worker pack output already exists: {resolved_output}")
     if resolved_output.is_relative_to(resolved_staging):
         raise WorkerPackError("worker pack output must be outside the staging directory")
@@ -466,6 +611,12 @@ def build_archive(
     manifest_bytes = _manifest_json(manifest)
 
     resolved_output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _require_real_directory(resolved_output.parent, label="worker pack output directory")
+    _preflight_free_space(
+        resolved_output.parent,
+        expanded_bytes=sum(file.size for file in manifest.files),
+        operation="worker pack build",
+    )
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{resolved_output.name}.", suffix=".tmp", dir=resolved_output.parent
     )
@@ -482,7 +633,13 @@ def build_archive(
         ) as archive:
             archive.writestr(_zip_info(MANIFEST_NAME), manifest_bytes)
             for file in manifest.files:
-                source = resolved_staging.joinpath(*PurePosixPath(file.path).parts)
+                source = resolved_staging
+                path_parts = PurePosixPath(file.path).parts
+                for part in path_parts[:-1]:
+                    source /= part
+                    _require_real_directory(source, label="worker pack staging directory")
+                source /= path_parts[-1]
+                _require_regular_file(source, label=f"worker pack staging file {file.path!r}")
                 info = _zip_info(
                     file.path,
                     executable=file.path == manifest.worker.entrypoint.executable,
@@ -510,12 +667,23 @@ def _extract_verified_payload(
     verified: VerifiedWorkerPackArchive,
     destination: Path,
 ) -> None:
+    _require_real_directory(destination, label="worker pack installation staging")
     with zipfile.ZipFile(verified.archive_path) as archive:
         members = _archive_members(archive)
         for file in verified.manifest.files:
             member = members[file.path]
             target = destination.joinpath(*PurePosixPath(file.path).parts)
-            target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            current = destination
+            for part in PurePosixPath(file.path).parts[:-1]:
+                current /= part
+                _reject_link_or_reparse(current, label="worker pack payload directory")
+                if not current.exists():
+                    current.mkdir(mode=0o700)
+                _require_real_directory(current, label="worker pack payload directory")
+            if target.exists() or _path_is_link_or_reparse(target):
+                raise WorkerPackError(
+                    f"worker pack extraction target already exists: {file.path!r}"
+                )
             digest = hashlib.sha256()
             total = 0
             try:
@@ -539,6 +707,7 @@ def _extract_verified_payload(
             target.chmod(
                 0o700 if file.path == verified.manifest.worker.entrypoint.executable else 0o600
             )
+            _require_regular_file(target, label=f"installed payload {file.path!r}")
 
 
 def _write_json_file(path: Path, value: Any, *, exclusive: bool) -> None:
@@ -556,19 +725,25 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
 
     verified = verify_archive(archive_path)
     expanded_root = root.expanduser()
-    if expanded_root.is_symlink():
-        raise WorkerPackError(f"worker pack root must not be a symlink: {expanded_root}")
+    _reject_reparse_ancestors(expanded_root, label="worker pack installation path")
     resolved_root = expanded_root.resolve()
     resolved_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _require_real_directory(resolved_root, label="worker pack root")
     pack_root = resolved_root / verified.manifest.pack_id
-    if pack_root.is_symlink():
-        raise WorkerPackError(f"worker pack namespace must not be a symlink: {pack_root}")
+    _reject_link_or_reparse(pack_root, label="worker pack namespace")
     pack_root.mkdir(exist_ok=True, mode=0o700)
+    _require_real_directory(pack_root, label="worker pack namespace")
+    _preflight_free_space(
+        pack_root,
+        expanded_bytes=sum(file.size for file in verified.manifest.files),
+        operation="worker pack installation",
+    )
     target = pack_root / verified.manifest.version
-    if target.exists() or target.is_symlink():
+    if target.exists() or _path_is_link_or_reparse(target):
         raise WorkerPackError(f"worker pack is already installed: {target}")
 
     temporary = Path(tempfile.mkdtemp(prefix=".install-", dir=pack_root))
+    renamed = False
     try:
         _extract_verified_payload(verified, temporary)
         manifest_path = temporary / MANIFEST_NAME
@@ -591,32 +766,159 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
             exclusive=True,
         )
         # The staging directory lives inside pack_root, so the final rename never crosses volumes.
+        if target.exists() or _path_is_link_or_reparse(target):
+            raise WorkerPackError(
+                f"worker pack installation target appeared during install: {target}"
+            )
         os.replace(temporary, target)
+        renamed = True
+        installed = load_installed_pack(target, verify_payload=True)
     except BaseException:
         if temporary.exists():
             shutil.rmtree(temporary, ignore_errors=True)
+        if renamed and target.exists() and not _path_is_link_or_reparse(target):
+            shutil.rmtree(target, ignore_errors=True)
         raise
 
-    return InstalledWorkerPack(root=target, manifest=verified.manifest, receipt=receipt)
+    return installed
+
+
+def _read_bounded_regular_file(path: Path, *, label: str, maximum_bytes: int) -> bytes:
+    _require_regular_file(path, label=label)
+    try:
+        size = path.stat(follow_symlinks=False).st_size
+        if size > maximum_bytes:
+            raise WorkerPackError(f"{label} exceeds the size limit: {path}")
+        return path.read_bytes()
+    except WorkerPackError:
+        raise
+    except OSError as error:
+        raise WorkerPackError(f"could not read {label}: {path}") from error
+
+
+def _expected_payload_directories(manifest: WorkerPackManifest) -> set[str]:
+    directories: set[str] = set()
+    for file in manifest.files:
+        parent = PurePosixPath(file.path).parent
+        while parent != PurePosixPath("."):
+            directories.add(parent.as_posix())
+            parent = parent.parent
+    return directories
+
+
+def _verify_declared_installed_paths(resolved: Path, manifest: WorkerPackManifest) -> None:
+    """Reject missing or redirecting declared paths without paying the hash cost."""
+
+    for file in manifest.files:
+        payload = resolved
+        parts = PurePosixPath(file.path).parts
+        for index, part in enumerate(parts):
+            payload /= part
+            _reject_link_or_reparse(payload, label=f"installed payload {file.path!r}")
+            if index < len(parts) - 1:
+                _require_real_directory(payload, label=f"installed payload directory {file.path!r}")
+        _require_regular_file(payload, label=f"installed payload {file.path!r}")
+
+
+def _verify_installed_payload_tree(resolved: Path, manifest: WorkerPackManifest) -> None:
+    expected_files = {
+        MANIFEST_NAME.casefold(): MANIFEST_NAME,
+        RECEIPT_NAME.casefold(): RECEIPT_NAME,
+        **{file.path.casefold(): file.path for file in manifest.files},
+    }
+    expected_directories = {
+        directory.casefold(): directory for directory in _expected_payload_directories(manifest)
+    }
+    observed_files: dict[str, str] = {}
+    observed_directories: dict[str, str] = {}
+    for directory, directory_names, file_names in os.walk(resolved, followlinks=False):
+        directory_path = Path(directory)
+        _require_real_directory(directory_path, label="installed worker pack directory")
+        for name in directory_names:
+            candidate = directory_path / name
+            relative = candidate.relative_to(resolved).as_posix()
+            _portable_archive_path(relative)
+            _require_real_directory(candidate, label=f"installed directory {relative!r}")
+            folded = relative.casefold()
+            if folded in observed_directories:
+                raise WorkerPackError(
+                    "installed worker pack directories collide on a case-insensitive "
+                    f"filesystem: {observed_directories[folded]!r} and {relative!r}"
+                )
+            observed_directories[folded] = relative
+        for name in file_names:
+            candidate = directory_path / name
+            relative = candidate.relative_to(resolved).as_posix()
+            _portable_archive_path(relative)
+            _require_regular_file(candidate, label=f"installed file {relative!r}")
+            folded = relative.casefold()
+            if folded in observed_files:
+                raise WorkerPackError(
+                    "installed worker pack files collide on a case-insensitive filesystem: "
+                    f"{observed_files[folded]!r} and {relative!r}"
+                )
+            observed_files[folded] = relative
+    if set(observed_files) != set(expected_files):
+        missing = sorted(expected_files[key] for key in set(expected_files) - set(observed_files))
+        unexpected = sorted(
+            observed_files[key] for key in set(observed_files) - set(expected_files)
+        )
+        raise WorkerPackError(
+            "installed worker pack files do not match manifest; "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+    unexpected_directories = sorted(
+        observed_directories[key] for key in set(observed_directories) - set(expected_directories)
+    )
+    if unexpected_directories:
+        raise WorkerPackError(
+            f"installed worker pack contains undeclared directories: {unexpected_directories}"
+        )
+
+    for file in manifest.files:
+        payload = resolved.joinpath(*PurePosixPath(file.path).parts)
+        size = payload.stat(follow_symlinks=False).st_size
+        if size != file.size or _sha256_file(payload) != file.sha256:
+            raise WorkerPackError(f"installed worker pack file checksum mismatch: {file.path!r}")
+        if (
+            manifest.platform.os == "windows"
+            and PurePosixPath(file.path).suffix.casefold() in _WINDOWS_NATIVE_SUFFIXES
+        ):
+            _verify_installed_pe_machine(
+                payload,
+                architecture=manifest.platform.architecture,
+                label=file.path,
+            )
 
 
 def load_installed_pack(path: Path, *, verify_payload: bool = False) -> InstalledWorkerPack:
-    """Load an installed pack and optionally re-hash every immutable payload file."""
+    """Load an installed pack and optionally verify its complete immutable file tree."""
 
-    if path.is_symlink() or path.parent.is_symlink():
-        raise WorkerPackError(f"installed worker pack is not a real directory: {path}")
-    resolved = path.resolve(strict=True)
-    if not resolved.is_dir():
-        raise WorkerPackError(f"installed worker pack is not a real directory: {path}")
+    expanded = path.expanduser()
+    _reject_reparse_ancestors(expanded, label="installed worker pack path")
+    try:
+        resolved = expanded.resolve(strict=True)
+    except OSError as error:
+        raise WorkerPackError(f"installed worker pack path is invalid: {path}") from error
+    _require_real_directory(resolved, label="installed worker pack")
     manifest_path = resolved / MANIFEST_NAME
     receipt_path = resolved / RECEIPT_NAME
-    if manifest_path.is_symlink() or receipt_path.is_symlink():
-        raise WorkerPackError(f"installed worker pack metadata must not be symlinked: {resolved}")
     try:
-        manifest_bytes = manifest_path.read_bytes()
+        manifest_bytes = _read_bounded_regular_file(
+            manifest_path,
+            label="installed worker pack manifest",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+        receipt_bytes = _read_bounded_regular_file(
+            receipt_path,
+            label="installed worker pack receipt",
+            maximum_bytes=MAX_RECEIPT_BYTES,
+        )
         manifest = WorkerPackManifest.model_validate_json(manifest_bytes)
-        receipt = WorkerPackInstallReceipt.model_validate_json(receipt_path.read_bytes())
-    except (OSError, ValueError, ValidationError) as error:
+        receipt = WorkerPackInstallReceipt.model_validate_json(receipt_bytes)
+    except (WorkerPackError, ValueError, ValidationError) as error:
+        if isinstance(error, WorkerPackError):
+            raise
         raise WorkerPackError(f"installed worker pack metadata is invalid: {resolved}") from error
     manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
     if receipt.pack_id != manifest.pack_id or receipt.version != manifest.version:
@@ -627,47 +929,53 @@ def load_installed_pack(path: Path, *, verify_payload: bool = False) -> Installe
         raise WorkerPackError(f"installed worker pack receipt file count mismatch: {resolved}")
     if resolved.parent.name != manifest.pack_id or resolved.name != manifest.version:
         raise WorkerPackError(f"installed worker pack directory identity mismatch: {resolved}")
+    _verify_declared_installed_paths(resolved, manifest)
     if verify_payload:
-        for file in manifest.files:
-            payload = resolved
-            for part in PurePosixPath(file.path).parts:
-                payload /= part
-                if payload.is_symlink():
-                    raise WorkerPackError(f"installed worker pack path is symlinked: {file.path!r}")
-            if payload.is_symlink() or not payload.is_file():
-                raise WorkerPackError(f"installed worker pack file is missing: {file.path!r}")
-            if payload.stat().st_size != file.size or _sha256_file(payload) != file.sha256:
-                raise WorkerPackError(
-                    f"installed worker pack file checksum mismatch: {file.path!r}"
-                )
-            if (
-                manifest.platform.os == "windows"
-                and PurePosixPath(file.path).suffix.casefold() in _WINDOWS_NATIVE_SUFFIXES
-            ):
-                _verify_installed_pe_machine(
-                    payload,
-                    architecture=manifest.platform.architecture,
-                    label=file.path,
-                )
+        _verify_installed_payload_tree(resolved, manifest)
     return InstalledWorkerPack(root=resolved, manifest=manifest, receipt=receipt)
 
 
-def discover_installed_packs(root: Path) -> tuple[list[InstalledWorkerPack], list[str]]:
+def discover_installed_packs(
+    root: Path, *, verify_payload: bool = False
+) -> tuple[list[InstalledWorkerPack], list[str]]:
     """Return valid receipts and bounded diagnostics for malformed install directories."""
 
     expanded_root = root.expanduser()
-    if expanded_root.is_symlink():
-        raise WorkerPackError(f"worker pack root must be a real directory: {expanded_root}")
+    _reject_reparse_ancestors(expanded_root, label="worker pack discovery path")
     resolved_root = expanded_root.resolve()
     if not resolved_root.exists():
         return [], []
-    if resolved_root.is_symlink() or not resolved_root.is_dir():
-        raise WorkerPackError(f"worker pack root must be a real directory: {resolved_root}")
+    _require_real_directory(resolved_root, label="worker pack root")
     packs: list[InstalledWorkerPack] = []
     errors: list[str] = []
-    for manifest_path in sorted(resolved_root.glob("*/*/manifest.json")):
+    candidate_roots: list[Path] = []
+    try:
+        namespaces = sorted(resolved_root.iterdir(), key=lambda value: value.name.casefold())
+    except OSError as error:
+        raise WorkerPackError(f"could not enumerate worker pack root: {resolved_root}") from error
+    if len(namespaces) > WORKER_PACK_MAX_FILE_COUNT:
+        raise WorkerPackError("worker pack root contains too many namespace entries")
+    for namespace in namespaces:
         try:
-            packs.append(load_installed_pack(manifest_path.parent))
+            _reject_link_or_reparse(namespace, label="worker pack namespace")
+            if not namespace.is_dir():
+                continue
+            versions = sorted(namespace.iterdir(), key=lambda value: value.name.casefold())
+            if len(versions) > WORKER_PACK_MAX_FILE_COUNT:
+                raise WorkerPackError(
+                    f"worker pack namespace contains too many versions: {namespace}"
+                )
+            for version in versions:
+                if version.name.startswith(".install-"):
+                    continue
+                _reject_link_or_reparse(version, label="installed worker pack version")
+                if version.is_dir() and (version / MANIFEST_NAME).exists():
+                    candidate_roots.append(version)
+        except WorkerPackError as error:
+            errors.append(str(error)[:500])
+    for candidate in candidate_roots:
+        try:
+            packs.append(load_installed_pack(candidate, verify_payload=verify_payload))
         except WorkerPackError as error:
             errors.append(str(error)[:500])
     packs.sort(
@@ -676,7 +984,11 @@ def discover_installed_packs(root: Path) -> tuple[list[InstalledWorkerPack], lis
     return packs, errors
 
 
-def _semver_sort_key(version: str) -> tuple[int, int, int, int, tuple[tuple[int, int | str], ...]]:
+def semver_sort_key(
+    version: str,
+) -> tuple[int, int, int, int, tuple[tuple[int, int | str], ...]]:
+    """Return a SemVer precedence key, excluding build metadata."""
+
     without_build = version.split("+", 1)[0]
     core, separator, prerelease = without_build.partition("-")
     major, minor, patch = (int(part) for part in core.split("."))
@@ -689,8 +1001,7 @@ def _semver_sort_key(version: str) -> tuple[int, int, int, int, tuple[tuple[int,
 def _load_activation_config(config_path: Path) -> WorkerPackActivationConfig:
     if not config_path.exists():
         return WorkerPackActivationConfig()
-    if config_path.is_symlink() or not config_path.is_file():
-        raise WorkerPackError(f"activation config must be a regular file: {config_path}")
+    _require_regular_file(config_path, label="activation config")
     try:
         return WorkerPackActivationConfig.model_validate_json(config_path.read_bytes())
     except (OSError, ValueError, ValidationError) as error:
@@ -706,7 +1017,7 @@ def activate_pack(
 ) -> tuple[InstalledWorkerPack, Path]:
     """Select one installed pack for its worker kind using atomic replacement."""
 
-    packs, errors = discover_installed_packs(root)
+    packs, errors = discover_installed_packs(root, verify_payload=True)
     candidates = [
         pack
         for pack in packs
@@ -717,12 +1028,12 @@ def activate_pack(
         detail = f"; invalid installs: {errors}" if errors else ""
         requested = f"{pack_id}@{version}" if version else pack_id
         raise WorkerPackError(f"installed worker pack was not found: {requested}{detail}")
-    selected = max(candidates, key=lambda item: _semver_sort_key(item.manifest.version))
+    selected = max(candidates, key=lambda item: semver_sort_key(item.manifest.version))
     expanded_config_root = config_root.expanduser()
-    if expanded_config_root.is_symlink():
-        raise WorkerPackError(f"config root must not be a symlink: {expanded_config_root}")
+    _reject_reparse_ancestors(expanded_config_root, label="worker pack config path")
     resolved_config_root = expanded_config_root.resolve()
     resolved_config_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _require_real_directory(resolved_config_root, label="worker pack config root")
     config_path = resolved_config_root / SELECTION_NAME
     current = _load_activation_config(config_path)
     selection = WorkerPackSelection(
@@ -741,8 +1052,7 @@ def activate_pack(
     temporary = Path(temporary_name)
     try:
         _write_json_file(temporary, updated.model_dump(mode="json"), exclusive=False)
-        if config_path.is_symlink():
-            raise WorkerPackError(f"refusing to replace symlinked activation config: {config_path}")
+        _reject_link_or_reparse(config_path, label="activation config")
         os.replace(temporary, config_path)
     finally:
         temporary.unlink(missing_ok=True)

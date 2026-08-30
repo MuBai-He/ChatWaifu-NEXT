@@ -12,6 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 WORKER_PACK_SCHEMA_VERSION = "1.0"
 WORKER_PACK_RECEIPT_SCHEMA_VERSION = "1.0"
 WORKER_PACK_SELECTION_SCHEMA_VERSION = "1.0"
+WORKER_PACK_MAX_FILE_BYTES = 256 * 1024 * 1024 * 1024
+WORKER_PACK_MAX_FILE_COUNT = 100_000
+WORKER_PACK_MAX_EXPANDED_BYTES = 1024 * 1024 * 1024 * 1024
 
 _IDENTIFIER_PATTERN = r"^[a-z0-9][a-z0-9_.-]{1,127}$"
 _SEMVER_PATTERN = (
@@ -39,6 +42,30 @@ _WORKER_ENVIRONMENT_PREFIXES: dict[str, str] = {
     "tts": "CHATWAIFU_NEURAL_TTS_WORKER_",
 }
 _SUPERVISOR_ENVIRONMENT_SUFFIXES = frozenset({"HOST", "PORT", "TOKEN"})
+_SECRET_ENVIRONMENT_SEGMENTS = frozenset(
+    {
+        "AUTH",
+        "BEARER",
+        "COOKIE",
+        "CREDENTIAL",
+        "CREDENTIALS",
+        "KEY",
+        "PASSWORD",
+        "PASSWD",
+        "SECRET",
+        "TOKEN",
+    }
+)
+_SECRET_ENVIRONMENT_COMPOUNDS = frozenset(
+    {
+        "ACCESSKEY",
+        "APIKEY",
+        "CLIENTSECRET",
+        "CONNECTIONSTRING",
+        "PRIVATEKEY",
+        "SECRETKEY",
+    }
+)
 
 
 class WorkerPackModel(BaseModel):
@@ -81,6 +108,14 @@ def _validate_environment_value(value: str) -> str:
     return value
 
 
+def _environment_key_looks_secret(key: str) -> bool:
+    segments = frozenset(key.split("_"))
+    if segments & _SECRET_ENVIRONMENT_SEGMENTS:
+        return True
+    compact = key.replace("_", "")
+    return any(marker in compact for marker in _SECRET_ENVIRONMENT_COMPOUNDS)
+
+
 class WorkerPackPlatform(WorkerPackModel):
     os: Literal["windows", "macos", "linux"]
     architecture: Literal["x86_64", "arm64"]
@@ -99,7 +134,7 @@ class WorkerPackPlatform(WorkerPackModel):
 
 class WorkerPackFile(WorkerPackModel):
     path: str = Field(min_length=1, max_length=512)
-    size: int = Field(ge=0, le=512 * 1024 * 1024 * 1024)
+    size: int = Field(ge=0, le=WORKER_PACK_MAX_FILE_BYTES)
     sha256: str = Field(pattern=_SHA256_PATTERN)
     role: Literal["runtime", "library", "model", "metadata", "license", "other"] = "other"
 
@@ -172,6 +207,8 @@ class WorkerPackWorker(WorkerPackModel):
                 raise ValueError(f"{self.kind} pack environment key must start with {prefix}")
             if key in forbidden:
                 raise ValueError(f"{key} is owned by the worker supervisor")
+            if _environment_key_looks_secret(key):
+                raise ValueError(f"{key} looks like a secret and must not be stored in a pack")
         return self
 
 
@@ -195,7 +232,7 @@ class WorkerPackManifest(WorkerPackModel):
     version: str = Field(pattern=_SEMVER_PATTERN)
     platform: WorkerPackPlatform
     worker: WorkerPackWorker
-    files: list[WorkerPackFile] = Field(min_length=1, max_length=100_000)
+    files: list[WorkerPackFile] = Field(min_length=1, max_length=WORKER_PACK_MAX_FILE_COUNT)
     licenses: list[WorkerPackLicense] = Field(min_length=1, max_length=128)
 
     @model_validator(mode="after")
@@ -212,6 +249,14 @@ class WorkerPackManifest(WorkerPackModel):
         executable = self.worker.entrypoint.executable.casefold()
         if executable not in paths:
             raise ValueError("entrypoint executable must be listed in files")
+        if self.platform.os == "windows" and PurePosixPath(executable).suffix != ".exe":
+            raise ValueError("Windows worker pack entrypoint must be an .exe file")
+        expanded_bytes = sum(file.size for file in self.files)
+        if expanded_bytes > WORKER_PACK_MAX_EXPANDED_BYTES:
+            raise ValueError(
+                "worker pack expanded payload exceeds the supported size limit "
+                f"of {WORKER_PACK_MAX_EXPANDED_BYTES} bytes"
+            )
         for license_metadata in self.licenses:
             if license_metadata.file is not None and license_metadata.file.casefold() not in paths:
                 raise ValueError(f"license file {license_metadata.file!r} must be listed in files")

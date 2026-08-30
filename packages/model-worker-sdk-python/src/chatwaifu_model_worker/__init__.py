@@ -24,9 +24,13 @@ from chatwaifu_model_worker.pack_installer import (
     discover_installed_packs,
     install_archive,
     load_installed_pack,
+    semver_sort_key,
     verify_archive,
 )
 from chatwaifu_model_worker.packages import (
+    WORKER_PACK_MAX_EXPANDED_BYTES,
+    WORKER_PACK_MAX_FILE_BYTES,
+    WORKER_PACK_MAX_FILE_COUNT,
     WORKER_PACK_RECEIPT_SCHEMA_VERSION,
     WORKER_PACK_SCHEMA_VERSION,
     WORKER_PACK_SELECTION_SCHEMA_VERSION,
@@ -54,6 +58,9 @@ __all__ = [
     "TTS_PCM_FRAME_MAGIC",
     "TTS_PCM_FRAME_MAX_PAYLOAD_BYTES",
     "TTS_PCM_FRAME_VERSION",
+    "WORKER_PACK_MAX_EXPANDED_BYTES",
+    "WORKER_PACK_MAX_FILE_BYTES",
+    "WORKER_PACK_MAX_FILE_COUNT",
     "WORKER_PACK_RECEIPT_SCHEMA_VERSION",
     "WORKER_PACK_SCHEMA_VERSION",
     "WORKER_PACK_SELECTION_SCHEMA_VERSION",
@@ -90,6 +97,7 @@ __all__ = [
     "install_archive",
     "load_installed_pack",
     "pack_tts_pcm_frame",
+    "semver_sort_key",
     "unpack_tts_pcm_frame",
     "verify_archive",
 ]

@@ -5,8 +5,10 @@ import json
 import stat
 import struct
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from chatwaifu_model_worker import WorkerPackActivationConfig, WorkerPackManifest
@@ -142,7 +144,10 @@ def test_build_is_deterministic_and_infers_manifest_files(tmp_path: Path) -> Non
         assert archive.getinfo("models/default/model.bin").compress_type == zipfile.ZIP_STORED
 
 
-@pytest.mark.parametrize("forbidden", [".env", ".idea/workspace.xml", "state/runtime.db"])
+@pytest.mark.parametrize(
+    "forbidden",
+    [".env", ".idea/workspace.xml", "state/runtime.db", "secrets/private.key"],
+)
 def test_build_rejects_secrets_databases_and_development_state(
     tmp_path: Path, forbidden: str
 ) -> None:
@@ -159,6 +164,27 @@ def test_build_rejects_secrets_databases_and_development_state(
         worker_packs.build_archive(staging, template, tmp_path / "output.cwpack")
 
     assert not (tmp_path / "output.cwpack").exists()
+
+
+def test_build_allows_certificate_bundle_but_rejects_private_key_pem(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    (staging / "bin").mkdir(parents=True)
+    (staging / "certifi").mkdir()
+    worker = _pe()
+    (staging / "bin" / "worker.exe").write_bytes(worker)
+    certificate = b"-----BEGIN CERTIFICATE-----\ntest-only\n-----END CERTIFICATE-----\n"
+    (staging / "certifi" / "cacert.pem").write_bytes(certificate)
+    template = _write_template(tmp_path / "template.json", {"bin/worker.exe": worker})
+
+    built = worker_packs.build_archive(staging, template, tmp_path / "certificate.cwpack")
+
+    assert any(file.path == "certifi/cacert.pem" for file in built.manifest.files)
+    (tmp_path / "certificate.cwpack").unlink()
+    (staging / "certifi" / "cacert.pem").write_bytes(
+        b"-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\n"
+    )
+    with pytest.raises(worker_packs.WorkerPackError, match="private-key material"):
+        worker_packs.build_archive(staging, template, tmp_path / "private-key.cwpack")
 
 
 def test_build_rejects_symlinks_and_prefilled_files(tmp_path: Path) -> None:
@@ -306,6 +332,46 @@ def test_reverify_detects_installed_payload_tampering(tmp_path: Path) -> None:
         worker_packs.load_installed_pack(installed.root, verify_payload=True)
 
 
+@pytest.mark.parametrize("extra", ["extra.txt", "models/default/undeclared.bin"])
+def test_full_reverify_rejects_undeclared_installed_files(tmp_path: Path, extra: str) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    unexpected = installed.root.joinpath(*Path(extra).parts)
+    unexpected.parent.mkdir(parents=True, exist_ok=True)
+    unexpected.write_bytes(b"undeclared")
+
+    with pytest.raises(worker_packs.WorkerPackError, match="do not match manifest"):
+        worker_packs.load_installed_pack(installed.root, verify_payload=True)
+
+    discovered, errors = worker_packs.discover_installed_packs(
+        tmp_path / "packs", verify_payload=True
+    )
+    assert discovered == []
+    assert any("unexpected" in error for error in errors)
+
+
+def test_full_reverify_rejects_undeclared_installed_directory(tmp_path: Path) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    (installed.root / "undeclared-empty-directory").mkdir()
+
+    with pytest.raises(worker_packs.WorkerPackError, match="undeclared directories"):
+        worker_packs.load_installed_pack(installed.root, verify_payload=True)
+
+
+def test_activation_rejects_tampered_pack(tmp_path: Path) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    (installed.root / "bin/worker.exe").write_bytes(b"tampered")
+
+    with pytest.raises(worker_packs.WorkerPackError, match="invalid installs"):
+        worker_packs.activate_pack(
+            "faster-whisper-cpu",
+            root=tmp_path / "packs",
+            config_root=tmp_path / "config",
+        )
+
+
 def test_installed_pack_rejects_symlinked_metadata(tmp_path: Path) -> None:
     archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
     installed = worker_packs.install_archive(archive, tmp_path / "packs")
@@ -317,6 +383,151 @@ def test_installed_pack_rejects_symlinked_metadata(tmp_path: Path) -> None:
 
     with pytest.raises(worker_packs.WorkerPackError, match="must not be symlinked"):
         worker_packs.load_installed_pack(installed.root)
+
+
+def test_staging_rejects_windows_reparse_points_via_portable_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    staging = tmp_path / "staging"
+    (staging / "bin").mkdir(parents=True)
+    (staging / "junction").mkdir()
+    worker = _pe()
+    (staging / "bin" / "worker.exe").write_bytes(worker)
+    template = _write_template(tmp_path / "template.json", {"bin/worker.exe": worker})
+    original = cast(Callable[[Path], bool], worker_packs.__dict__["_path_is_link_or_reparse"])
+
+    def fake_reparse_probe(path: Path) -> bool:
+        return path.name == "junction" or original(path)
+
+    monkeypatch.setattr(
+        worker_packs,
+        "_path_is_link_or_reparse",
+        fake_reparse_probe,
+    )
+
+    with pytest.raises(worker_packs.WorkerPackError, match="junction or reparse"):
+        worker_packs.build_archive(staging, template, tmp_path / "worker.cwpack")
+
+
+def test_discovery_rejects_windows_reparse_version_via_portable_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    worker_packs.install_archive(archive, tmp_path / "packs")
+    original = cast(Callable[[Path], bool], worker_packs.__dict__["_path_is_link_or_reparse"])
+
+    def fake_reparse_probe(path: Path) -> bool:
+        return path.name == "1.0.0" or original(path)
+
+    monkeypatch.setattr(
+        worker_packs,
+        "_path_is_link_or_reparse",
+        fake_reparse_probe,
+    )
+
+    discovered, errors = worker_packs.discover_installed_packs(tmp_path / "packs")
+
+    assert discovered == []
+    assert any("junction or reparse" in error for error in errors)
+
+
+def test_fast_load_rejects_declared_reparse_payload_via_portable_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payloads = {"bin/worker.exe": _pe(), "models/default/model.bin": b"weights"}
+    archive = _write_archive(tmp_path / "worker.zip", payloads)
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    original = cast(Callable[[Path], bool], worker_packs.__dict__["_path_is_link_or_reparse"])
+
+    def fake_reparse_probe(path: Path) -> bool:
+        return path.name == "default" or original(path)
+
+    monkeypatch.setattr(worker_packs, "_path_is_link_or_reparse", fake_reparse_probe)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="junction or reparse"):
+        worker_packs.load_installed_pack(installed.root)
+
+
+def test_install_rejects_reparse_root_via_portable_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    pack_root = tmp_path / "packs"
+    pack_root.mkdir()
+    original = cast(Callable[[Path], bool], worker_packs.__dict__["_path_is_link_or_reparse"])
+
+    def fake_reparse_probe(path: Path) -> bool:
+        return path == pack_root or original(path)
+
+    monkeypatch.setattr(
+        worker_packs,
+        "_path_is_link_or_reparse",
+        fake_reparse_probe,
+    )
+
+    with pytest.raises(worker_packs.WorkerPackError, match="junction or reparse"):
+        worker_packs.install_archive(archive, pack_root)
+
+
+def test_install_preflights_required_free_space(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+
+    def fake_disk_usage(_path: object) -> SimpleNamespace:
+        return SimpleNamespace(total=1, used=0, free=1)
+
+    monkeypatch.setattr(worker_packs.shutil, "disk_usage", fake_disk_usage)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="insufficient free space"):
+        worker_packs.install_archive(archive, tmp_path / "packs")
+
+    assert not (tmp_path / "packs" / "faster-whisper-cpu" / "1.0.0").exists()
+
+
+def test_build_preflights_required_free_space(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    staging = tmp_path / "staging"
+    (staging / "bin").mkdir(parents=True)
+    worker = _pe()
+    (staging / "bin" / "worker.exe").write_bytes(worker)
+    template = _write_template(tmp_path / "template.json", {"bin/worker.exe": worker})
+
+    def fake_disk_usage(_path: object) -> SimpleNamespace:
+        return SimpleNamespace(total=1, used=0, free=1)
+
+    monkeypatch.setattr(worker_packs.shutil, "disk_usage", fake_disk_usage)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="insufficient free space"):
+        worker_packs.build_archive(staging, template, tmp_path / "worker.cwpack")
+
+    assert not (tmp_path / "worker.cwpack").exists()
+
+
+def test_verify_enforces_archive_member_and_expanded_size_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+
+    monkeypatch.setattr(worker_packs, "WORKER_PACK_MAX_FILE_BYTES", 100)
+    with pytest.raises(worker_packs.WorkerPackError, match="member exceeds"):
+        worker_packs.verify_archive(archive)
+
+    monkeypatch.setattr(worker_packs, "WORKER_PACK_MAX_FILE_BYTES", 1024)
+    monkeypatch.setattr(worker_packs, "WORKER_PACK_MAX_EXPANDED_BYTES", 100)
+    with pytest.raises(worker_packs.WorkerPackError, match="total expanded size"):
+        worker_packs.verify_archive(archive)
+
+
+def test_verify_enforces_archive_member_count_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    monkeypatch.setattr(worker_packs, "MAX_ARCHIVE_MEMBER_COUNT", 1)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="too many members"):
+        worker_packs.verify_archive(archive)
 
 
 def test_activate_selects_latest_semver_and_preserves_other_kind(tmp_path: Path) -> None:

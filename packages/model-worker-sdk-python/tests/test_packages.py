@@ -4,6 +4,7 @@ import hashlib
 
 import pytest
 from chatwaifu_model_worker import (
+    WORKER_PACK_MAX_FILE_BYTES,
     WorkerPackActivationConfig,
     WorkerPackActiveSelection,
     WorkerPackEntrypoint,
@@ -93,6 +94,9 @@ def test_worker_pack_requires_entrypoint_and_license_files_in_payload() -> None:
     [
         {"PATH": "${PACK_ROOT}/bin"},
         {"CHATWAIFU_STT_WORKER_TOKEN": "not-allowed"},
+        {"CHATWAIFU_STT_WORKER_API_KEY": "not-allowed"},
+        {"CHATWAIFU_STT_WORKER_CLIENT_SECRET": "not-allowed"},
+        {"CHATWAIFU_STT_WORKER_PASSWORD": "not-allowed"},
         {"CHATWAIFU_STT_WORKER_MODEL_DIR": "${UNKNOWN}/model"},
     ],
 )
@@ -111,6 +115,53 @@ def test_worker_pack_rejects_uncontrolled_environment(environment: dict[str, str
                 ),
             )
         )
+
+
+def test_worker_pack_allows_non_secret_environment_names_containing_key_letters() -> None:
+    manifest = _manifest(
+        worker=WorkerPackWorker(
+            kind="stt",
+            backend="faster_whisper",
+            provider_id="faster-whisper",
+            display_name="faster-whisper",
+            model="base",
+            entrypoint=WorkerPackEntrypoint(
+                executable="bin/worker.exe",
+                environment={"CHATWAIFU_STT_WORKER_MONKEY": "enabled"},
+            ),
+        )
+    )
+
+    assert manifest.worker.entrypoint.environment["CHATWAIFU_STT_WORKER_MONKEY"] == "enabled"
+
+
+def test_windows_worker_pack_requires_exe_entrypoint() -> None:
+    worker = WorkerPackWorker(
+        kind="stt",
+        backend="faster_whisper",
+        provider_id="faster-whisper",
+        display_name="faster-whisper",
+        model="base",
+        entrypoint=WorkerPackEntrypoint(executable="bin/worker"),
+    )
+
+    with pytest.raises(ValidationError, match=r"must be an \.exe"):
+        _manifest(worker=worker, files=[_file("bin/worker")])
+
+
+def test_worker_pack_rejects_oversized_total_expanded_payload() -> None:
+    files = [
+        WorkerPackFile(
+            path="bin/worker.exe" if index == 0 else f"models/model-{index}.bin",
+            size=WORKER_PACK_MAX_FILE_BYTES,
+            sha256="0" * 64,
+            role="runtime" if index == 0 else "model",
+        )
+        for index in range(5)
+    ]
+
+    with pytest.raises(ValidationError, match="expanded payload exceeds"):
+        _manifest(files=files)
 
 
 def test_worker_pack_rejects_unknown_fields_and_invalid_accelerator_combinations() -> None:
