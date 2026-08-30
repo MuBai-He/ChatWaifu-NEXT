@@ -145,7 +145,10 @@ class SttConfig(BaseModel):
     provider: str = "disabled"
     worker_url: str = "http://127.0.0.1:8766"
     worker_token: SecretStr | None = None
-    language: str = Field(default="zh", min_length=2, max_length=32)
+    # ``auto`` is normalized to ``None`` at the STT domain boundary so local
+    # engines can identify Chinese, Japanese, or English without a hard-coded
+    # language hint.
+    language: str = Field(default="auto", min_length=2, max_length=32)
     timeout_seconds: float = Field(default=60.0, gt=0, le=300)
 
 

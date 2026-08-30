@@ -168,6 +168,7 @@ class RuntimeContainer:
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,
+                stt_config=settings.stt,
                 publisher=self.event_publisher,
                 event_hub=self.event_hub,
                 conversation=self.conversation,

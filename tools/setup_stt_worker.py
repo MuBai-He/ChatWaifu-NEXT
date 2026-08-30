@@ -26,7 +26,7 @@ def main() -> int:
             "--no-editable",
             "--reinstall-package",
             "chatwaifu-asr-faster-whisper-worker",
-            "--refresh-package",
+            "--reinstall-package",
             "chatwaifu-model-worker-sdk",
         ],
         cwd=ROOT,

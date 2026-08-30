@@ -61,6 +61,19 @@ class SttTranscriptionResult(WorkerModel):
     provider: str = Field(min_length=1, max_length=128)
 
 
+class SttWorkerCapabilities(WorkerModel):
+    """Provider-neutral discovery metadata exposed by ASR workers."""
+
+    schema_version: Literal["1.0"] = WORKER_SCHEMA_VERSION
+    provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
+    display_name: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    languages: list[str] = Field(min_length=1, max_length=32)
+    supports_partial: bool = False
+    supports_word_timestamps: bool = False
+    local_only: bool = True
+
+
 class TtsSynthesisRequest(WorkerRequest):
     text: str = Field(min_length=1, max_length=5000)
     language: str = Field(min_length=2, max_length=32)

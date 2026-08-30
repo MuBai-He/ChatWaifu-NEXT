@@ -51,5 +51,6 @@ def test_public_config_omits_secrets() -> None:
 def test_qwen_is_default_and_both_neural_tts_workers_are_declared() -> None:
     settings = Settings()
 
+    assert settings.stt.language == "auto"
     assert settings.tts.selected_provider == "qwen3_tts_mlx"
     assert set(settings.tts.workers) == {"qwen3_tts_mlx", "gpt_sovits"}

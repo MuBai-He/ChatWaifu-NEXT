@@ -212,7 +212,7 @@ def _runtime_environment(
             "CHATWAIFU_STT__PROVIDER": (
                 "faster_whisper_worker" if stt_port is not None else "disabled"
             ),
-            "CHATWAIFU_STT__LANGUAGE": "zh",
+            "CHATWAIFU_STT__LANGUAGE": "auto",
             "CHATWAIFU_TTS__PROVIDER": "null" if tts_profiles else "fake",
             "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx" if tts_profiles else "fake",
             "CHATWAIFU_TTS__WORKERS": json.dumps(

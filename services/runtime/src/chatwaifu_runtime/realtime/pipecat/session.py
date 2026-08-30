@@ -25,7 +25,7 @@ from pipecat.workers.runner import WorkerRunner
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.companion.activity import ActivityTracker
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
-from chatwaifu_runtime.config.settings import RealtimeConfig
+from chatwaifu_runtime.config.settings import RealtimeConfig, SttConfig
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -54,6 +54,7 @@ class PipecatMediaAdapter:
         self,
         *,
         config: RealtimeConfig,
+        stt_config: SttConfig,
         publisher: EventPublisher,
         event_hub: EventHub,
         conversation: ConversationService,
@@ -64,6 +65,9 @@ class PipecatMediaAdapter:
         resource_activity: Callable[[], None],
     ) -> None:
         self._config = config
+        self._stt_language = (
+            None if stt_config.language.strip().casefold() == "auto" else stt_config.language
+        )
         self._publisher = publisher
         self._event_hub = event_hub
         self._conversation = conversation
@@ -182,6 +186,7 @@ class PipecatMediaAdapter:
             conversation=self._conversation,
             audio_assets=self._audio_assets,
             stt=self._stt,
+            stt_language=self._stt_language,
             companion_settings=self._companion_settings,
             activity=self._activity,
             resource_activity=self._resource_activity,

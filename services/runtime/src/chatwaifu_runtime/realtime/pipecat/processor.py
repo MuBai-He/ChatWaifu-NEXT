@@ -134,6 +134,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         conversation: ConversationService,
         audio_assets: AudioAssetStore,
         stt: SttBackend,
+        stt_language: str | None,
         companion_settings: CompanionSettingsService,
         activity: ActivityTracker,
         resource_activity: Callable[[], None],
@@ -149,6 +150,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         self._conversation = conversation
         self._audio_assets = audio_assets
         self._stt = stt
+        self._stt_language = stt_language
         self._companion_settings = companion_settings
         self._activity = activity
         self._resource_activity = resource_activity
@@ -319,7 +321,7 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                     audio=audio,
                     sample_rate=self._sample_rate,
                     channels=self._channels,
-                    language="zh",
+                    language=self._stt_language,
                 )
             )
             if result is None or self._identity != identity:

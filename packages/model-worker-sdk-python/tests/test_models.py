@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from chatwaifu_model_worker import (
     SttTranscriptionRequest,
+    SttWorkerCapabilities,
     TtsPcmFrame,
     TtsStreamStart,
     TtsSynthesisRequest,
@@ -47,6 +48,19 @@ def test_stt_request_rejects_misaligned_pcm() -> None:
             sample_rate=16_000,
             channels=1,
         )
+
+
+def test_stt_worker_capabilities_are_provider_neutral() -> None:
+    capabilities = SttWorkerCapabilities(
+        provider_id="faster-whisper",
+        display_name="faster-whisper · CPU",
+        model="base",
+        languages=["zh", "ja", "en"],
+    )
+
+    assert capabilities.supports_partial is False
+    assert capabilities.supports_word_timestamps is False
+    assert capabilities.local_only is True
 
 
 def test_tts_request_and_wave_result_keep_full_generation_identity() -> None:
