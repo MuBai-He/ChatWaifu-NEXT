@@ -182,17 +182,18 @@ Web / Desktop UI
   → adapter / repository / isolated Worker
 ```
 
-| 要扩展的内容 | 从这里开始                                                                                               | 关键规则                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 角色         | `characters/<id>/`、`services/runtime/src/chatwaifu_runtime/characters/service.py`                       | 六文件包严格校验；真实资产、路径、密钥不进角色包                   |
-| LLM          | `providers/contracts.py`、`providers/model_config.py`                                                    | OpenAI-compatible 通常零代码；新协议封装在 adapter                 |
-| 云端 TTS     | `providers/tts_registry.py`                                                                              | 注册一次生成通用配置/API/UI，禁止复制 Provider 专属设置页          |
-| 本地 TTS/STT | `packages/model-worker-sdk-python/`、`workers/`                                                          | 重型 SDK 不进入 Runtime；能力、取消、离线和真实音频 smoke 必须通过 |
-| Avatar       | Protocol `AvatarCue`、`services/runtime/src/chatwaifu_runtime/avatar/planner.py`、`packages/avatar-sdk/` | Agent 只发语义 cue；Live2D 参数/文件名只属于 renderer              |
-| Memory       | `memory/` ports/policy/retrieval、`persistence/` adapter                                                 | 模型只能提候选；写入必须经过策略、去重、冲突、来源与隐私           |
-| Skill/MCP    | `skills/`、`runtime_skills/`                                                                             | schema、权限、副作用、确认、超时、取消、审计、沙箱缺一不可         |
-| 设置         | `desktopSettingsRegistry.tsx`                                                                            | 新 section 通过 registry/typed context 注册，不修改页面大 switch   |
-| 协议         | `packages/protocol-python/`                                                                              | Python 是唯一源，生成 Schema/TS，边界做 Zod parse                  |
+| 要扩展的内容 | 从这里开始                                                                                                         | 关键规则                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| 角色         | `characters/<id>/`、`services/runtime/src/chatwaifu_runtime/characters/service.py`                                 | 六文件包严格校验；真实资产、路径、密钥不进角色包                   |
+| LLM          | `providers/contracts.py`、`providers/model_config.py`                                                              | OpenAI-compatible 通常零代码；新协议封装在 adapter                 |
+| 云端 TTS     | `providers/tts_registry.py`                                                                                        | 注册一次生成通用配置/API/UI，禁止复制 Provider 专属设置页          |
+| 本地 TTS/STT | `packages/model-worker-sdk-python/`、`workers/`                                                                    | 重型 SDK 不进入 Runtime；能力、取消、离线和真实音频 smoke 必须通过 |
+| Avatar       | Protocol `AvatarCue`、`services/runtime/src/chatwaifu_runtime/avatar/planner.py`、`packages/avatar-sdk/`           | Agent 只发语义 cue；Live2D 参数/文件名只属于 renderer              |
+| Memory       | `memory/` ports/policy/retrieval、`persistence/` adapter                                                           | 模型只能提候选；写入必须经过策略、去重、冲突、来源与隐私           |
+| Skill/MCP    | `skills/`、`runtime_skills/`                                                                                       | schema、权限、副作用、确认、超时、取消、审计、沙箱缺一不可         |
+| 外部消息渠道 | `services/runtime/src/chatwaifu_runtime/external_channels/`、`adapters/`、`docs/architecture/external-channels.md` | 统一 ingress/ACK；Adapter 管传输，Runtime 管角色/记忆/Skills       |
+| 设置         | `desktopSettingsRegistry.tsx`                                                                                      | 新 section 通过 registry/typed context 注册，不修改页面大 switch   |
+| 协议         | `packages/protocol-python/`                                                                                        | Python 是唯一源，生成 Schema/TS，边界做 Zod parse                  |
 
 几个不能破坏的约束：
 
@@ -270,6 +271,7 @@ make build-desktop-ui
 - [交接与不变量](CODEX_HANDOFF.md)
 - [实现状态](docs/implementation-status.yaml)
 - [Web/Desktop 发行模型](docs/architecture/product-release-profiles.md)
+- [外部消息渠道统一边界](docs/architecture/external-channels.md)
 - [Windows Worker Packs](docs/operations/windows-local-ai-worker-packs.md)
 
 文档规范源保留在本 private monorepo；`make publish-docs` 只把经过路径、密钥和私有资产审计的静态产物

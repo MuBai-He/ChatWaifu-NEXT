@@ -17,3 +17,8 @@ The local Demo setup currently uses the Natori sample shipped with Cubism SDK fo
 Core, Demo source, generated bridge, textures, motions, and model files remain Git-ignored and are
 used only for local validation. Natori retains the SDK's sample-model and Free Material License
 terms; this repository does not grant redistribution or commercial-use rights for those files.
+
+The native WeChat iLink adapter implements HTTP and QR-login behavior from Tencent's published
+`openclaw-weixin` v2.4.6 reference at commit
+`cef0bfc390393f716903e16d50408118047f87e0`. That reference is Copyright (C) 2026 Tencent and
+licensed under the MIT License. See `services/runtime/THIRD_PARTY_NOTICES.md`.

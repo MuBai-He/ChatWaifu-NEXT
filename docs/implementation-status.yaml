@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-30"
+updated_at: "2026-08-31"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -8,6 +8,7 @@ continuous_demo_delivery_authorized: true
 out_of_order_slices:
   - phase_3_native_runtime_supervision
   - phase_15_idle_proactive_companion
+  - phase_17_external_channel_gateway
 
 validation:
   local_platform: macos-arm64
@@ -32,6 +33,11 @@ validation:
     - make setup-neural-tts-workers
     - make build-live2d-bridge
     - make check-live2d-vendor
+    - uv run pytest (432 passed, 10 Windows-only acceptance tests skipped)
+    - Ruff format and lint plus Pyright (0 errors)
+    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 131 Web tests passed)
+    - Prettier workspace check and generated channel-schema byte-stability check
+    - cargo fmt plus workspace all-targets check
     - pnpm build
     - make build-web plus isolated Web artifact verification
     - make build-desktop-ui plus isolated Desktop artifact verification
@@ -66,6 +72,8 @@ validation:
     - proactive policy and API tests cover cross-midnight quiet hours, busy deferral, cooldown, daily budget, hidden system turns, and natural Demo fallback
     - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
     - browser desktop-settings smoke confirms app-like fixed-window layout, internal scroll, working display preferences, and no conversation/media controls
+    - browser native WeChat settings smoke reaches a real Tencent QR authorization, renders one QR with no manual identity or verification input, has no horizontal overflow or console error, and cancels back to the clean unbound state
+    - direct Tencent QR endpoint probe returns both opaque authorization identity and render content without exposing either in logs; macOS Keychain health probe is available
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -93,7 +101,7 @@ phases:
       - Python, TypeScript, and Rust lockfiles exist
       - Nine GitHub Actions workflows are configured, including independent Web and Desktop tag gates plus a documentation build and dependency-audit gate
       - A VitePress installation and extension site builds locally and is publicly served from an audited static Pages mirror while the canonical product source remains private
-      - Twenty-eight ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, and ADR 0028 defines versioned local AI Worker Packs
+      - Thirty ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, ADR 0028 defines versioned local AI Worker Packs, ADR 0029 fixes a provider-neutral external channel boundary, and ADR 0030 selects the Runtime-native WeChat iLink adapter
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -101,9 +109,9 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Pydantic protocol source covers all required Phase 1 model families
-      - 31 versioned JSON Schemas are generated deterministically
+      - 51 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
-      - 13 Python tests and 9 TypeScript contract tests pass
+      - 22 Python tests and 18 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
       - Unknown major versions, unknown types, and invalid payloads are rejected
       - Same-major optional fields are accepted
@@ -328,6 +336,20 @@ phases:
       - Ambient generation uses Character Kernel, memory retrieval, semantic avatar cues, TTS, cancellation, and playback ACK without fabricating a visible user turn
       - Demo fallback emits a natural fixed check-in rather than exposing the internal ambient instruction
       - The dedicated companion settings panel reports daily use and controls attention, quiet hours, proactive limits, resource sleep, and native Runtime recovery
+  - id: 17
+    name: external-channel-gateway
+    status: native_weixin_owner_direct_text_implemented_pending_real_account_acceptance
+    evidence:
+      - ADR 0029 assigns messaging transport and credentials to adapters while ChatWaifu Runtime remains the sole owner of character, memory, relationship, model, Skill, session, and delivery state; ADR 0030 selects a Runtime-native Tencent iLink adapter instead of a second agent or bridge process
+      - Versioned Python/JSON Schema/generated TypeScript contracts and Zod parsers cover provider discovery, QR authorization lifecycle, sanitized connections, idempotent ingress, turn polling/cancellation, exclusive delivery leases, and lease-bound ACK
+      - SQLite repositories persist connection-scoped token hashes, stable conversation/sender bindings, message idempotency, Runtime lineage, source context, delivery state, non-secret adapter cursors, and restart reconciliation behind an ExternalChannelRepository port
+      - External text turns reuse ConversationService and Character/Memory/model routing while disabling TTS, local audio, Avatar output, and tools; Runtime tests prove duplicate reuse, changed-content conflict, owner/group fail-closed behavior, cross-session source continuity, exclusive lease/reclaim, and lease-bound ACK
+      - Conversation turns and long-term MemorySource provenance keep provider, connection, account, principal, chat type, stable conversation/sender keys, received time, and optional untrusted labels; Prompt Compiler emits separate budgeted recent-channel and recalled-memory source JSON so a later local session retains WeChat attribution after recent history rolls over
+      - Runtime owns QR start/poll/verification/confirmation, OS-keyring credential journaling, crash recovery, one cancellable long-poll task per connection, capped jittered reconnect, context-bound delivery, stable client ids, cursor commit after durable decisions, and lease-matched ACK
+      - The public manual-connection/token-rotation path and launcher discovery file were removed; the browser can neither type provider identities nor receive gateway or provider credentials
+      - Desktop settings presents one responsive WeChat scan flow, shows a verification input only when requested, cancels stale long polls, and reuses the generic connection delete route for full local unbind
+      - PyInstaller explicitly collects HTTP/keyring metadata and platform backends; a frozen macOS Runtime import, TLS/keyring discovery, startup, and stdin-EOF shutdown smoke passes, while Windows resolves the Credential Manager backend dependency
+      - Wire, lifecycle, failure-isolation, crash-recovery, cancellation, source-provenance, and complete getupdates-to-delivery tests pass; a real scanned WeChat owner round trip and installed Windows/Linux credential-store acceptance remain pending
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -341,6 +363,8 @@ entry_blockers:
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
   - Proactive prospective-memory, Skill-completion, calendar, and scene event sources plus ignore-adaptive frequency remain pending
+  - The native WeChat iLink adapter passes local wire and lifecycle tests, but a real owner QR scan/direct-text round trip and installed Windows/Linux credential-store acceptance remain pending
+  - Memory sources persist typed channel attribution and retrieval/prompt projection preserve it, but the memory UI does not yet display that provenance; QQ/group and multi-human identity/privacy policy acceptance remain pending, and display labels must never become authorization or deduplication keys
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
@@ -361,3 +385,4 @@ constraints:
   memory_temporal_graph: reserved_null_port
   character_kernel: persistent-affect-relationship-response-plan-and-prompt-compiler
   model_configuration: runtime-db-plus-write-only-local-secret-store
+  external_channel_gateway: native_weixin_owner_direct_text_implemented_pending_real_account_acceptance
