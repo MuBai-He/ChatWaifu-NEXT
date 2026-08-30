@@ -119,10 +119,10 @@ input; saved settings and migrations always target the user directories.
 ### Models and private character assets
 
 The base installer contains no CUDA runtime, PyTorch environment, Qwen/GPT-SoVITS/faster-whisper
-weights, trained Ningning checkpoints, voice-clone reference audio, or game-derived data. Local GPU
-workers and models are a future independently versioned pack or user-approved Model Manager download
-with architecture, hash, size, license, and compatibility metadata. Removing or updating the base app
-must not destroy that user-owned cache.
+weights, trained Ningning checkpoints, voice-clone reference audio, or game-derived data. ADR 0028
+defines the independently versioned, checksummed Worker Pack path now used for owner-installed local
+Qwen3-TTS and faster-whisper assets. Removing or updating the base app must not destroy that
+user-owned cache.
 
 The redistributable base also contains no private Ningning Live2D/Core assets. Missing vendor assets
 use the deterministic safe avatar fallback. The Windows build may accept an explicit ignored
@@ -208,6 +208,7 @@ path ambiguity.
 - [ADR 0005: React renderer with a thin Tauri host](0005-react-tauri-live2d.md)
 - [ADR 0025: Windows AppContainer Runtime Skill launcher](0025-windows-appcontainer-runtime-skill-launcher.md)
 - [ADR 0026: Monorepo product release profiles](0026-monorepo-product-release-profiles.md)
+- [ADR 0028: Versioned local AI Worker Packs](0028-versioned-local-ai-worker-packs.md)
 - [Tauri Windows installers](https://v2.tauri.app/distribute/windows-installer/)
 - [Tauri application resources](https://v2.tauri.app/develop/resources/)
 - [Tauri application paths](https://v2.tauri.app/reference/javascript/api/namespacepath/)

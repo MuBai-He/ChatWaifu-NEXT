@@ -1,5 +1,7 @@
 """Packaged desktop Runtime path and fallback behavior."""
 
+# pyright: reportPrivateUsage=false, reportUnknownVariableType=false
+
 import json
 import os
 import subprocess
@@ -7,7 +9,11 @@ import sys
 from pathlib import Path
 
 import pytest
-from chatwaifu_runtime.desktop_sidecar import _run_plugin_python, prepare_environment
+from chatwaifu_runtime.desktop_sidecar import (
+    _run_plugin_python,
+    _run_worker_pack_command,
+    prepare_environment,
+)
 from chatwaifu_runtime.runtime_skills.transports import _resolve_command
 
 
@@ -64,6 +70,22 @@ def test_packaged_plugin_python_executes_declared_script(tmp_path: Path) -> None
 
     assert result == 0
     assert output.read_text(encoding="utf-8") == "插件已运行"
+
+
+def test_frozen_runtime_worker_pack_role_lists_the_owner_data_root(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    environment = {
+        "CHATWAIFU_CONFIG_DIR": str(tmp_path / "config"),
+        "CHATWAIFU_DATA_DIR": str(tmp_path / "data"),
+    }
+
+    result = _run_worker_pack_command(["list"], environment)
+
+    assert result == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {"action": "listed", "packs": [], "errors": []}
 
 
 def test_frozen_runtime_routes_python_plugins_to_plugin_role(

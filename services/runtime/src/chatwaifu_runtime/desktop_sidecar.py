@@ -19,7 +19,8 @@ from typing import Any, cast
 
 BOOTSTRAP_PREFIX = "CHATWAIFU_BOOTSTRAP "
 STACK_VERSION = "1.0"
-STARTUP_TIMEOUT_SECONDS = 120.0
+RUNTIME_SERVER_STARTUP_TIMEOUT_SECONDS = 120.0
+WORKER_PACK_STARTUP_TIMEOUT_SECONDS = 300.0
 WINDOWS_SYNCHRONIZE = 0x00100000
 WINDOWS_WAIT_TIMEOUT = 0x00000102
 WINDOWS_JOB_OBJECT_LIMIT_KILL_ON_CLOSE = 0x00002000
@@ -67,63 +68,92 @@ def main(arguments: list[str] | None = None) -> int:
     resolved_arguments = list(sys.argv[1:] if arguments is None else arguments)
     if resolved_arguments[:1] == ["--plugin-python"]:
         return _run_plugin_python(resolved_arguments[1:])
+    if resolved_arguments[:1] == ["--worker-pack"]:
+        return _run_worker_pack_command(resolved_arguments[1:])
     if resolved_arguments:
         raise RuntimeError(f"Unknown packaged Runtime arguments: {resolved_arguments!r}")
 
     _install_windows_process_job()
     environment = prepare_environment()
-    listener = _loopback_listener()
-    runtime_port = cast(tuple[str, int], listener.getsockname())[1]
-    environment["CHATWAIFU_RUNTIME__PORT"] = str(runtime_port)
-
-    # These imports intentionally happen after the packaged resource and writable
-    # data roots are exported. Pipecat imports NLTK while the Runtime graph loads.
-    import uvicorn
-
-    from chatwaifu_runtime.config.settings import load_settings
-    from chatwaifu_runtime.main import create_app
-    from chatwaifu_runtime.observability.logging import configure_logging
-
-    settings = load_settings()
-    configure_logging(settings.log_level)
-    server = uvicorn.Server(
-        uvicorn.Config(
-            create_app(settings),
-            host=settings.runtime.host,
-            port=runtime_port,
-            log_config=None,
-        )
-    )
     stopped = threading.Event()
     _install_signal_handlers(stopped)
     _start_stdin_watchdog(stopped)
     _start_parent_watchdog(environment, stopped)
-    server_thread = threading.Thread(
-        target=server.run,
-        kwargs={"sockets": [listener]},
-        name="chatwaifu-runtime",
-        daemon=True,
-    )
-    server_thread.start()
 
+    # Optional local AI packs are owner-installed data. Start and authenticate
+    # them before Settings is loaded so provider SDKs remain behind Runtime
+    # adapters and the base installer can still boot without any model pack.
+    from chatwaifu_runtime.worker_packs import WorkerPackSupervisor
+
+    worker_packs = WorkerPackSupervisor(environment)
+    listener: socket.socket | None = None
+    server: Any | None = None
+    server_thread: threading.Thread | None = None
     try:
-        deadline = time.monotonic() + STARTUP_TIMEOUT_SECONDS
+        if stopped.is_set():
+            return 0
+        listener = _loopback_listener()
+        runtime_port = cast(tuple[str, int], listener.getsockname())[1]
+        environment["CHATWAIFU_RUNTIME__PORT"] = str(runtime_port)
+        worker_packs.start(
+            stopped,
+            timeout_seconds=WORKER_PACK_STARTUP_TIMEOUT_SECONDS,
+        )
+        if stopped.is_set():
+            return 0
+
+        # These imports intentionally happen after the packaged resource and writable
+        # data roots are exported. Pipecat imports NLTK while the Runtime graph loads.
+        import uvicorn
+
+        from chatwaifu_runtime.config.settings import load_settings
+        from chatwaifu_runtime.main import create_app
+        from chatwaifu_runtime.observability.logging import configure_logging
+
+        settings = load_settings()
+        configure_logging(settings.log_level)
+        server = uvicorn.Server(
+            uvicorn.Config(
+                create_app(settings),
+                host=settings.runtime.host,
+                port=runtime_port,
+                log_config=None,
+            )
+        )
+        server_thread = threading.Thread(
+            target=server.run,
+            kwargs={"sockets": [listener]},
+            name="chatwaifu-runtime",
+            daemon=True,
+        )
+        server_thread.start()
+
+        deadline = time.monotonic() + RUNTIME_SERVER_STARTUP_TIMEOUT_SECONDS
         while not server.started and server_thread.is_alive() and not stopped.is_set():
             if time.monotonic() >= deadline:
                 raise RuntimeError("Packaged Runtime startup timed out")
             stopped.wait(0.05)
+        if stopped.is_set():
+            return 0
         if not server.started:
             raise RuntimeError("Packaged Runtime stopped before startup completed")
 
         runtime_url = f"http://127.0.0.1:{runtime_port}"
-        _write_bootstrap(runtime_url)
+        _write_bootstrap(runtime_url, workers=worker_packs.bootstrap_workers)
         while server_thread.is_alive() and not stopped.is_set():
+            worker_failure = worker_packs.failed_worker()
+            if worker_failure is not None:
+                raise RuntimeError(f"Managed local AI worker failed: {worker_failure}")
             server_thread.join(timeout=0.25)
         return 0 if server.started else 1
     finally:
-        server.should_exit = True
-        server_thread.join(timeout=10)
-        listener.close()
+        if server is not None:
+            server.should_exit = True
+        if server_thread is not None:
+            server_thread.join(timeout=10)
+        if listener is not None:
+            listener.close()
+        worker_packs.stop()
 
 
 def _run_plugin_python(arguments: list[str]) -> int:
@@ -147,6 +177,101 @@ def _run_plugin_python(arguments: list[str]) -> int:
         return error.code if isinstance(error.code, int) else int(error.code is not None)
     finally:
         sys.argv = previous_arguments
+    return 0
+
+
+def _run_worker_pack_command(
+    arguments: list[str],
+    environment: MutableMapping[str, str] | None = None,
+) -> int:
+    """Manage owner-selected offline packs through the frozen Runtime executable."""
+
+    import argparse
+
+    from chatwaifu_model_worker.pack_installer import (
+        WorkerPackError,
+        activate_pack,
+        discover_installed_packs,
+        install_archive,
+        verify_archive,
+    )
+
+    parser = argparse.ArgumentParser(prog="chatwaifu-runtime --worker-pack")
+    commands = parser.add_subparsers(dest="command", required=True)
+    verify = commands.add_parser("verify")
+    verify.add_argument("archive", type=Path)
+    install = commands.add_parser("install")
+    install.add_argument("archive", type=Path)
+    commands.add_parser("list")
+    activate = commands.add_parser("activate")
+    activate.add_argument("pack_id")
+    activate.add_argument("--version")
+    parsed = parser.parse_args(arguments)
+
+    prepared = prepare_environment(environment)
+    pack_root = Path(prepared["CHATWAIFU_DATA_DIR"]) / "worker-packs"
+    config_root = Path(prepared["CHATWAIFU_CONFIG_DIR"])
+    try:
+        if parsed.command == "verify":
+            verified = verify_archive(parsed.archive)
+            payload: dict[str, object] = {
+                "action": "verified",
+                "pack_id": verified.manifest.pack_id,
+                "version": verified.manifest.version,
+                "kind": verified.manifest.worker.kind,
+                "archive_sha256": verified.archive_sha256,
+            }
+        elif parsed.command == "install":
+            installed = install_archive(parsed.archive, pack_root)
+            _, config_path = activate_pack(
+                installed.manifest.pack_id,
+                version=installed.manifest.version,
+                root=pack_root,
+                config_root=config_root,
+            )
+            payload = {
+                "action": "installed_and_activated",
+                "pack_id": installed.manifest.pack_id,
+                "version": installed.manifest.version,
+                "kind": installed.manifest.worker.kind,
+                "path": str(installed.root),
+                "config_path": str(config_path),
+                "restart_required": True,
+            }
+        elif parsed.command == "list":
+            packs, errors = discover_installed_packs(pack_root)
+            payload = {
+                "action": "listed",
+                "packs": [
+                    {
+                        "pack_id": pack.manifest.pack_id,
+                        "version": pack.manifest.version,
+                        "kind": pack.manifest.worker.kind,
+                        "backend": pack.manifest.worker.backend,
+                        "path": str(pack.root),
+                    }
+                    for pack in packs
+                ],
+                "errors": errors,
+            }
+        else:
+            selected, config_path = activate_pack(
+                parsed.pack_id,
+                version=parsed.version,
+                root=pack_root,
+                config_root=config_root,
+            )
+            payload = {
+                "action": "activated",
+                "pack_id": selected.manifest.pack_id,
+                "version": selected.manifest.version,
+                "kind": selected.manifest.worker.kind,
+                "config_path": str(config_path),
+                "restart_required": True,
+            }
+    except (OSError, WorkerPackError) as error:
+        parser.exit(2, f"worker-pack: error: {error}\n")
+    print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
     return 0
 
 
@@ -209,13 +334,13 @@ def _loopback_listener() -> socket.socket:
     return listener
 
 
-def _write_bootstrap(runtime_url: str) -> None:
+def _write_bootstrap(runtime_url: str, *, workers: list[str] | None = None) -> None:
     payload: dict[str, object] = {
         "schema_version": STACK_VERSION,
         "type": "runtime.ready",
         "runtime_url": runtime_url,
         "pid": os.getpid(),
-        "workers": [],
+        "workers": workers or [],
     }
     print(f"{BOOTSTRAP_PREFIX}{json.dumps(payload, separators=(',', ':'))}", flush=True)
 

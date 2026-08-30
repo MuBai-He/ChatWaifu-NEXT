@@ -17,7 +17,17 @@ use tauri::{AppHandle, Emitter, Manager};
 
 pub const RUNTIME_STATUS_CHANGED_EVENT: &str = "desktop-runtime-status-changed";
 const MAX_AUTOMATIC_RESTARTS: u32 = 5;
-const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
+// The frozen Runtime starts selected STT/TTS packs concurrently within 300s,
+// then gives its HTTP server 120s. Keep an explicit supervisor grace period so
+// a valid first CUDA load is not killed and counted as a restart storm.
+const WORKER_PACK_STARTUP_BUDGET_SECONDS: u64 = 300;
+const RUNTIME_SERVER_STARTUP_BUDGET_SECONDS: u64 = 120;
+const STARTUP_SUPERVISOR_GRACE_SECONDS: u64 = 30;
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(
+    WORKER_PACK_STARTUP_BUDGET_SECONDS
+        + RUNTIME_SERVER_STARTUP_BUDGET_SECONDS
+        + STARTUP_SUPERVISOR_GRACE_SECONDS,
+);
 const SIDECAR_LOG_MAX_BYTES: u64 = 5 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug)]
@@ -565,7 +575,9 @@ fn lock<'a, T>(value: &'a Mutex<T>, label: &str) -> Result<MutexGuard<'a, T>, St
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_AUTOMATIC_RESTARTS, adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
+        MAX_AUTOMATIC_RESTARTS, RUNTIME_SERVER_STARTUP_BUDGET_SECONDS,
+        STARTUP_SUPERVISOR_GRACE_SECONDS, STARTUP_TIMEOUT, WORKER_PACK_STARTUP_BUDGET_SECONDS,
+        adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
         packaged_runtime_executable, restart_backoff, should_request_start,
     };
     use crate::runtime_health::RuntimeLifecycleState;
@@ -578,6 +590,14 @@ mod tests {
         assert_eq!(restart_backoff(2), Some(Duration::from_secs(2)));
         assert_eq!(restart_backoff(5), Some(Duration::from_secs(16)));
         assert_eq!(restart_backoff(MAX_AUTOMATIC_RESTARTS + 1), None);
+    }
+
+    #[test]
+    fn startup_timeout_covers_worker_runtime_and_supervisor_budgets() {
+        assert_eq!(WORKER_PACK_STARTUP_BUDGET_SECONDS, 300);
+        assert_eq!(RUNTIME_SERVER_STARTUP_BUDGET_SECONDS, 120);
+        assert_eq!(STARTUP_SUPERVISOR_GRACE_SECONDS, 30);
+        assert_eq!(STARTUP_TIMEOUT, Duration::from_secs(450));
     }
 
     #[test]
