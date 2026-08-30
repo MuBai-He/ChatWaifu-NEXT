@@ -3,6 +3,32 @@ import { expect, test } from "@playwright/test";
 test("desktop settings is an app-like control surface without chat ownership", async ({
   page,
 }, testInfo) => {
+  await page.route(
+    "http://127.0.0.1:8765/v1/model-configurations",
+    async (route) => {
+      if (route.request().method() === "OPTIONS") {
+        await route.fulfill({
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Headers": "content-type",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          items: [
+            modelConfiguration("chat", "openai_compatible", "chat-model"),
+            modelConfiguration("memory_extraction", "demo", "memory-demo"),
+            modelConfiguration("memory_summary", "demo", "summary-demo"),
+            modelConfiguration("embedding", "local_hash", "local-hash-64-v1"),
+          ],
+        },
+        headers: { "Access-Control-Allow-Origin": "*" },
+      });
+    },
+  );
   await page.setViewportSize({ width: 960, height: 700 });
   await page.goto("/desktop-settings");
 
@@ -28,6 +54,41 @@ test("desktop settings is an app-like control surface without chat ownership", a
   ).toBeVisible();
   await expect(page.getByText(/设置页不会建立第二条媒体链路/)).toBeVisible();
 
+  await page.getByRole("button", { name: /模型.*AI 与记忆路由/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "模型" }),
+  ).toBeVisible();
+  const modelLayout = await page.evaluate<{
+    panelDisplay: string;
+    headingDisplay: string;
+    panelGap: string;
+    cardDisplay: string;
+    inputWidth: string;
+  }>(`
+    (() => {
+      const panel = document.querySelector(".model-settings");
+      const heading = document.querySelector(".model-settings-heading");
+      const card = document.querySelector(".model-role-card");
+      const input = card?.querySelector("input:not([type=checkbox])");
+      if (!panel || !heading || !card || !input) {
+        throw new Error("model settings layout is missing");
+      }
+      const panelStyle = getComputedStyle(panel);
+      return {
+        panelDisplay: panelStyle.display,
+        headingDisplay: getComputedStyle(heading).display,
+        panelGap: panelStyle.gap,
+        cardDisplay: getComputedStyle(card).display,
+        inputWidth: getComputedStyle(input).width,
+      };
+    })()
+  `);
+  expect(modelLayout.panelDisplay).toBe("grid");
+  expect(modelLayout.headingDisplay).toBe("flex");
+  expect(modelLayout.panelGap).not.toBe("normal");
+  expect(modelLayout.cardDisplay).toBe("grid");
+  expect(Number.parseFloat(modelLayout.inputWidth)).toBeGreaterThan(200);
+
   const metrics = await page.evaluate<{
     pageHeight: number;
     viewportHeight: number;
@@ -52,6 +113,25 @@ test("desktop settings is an app-like control surface without chat ownership", a
   });
   expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });
+
+function modelConfiguration(
+  role: "chat" | "memory_extraction" | "memory_summary" | "embedding",
+  provider: "demo" | "openai_compatible" | "local_hash",
+  model: string,
+) {
+  return {
+    role,
+    provider,
+    model,
+    base_url:
+      provider === "openai_compatible" ? "http://127.0.0.1:9999/v1" : "",
+    timeout_seconds: 60,
+    context_window: 8192,
+    enabled: true,
+    api_key_configured: false,
+    updated_at: "2026-08-31T00:00:00Z",
+  };
+}
 
 test("desktop pet reveals its controls and composer while the pointer is over the pet", async ({
   page,

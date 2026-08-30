@@ -1,0 +1,211 @@
+.model-settings {
+  display: grid;
+  padding: 20px;
+  gap: 12px;
+}
+
+.character-kernel-card,
+.model-role-card {
+  padding: 14px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 3px 14px 3px 14px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.character-kernel-card > header,
+.model-role-card > header,
+.model-settings-heading,
+.model-role-card > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.character-kernel-card header > div,
+.model-settings-heading > div,
+.model-role-card header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.character-kernel-card header small,
+.model-settings-heading small {
+  color: #eab1d1;
+  font: 0.5rem var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.character-kernel-card header strong,
+.model-settings-heading strong {
+  font-family: "Yu Mincho", Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.character-kernel-card header > span,
+.model-settings-heading > span {
+  color: rgb(255 246 252 / 44%);
+  font: 0.55rem var(--mono);
+}
+
+.kernel-metrics {
+  display: grid;
+  margin-top: 13px;
+  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kernel-metrics > div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  gap: 6px;
+  align-items: center;
+  color: rgb(255 246 252 / 52%);
+  font-size: 0.55rem;
+}
+
+.kernel-metrics i {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 9%);
+}
+
+.kernel-metrics b {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b45b96, #f0b7d5);
+  transform-origin: left;
+}
+
+.character-kernel-card > p {
+  margin: 12px 0 0;
+  color: rgb(255 246 252 / 48%);
+  font-size: 0.58rem;
+  line-height: 1.6;
+}
+
+.model-settings-heading {
+  margin-top: 7px;
+  padding-bottom: 5px;
+}
+
+.model-role-card {
+  display: grid;
+  gap: 10px;
+}
+
+.model-role-card header strong {
+  color: #fff7fc;
+  font-size: 0.72rem;
+}
+
+.model-role-card header small {
+  color: rgb(255 246 252 / 40%);
+  font-size: 0.54rem;
+  line-height: 1.45;
+}
+
+.model-role-card label:not(.model-enabled) {
+  display: grid;
+  gap: 5px;
+}
+
+.model-role-card label > span {
+  color: rgb(255 246 252 / 48%);
+  font-size: 0.56rem;
+}
+
+.model-enabled {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: rgb(255 246 252 / 58%);
+  font-size: 0.55rem;
+  white-space: nowrap;
+}
+
+.model-enabled input {
+  accent-color: #d979ad;
+}
+
+.model-role-card input:not([type="checkbox"]),
+.model-role-card select {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 7px;
+  outline: none;
+  color: #fff7fc;
+  background: rgb(255 255 255 / 6%);
+  font-size: 0.66rem;
+}
+
+.model-role-card input:focus,
+.model-role-card select:focus {
+  border-color: rgb(234 177 209 / 50%);
+}
+
+.model-role-card option {
+  color: #2f2036;
+  background: white;
+}
+
+.model-role-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.model-role-card footer {
+  justify-content: flex-start;
+  padding-top: 2px;
+}
+
+.model-role-card footer button {
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 7px;
+  color: rgb(255 250 253 / 78%);
+  background: rgb(255 255 255 / 6%);
+  cursor: pointer;
+  font-size: 0.58rem;
+}
+
+.model-role-card footer button:first-child {
+  border-color: rgb(234 177 209 / 30%);
+  color: #ffe8f6;
+  background: rgb(180 91 150 / 22%);
+}
+
+.model-role-card footer button.danger {
+  margin-left: auto;
+  color: #f4b7c2;
+}
+
+.model-role-card footer button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.model-secret-note,
+.model-settings-notice {
+  margin: 0;
+  color: rgb(255 246 252 / 40%);
+  font-size: 0.55rem;
+  line-height: 1.55;
+}
+
+.model-settings-notice {
+  position: sticky;
+  bottom: -1px;
+  padding: 9px 10px;
+  border: 1px solid rgb(234 177 209 / 20%);
+  border-radius: 8px;
+  color: #ffe8f6;
+  background: rgb(48 27 56 / 96%);
+}
