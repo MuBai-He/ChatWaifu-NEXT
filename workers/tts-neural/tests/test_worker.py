@@ -293,6 +293,47 @@ def test_qwen_torch_drops_native_result_after_generation_is_cancelled(
         engine.synthesize(request, cancel_event)
 
 
+def test_qwen_torch_validates_target_accelerator_before_reporting_ready(
+    tmp_path: Path,
+) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    validated: list[WorkerSettings] = []
+    service = SynthesisService(
+        settings,
+        engine_factory=lambda _: FakeEngine(),
+        startup_validator=validated.append,
+    )
+
+    async def exercise() -> None:
+        await service.start()
+        assert service.health().model_loaded is False
+        await service.close()
+
+    asyncio.run(exercise())
+
+    assert validated == [settings]
+
+
+def test_qwen_torch_accelerator_failure_prevents_worker_startup(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+
+    def fail(_: WorkerSettings) -> None:
+        raise RuntimeError("CUDA driver is unavailable")
+
+    service = SynthesisService(
+        settings,
+        engine_factory=lambda _: FakeEngine(),
+        startup_validator=fail,
+    )
+
+    async def exercise() -> None:
+        with pytest.raises(RuntimeError, match="CUDA driver is unavailable"):
+            await service.start()
+        await service.close()
+
+    asyncio.run(exercise())
+
+
 def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> None:
     identifiers = {
         "request_id": str(uuid4()),

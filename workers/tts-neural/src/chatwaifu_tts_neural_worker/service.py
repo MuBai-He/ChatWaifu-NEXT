@@ -24,6 +24,7 @@ from chatwaifu_tts_neural_worker.engines import (
     SynthesisCancelled,
     SynthesisEngine,
     build_engine,
+    validate_runtime_accelerator,
 )
 
 
@@ -40,9 +41,11 @@ class SynthesisService:
         self,
         settings: WorkerSettings,
         engine_factory: Callable[[WorkerSettings], SynthesisEngine] = build_engine,
+        startup_validator: Callable[[WorkerSettings], None] = validate_runtime_accelerator,
     ) -> None:
         self._settings = settings
         self._engine_factory = engine_factory
+        self._startup_validator = startup_validator
         self._engine: SynthesisEngine | None = None
         self._load_lock = asyncio.Lock()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=settings.provider_id)
@@ -52,6 +55,8 @@ class SynthesisService:
         self._engine_generation_id: UUID | None = None
 
     async def start(self) -> None:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._executor, self._startup_validator, self._settings)
         if self._settings.preload:
             await self._ensure_loaded()
 

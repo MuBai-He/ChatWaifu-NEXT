@@ -57,6 +57,37 @@ def build_engine(settings: WorkerSettings) -> SynthesisEngine:
     return GptSovitsEngine(settings)
 
 
+def validate_runtime_accelerator(settings: WorkerSettings) -> None:
+    """Fail startup before advertising a CUDA Worker that cannot execute.
+
+    Model loading remains lazy so the desktop can appear without paying the full
+    checkpoint load cost.  A real device allocation still proves that the
+    packaged PyTorch runtime, driver, and selected CUDA device work together on
+    the target machine.  This is intentionally stronger than checking
+    ``torch.cuda.is_available()`` alone.
+    """
+
+    if settings.backend != "qwen3_tts_torch" or not settings.device.startswith("cuda"):
+        return
+    import torch
+
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "Qwen3-TTS CUDA worker cannot start because PyTorch reports CUDA unavailable"
+        )
+    try:
+        probe = torch.ones(1, device=settings.device)
+        result = (probe + 1).item()
+        torch.cuda.synchronize(settings.device)
+        del probe
+    except Exception as error:
+        raise RuntimeError(
+            f"Qwen3-TTS CUDA worker failed its {settings.device} execution probe: {error}"
+        ) from error
+    if result != 2:
+        raise RuntimeError("Qwen3-TTS CUDA worker returned an invalid device probe result")
+
+
 class QwenMlxEngine:
     def __init__(
         self,
