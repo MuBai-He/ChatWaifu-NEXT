@@ -4,6 +4,7 @@ export type SettingsIconName =
   | "companion"
   | "voice"
   | "models"
+  | "channels"
   | "data"
   | "memory"
   | "skills";
@@ -58,6 +59,13 @@ const iconPaths: Record<SettingsIconName, React.ReactNode> = {
       <circle cx="5" cy="18" r="2" />
       <circle cx="19" cy="18" r="2" />
       <path d="m7 7.4 2.6 2.5M17 7.4l-2.6 2.5M7 16.6l2.6-2.5M17 16.6l-2.6-2.5" />
+    </>
+  ),
+  channels: (
+    <>
+      <path d="M4.2 5.5h10.4a3.2 3.2 0 0 1 3.2 3.2v2.6a3.2 3.2 0 0 1-3.2 3.2H9.2l-3.8 2.8.8-2.8h-2a3.2 3.2 0 0 1-3.2-3.2V8.7a3.2 3.2 0 0 1 3.2-3.2Z" />
+      <path d="M11.3 14.5v.8a3.2 3.2 0 0 0 3.2 3.2h2l3.8 2.8-.8-2.8h.3a3.2 3.2 0 0 0 3.2-3.2v-2.6a3.2 3.2 0 0 0-3.2-3.2h-2" />
+      <path d="M6.2 9.8h.01M10.5 9.8h.01M14.8 9.8h.01" />
     </>
   ),
   data: (

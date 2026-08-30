@@ -1,4 +1,5 @@
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
+import { ChannelsSettingsSection } from "./ChannelsSettingsSection";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
 import { DataSettingsSection } from "./DataSettingsSection";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
@@ -35,6 +36,13 @@ export const desktopSettingsRegistry =
       description: "AI 与记忆路由",
       icon: "models",
       component: ModelsSettingsSection,
+    },
+    {
+      id: "channels",
+      label: "渠道",
+      description: "微信与外部消息",
+      icon: "channels",
+      component: ChannelsSettingsSection,
     },
     {
       id: "data",

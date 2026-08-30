@@ -1,6 +1,7 @@
 // Compatibility barrel. Domain code lives in focused clients so adding a new
 // provider or control surface does not expand a single all-purpose API module.
 export * from "./runtime-client/companionClient";
+export * from "./runtime-client/channelsClient";
 export * from "./runtime-client/coreClient";
 export * from "./runtime-client/mcpClient";
 export * from "./runtime-client/memoryClient";

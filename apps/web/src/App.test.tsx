@@ -481,7 +481,7 @@ describe("ChatWaifu usable demo", () => {
       name: "设置分类",
     });
     expect(settingsNavigation).toBeTruthy();
-    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(5);
+    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(6);
     expect(
       document.querySelector(".desktop-settings-app-icon svg"),
     ).toBeTruthy();
