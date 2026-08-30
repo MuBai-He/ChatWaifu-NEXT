@@ -1,7 +1,7 @@
 # 模型与 TTS 配置
 
-产品配置入口在 Web/桌宠控制中心，不推荐把模型信息塞回 `.env`。前端只操作 Runtime 的 typed API；
-Provider Key 是只写字段，Runtime 保存到 Git 忽略、权限受限的本地文件，绝不回显到浏览器。
+模型和声音都可以直接在 Web 或桌宠设置里修改，不需要反复编辑 `.env`。前端只操作 Runtime 的
+typed API；Provider Key 是只写字段，Runtime 保存到 Git 忽略、权限受限的本地文件，不会回显到浏览器。
 
 ## 四个模型角色
 

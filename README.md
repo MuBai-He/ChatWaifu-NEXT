@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.svg" alt="ChatWaifu NEXT — local-first realtime character runtime" width="100%" />
+  <img src="docs-site/public/brand/chatwaifu-mark.png" alt="ChatWaifu NEXT" width="132" />
 </p>
 
+<h1 align="center">ChatWaifu NEXT</h1>
+
+<p align="center"><strong>想聊的时候，她一直都在。</strong></p>
+
 <p align="center">
-  <img alt="Status" src="https://img.shields.io/badge/status-usable_demo-c16d9f?style=flat-square" />
-  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-6e4d7e?style=flat-square&logo=python&logoColor=white" />
-  <img alt="React 19" src="https://img.shields.io/badge/React-19-6e4d7e?style=flat-square&logo=react&logoColor=white" />
-  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-6e4d7e?style=flat-square&logo=tauri&logoColor=white" />
-  <img alt="Local first" src="https://img.shields.io/badge/privacy-local--first-4f7c70?style=flat-square" />
+  <img src="docs-site/public/brand/moonlit-room.png" alt="月夜书桌与窗边的 ChatWaifu NEXT 氛围场景" width="100%" />
 </p>
 
 <p align="center">
@@ -18,33 +18,32 @@
   · <a href="CONTRIBUTING.md">贡献指南</a>
 </p>
 
-ChatWaifu NEXT（ChatWaifuV2）是一个 **local-first、可替换 Provider、面向实时交互** 的 AI 角色
-Runtime。它把对话、真实语音、长期记忆、Character Kernel、Runtime Skills/MCP 与语义 Avatar
-组合成同一条可取消、可恢复、可审计的角色体验，并同时提供 Galgame Web 界面和原生桌宠。
+ChatWaifu NEXT（ChatWaifuV2）想做一件很简单的事：让你喜欢的角色不只待在一段 Prompt 里。她能听你
+说话、记住你提过的小事，也会随着相处改变语气、表情和动作。你可以在浏览器里像玩 Galgame 一样聊天，
+也可以让她作为桌宠一直留在桌面上。
 
-当前默认 Demo 围绕绫地宁宁主题构建，但角色人格、语音、模型和 Avatar 都是可替换边界。仓库不分裂
-Web/Pet 长期分支：一个 `main` 保存唯一真相源，`web-v*` 与 `desktop-v*` 使用独立版本、Tag 和构建门；
-Web 可以发布静态产物，Desktop 目前仍只生成未签名安装候选。
+当前 Demo 从绫地宁宁主题开始，但人格、声音、模型和 Avatar 都可以替换。Web 与桌宠放在同一个项目中
+维护，各自构建、各自发布，共用同一套对话、记忆和语音能力。Desktop 目前仍只生成未签名安装候选。
 
 > **项目状态**：基础可用 Demo，仍在活跃开发。发行许可证尚未选定；宁宁 Live2D、训练音色、
 > checkpoint、Cubism Core 和其他 owner-only 资产不随源码分发。公开发布或二开分发前请先阅读
 > [许可与资产边界](LICENSES.md)。
 
-## 为什么是 NEXT
+## 从 ChatWaifu 走到 NEXT
 
-上一代 [ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 验证了“LLM + 角色语音 + Live2D”可以形成
-有趣的陪伴体验。NEXT 保留这个方向，但不再把不同语言、模型和输入方式拆成多份启动脚本，而是重写为
-可维护的 Runtime：Provider 可替换、状态可持久化、实时输出可取消，Web 与桌面共享领域能力。
+最早的 [ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 已经证明，聊天模型、角色语音和 Live2D 放在
+一起，确实能产生很特别的陪伴感。NEXT 没有改变这个方向，只是把当年分散在脚本里的能力重新整理了一遍：
+聊天可以打断，记忆可以留下，模型和声音可以替换，Web 与桌宠也不必再各做一套。
 
-|     | 能力               | 现在的实现                                                                                                                |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| 🎙️  | **真正的语音回合** | 浏览器麦克风、Silero VAD、faster-whisper、唤醒词门控、自动结束和抢话打断                                                  |
-| 🌙  | **会动的角色**     | typed `AvatarCue`、动作状态机、表情/注视/口型、Live2D 与 Fake renderer 安全回退                                           |
-| 🧠  | **有边界的记忆**   | SQLite WAL + FTS5、结构化提取、审核、去重、冲突修正、来源、隐私和可重建语义投影                                           |
-| 💗  | **持续的人格关系** | Affect/Relationship reducer、关系阶段、Prompt 预算和跨 LLM 的 persona 约束                                                |
-| 🔊  | **可选择的声音**   | 本地 Qwen3-TTS / GPT-SoVITS 与百炼 Qwen VC / CosyVoice 共用 TTS contract；Kokoro、macOS say、Fake 作为可配置 adapter/回退 |
-| 🧩  | **安全的扩展能力** | Runtime Skills、OpenAI tool calling、MCP Host/Server、权限确认、超时、取消、审计和平台沙箱                                |
-| 🖥️  | **两种产品形态**   | Galgame Web 与 Tauri 桌宠独立编译，复用 Runtime、会话、语音、记忆和 Avatar SDK                                            |
+|     | 能力                     | 现在的实现                                                                                                                |
+| --- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 🎙️  | **开口就能聊**           | 浏览器麦克风、Silero VAD、faster-whisper、唤醒词门控、自动结束和抢话打断                                                  |
+| 🌙  | **说话时，她也会动**     | typed `AvatarCue`、动作状态机、表情/注视/口型、Live2D 与 Fake renderer 安全回退                                           |
+| 🧠  | **她记得，也允许你删掉** | SQLite WAL + FTS5、结构化提取、审核、去重、冲突修正、来源、隐私和可重建语义投影                                           |
+| 💗  | **相处会留下痕迹**       | Affect/Relationship reducer、关系阶段、Prompt 预算和跨 LLM 的 persona 约束                                                |
+| 🔊  | **声音由你来选**         | 本地 Qwen3-TTS / GPT-SoVITS 与百炼 Qwen VC / CosyVoice 共用 TTS contract；Kokoro、macOS say、Fake 作为可配置 adapter/回退 |
+| 🧩  | **想让她帮忙，也有边界** | Runtime Skills、OpenAI tool calling、MCP Host/Server、权限确认、超时、取消、审计和平台沙箱                                |
+| 🖥️  | **浏览器里聊，桌面上陪** | Galgame Web 与 Tauri 桌宠独立编译，复用 Runtime、会话、语音、记忆和 Avatar SDK                                            |
 
 ## 产品形态
 
@@ -63,7 +62,7 @@ Web 与桌宠不是同一个页面套皮。它们从 `apps/web/src/main.web.tsx`
 
 ## 快速体验
 
-### 1. 无私有模型的最小开发模式
+### 1. 先把界面跑起来（不需要模型）
 
 需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22/npm、Rust/cargo 和 GNU Make。
 项目会在 `.local/tooling/` 准备固定 pnpm，不要求全局安装 pnpm。
@@ -92,7 +91,7 @@ make dev-web
 这一模式不需要宁宁模型、参考音频、CUDA 或第三方 API Key，适合验证 UI、对话、记忆、Skills 和
 Fake Avatar。默认聊天模型是明确标注的离线 Demo；真实模型在页面“模型”设置中配置。
 
-### 2. 完整本地语音 Demo
+### 2. 接上本地声音
 
 `make demo` 会监督 faster-whisper、Qwen3-TTS、GPT-SoVITS、Runtime 与 Web，但它需要本机已有
 `.local/config/tts-profiles.toml`、对应隔离环境和合法取得的模型资产。它会自动准备/缓存公开的

@@ -1,7 +1,7 @@
 # 故障排查
 
-先判断问题发生在哪一层：Web、Tauri Host、Runtime、STT/TTS Worker、Provider，还是私有 Live2D 资产。
-不要看到白屏或没声音就同时重装所有依赖。
+先别急着重装。白屏和没声音通常发生在不同环节；先判断问题在 Web、Tauri Host、Runtime、
+STT/TTS Worker、Provider，还是私有 Live2D 资产，按下面的顺序检查会更快。
 
 ## `make demo` 报 TTS profile / environment missing
 

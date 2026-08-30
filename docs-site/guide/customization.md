@@ -1,6 +1,7 @@
 # 二次开发指南
 
-二开 ChatWaifu NEXT 的关键不是复制一个页面或改一段 Prompt，而是把扩展放进正确边界：
+想换角色、接新的模型或增加一个 Skill，可以从对应模块下手，不必复制整套页面。所有扩展最终都沿着
+下面这条路径进入 Runtime：
 
 ```text
 Frontend → typed application protocol → services → domain ports → adapters / workers
