@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import io
 import json
+import math
 import os
+import re
 import socket
 import subprocess
 import tempfile
@@ -16,6 +19,9 @@ import urllib.request
 import uuid
 import wave
 from array import array
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
@@ -26,6 +32,12 @@ from chatwaifu_model_worker import (
 )
 
 BUFFER_SIZE = 4 * 1024 * 1024
+RESULT_SCHEMA_VERSION = "1.0"
+RESULT_FILE_NAME = "smoke-result.json"
+DEFAULT_MIN_TRANSCRIPT_CHARACTERS = 4
+DEFAULT_CANCEL_PROBE_SECONDS = 60.0
+HEALTH_POLL_INTERVAL_SECONDS = 0.05
+MIN_TTS_DURATION_MS = 250
 PYTHON_ENVIRONMENT_KEYS = {
     "PYTHONHOME",
     "PYTHONPATH",
@@ -46,6 +58,50 @@ PROXY_KEYS = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class TranscriptExpectations:
+    """Language-neutral transcript checks plus optional recording-specific expectations."""
+
+    min_meaningful_characters: int = DEFAULT_MIN_TRANSCRIPT_CHARACTERS
+    pattern: str | None = None
+    language: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.min_meaningful_characters < 1:
+            raise ValueError("minimum meaningful transcript characters must be at least one")
+        if self.pattern is not None:
+            try:
+                re.compile(self.pattern)
+            except re.error as error:
+                raise ValueError(f"invalid expected transcript pattern: {error}") from error
+
+
+@dataclass(frozen=True, slots=True)
+class PcmWave:
+    pcm16: bytes
+    sample_rate: int
+    channels: int
+    frame_count: int
+
+    @property
+    def duration_ms(self) -> int:
+        return round(self.frame_count * 1000 / self.sample_rate)
+
+    def evidence(self, *, file_name: str | None = None) -> dict[str, object]:
+        result: dict[str, object] = {
+            "sample_rate": self.sample_rate,
+            "channels": self.channels,
+            "sample_width_bytes": 2,
+            "frame_count": self.frame_count,
+            "duration_ms": self.duration_ms,
+            "pcm_bytes": len(self.pcm16),
+            "pcm_sha256": hashlib.sha256(self.pcm16).hexdigest(),
+        }
+        if file_name is not None:
+            result["file_name"] = file_name
+        return result
+
+
 def smoke_pack(
     archive: Path,
     *,
@@ -53,21 +109,62 @@ def smoke_pack(
     timeout: float,
     smoke_wav: Path | None,
     output_directory: Path,
+    transcript_expectations: TranscriptExpectations | None = None,
+    cancel_probe_seconds: float = DEFAULT_CANCEL_PROBE_SECONDS,
 ) -> dict[str, object]:
+    if timeout <= 0:
+        raise ValueError("smoke timeout must be positive")
+    if cancel_probe_seconds <= 0:
+        raise ValueError("cancel probe duration must be positive")
     output_directory.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="chatwaifu-worker-pack-smoke-") as temporary:
         installed = install_archive(archive, Path(temporary) / "installed-packs")
         manifest = installed.manifest
         if manifest.worker.kind != kind:
             raise RuntimeError(f"Worker pack kind is {manifest.worker.kind!r}, expected {kind!r}")
-        result = _smoke_extracted(
+        build_metadata = _load_pack_build_metadata(installed.root)
+        run_result = _smoke_extracted(
             manifest,
             installed.root,
             kind=kind,
             timeout=timeout,
             smoke_wav=smoke_wav,
             output_directory=output_directory,
+            transcript_expectations=transcript_expectations or TranscriptExpectations(),
+            cancel_probe_seconds=cancel_probe_seconds,
         )
+    result: dict[str, object] = {
+        "schema_version": RESULT_SCHEMA_VERSION,
+        "archive": {
+            "file_name": archive.name,
+            "size_bytes": archive.stat().st_size,
+            "sha256": installed.receipt.archive_sha256,
+            "manifest_sha256": installed.receipt.manifest_sha256,
+        },
+        "pack": {
+            "pack_id": manifest.pack_id,
+            "version": manifest.version,
+            "kind": manifest.worker.kind,
+            "backend": manifest.worker.backend,
+            "provider_id": manifest.worker.provider_id,
+            "model": manifest.worker.model,
+            "platform": manifest.platform.model_dump(mode="json"),
+            "entrypoint_environment": manifest.worker.entrypoint.environment,
+            "build_metadata": build_metadata,
+            "payload": {
+                "file_count": len(manifest.files),
+                "expanded_size_bytes": sum(item.size for item in manifest.files),
+                "model_file_count": sum(item.role == "model" for item in manifest.files),
+                "model_size_bytes": sum(
+                    item.size for item in manifest.files if item.role == "model"
+                ),
+            },
+        },
+        **run_result,
+    }
+    artifacts = cast(dict[str, object], result["artifacts"])
+    artifacts["result_json"] = RESULT_FILE_NAME
+    _write_result(output_directory / RESULT_FILE_NAME, result)
     return result
 
 
@@ -79,6 +176,8 @@ def _smoke_extracted(
     timeout: float,
     smoke_wav: Path | None,
     output_directory: Path,
+    transcript_expectations: TranscriptExpectations,
+    cancel_probe_seconds: float,
 ) -> dict[str, object]:
     entrypoint = manifest.worker.entrypoint
     executable = _resolve_pack_path(pack_root, entrypoint.executable)
@@ -107,6 +206,7 @@ def _smoke_extracted(
     environment[f"{prefix}PORT"] = str(port)
     environment[f"{prefix}TOKEN"] = token
     log_path = output_directory / f"{manifest.pack_id}.log"
+    result: dict[str, object]
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
@@ -123,7 +223,7 @@ def _smoke_extracted(
         base_url = f"http://127.0.0.1:{port}"
         headers = {"Authorization": f"Bearer {token}"}
         try:
-            health = _wait_for_health(
+            startup_health = _wait_for_health(
                 process,
                 base_url,
                 entrypoint.health_path,
@@ -135,27 +235,82 @@ def _smoke_extracted(
                 f"{base_url}{entrypoint.capabilities_path}", headers, timeout=10
             )
             if kind == "tts":
-                outputs = _smoke_tts(base_url, headers, output_directory, timeout)
-                result: dict[str, object] = {
-                    "health": health,
-                    "capabilities": capabilities,
-                    "outputs": [str(path) for path in outputs],
+                inference: dict[str, object] = {
+                    "kind": "tts",
+                    "languages": _smoke_tts(base_url, headers, output_directory, timeout),
+                }
+                cancel_payload = _tts_payload(
+                    "zh",
+                    "这是一段用于验证在途任务取消的语音。" * 4,
+                )
+                cancel_request_evidence: dict[str, object] = {
+                    "kind": "tts",
+                    "language": cancel_payload["language"],
+                    "text_character_count": len(cast(str, cancel_payload["text"])),
                 }
             else:
                 if smoke_wav is None:
                     raise RuntimeError("faster-whisper smoke requires --smoke-wav")
-                transcript = _smoke_stt(base_url, headers, smoke_wav, timeout)
-                result = {
-                    "health": health,
-                    "capabilities": capabilities,
-                    "transcript": transcript,
+                source_wave = _load_pcm_wave(smoke_wav)
+                inference = {
+                    "kind": "stt",
+                    **_smoke_stt(
+                        base_url,
+                        headers,
+                        source_wave,
+                        smoke_wav.name,
+                        timeout,
+                        transcript_expectations,
+                    ),
                 }
-            unload = _post_json(f"{base_url}/v1/model/unload", headers, {}, timeout=30)
-            result["unload"] = unload
-            return result
+                cancel_wave = _repeat_wave(source_wave, cancel_probe_seconds)
+                cancel_payload = _stt_payload(cancel_wave)
+                cancel_request_evidence = {
+                    "kind": "stt",
+                    "input": cancel_wave.evidence(),
+                }
+
+            after_inference = _get_json(f"{base_url}{entrypoint.health_path}", headers, timeout=10)
+            _assert_model_loaded(after_inference, stage="after inference")
+            cancellation = _probe_in_flight_cancellation(
+                base_url,
+                entrypoint.health_path,
+                headers,
+                kind=kind,
+                payload=cancel_payload,
+                request_evidence=cancel_request_evidence,
+                timeout=timeout,
+            )
+            unload = _unload_and_verify(
+                base_url,
+                entrypoint.health_path,
+                headers,
+                timeout=timeout,
+            )
+            result = {
+                "health": {
+                    "startup": startup_health,
+                    "after_inference": after_inference,
+                    "after_cancel": cancellation["health_after_cancel"],
+                    "after_unload": unload["health_after_unload"],
+                },
+                "capabilities": capabilities,
+                "device": {
+                    "reported": after_inference.get("device"),
+                    "model": after_inference.get("model"),
+                    "worker_id": after_inference.get("worker_id"),
+                },
+                "inference": inference,
+                "cancellation": cancellation,
+                "unload": unload,
+                "artifacts": {"worker_log": log_path.name},
+            }
         finally:
             _stop_process(process)
             _assert_listener_closed(port)
+
+    result["shutdown"] = {"process_stopped": True, "listener_closed": True, "port": port}
+    return result
 
 
 def _worker_environment(
@@ -197,67 +352,390 @@ def _worker_environment(
 
 def _smoke_tts(
     base_url: str, headers: dict[str, str], output_directory: Path, timeout: float
-) -> list[Path]:
+) -> list[dict[str, object]]:
     prompts = (("zh", "你好，我是绫地宁宁。"), ("ja", "こんにちは、綾地寧々です。"))
-    outputs: list[Path] = []
+    outputs: list[dict[str, object]] = []
     for language, text in prompts:
-        identity = {name: str(uuid.uuid4()) for name in _identity_fields()}
-        payload: dict[str, object] = {
-            "schema_version": "1.0",
-            **identity,
-            "text": text,
-            "language": language,
-            "voice_id": "ayachi_nene_local",
-            "speaker_id": 0,
-            "speed": 1.0,
-            "output_format": "wav",
-        }
+        payload = _tts_payload(language, text)
+        started = time.perf_counter()
         response = _post_json(f"{base_url}/v1/synthesize", headers, payload, timeout=timeout)
+        latency_ms = round((time.perf_counter() - started) * 1000, 3)
+        _assert_response_identity(payload, response, operation=f"TTS {language}")
         audio_base64 = response.get("audio_base64")
         if not isinstance(audio_base64, str):
             raise RuntimeError(f"TTS {language} smoke returned no audio")
         audio = base64.b64decode(audio_base64, validate=True)
-        _assert_non_silent_wave(audio)
+        audio_metrics = _assert_non_silent_wave(audio)
+        duration_bounds = _assert_tts_duration_reasonable(text, audio_metrics)
         output = output_directory / f"qwen3-tts-{language}.wav"
         output.write_bytes(audio)
-        outputs.append(output)
+        response_metadata = {key: value for key, value in response.items() if key != "audio_base64"}
+        outputs.append(
+            {
+                "language": language,
+                "text": text,
+                "request_identity": {name: payload[name] for name in _identity_fields()},
+                "latency_ms": latency_ms,
+                "response": response_metadata,
+                "audio": {
+                    **audio_metrics,
+                    "duration_acceptance_bounds_ms": duration_bounds,
+                    "file_name": output.name,
+                    "file_bytes": len(audio),
+                    "file_sha256": hashlib.sha256(audio).hexdigest(),
+                },
+            }
+        )
     return outputs
+
+
+def _tts_payload(language: str, text: str) -> dict[str, object]:
+    identity = {name: str(uuid.uuid4()) for name in _identity_fields()}
+    return {
+        "schema_version": "1.0",
+        **identity,
+        "text": text,
+        "language": language,
+        "voice_id": "ayachi_nene_local",
+        "speaker_id": 0,
+        "speed": 1.0,
+        "output_format": "wav",
+    }
 
 
 def _smoke_stt(
     base_url: str,
     headers: dict[str, str],
-    smoke_wav: Path,
+    smoke_wave: PcmWave,
+    smoke_file_name: str,
     timeout: float,
+    expectations: TranscriptExpectations,
 ) -> dict[str, object]:
-    with wave.open(str(smoke_wav), "rb") as source:
+    payload = _stt_payload(smoke_wave)
+    started = time.perf_counter()
+    response = _post_json(f"{base_url}/v1/transcribe", headers, payload, timeout=timeout)
+    latency_ms = round((time.perf_counter() - started) * 1000, 3)
+    _assert_response_identity(payload, response, operation="Whisper transcription")
+    text = response.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError(f"Whisper smoke returned an empty transcript: {response}")
+    reasonableness = _assess_transcript(text, response.get("language"), expectations)
+    return {
+        "input": smoke_wave.evidence(file_name=smoke_file_name),
+        "request_identity": {name: payload[name] for name in _identity_fields()},
+        "latency_ms": latency_ms,
+        "transcript": response,
+        "reasonableness": reasonableness,
+    }
+
+
+def _stt_payload(smoke_wave: PcmWave) -> dict[str, object]:
+    identity = {name: str(uuid.uuid4()) for name in _identity_fields()}
+    return {
+        "schema_version": "1.0",
+        **identity,
+        "audio_base64": base64.b64encode(smoke_wave.pcm16).decode("ascii"),
+        "sample_rate": smoke_wave.sample_rate,
+        "channels": smoke_wave.channels,
+        "language": None,
+    }
+
+
+def _load_pcm_wave(path: Path) -> PcmWave:
+    with wave.open(str(path), "rb") as source:
         sample_width = source.getsampwidth()
         channels = source.getnchannels()
         sample_rate = source.getframerate()
         compression = source.getcomptype()
-        audio = source.readframes(source.getnframes())
+        frame_count = source.getnframes()
+        audio = source.readframes(frame_count)
     if sample_width != 2 or channels not in (1, 2) or compression != "NONE":
         raise RuntimeError("Whisper smoke WAV must be uncompressed PCM16 mono or stereo")
     if not 8_000 <= sample_rate <= 48_000:
         raise RuntimeError("Whisper smoke WAV sample rate must be between 8 and 48 kHz")
-    identity = {name: str(uuid.uuid4()) for name in _identity_fields()}
-    response = _post_json(
-        f"{base_url}/v1/transcribe",
-        headers,
-        {
-            "schema_version": "1.0",
-            **identity,
-            "audio_base64": base64.b64encode(audio).decode("ascii"),
-            "sample_rate": sample_rate,
-            "channels": channels,
-            "language": None,
-        },
-        timeout=timeout,
+    if frame_count == 0:
+        raise RuntimeError("Whisper smoke WAV must contain audio frames")
+    return PcmWave(
+        pcm16=audio,
+        sample_rate=sample_rate,
+        channels=channels,
+        frame_count=frame_count,
     )
-    text = response.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise RuntimeError(f"Whisper smoke returned an empty transcript: {response}")
-    return response
+
+
+def _repeat_wave(source: PcmWave, minimum_duration_seconds: float) -> PcmWave:
+    target_frames = max(
+        source.frame_count, math.ceil(source.sample_rate * minimum_duration_seconds)
+    )
+    frame_width = source.channels * 2
+    repeats = math.ceil(target_frames / source.frame_count)
+    pcm16 = (source.pcm16 * repeats)[: target_frames * frame_width]
+    encoded_length = 4 * math.ceil(len(pcm16) / 3)
+    if encoded_length > 32_000_000:
+        raise RuntimeError(
+            "Whisper cancel probe exceeds the Worker protocol audio_base64 size limit; "
+            "reduce --cancel-probe-seconds"
+        )
+    return PcmWave(
+        pcm16=pcm16,
+        sample_rate=source.sample_rate,
+        channels=source.channels,
+        frame_count=target_frames,
+    )
+
+
+def _assess_transcript(
+    text: str,
+    reported_language: object,
+    expectations: TranscriptExpectations,
+) -> dict[str, object]:
+    normalized = " ".join(text.split())
+    meaningful_count = sum(character.isalnum() for character in normalized)
+    replacement_count = normalized.count("\ufffd")
+    control_count = sum(ord(character) < 32 and not character.isspace() for character in normalized)
+    if meaningful_count < expectations.min_meaningful_characters:
+        raise RuntimeError(
+            "Whisper smoke transcript is not reasonable: "
+            f"found {meaningful_count} meaningful characters, expected at least "
+            f"{expectations.min_meaningful_characters}: {text!r}"
+        )
+    if replacement_count or control_count:
+        raise RuntimeError(
+            "Whisper smoke transcript contains replacement or control characters: "
+            f"replacement={replacement_count}, control={control_count}"
+        )
+    pattern_matched: bool | None = None
+    if expectations.pattern is not None:
+        pattern_matched = re.search(expectations.pattern, normalized) is not None
+        if not pattern_matched:
+            raise RuntimeError(
+                "Whisper smoke transcript did not match the configured pattern "
+                f"{expectations.pattern!r}: {text!r}"
+            )
+    language_matched: bool | None = None
+    if expectations.language is not None:
+        language_matched = (
+            isinstance(reported_language, str)
+            and reported_language.casefold() == expectations.language.casefold()
+        )
+        if not language_matched:
+            raise RuntimeError(
+                "Whisper smoke reported an unexpected language: "
+                f"{reported_language!r}, expected {expectations.language!r}"
+            )
+    return {
+        "normalized_character_count": len(normalized),
+        "meaningful_character_count": meaningful_count,
+        "replacement_character_count": replacement_count,
+        "control_character_count": control_count,
+        "minimum_meaningful_characters": expectations.min_meaningful_characters,
+        "expected_pattern": expectations.pattern,
+        "pattern_matched": pattern_matched,
+        "expected_language": expectations.language,
+        "language_matched": language_matched,
+    }
+
+
+def _probe_in_flight_cancellation(
+    base_url: str,
+    health_path: str,
+    headers: dict[str, str],
+    *,
+    kind: str,
+    payload: dict[str, object],
+    request_evidence: dict[str, object],
+    timeout: float,
+) -> dict[str, object]:
+    request_path = "/v1/transcribe" if kind == "stt" else "/v1/synthesize"
+    generation_id = cast(str, payload["generation_id"])
+    job_id = cast(str, payload["job_id"])
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="worker-cancel-probe")
+    probe_started = time.perf_counter()
+    request_future = executor.submit(
+        _post_json,
+        f"{base_url}{request_path}",
+        headers,
+        payload,
+        timeout,
+    )
+    try:
+        busy_health = _wait_for_active_job(
+            request_future,
+            f"{base_url}{health_path}",
+            headers,
+            timeout=timeout,
+        )
+        busy_observed_ms = round((time.perf_counter() - probe_started) * 1000, 3)
+        cancel_started = time.perf_counter()
+        cancel_response = _post_json(
+            f"{base_url}/v1/jobs/{generation_id}/cancel",
+            headers,
+            {},
+            timeout=min(timeout, 30),
+        )
+        cancel_response_ms = round((time.perf_counter() - cancel_started) * 1000, 3)
+        if cancel_response.get("generation_id") != generation_id:
+            raise RuntimeError(
+                f"Worker cancel response changed generation identity: {cancel_response}"
+            )
+        if cancel_response.get("cancelled") is not True:
+            raise RuntimeError(
+                f"Worker did not cancel the observed in-flight job: {cancel_response}"
+            )
+        request_outcome = _await_request_termination_after_cancel(
+            request_future, timeout=min(timeout, 30)
+        )
+        request_terminated_ms = round((time.perf_counter() - cancel_started) * 1000, 3)
+        after_cancel = _wait_for_idle_health(f"{base_url}{health_path}", headers, timeout=timeout)
+        idle_observed_ms = round((time.perf_counter() - cancel_started) * 1000, 3)
+        _assert_model_loaded(after_cancel, stage="after cancellation")
+        return {
+            "generation_id": generation_id,
+            "job_id": job_id,
+            "request": request_evidence,
+            "observed_in_flight": True,
+            "semantics": {
+                "scope": "worker_request_boundary",
+                "cancel_acknowledged": True,
+                "successful_inference_result_suppressed": True,
+                "native_execution_stop_observable": False,
+            },
+            "timing_ms": {
+                "request_to_busy_observation": busy_observed_ms,
+                "cancel_response": cancel_response_ms,
+                "cancel_to_request_termination": request_terminated_ms,
+                "cancel_to_idle_observation": idle_observed_ms,
+            },
+            "health_while_in_flight": busy_health,
+            "cancel_response": cancel_response,
+            "request_outcome": request_outcome,
+            "health_after_cancel": after_cancel,
+        }
+    finally:
+        executor.shutdown(wait=request_future.done(), cancel_futures=True)
+
+
+def _wait_for_active_job(
+    request_future: Future[dict[str, object]],
+    health_url: str,
+    headers: dict[str, str],
+    *,
+    timeout: float,
+) -> dict[str, object]:
+    deadline = time.monotonic() + timeout
+    last_health: dict[str, object] | None = None
+    while time.monotonic() < deadline:
+        if request_future.done():
+            try:
+                completed = request_future.result()
+            except Exception as error:
+                raise RuntimeError(
+                    "Worker cancel probe ended before an in-flight job became observable"
+                ) from error
+            raise RuntimeError(
+                "Worker cancel probe completed before an in-flight job became observable: "
+                f"{completed}"
+            )
+        last_health = _get_json(health_url, headers, timeout=min(2, timeout))
+        queue_depth = last_health.get("queue_depth")
+        if (
+            last_health.get("status") == "busy"
+            and isinstance(queue_depth, int)
+            and not isinstance(queue_depth, bool)
+            and queue_depth > 0
+        ):
+            return last_health
+        _backoff_health_poll(deadline)
+    raise RuntimeError(
+        f"Worker cancel probe timed out before health reported an active job: {last_health}"
+    )
+
+
+def _await_request_termination_after_cancel(
+    request_future: Future[dict[str, object]], *, timeout: float
+) -> dict[str, object]:
+    try:
+        response = request_future.result(timeout=timeout)
+    except FutureTimeoutError as error:
+        raise RuntimeError("Cancelled Worker request did not terminate within the bound") from error
+    except urllib.error.HTTPError as error:
+        body = error.read(2_000).decode("utf-8", errors="replace")
+        return {
+            "request_terminated_after_cancel": True,
+            "successful_inference_returned": False,
+            "transport": "http_error",
+            "http_status": error.code,
+            "detail": body,
+        }
+    except (ConnectionError, OSError, TimeoutError, urllib.error.URLError) as error:
+        return {
+            "request_terminated_after_cancel": True,
+            "successful_inference_returned": False,
+            "transport": "connection_closed",
+            "error_type": error.__class__.__name__,
+            "detail": str(error),
+        }
+    raise RuntimeError(
+        f"Cancelled Worker request returned a successful inference result: {response}"
+    )
+
+
+def _wait_for_idle_health(
+    health_url: str, headers: dict[str, str], *, timeout: float
+) -> dict[str, object]:
+    deadline = time.monotonic() + timeout
+    last_health: dict[str, object] | None = None
+    while time.monotonic() < deadline:
+        last_health = _get_json(health_url, headers, timeout=min(2, timeout))
+        if last_health.get("status") == "ready" and last_health.get("queue_depth") == 0:
+            return last_health
+        _backoff_health_poll(deadline)
+    raise RuntimeError(f"Worker did not become idle after cancellation: {last_health}")
+
+
+def _unload_and_verify(
+    base_url: str,
+    health_path: str,
+    headers: dict[str, str],
+    *,
+    timeout: float,
+) -> dict[str, object]:
+    started = time.perf_counter()
+    response = _post_json(f"{base_url}/v1/model/unload", headers, {}, timeout=timeout)
+    response_ms = round((time.perf_counter() - started) * 1000, 3)
+    if response.get("unloaded") is not True:
+        raise RuntimeError(f"Worker model unload did not return true: {response}")
+    health = _get_json(f"{base_url}{health_path}", headers, timeout=min(timeout, 10))
+    if health.get("model_loaded") is not False:
+        raise RuntimeError(f"Worker still reports a loaded model after unload: {health}")
+    if health.get("queue_depth") != 0:
+        raise RuntimeError(f"Worker still reports queued work after unload: {health}")
+    verified_ms = round((time.perf_counter() - started) * 1000, 3)
+    return {
+        "response": response,
+        "health_after_unload": health,
+        "timing_ms": {
+            "unload_response": response_ms,
+            "unload_and_health_verification": verified_ms,
+        },
+        "native_drain_inference": (
+            "For non-interruptible native engines, unload response latency includes waiting "
+            "behind the cancelled native call on the serialized executor."
+        ),
+    }
+
+
+def _assert_model_loaded(health: dict[str, object], *, stage: str) -> None:
+    if health.get("model_loaded") is not True:
+        raise RuntimeError(f"Worker did not report model_loaded=true {stage}: {health}")
+
+
+def _backoff_health_poll(deadline: float) -> None:
+    """Rate-limit probes; health state, never elapsed sleep, decides readiness."""
+
+    remaining = deadline - time.monotonic()
+    if remaining > 0:
+        time.sleep(min(HEALTH_POLL_INTERVAL_SECONDS, remaining))
 
 
 def _wait_for_health(
@@ -319,15 +797,69 @@ def _opener() -> urllib.request.OpenerDirector:
     return urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
-def _assert_non_silent_wave(audio: bytes) -> None:
+def _assert_non_silent_wave(audio: bytes) -> dict[str, object]:
     with wave.open(io.BytesIO(audio), "rb") as source:
-        if source.getsampwidth() != 2 or source.getnchannels() not in (1, 2):
-            raise RuntimeError("TTS smoke output must be PCM16 WAV")
-        if not 8_000 <= source.getframerate() <= 48_000:
-            raise RuntimeError("TTS smoke output has an unsupported sample rate")
-        samples = array("h", source.readframes(source.getnframes()))
-    if len(samples) < 1_000 or max(abs(sample) for sample in samples) < 64:
+        sample_width = source.getsampwidth()
+        channels = source.getnchannels()
+        sample_rate = source.getframerate()
+        frame_count = source.getnframes()
+        compression = source.getcomptype()
+        samples = array("h", source.readframes(frame_count))
+    if sample_width != 2 or channels not in (1, 2) or compression != "NONE":
+        raise RuntimeError("TTS smoke output must be uncompressed PCM16 WAV")
+    if not 8_000 <= sample_rate <= 48_000:
+        raise RuntimeError("TTS smoke output has an unsupported sample rate")
+    peak = max((abs(sample) for sample in samples), default=0)
+    if len(samples) < 1_000 or peak < 64:
         raise RuntimeError("TTS smoke output is empty or effectively silent")
+    square_mean = sum(float(sample) ** 2 for sample in samples) / len(samples)
+    rms = math.sqrt(square_mean)
+    clipped_samples = sum(abs(sample) >= 32_767 for sample in samples)
+    peak_ratio = peak / 32_768
+    rms_ratio = rms / 32_768
+    return {
+        "sample_rate": sample_rate,
+        "channels": channels,
+        "sample_width_bytes": sample_width,
+        "frame_count": frame_count,
+        "sample_count": len(samples),
+        "duration_ms": round(frame_count * 1000 / sample_rate),
+        "peak_pcm16": peak,
+        "peak_normalized": round(peak_ratio, 8),
+        "peak_dbfs": round(20 * math.log10(peak_ratio), 3),
+        "rms_pcm16": round(rms, 3),
+        "rms_normalized": round(rms_ratio, 8),
+        "rms_dbfs": round(20 * math.log10(rms_ratio), 3),
+        "clipped_sample_count": clipped_samples,
+        "clipped_sample_fraction": round(clipped_samples / len(samples), 10),
+    }
+
+
+def _assert_tts_duration_reasonable(text: str, audio_metrics: dict[str, object]) -> dict[str, int]:
+    meaningful_characters = sum(character.isalnum() for character in text)
+    minimum = max(MIN_TTS_DURATION_MS, meaningful_characters * 40)
+    maximum = max(5_000, meaningful_characters * 1_500)
+    duration = audio_metrics.get("duration_ms")
+    if not isinstance(duration, int) or isinstance(duration, bool):
+        raise RuntimeError(f"TTS smoke produced invalid duration evidence: {audio_metrics}")
+    if not minimum <= duration <= maximum:
+        raise RuntimeError(
+            "TTS smoke duration is inconsistent with the fixed prompt and may be truncated "
+            f"or have abnormal speed: duration={duration}ms, expected={minimum}..{maximum}ms"
+        )
+    return {"minimum": minimum, "maximum": maximum}
+
+
+def _assert_response_identity(
+    request: dict[str, object], response: dict[str, object], *, operation: str
+) -> None:
+    mismatched = [
+        field for field in _identity_fields() if response.get(field) != request.get(field)
+    ]
+    if mismatched:
+        raise RuntimeError(
+            f"{operation} response changed request identity fields: {', '.join(mismatched)}"
+        )
 
 
 def _resolve_pack_path(pack_root: Path, relative: str) -> Path:
@@ -337,6 +869,17 @@ def _resolve_pack_path(pack_root: Path, relative: str) -> Path:
     except ValueError as error:
         raise RuntimeError(f"Worker pack path escapes its root: {relative}") from error
     return candidate
+
+
+def _load_pack_build_metadata(pack_root: Path) -> dict[str, object] | None:
+    path = _resolve_pack_path(pack_root, "payload/metadata/build.json")
+    if not path.is_file():
+        return None
+    with path.open("r", encoding="utf-8") as source:
+        value = json.load(source)
+    if not isinstance(value, dict):
+        raise RuntimeError(f"Worker pack build metadata is not a JSON object: {path}")
+    return cast(dict[str, object], value)
 
 
 def _expand_placeholders(value: str, pack_root: Path, data_root: Path, config_root: Path) -> str:
@@ -379,6 +922,15 @@ def _assert_listener_closed(port: int) -> None:
     raise RuntimeError(f"Worker listener remained open after shutdown: {port}")
 
 
+def _write_result(path: Path, result: dict[str, object]) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, path)
+
+
 def _log_tail(path: Path, limit: int = 8_000) -> str:
     if not path.is_file():
         return "<no worker log>"
@@ -395,6 +947,26 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=float, default=900)
     parser.add_argument("--smoke-wav", type=Path)
     parser.add_argument("--output-directory", type=Path, required=True)
+    parser.add_argument(
+        "--min-transcript-characters",
+        type=int,
+        default=DEFAULT_MIN_TRANSCRIPT_CHARACTERS,
+        help="Minimum Unicode letters/digits required in the Whisper transcript.",
+    )
+    parser.add_argument(
+        "--expected-transcript-pattern",
+        help="Optional regular expression that the normalized Whisper transcript must match.",
+    )
+    parser.add_argument(
+        "--expected-language",
+        help="Optional faster-whisper language code required for this specific smoke recording.",
+    )
+    parser.add_argument(
+        "--cancel-probe-seconds",
+        type=float,
+        default=DEFAULT_CANCEL_PROBE_SECONDS,
+        help="Minimum repeated Whisper audio duration used only by the in-flight cancel probe.",
+    )
     return parser
 
 
@@ -406,6 +978,12 @@ def main() -> int:
         timeout=arguments.timeout,
         smoke_wav=arguments.smoke_wav.resolve() if arguments.smoke_wav else None,
         output_directory=arguments.output_directory.resolve(),
+        transcript_expectations=TranscriptExpectations(
+            min_meaningful_characters=arguments.min_transcript_characters,
+            pattern=arguments.expected_transcript_pattern,
+            language=arguments.expected_language,
+        ),
+        cancel_probe_seconds=arguments.cancel_probe_seconds,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
