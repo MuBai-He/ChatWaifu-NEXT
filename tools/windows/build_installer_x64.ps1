@@ -19,7 +19,8 @@ $UvPythonInstallDir = Join-Path $RepoRoot ".local\toolchains\uv-python"
 $TauriCli = Join-Path $RepoRoot "apps\desktop\node_modules\@tauri-apps\cli\tauri.js"
 $ViteCli = Join-Path $RepoRoot "apps\web\node_modules\vite\bin\vite.js"
 $Target = "x86_64-pc-windows-msvc"
-$RuntimeExecutable = Join-Path $RepoRoot "dist\windows\runtime-sidecar\chatwaifu-runtime.exe"
+$RuntimeRoot = Join-Path $RepoRoot "dist\windows\runtime-sidecar"
+$RuntimeExecutable = Join-Path $RuntimeRoot "chatwaifu-runtime.exe"
 $HelperExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
 $StagedHelper = Join-Path $RepoRoot "apps\desktop\src-tauri\binaries\chatwaifu-appcontainer-host-$Target.exe"
 $PytestBaseTemp = Join-Path $RepoRoot "build\pytest\windows-installer"
@@ -29,6 +30,7 @@ $InstallerOutput = Join-Path $RepoRoot "dist\windows\installer"
 $Live2DStagingRoot = $null
 $OriginalLive2DBackup = $null
 $Live2DDestinationTemporarilyOwned = $false
+$Live2DSourceLayout = ""
 
 function Invoke-Checked {
     param(
@@ -45,12 +47,29 @@ function Invoke-Checked {
 function Get-PeMachine {
     param([Parameter(Mandatory = $true)][string]$Path)
 
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Expected PE file was not produced: $Path"
+    }
     $Stream = [System.IO.File]::OpenRead($Path)
     $Reader = [System.IO.BinaryReader]::new($Stream)
     try {
+        if ($Stream.Length -lt 0x40) {
+            throw "File is too small to contain a PE header: $Path"
+        }
+        $DosSignature = $Reader.ReadUInt16()
+        if ($DosSignature -ne 0x5A4D) {
+            throw "Invalid MZ signature in PE file: $Path"
+        }
         $Stream.Position = 0x3c
-        $PeOffset = $Reader.ReadInt32()
-        $Stream.Position = $PeOffset + 4
+        $PeOffset = $Reader.ReadUInt32()
+        if (([long]$PeOffset + 6) -gt $Stream.Length) {
+            throw "Invalid PE header offset in file: $Path"
+        }
+        $Stream.Position = $PeOffset
+        $PeSignature = $Reader.ReadUInt32()
+        if ($PeSignature -ne 0x00004550) {
+            throw "Invalid PE signature in file: $Path"
+        }
         return $Reader.ReadUInt16()
     } finally {
         $Reader.Dispose()
@@ -67,6 +86,52 @@ function Assert-X64Pe {
     $Machine = Get-PeMachine $Path
     if ($Machine -ne 0x8664) {
         throw ("Expected PE machine 0x8664 (x64), received 0x{0:X4}: {1}" -f $Machine, $Path)
+    }
+}
+
+function Assert-X64PeTree {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
+        throw "Expected frozen Runtime directory was not produced: $Root"
+    }
+    $NativeFiles = @(
+        Get-ChildItem -LiteralPath $Root -Recurse -File |
+            Where-Object { $_.Extension.ToLowerInvariant() -in @(".exe", ".dll", ".pyd") }
+    )
+    if ($NativeFiles.Count -eq 0) {
+        throw "Frozen Runtime contains no EXE, DLL, or PYD files: $Root"
+    }
+    foreach ($NativeFile in $NativeFiles) {
+        Assert-X64Pe $NativeFile.FullName
+    }
+    Write-Host "Verified $($NativeFiles.Count) frozen Runtime native files as x64 PE."
+}
+
+function Assert-Live2DVendorInputs {
+    param(
+        [Parameter(Mandatory = $true)][string]$Root,
+        [switch]$BaseOnly
+    )
+
+    $RequiredInputs = [ordered]@{
+        "Cubism Core" = Join-Path $Root "live2dcubismcore.min.js"
+        "ChatWaifu Cubism bridge" = Join-Path $Root "chatwaifu-live2d-bridge.js"
+    }
+    if (-not $BaseOnly) {
+        $RequiredInputs["avatar model"] = Join-Path $Root "model\avatar.model3.json"
+    }
+    $MissingInputs = @()
+    foreach ($Input in $RequiredInputs.GetEnumerator()) {
+        if (-not (Test-Path -LiteralPath $Input.Value -PathType Leaf)) {
+            $MissingInputs += "- $($Input.Key): $($Input.Value)"
+        }
+    }
+    if ($MissingInputs.Count -gt 0) {
+        throw (
+            "Private Live2D owner overlay is incomplete:`n" +
+            ($MissingInputs -join "`n")
+        )
     }
 }
 
@@ -203,6 +268,24 @@ try {
             throw "Private Live2D overlay source must be an existing directory: $Live2DSource"
         }
         $ResolvedLive2DSource = (Resolve-Path -LiteralPath $Live2DSource).Path
+        $DirectModelAvatar = Join-Path $ResolvedLive2DSource "avatar.model3.json"
+        $VendorRootAvatar = Join-Path $ResolvedLive2DSource "model\avatar.model3.json"
+        if (Test-Path -LiteralPath $DirectModelAvatar -PathType Leaf) {
+            $Live2DSourceLayout = "model"
+            # A model-only overlay deliberately inherits the ignored local SDK
+            # inputs. Validate those inputs before moving anything or starting
+            # the expensive Runtime and installer build.
+            Assert-Live2DVendorInputs -Root $Live2DDestination -BaseOnly
+        } elseif (Test-Path -LiteralPath $VendorRootAvatar -PathType Leaf) {
+            $Live2DSourceLayout = "vendor"
+            Assert-Live2DVendorInputs -Root $ResolvedLive2DSource
+        } else {
+            throw (
+                "Private Live2D overlay must be either a model directory containing " +
+                "avatar.model3.json or a vendor root containing model/avatar.model3.json: " +
+                $ResolvedLive2DSource
+            )
+        }
         $Live2DSourceSnapshot = Join-Path $Live2DStagingRoot "source"
         New-Item -ItemType Directory -Path $Live2DSourceSnapshot -Force | Out-Null
         Copy-DirectoryContents -Source $ResolvedLive2DSource `
@@ -216,12 +299,23 @@ try {
     if ($Live2DSource) {
         $Live2DDestinationTemporarilyOwned = $true
         New-Item -ItemType Directory -Path $Live2DDestination -Force | Out-Null
-        Copy-DirectoryContents -Source $Live2DSourceSnapshot `
-            -Destination $Live2DDestination
-        $RequiredAvatar = Join-Path $Live2DDestination "model\avatar.model3.json"
-        if (-not (Test-Path $RequiredAvatar -PathType Leaf)) {
-            throw "Private Live2D overlay is missing model/avatar.model3.json."
+        if ($Live2DSourceLayout -eq "model") {
+            if ($null -eq $OriginalLive2DBackup -or
+                -not (Test-Path -LiteralPath $OriginalLive2DBackup -PathType Container)) {
+                throw "A model-only Live2D overlay requires an existing local vendor base."
+            }
+            Copy-DirectoryContents -Source $OriginalLive2DBackup `
+                -Destination $Live2DDestination
+            $StagedModel = Join-Path $Live2DDestination "model"
+            Remove-Item -LiteralPath $StagedModel -Recurse -Force -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Path $StagedModel -Force | Out-Null
+            Copy-DirectoryContents -Source $Live2DSourceSnapshot `
+                -Destination $StagedModel
+        } else {
+            Copy-DirectoryContents -Source $Live2DSourceSnapshot `
+                -Destination $Live2DDestination
         }
+        Assert-Live2DVendorInputs -Root $Live2DDestination
         $Live2DTexture = Join-Path $Live2DDestination "model\texture\texture_00.png"
         if (Test-Path $Live2DTexture -PathType Leaf) {
             & (Join-Path $RepoRoot "tools\windows\optimize_live2d_texture.ps1") `
@@ -254,6 +348,8 @@ try {
     )
     Invoke-Checked $PackagingPython @("tools/setup_nltk_data.py")
     Invoke-Checked $PackagingPython @("tools/build_runtime_sidecar.py", "--platform", "windows")
+    Assert-X64PeTree $RuntimeRoot
+    Assert-RuntimeFileIdentity $RuntimeExecutable
     Invoke-Checked $PackagingPython @(
         "tools/smoke_runtime_sidecar.py",
         "--executable", $RuntimeExecutable,
@@ -305,7 +401,6 @@ try {
     Assert-X64Pe $HostExecutable
     Assert-X64Pe $RuntimeExecutable
     Assert-X64Pe $HelperExecutable
-    Assert-RuntimeFileIdentity $RuntimeExecutable
 
     $Installers = @(Get-ChildItem -LiteralPath $NsisRoot -Filter "*-setup.exe" -File)
     if ($Installers.Count -ne 1) {

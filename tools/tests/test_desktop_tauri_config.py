@@ -83,6 +83,7 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "Assert-X64Pe $HostExecutable" in script
     assert "Assert-X64Pe $RuntimeExecutable" in script
     assert "Assert-X64Pe $HelperExecutable" in script
+    assert "Assert-X64PeTree $RuntimeRoot" in script
     assert "$Live2DDestinationTemporarilyOwned" in script
     assert "Move-Item -Path $Live2DDestination -Destination $OriginalLive2DBackup" in script
     assert "Move-Item -Path $OriginalLive2DBackup -Destination $Live2DDestination" in script
@@ -124,6 +125,41 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "$Installers.Count -ne 1" in script
     assert script.count("Remove-Item -LiteralPath $StagedHelper") >= 2
     assert "apps/desktop/src-tauri/binaries/chatwaifu-appcontainer-host-*.exe" in gitignore
+
+
+def test_windows_installer_accepts_model_only_or_complete_live2d_vendor_overlay() -> None:
+    script = (ROOT / "tools/windows/build_installer_x64.ps1").read_text(encoding="utf-8")
+
+    assert '$DirectModelAvatar = Join-Path $ResolvedLive2DSource "avatar.model3.json"' in script
+    assert (
+        '$VendorRootAvatar = Join-Path $ResolvedLive2DSource "model\\avatar.model3.json"' in script
+    )
+    assert '$Live2DSourceLayout = "model"' in script
+    assert '$Live2DSourceLayout = "vendor"' in script
+    assert "Assert-Live2DVendorInputs -Root $Live2DDestination -BaseOnly" in script
+    assert "Assert-Live2DVendorInputs -Root $ResolvedLive2DSource" in script
+    assert "Copy-DirectoryContents -Source $OriginalLive2DBackup" in script
+    assert '$StagedModel = Join-Path $Live2DDestination "model"' in script
+    assert "Copy-DirectoryContents -Source $Live2DSourceSnapshot" in script
+    assert "-Destination $StagedModel" in script
+    assert "Assert-Live2DVendorInputs -Root $Live2DDestination" in script
+    assert 'Join-Path $Root "live2dcubismcore.min.js"' in script
+    assert 'Join-Path $Root "chatwaifu-live2d-bridge.js"' in script
+    assert 'Join-Path $Root "model\\avatar.model3.json"' in script
+
+
+def test_windows_installer_validates_every_frozen_runtime_native_file_as_pe_x64() -> None:
+    script = (ROOT / "tools/windows/build_installer_x64.ps1").read_text(encoding="utf-8")
+
+    assert "$DosSignature -ne 0x5A4D" in script
+    assert "$PeSignature -ne 0x00004550" in script
+    assert "([long]$PeOffset + 6) -gt $Stream.Length" in script
+    assert "Get-ChildItem -LiteralPath $Root -Recurse -File" in script
+    for extension in (".exe", ".dll", ".pyd"):
+        assert f'"{extension}"' in script
+    assert "foreach ($NativeFile in $NativeFiles)" in script
+    assert "Assert-X64Pe $NativeFile.FullName" in script
+    assert "Assert-X64PeTree $RuntimeRoot" in script
 
 
 def test_frozen_windows_runtime_uses_chatwaifu_file_identity_and_icon() -> None:
