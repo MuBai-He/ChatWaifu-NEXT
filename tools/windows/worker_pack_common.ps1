@@ -261,6 +261,16 @@ function Remove-WorkerPackPackagingTools {
             Remove-Item -LiteralPath $Entry.FullName -Force
         }
     }
+
+    # Some runtime dependencies still import setuptools' Python modules, so retain those.
+    # Its cli/gui executables are installer launcher templates (x86/x64/ARM), never runtime
+    # entrypoints for a frozen Worker Pack, and would otherwise violate the x64-only payload.
+    $SetuptoolsRoot = Join-Path $SitePackagesRoot "setuptools"
+    if (Test-Path -LiteralPath $SetuptoolsRoot -PathType Container) {
+        foreach ($Launcher in @(Get-ChildItem -LiteralPath $SetuptoolsRoot -File -Filter "*.exe" -Recurse)) {
+            Remove-Item -LiteralPath $Launcher.FullName -Force
+        }
+    }
 }
 
 function Write-WorkerPackJson {

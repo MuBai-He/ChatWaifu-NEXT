@@ -194,13 +194,23 @@ def test_worker_pack_builder_removes_pip_cross_arch_launchers(tmp_path: Path) ->
     portable = tmp_path / "portable-python"
     pip_package = portable / "Lib/site-packages/pip"
     pip_dist_info = portable / "Lib/site-packages/pip-25.2.dist-info"
+    setuptools_package = portable / "Lib/site-packages/setuptools"
     runtime_package = portable / "Lib/site-packages/runtime_dependency"
     scripts = portable / "Scripts"
-    for directory in (pip_package / "_vendor/distlib", pip_dist_info, runtime_package, scripts):
+    for directory in (
+        pip_package / "_vendor/distlib",
+        pip_dist_info,
+        setuptools_package,
+        runtime_package,
+        scripts,
+    ):
         directory.mkdir(parents=True, exist_ok=True)
     (pip_package / "_vendor/distlib/t32.exe").write_bytes(b"not-a-runtime-binary")
     (pip_dist_info / "METADATA").write_text("Name: pip\n", encoding="utf-8")
     (runtime_package / "keep.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (setuptools_package / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (setuptools_package / "cli-32.exe").write_bytes(b"x86-launcher-template")
+    (setuptools_package / "cli-64.exe").write_bytes(b"x64-launcher-template")
     (scripts / "pip.exe").write_bytes(b"builder-only")
     (scripts / "uvicorn.exe").write_bytes(b"runtime")
 
@@ -232,5 +242,7 @@ def test_worker_pack_builder_removes_pip_cross_arch_launchers(tmp_path: Path) ->
     assert not pip_package.exists()
     assert not pip_dist_info.exists()
     assert not (scripts / "pip.exe").exists()
+    assert (setuptools_package / "__init__.py").is_file()
+    assert not list(setuptools_package.glob("*.exe"))
     assert (runtime_package / "keep.py").is_file()
     assert (scripts / "uvicorn.exe").is_file()
