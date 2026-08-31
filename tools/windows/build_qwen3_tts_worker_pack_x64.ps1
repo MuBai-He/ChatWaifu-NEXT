@@ -46,6 +46,7 @@ $QwenArchive = (
     "https://github.com/QwenLM/Qwen3-TTS/archive/" + $QwenCommit + ".zip"
 )
 $TorchIndex = "https://download.pytorch.org/whl/$CudaVariant"
+$CudaProbePath = Join-Path $WorkRoot "cuda-probe.json"
 
 if ($CudaVariant -ne "cu126") {
     throw "This first Qwen3-TTS pack profile is pinned to cu126."
@@ -111,11 +112,31 @@ try {
     if (-not $SkipModelSmoke) {
         Invoke-WorkerPackChecked $PortablePython @(
             "-I", "-c",
-            ('import torch; ' +
+            ('import json, pathlib, sys, torch; ' +
              'assert torch.cuda.is_available(), "CUDA is unavailable"; ' +
-             'probe = (torch.ones(1, device="cuda") + 1).item(); ' +
-             'assert probe == 2; ' +
-             'print(torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))')
+             'torch.cuda.set_device(0); ' +
+             'probe_tensor = torch.ones(1, device="cuda:0") + 1; ' +
+             'assert probe_tensor.item() == 2; ' +
+             'free_bytes, total_bytes = torch.cuda.mem_get_info(0); ' +
+             'properties = torch.cuda.get_device_properties(0); ' +
+             'payload = {' +
+             '"schema_version": "1.0", ' +
+             '"torch_version": str(torch.__version__), ' +
+             '"torch_cuda_version": str(torch.version.cuda), ' +
+             '"cudnn_version": torch.backends.cudnn.version(), ' +
+             '"cuda_available": True, ' +
+             '"device_index": 0, ' +
+             '"device": "cuda:0", ' +
+             '"tensor_device": str(probe_tensor.device), ' +
+             '"gpu_name": properties.name, ' +
+             '"compute_capability": list(torch.cuda.get_device_capability(0)), ' +
+             '"total_memory_bytes": int(properties.total_memory), ' +
+             '"free_memory_bytes": int(free_bytes), ' +
+             '"driver_visible_memory_bytes": int(total_bytes)}; ' +
+             'pathlib.Path(sys.argv[1]).write_text(' +
+             'json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"); ' +
+             'print(json.dumps(payload, ensure_ascii=False))'),
+            $CudaProbePath
         )
     }
 
@@ -136,6 +157,14 @@ try {
         (Join-Path $RepoRoot "tools\windows\write_python_inventory.py"),
         "--output", (Join-Path $MetadataRoot "python-packages.json")
     )
+    if (-not $SkipModelSmoke) {
+        if (-not (Test-Path -LiteralPath $CudaProbePath -PathType Leaf)) {
+            throw "CUDA probe did not produce structured evidence: $CudaProbePath"
+        }
+        Copy-Item -LiteralPath $CudaProbePath -Destination (
+            Join-Path $MetadataRoot "cuda-probe.json"
+        )
+    }
     Write-WorkerPackJson -Path (Join-Path $MetadataRoot "build.json") -Value ([ordered]@{
         schema_version = "1.0"
         qwen_upstream_commit = $QwenCommit

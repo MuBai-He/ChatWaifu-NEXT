@@ -127,6 +127,8 @@ try {
         faster_whisper_version = "1.2.1"
         compute_type = "int8"
         model_source = $Materialization
+        model_repository = $ModelRepository
+        model_revision = if ($ModelSource) { $null } else { $ModelRevision }
         redistribution = "license review required"
     })
 

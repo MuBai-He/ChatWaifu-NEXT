@@ -44,7 +44,10 @@ def test_qwen_pack_is_pinned_cuda_126_and_smokes_both_languages() -> None:
     assert "https://download.pytorch.org/whl/$CudaVariant" in builder
     assert 'torch.version.cuda == "12.6"' in builder
     assert "torch.cuda.is_available()" in builder
-    assert 'torch.ones(1, device="cuda")' in builder
+    assert 'torch.ones(1, device="cuda:0")' in builder
+    assert '"tensor_device": str(probe_tensor.device)' in builder
+    assert '"compute_capability": list(torch.cuda.get_device_capability(0))' in builder
+    assert 'Join-Path $MetadataRoot "cuda-probe.json"' in builder
     assert "qwen3_tts_torch" in builder
     assert "${PACK_ROOT}/payload/models/default" in builder
     assert 'CHATWAIFU_NEURAL_TTS_WORKER_DEVICE = "cuda:0"' in builder
@@ -59,6 +62,8 @@ def test_faster_whisper_pack_is_materialized_offline_cpu_int8() -> None:
 
     assert 'ModelRepository = "Systran/faster-whisper-base"' in builder
     assert 'ModelRevision = "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66"' in builder
+    assert "model_repository = $ModelRepository" in builder
+    assert "model_revision = if ($ModelSource) { $null } else { $ModelRevision }" in builder
     assert 'CHATWAIFU_STT_WORKER_LOCAL_FILES_ONLY = "true"' in builder
     assert 'CHATWAIFU_STT_WORKER_DEVICE = "cpu"' in builder
     assert 'CHATWAIFU_STT_WORKER_COMPUTE_TYPE = "int8"' in builder
