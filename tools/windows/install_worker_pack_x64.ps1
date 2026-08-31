@@ -7,6 +7,9 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$ProductName = "ChatWaifu NEXT",
 
+    [ValidateNotNullOrEmpty()]
+    [string]$AppIdentifier = "local.chatwaifu.next",
+
     [string]$RuntimePath = "",
 
     [switch]$VerifyOnly
@@ -18,6 +21,12 @@ $ErrorActionPreference = "Stop"
 if ($env:OS -ne "Windows_NT") {
     throw "Worker Packs can only be installed into the Windows desktop product on Windows."
 }
+if (-not $env:APPDATA -or -not $env:LOCALAPPDATA) {
+    throw "APPDATA and LOCALAPPDATA are required to resolve the Tauri per-user Runtime roots."
+}
+
+$RuntimeConfigRoot = Join-Path (Join-Path $env:APPDATA $AppIdentifier) "runtime"
+$RuntimeDataRoot = Join-Path (Join-Path $env:LOCALAPPDATA $AppIdentifier) "runtime"
 
 $ResolvedArchive = (Resolve-Path -LiteralPath $ArchivePath).Path
 if ([System.IO.Path]::GetExtension($ResolvedArchive) -ine ".cwpack") {
@@ -119,17 +128,51 @@ if ($Machine -ne 0x8664) {
         $Machine, $ResolvedRuntime)
 }
 
-& $ResolvedRuntime --worker-pack verify $ResolvedArchive
-if ($LASTEXITCODE -ne 0) {
-    throw "Worker Pack verification failed with exit code $LASTEXITCODE."
-}
-if ($VerifyOnly) {
-    Write-Host "Worker Pack verified; no installation was requested."
-    exit 0
-}
+$PreviousConfigDir = [Environment]::GetEnvironmentVariable(
+    "CHATWAIFU_CONFIG_DIR",
+    [EnvironmentVariableTarget]::Process
+)
+$PreviousDataDir = [Environment]::GetEnvironmentVariable(
+    "CHATWAIFU_DATA_DIR",
+    [EnvironmentVariableTarget]::Process
+)
+try {
+    [Environment]::SetEnvironmentVariable(
+        "CHATWAIFU_CONFIG_DIR",
+        $RuntimeConfigRoot,
+        [EnvironmentVariableTarget]::Process
+    )
+    [Environment]::SetEnvironmentVariable(
+        "CHATWAIFU_DATA_DIR",
+        $RuntimeDataRoot,
+        [EnvironmentVariableTarget]::Process
+    )
 
-& $ResolvedRuntime --worker-pack install $ResolvedArchive
-if ($LASTEXITCODE -ne 0) {
-    throw "Worker Pack installation failed with exit code $LASTEXITCODE."
+    & $ResolvedRuntime --worker-pack verify $ResolvedArchive
+    $VerifyExitCode = $LASTEXITCODE
+    if ($VerifyExitCode -ne 0) {
+        throw "Worker Pack verification failed with exit code $VerifyExitCode."
+    }
+    if ($VerifyOnly) {
+        Write-Host "Worker Pack verified; no installation was requested."
+        return
+    }
+
+    & $ResolvedRuntime --worker-pack install $ResolvedArchive
+    $InstallExitCode = $LASTEXITCODE
+    if ($InstallExitCode -ne 0) {
+        throw "Worker Pack installation failed with exit code $InstallExitCode."
+    }
+} finally {
+    [Environment]::SetEnvironmentVariable(
+        "CHATWAIFU_CONFIG_DIR",
+        $PreviousConfigDir,
+        [EnvironmentVariableTarget]::Process
+    )
+    [Environment]::SetEnvironmentVariable(
+        "CHATWAIFU_DATA_DIR",
+        $PreviousDataDir,
+        [EnvironmentVariableTarget]::Process
+    )
 }
 Write-Host "Worker Pack installed and activated. Restart ChatWaifu NEXT to use it."

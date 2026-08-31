@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 WINDOWS_TOOLS = ROOT / "tools" / "windows"
@@ -92,3 +96,85 @@ def test_installed_pack_helper_uses_frozen_runtime_and_checks_x64() -> None:
     assert "InstallLocation" in installer
     assert "CurrentUser" in installer
     assert "python" not in installer.casefold()
+
+
+def test_installed_pack_helper_uses_tauri_user_roots_and_restores_environment() -> None:
+    installer = _script("install_worker_pack_x64.ps1")
+
+    assert '[string]$AppIdentifier = "local.chatwaifu.next"' in installer
+    assert (
+        '$RuntimeConfigRoot = Join-Path (Join-Path $env:APPDATA $AppIdentifier) "runtime"'
+        in installer
+    )
+    assert (
+        '$RuntimeDataRoot = Join-Path (Join-Path $env:LOCALAPPDATA $AppIdentifier) "runtime"'
+        in installer
+    )
+    assert '"CHATWAIFU_CONFIG_DIR",\n        $RuntimeConfigRoot' in installer
+    assert '"CHATWAIFU_DATA_DIR",\n        $RuntimeDataRoot' in installer
+    assert "try {" in installer
+    assert "} finally {" in installer
+    assert '"CHATWAIFU_CONFIG_DIR",\n        $PreviousConfigDir' in installer
+    assert '"CHATWAIFU_DATA_DIR",\n        $PreviousDataDir' in installer
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires the Windows x64 install helper")
+def test_installed_pack_helper_restores_environment_after_runtime_failure(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "test.cwpack"
+    archive.write_bytes(b"the fake runtime does not inspect this archive")
+    windows_root = Path(os.environ["WINDIR"])
+    powershell = windows_root / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    runtime = windows_root / "System32/where.exe"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_INSTALLER": str(WINDOWS_TOOLS / "install_worker_pack_x64.ps1"),
+            "CHATWAIFU_TEST_ARCHIVE": str(archive),
+            "CHATWAIFU_TEST_RUNTIME": str(runtime),
+        }
+    )
+    command = r"""
+$ErrorActionPreference = "Stop"
+$env:CHATWAIFU_CONFIG_DIR = "sentinel-config"
+$env:CHATWAIFU_DATA_DIR = "sentinel-data"
+$FailureMessage = $null
+try {
+    & $env:CHATWAIFU_TEST_INSTALLER `
+        -ArchivePath $env:CHATWAIFU_TEST_ARCHIVE `
+        -RuntimePath $env:CHATWAIFU_TEST_RUNTIME `
+        -VerifyOnly
+} catch {
+    $FailureMessage = $_.Exception.Message
+}
+if ($FailureMessage -notlike "Worker Pack verification failed*") {
+    throw "The helper did not reach the expected frozen Runtime failure: $FailureMessage"
+}
+if ($env:CHATWAIFU_CONFIG_DIR -cne "sentinel-config") {
+    throw "CHATWAIFU_CONFIG_DIR was not restored."
+}
+if ($env:CHATWAIFU_DATA_DIR -cne "sentinel-data") {
+    throw "CHATWAIFU_DATA_DIR was not restored."
+}
+"environment-restored"
+"""
+
+    completed = subprocess.run(
+        [
+            str(powershell),
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "environment-restored" in completed.stdout

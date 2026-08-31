@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import struct
 import zipfile
@@ -247,6 +248,17 @@ def test_verify_rejects_escaping_or_nonportable_zip_names(tmp_path: Path, unsafe
         payloads,
         extras={unsafe_name: b"escape"},
     )
+    if "\\" in unsafe_name:
+        # ZipFile rewrites backslashes while creating archives on Windows. Patch
+        # the equal-length local and central-directory names so verification sees
+        # the same malformed bytes that an external ZIP producer can emit.
+        archive_bytes = archive.read_bytes()
+        archive.write_bytes(
+            archive_bytes.replace(
+                unsafe_name.replace("\\", "/").encode(),
+                unsafe_name.encode(),
+            )
+        )
 
     with pytest.raises(worker_packs.WorkerPackError, match="archive path"):
         worker_packs.verify_archive(archive)
@@ -558,7 +570,8 @@ def test_activate_selects_latest_semver_and_preserves_other_kind(tmp_path: Path)
     assert selected.manifest.version == "1.1.0"
     assert config.active.stt is not None and config.active.stt.version == "1.1.0"
     assert config.active.tts is not None and config.active.tts.pack_id == "qwen3-tts-cuda"
-    assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
 
 
 def test_activate_rejects_invalid_existing_config_without_replacing_it(tmp_path: Path) -> None:

@@ -252,6 +252,10 @@ def _portable_archive_path(name: str, *, directory: bool = False) -> str:
 
 def _validate_zip_member(member: zipfile.ZipInfo) -> tuple[str, bool]:
     is_directory = member.is_dir()
+    # ZipInfo.filename is platform-normalized by the standard library. On Windows,
+    # backslashes in an archive member become forward slashes, so validate the raw
+    # name as well or an archive can have different acceptance semantics by host OS.
+    _portable_archive_path(member.orig_filename, directory=is_directory)
     path = _portable_archive_path(member.filename, directory=is_directory)
     mode = member.external_attr >> 16
     file_type = stat.S_IFMT(mode)
