@@ -26,6 +26,7 @@ def test_windows_builders_use_one_canonical_worker_pack_contract() -> None:
         assert script.count('"--break-system-packages"') == script.count(
             '"pip", "install"'
         )
+        assert "Remove-WorkerPackPackagingTools" in script
         assert "worker_pack_archive.py" not in script
         assert "Assert-WorkerPackPayloadX64" in script
         assert "Assert-WorkerPackSemanticVersion" in script
@@ -186,3 +187,50 @@ if ($env:CHATWAIFU_DATA_DIR -cne "sentinel-data") {
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "environment-restored" in completed.stdout
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell")
+def test_worker_pack_builder_removes_pip_cross_arch_launchers(tmp_path: Path) -> None:
+    portable = tmp_path / "portable-python"
+    pip_package = portable / "Lib/site-packages/pip"
+    pip_dist_info = portable / "Lib/site-packages/pip-25.2.dist-info"
+    runtime_package = portable / "Lib/site-packages/runtime_dependency"
+    scripts = portable / "Scripts"
+    for directory in (pip_package / "_vendor/distlib", pip_dist_info, runtime_package, scripts):
+        directory.mkdir(parents=True, exist_ok=True)
+    (pip_package / "_vendor/distlib/t32.exe").write_bytes(b"not-a-runtime-binary")
+    (pip_dist_info / "METADATA").write_text("Name: pip\n", encoding="utf-8")
+    (runtime_package / "keep.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (scripts / "pip.exe").write_bytes(b"builder-only")
+    (scripts / "uvicorn.exe").write_bytes(b"runtime")
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_COMMON": str(WINDOWS_TOOLS / "worker_pack_common.ps1"),
+            "CHATWAIFU_TEST_PORTABLE": str(portable),
+        }
+    )
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            ". $env:CHATWAIFU_TEST_COMMON; "
+            "Remove-WorkerPackPackagingTools -PortablePythonRoot $env:CHATWAIFU_TEST_PORTABLE",
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert not pip_package.exists()
+    assert not pip_dist_info.exists()
+    assert not (scripts / "pip.exe").exists()
+    assert (runtime_package / "keep.py").is_file()
+    assert (scripts / "uvicorn.exe").is_file()

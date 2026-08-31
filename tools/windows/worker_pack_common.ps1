@@ -238,6 +238,31 @@ function Remove-WorkerPackBuilderMetadata {
     }
 }
 
+function Remove-WorkerPackPackagingTools {
+    param([Parameter(Mandatory = $true)][string]$PortablePythonRoot)
+
+    # The embedded interpreter is an application runtime, not a development environment.
+    # Besides reducing the attack surface, removing pip also removes distlib's bundled
+    # cross-architecture t32.exe/w32.exe launchers before the strict x64 payload audit.
+    $SitePackagesRoot = Join-Path $PortablePythonRoot "Lib\site-packages"
+    if (Test-Path -LiteralPath $SitePackagesRoot -PathType Container) {
+        foreach ($Entry in @(Get-ChildItem -LiteralPath $SitePackagesRoot -Force | Where-Object {
+            $_.Name -ieq "pip" -or $_.Name -match '^pip-.*\.dist-info$'
+        })) {
+            Remove-Item -LiteralPath $Entry.FullName -Recurse -Force
+        }
+    }
+
+    $ScriptsRoot = Join-Path $PortablePythonRoot "Scripts"
+    if (Test-Path -LiteralPath $ScriptsRoot -PathType Container) {
+        foreach ($Entry in @(Get-ChildItem -LiteralPath $ScriptsRoot -File -Force | Where-Object {
+            $_.Name -match '^pip(?:3(?:\.\d+)?)?(?:\.exe|-script\.py)?$'
+        })) {
+            Remove-Item -LiteralPath $Entry.FullName -Force
+        }
+    }
+}
+
 function Write-WorkerPackJson {
     param(
         [Parameter(Mandatory = $true)][object]$Value,

@@ -177,6 +177,7 @@ try {
         redistribution = "owner-only; license review required"
     })
 
+    Remove-WorkerPackPackagingTools -PortablePythonRoot $PortablePythonRoot
     Remove-WorkerPackBuilderMetadata -PortablePythonRoot $PortablePythonRoot
 
     $Manifest = [ordered]@{
