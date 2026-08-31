@@ -24,6 +24,7 @@
     "@chatwaifu/avatar-sdk": "workspace:*",
     "@chatwaifu/protocol": "workspace:*",
     "@tauri-apps/api": "2.11.1",
+    "lucide-react": "1.37.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

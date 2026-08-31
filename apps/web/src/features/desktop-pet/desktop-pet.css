@@ -166,7 +166,8 @@
   opacity: 0.32;
 }
 
-.desktop-pet-composer svg {
+.desktop-pet-composer svg,
+.desktop-pet-actions button svg {
   width: 15px;
   height: 15px;
   fill: none;
@@ -240,9 +241,10 @@
   background: rgb(158 73 126 / 82%);
 }
 
-.desktop-pet-actions button.voice {
+.desktop-pet-actions button {
   display: grid;
   width: 30px;
+  min-width: 30px;
   padding: 0;
   place-items: center;
 }
@@ -251,16 +253,6 @@
   border-color: rgb(231 176 211 / 50%);
   color: rgb(255 218 241 / 92%);
   background: rgb(84 42 84 / 84%);
-}
-
-.desktop-pet-actions button.voice svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentcolor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
 }
 
 .desktop-pet-actions button.unavailable {

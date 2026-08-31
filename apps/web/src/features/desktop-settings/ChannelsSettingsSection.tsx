@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
+import { ProductIcon } from "../../components/ProductIcon";
 import {
   cancelChannelAuthorization,
   deleteChannelConnection,
@@ -379,7 +380,9 @@ function ConnectedWeixinCard({
 }) {
   return (
     <div className="channels-settings-connected-card">
-      <span className="channels-settings-connected-mark">✓</span>
+      <span className="channels-settings-connected-mark">
+        <ProductIcon name="connected" />
+      </span>
       <div>
         <small>连接正常</small>
         <h3>{connection.configuration.name || "微信"}</h3>
@@ -425,11 +428,11 @@ function authorizationDescription(
   return "请检查网络和微信状态，然后重新生成二维码。";
 }
 
-function statusMark(status: ChannelAuthorizationSnapshot["status"]): string {
-  if (status === "confirmed") return "✓";
-  if (status === "expired") return "↻";
-  if (status === "cancelled") return "×";
-  return "!";
+function statusMark(status: ChannelAuthorizationSnapshot["status"]) {
+  if (status === "confirmed") return <ProductIcon name="connected" />;
+  if (status === "expired") return <ProductIcon name="refresh" />;
+  if (status === "cancelled") return <ProductIcon name="disconnected" />;
+  return <ProductIcon name="alert" />;
 }
 
 function formatDate(value: string): string {

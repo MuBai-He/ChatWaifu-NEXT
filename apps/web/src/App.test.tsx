@@ -483,7 +483,7 @@ describe("ChatWaifu usable demo", () => {
     expect(settingsNavigation).toBeTruthy();
     expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(6);
     expect(
-      document.querySelector(".desktop-settings-app-icon svg"),
+      document.querySelector(".desktop-settings-app-icon img"),
     ).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Conversation" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();

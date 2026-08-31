@@ -35,7 +35,7 @@ validation:
     - make check-live2d-vendor
     - uv run pytest (432 passed, 10 Windows-only acceptance tests skipped)
     - Ruff format and lint plus Pyright (0 errors)
-    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 131 Web tests passed)
+    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 133 Web tests passed)
     - Prettier workspace check and generated channel-schema byte-stability check
     - cargo fmt plus workspace all-targets check
     - pnpm build
@@ -146,7 +146,7 @@ phases:
       - Web and Desktop have independent 0.2.0 release trains and exact web-v*/desktop-v* tag validation while sharing one main branch
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
-      - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
+      - The control-center renders a dedicated six-section desktop settings surface instead of reusing the visual-novel conversation page
       - A typed desktop settings registry is the single navigation/composition entry; existing sections use shared layout, write-only secret, and mutually-exclusive async-operation primitives with platform visibility and availability hooks
       - The native host injects an explicit control-center surface marker before frontend scripts; development URLs carry the same marker, while immutable labels and paths remain fallbacks, preventing stale Windows WebView context from mounting the desktop-pet page in settings
       - Focused desktop settings temporarily promote the control center and demote the always-on-top avatar, restoring both normal settings z-order and the persisted avatar preference on blur or close
@@ -155,7 +155,7 @@ phases:
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
       - Overlay position, size, visibility, always-on-top, click-through, and subtitle visibility persist atomically in the OS application config directory
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
-      - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
+      - Web, desktop-pet, and control-center functional icons share the typed Lucide SVG boundary while favicon, generated application assets, settings branding, and the tray use the existing Web crescent-and-ribbon mark
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
       - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while pressing and moving any authored or visible-mesh avatar hit starts native window dragging synchronously without converting the gesture into a touch
       - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
@@ -192,6 +192,7 @@ phases:
       - Runtime persists idempotent segment playback acknowledgements and projects only completely heard sentences into generation spoken_text
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
       - Confirmed reset quarantines owned WAVs, atomically clears current-session turns/events plus current character/user memory and relationship truth, restores audio on transaction failure, and preserves unrelated scopes
+      - Desktop settings discloses that scoped reset boundary before deletion and requires a second typed confirmation while explicitly preserving model routes, API keys, plugins, MCP, channels, and unrelated scopes
       - Reset keeps the session ready, rejects late output, and resumes from a collision-free event sequence while retaining any cross-scope provenance event that must remain auditable
       - SQLite migrations apply script plus checksummed ledger entry atomically, reject edited or newer versions, and recover cleanly after injected failure
       - Runtime startup rolls back every successfully started component on failure; shutdown aggregates cleanup errors, continues teardown, and retries only failed steps

@@ -24,10 +24,18 @@
 }
 
 .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 0.78rem;
   text-decoration: none;
+}
+
+.back-link svg {
+  width: 15px;
+  height: 15px;
 }
 
 .renderer-error {

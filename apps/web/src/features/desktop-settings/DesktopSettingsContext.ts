@@ -25,7 +25,7 @@ export interface SettingsRuntimeContext {
   runtime: Pick<SettingsRuntimeState, "connection" | "health" | "error">;
   sessionId: SettingsRuntimeState["sessionId"];
   desktop: ReturnType<typeof useDesktopPreferences>;
-  resetConversationAndMemory: () => Promise<void>;
+  resetConversationAndMemory: () => Promise<boolean>;
 }
 
 // Compatibility name for existing section components. The context itself is

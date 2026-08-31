@@ -1,6 +1,9 @@
+import { useState } from "react";
+import { ProductIcon } from "../../components/ProductIcon";
 import { MemoryControlCenter } from "../chat/MemoryControlCenter";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import { DataClearConfirmationDialog } from "./DataClearConfirmationDialog";
 import { McpConnectionsPanel } from "./McpConnectionsPanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsGroup } from "./SettingsPrimitives";
@@ -11,6 +14,7 @@ export function DataSettingsSection({
   context: DesktopSettingsContext;
 }) {
   const { data } = context;
+  const [confirmingClear, setConfirmingClear] = useState(false);
   return (
     <>
       <div className="desktop-settings-tool-grid">
@@ -35,7 +39,7 @@ export function DataSettingsSection({
         </article>
         <article className="desktop-settings-tool-card">
           <span>
-            <SettingsIcon name="skills" />
+            <SettingsIcon name="plugin" />
           </span>
           <h2>MCP 连接</h2>
           <p>连接本地或远程 MCP 服务，检查工具、资源和 Prompt 能力。</p>
@@ -52,12 +56,20 @@ export function DataSettingsSection({
           <button
             type="button"
             disabled={!data.sessionId || data.resetting}
-            onClick={() => void context.resetConversationAndMemory()}
+            onClick={() => setConfirmingClear(true)}
           >
-            {data.resetting ? "正在重置…" : "全部重置"}
+            <ProductIcon name="trash" />
+            {data.resetting ? "正在清除…" : "清除当前数据"}
           </button>
         </div>
       </SettingsGroup>
+
+      <DataClearConfirmationDialog
+        open={confirmingClear}
+        busy={data.resetting}
+        onCancel={() => setConfirmingClear(false)}
+        onConfirm={context.resetConversationAndMemory}
+      />
     </>
   );
 }

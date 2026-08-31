@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "../chat/ModalPortal";
 import { SettingsStatus } from "../settings/SettingsFields";
 import {
@@ -26,6 +27,7 @@ export function McpConnectionsPanel({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
+        <ProductIcon name="plugin" />
         MCP 连接
       </button>
       {open ? (
@@ -53,7 +55,7 @@ export function McpConnectionsPanel({
                 aria-label="关闭 MCP 连接管理"
                 onClick={close}
               >
-                ×
+                <ProductIcon name="close" />
               </button>
             </header>
 
@@ -67,6 +69,7 @@ export function McpConnectionsPanel({
                 <div>
                   <strong>连接</strong>
                   <button type="button" onClick={() => controller.createNew()}>
+                    <ProductIcon name="plus" />
                     新建连接
                   </button>
                 </div>
@@ -107,6 +110,7 @@ export function McpConnectionsPanel({
                           disabled={controller.busy !== null}
                           onClick={() => void controller.remove(connection)}
                         >
+                          <ProductIcon name="trash" />
                           删除
                         </button>
                       </div>

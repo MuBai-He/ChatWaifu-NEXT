@@ -20,13 +20,7 @@ export function DesktopSettingsPage() {
     useState<DesktopSettingsSectionId>("appearance");
 
   const resetConversationAndMemory = async () => {
-    if (
-      !window.confirm(
-        "确定清空当前对话、全部明确记忆和本地生成语音吗？此操作无法撤销。",
-      )
-    )
-      return;
-    await runtime.resetAll();
+    return runtime.resetAll();
   };
   const context: SettingsRuntimeContext = {
     canvasRef: runtime.canvasRef,

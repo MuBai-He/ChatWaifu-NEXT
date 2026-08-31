@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ProductIcon } from "../../components/ProductIcon";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import { useChatSession } from "../chat/useChatSession";
 import {
@@ -214,9 +215,7 @@ export function DesktopPetPage() {
           title="发送"
           disabled={!canSend || sending || !draft.trim()}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m5 12 12-7-3.8 14-2.4-5-5.8-2Zm5.8 2L17 5" />
-          </svg>
+          <ProductIcon name="send" />
         </button>
       </form>
 
@@ -227,7 +226,7 @@ export function DesktopPetPage() {
           aria-label="打开控制中心"
           title="打开控制中心"
         >
-          ◇
+          <ProductIcon name="controlCenter" />
         </button>
         <button
           className={displaySettingsOpen ? "active" : ""}
@@ -237,7 +236,7 @@ export function DesktopPetPage() {
           aria-expanded={displaySettingsOpen}
           title="字幕与状态显示"
         >
-          HUD
+          <ProductIcon name="captions" />
         </button>
         <button
           className={
@@ -267,10 +266,7 @@ export function DesktopPetPage() {
                 : "连接麦克风"
           }
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6" />
-          </svg>
+          <ProductIcon name="microphone" />
         </button>
         {voiceConnected && voiceActivationMode === "push_to_talk" ? (
           <button
@@ -287,7 +283,7 @@ export function DesktopPetPage() {
             aria-pressed={voiceTransmitting}
             title="按住说话"
           >
-            TALK
+            <ProductIcon name="pushToTalk" />
           </button>
         ) : null}
       </nav>

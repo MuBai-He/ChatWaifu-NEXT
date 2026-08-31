@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { ProductIcon } from "../../components/ProductIcon";
 import { AudioDebugPanel } from "./AudioDebugPanel";
 import { AvatarDebugPanel } from "./AvatarDebugPanel";
 import { AvatarViewport } from "./AvatarViewport";
@@ -16,7 +17,8 @@ export function AvatarLabPage() {
       <header className="lab-hero">
         <div>
           <a href="/" className="back-link">
-            ← ChatWaifu NEXT
+            <ProductIcon name="back" />
+            ChatWaifu NEXT
           </a>
           <p className="eyebrow">Phase 2 · isolated renderer laboratory</p>
           <h1>Live2D Avatar Lab</h1>

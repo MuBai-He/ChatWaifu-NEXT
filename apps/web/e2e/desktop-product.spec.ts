@@ -38,6 +38,10 @@ test("desktop settings is an app-like control surface without chat ownership", a
   await expect(
     page.getByRole("navigation", { name: "设置分类" }),
   ).toBeVisible();
+  await expect(page.locator(".desktop-settings-app-icon img")).toBeVisible();
+  await expect(
+    page.locator(".desktop-settings-sidebar nav svg.lucide"),
+  ).toHaveCount(6);
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Conversation" })).toHaveCount(
     0,
@@ -160,6 +164,10 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   await expect(shell).toHaveAttribute("data-pointer-inside", "true");
   await expect(actions).toHaveCSS("opacity", "1");
   await expect(actions).toHaveCSS("pointer-events", "auto");
+  await expect(actions.locator("svg.lucide")).toHaveCount(3);
+  await expect(
+    page.locator(".desktop-pet-composer svg.lucide-send"),
+  ).toBeVisible();
   await expect(composer.locator("..")).toHaveCSS("opacity", "1");
   await expect(composer.locator("..")).toHaveCSS("pointer-events", "auto");
 

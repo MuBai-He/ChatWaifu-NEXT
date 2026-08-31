@@ -534,6 +534,7 @@
 }
 
 .skills-center > header button {
+  display: grid;
   width: 38px;
   height: 38px;
   border: 1px solid var(--line);
@@ -542,6 +543,12 @@
   background: white;
   font-size: 1.35rem;
   cursor: pointer;
+  place-items: center;
+}
+
+.skills-center > header button svg {
+  width: 17px;
+  height: 17px;
 }
 
 .skills-notice {
@@ -728,10 +735,25 @@
 }
 
 .install-example {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   width: 100%;
   margin-bottom: 9px;
   border-style: dashed;
   color: var(--accent);
+}
+
+.install-example svg,
+.skills-section-title button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.skills-section-title button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .local-plugin-install {
@@ -1510,29 +1532,23 @@
   vertical-align: 0.17em;
 }
 
-.vn-brand-ornament {
+.vn-brand-mark {
   display: grid;
-  width: 20px;
-  height: 46px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  color: #efb1d3;
-  grid-template-rows: 1fr auto 1fr;
+  border: 1px solid rgb(255 222 241 / 24%);
+  border-radius: 10px;
+  color: #f3bddb;
+  background: rgb(73 38 77 / 48%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(12px);
 }
 
-.vn-brand-ornament i {
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(transparent, rgb(239 177 211 / 72%));
-}
-
-.vn-brand-ornament i:last-child {
-  background: linear-gradient(rgb(239 177 211 / 72%), transparent);
-}
-
-.vn-brand-ornament b {
-  font-size: 0.62rem;
-  font-weight: 400;
-  line-height: 1;
+.vn-brand-mark img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
 }
 
 .vn-runtime {
@@ -1658,10 +1674,11 @@
 }
 
 .vn-system-menu > button {
+  position: relative;
   display: grid;
   width: 92px;
   min-height: 44px;
-  padding: 7px 10px;
+  padding: 7px 10px 7px 32px;
   border: 1px solid rgb(255 235 247 / 18%);
   border-radius: 4px 14px 4px 14px;
   color: rgb(255 248 252 / 78%);
@@ -1679,6 +1696,16 @@
     border-color 140ms ease,
     transform 140ms ease,
     background 140ms ease;
+}
+
+.vn-system-menu > button > svg {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: #efb1d3;
+  transform: translateY(-50%);
 }
 
 .vn-system-menu > button:hover,
@@ -1773,6 +1800,12 @@
   background: rgb(255 255 255 / 4%);
   cursor: pointer;
   place-items: center;
+}
+
+.vn-history-panel header button svg,
+.vn-settings-panel header button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .vn-history-list {
@@ -1984,11 +2017,9 @@
   position: absolute;
   right: 4px;
   bottom: 2px;
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid #eda9ce;
-  border-bottom: 2px solid #eda9ce;
-  transform: rotate(45deg);
+  width: 14px;
+  height: 14px;
+  color: #eda9ce;
   animation: vn-continue 1.15s ease-in-out infinite;
 }
 
@@ -2010,6 +2041,13 @@
   cursor: pointer;
   font-size: 0.64rem;
   gap: 2px;
+}
+
+.vn-dialogue-actions button > svg {
+  width: 14px;
+  height: 14px;
+  justify-self: center;
+  color: #efb1d3;
 }
 
 .vn-dialogue-actions button small {
@@ -2076,9 +2114,10 @@
   cursor: default;
 }
 
-.vn-composer button span {
+.vn-composer button svg {
+  width: 15px;
+  height: 15px;
   color: rgb(255 255 255 / 62%);
-  font-family: var(--mono);
 }
 
 .vn-disclosure {
@@ -2106,7 +2145,7 @@
 @keyframes vn-continue {
   50% {
     opacity: 0.34;
-    transform: translateY(3px) rotate(45deg);
+    transform: translateY(3px);
   }
 }
 

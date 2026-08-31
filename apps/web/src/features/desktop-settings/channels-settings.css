@@ -202,6 +202,16 @@
   font-family: var(--mono);
 }
 
+.channels-settings-auth-mark svg {
+  width: 42px;
+  height: 42px;
+}
+
+.channels-settings-connected-mark svg {
+  width: 24px;
+  height: 24px;
+}
+
 .channels-settings-auth-mark {
   width: 96px;
   height: 96px;
