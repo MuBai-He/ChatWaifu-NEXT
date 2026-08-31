@@ -2,6 +2,7 @@ use crate::runtime_health::{
     RuntimeBootstrap, RuntimeLifecycleState, RuntimeStatus, parse_bootstrap_line,
 };
 use std::{
+    ffi::{OsStr, OsString},
     fs::{self, OpenOptions},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
@@ -29,6 +30,42 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(
         + STARTUP_SUPERVISOR_GRACE_SECONDS,
 );
 const SIDECAR_LOG_MAX_BYTES: u64 = 5 * 1024 * 1024;
+const RUNTIME_SUPERVISOR_ARGUMENT: &str = "--chatwaifu-runtime-supervisor";
+
+pub fn runtime_supervisor_exit_code() -> Option<i32> {
+    runtime_supervisor_exit_code_from(std::env::args_os().skip(1))
+}
+
+fn runtime_supervisor_exit_code_from(mut arguments: impl Iterator<Item = OsString>) -> Option<i32> {
+    if arguments.next().as_deref() != Some(OsStr::new(RUNTIME_SUPERVISOR_ARGUMENT)) {
+        return None;
+    }
+    if arguments.next().as_deref() != Some(OsStr::new("--")) {
+        eprintln!("runtime supervisor requires `--` before the service command");
+        return Some(2);
+    }
+    let Some(executable) = arguments.next() else {
+        eprintln!("runtime supervisor requires a service executable");
+        return Some(2);
+    };
+    let service_arguments = arguments.collect::<Vec<_>>();
+    #[cfg(target_os = "windows")]
+    {
+        match windows_process_tree::run(&executable, &service_arguments) {
+            Ok(exit_code) => Some(exit_code),
+            Err(error) => {
+                eprintln!("runtime supervisor failed: {error}");
+                Some(1)
+            }
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (executable, service_arguments);
+        eprintln!("runtime supervisor mode is only available on Windows");
+        Some(1)
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 enum SupervisorCommand {
@@ -376,29 +413,52 @@ fn update_status(app: &AppHandle, status: &Arc<Mutex<RuntimeStatus>>, next: Runt
 }
 
 fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
-    let mut command = if let Ok(executable) = std::env::var("CHATWAIFU_DESKTOP_SERVICE_EXECUTABLE")
-    {
-        Command::new(executable)
-    } else if cfg!(not(debug_assertions)) {
-        let resource_dir = app
-            .path()
-            .resource_dir()
-            .map_err(|error| format!("无法定位打包 Runtime：{error}"))?;
-        let executable = packaged_runtime_executable(&resource_dir);
-        if !executable.is_file() {
-            return Err(format!("打包 Runtime 不存在：{}", executable.display()));
-        }
-        Command::new(executable)
-    } else {
-        let root = workspace_root();
-        let mut command = Command::new("uv");
+    let (executable, arguments, current_dir) =
+        if let Some(executable) = std::env::var_os("CHATWAIFU_DESKTOP_SERVICE_EXECUTABLE") {
+            (executable, Vec::new(), None)
+        } else if cfg!(not(debug_assertions)) {
+            let resource_dir = app
+                .path()
+                .resource_dir()
+                .map_err(|error| format!("无法定位打包 Runtime：{error}"))?;
+            let executable = packaged_runtime_executable(&resource_dir);
+            if !executable.is_file() {
+                return Err(format!("打包 Runtime 不存在：{}", executable.display()));
+            }
+            (executable.into_os_string(), Vec::new(), None)
+        } else {
+            let root = workspace_root();
+            (
+                OsString::from("uv"),
+                vec![
+                    OsString::from("run"),
+                    OsString::from("python"),
+                    root.join("tools/run_desktop_services.py").into_os_string(),
+                ],
+                Some(root),
+            )
+        };
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let current_executable = std::env::current_exe()
+            .map_err(|error| format!("无法定位 Windows Runtime supervisor：{error}"))?;
+        let mut command = Command::new(current_executable);
         command
-            .arg("run")
-            .arg("python")
-            .arg(root.join("tools/run_desktop_services.py"))
-            .current_dir(root);
+            .arg(RUNTIME_SUPERVISOR_ARGUMENT)
+            .arg("--")
+            .arg(executable)
+            .args(arguments);
         command
     };
+    #[cfg(not(target_os = "windows"))]
+    let mut command = {
+        let mut command = Command::new(executable);
+        command.args(arguments);
+        command
+    };
+    if let Some(current_dir) = current_dir {
+        command.current_dir(current_dir);
+    }
     let config_dir = app
         .path()
         .app_config_dir()
@@ -470,6 +530,287 @@ fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
     command
         .spawn()
         .map_err(|error| format!("无法启动本地服务：{error}"))
+}
+
+#[cfg(target_os = "windows")]
+mod windows_process_tree {
+    use std::ffi::{OsStr, OsString};
+    use std::os::windows::ffi::OsStrExt;
+
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, GetLastError, HANDLE, WAIT_FAILED, WAIT_OBJECT_0,
+    };
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
+    use windows_sys::Win32::System::JobObjects::{
+        CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        JobObjectExtendedLimitInformation, SetInformationJobObject, TerminateJobObject,
+    };
+    use windows_sys::Win32::System::Threading::{
+        CREATE_NO_WINDOW, CreateProcessW, DeleteProcThreadAttributeList,
+        EXTENDED_STARTUPINFO_PRESENT, GetExitCodeProcess, INFINITE,
+        InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST, OpenProcess,
+        PROC_THREAD_ATTRIBUTE_JOB_LIST, PROCESS_INFORMATION, STARTF_USESTDHANDLES, STARTUPINFOEXW,
+        UpdateProcThreadAttribute, WaitForMultipleObjects, WaitForSingleObject,
+    };
+
+    const SYNCHRONIZE: u32 = 0x0010_0000;
+
+    pub(super) fn run(executable: &OsStr, arguments: &[OsString]) -> Result<i32, String> {
+        let desktop_parent = DesktopParent::from_environment()?;
+        let job = Job::new()?;
+        let mut attribute_size = 0usize;
+        // SAFETY: the null call is the documented attribute-list size query.
+        unsafe {
+            let _ =
+                InitializeProcThreadAttributeList(std::ptr::null_mut(), 1, 0, &mut attribute_size);
+        }
+        if attribute_size == 0 {
+            return Err(last_api_error("InitializeProcThreadAttributeList(size)"));
+        }
+        let mut attribute_storage = vec![0u8; attribute_size];
+        let attribute_list = attribute_storage.as_mut_ptr().cast();
+        // SAFETY: storage has the exact size returned by the query and remains
+        // alive until CreateProcessW returns.
+        if unsafe { InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut attribute_size) }
+            == 0
+        {
+            return Err(last_api_error("InitializeProcThreadAttributeList"));
+        }
+        let attribute_guard = AttributeList(attribute_list);
+        let job_handle = job.handle;
+        // SAFETY: the job handle storage remains alive through CreateProcessW.
+        if unsafe {
+            UpdateProcThreadAttribute(
+                attribute_list,
+                0,
+                PROC_THREAD_ATTRIBUTE_JOB_LIST as usize,
+                (&raw const job_handle).cast(),
+                std::mem::size_of::<HANDLE>(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            )
+        } == 0
+        {
+            return Err(last_api_error("UpdateProcThreadAttribute(JOB_LIST)"));
+        }
+
+        let mut startup: STARTUPINFOEXW = unsafe { std::mem::zeroed() };
+        startup.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
+        startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        // SAFETY: these pseudo constants query handles owned by this process.
+        startup.StartupInfo.hStdInput = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
+        startup.StartupInfo.hStdOutput = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
+        startup.StartupInfo.hStdError = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
+        startup.lpAttributeList = attribute_list;
+
+        let mut command_line = build_command_line(executable, arguments);
+        let mut process_information: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+        // PROC_THREAD_ATTRIBUTE_JOB_LIST assigns the root to the Job before
+        // its first instruction. Every descendant is therefore contained,
+        // including uv/Python launch layers and Runtime workers.
+        let created = unsafe {
+            CreateProcessW(
+                std::ptr::null(),
+                command_line.as_mut_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                1,
+                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW,
+                std::ptr::null(),
+                std::ptr::null(),
+                (&raw mut startup).cast(),
+                &mut process_information,
+            )
+        };
+        drop(attribute_guard);
+        if created == 0 {
+            return Err(last_api_error("CreateProcessW(Runtime service)"));
+        }
+        let process = ProcessHandles(process_information);
+        if let Some(parent) = desktop_parent.as_ref() {
+            let handles = [process.0.hProcess, parent.handle];
+            // SAFETY: both handles remain live through the kernel wait.
+            match unsafe {
+                WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, INFINITE)
+            } {
+                WAIT_OBJECT_0 => {}
+                value if value == WAIT_OBJECT_0 + 1 => {
+                    // The Tauri host was force-terminated. The hidden wrapper
+                    // is still alive, so close the full Job immediately rather
+                    // than relying on Python polling or process reparenting.
+                    job.terminate()?;
+                    // SAFETY: Job termination signals the supervised root.
+                    if unsafe { WaitForSingleObject(process.0.hProcess, INFINITE) } != WAIT_OBJECT_0
+                    {
+                        return Err(last_api_error(
+                            "WaitForSingleObject(Runtime service after desktop exit)",
+                        ));
+                    }
+                    return Ok(0);
+                }
+                WAIT_FAILED => return Err(last_api_error("WaitForMultipleObjects(Runtime)")),
+                value => return Err(format!("unexpected Runtime wait result {value}")),
+            }
+        } else {
+            // SAFETY: hProcess is live until ProcessHandles is dropped.
+            if unsafe { WaitForSingleObject(process.0.hProcess, INFINITE) } != WAIT_OBJECT_0 {
+                return Err(last_api_error("WaitForSingleObject(Runtime service)"));
+            }
+        }
+        let mut exit_code = 1u32;
+        // SAFETY: the process has signaled and the output pointer is valid.
+        if unsafe { GetExitCodeProcess(process.0.hProcess, &mut exit_code) } == 0 {
+            return Err(last_api_error("GetExitCodeProcess(Runtime service)"));
+        }
+        // The root may exit while a worker still owns inherited pipes or a
+        // listening port. End all remaining descendants before returning.
+        job.terminate()?;
+        Ok(i32::try_from(exit_code).unwrap_or(1))
+    }
+
+    struct DesktopParent {
+        handle: HANDLE,
+    }
+
+    impl DesktopParent {
+        fn from_environment() -> Result<Option<Self>, String> {
+            let Some(raw_parent_pid) = std::env::var_os("CHATWAIFU_DESKTOP_PARENT_PID") else {
+                return Ok(None);
+            };
+            let parent_pid = raw_parent_pid
+                .to_string_lossy()
+                .parse::<u32>()
+                .map_err(|_| "CHATWAIFU_DESKTOP_PARENT_PID must be an integer".to_owned())?;
+            if parent_pid <= 1 || parent_pid == std::process::id() {
+                return Err("CHATWAIFU_DESKTOP_PARENT_PID is not a valid supervisor".to_owned());
+            }
+            // SAFETY: SYNCHRONIZE is read-only and the PID came from the
+            // desktop host which spawned this wrapper.
+            let handle = unsafe { OpenProcess(SYNCHRONIZE, 0, parent_pid) };
+            if handle.is_null() {
+                return Err(last_api_error("OpenProcess(desktop parent)"));
+            }
+            Ok(Some(Self { handle }))
+        }
+    }
+
+    impl Drop for DesktopParent {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = CloseHandle(self.handle);
+            }
+        }
+    }
+
+    struct Job {
+        handle: HANDLE,
+    }
+
+    impl Job {
+        fn new() -> Result<Self, String> {
+            // SAFETY: unnamed Job with default security.
+            let handle = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+            if handle.is_null() {
+                return Err(last_api_error("CreateJobObjectW"));
+            }
+            let job = Self { handle };
+            let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+            limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            // SAFETY: limits is initialized for the documented information class.
+            if unsafe {
+                SetInformationJobObject(
+                    handle,
+                    JobObjectExtendedLimitInformation,
+                    (&raw const limits).cast(),
+                    std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                )
+            } == 0
+            {
+                return Err(last_api_error("SetInformationJobObject"));
+            }
+            Ok(job)
+        }
+
+        fn terminate(&self) -> Result<(), String> {
+            // SAFETY: this is a live Job handle owned by this wrapper.
+            if unsafe { TerminateJobObject(self.handle, 1) } == 0 {
+                return Err(last_api_error("TerminateJobObject"));
+            }
+            Ok(())
+        }
+    }
+
+    impl Drop for Job {
+        fn drop(&mut self) {
+            // KILL_ON_JOB_CLOSE covers abrupt wrapper termination. A separate
+            // kernel wait above covers abrupt desktop-host termination.
+            unsafe {
+                let _ = CloseHandle(self.handle);
+            }
+        }
+    }
+
+    struct ProcessHandles(PROCESS_INFORMATION);
+
+    impl Drop for ProcessHandles {
+        fn drop(&mut self) {
+            // SAFETY: CreateProcessW returned both handles and they close once.
+            unsafe {
+                let _ = CloseHandle(self.0.hProcess);
+                let _ = CloseHandle(self.0.hThread);
+            }
+        }
+    }
+
+    struct AttributeList(LPPROC_THREAD_ATTRIBUTE_LIST);
+
+    impl Drop for AttributeList {
+        fn drop(&mut self) {
+            // SAFETY: initialized once and deleted exactly once.
+            unsafe { DeleteProcThreadAttributeList(self.0) }
+        }
+    }
+
+    fn build_command_line(executable: &OsStr, arguments: &[OsString]) -> Vec<u16> {
+        let mut result = quote_argument(executable);
+        for argument in arguments {
+            result.push(b' ' as u16);
+            result.extend(quote_argument(argument));
+        }
+        result.push(0);
+        result
+    }
+
+    fn quote_argument(value: &OsStr) -> Vec<u16> {
+        let input = value.encode_wide().collect::<Vec<_>>();
+        let mut output = Vec::with_capacity(input.len() + 2);
+        output.push(b'"' as u16);
+        let mut backslashes = 0usize;
+        for unit in input {
+            if unit == b'\\' as u16 {
+                backslashes += 1;
+                continue;
+            }
+            if unit == b'"' as u16 {
+                output.extend(std::iter::repeat_n(b'\\' as u16, backslashes * 2 + 1));
+            } else {
+                output.extend(std::iter::repeat_n(b'\\' as u16, backslashes));
+            }
+            backslashes = 0;
+            output.push(unit);
+        }
+        output.extend(std::iter::repeat_n(b'\\' as u16, backslashes * 2));
+        output.push(b'"' as u16);
+        output
+    }
+
+    fn last_api_error(api: &str) -> String {
+        format!("{api} failed with Windows error {}", unsafe {
+            GetLastError()
+        })
+    }
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -578,9 +919,11 @@ mod tests {
         MAX_AUTOMATIC_RESTARTS, RUNTIME_SERVER_STARTUP_BUDGET_SECONDS,
         STARTUP_SUPERVISOR_GRACE_SECONDS, STARTUP_TIMEOUT, WORKER_PACK_STARTUP_BUDGET_SECONDS,
         adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
-        packaged_runtime_executable, restart_backoff, should_request_start,
+        packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
+        should_request_start,
     };
     use crate::runtime_health::RuntimeLifecycleState;
+    use std::ffi::OsString;
     use std::path::Path;
     use std::time::Duration;
 
@@ -627,6 +970,36 @@ mod tests {
         assert_eq!(
             packaged_appcontainer_launcher(resources),
             resources.join("bin/chatwaifu-appcontainer-host.exe")
+        );
+    }
+
+    #[test]
+    fn ordinary_desktop_arguments_do_not_enter_runtime_supervisor_mode() {
+        assert_eq!(
+            runtime_supervisor_exit_code_from(
+                [OsString::from("--some-tauri-argument")].into_iter()
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn malformed_runtime_supervisor_arguments_fail_closed() {
+        assert_eq!(
+            runtime_supervisor_exit_code_from(
+                [OsString::from("--chatwaifu-runtime-supervisor")].into_iter()
+            ),
+            Some(2)
+        );
+        assert_eq!(
+            runtime_supervisor_exit_code_from(
+                [
+                    OsString::from("--chatwaifu-runtime-supervisor"),
+                    OsString::from("--"),
+                ]
+                .into_iter()
+            ),
+            Some(2)
         );
     }
 }
