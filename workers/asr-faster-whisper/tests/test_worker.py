@@ -18,6 +18,7 @@ from chatwaifu_asr_worker.main import create_app
 from chatwaifu_asr_worker.service import (
     TranscriptionEngine,
     TranscriptionService,
+    _prepare_whisper_audio,
     _resolve_model_source,
 )
 
@@ -97,6 +98,78 @@ def test_offline_pack_rejects_an_incomplete_model_directory(tmp_path: Path) -> N
 
     with pytest.raises(RuntimeError, match=r"config.json, model.bin, tokenizer.json"):
         _resolve_model_source(settings)
+
+
+def test_whisper_audio_resampler_preserves_24khz_duration_and_pitch() -> None:
+    source_rate = 24_000
+    frequency = 440
+    time = np.arange(source_rate, dtype=np.float64) / source_rate
+    pcm16 = (np.sin(2 * np.pi * frequency * time) * 16_000).astype(np.int16).tobytes()
+
+    audio = _prepare_whisper_audio(pcm16, sample_rate=source_rate, channels=1)
+
+    assert audio.dtype == np.float32
+    assert audio.shape == (16_000,)
+    assert np.max(np.abs(audio)) == pytest.approx(16_000 / 32_768, abs=0.01)
+    positive_crossings = np.count_nonzero((audio[:-1] <= 0) & (audio[1:] > 0))
+    assert positive_crossings == pytest.approx(frequency, abs=2)
+
+
+def test_whisper_audio_resampler_downmixes_16khz_stereo() -> None:
+    left = np.full(160, 16_384, dtype=np.int16)
+    right = np.zeros(160, dtype=np.int16)
+    interleaved = np.column_stack((left, right)).reshape(-1).tobytes()
+
+    audio = _prepare_whisper_audio(interleaved, sample_rate=16_000, channels=2)
+
+    assert audio.shape == (160,)
+    assert audio == pytest.approx(np.full(160, 0.25, dtype=np.float32), abs=1e-6)
+
+
+class CapturingEngine(TranscriptionEngine):
+    def __init__(self) -> None:
+        self.audio: np.ndarray | None = None
+
+    def transcribe(
+        self,
+        audio: np.ndarray,
+        *,
+        language: str | None,
+    ) -> tuple[str, str | None]:
+        self.audio = audio
+        return "采样率正确。", language
+
+
+@pytest.mark.anyio
+async def test_worker_resamples_24khz_but_reports_original_duration(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+    )
+    engine = CapturingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    pcm16 = np.zeros(24_000, dtype=np.int16).tobytes()
+    request = SttTranscriptionRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        audio_base64=base64.b64encode(pcm16).decode("ascii"),
+        sample_rate=24_000,
+        channels=1,
+        language="zh",
+    )
+
+    try:
+        result = await service.transcribe(request)
+    finally:
+        await service.close()
+
+    assert engine.audio is not None
+    assert engine.audio.shape == (16_000,)
+    assert result.duration_ms == 1_000
 
 
 def test_worker_transcribes_pcm_with_generation_identity(client: TestClient) -> None:

@@ -12,6 +12,7 @@ from functools import partial
 from typing import Protocol
 from uuid import UUID
 
+import av
 import numpy as np
 from chatwaifu_model_worker import (
     SttTranscriptionRequest,
@@ -21,6 +22,8 @@ from chatwaifu_model_worker import (
 )
 
 from chatwaifu_asr_worker.config import WorkerSettings
+
+WHISPER_SAMPLE_RATE = 16_000
 
 
 class TranscriptionEngine(Protocol):
@@ -79,6 +82,33 @@ def _resolve_model_source(settings: WorkerSettings) -> str:
     return str(model_dir)
 
 
+def _prepare_whisper_audio(
+    pcm16: bytes,
+    *,
+    sample_rate: int,
+    channels: int,
+) -> np.ndarray:
+    """Convert interleaved PCM16 at the protocol rate to 16 kHz mono float32."""
+
+    audio = np.frombuffer(pcm16, dtype=np.int16).astype(np.float32)
+    audio /= 32768.0
+    if channels == 2:
+        audio = audio.reshape(-1, 2).mean(axis=1)
+    frame = av.AudioFrame.from_ndarray(audio.reshape(1, -1), format="flt", layout="mono")
+    frame.sample_rate = sample_rate
+    resampler = av.AudioResampler(
+        format="flt",
+        layout="mono",
+        rate=WHISPER_SAMPLE_RATE,
+    )
+    output_frames = resampler.resample(frame)
+    output_frames.extend(resampler.resample(None))
+    output = [output.to_ndarray().reshape(-1) for output in output_frames]
+    if not output:
+        return np.empty(0, dtype=np.float32)
+    return np.concatenate(output).astype(np.float32, copy=False)
+
+
 class TranscriptionService:
     def __init__(
         self,
@@ -109,10 +139,12 @@ class TranscriptionService:
         try:
             engine = await self._ensure_loaded()
             async with self._run_lock:
-                audio = np.frombuffer(request.audio_bytes(), dtype=np.int16).astype(np.float32)
-                audio /= 32768.0
-                if request.channels == 2:
-                    audio = audio.reshape(-1, 2).mean(axis=1)
+                pcm16 = request.audio_bytes()
+                audio = _prepare_whisper_audio(
+                    pcm16,
+                    sample_rate=request.sample_rate,
+                    channels=request.channels,
+                )
                 loop = asyncio.get_running_loop()
                 native_job = loop.run_in_executor(
                     self._executor,
@@ -123,9 +155,7 @@ class TranscriptionService:
                     partial(self._native_job_finished, request.generation_id)
                 )
                 text, language = await asyncio.shield(native_job)
-            duration_ms = (
-                len(request.audio_bytes()) * 1000 // (request.sample_rate * request.channels * 2)
-            )
+            duration_ms = len(pcm16) * 1000 // (request.sample_rate * request.channels * 2)
             return SttTranscriptionResult(
                 request_id=request.request_id,
                 session_id=request.session_id,
