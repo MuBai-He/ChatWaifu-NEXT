@@ -5,6 +5,7 @@
 
 import asyncio
 import io
+import sys
 import threading
 import wave
 from collections.abc import Iterator
@@ -28,6 +29,7 @@ from chatwaifu_tts_neural_worker.engines import (
     QwenTorchEngine,
     SynthesisCancelled,
     SynthesisEngine,
+    collect_torch_runtime_diagnostics,
 )
 from chatwaifu_tts_neural_worker.main import create_app
 from chatwaifu_tts_neural_worker.service import SynthesisService
@@ -173,6 +175,9 @@ class FakeTorchQwenModel:
     def __init__(self, *, cancel_event: threading.Event | None = None) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
         self._cancel_event = cancel_event
+        self.device = "cuda:0"
+        parameter = SimpleNamespace(device="cuda:0")
+        self.model = SimpleNamespace(parameters=lambda: iter((parameter,)))
 
     def get_supported_speakers(self) -> list[str]:
         return ["ayachi_nene_local"]
@@ -291,6 +296,50 @@ def test_qwen_torch_drops_native_result_after_generation_is_cancelled(
 
     with pytest.raises(SynthesisCancelled):
         engine.synthesize(request, cancel_event)
+
+
+def test_qwen_torch_rejects_model_parameters_on_the_wrong_device(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel()
+    parameter = SimpleNamespace(device="cpu")
+    model.model = SimpleNamespace(parameters=lambda: iter((parameter,)))
+
+    with pytest.raises(RuntimeError, match="not entirely on cuda:0"):
+        QwenTorchEngine(settings, model_loader=lambda _: model)
+
+
+def test_qwen_torch_runtime_diagnostics_come_from_torch_and_loaded_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    engine = QwenTorchEngine(settings, model_loader=lambda _: FakeTorchQwenModel())
+    fake_cuda = SimpleNamespace(
+        is_available=lambda: True,
+        current_device=lambda: 0,
+        get_device_capability=lambda _: (8, 6),
+        get_device_name=lambda _: "NVIDIA GeForce RTX 3090",
+        mem_get_info=lambda _: (20_000_000_000, 25_769_803_776),
+        memory_allocated=lambda _: 4_000_000_000,
+        memory_reserved=lambda _: 4_500_000_000,
+    )
+    fake_torch = SimpleNamespace(
+        __version__="2.7.1+cu126",
+        version=SimpleNamespace(cuda="12.6"),
+        cuda=fake_cuda,
+        device=lambda _: SimpleNamespace(index=0),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    diagnostics = collect_torch_runtime_diagnostics(settings, engine)
+
+    assert diagnostics is not None
+    assert diagnostics["torch_version"] == "2.7.1+cu126"
+    assert diagnostics["torch_cuda_version"] == "12.6"
+    assert diagnostics["cuda_device_name"] == "NVIDIA GeForce RTX 3090"
+    assert diagnostics["cuda_compute_capability"] == "8.6"
+    assert diagnostics["cuda_total_memory_bytes"] == 25_769_803_776
+    assert diagnostics["model_device"] == "cuda:0"
+    assert diagnostics["model_parameter_devices"] == ["cuda:0"]
 
 
 def test_qwen_torch_validates_target_accelerator_before_reporting_ready(

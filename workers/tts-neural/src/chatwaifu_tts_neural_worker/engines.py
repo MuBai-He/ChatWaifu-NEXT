@@ -222,11 +222,22 @@ class QwenTorchEngine:
 
             model_loader = load
         self._model: Any = model_loader(model_dir)
+        self._model_device, self._model_parameter_devices = _validate_torch_model_device(
+            self._model, settings.device
+        )
         self._voice = _resolve_torch_qwen_voice(self._model, settings.qwen_voice)
 
     @property
     def device(self) -> str:
         return self._settings.device
+
+    @property
+    def model_device(self) -> str:
+        return self._model_device
+
+    @property
+    def model_parameter_devices(self) -> tuple[str, ...]:
+        return self._model_parameter_devices
 
     def synthesize(
         self, request: TtsSynthesisRequest, cancel_event: threading.Event
@@ -451,3 +462,81 @@ def _resolve_torch_dtype(torch: Any, device: str, configured: str) -> Any:
     if torch.cuda.is_bf16_supported():
         return torch.bfloat16
     return torch.float16
+
+
+def _validate_torch_model_device(model: Any, expected_device: str) -> tuple[str, tuple[str, ...]]:
+    """Prove the loaded wrapper and every model parameter use the requested device."""
+
+    wrapped_model = getattr(model, "model", None)
+    parameters = getattr(wrapped_model, "parameters", None)
+    if not callable(parameters):
+        raise RuntimeError("Qwen3-TTS Torch model does not expose parameters for device validation")
+    parameter_iterator = cast(Callable[[], Iterator[Any]], parameters)
+    parameter_devices = tuple(
+        sorted(
+            {
+                str(getattr(parameter, "device", "unknown"))
+                for parameter in parameter_iterator()
+            }
+        )
+    )
+    if not parameter_devices:
+        raise RuntimeError("Qwen3-TTS Torch model exposes no parameters for device validation")
+    if parameter_devices != (expected_device,):
+        raise RuntimeError(
+            "Qwen3-TTS Torch model parameters are not entirely on "
+            f"{expected_device}: {list(parameter_devices)}"
+        )
+    model_device = str(getattr(model, "device", parameter_devices[0]))
+    if model_device != expected_device:
+        raise RuntimeError(
+            f"Qwen3-TTS Torch wrapper reports {model_device}, expected {expected_device}"
+        )
+    return model_device, parameter_devices
+
+
+def collect_torch_runtime_diagnostics(
+    settings: WorkerSettings, engine: SynthesisEngine | None
+) -> dict[str, object] | None:
+    """Capture current CUDA and model-placement evidence for Qwen Torch health."""
+
+    if settings.backend != "qwen3_tts_torch":
+        return None
+    try:
+        import torch
+    except ImportError:
+        return None
+
+    cuda_available = bool(torch.cuda.is_available())
+    diagnostics: dict[str, object] = {
+        "torch_version": str(torch.__version__),
+        "torch_cuda_version": (
+            str(torch.version.cuda) if torch.version.cuda is not None else None
+        ),
+        "cuda_available": cuda_available,
+    }
+    if cuda_available and settings.device.startswith("cuda"):
+        device = torch.device(settings.device)
+        device_index = device.index
+        if device_index is None:
+            device_index = int(torch.cuda.current_device())
+        major, minor = torch.cuda.get_device_capability(device_index)
+        free_memory, total_memory = torch.cuda.mem_get_info(device_index)
+        diagnostics.update(
+            {
+                "cuda_device_index": device_index,
+                "cuda_device_name": str(torch.cuda.get_device_name(device_index)),
+                "cuda_compute_capability": f"{major}.{minor}",
+                "cuda_total_memory_bytes": int(total_memory),
+                "cuda_free_memory_bytes": int(free_memory),
+                "cuda_memory_allocated_bytes": int(torch.cuda.memory_allocated(device_index)),
+                "cuda_memory_reserved_bytes": int(torch.cuda.memory_reserved(device_index)),
+            }
+        )
+    if engine is not None:
+        model_device = getattr(engine, "model_device", None)
+        parameter_devices = getattr(engine, "model_parameter_devices", ())
+        if model_device is not None:
+            diagnostics["model_device"] = str(model_device)
+        diagnostics["model_parameter_devices"] = [str(item) for item in parameter_devices]
+    return diagnostics

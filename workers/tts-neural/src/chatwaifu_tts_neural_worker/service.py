@@ -16,6 +16,7 @@ from chatwaifu_model_worker import (
     TtsSynthesisResult,
     TtsWorkerCapabilities,
     WorkerHealth,
+    WorkerRuntimeDiagnostics,
 )
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
@@ -24,6 +25,7 @@ from chatwaifu_tts_neural_worker.engines import (
     SynthesisCancelled,
     SynthesisEngine,
     build_engine,
+    collect_torch_runtime_diagnostics,
     validate_runtime_accelerator,
 )
 
@@ -188,6 +190,9 @@ class SynthesisService:
 
     def health(self) -> WorkerHealth:
         queue_depth = sum(not task.done() for task in self._jobs.values())
+        runtime_diagnostics = collect_torch_runtime_diagnostics(
+            self._settings, self._engine
+        )
         return WorkerHealth(
             status="busy" if queue_depth else "ready",
             worker_id=self._settings.worker_id,
@@ -196,6 +201,11 @@ class SynthesisService:
             queue_depth=queue_depth,
             device=self._engine.device if self._engine is not None else self._settings.device,
             capabilities=["tts.synthesize", "tts.cancel", "tts.unload", "health"],
+            runtime_diagnostics=(
+                WorkerRuntimeDiagnostics.model_validate(runtime_diagnostics)
+                if runtime_diagnostics is not None
+                else None
+            ),
         )
 
     def capabilities(self) -> TtsWorkerCapabilities:

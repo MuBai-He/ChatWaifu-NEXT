@@ -14,6 +14,7 @@ from chatwaifu_model_worker.models import (
     TtsSynthesisResult,
     TtsWorkerCapabilities,
     WorkerHealth,
+    WorkerRuntimeDiagnostics,
 )
 from chatwaifu_model_worker.pack_installer import (
     InstalledWorkerPack,
@@ -91,6 +92,7 @@ __all__ = [
     "WorkerPackPlatform",
     "WorkerPackSelection",
     "WorkerPackWorker",
+    "WorkerRuntimeDiagnostics",
     "activate_pack",
     "build_archive",
     "discover_installed_packs",

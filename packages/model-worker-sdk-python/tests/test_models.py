@@ -12,6 +12,8 @@ from chatwaifu_model_worker import (
     TtsSynthesisRequest,
     TtsSynthesisResult,
     TtsWorkerCapabilities,
+    WorkerHealth,
+    WorkerRuntimeDiagnostics,
     pack_tts_pcm_frame,
     unpack_tts_pcm_frame,
 )
@@ -122,6 +124,35 @@ def test_tts_worker_capabilities_are_provider_neutral() -> None:
     assert capabilities.output_formats == ["wav"]
     assert capabilities.local_only is True
     assert capabilities.stream_protocols == ["pcm.v2"]
+
+
+def test_worker_health_can_carry_cuda_runtime_evidence() -> None:
+    health = WorkerHealth(
+        status="ready",
+        worker_id="tts-qwen-cuda-test",
+        model_loaded=True,
+        model="nene-qwen3-0.6b",
+        queue_depth=0,
+        device="cuda:0",
+        runtime_diagnostics=WorkerRuntimeDiagnostics(
+            torch_version="2.7.1+cu126",
+            torch_cuda_version="12.6",
+            cuda_available=True,
+            cuda_device_index=0,
+            cuda_device_name="NVIDIA GeForce RTX 3090",
+            cuda_compute_capability="8.6",
+            cuda_total_memory_bytes=25_769_803_776,
+            cuda_free_memory_bytes=20_000_000_000,
+            cuda_memory_allocated_bytes=4_000_000_000,
+            cuda_memory_reserved_bytes=4_500_000_000,
+            model_device="cuda:0",
+            model_parameter_devices=["cuda:0"],
+        ),
+    )
+
+    payload = health.model_dump(mode="json")
+    assert payload["runtime_diagnostics"]["cuda_compute_capability"] == "8.6"
+    assert payload["runtime_diagnostics"]["model_parameter_devices"] == ["cuda:0"]
 
 
 def test_tts_v2_pcm_frame_round_trips_generation_identity() -> None:
