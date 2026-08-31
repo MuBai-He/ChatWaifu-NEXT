@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 import {
   isPointInsideWindow,
+  mapPhysicalPointToClient,
+  shouldCaptureDesktopInteraction,
   shouldKeepDesktopInteraction,
   useDesktopPointerPresence,
 } from "./useDesktopPointerPresence";
@@ -45,10 +47,32 @@ describe("desktop pointer presence", () => {
     expect(isPointInsideWindow({ x: -431, y: 300 }, origin, size)).toBe(false);
   });
 
+  it("maps physical cursor coordinates into CSS viewport coordinates", () => {
+    expect(
+      mapPhysicalPointToClient({ x: -215, y: 445 }, origin, size, {
+        width: 215,
+        height: 325,
+      }),
+    ).toEqual({ x: 107.5, y: 162.5 });
+    expect(
+      mapPhysicalPointToClient({ x: 0, y: 445 }, origin, size, {
+        width: 215,
+        height: 325,
+      }),
+    ).toBeNull();
+  });
+
   it("keeps the native window interactive while a modal guard is active", () => {
     expect(shouldKeepDesktopInteraction(false, true)).toBe(true);
     expect(shouldKeepDesktopInteraction(true, false)).toBe(true);
     expect(shouldKeepDesktopInteraction(false, false)).toBe(false);
+  });
+
+  it("captures only interactive points while transparent space remains pass-through", () => {
+    expect(shouldCaptureDesktopInteraction(true, true, false)).toBe(true);
+    expect(shouldCaptureDesktopInteraction(true, false, false)).toBe(false);
+    expect(shouldCaptureDesktopInteraction(false, true, false)).toBe(false);
+    expect(shouldCaptureDesktopInteraction(false, false, true)).toBe(true);
   });
 
   it("applies a guard that was acquired before the pointer hook mounted", async () => {
@@ -63,8 +87,8 @@ describe("desktop pointer presence", () => {
 
     await waitFor(() =>
       expect(nativeMocks.invoke).toHaveBeenCalledWith(
-        "set_avatar_overlay_pointer_inside",
-        { inside: true },
+        "set_avatar_overlay_interaction_region_active",
+        { active: true },
       ),
     );
     expect(result.current.pointerInside).toBe(true);
@@ -72,15 +96,15 @@ describe("desktop pointer presence", () => {
     releaseFirst();
     await Promise.resolve();
     expect(nativeMocks.invoke).toHaveBeenLastCalledWith(
-      "set_avatar_overlay_pointer_inside",
-      { inside: true },
+      "set_avatar_overlay_interaction_region_active",
+      { active: true },
     );
 
     releaseSecond();
     await waitFor(() =>
       expect(nativeMocks.invoke).toHaveBeenLastCalledWith(
-        "set_avatar_overlay_pointer_inside",
-        { inside: false },
+        "set_avatar_overlay_interaction_region_active",
+        { active: false },
       ),
     );
     unmount();

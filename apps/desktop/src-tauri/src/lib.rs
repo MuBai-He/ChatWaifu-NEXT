@@ -66,7 +66,7 @@ impl Default for DesktopPreferences {
 #[derive(Default)]
 struct DesktopState {
     preferences: Mutex<DesktopPreferences>,
-    pointer_inside_overlay: Mutex<bool>,
+    interaction_region_active: Mutex<bool>,
     runtime: RuntimeHost,
 }
 
@@ -176,17 +176,17 @@ fn set_avatar_overlay_display(
 }
 
 #[tauri::command]
-fn set_avatar_overlay_pointer_inside(
+fn set_avatar_overlay_interaction_region_active(
     app: AppHandle,
     state: State<'_, DesktopState>,
-    inside: bool,
+    active: bool,
 ) -> Result<(), String> {
-    let mut pointer_inside = lock_pointer_inside(&state)?;
+    let mut interaction_active = lock_interaction_region_active(&state)?;
     let click_through = lock_preferences(&state)?.click_through;
     required_window(&app, AVATAR_OVERLAY_LABEL)?
-        .set_ignore_cursor_events(should_ignore_cursor_events(click_through, inside))
+        .set_ignore_cursor_events(should_ignore_cursor_events(click_through, active))
         .map_err(window_error)?;
-    *pointer_inside = inside;
+    *interaction_active = active;
     Ok(())
 }
 
@@ -231,7 +231,7 @@ pub fn run() {
             set_avatar_overlay_click_through,
             set_avatar_overlay_visible,
             set_avatar_overlay_display,
-            set_avatar_overlay_pointer_inside,
+            set_avatar_overlay_interaction_region_active,
             start_runtime,
             stop_runtime,
             restart_runtime,
@@ -253,7 +253,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let control_center =
         MenuItem::with_id(app, "control-center", "打开桌宠设置", true, None::<&str>)?;
     let click_through =
-        MenuItem::with_id(app, "click-through", "切换鼠标穿透", true, None::<&str>)?;
+        MenuItem::with_id(app, "click-through", "切换透明区域穿透", true, None::<&str>)?;
     let restart_runtime =
         MenuItem::with_id(app, "restart-runtime", "重启本地服务", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出 ChatWaifu", true, None::<&str>)?;
@@ -453,20 +453,20 @@ fn set_click_through(
     state: &State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
-    let pointer_inside = lock_pointer_inside(state)?;
+    let interaction_active = lock_interaction_region_active(state)?;
     required_window(app, AVATAR_OVERLAY_LABEL)?
-        .set_ignore_cursor_events(should_ignore_cursor_events(enabled, *pointer_inside))
+        .set_ignore_cursor_events(should_ignore_cursor_events(enabled, *interaction_active))
         .map_err(window_error)?;
     let preferences = update_preferences(state, |preferences| {
         preferences.click_through = enabled;
     })?;
-    drop(pointer_inside);
+    drop(interaction_active);
     commit_preferences(app, &preferences)?;
     Ok(preferences)
 }
 
-fn should_ignore_cursor_events(click_through: bool, pointer_inside: bool) -> bool {
-    click_through && !pointer_inside
+fn should_ignore_cursor_events(click_through: bool, interaction_active: bool) -> bool {
+    click_through && !interaction_active
 }
 
 fn control_center_is_focused(app: &AppHandle) -> bool {
@@ -520,13 +520,13 @@ fn lock_preferences<'a>(
         .map_err(|_| "desktop preference lock was poisoned".to_owned())
 }
 
-fn lock_pointer_inside<'a>(
+fn lock_interaction_region_active<'a>(
     state: &'a State<'_, DesktopState>,
 ) -> Result<MutexGuard<'a, bool>, String> {
     state
-        .pointer_inside_overlay
+        .interaction_region_active
         .lock()
-        .map_err(|_| "desktop pointer-presence lock was poisoned".to_owned())
+        .map_err(|_| "desktop interaction-region lock was poisoned".to_owned())
 }
 
 fn preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -617,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn cursor_capture_temporarily_overrides_persisted_click_through() {
+    fn only_interactive_regions_override_transparent_click_through() {
         assert!(should_ignore_cursor_events(true, false));
         assert!(!should_ignore_cursor_events(true, true));
         assert!(!should_ignore_cursor_events(false, false));

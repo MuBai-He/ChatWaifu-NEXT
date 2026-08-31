@@ -35,7 +35,7 @@ validation:
     - make check-live2d-vendor
     - uv run pytest (432 passed, 10 Windows-only acceptance tests skipped)
     - Ruff format and lint plus Pyright (0 errors)
-    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 133 Web tests passed)
+    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 137 Web tests passed)
     - Prettier workspace check and generated channel-schema byte-stability check
     - cargo fmt plus workspace all-targets check
     - pnpm build
@@ -158,7 +158,7 @@ phases:
       - Web, desktop-pet, and control-center functional icons share the typed Lucide SVG boundary while favicon, generated application assets, settings branding, and the tray use the existing Web crescent-and-ribbon mark
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
       - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while pressing and moving any authored or visible-mesh avatar hit starts native window dragging synchronously without converting the gesture into a touch
-      - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
+      - The inactive overlay uses bounded global physical-cursor tracking to reveal controls without focus while transparent points keep passing through; only Live2D mesh hits, marked UI chrome, modal guards, avatar gestures, and push-to-talk request temporary native capture
       - The avatar overlay disables inactive WebView throttling so streaming text, audio progress, Live2D, and subtitle paging continue without mouse focus or selection
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination

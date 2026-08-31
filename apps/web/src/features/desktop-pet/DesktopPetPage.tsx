@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
+import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import { useChatSession } from "../chat/useChatSession";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../chat/subtitlePlayback";
 import { useDesktopPreferences } from "./useDesktopPreferences";
 import { useDesktopAvatarDrag } from "./useDesktopAvatarDrag";
+import { isPointInsideDesktopPetChrome } from "./desktopPetInteractionRegions";
 import { useDesktopPointerPresence } from "./useDesktopPointerPresence";
 
 export function DesktopPetPage() {
@@ -41,12 +43,19 @@ export function DesktopPetPage() {
   const [sending, setSending] = useState(false);
   const dialogueRef = useRef<HTMLParagraphElement>(null);
   const subtitleGenerationRef = useRef<string | null>(null);
+  const pushToTalkGuardRef = useRef<(() => void) | null>(null);
   const {
     preferences,
     error: preferenceError,
     setDisplay,
   } = useDesktopPreferences();
-  const pointerPresence = useDesktopPointerPresence();
+  const isInteractiveAtPoint = useCallback(
+    (clientX: number, clientY: number) =>
+      hitTest(clientX, clientY).length > 0 ||
+      isPointInsideDesktopPetChrome(document, { x: clientX, y: clientY }),
+    [hitTest],
+  );
+  const pointerPresence = useDesktopPointerPresence({ isInteractiveAtPoint });
   const avatarDrag = useDesktopAvatarDrag({
     hitTest,
     touch,
@@ -107,6 +116,26 @@ export function DesktopPetPage() {
     );
   }, [displayDialogue, latestAssistant?.generationId, subtitlePlayback]);
 
+  useEffect(
+    () => () => {
+      pushToTalkGuardRef.current?.();
+      pushToTalkGuardRef.current = null;
+    },
+    [],
+  );
+
+  const beginDesktopPushToTalk = () => {
+    pushToTalkGuardRef.current?.();
+    pushToTalkGuardRef.current = acquireNativeInteractionGuard("push-to-talk");
+    beginPushToTalk();
+  };
+
+  const endDesktopPushToTalk = () => {
+    endPushToTalk();
+    pushToTalkGuardRef.current?.();
+    pushToTalkGuardRef.current = null;
+  };
+
   const sendDraft = async () => {
     const text = draft.trim();
     if (!text || !canSend || sending) return;
@@ -149,6 +178,7 @@ export function DesktopPetPage() {
       }
       data-pointer-inside={pointerPresence.pointerInside}
       onPointerEnter={pointerPresence.onPointerEnter}
+      onPointerMove={pointerPresence.onPointerMove}
       onPointerLeave={pointerPresence.onPointerLeave}
     >
       <SkillConfirmationPrompt sessionId={sessionId} />
@@ -166,7 +196,11 @@ export function DesktopPetPage() {
       </button>
 
       {preferences.showSubtitles && (displayDialogue || pending) ? (
-        <section className="desktop-pet-dialogue" aria-live="polite">
+        <section
+          className="desktop-pet-dialogue"
+          aria-live="polite"
+          data-native-interactive="true"
+        >
           <small>{character?.display_name ?? "绫地宁宁"}</small>
           <p ref={dialogueRef}>
             {displayDialogue}
@@ -176,7 +210,10 @@ export function DesktopPetPage() {
       ) : null}
 
       {displaySettingsOpen ? (
-        <fieldset className="desktop-pet-display-settings">
+        <fieldset
+          className="desktop-pet-display-settings"
+          data-native-interactive="true"
+        >
           <legend>显示</legend>
           <label>
             <input
@@ -195,6 +232,7 @@ export function DesktopPetPage() {
 
       <form
         className="desktop-pet-composer"
+        data-native-interactive="true"
         onSubmit={(event) => {
           event.preventDefault();
           void sendDraft();
@@ -219,7 +257,11 @@ export function DesktopPetPage() {
         </button>
       </form>
 
-      <nav className="desktop-pet-actions" aria-label="桌宠操作">
+      <nav
+        className="desktop-pet-actions"
+        aria-label="桌宠操作"
+        data-native-interactive="true"
+      >
         <button
           type="button"
           onClick={() => void openControlCenter()}
@@ -274,11 +316,11 @@ export function DesktopPetPage() {
             type="button"
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture?.(event.pointerId);
-              beginPushToTalk();
+              beginDesktopPushToTalk();
             }}
-            onPointerUp={endPushToTalk}
-            onPointerCancel={endPushToTalk}
-            onBlur={endPushToTalk}
+            onPointerUp={endDesktopPushToTalk}
+            onPointerCancel={endDesktopPushToTalk}
+            onBlur={endDesktopPushToTalk}
             aria-label="按住说话"
             aria-pressed={voiceTransmitting}
             title="按住说话"
@@ -289,7 +331,11 @@ export function DesktopPetPage() {
       </nav>
 
       {avatarWarning || error || preferenceError || controlError ? (
-        <p className="desktop-pet-notice" role="status">
+        <p
+          className="desktop-pet-notice"
+          role="status"
+          data-native-interactive="true"
+        >
           {controlError ??
             preferenceError ??
             error ??

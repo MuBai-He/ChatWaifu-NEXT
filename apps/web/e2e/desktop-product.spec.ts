@@ -157,14 +157,19 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   await expect(composer.locator("..")).toHaveCSS("opacity", "0");
   await expect(composer.locator("..")).toHaveCSS("pointer-events", "none");
 
-  await page.getByRole("button", { name: "摸摸绫地宁宁" }).hover({
-    position: { x: 200, y: 80 },
-  });
+  // Empty transparent window space still reveals the rail; native capture is
+  // decided separately from this window-presence signal.
+  await page.mouse.move(10, 10);
 
   await expect(shell).toHaveAttribute("data-pointer-inside", "true");
   await expect(actions).toHaveCSS("opacity", "1");
   await expect(actions).toHaveCSS("pointer-events", "auto");
+  await expect(actions).toHaveAttribute("data-native-interactive", "true");
   await expect(actions.locator("svg.lucide")).toHaveCount(3);
+  await expect(composer.locator("..")).toHaveAttribute(
+    "data-native-interactive",
+    "true",
+  );
   await expect(
     page.locator(".desktop-pet-composer svg.lucide-send"),
   ).toBeVisible();

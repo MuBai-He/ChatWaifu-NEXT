@@ -27,7 +27,7 @@ export function AppearanceSettingsSection({
 
       {!desktop.desktopHost ? (
         <p className="desktop-settings-preview-note">
-          当前是浏览器预览；窗口置顶、显示和鼠标穿透会在桌面版中生效。
+          当前是浏览器预览；窗口置顶、显示和透明区域穿透会在桌面版中生效。
         </p>
       ) : null}
 
@@ -47,8 +47,8 @@ export function AppearanceSettingsSection({
           onChange={desktop.setAlwaysOnTop}
         />
         <SettingsToggle
-          label="鼠标穿透"
-          description="开启后点击会落到下方窗口，可在本设置页或托盘关闭"
+          label="透明区域穿透"
+          description="开启后角色、字幕和控件仍可点击，空白区域会点击到下方窗口"
           checked={desktop.preferences.clickThrough}
           disabled={disabled}
           onChange={desktop.setClickThrough}

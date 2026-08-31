@@ -18,6 +18,15 @@ interface PhysicalSize {
   height: number;
 }
 
+interface ClientSize {
+  width: number;
+  height: number;
+}
+
+interface DesktopPointerPresenceOptions {
+  isInteractiveAtPoint?: (clientX: number, clientY: number) => boolean;
+}
+
 export function isPointInsideWindow(
   point: PhysicalPoint,
   windowOrigin: PhysicalPoint,
@@ -31,42 +40,96 @@ export function isPointInsideWindow(
   );
 }
 
-export function useDesktopPointerPresence() {
+export function mapPhysicalPointToClient(
+  point: PhysicalPoint,
+  windowOrigin: PhysicalPoint,
+  windowSize: PhysicalSize,
+  viewportSize: ClientSize,
+): PhysicalPoint | null {
+  if (
+    !isPointInsideWindow(point, windowOrigin, windowSize) ||
+    windowSize.width <= 0 ||
+    windowSize.height <= 0 ||
+    viewportSize.width <= 0 ||
+    viewportSize.height <= 0
+  ) {
+    return null;
+  }
+  return {
+    x: (point.x - windowOrigin.x) * (viewportSize.width / windowSize.width),
+    y: (point.y - windowOrigin.y) * (viewportSize.height / windowSize.height),
+  };
+}
+
+export function useDesktopPointerPresence({
+  isInteractiveAtPoint = () => false,
+}: DesktopPointerPresenceOptions = {}) {
   const [pointerInside, setPointerInside] = useState(false);
   const pointerInsideRef = useRef(false);
   const physicalPointerInsideRef = useRef(false);
+  const physicalPointerInteractiveRef = useRef(false);
   const interactionGuardRef = useRef(false);
+  const interactiveProbeRef = useRef(isInteractiveAtPoint);
+  const nativeInteractionRef = useRef(false);
   const nativePresenceSyncRef = useRef<Promise<void>>(Promise.resolve());
 
-  const syncNativePresence = useCallback((inside: boolean) => {
+  useEffect(() => {
+    interactiveProbeRef.current = isInteractiveAtPoint;
+  }, [isInteractiveAtPoint]);
+
+  const syncNativeInteraction = useCallback((active: boolean) => {
     if (!("__TAURI_INTERNALS__" in window)) return;
     nativePresenceSyncRef.current = nativePresenceSyncRef.current
       .catch(() => undefined)
       .then(async () => {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("set_avatar_overlay_pointer_inside", { inside });
+        await invoke("set_avatar_overlay_interaction_region_active", {
+          active,
+        });
       })
       .catch(() => undefined);
   }, []);
 
-  const updatePointerInside = useCallback(
-    (inside: boolean) => {
-      if (pointerInsideRef.current === inside) return;
-      pointerInsideRef.current = inside;
-      syncNativePresence(inside);
-      setPointerInside(inside);
+  const updateNativeInteraction = useCallback(
+    (active: boolean) => {
+      if (nativeInteractionRef.current === active) return;
+      nativeInteractionRef.current = active;
+      syncNativeInteraction(active);
     },
-    [syncNativePresence],
+    [syncNativeInteraction],
   );
 
-  const updatePhysicalPointerInside = useCallback(
-    (inside: boolean) => {
+  const updatePointerInside = useCallback((inside: boolean) => {
+    if (pointerInsideRef.current === inside) return;
+    pointerInsideRef.current = inside;
+    setPointerInside(inside);
+  }, []);
+
+  const updatePhysicalPointer = useCallback(
+    (point: PhysicalPoint | null) => {
+      const inside = point !== null;
+      let interactive = false;
+      if (point) {
+        try {
+          interactive = interactiveProbeRef.current(point.x, point.y);
+        } catch {
+          // Renderer teardown must fail closed so transparent pixels stay pass-through.
+        }
+      }
       physicalPointerInsideRef.current = inside;
+      physicalPointerInteractiveRef.current = interactive;
       updatePointerInside(
         shouldKeepDesktopInteraction(inside, interactionGuardRef.current),
       );
+      updateNativeInteraction(
+        shouldCaptureDesktopInteraction(
+          inside,
+          interactive,
+          interactionGuardRef.current,
+        ),
+      );
     },
-    [updatePointerInside],
+    [updateNativeInteraction, updatePointerInside],
   );
 
   useEffect(() => {
@@ -79,6 +142,13 @@ export function useDesktopPointerPresence() {
           event.detail.active,
         ),
       );
+      updateNativeInteraction(
+        shouldCaptureDesktopInteraction(
+          physicalPointerInsideRef.current,
+          physicalPointerInteractiveRef.current,
+          event.detail.active,
+        ),
+      );
     };
     window.addEventListener(NATIVE_INTERACTION_GUARD_NOTIFICATION, updateGuard);
     const active = isNativeInteractionGuardActive();
@@ -86,12 +156,19 @@ export function useDesktopPointerPresence() {
     updatePointerInside(
       shouldKeepDesktopInteraction(physicalPointerInsideRef.current, active),
     );
+    updateNativeInteraction(
+      shouldCaptureDesktopInteraction(
+        physicalPointerInsideRef.current,
+        physicalPointerInteractiveRef.current,
+        active,
+      ),
+    );
     return () =>
       window.removeEventListener(
         NATIVE_INTERACTION_GUARD_NOTIFICATION,
         updateGuard,
       );
-  }, [updatePointerInside]);
+  }, [updateNativeInteraction, updatePointerInside]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -116,8 +193,11 @@ export function useDesktopPointerPresence() {
             ]);
             if (cancelled) return;
             consecutiveErrors = 0;
-            updatePhysicalPointerInside(
-              isPointInsideWindow(pointer, origin, size),
+            updatePhysicalPointer(
+              mapPhysicalPointToClient(pointer, origin, size, {
+                width: window.innerWidth,
+                height: window.innerHeight,
+              }),
             );
           } catch {
             consecutiveErrors += 1;
@@ -127,7 +207,7 @@ export function useDesktopPointerPresence() {
             ) {
               window.clearInterval(intervalId);
               intervalId = null;
-              updatePhysicalPointerInside(false);
+              updatePhysicalPointer(null);
             }
           } finally {
             sampleInFlight = false;
@@ -146,19 +226,22 @@ export function useDesktopPointerPresence() {
       cancelled = true;
       if (intervalId !== null) window.clearInterval(intervalId);
     };
-  }, [updatePhysicalPointerInside]);
+  }, [updatePhysicalPointer]);
 
   useEffect(
     () => () => {
-      if (pointerInsideRef.current) syncNativePresence(false);
+      if (nativeInteractionRef.current) syncNativeInteraction(false);
     },
-    [syncNativePresence],
+    [syncNativeInteraction],
   );
 
   return {
     pointerInside,
-    onPointerEnter: () => updatePhysicalPointerInside(true),
-    onPointerLeave: () => updatePhysicalPointerInside(false),
+    onPointerEnter: (event: { clientX: number; clientY: number }) =>
+      updatePhysicalPointer({ x: event.clientX, y: event.clientY }),
+    onPointerMove: (event: { clientX: number; clientY: number }) =>
+      updatePhysicalPointer({ x: event.clientX, y: event.clientY }),
+    onPointerLeave: () => updatePhysicalPointer(null),
   };
 }
 
@@ -167,4 +250,12 @@ export function shouldKeepDesktopInteraction(
   interactionGuardActive: boolean,
 ): boolean {
   return pointerInside || interactionGuardActive;
+}
+
+export function shouldCaptureDesktopInteraction(
+  pointerInside: boolean,
+  pointInteractive: boolean,
+  interactionGuardActive: boolean,
+): boolean {
+  return interactionGuardActive || (pointerInside && pointInteractive);
 }
