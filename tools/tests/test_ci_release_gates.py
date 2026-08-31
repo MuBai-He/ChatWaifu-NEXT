@@ -1,4 +1,8 @@
+import os
+import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -82,6 +86,7 @@ def test_desktop_candidate_builds_a_self_contained_unsigned_windows_x64_installe
 def test_windows_installed_product_smoke_covers_layout_lifecycle_and_data() -> None:
     smoke = (ROOT / "tools/windows/smoke_installed_x64.ps1").read_text(encoding="utf-8")
 
+    assert "$StartupTimeoutSeconds = 600" in smoke
     assert "Get-CurrentUserUninstallEntries" in smoke
     assert "ExpectedMachine = 0x8664" in smoke
     assert "runtime-sidecar\\chatwaifu-runtime.exe" in smoke
@@ -90,12 +95,130 @@ def test_windows_installed_product_smoke_covers_layout_lifecycle_and_data() -> N
     assert "Start Menu\\Programs\\$ProductName.lnk" in smoke
     assert "$UnquotedPath = $Path.Trim().Trim('\"')" in smoke
     assert "/v1/runtime/health" in smoke
+    assert '$RuntimeSupervisorArgument = "--chatwaifu-runtime-supervisor"' in smoke
+    assert "Get-OwnedRuntimeSupervisor" in smoke
+    assert "[int]$_.ProcessId -eq [int]$Runtime.ParentProcessId" in smoke
+    assert "[int]$_.ParentProcessId -eq $OwnerProcessId" in smoke
+    assert "Test-PathEqual $_.ExecutablePath $HostExecutable" in smoke
+    assert "[regex]::Escape($RuntimeSupervisorArgument)" in smoke
+    assert "SupervisorProcessId = [int]$Supervisor.ProcessId" in smoke
+    assert "[int]$Runtime.ParentProcessId -ne $Owner.Id" not in smoke
     assert "Stop-Process -Id $HostProcess.Id -Force" in smoke
+    assert "Wait-ForProcessExit -ProcessId $SupervisorProcessId" in smoke
+    assert "$HostProcesses.Count -eq 0" in smoke
     assert "Assert-RuntimeStopped" in smoke
     assert 'ArgumentList "/S"' in smoke
     assert "Wait-ForPathRemoval" in smoke
     assert "Silent uninstall removed the preservation marker" in smoke
     assert "test-owned markers were removed after verification" in smoke
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell")
+def test_windows_installed_smoke_distinguishes_supervisor_process_role() -> None:
+    smoke_path = ROOT / "tools/windows/smoke_installed_x64.ps1"
+    powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    environment = os.environ.copy()
+    environment["CHATWAIFU_TEST_INSTALLED_SMOKE"] = str(smoke_path)
+    command = r"""
+$Source = Get-Content -Raw -LiteralPath $env:CHATWAIFU_TEST_INSTALLED_SMOKE
+$Tokens = $null
+$Errors = $null
+$Ast = [System.Management.Automation.Language.Parser]::ParseInput(
+    $Source,
+    [ref]$Tokens,
+    [ref]$Errors
+)
+foreach ($Name in @(
+    "Get-NormalizedPath",
+    "Test-PathEqual",
+    "Get-OwnedRuntimeSupervisor"
+)) {
+    $Node = @($Ast.FindAll({
+        param($Candidate)
+        $Candidate -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $Candidate.Name -eq $Name
+    }, $true))[0]
+    if ($null -eq $Node) {
+        throw "Installed smoke function is missing: $Name"
+    }
+    Invoke-Expression $Node.Extent.Text
+}
+
+$RuntimeSupervisorArgument = "--chatwaifu-runtime-supervisor"
+$HostPath = "C:\Users\tester\AppData\Local\ChatWaifu NEXT\chatwaifu-desktop-host.exe"
+$Foreground = [PSCustomObject]@{
+    ProcessId = 100
+    ParentProcessId = 50
+    ExecutablePath = $HostPath
+    CommandLine = '"C:\Users\tester\AppData\Local\ChatWaifu NEXT\chatwaifu-desktop-host.exe"'
+}
+$Supervisor = [PSCustomObject]@{
+    ProcessId = 200
+    ParentProcessId = 100
+    ExecutablePath = $HostPath
+    CommandLine = (
+        '"C:\Users\tester\AppData\Local\ChatWaifu NEXT\chatwaifu-desktop-host.exe" ' +
+        '--chatwaifu-runtime-supervisor -- runtime.exe'
+    )
+}
+$RuntimePath = Join-Path (Split-Path $HostPath) "runtime-sidecar\chatwaifu-runtime.exe"
+$Runtime = [PSCustomObject]@{
+    ProcessId = 300
+    ParentProcessId = 200
+    ExecutablePath = $RuntimePath
+}
+$Resolved = Get-OwnedRuntimeSupervisor -Runtime $Runtime `
+    -OwnerProcessId $Foreground.ProcessId -HostExecutable $HostPath `
+    -InstalledHostProcesses @($Foreground, $Supervisor)
+if ($null -eq $Resolved -or $Resolved.ProcessId -ne $Supervisor.ProcessId) {
+    throw "The valid Host -> supervisor -> Runtime chain was rejected."
+}
+
+$ForegroundImpostor = [PSCustomObject]@{
+    ProcessId = 200
+    ParentProcessId = 100
+    ExecutablePath = $HostPath
+    CommandLine = '"C:\Users\tester\AppData\Local\ChatWaifu NEXT\chatwaifu-desktop-host.exe"'
+}
+$Resolved = Get-OwnedRuntimeSupervisor -Runtime $Runtime `
+    -OwnerProcessId $Foreground.ProcessId -HostExecutable $HostPath `
+    -InstalledHostProcesses @($Foreground, $ForegroundImpostor)
+if ($null -ne $Resolved) {
+    throw "A foreground Host without the supervisor role argument was accepted."
+}
+
+$UnownedSupervisor = [PSCustomObject]@{
+    ProcessId = 200
+    ParentProcessId = 999
+    ExecutablePath = $HostPath
+    CommandLine = $Supervisor.CommandLine
+}
+$Resolved = Get-OwnedRuntimeSupervisor -Runtime $Runtime `
+    -OwnerProcessId $Foreground.ProcessId -HostExecutable $HostPath `
+    -InstalledHostProcesses @($Foreground, $UnownedSupervisor)
+if ($null -ne $Resolved) {
+    throw "A supervisor outside the foreground Host process tree was accepted."
+}
+"process-role-contract-passed"
+"""
+    completed = subprocess.run(
+        [
+            str(powershell),
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "process-role-contract-passed" in completed.stdout
 
 
 def test_desktop_candidate_rejects_private_character_and_model_overlays() -> None:

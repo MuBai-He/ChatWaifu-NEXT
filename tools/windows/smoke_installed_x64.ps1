@@ -5,7 +5,11 @@ param(
     [string]$InstallerPath,
 
     [ValidateRange(30, 600)]
-    [int]$StartupTimeoutSeconds = 180,
+    # The desktop host reserves 300 seconds for Worker Pack startup, 120
+    # seconds for the Runtime server, and 30 seconds of supervisor grace. A
+    # 600-second outer acceptance bound covers that 450-second contract plus
+    # cold CUDA model loading and installed-process/health discovery overhead.
+    [int]$StartupTimeoutSeconds = 600,
 
     [ValidateRange(5, 120)]
     [int]$CleanupTimeoutSeconds = 45,
@@ -39,6 +43,7 @@ if ([System.IO.Path]::GetExtension($ResolvedInstaller) -ine ".exe") {
 }
 
 $ExpectedMachine = 0x8664
+$RuntimeSupervisorArgument = "--chatwaifu-runtime-supervisor"
 $RuntimeRelativePath = "runtime-sidecar\chatwaifu-runtime.exe"
 $HelperRelativePath = "bin\chatwaifu-appcontainer-host.exe"
 $RequiredRuntimeResources = @(
@@ -59,6 +64,7 @@ $StartMenuShortcut = Join-Path $env:APPDATA (
 )
 $HostProcess = $null
 $RuntimeProcessId = $null
+$RuntimeSupervisorProcessId = $null
 $RuntimePort = $null
 $InstallRoot = $null
 $InstallCompleted = $false
@@ -254,6 +260,35 @@ function Get-InstalledProcesses {
     })
 }
 
+function Get-OwnedRuntimeSupervisor {
+    param(
+        [Parameter(Mandatory = $true)][object]$Runtime,
+        [Parameter(Mandatory = $true)][int]$OwnerProcessId,
+        [Parameter(Mandatory = $true)][string]$HostExecutable,
+        [Parameter(Mandatory = $true)][object[]]$InstalledHostProcesses
+    )
+
+    # Windows starts the frozen Runtime through a hidden copy of the Tauri
+    # executable. The foreground Host returned by Start-Process is therefore
+    # the grandparent, not the direct parent, of chatwaifu-runtime.exe. Match
+    # the exact installed executable and the internal role argument so another
+    # foreground Host cannot be mistaken for the supervisor.
+    $Supervisors = @($InstalledHostProcesses | Where-Object {
+        [int]$_.ProcessId -eq [int]$Runtime.ParentProcessId -and
+        [int]$_.ParentProcessId -eq $OwnerProcessId -and
+        $_.ExecutablePath -and
+        (Test-PathEqual $_.ExecutablePath $HostExecutable) -and
+        $_.CommandLine -and
+        $_.CommandLine -match (
+            "(?i)(?:^|\s)" + [regex]::Escape($RuntimeSupervisorArgument) + "(?:\s|$)"
+        )
+    })
+    if ($Supervisors.Count -ne 1) {
+        return $null
+    }
+    return $Supervisors[0]
+}
+
 function Invoke-LoopbackJson {
     param(
         [Parameter(Mandatory = $true)][string]$Url,
@@ -296,6 +331,7 @@ function Get-RuntimeLogTail {
 function Wait-ForInstalledRuntime {
     param(
         [Parameter(Mandatory = $true)][System.Diagnostics.Process]$Owner,
+        [Parameter(Mandatory = $true)][string]$HostExecutable,
         [Parameter(Mandatory = $true)][string]$RuntimeExecutable,
         [Parameter(Mandatory = $true)][int]$TimeoutSeconds
     )
@@ -306,8 +342,33 @@ function Wait-ForInstalledRuntime {
         if ($Owner.HasExited) {
             throw "Installed desktop host exited before Runtime became healthy."
         }
+        $InstalledHostProcesses = @(Get-InstalledProcesses $HostExecutable)
+        $OwnerHosts = @($InstalledHostProcesses | Where-Object {
+            [int]$_.ProcessId -eq $Owner.Id
+        })
+        if ($OwnerHosts.Count -eq 1 -and $OwnerHosts[0].CommandLine -match (
+            "(?i)(?:^|\s)" + [regex]::Escape($RuntimeSupervisorArgument) + "(?:\s|$)"
+        )) {
+            throw "The launched foreground Host unexpectedly entered Runtime supervisor mode."
+        }
+        $ForegroundHosts = @($OwnerHosts | Where-Object {
+            $_.CommandLine -and
+            $_.CommandLine -notmatch (
+                "(?i)(?:^|\s)" + [regex]::Escape($RuntimeSupervisorArgument) + "(?:\s|$)"
+            )
+        })
+        if ($ForegroundHosts.Count -ne 1) {
+            # CIM can briefly lag process creation. The System.Diagnostics
+            # owner remains the liveness authority; keep polling until its
+            # foreground role is observable or the bounded deadline expires.
+            Start-Sleep -Milliseconds 250
+            continue
+        }
         foreach ($Runtime in @(Get-InstalledProcesses $RuntimeExecutable)) {
-            if ([int]$Runtime.ParentProcessId -ne $Owner.Id) {
+            $Supervisor = Get-OwnedRuntimeSupervisor -Runtime $Runtime `
+                -OwnerProcessId $Owner.Id -HostExecutable $HostExecutable `
+                -InstalledHostProcesses $InstalledHostProcesses
+            if ($null -eq $Supervisor) {
                 continue
             }
             $Listeners = @(Get-NetTCPConnection -OwningProcess $Runtime.ProcessId `
@@ -326,6 +387,7 @@ function Wait-ForInstalledRuntime {
                     if ($Health.status -eq "ok" -and $Health.database -eq "ready") {
                         return [PSCustomObject]@{
                             ProcessId = [int]$Runtime.ProcessId
+                            SupervisorProcessId = [int]$Supervisor.ProcessId
                             Port = [int]$Listener.LocalPort
                             Url = $Url
                             Health = $Health
@@ -361,7 +423,9 @@ function Wait-ForProcessExit {
 
 function Assert-RuntimeStopped {
     param(
+        [Parameter(Mandatory = $true)][string]$HostExecutable,
         [Parameter(Mandatory = $true)][string]$RuntimeExecutable,
+        [Parameter(Mandatory = $true)][int]$SupervisorProcessId,
         [Parameter(Mandatory = $true)][int]$ProcessId,
         [Parameter(Mandatory = $true)][int]$Port,
         [Parameter(Mandatory = $true)][int]$TimeoutSeconds
@@ -369,12 +433,17 @@ function Assert-RuntimeStopped {
 
     Wait-ForProcessExit -ProcessId $ProcessId -TimeoutSeconds $TimeoutSeconds `
         -Label "Installed Runtime"
+    Wait-ForProcessExit -ProcessId $SupervisorProcessId -TimeoutSeconds $TimeoutSeconds `
+        -Label "Installed Runtime supervisor"
     $Deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $Deadline) {
+        $HostProcesses = @(Get-InstalledProcesses $HostExecutable)
         $RuntimeProcesses = @(Get-InstalledProcesses $RuntimeExecutable)
         $Listener = @(Get-NetTCPConnection -LocalPort $Port -State Listen `
             -ErrorAction SilentlyContinue)
-        if ($RuntimeProcesses.Count -eq 0 -and $Listener.Count -eq 0) {
+        if ($HostProcesses.Count -eq 0 -and
+            $RuntimeProcesses.Count -eq 0 -and
+            $Listener.Count -eq 0) {
             try {
                 $null = Invoke-LoopbackJson "http://127.0.0.1:$Port/v1/runtime/health" 500
             } catch {
@@ -497,11 +566,16 @@ try {
     Write-Host "Installed layout and x64 PE checks passed: $InstallRoot"
 
     $HostProcess = Start-Process -FilePath $HostExecutable -PassThru
-    $Ready = Wait-ForInstalledRuntime -Owner $HostProcess `
+    $Ready = Wait-ForInstalledRuntime -Owner $HostProcess -HostExecutable $HostExecutable `
         -RuntimeExecutable $RuntimeExecutable -TimeoutSeconds $StartupTimeoutSeconds
     $RuntimeProcessId = $Ready.ProcessId
+    $RuntimeSupervisorProcessId = $Ready.SupervisorProcessId
     $RuntimePort = $Ready.Port
-    Write-Host "Installed Runtime health passed: $($Ready.Url) (PID $RuntimeProcessId)"
+    Write-Host (
+        "Installed Runtime health passed: $($Ready.Url) " +
+        "(Host PID $($HostProcess.Id) -> supervisor PID $($Ready.SupervisorProcessId) " +
+        "-> Runtime PID $RuntimeProcessId)"
+    )
 
     foreach ($Root in @($ConfigRoot, $DataRoot, $LogRoot)) {
         if (-not (Test-Path $Root -PathType Container)) {
@@ -518,7 +592,9 @@ try {
     Stop-Process -Id $HostProcess.Id -Force
     Wait-ForProcessExit -ProcessId $HostProcess.Id `
         -TimeoutSeconds $CleanupTimeoutSeconds -Label "Desktop host"
-    Assert-RuntimeStopped -RuntimeExecutable $RuntimeExecutable `
+    Assert-RuntimeStopped -HostExecutable $HostExecutable `
+        -RuntimeExecutable $RuntimeExecutable `
+        -SupervisorProcessId $RuntimeSupervisorProcessId `
         -ProcessId $RuntimeProcessId -Port $RuntimePort `
         -TimeoutSeconds $CleanupTimeoutSeconds
     $HostProcess = $null
