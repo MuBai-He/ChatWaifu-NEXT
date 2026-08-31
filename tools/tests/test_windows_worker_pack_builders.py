@@ -23,6 +23,9 @@ def test_windows_builders_use_one_canonical_worker_pack_contract() -> None:
         assert 'Join-Path $RepoRoot "tools\\worker_packs.py"' in script
         assert '$WorkerPackTool, "build"' in script
         assert '$WorkerPackTool, "verify"' in script
+        assert script.count('"--break-system-packages"') == script.count(
+            '"pip", "install"'
+        )
         assert "worker_pack_archive.py" not in script
         assert "Assert-WorkerPackPayloadX64" in script
         assert "Assert-WorkerPackSemanticVersion" in script

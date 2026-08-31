@@ -88,6 +88,7 @@ try {
 
     Invoke-WorkerPackChecked $Uv @(
         "pip", "install",
+        "--break-system-packages",
         "--python", $PortablePython,
         "--index-url", $TorchIndex,
         "torch==$TorchVersion+$CudaVariant",
@@ -95,6 +96,7 @@ try {
     )
     Invoke-WorkerPackChecked $Uv @(
         "pip", "install",
+        "--break-system-packages",
         "--python", $PortablePython,
         $QwenArchive,
         (Join-Path $RepoRoot "packages\model-worker-sdk-python"),

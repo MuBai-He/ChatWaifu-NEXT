@@ -74,6 +74,7 @@ try {
 
     Invoke-WorkerPackChecked $Uv @(
         "pip", "install",
+        "--break-system-packages",
         "--python", $PortablePython,
         (Join-Path $RepoRoot "packages\model-worker-sdk-python"),
         (Join-Path $RepoRoot "workers\asr-faster-whisper")
