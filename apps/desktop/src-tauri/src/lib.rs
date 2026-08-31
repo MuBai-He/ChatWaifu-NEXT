@@ -71,13 +71,17 @@ struct DesktopState {
 }
 
 #[tauri::command]
-fn show_control_center(app: AppHandle) -> Result<(), String> {
+async fn show_control_center(app: AppHandle) -> Result<(), String> {
+    show_control_center_window(&app)
+}
+
+fn show_control_center_window(app: &AppHandle) -> Result<(), String> {
     let window = match app.get_webview_window(CONTROL_CENTER_LABEL) {
         Some(window) => {
-            refresh_development_window(&app, &window)?;
+            refresh_development_window(app, &window)?;
             window
         }
-        None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, control_center_entry(&app))
+        None => WebviewWindowBuilder::new(app, CONTROL_CENTER_LABEL, control_center_entry(app))
             .initialization_script(CONTROL_CENTER_INIT_SCRIPT)
             .title("ChatWaifu NEXT · 桌宠设置")
             .always_on_top(true)
@@ -87,14 +91,14 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
             .build()
             .map_err(window_error)?,
     };
-    set_avatar_overlay_topmost(&app, false)?;
+    set_avatar_overlay_topmost(app, false)?;
     window.set_always_on_top(true).map_err(window_error)?;
     if let Err(error) = window.show().map_err(window_error) {
-        restore_avatar_overlay_topmost(&app);
+        restore_avatar_overlay_topmost(app);
         return Err(error);
     }
     if let Err(error) = window.set_focus().map_err(window_error) {
-        restore_avatar_overlay_topmost(&app);
+        restore_avatar_overlay_topmost(app);
         return Err(error);
     }
     Ok(())
@@ -281,9 +285,12 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
                 }
             }
             "control-center" => {
-                if let Err(error) = show_control_center(app.clone()) {
-                    eprintln!("desktop tray control-center failed: {error}");
-                }
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = show_control_center(app).await {
+                        eprintln!("desktop tray control-center failed: {error}");
+                    }
+                });
             }
             "click-through" => {
                 let state = app.state::<DesktopState>();
@@ -580,7 +587,9 @@ mod tests {
     use super::{
         APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
         HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost, should_ignore_cursor_events,
+        show_control_center,
     };
+    use std::future::Future;
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
@@ -598,6 +607,18 @@ mod tests {
         assert_eq!(NATIVE_SURFACE_QUERY, "chatwaifu_surface");
         assert!(CONTROL_CENTER_INIT_SCRIPT.contains("__CHATWAIFU_NATIVE_SURFACE__"));
         assert!(CONTROL_CENTER_INIT_SCRIPT.contains(CONTROL_CENTER_SURFACE));
+    }
+
+    #[test]
+    fn control_center_command_is_async_for_windows_webview_creation() {
+        fn assert_async_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle) -> Fut,
+            Fut: Future<Output = Result<(), String>>,
+        {
+        }
+
+        assert_async_command(show_control_center);
     }
 
     #[test]
