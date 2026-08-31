@@ -78,12 +78,12 @@ def _copy_sample_sources(sdk_directory: Path) -> None:
     source = sdk_directory / "Samples" / "TypeScript" / "Demo" / "src"
     shutil.copytree(source, SAMPLE_SOURCE_TARGET, dirs_exist_ok=True)
     define_path = SAMPLE_SOURCE_TARGET / "lappdefine.ts"
-    contents = define_path.read_text()
+    contents = define_path.read_text(encoding="utf-8")
     original = "export const ShaderPath = '../../Framework/Shaders/WebGL/';"
     replacement = "export const ShaderPath = '/vendor/live2d/framework/Shaders/WebGL/';"
     if original not in contents and replacement not in contents:
         raise RuntimeError(f"Unexpected ShaderPath declaration in {define_path}")
-    define_path.write_text(contents.replace(original, replacement))
+    define_path.write_text(contents.replace(original, replacement), encoding="utf-8")
 
 
 def _copy_framework_shaders() -> None:
