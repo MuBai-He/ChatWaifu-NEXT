@@ -229,6 +229,83 @@ def test_verify_install_list_and_reverify_payload(tmp_path: Path) -> None:
     assert not list((tmp_path / "packs" / "faster-whisper-cpu").glob(".install-*"))
 
 
+@pytest.mark.skipif(os.name != "nt", reason="requires Win32 extended-length paths")
+def test_windows_install_and_reverify_payload_beyond_legacy_max_path(tmp_path: Path) -> None:
+    worker = _pe()
+    long_member = "/".join(
+        [
+            "python",
+            "Lib",
+            "site-packages",
+            *(f"nested-package-assets-{index}-" + "x" * 48 for index in range(3)),
+            "frontend-bundle.js",
+        ]
+    )
+    payloads = {"bin/worker.exe": worker, long_member: b"long-path-payload"}
+    archive = _write_archive(tmp_path / "long-path-worker.zip", payloads)
+    expected = (tmp_path / "packs" / "faster-whisper-cpu" / "1.0.0").joinpath(
+        *Path(long_member).parts
+    )
+
+    assert len(os.path.abspath(expected)) > 260
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    reverified = worker_packs.load_installed_pack(installed.root, verify_payload=True)
+    discovered, errors = worker_packs.discover_installed_packs(
+        tmp_path / "packs", verify_payload=True
+    )
+
+    assert not os.fspath(installed.root).startswith("\\\\?\\")
+    assert worker_packs.__dict__["_filesystem_path"](expected).read_bytes() == b"long-path-payload"
+    assert reverified == installed
+    assert discovered == [installed]
+    assert errors == []
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Win32 extended-length paths")
+def test_windows_install_rollback_removes_payload_beyond_legacy_max_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    long_member = "/".join(
+        [
+            "python",
+            "Lib",
+            "site-packages",
+            *(f"rollback-package-assets-{index}-" + "x" * 48 for index in range(3)),
+            "frontend-bundle.js",
+        ]
+    )
+    payloads = {"bin/worker.exe": _pe(), long_member: b"rollback-long-path"}
+    archive = _write_archive(tmp_path / "rollback-long-path-worker.zip", payloads)
+    target = tmp_path / "packs" / "faster-whisper-cpu" / "1.0.0"
+    long_target = target.joinpath(*Path(long_member).parts)
+
+    assert len(os.path.abspath(long_target)) > 260
+
+    def fail_post_rename_verification(_path: Path, *, verify_payload: bool = False) -> None:
+        del verify_payload
+        raise worker_packs.WorkerPackError("forced post-rename verification failure")
+
+    monkeypatch.setattr(worker_packs, "load_installed_pack", fail_post_rename_verification)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="forced post-rename"):
+        worker_packs.install_archive(archive, tmp_path / "packs")
+
+    filesystem_path = worker_packs.__dict__["_filesystem_path"]
+    namespace = tmp_path / "packs" / "faster-whisper-cpu"
+    assert not filesystem_path(target).exists()
+    assert list(filesystem_path(namespace).iterdir()) == []
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows path namespaces")
+@pytest.mark.parametrize(
+    "path",
+    [Path(r"\\.\PhysicalDrive0"), Path(r"\\?\GLOBALROOT\Device\HarddiskVolume1")],
+)
+def test_windows_extended_paths_reject_device_namespaces(path: Path) -> None:
+    with pytest.raises(worker_packs.WorkerPackError, match="unsupported Windows filesystem"):
+        worker_packs.__dict__["_filesystem_path"](path)
+
+
 def test_verify_rejects_checksum_mismatch_and_leaves_no_install(tmp_path: Path) -> None:
     payloads = {"bin/worker.exe": _pe(b"tampered")}
     manifest = _manifest({"bin/worker.exe": _pe(b"expected")})

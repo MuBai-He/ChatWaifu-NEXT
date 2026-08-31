@@ -107,6 +107,9 @@ _PRIVATE_KEY_MARKERS = (
 )
 _DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 _WINDOWS_REPARSE_POINT_ATTRIBUTE = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+_WINDOWS_EXTENDED_PATH_PREFIX = "\\\\?\\"
+_WINDOWS_EXTENDED_UNC_PREFIX = "\\\\?\\UNC\\"
+_WINDOWS_DEVICE_PATH_PREFIX = "\\\\.\\"
 # `datetime.UTC` was added in Python 3.11, while the shared worker SDK is also
 # installed into the supported Python 3.10 GPT-SoVITS environment.
 _UTC = timezone.utc  # noqa: UP017
@@ -132,11 +135,63 @@ class InstalledWorkerPack:
     receipt: WorkerPackInstallReceipt
 
 
+def _filesystem_path(path: Path) -> Path:
+    """Return a Win32 extended-length path without resolving filesystem links.
+
+    Worker packs can contain valid Python package paths whose installed absolute
+    names exceed the legacy 260-character Win32 limit. Keep manifest and
+    containment logic on ordinary ``Path`` values, and add the extended prefix
+    only at filesystem call boundaries. Standard drive and UNC paths are the
+    only supported namespaces; device namespaces remain rejected.
+    """
+
+    if os.name != "nt":
+        return path
+    value = os.fspath(path)
+    folded = value.casefold()
+    if folded.startswith(_WINDOWS_EXTENDED_UNC_PREFIX.casefold()):
+        return path
+    if folded.startswith(_WINDOWS_EXTENDED_PATH_PREFIX.casefold()):
+        remainder = value[len(_WINDOWS_EXTENDED_PATH_PREFIX) :]
+        drive, tail = os.path.splitdrive(remainder)
+        if len(drive) == 2 and drive[1] == ":" and tail.startswith(("\\", "/")):
+            return path
+        raise WorkerPackError(f"unsupported Windows filesystem namespace: {path}")
+    if folded.startswith(_WINDOWS_DEVICE_PATH_PREFIX.casefold()):
+        raise WorkerPackError(f"unsupported Windows filesystem namespace: {path}")
+
+    absolute = os.path.abspath(value)
+    if absolute.startswith("\\\\"):
+        drive, _ = os.path.splitdrive(absolute)
+        if not drive:
+            raise WorkerPackError(f"invalid Windows UNC path: {path}")
+        return Path(f"{_WINDOWS_EXTENDED_UNC_PREFIX}{absolute[2:]}")
+    drive, tail = os.path.splitdrive(absolute)
+    if len(drive) != 2 or drive[1] != ":" or not tail.startswith(("\\", "/")):
+        raise WorkerPackError(f"Windows filesystem path is not absolute: {path}")
+    return Path(f"{_WINDOWS_EXTENDED_PATH_PREFIX}{absolute}")
+
+
+def _ordinary_path(path: Path) -> Path:
+    """Remove a standard extended-length prefix from a public path value."""
+
+    if os.name != "nt":
+        return path
+    value = os.fspath(path)
+    folded = value.casefold()
+    if folded.startswith(_WINDOWS_EXTENDED_UNC_PREFIX.casefold()):
+        return Path(f"\\\\{value[len(_WINDOWS_EXTENDED_UNC_PREFIX) :]}")
+    if folded.startswith(_WINDOWS_EXTENDED_PATH_PREFIX.casefold()):
+        return Path(value[len(_WINDOWS_EXTENDED_PATH_PREFIX) :])
+    return path
+
+
 def _path_is_link_or_reparse(path: Path) -> bool:
     """Detect POSIX symlinks and Windows junction/reparse points without following them."""
 
     try:
-        metadata = path.lstat()
+        filesystem_path = _filesystem_path(path)
+        metadata = filesystem_path.lstat()
     except FileNotFoundError:
         return False
     except OSError as error:
@@ -146,7 +201,7 @@ def _path_is_link_or_reparse(path: Path) -> bool:
     file_attributes = cast(int, getattr(metadata, "st_file_attributes", 0))
     if file_attributes & _WINDOWS_REPARSE_POINT_ATTRIBUTE:
         return True
-    is_junction = getattr(path, "is_junction", None)
+    is_junction = getattr(filesystem_path, "is_junction", None)
     if callable(is_junction):
         try:
             return bool(is_junction())
@@ -177,7 +232,7 @@ def _reject_reparse_ancestors(path: Path, *, label: str) -> None:
 def _require_real_directory(path: Path, *, label: str) -> None:
     _reject_link_or_reparse(path, label=label)
     try:
-        metadata = path.stat(follow_symlinks=False)
+        metadata = _filesystem_path(path).stat(follow_symlinks=False)
     except OSError as error:
         raise WorkerPackError(f"could not inspect {label}: {path}") from error
     if not stat.S_ISDIR(metadata.st_mode):
@@ -187,7 +242,7 @@ def _require_real_directory(path: Path, *, label: str) -> None:
 def _require_regular_file(path: Path, *, label: str) -> None:
     _reject_link_or_reparse(path, label=label)
     try:
-        metadata = path.stat(follow_symlinks=False)
+        metadata = _filesystem_path(path).stat(follow_symlinks=False)
     except OSError as error:
         raise WorkerPackError(f"could not inspect {label}: {path}") from error
     if not stat.S_ISREG(metadata.st_mode):
@@ -201,7 +256,7 @@ def _preflight_free_space(destination: Path, *, expanded_bytes: int, operation: 
     )
     required = expanded_bytes + headroom
     try:
-        available = shutil.disk_usage(destination).free
+        available = shutil.disk_usage(_filesystem_path(destination)).free
     except OSError as error:
         raise WorkerPackError(
             f"could not determine free space for {operation}: {destination}"
@@ -227,7 +282,7 @@ def _manifest_json(manifest: WorkerPackManifest) -> bytes:
 
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as source:
+    with _filesystem_path(path).open("rb") as source:
         while chunk := source.read(COPY_CHUNK_BYTES):
             digest.update(chunk)
     return digest.hexdigest()
@@ -398,8 +453,13 @@ def _verify_archive_pe_machine(
 def _verify_installed_pe_machine(path: Path, *, architecture: str, label: str) -> None:
     expected_machine = _WINDOWS_PE_MACHINE[architecture]
     try:
-        with path.open("rb") as source:
-            actual_machine = _read_pe_machine(source, size=path.stat().st_size, label=label)
+        filesystem_path = _filesystem_path(path)
+        with filesystem_path.open("rb") as source:
+            actual_machine = _read_pe_machine(
+                source,
+                size=filesystem_path.stat().st_size,
+                label=label,
+            )
     except WorkerPackError:
         raise
     except OSError as error:
@@ -414,12 +474,14 @@ def _verify_installed_pe_machine(path: Path, *, architecture: str, label: str) -
 def verify_archive(archive_path: Path) -> VerifiedWorkerPackArchive:
     """Fully verify one offline archive without extracting it."""
 
-    resolved_archive = archive_path.expanduser().resolve(strict=True)
-    if not resolved_archive.is_file():
+    resolved_archive = _ordinary_path(
+        _filesystem_path(archive_path.expanduser()).resolve(strict=True)
+    )
+    if not _filesystem_path(resolved_archive).is_file():
         raise WorkerPackError(f"worker pack archive is not a file: {resolved_archive}")
     archive_sha256 = _sha256_file(resolved_archive)
     try:
-        with zipfile.ZipFile(resolved_archive) as archive:
+        with zipfile.ZipFile(_filesystem_path(resolved_archive)) as archive:
             members = _archive_members(archive)
             manifest_member = members.get(MANIFEST_NAME)
             if manifest_member is None:
@@ -682,7 +744,7 @@ def _extract_verified_payload(
     destination: Path,
 ) -> None:
     _require_real_directory(destination, label="worker pack installation staging")
-    with zipfile.ZipFile(verified.archive_path) as archive:
+    with zipfile.ZipFile(_filesystem_path(verified.archive_path)) as archive:
         members = _archive_members(archive)
         for file in verified.manifest.files:
             member = members[file.path]
@@ -691,17 +753,19 @@ def _extract_verified_payload(
             for part in PurePosixPath(file.path).parts[:-1]:
                 current /= part
                 _reject_link_or_reparse(current, label="worker pack payload directory")
-                if not current.exists():
-                    current.mkdir(mode=0o700)
+                filesystem_current = _filesystem_path(current)
+                if not filesystem_current.exists():
+                    filesystem_current.mkdir(mode=0o700)
                 _require_real_directory(current, label="worker pack payload directory")
-            if target.exists() or _path_is_link_or_reparse(target):
+            filesystem_target = _filesystem_path(target)
+            if filesystem_target.exists() or _path_is_link_or_reparse(target):
                 raise WorkerPackError(
                     f"worker pack extraction target already exists: {file.path!r}"
                 )
             digest = hashlib.sha256()
             total = 0
             try:
-                with archive.open(member) as source, target.open("xb") as output:
+                with archive.open(member) as source, filesystem_target.open("xb") as output:
                     while chunk := source.read(COPY_CHUNK_BYTES):
                         total += len(chunk)
                         if total > file.size:
@@ -718,7 +782,7 @@ def _extract_verified_payload(
                 raise WorkerPackError(f"could not extract archive member {file.path!r}") from error
             if total != file.size or digest.hexdigest() != file.sha256:
                 raise WorkerPackError(f"archive member changed during installation: {file.path!r}")
-            target.chmod(
+            filesystem_target.chmod(
                 0o700 if file.path == verified.manifest.worker.entrypoint.executable else 0o600
             )
             _require_regular_file(target, label=f"installed payload {file.path!r}")
@@ -726,12 +790,13 @@ def _extract_verified_payload(
 
 def _write_json_file(path: Path, value: Any, *, exclusive: bool) -> None:
     mode = "x" if exclusive else "w"
-    with path.open(mode, encoding="utf-8", newline="\n") as output:
+    filesystem_path = _filesystem_path(path)
+    with filesystem_path.open(mode, encoding="utf-8", newline="\n") as output:
         json.dump(value, output, ensure_ascii=False, indent=2)
         output.write("\n")
         output.flush()
         os.fsync(output.fileno())
-    path.chmod(0o600)
+    filesystem_path.chmod(0o600)
 
 
 def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
@@ -740,12 +805,12 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
     verified = verify_archive(archive_path)
     expanded_root = root.expanduser()
     _reject_reparse_ancestors(expanded_root, label="worker pack installation path")
-    resolved_root = expanded_root.resolve()
-    resolved_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    resolved_root = _ordinary_path(_filesystem_path(expanded_root).resolve())
+    _filesystem_path(resolved_root).mkdir(parents=True, exist_ok=True, mode=0o700)
     _require_real_directory(resolved_root, label="worker pack root")
     pack_root = resolved_root / verified.manifest.pack_id
     _reject_link_or_reparse(pack_root, label="worker pack namespace")
-    pack_root.mkdir(exist_ok=True, mode=0o700)
+    _filesystem_path(pack_root).mkdir(exist_ok=True, mode=0o700)
     _require_real_directory(pack_root, label="worker pack namespace")
     _preflight_free_space(
         pack_root,
@@ -753,19 +818,22 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
         operation="worker pack installation",
     )
     target = pack_root / verified.manifest.version
-    if target.exists() or _path_is_link_or_reparse(target):
+    if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
         raise WorkerPackError(f"worker pack is already installed: {target}")
 
-    temporary = Path(tempfile.mkdtemp(prefix=".install-", dir=pack_root))
+    temporary = _ordinary_path(
+        Path(tempfile.mkdtemp(prefix=".install-", dir=_filesystem_path(pack_root)))
+    )
     renamed = False
     try:
         _extract_verified_payload(verified, temporary)
         manifest_path = temporary / MANIFEST_NAME
-        with manifest_path.open("xb") as output:
+        filesystem_manifest_path = _filesystem_path(manifest_path)
+        with filesystem_manifest_path.open("xb") as output:
             output.write(verified.manifest_bytes)
             output.flush()
             os.fsync(output.fileno())
-        manifest_path.chmod(0o600)
+        filesystem_manifest_path.chmod(0o600)
         receipt = WorkerPackInstallReceipt(
             pack_id=verified.manifest.pack_id,
             version=verified.manifest.version,
@@ -780,18 +848,18 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
             exclusive=True,
         )
         # The staging directory lives inside pack_root, so the final rename never crosses volumes.
-        if target.exists() or _path_is_link_or_reparse(target):
+        if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
             raise WorkerPackError(
                 f"worker pack installation target appeared during install: {target}"
             )
-        os.replace(temporary, target)
+        os.replace(_filesystem_path(temporary), _filesystem_path(target))
         renamed = True
         installed = load_installed_pack(target, verify_payload=True)
     except BaseException:
-        if temporary.exists():
-            shutil.rmtree(temporary, ignore_errors=True)
-        if renamed and target.exists() and not _path_is_link_or_reparse(target):
-            shutil.rmtree(target, ignore_errors=True)
+        if _filesystem_path(temporary).exists():
+            shutil.rmtree(_filesystem_path(temporary), ignore_errors=True)
+        if renamed and _filesystem_path(target).exists() and not _path_is_link_or_reparse(target):
+            shutil.rmtree(_filesystem_path(target), ignore_errors=True)
         raise
 
     return installed
@@ -800,10 +868,11 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
 def _read_bounded_regular_file(path: Path, *, label: str, maximum_bytes: int) -> bytes:
     _require_regular_file(path, label=label)
     try:
-        size = path.stat(follow_symlinks=False).st_size
+        filesystem_path = _filesystem_path(path)
+        size = filesystem_path.stat(follow_symlinks=False).st_size
         if size > maximum_bytes:
             raise WorkerPackError(f"{label} exceeds the size limit: {path}")
-        return path.read_bytes()
+        return filesystem_path.read_bytes()
     except WorkerPackError:
         raise
     except OSError as error:
@@ -845,12 +914,13 @@ def _verify_installed_payload_tree(resolved: Path, manifest: WorkerPackManifest)
     }
     observed_files: dict[str, str] = {}
     observed_directories: dict[str, str] = {}
-    for directory, directory_names, file_names in os.walk(resolved, followlinks=False):
+    filesystem_root = _filesystem_path(resolved)
+    for directory, directory_names, file_names in os.walk(filesystem_root, followlinks=False):
         directory_path = Path(directory)
         _require_real_directory(directory_path, label="installed worker pack directory")
         for name in directory_names:
             candidate = directory_path / name
-            relative = candidate.relative_to(resolved).as_posix()
+            relative = candidate.relative_to(filesystem_root).as_posix()
             _portable_archive_path(relative)
             _require_real_directory(candidate, label=f"installed directory {relative!r}")
             folded = relative.casefold()
@@ -862,7 +932,7 @@ def _verify_installed_payload_tree(resolved: Path, manifest: WorkerPackManifest)
             observed_directories[folded] = relative
         for name in file_names:
             candidate = directory_path / name
-            relative = candidate.relative_to(resolved).as_posix()
+            relative = candidate.relative_to(filesystem_root).as_posix()
             _portable_archive_path(relative)
             _require_regular_file(candidate, label=f"installed file {relative!r}")
             folded = relative.casefold()
@@ -891,7 +961,7 @@ def _verify_installed_payload_tree(resolved: Path, manifest: WorkerPackManifest)
 
     for file in manifest.files:
         payload = resolved.joinpath(*PurePosixPath(file.path).parts)
-        size = payload.stat(follow_symlinks=False).st_size
+        size = _filesystem_path(payload).stat(follow_symlinks=False).st_size
         if size != file.size or _sha256_file(payload) != file.sha256:
             raise WorkerPackError(f"installed worker pack file checksum mismatch: {file.path!r}")
         if (
@@ -911,7 +981,7 @@ def load_installed_pack(path: Path, *, verify_payload: bool = False) -> Installe
     expanded = path.expanduser()
     _reject_reparse_ancestors(expanded, label="installed worker pack path")
     try:
-        resolved = expanded.resolve(strict=True)
+        resolved = _ordinary_path(_filesystem_path(expanded).resolve(strict=True))
     except OSError as error:
         raise WorkerPackError(f"installed worker pack path is invalid: {path}") from error
     _require_real_directory(resolved, label="installed worker pack")
@@ -956,15 +1026,18 @@ def discover_installed_packs(
 
     expanded_root = root.expanduser()
     _reject_reparse_ancestors(expanded_root, label="worker pack discovery path")
-    resolved_root = expanded_root.resolve()
-    if not resolved_root.exists():
+    resolved_root = _ordinary_path(_filesystem_path(expanded_root).resolve())
+    if not _filesystem_path(resolved_root).exists():
         return [], []
     _require_real_directory(resolved_root, label="worker pack root")
     packs: list[InstalledWorkerPack] = []
     errors: list[str] = []
     candidate_roots: list[Path] = []
     try:
-        namespaces = sorted(resolved_root.iterdir(), key=lambda value: value.name.casefold())
+        namespaces = sorted(
+            (_ordinary_path(value) for value in _filesystem_path(resolved_root).iterdir()),
+            key=lambda value: value.name.casefold(),
+        )
     except OSError as error:
         raise WorkerPackError(f"could not enumerate worker pack root: {resolved_root}") from error
     if len(namespaces) > WORKER_PACK_MAX_FILE_COUNT:
@@ -972,9 +1045,12 @@ def discover_installed_packs(
     for namespace in namespaces:
         try:
             _reject_link_or_reparse(namespace, label="worker pack namespace")
-            if not namespace.is_dir():
+            if not _filesystem_path(namespace).is_dir():
                 continue
-            versions = sorted(namespace.iterdir(), key=lambda value: value.name.casefold())
+            versions = sorted(
+                (_ordinary_path(value) for value in _filesystem_path(namespace).iterdir()),
+                key=lambda value: value.name.casefold(),
+            )
             if len(versions) > WORKER_PACK_MAX_FILE_COUNT:
                 raise WorkerPackError(
                     f"worker pack namespace contains too many versions: {namespace}"
@@ -983,7 +1059,10 @@ def discover_installed_packs(
                 if version.name.startswith(".install-"):
                     continue
                 _reject_link_or_reparse(version, label="installed worker pack version")
-                if version.is_dir() and (version / MANIFEST_NAME).exists():
+                if (
+                    _filesystem_path(version).is_dir()
+                    and _filesystem_path(version / MANIFEST_NAME).exists()
+                ):
                     candidate_roots.append(version)
         except WorkerPackError as error:
             errors.append(str(error)[:500])
@@ -1013,11 +1092,12 @@ def semver_sort_key(
 
 
 def _load_activation_config(config_path: Path) -> WorkerPackActivationConfig:
-    if not config_path.exists():
+    filesystem_path = _filesystem_path(config_path)
+    if not filesystem_path.exists():
         return WorkerPackActivationConfig()
     _require_regular_file(config_path, label="activation config")
     try:
-        return WorkerPackActivationConfig.model_validate_json(config_path.read_bytes())
+        return WorkerPackActivationConfig.model_validate_json(filesystem_path.read_bytes())
     except (OSError, ValueError, ValidationError) as error:
         raise WorkerPackError(f"activation config is invalid: {config_path}") from error
 
@@ -1045,8 +1125,8 @@ def activate_pack(
     selected = max(candidates, key=lambda item: semver_sort_key(item.manifest.version))
     expanded_config_root = config_root.expanduser()
     _reject_reparse_ancestors(expanded_config_root, label="worker pack config path")
-    resolved_config_root = expanded_config_root.resolve()
-    resolved_config_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    resolved_config_root = _ordinary_path(_filesystem_path(expanded_config_root).resolve())
+    _filesystem_path(resolved_config_root).mkdir(parents=True, exist_ok=True, mode=0o700)
     _require_real_directory(resolved_config_root, label="worker pack config root")
     config_path = resolved_config_root / SELECTION_NAME
     current = _load_activation_config(config_path)
@@ -1060,16 +1140,18 @@ def activate_pack(
         active=WorkerPackActiveSelection.model_validate(active_values)
     )
     descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{SELECTION_NAME}.", suffix=".tmp", dir=resolved_config_root
+        prefix=f".{SELECTION_NAME}.",
+        suffix=".tmp",
+        dir=_filesystem_path(resolved_config_root),
     )
     os.close(descriptor)
-    temporary = Path(temporary_name)
+    temporary = _ordinary_path(Path(temporary_name))
     try:
         _write_json_file(temporary, updated.model_dump(mode="json"), exclusive=False)
         _reject_link_or_reparse(config_path, label="activation config")
-        os.replace(temporary, config_path)
+        os.replace(_filesystem_path(temporary), _filesystem_path(config_path))
     finally:
-        temporary.unlink(missing_ok=True)
+        _filesystem_path(temporary).unlink(missing_ok=True)
     return selected, config_path
 
 
