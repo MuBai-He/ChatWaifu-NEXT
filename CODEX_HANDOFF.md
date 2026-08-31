@@ -5,6 +5,95 @@
 
 ---
 
+## 0.1 2026-09-01 当前接手状态
+
+本节是跨机器接手入口，优先于本文后面的历史首轮任务。第 8、9 节记录的是项目初始化时的
+Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**。当前事实以
+`docs/implementation-status.yaml`、已接受 ADR 和当前 checkout 为准。
+
+### Git 基线
+
+```text
+Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
+Branch:     codex/windows-installer
+Commit:     5cc655a
+Platform:   下一轮在原生 Windows x64 + NVIDIA CUDA 电脑验收
+```
+
+该提交已经推送。源代码工作区干净，不需要从 macOS 复制完整工程目录。Windows 机器应从 Git
+干净 clone；macOS 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
+
+### 当前产品能力
+
+- Web 与 Desktop 是一个仓库、一个产品内核、两个独立构建 profile。
+- Tauri 桌宠、独立设置窗口、Live2D、文本/语音会话、播放 ACK、打断和设备恢复已经连通。
+- Character Kernel、结构化记忆、分角色模型路由、Runtime Skills/MCP、权限确认和插件隔离已经落地。
+- TTS 共用统一 Provider contract；本地 Qwen3-TTS、GPT-SoVITS 与百炼 Qwen/CosyVoice 可配置切换。
+- Windows 基础安装包、冻结 Runtime、AppContainer helper 和 `.cwpack` Worker Pack 边界已经实现。
+- 桌宠透明空白区域可穿透点击；Live2D 命中区域、字幕、输入框和悬浮控件仍可交互。
+- 原生微信 iLink 扫码接入已进入该分支，但它不属于本次 CUDA 验收的阻塞项。
+
+### Windows CUDA 下一目标
+
+先证明真实硬件路径，不继续扩功能：
+
+1. 在原生 Windows x64 上完成干净 checkout 和 x64 工具链 bootstrap。
+2. 确认 `nvidia-smi`、驱动、CUDA 12.6 PyTorch wheel 与 Qwen3-TTS 实际执行设备。
+3. 构建并真实推理验收 Qwen3-TTS 宁宁 CUDA `.cwpack`。
+4. 构建并真实转写验收 faster-whisper Base CPU-int8 `.cwpack`。
+5. 构建带本地私有 Live2D overlay 的 owner-only NSIS 候选，安装两个 pack 后从开始菜单运行。
+6. 验证中文/日文 TTS、麦克风 STT、抢话取消、设置/记忆持久化、进程退出和重启恢复。
+7. 记录显卡、驱动、Windows、WebView2、安装包/pack SHA-256 和所有真实失败。
+
+尚未完成的发布门包括：原生 CUDA 实机验收、干净账户完整安装态流程、签名、私有角色资产许可审查
+和公开发布。Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
+
+### Windows 干净接手命令
+
+```powershell
+git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
+cd ChatWaifu-NEXT
+git switch codex/windows-installer
+git rev-parse --short HEAD  # 应为 5cc655a 或其后续提交
+
+Set-ExecutionPolicy -Scope Process Bypass
+.\tools\windows\bootstrap_x64.ps1
+.\tools\windows\dev_x64.ps1
+```
+
+先用 `dev_x64.ps1` 验证窗口、Runtime 和本地资源，再构建发布形态。模型 pack 和安装包命令见
+`docs/operations/windows-local-ai-worker-packs.md` 与 `docs/architecture/product-release-profiles.md`。
+
+### 只单独转移这些本地私有资产
+
+| 资产 | macOS 侧已存在的目录 | Windows 建议落点 | 约大小 |
+| --- | --- | --- | ---: |
+| 宁宁 Qwen3-TTS 原始 CustomVoice checkpoint | `ChatWaifu-Nene-Qwen3-TTS/20260825-155901/checkpoint-epoch-0` | `C:\models\nene-qwen3-tts\checkpoint-epoch-0` | 2.3 GB |
+| 已适配的宁宁 Live2D 模型 | `apps/web/public/vendor/live2d/model` | clone 后同一仓库相对路径 | 46 MB |
+| GPT-SoVITS 宁宁模型，可选 | `nene` | `C:\models\nene-gpt-sovits` | 313 MB |
+
+不要复制整个 `.local`。其中包含 macOS/MLX 专用环境、缓存、历史音频、数据库和明文 secret 文件；
+既不能在 Windows 运行，也不应作为机器迁移包。模型/API 密钥在 Windows 设置界面重新填写。当前
+CUDA 验收只需要前两项；faster-whisper 由固定 revision 的 Windows builder 下载并封装。
+
+Qwen 与 Whisper pack 的标准命令：
+
+```powershell
+.\tools\windows\build_qwen3_tts_worker_pack_x64.ps1 `
+    -ModelSource C:\models\nene-qwen3-tts\checkpoint-epoch-0 `
+    -Voice ayachi_nene_local `
+    -PackVersion 0.1.0
+
+.\tools\windows\build_faster_whisper_worker_pack_x64.ps1 `
+    -SmokeWav C:\validation\speech.wav `
+    -PackVersion 0.1.0
+```
+
+新 Codex 开始时先读取本节、`docs/implementation-status.yaml`、ADR 0027/0028 和上述两份 Windows
+文档；先观察真实 Windows/CUDA 基线，再修改代码，不要根据 macOS 结果宣称 Windows 已通过。
+
+---
+
 ## 1. 你的角色
 
 你是 ChatWaifu Next 的实现代理。你的任务是按照既定架构，以小步、可测试、可审计的方式建立一个本地优先的实时 AI 角色运行时。
@@ -203,7 +292,7 @@ schema/test
 
 ---
 
-## 8. 首轮任务范围
+## 8. 历史首轮任务范围（已完成，不再约束当前任务）
 
 第一轮只能实现 Phase 0 和 Phase 1。不要接 Pipecat、Live2D、Tauri sidecar 或任何真实模型。
 
@@ -243,7 +332,7 @@ Contract tests
 
 ---
 
-## 9. 首轮建议命令
+## 9. 历史首轮建议命令
 
 根据实际平台调整，但目标命令必须保持：
 
