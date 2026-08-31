@@ -32,7 +32,12 @@ from chatwaifu_model_worker.packages import (
 MANIFEST_NAME = "manifest.json"
 RECEIPT_NAME = "install-receipt.json"
 SELECTION_NAME = "local-ai-selection.json"
-MAX_MANIFEST_BYTES = 4 * 1024 * 1024
+# A manifest stores a path, size, SHA-256, and role for every payload file.
+# Frozen Python workers can contain tens of thousands of small files, so 4 MiB
+# rejects otherwise-valid packs well below the schema's file-count limit. Keep
+# manifest parsing independently and strictly bounded while accommodating those
+# runtimes.
+MAX_MANIFEST_BYTES = 32 * 1024 * 1024
 MAX_RECEIPT_BYTES = 1024 * 1024
 COPY_CHUNK_BYTES = 4 * 1024 * 1024
 MAX_ARCHIVE_MEMBER_COUNT = WORKER_PACK_MAX_FILE_COUNT * 2 + 2
@@ -297,6 +302,8 @@ def _archive_members(archive: zipfile.ZipFile) -> dict[str, zipfile.ZipInfo]:
             MAX_MANIFEST_BYTES if path.casefold() == MANIFEST_NAME else WORKER_PACK_MAX_FILE_BYTES
         )
         if member.file_size < 0 or member.file_size > member_limit:
+            if path.casefold() == MANIFEST_NAME:
+                raise WorkerPackError("worker pack manifest exceeds the size limit")
             raise WorkerPackError(
                 f"archive member exceeds the expanded size limit: {member.filename!r}"
             )

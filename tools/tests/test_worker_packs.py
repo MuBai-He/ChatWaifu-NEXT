@@ -532,6 +532,38 @@ def test_verify_enforces_archive_member_and_expanded_size_limits(
         worker_packs.verify_archive(archive)
 
 
+def test_verify_accepts_manifest_larger_than_legacy_limit(tmp_path: Path) -> None:
+    payloads = {"bin/worker.exe": _pe()}
+    manifest = json.dumps(_manifest(payloads)).encode("utf-8")
+    legacy_limit = 4 * 1024 * 1024
+    manifest += b" " * (legacy_limit + 1 - len(manifest))
+    archive_path = tmp_path / "large-manifest.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("manifest.json", manifest)
+        archive.writestr("bin/worker.exe", payloads["bin/worker.exe"])
+
+    verified = worker_packs.verify_archive(archive_path)
+
+    assert verified.manifest.pack_id == "faster-whisper-cpu"
+    assert legacy_limit < worker_packs.MAX_MANIFEST_BYTES <= 32 * 1024 * 1024
+
+
+def test_verify_enforces_dedicated_manifest_size_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payloads = {"bin/worker.exe": _pe()}
+    manifest = json.dumps(_manifest(payloads)).encode("utf-8")
+    manifest_limit = len(manifest)
+    archive_path = tmp_path / "oversized-manifest.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("manifest.json", manifest + b" ")
+        archive.writestr("bin/worker.exe", payloads["bin/worker.exe"])
+    monkeypatch.setattr(worker_packs, "MAX_MANIFEST_BYTES", manifest_limit)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="manifest exceeds the size limit"):
+        worker_packs.verify_archive(archive_path)
+
+
 def test_verify_enforces_archive_member_count_limit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
