@@ -140,29 +140,29 @@ fn get_desktop_preferences(state: State<'_, DesktopState>) -> Result<DesktopPref
 }
 
 #[tauri::command]
-fn set_avatar_overlay_always_on_top(
+async fn set_avatar_overlay_always_on_top(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_always_on_top(&app, &state, enabled)
 }
 
 #[tauri::command]
-fn set_avatar_overlay_click_through(
+async fn set_avatar_overlay_click_through(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_click_through(&app, &state, enabled)
 }
 
 #[tauri::command]
-fn set_avatar_overlay_visible(
+async fn set_avatar_overlay_visible(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_overlay_visible(&app, &state, enabled)
 }
 
@@ -180,11 +180,11 @@ fn set_avatar_overlay_display(
 }
 
 #[tauri::command]
-fn set_avatar_overlay_interaction_region_active(
+async fn set_avatar_overlay_interaction_region_active(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     active: bool,
 ) -> Result<(), String> {
+    let state = app.state::<DesktopState>();
     let mut interaction_active = lock_interaction_region_active(&state)?;
     let click_through = lock_preferences(&state)?.click_through;
     required_window(&app, AVATAR_OVERLAY_LABEL)?
@@ -586,8 +586,10 @@ fn window_error(error: tauri::Error) -> String {
 mod tests {
     use super::{
         APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
-        HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost, should_ignore_cursor_events,
-        show_control_center,
+        HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost,
+        set_avatar_overlay_always_on_top, set_avatar_overlay_click_through,
+        set_avatar_overlay_interaction_region_active, set_avatar_overlay_visible,
+        should_ignore_cursor_events, show_control_center,
     };
     use std::future::Future;
 
@@ -619,6 +621,28 @@ mod tests {
         }
 
         assert_async_command(show_control_center);
+    }
+
+    #[test]
+    fn native_window_mutation_commands_are_async_on_windows() {
+        fn assert_async_preference_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle, bool) -> Fut,
+            Fut: Future<Output = Result<DesktopPreferences, String>>,
+        {
+        }
+
+        fn assert_async_interaction_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle, bool) -> Fut,
+            Fut: Future<Output = Result<(), String>>,
+        {
+        }
+
+        assert_async_preference_command(set_avatar_overlay_always_on_top);
+        assert_async_preference_command(set_avatar_overlay_click_through);
+        assert_async_preference_command(set_avatar_overlay_visible);
+        assert_async_interaction_command(set_avatar_overlay_interaction_region_active);
     }
 
     #[test]
