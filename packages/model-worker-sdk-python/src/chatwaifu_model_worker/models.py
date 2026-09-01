@@ -198,9 +198,7 @@ class WorkerRuntimeDiagnostics(WorkerModel):
     cuda_available: bool | None = None
     cuda_device_index: int | None = Field(default=None, ge=0)
     cuda_device_name: str | None = Field(default=None, min_length=1, max_length=256)
-    cuda_compute_capability: str | None = Field(
-        default=None, pattern=r"^[0-9]+\.[0-9]+$"
-    )
+    cuda_compute_capability: str | None = Field(default=None, pattern=r"^[0-9]+\.[0-9]+$")
     cuda_total_memory_bytes: int | None = Field(default=None, ge=0)
     cuda_free_memory_bytes: int | None = Field(default=None, ge=0)
     cuda_memory_allocated_bytes: int | None = Field(default=None, ge=0)

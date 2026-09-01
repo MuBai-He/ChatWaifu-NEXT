@@ -473,12 +473,7 @@ def _validate_torch_model_device(model: Any, expected_device: str) -> tuple[str,
         raise RuntimeError("Qwen3-TTS Torch model does not expose parameters for device validation")
     parameter_iterator = cast(Callable[[], Iterator[Any]], parameters)
     parameter_devices = tuple(
-        sorted(
-            {
-                str(getattr(parameter, "device", "unknown"))
-                for parameter in parameter_iterator()
-            }
-        )
+        sorted({str(getattr(parameter, "device", "unknown")) for parameter in parameter_iterator()})
     )
     if not parameter_devices:
         raise RuntimeError("Qwen3-TTS Torch model exposes no parameters for device validation")
@@ -510,9 +505,7 @@ def collect_torch_runtime_diagnostics(
     cuda_available = bool(torch.cuda.is_available())
     diagnostics: dict[str, object] = {
         "torch_version": str(torch.__version__),
-        "torch_cuda_version": (
-            str(torch.version.cuda) if torch.version.cuda is not None else None
-        ),
+        "torch_cuda_version": (str(torch.version.cuda) if torch.version.cuda is not None else None),
         "cuda_available": cuda_available,
     }
     if cuda_available and settings.device.startswith("cuda"):

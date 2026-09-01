@@ -10,9 +10,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 _CHUNK_SIZE = 8 * 1024 * 1024
-_HF_TOKEN_PATTERN = re.compile(
-    rb"(?<![A-Za-z0-9_])hf_[A-Za-z0-9]{34}(?![A-Za-z0-9])"
-)
+_HF_TOKEN_PATTERN = re.compile(rb"(?<![A-Za-z0-9_])hf_[A-Za-z0-9]{34}(?![A-Za-z0-9])")
 
 
 class PayloadContentError(RuntimeError):
@@ -64,9 +62,7 @@ def assert_payload_is_sanitized(root: Path, forbidden_paths: Sequence[str]) -> N
     markers = _path_markers(forbidden_paths)
     file_count = 0
     byte_count = 0
-    for directory, directory_names, file_names in os.walk(
-        resolved_root, followlinks=False
-    ):
+    for directory, directory_names, file_names in os.walk(resolved_root, followlinks=False):
         directory_names.sort(key=str.casefold)
         file_names.sort(key=str.casefold)
         for file_name in file_names:
@@ -78,9 +74,7 @@ def assert_payload_is_sanitized(root: Path, forbidden_paths: Sequence[str]) -> N
             violation = _file_violation(path, markers)
             if violation is not None:
                 relative = path.relative_to(resolved_root).as_posix()
-                raise PayloadContentError(
-                    f"worker payload contains {violation}: {relative!r}"
-                )
+                raise PayloadContentError(f"worker payload contains {violation}: {relative!r}")
     print(
         "Verified worker payload contains no local build paths or credential material "
         f"across {file_count} files and {byte_count} bytes."

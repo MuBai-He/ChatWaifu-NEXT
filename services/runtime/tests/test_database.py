@@ -468,9 +468,12 @@ async def test_corrupt_database_fails_closed_before_migration_writes(tmp_path: P
 
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest_before
     with sqlite3.connect(path) as connection:
-        assert connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE name = 'must_not_exist'"
-        ).fetchone() is None
+        assert (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE name = 'must_not_exist'"
+            ).fetchone()
+            is None
+        )
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="validates Windows TerminateProcess recovery")
@@ -499,8 +502,7 @@ async def test_windows_force_exit_recovers_wal_without_partial_domain_rows(
             if line != "READY_TO_TERMINATE":
                 stderr = (await process.stderr.read()).decode("utf-8", errors="replace")
             assert line == "READY_TO_TERMINATE", (
-                f"force-exit fixture failed before its commit boundary: {line!r}; "
-                f"stderr={stderr}"
+                f"force-exit fixture failed before its commit boundary: {line!r}; stderr={stderr}"
             )
             process.kill()
             await asyncio.wait_for(process.wait(), timeout=10)

@@ -25,7 +25,7 @@ WINDOWS_SYNCHRONIZE = 0x00100000
 WINDOWS_WAIT_TIMEOUT = 0x00000102
 WINDOWS_JOB_OBJECT_LIMIT_KILL_ON_CLOSE = 0x00002000
 WINDOWS_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
-_PROCESS_JOB_HANDLE: int | None = None
+_process_job_handle: int | None = None
 
 
 class _WindowsJobBasicLimitInformation(ctypes.Structure):
@@ -372,8 +372,8 @@ def _start_stdin_watchdog(stopped: threading.Event) -> None:
 def _install_windows_process_job() -> None:
     """Contain Runtime and plugin descendants in a kill-on-close Windows Job."""
 
-    global _PROCESS_JOB_HANDLE
-    if os.name != "nt" or _PROCESS_JOB_HANDLE is not None:
+    global _process_job_handle
+    if os.name != "nt" or _process_job_handle is not None:
         return
     windll = cast(Any, getattr(ctypes, "windll", None))
     if windll is None:
@@ -416,7 +416,7 @@ def _install_windows_process_job() -> None:
         error = ctypes.WinError()
         kernel32.CloseHandle(handle)
         raise error
-    _PROCESS_JOB_HANDLE = int(handle)
+    _process_job_handle = int(handle)
 
 
 def _start_parent_watchdog(environment: MutableMapping[str, str], stopped: threading.Event) -> None:

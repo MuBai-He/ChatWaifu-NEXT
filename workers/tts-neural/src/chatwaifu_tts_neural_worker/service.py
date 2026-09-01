@@ -190,9 +190,7 @@ class SynthesisService:
 
     def health(self) -> WorkerHealth:
         queue_depth = sum(not task.done() for task in self._jobs.values())
-        runtime_diagnostics = collect_torch_runtime_diagnostics(
-            self._settings, self._engine
-        )
+        runtime_diagnostics = collect_torch_runtime_diagnostics(self._settings, self._engine)
         return WorkerHealth(
             status="busy" if queue_depth else "ready",
             worker_id=self._settings.worker_id,
