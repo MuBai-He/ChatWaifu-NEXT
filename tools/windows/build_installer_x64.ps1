@@ -27,10 +27,18 @@ $PytestBaseTemp = Join-Path $RepoRoot "build\pytest\windows-installer"
 $Live2DDestination = Join-Path $RepoRoot "apps\web\public\vendor\live2d"
 $NsisRoot = Join-Path $RepoRoot "target\$Target\release\bundle\nsis"
 $InstallerOutput = Join-Path $RepoRoot "dist\windows\installer"
-$Live2DStagingRoot = $null
-$OriginalLive2DBackup = $null
-$Live2DDestinationTemporarilyOwned = $false
+$Live2DTransactionRoot = Join-Path $RepoRoot "build\windows-installer\live2d-transaction"
+$OriginalLive2DBackup = Join-Path $Live2DTransactionRoot "original"
+$Live2DSourceSnapshot = Join-Path $Live2DTransactionRoot "source"
 $Live2DSourceLayout = ""
+
+. (Join-Path $PSScriptRoot "installer_live2d_transaction.ps1")
+
+# Recover before toolchain preflight as well as before inspecting local assets.
+# A broken or incomplete development environment must not leave an interrupted
+# private-overlay transaction in place until the next successful build attempt.
+Restore-InstallerLive2DTransaction -TransactionRoot $Live2DTransactionRoot `
+    -Destination $Live2DDestination
 
 function Invoke-Checked {
     param(
@@ -114,6 +122,8 @@ function Assert-Live2DVendorInputs {
         [switch]$BaseOnly
     )
 
+    Assert-InstallerLive2DOrdinaryDirectoryTree -Root $Root `
+        -Purpose "vendor input tree"
     $RequiredInputs = [ordered]@{
         "Cubism Core" = Join-Path $Root "live2dcubismcore.min.js"
         "ChatWaifu Cubism bridge" = Join-Path $Root "chatwaifu-live2d-bridge.js"
@@ -206,9 +216,7 @@ function Copy-DirectoryContents {
         [Parameter(Mandatory = $true)][string]$Destination
     )
 
-    foreach ($Entry in @(Get-ChildItem -LiteralPath $Source -Force)) {
-        Copy-Item -LiteralPath $Entry.FullName -Destination $Destination -Recurse -Force
-    }
+    Copy-InstallerLive2DDirectoryContents -Source $Source -Destination $Destination
 }
 
 function Remove-GeneratedInstallerArtifacts {
@@ -254,19 +262,20 @@ try {
     $env:UV_PROJECT = $RepoRoot
     $env:UV_PROJECT_ENVIRONMENT = $PackagingEnvironment
     # The ignored development model must never leak into a base installer. Move it
-    # out for the duration of every build, then restore it in finally. An explicit
-    # owner-only overlay is first copied to a temporary snapshot so source and
-    # destination may safely refer to the same directory.
+    # out for the duration of every build, then restore it in finally. The stable,
+    # ignored, same-volume transaction keeps an authoritative backup and atomic
+    # phase markers across process termination. An explicit owner-only overlay is
+    # first copied to a snapshot so source and destination may safely be identical.
     if ($Live2DSource -or (Test-Path $Live2DDestination -PathType Container)) {
-        $Live2DStagingRoot = Join-Path (
-            [System.IO.Path]::GetTempPath()
-        ) ("chatwaifu-live2d-" + [System.Guid]::NewGuid().ToString("N"))
-        New-Item -ItemType Directory -Path $Live2DStagingRoot -Force | Out-Null
+        Start-InstallerLive2DTransaction -TransactionRoot $Live2DTransactionRoot `
+            -Destination $Live2DDestination
     }
     if ($Live2DSource) {
         if (-not (Test-Path -LiteralPath $Live2DSource -PathType Container)) {
             throw "Private Live2D overlay source must be an existing directory: $Live2DSource"
         }
+        Assert-InstallerLive2DOrdinaryDirectoryTree -Root $Live2DSource `
+            -Purpose "private overlay input tree"
         $ResolvedLive2DSource = (Resolve-Path -LiteralPath $Live2DSource).Path
         $DirectModelAvatar = Join-Path $ResolvedLive2DSource "avatar.model3.json"
         $VendorRootAvatar = Join-Path $ResolvedLive2DSource "model\avatar.model3.json"
@@ -286,28 +295,38 @@ try {
                 $ResolvedLive2DSource
             )
         }
-        $Live2DSourceSnapshot = Join-Path $Live2DStagingRoot "source"
         New-Item -ItemType Directory -Path $Live2DSourceSnapshot -Force | Out-Null
         Copy-DirectoryContents -Source $ResolvedLive2DSource `
             -Destination $Live2DSourceSnapshot
     }
     if (Test-Path $Live2DDestination -PathType Container) {
-        $OriginalLive2DBackup = Join-Path $Live2DStagingRoot "original"
-        Move-Item -Path $Live2DDestination -Destination $OriginalLive2DBackup
-        $Live2DDestinationTemporarilyOwned = $true
+        Assert-InstallerLive2DOrdinaryDirectoryTree -Root $Live2DDestination `
+            -Purpose "destination before backup"
+        if (Test-Path -LiteralPath $OriginalLive2DBackup) {
+            throw "Live2D original backup path already exists: $OriginalLive2DBackup"
+        }
+        # Directory.Move is same-volume and fails if the backup path appears;
+        # Move-Item would silently nest the original and corrupt recovery state.
+        [System.IO.Directory]::Move($Live2DDestination, $OriginalLive2DBackup)
+        Assert-InstallerLive2DOrdinaryDirectoryTree -Root $OriginalLive2DBackup `
+            -Purpose "authoritative original backup"
+    }
+    if ($Live2DSource -or (Test-Path -LiteralPath $OriginalLive2DBackup -PathType Container)) {
+        Set-InstallerLive2DDestinationOwned -TransactionRoot $Live2DTransactionRoot
     }
     if ($Live2DSource) {
-        $Live2DDestinationTemporarilyOwned = $true
         New-Item -ItemType Directory -Path $Live2DDestination -Force | Out-Null
         if ($Live2DSourceLayout -eq "model") {
-            if ($null -eq $OriginalLive2DBackup -or
-                -not (Test-Path -LiteralPath $OriginalLive2DBackup -PathType Container)) {
+            if (-not (Test-Path -LiteralPath $OriginalLive2DBackup -PathType Container)) {
                 throw "A model-only Live2D overlay requires an existing local vendor base."
             }
             Copy-DirectoryContents -Source $OriginalLive2DBackup `
                 -Destination $Live2DDestination
             $StagedModel = Join-Path $Live2DDestination "model"
-            Remove-Item -LiteralPath $StagedModel -Recurse -Force -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath $StagedModel) {
+                Remove-InstallerLive2DOrdinaryDirectoryTree -Root $StagedModel `
+                    -Purpose "staged model tree"
+            }
             New-Item -ItemType Directory -Path $StagedModel -Force | Out-Null
             Copy-DirectoryContents -Source $Live2DSourceSnapshot `
                 -Destination $StagedModel
@@ -437,15 +456,16 @@ try {
     } else {
         $env:UV_PYTHON_INSTALL_DIR = $PreviousUvPythonInstallDir
     }
-    if ($Live2DDestinationTemporarilyOwned -and (Test-Path $Live2DDestination)) {
-        Remove-Item -Path $Live2DDestination -Recurse -Force
+    $Live2DRestoreFailure = $null
+    try {
+        Restore-InstallerLive2DTransaction -TransactionRoot $Live2DTransactionRoot `
+            -Destination $Live2DDestination
+    } catch {
+        $Live2DRestoreFailure = $_
+    } finally {
+        Pop-Location
     }
-    if ($null -ne $OriginalLive2DBackup -and (Test-Path $OriginalLive2DBackup)) {
-        New-Item -ItemType Directory -Path (Split-Path $Live2DDestination) -Force | Out-Null
-        Move-Item -Path $OriginalLive2DBackup -Destination $Live2DDestination
+    if ($null -ne $Live2DRestoreFailure) {
+        throw $Live2DRestoreFailure
     }
-    if ($null -ne $Live2DStagingRoot -and (Test-Path $Live2DStagingRoot)) {
-        Remove-Item -Path $Live2DStagingRoot -Recurse -Force
-    }
-    Pop-Location
 }
