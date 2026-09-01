@@ -88,17 +88,22 @@ publication. Those remain part of the full run below.
 
 On 2026-09-01 an owner-only private-overlay candidate was built, installed, and exercised on native
 AMD64 Windows 11 Pro 25H2 build 26200.9168 with an RTX 3090. The final rebuilt candidate was
-`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,195,690 bytes, SHA-256
-`9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3`. It remains a local artifact
+`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,243,973 bytes, SHA-256
+`e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063`. It remains a local artifact
 because it contains an explicitly supplied private Live2D overlay and is unsigned.
 
-Automated inspection proved the Host, frozen Runtime, helper, and all inspected bundled EXE/DLL/PYD
-files were PE Machine `0x8664`. The current-user install required no elevation, resolved the physical
+Automated inspection proved the Host, frozen Runtime, helper, 294 installed product native files,
+and all 552 Worker Pack EXE/DLL/PYD files were PE Machine `0x8664`; the sole `0x014c` file was the
+generated NSIS `uninstall.exe` stub. The current-user install required no elevation, resolved the physical
 LocalAppData/RoamingAppData Known Folders, created the Start Menu shortcut, started Runtime and two
 Worker Packs on dynamic authenticated loopback ports, and reused retained settings, SQLite memory,
 pack receipts, and activation selection after reinstall. The Worker Pack helper now explicitly
 rejects Package `LocalCache`, reparse, or final-handle path redirection instead of trusting a
 packaged caller's environment variables.
+
+The final candidate also enforces one application instance. A real repeated Start Menu launch
+re-activated the existing avatar while process inspection continued to show one product Host, one
+internal supervisor, and one Runtime, preventing a duplicate CUDA/Worker graph.
 
 The independently installed pack artifacts were:
 
@@ -110,10 +115,11 @@ The independently installed pack artifacts were:
 Torch `2.7.1+cu126` reported CUDA 12.6 available and ran Qwen tensors on `cuda:0`. The pack generated
 non-silent, unclipped Chinese and Japanese WAVs; faster-whisper produced a non-empty, coherent
 Japanese CPU-`int8` transcript with its fixed revision and fully offline model directory. Both pack
-smokes covered cancellation, unload, process exit, and port closure. One installed two-pack cold
-start took about 151 seconds, so the Web resolver was corrected from 125 seconds to 455 seconds,
+smokes covered cancellation, unload, process exit, and port closure. Installed two-pack cold starts
+took about 151 seconds and about 443 seconds, so the Web resolver was corrected from 125 seconds to 455 seconds,
 beyond the native bounded startup window of 300 seconds for Workers, 120 seconds for Runtime, and
-30 seconds of supervisor grace.
+30 seconds of supervisor grace. The near-bound full-pack verification path remains a product usability
+risk and cannot be "fixed" by disabling hashes or readiness checks.
 
 Actual Tauri-window observation separately confirmed the private Ningning model rendered and
 animated over the transparent pet window, settings opened and scrolled, local providers reached
@@ -122,12 +128,25 @@ This is stronger evidence than build success, but it does not make automated wav
 speaker playback a human-ear judgment. Human voice/reference comparison and microphone/VAD evidence
 must be labeled separately in a final acceptance report.
 
+One installed microphone input produced a 2,920 ms / 93,440-byte VAD utterance and a real
+faster-whisper final transcript, proving capture, VAD auto-end, and Worker return; the transcript was
+materially inaccurate for the intended sentence. A later playback-time interruption attempt had no
+speech because the user explicitly did not speak, so voice barge-in is not accepted. That attempt
+also exposed an independent output race: connecting WebRTC mid-generation discarded a later WAV
+segment with no playback ACK. The final candidate defers output ownership until the next generation,
+and its regression proves the local tail completes before WebRTC becomes exclusive. The installed
+replay then completed all 4 current-generation `audio_element` segments with terminal ACK after the
+mid-segment connection, followed by all 4 next-generation segments on WebRTC only, with strictly
+alternating started/stopped order.
+
 This run still leaves release gates open. The exercised pre-fix candidate exposed stale
 `HKCU\Software\MuBai\ChatWaifu NEXT` manufacturer metadata after data-preserving uninstall. The
 rebuilt final candidate's narrowly scoped post-uninstall hook then passed a native real-machine
 replay: both standard uninstall registry views, Start Menu/Desktop shortcuts, the immutable product
 tree, and manufacturer metadata were clear afterward, while AppData, local-AI selection, and both
-Worker Packs remained. Installed AppContainer/MCP execution and profile/owned-ACL reconciliation
+Worker Packs remained. The final replay also force-terminated the complete 15-process descendant
+tree, including WebView2 and both Workers, and closed all three dynamic listeners before uninstall.
+Installed AppContainer/MCP execution and profile/owned-ACL reconciliation
 remain unproved. Licensing, notices, executable/installer signing, clean-account base-candidate
 testing, and remote publication remain mandatory before a `desktop-v*` artifact may be described as
 distributable.

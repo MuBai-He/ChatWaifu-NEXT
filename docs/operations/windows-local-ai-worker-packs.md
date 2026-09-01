@@ -109,6 +109,13 @@ re-verifies the installed tree after real inference and shutdown. This matters b
 `PYTHONDONTWRITEBYTECODE` stop CPython bytecode writes but do not stop libraries such as Numba from
 creating their own cache directories.
 
+Each `launch-*` cache carries an owner byte-range lock and a ready marker. A later Runtime reaps it
+only after the old lock is provably available and exact-depth, physical-root, and reparse checks pass.
+Live, unready, missing/corrupt-marker, unverifiable, symlink, junction, and other reparse entries are
+preserved; shared pack/version cache namespaces are never recursively deleted. After a forced Host
+exit, it is therefore normal to see the exact crash-owned launch directories briefly remain until a
+subsequent Runtime performs this conservative recovery.
+
 `-VerifyOnly` validates an archive without changing the active selection; `-RuntimePath` can target
 a reviewed portable Runtime during release testing. Normal installation never overwrites an
 existing version. If a full Runtime re-verification has already rejected that version, restore it
@@ -123,7 +130,10 @@ only from the exact original archive with the explicit repair path:
 Repair verifies and stages the archive before moving anything, refuses to overwrite a valid pack,
 refuses a different archive or damaged identity metadata, swaps the invalid directory on the same
 volume, verifies the replacement, and restores the original directory if replacement verification
-fails. Restart ChatWaifu NEXT afterward.
+fails. Before invoking repair, completely exit ChatWaifu NEXT and verify that the Host, hidden
+supervisor, Frozen Runtime, both Worker processes, and their listeners have stopped. Repair is not a
+live-update mechanism and must fail rather than mutate a pack owned by a running product graph.
+Restart ChatWaifu NEXT afterward.
 
 ## Physical per-user roots and redirected shells
 
@@ -156,23 +166,25 @@ only the resulting measurements and hashes are recorded here.
 | ----------------------------------------------------- | ------------: | ------------------------------------------------------------------ |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack`         | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` |   250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` (owner-only)     |   128,195,690 | `9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` (owner-only)     |   128,243,973 | `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063` |
 
-Qwen used Torch `2.7.1+cu126` on `cuda:0` and verified its model tensors on the RTX 3090. The direct
-Worker smoke's first controlled post-load Chinese inference and subsequent warm Japanese inference
-produced non-silent, unclipped 1.84-second and 1.92-second PCM16 WAVs in 14,691.977 ms and
-4,471.212 ms. The first inference left 2,164,438,016 CUDA bytes allocated and
+Qwen used Torch `2.7.1+cu126` on `cuda:0` and verified its model tensors on the RTX 3090. The final
+post-inference integrity smoke's first controlled post-load Chinese inference and subsequent warm
+Japanese inference produced non-silent, unclipped 2.08-second and 2.16-second PCM16 WAVs in
+15,129.724 ms and 4,665.135 ms. The first inference left 2,164,438,016 CUDA bytes allocated and
 2,302,672,896 reserved. faster-whisper used the fixed model revision
 `ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66`, CPU `int8`, and `local_files_only=true`; it returned a
-non-empty, coherent Japanese transcript for the 21.455-second smoke WAV in 876.589 ms. Both packs
+non-empty, coherent Japanese transcript for the 21.455-second smoke WAV in 862.951 ms. Both packs
 passed cancellation, unload, child-process exit, and listening-port closure.
 
 All 393 native Qwen files, all 159 native Whisper files, and the installed Host, frozen Runtime, and
 AppContainer helper were PE Machine `0x8664`. The installed graph selected independent ephemeral
-ports for Runtime and both Workers. A two-pack cold boot reached ready in about 151 seconds, beyond
-the former 125-second frontend cutoff but within the native 300-second Worker + 120-second Runtime +
-30-second supervisor bound. Desktop Web resolution now waits 455 seconds, five seconds longer than
-that full 450-second native window. Do not replace health/capability readiness with `Start-Sleep`.
+ports for Runtime and both Workers. Two-pack cold boots reached ready in about 151 seconds and, on a
+later full verification boot, about 443 seconds. The latter is within but uncomfortably close to the
+native 300-second Worker + 120-second Runtime + 30-second supervisor bound. Desktop Web resolution
+waits 455 seconds, five seconds longer than that full 450-second window. The repeated full hash of the
+Qwen pack is a usability risk; optimize it only with a fail-closed, receipt-backed integrity design.
+Do not replace health/capability readiness with `Start-Sleep`.
 
 ### Evidence boundary and remaining release work
 
@@ -184,7 +196,9 @@ that full 450-second native window. Do not replace health/capability readiness w
   reinstall/restart. These are not inferred from a successful build.
 - Speaker playback and objective WAV checks do not constitute human-ear approval. Voice identity,
   pronunciation, speed, clipping perception, and reference-sample similarity require an explicit
-  human listening record; microphone/VAD acceptance is also tracked separately.
+  human listening record. One installed 2,920 ms / 93,440-byte microphone utterance completed VAD
+  and returned a real faster-whisper transcript, but recognition quality was poor; the user did not
+  speak during the final playback-time interruption attempt, so voice barge-in remains unaccepted.
 - The owner-only NSIS artifact is neither signed nor publishable. Installed AppContainer/MCP
   execution and uninstall profile/owned-ACL reconciliation remain pending.
 - The exercised pre-fix candidate exposed stale `HKCU\Software\MuBai\ChatWaifu NEXT` manufacturer

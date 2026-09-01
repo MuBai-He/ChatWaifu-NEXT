@@ -70,6 +70,14 @@ publisher authenticity. The first owner-only offline flow trusts the archive exp
 the owner. A public download catalog requires signatures and license review before it may install
 without an explicit local-file action.
 
+The only exception to immutable exact-version installation is an explicit owner-requested repair
+after Runtime verification has already proved that exact installed target invalid. Repair accepts
+only the original archive whose identity and hashes match the surviving receipt/manifest metadata,
+verifies and stages it before moving the target, performs a same-volume atomic swap, re-verifies the
+replacement, and restores the original directory on failure. It refuses a valid target, missing or
+damaged identity metadata, a different archive, a running product graph, and any reparse/redirected
+path. Normal install and application startup never silently overwrite a pack.
+
 ### Runtime supervision
 
 The frozen Runtime discovers and validates compatible installed packs before loading immutable
@@ -91,6 +99,15 @@ Workers inherit the frozen Runtime's Windows kill-on-close Job. Orderly shutdown
 force-kills after the declared bound. A pack that cannot start leaves the base Runtime on disabled
 STT/fake TTS; a previously ready worker that crashes makes the service stack exit so Tauri's bounded
 supervisor can recover the complete graph instead of leaving a dead provider selected.
+
+Worker-native caches are mutable per-launch data outside the verified pack tree. Each launch owns an
+exact `worker-cache/<pack-id>/<version>/launch-*` directory with a byte-range OS lock and a ready
+marker. Orderly stop removes only its own cache after Worker exit is confirmed. After a crash, a later
+Runtime may delete a directory only when it can acquire the prior owner lock and the ready marker,
+exact depth, physical root, and non-reparse checks all pass. A live lock, missing/corrupt marker,
+unready launch, unverifiable state, symlink, junction, or other reparse point is preserved. Parent
+pack/version namespaces are never recursively removed, so concurrent Runtime instances cannot erase
+one another's active Numba/native cache.
 
 Tauri remains unaware of Qwen, Whisper, Python, CUDA, and model paths. It continues to own exactly one
 Runtime sidecar and receives only sanitized worker names in the versioned bootstrap record.
@@ -145,27 +162,32 @@ was `82ffc2af56c5593aeae878c2da1d5875aec833483ccf0094bc2dcce0a9b220b9`. The Qwen
 pinned to commit `022e286b98fbec7e1e916cb940cdf532cd9f488e`, and the Whisper model to revision
 `ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66`.
 
-In the direct Worker smoke, the first controlled post-load Chinese inference generated a 1.84-second
-WAV in 14,691.977 ms, and the subsequent warm Japanese inference generated a 1.92-second WAV in
-4,471.212 ms. Both were well-formed PCM16 containers with expected nonzero duration and tail metrics,
-non-silent and unclipped; their RMS levels were -20.156 dBFS and -19.051 dBFS respectively. CUDA memory measured
+In the final post-inference integrity Worker smoke, the first controlled post-load Chinese inference
+generated a 2.08-second WAV in 15,129.724 ms, and the subsequent warm Japanese inference generated a
+2.16-second WAV in 4,665.135 ms. Both were well-formed PCM16 containers with expected nonzero duration
+and tail metrics, non-silent and unclipped; their RMS levels were -21.142 dBFS and -20.058 dBFS
+respectively. CUDA memory measured
 2,164,438,016 allocated and 2,302,672,896 reserved bytes after inference, with a 2,321,547,264-byte
 drop in free GPU memory. These measurements prove real CUDA execution and viable waveforms, not a
 human judgment about voice identity, pronunciation, speed, or subjective audio quality.
 
 The fixed-revision faster-whisper pack ran CPU `int8` with `local_files_only=true`, transcribed the
-21.455-second Japanese smoke recording to non-empty, coherent text in 876.589 ms, and started from
+21.455-second Japanese smoke recording to non-empty, coherent text in 862.951 ms, and started from
 the fully materialized model directory with network caches disabled. The exact private-validation
 transcript and generated WAVs remain local smoke artifacts and are not part of the archive or
 repository.
 
 Both installed-pack smokes authenticated health/capabilities on dynamically assigned loopback
 ports, verified identity, exercised inference, cancellation and unload, and confirmed process and
-listener closure. A full installed cold start took about 151 seconds with both selected packs. The
+listener closure. Full installed cold starts with both selected packs were observed at about 151
+seconds and about 443 seconds; the latter spent most of its time re-verifying the Qwen pack's 31,223
+files and multi-gigabyte payload. The
 native startup contract therefore remains bounded at 300 seconds for Workers, 120 seconds for the
 Runtime server, and 30 seconds of supervisor grace; Desktop Web resolution waits 455 seconds so its
 timeout exceeds the complete 450-second native bound. This is a bounded readiness contract, not an
-arbitrary synchronization sleep.
+arbitrary synchronization sleep. The near-bound 443-second path is nevertheless a product usability
+risk; a future optimization must retain fail-closed integrity, for example through a trustworthy
+receipt-backed verification cache, rather than skipping checks.
 
 During native installation, a packaged tool host exposed that `%APPDATA%` and `%LOCALAPPDATA%` may
 name a Package `LocalCache` layer instead of the physical user's Known Folders. The pack helper now

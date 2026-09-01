@@ -16,12 +16,12 @@ Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**
 ```text
 Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
 Branch:     codex/windows-installer
-Validated product-code commit: e644d13
+Validated product-code commit: 6ff2470
 Original remote handoff baseline: b03a38b
-Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收进行中
+Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收基本完成，明确的人耳/语音抢话门仍开放
 ```
 
-`e644d13` 是最终安装候选包含的产品代码点；其后的测试与文档提交不改变安装载荷，最终远端同步
+`6ff2470` 是最终安装候选包含的产品代码点；其后的测试与文档提交不改变安装载荷，最终远端同步
 仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
 
@@ -48,24 +48,29 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 - Git 2.45.1.windows.1、uv 0.12.7 x86_64、Node 23.9.0、pnpm 11.19.0、Rust 1.98.0；
   Python 3.12.10 为 win-amd64，Rust target 为 `x86_64-pc-windows-msvc`。
 - Qwen3-TTS pack 使用 Torch 2.7.1+cu126，`torch.cuda.is_available()` 为真，模型参数与 tensor
-  实际位于 `cuda:0`。Direct Worker 模型加载后的首个中文受控推理为 14.692 秒、随后日文热态推理为 4.471 秒；两份 24 kHz WAV
+  实际位于 `cuda:0`。最终 post-inference integrity smoke 的首个中文受控推理为 15.130 秒、随后日文热态推理为 4.665 秒；两份 24 kHz WAV
   均非静音、无削波，取消、卸载与动态监听端口关闭通过。推理后 Torch allocated/reserved 分别约
   2.164/2.303 GB，安装态首次生成观察到整卡占用约增加 2.2 GiB。
 - faster-whisper Base 固定 revision pack 在完全离线模型目录执行 CPU int8，21.455 秒日文样音
-  在 0.877 秒内得到非空且合理的日文转写；取消、卸载与监听端口关闭通过。
-- owner-only NSIS 候选已在当前非提权用户安装。Host、Frozen Runtime、AppContainer helper 及
-  所有枚举到的 pack EXE、DLL、PYD 均为 PE `0x8664`；Runtime 和两个 Worker 使用动态回环端口。
+  在 0.863 秒内得到非空且合理的日文转写；取消、卸载与监听端口关闭通过。
+- owner-only NSIS 候选已在当前非提权用户安装。Host、Frozen Runtime、AppContainer helper、
+  294 个安装载荷原生文件及 552 个 pack EXE/DLL/PYD 均为 PE `0x8664`；唯一 `0x014c` 文件是
+  NSIS 生成的 `uninstall.exe` stub。Runtime 和两个 Worker 使用动态回环端口。
+- 最终候选补上 Tauri 官方 single-instance 插件：连续两次从开始菜单启动只保留一个产品 Host、
+  一个 supervisor 和一个 Runtime，第二次启动会重新显示现有宁宁窗口，不会复制 CUDA/Worker 进程树。
 - 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
   进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
-  安装、健康启动、强退、卸载与两种注册表视图/快捷方式清理；正常退出与语音后的最终卸载仍见下方。
-- 安装态 Runtime API 证明中文 4 段、日文 5 段播放均收到 `stopped/ended` ACK，`played_pts_ms`
+  安装、健康启动、重复启动抑制、强退、卸载与两种注册表视图/快捷方式清理；正常托盘退出仍见下方。
+- 安装态 Runtime API 证明已播放的中文/日文段落均收到 `stopped/ended` ACK，`played_pts_ms`
   等于各段 duration；后续键盘新回合取消旧 generation 后未观察到旧 generation 的迟到文本、音频或播放事件。
-- 最终根目录 Python 门禁为 521 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
-  通过。Web 为 32 files/143 tests，Tauri 为 34 tests，Clippy 通过。
+  实机还暴露了播放中连接麦克风会把同一 generation 尾段丢在 WAV/WebRTC 交界的问题；`f7bccde`
+  将输出所有权延迟到下一 generation 再切换，并加入尾段不断流/下一轮 WebRTC 独占回归测试。
+- 最终根目录 Python 门禁为 533 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
+  通过。Web 为 32 files/144 tests，workspace 共 183 tests，Tauri 为 34 tests，Clippy 通过。
 
 | 产物 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,195,690 | `9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,243,973 | `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 
@@ -78,28 +83,40 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 - 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
   合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
   冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。
-- 首次 CUDA Worker 冷启动实测约 151 秒。Web 等待预算已调整为 455 秒以覆盖 native host 的
-  450 秒预算，并补上 ready 事件监听注册竞态测试；实际安装态跨过旧 125 秒上限后仍成功 ready。
+- 完整安装态两 pack 冷启动在本机既观察到约 151 秒，也观察到约 443 秒；后者主要消耗在每次启动
+  对 Qwen 31,223 个文件/约 5.4 GB archive 展开内容做完整哈希。Web 等待预算已调整为 455 秒以覆盖
+  native host 的 450 秒预算，并补上 ready 事件监听注册竞态测试。443 秒虽然仍在界内，但已经是明确的
+  可用性风险，后续必须在不降低完整性校验的前提下做可证明的可信缓存/增量验证优化。
 
 #### 尚未完成或不能由自动化宣称
 
-- 安装态麦克风操作已触发 WebView 权限提示；截至本记录用户尚未决定“允许”或“阻止”，Codex 不代点
-  隐私权限。因此安装态真实麦克风输入、faster-whisper 回填、VAD 自动结束和播放中语音抢话仍待用户授权后验收。
+- 应用内麦克风连接已成功，未出现可由 Codex确认的 Windows 隐私弹窗。一次真实输入产生了 2,920 ms /
+  93,440-byte VAD utterance，并由安装态 faster-whisper 回填为 `明明也好 今天的延期不錯`；这证明采集、
+  VAD 自动结束和 Worker 回填链路工作，但对目标句的识别质量不理想。最终一次抢话提示期间用户明确表示
+  没有说话，因此播放中的真实语音 barge-in 不能默认写成已通过。
+- 最终安装态播放协调回归实际记录：麦克风在本轮第 1 段播放中连接后，本轮 4/4 段继续由
+  `audio_element` 顺序播放并全部收到 ended ACK；下一轮 4/4 段全部由 `webrtc` 独占并收到 ended ACK，
+  各段 started/stopped 严格交替。它证明 transport handoff 和协议级不重叠，不等同于人耳抢话通过。
 - CUDA 中文/日文样音与参考音均已通过扬声器发声，波形客观指标通过；但音色、爆音、截断、速度和
   与参考样音的主观比较必须由人耳确认，当前不能写成“人工听感通过”。
-- 安装态播放 ACK 已由协议/Runtime 状态验证，但扬声器无重叠仍需要播放中抢话与人耳观察；安装态
+- 安装态播放 ACK 与 transport 级无重叠已由协议/Runtime 状态验证，但扬声器主观无重叠仍需要播放中抢话与人耳观察；安装态
   透明空白区域点击穿透也尚未与开发态证据分开复验。
 - 自动化已证明最终候选卸载后程序目录、开始菜单/桌面快捷方式、标准卸载项和 manufacturer metadata
-  删除且用户数据/两个 Worker Pack 保留；当前为麦克风验收重新安装，正常托盘退出和语音后的最终
-  卸载仍待收尾。长时间多轮语音压力、installed AppContainer/MCP profile/ACL reconciliation、签名和
-  私有角色资产许可审查仍是发布门。
+  删除且用户数据/两个 Worker Pack 保留；本轮最终状态已卸载。Computer Use 不能定位 Windows 通知区，
+  因此没有把 Alt+F4 的“隐藏到托盘”误报成正常退出，托盘菜单正常退出仍需人工补验。长时间多轮语音
+  压力、installed AppContainer/MCP profile/ACL reconciliation、签名和私有角色资产许可审查仍是发布门。
 - Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
 
 本轮已落地的根因修复包括：拒绝重解析/重定向的 Worker Pack 安装根、使私有 Live2D staging
 具备崩溃安全回滚、隔离 Windows 数据库恢复命名空间、修正安装根 lint 门、避免应用退出把 avatar
 可见性持久化为隐藏、覆盖 CUDA 冷启动等待预算与 ready 监听竞态、清理 data-preserving NSIS 卸载
 遗留的 manufacturer metadata、消除 Windows PDB 目标名碰撞，以及让 generation completion 成为
-真正的最终事件屏障。不要通过关闭 smoke、固定端口或 `sleep` 绕过剩余验收。
+真正的最终事件屏障。此外，Runtime 现在把 Numba/native cache 放进每次启动的 owner lease，以 OS 文件锁
+区分活跃与 crash-owned cache，只回收可证明失主且路径深度/重解析检查通过的 `launch-*`；安装 helper
+只允许用相同 archive 对已验证为损坏的 exact version 做显式原子 repair；Demo LLM 不再把隐藏记忆
+上下文/来源标签原样念出；播放协调器不会在同一 generation 中途切换到新建 WebRTC；Tauri 的
+single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker graph。不要通过关闭 smoke、
+固定端口或 `sleep` 绕过剩余验收。
 
 ### Windows 干净接手命令
 
@@ -107,7 +124,7 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
 cd ChatWaifu-NEXT
 git switch codex/windows-installer
-git rev-parse --short HEAD  # 应为 e644d13 或其后续提交
+git rev-parse --short HEAD  # 应为 6ff2470 或其后续提交
 
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\windows\bootstrap_x64.ps1

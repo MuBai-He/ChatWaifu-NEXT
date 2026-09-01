@@ -185,17 +185,25 @@ On 2026-09-01 the owner-only path was repeated on native AMD64 Windows 11 Pro 25
 `ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,212,119 bytes, with SHA-256
 `ba50b28735a7c67e57be0646568b406e18982846349ef0b73a11f99a16f9d53f`. That pre-fix candidate
 exposed stale NSIS manufacturer metadata during uninstall. The rebuilt final candidate containing the
-post-uninstall correction is 128,195,690 bytes with SHA-256
-`9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3`. This hash identifies
+post-uninstall correction, playback-handoff fix, and single-instance guard is 128,243,973 bytes with
+SHA-256 `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063`. This hash identifies
 only a local owner candidate; it does not make its private overlay redistributable.
 
 Automated artifact and installed-path inspection proved a `win-amd64` frozen Python Runtime, the
 `x86_64-pc-windows-msvc` Tauri target, PE Machine `0x8664` for the installed Host, Runtime, and
-AppContainer helper, and `0x8664` for every inspected frozen native DLL/PYD. A current-user install
+AppContainer helper, 294 installed native product files, and all 552 independently installed Worker
+Pack EXE/DLL/PYD files. The only observed `0x014c` PE is Tauri/NSIS's generated `uninstall.exe` stub;
+it is not the Host, Runtime, helper, or a Python/Worker payload. A current-user install
 placed immutable resources under the physical LocalAppData installation root and created the
 Start Menu shortcut without elevation. Runtime and both selected Worker Packs bound independently
 assigned loopback ports; one recorded installed boot used Runtime port 12557 and Worker ports 14351
 and 14353, but those values are observations rather than configuration or stable API.
+
+Repeated Start Menu activation of the final candidate was also exercised while the first installed
+graph was running. The Tauri single-instance callback made the existing avatar visible and left
+exactly one product Host, one supervisor, and one Runtime; it did not create a second service graph.
+The supervisor intentionally uses the same Host executable with an explicit internal role argument
+and is not a second application instance.
 
 Writable roots were verified against the physical Windows Known Folders rather than trusting a
 possibly package-redirected environment spelling:
@@ -218,17 +226,32 @@ A real foreground Tauri-window observation, not a build inference, confirmed the
 Live2D model rendered and animated over the transparent pet surface, settings opened and scrolled,
 Runtime and the selected local providers reached ready, text chat updated progressively, and a
 stored memory survived reinstall and restart. The installed CUDA graph needed about 151 seconds on
-one cold boot. Native supervision intentionally allows 300 seconds for selected Workers, 120 seconds
+one cold boot and about 443 seconds on a later complete-pack verification boot. Native supervision
+intentionally allows 300 seconds for selected Workers, 120 seconds
 for the Runtime server, and 30 seconds of supervisor grace; the Web resolver now waits 455 seconds,
 five seconds beyond that complete 450-second native bound, instead of abandoning a healthy CUDA
 start at the former 125-second cutoff.
 
-Automated process inspection proved forced Host termination removed the Host, supervisor, Runtime,
-both Workers, and their listeners. Reinstall preserved the physical per-user database, model-pack
+The 443-second path is within the contract but not an acceptable steady-state user experience. The
+dominant work is repeated integrity hashing of the Qwen pack's 31,223 files and multi-gigabyte
+payload. Any future optimization must retain fail-closed receipt/hash semantics, such as through a
+trustworthy verification cache invalidated by file identity changes; increasing timeouts again or
+skipping verification is not a resolution.
+
+Automated process inspection proved final-candidate forced Host termination removed the complete
+15-process descendant tree (Host, WebView2, supervisor, Runtime, both Workers, and console helpers)
+and all three listeners. Reinstall preserved the physical per-user database, model-pack
 receipts, activation selection, and the test memory. The recorded foreground observation does not
 convert objective WAV checks into a human listening result: human-ear sound-quality judgment and
 the microphone/VAD path must be reported separately from automated waveform, GPU, protocol, and
 window evidence.
+
+The same forced-exit run intentionally left two exact per-launch Worker cache directories after the
+Windows Job terminated Python without `finally`. On the next Runtime boot both were reclaimed by
+their released byte-range owner locks before new leases were created. Live, unready, malformed,
+unverifiable, and reparse cache entries remain fail-closed; no shared pack/version namespace is
+recursively removed. This recovery belongs to Runtime, not the Tauri Host, and never changes the
+immutable Worker Pack install tree.
 
 This native run is still not the public Desktop release gate. The first data-preserving uninstall
 exposed that Tauri's generated NSIS flow left `HKCU\Software\MuBai\ChatWaifu NEXT` pointing at the
