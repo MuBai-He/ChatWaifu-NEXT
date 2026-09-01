@@ -886,9 +886,9 @@ pub fn windows_current_process_image_path() -> Result<PathBuf, String> {
     // here even though its image was loaded from an ordinary NSIS directory.
     // Ask Shell for the current user's non-redirected root and only rewrite the
     // exact package-redirection shape validated below.
-    let physical_local_app_data = windows_physical_local_app_data().ok();
+    let physical_local_app_data = windows_physical_local_app_data()?;
     if let Some(physical_image) =
-        validated_physical_image_candidate(&win32_image, physical_local_app_data.as_deref())
+        validated_physical_image_candidate(&win32_image, &physical_local_app_data)
     {
         return Ok(physical_image);
     }
@@ -984,11 +984,10 @@ fn windows_physical_local_app_data() -> Result<PathBuf, String> {
 #[cfg(target_os = "windows")]
 fn validated_physical_image_candidate(
     image: &Path,
-    physical_local_app_data: Option<&Path>,
+    physical_local_app_data: &Path,
 ) -> Option<PathBuf> {
-    if let Some(local_app_data) = physical_local_app_data
-        && let Some((path_package_family, mapped)) =
-            strict_localcache_physical_image_mapping(image, local_app_data)
+    if let Some((path_package_family, mapped)) =
+        strict_localcache_physical_image_mapping(image, physical_local_app_data)
     {
         // GetCurrentPackageFamilyName may report NO_PACKAGE for these inherited
         // children. Keep this mapping bounded by the OS-provided user root, one
@@ -996,7 +995,9 @@ fn validated_physical_image_candidate(
         // existing same-relative-path image. Never accept LocalCache itself as
         // the physical fallback when one of these checks fails.
         if !windows_physical_path_is_directory(
-            &local_app_data.join("Packages").join(&path_package_family),
+            &physical_local_app_data
+                .join("Packages")
+                .join(&path_package_family),
         ) || !windows_physical_path_is_file(&mapped)
         {
             return None;
