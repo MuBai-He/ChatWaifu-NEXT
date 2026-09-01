@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import importlib.metadata
+import json
 import os
+import runpy
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -27,6 +31,12 @@ def test_windows_builders_use_one_canonical_worker_pack_contract() -> None:
             '"pip", "install"'
         )
         assert "Remove-WorkerPackPackagingTools" in script
+        last_install = script.rfind('"pip", "install"')
+        strip_runtime = script.index("Remove-WorkerPackPackagingTools")
+        write_inventory = script.index("write_python_inventory.py")
+        assert last_install < strip_runtime < write_inventory
+        assert script.count("Remove-WorkerPackPackagingTools") == 1
+        assert "Assert-WorkerPackPayloadHasNoBuildPaths" in script
         assert "worker_pack_archive.py" not in script
         assert "Assert-WorkerPackPayloadX64" in script
         assert "Assert-WorkerPackSemanticVersion" in script
@@ -190,29 +200,46 @@ if ($env:CHATWAIFU_DATA_DIR -cne "sentinel-data") {
 
 
 @pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell")
-def test_worker_pack_builder_removes_pip_cross_arch_launchers(tmp_path: Path) -> None:
+def test_worker_pack_builder_removes_all_pack_only_launchers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     portable = tmp_path / "portable-python"
     pip_package = portable / "Lib/site-packages/pip"
     pip_dist_info = portable / "Lib/site-packages/pip-25.2.dist-info"
     setuptools_package = portable / "Lib/site-packages/setuptools"
     runtime_package = portable / "Lib/site-packages/runtime_dependency"
+    runtime_dist_info = portable / "Lib/site-packages/runtime_dependency-1.2.3.dist-info"
     scripts = portable / "Scripts"
     for directory in (
         pip_package / "_vendor/distlib",
         pip_dist_info,
         setuptools_package,
         runtime_package,
+        runtime_dist_info,
         scripts,
     ):
         directory.mkdir(parents=True, exist_ok=True)
     (pip_package / "_vendor/distlib/t32.exe").write_bytes(b"not-a-runtime-binary")
     (pip_dist_info / "METADATA").write_text("Name: pip\n", encoding="utf-8")
+    (runtime_dist_info / "METADATA").write_text(
+        "Metadata-Version: 2.1\n"
+        "Name: runtime-dependency\n"
+        "Version: 1.2.3\n"
+        "License: MIT\n",
+        encoding="utf-8",
+    )
     (runtime_package / "keep.py").write_text("VALUE = 1\n", encoding="utf-8")
     (setuptools_package / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
     (setuptools_package / "cli-32.exe").write_bytes(b"x86-launcher-template")
     (setuptools_package / "cli-64.exe").write_bytes(b"x64-launcher-template")
     (scripts / "pip.exe").write_bytes(b"builder-only")
     (scripts / "uvicorn.exe").write_bytes(b"runtime")
+    (scripts / "numba").write_text(
+        f"#!{portable / 'python.exe'}\nprint('builder-only')\n", encoding="utf-8"
+    )
+    (portable / "python.exe").write_bytes(b"portable-interpreter")
+    (portable / "python312.dll").write_bytes(b"runtime-dll")
+    (runtime_package / "runtime.pyd").write_bytes(b"runtime-extension")
 
     environment = os.environ.copy()
     environment.update(
@@ -241,8 +268,108 @@ def test_worker_pack_builder_removes_pip_cross_arch_launchers(tmp_path: Path) ->
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert not pip_package.exists()
     assert not pip_dist_info.exists()
-    assert not (scripts / "pip.exe").exists()
+    assert not scripts.exists()
     assert (setuptools_package / "__init__.py").is_file()
     assert not list(setuptools_package.glob("*.exe"))
     assert (runtime_package / "keep.py").is_file()
-    assert (scripts / "uvicorn.exe").is_file()
+    assert (runtime_package / "runtime.pyd").is_file()
+    assert runtime_dist_info.is_dir()
+    assert (portable / "python.exe").is_file()
+    assert (portable / "python312.dll").is_file()
+
+    site_packages = portable / "Lib/site-packages"
+    real_distributions = importlib.metadata.distributions
+    expected = sorted(
+        (distribution.metadata["Name"], distribution.version)
+        for distribution in real_distributions(path=[str(site_packages)])
+    )
+    monkeypatch.setattr(
+        importlib.metadata,
+        "distributions",
+        lambda: real_distributions(path=[str(site_packages)]),
+    )
+    inventory_tool = WINDOWS_TOOLS / "write_python_inventory.py"
+    inventory_path = tmp_path / "python-packages.json"
+    namespace = runpy.run_path(str(inventory_tool))
+    monkeypatch.setattr(
+        sys, "argv", [str(inventory_tool), "--output", str(inventory_path)]
+    )
+    assert namespace["main"]() == 0
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    actual = [(package["name"], package["version"]) for package in inventory["packages"]]
+    assert actual == expected == [("runtime-dependency", "1.2.3")]
+    assert all(package["name"].casefold() != "pip" for package in inventory["packages"])
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell")
+def test_worker_pack_builder_rejects_build_paths_in_every_file_type(
+    tmp_path: Path,
+) -> None:
+    payload = tmp_path / "staging/payload"
+    scripts = payload / "python/Scripts"
+    scripts.mkdir(parents=True)
+    (payload / "safe.bin").write_bytes(b"portable payload")
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_COMMON": str(WINDOWS_TOOLS / "worker_pack_common.ps1"),
+            "CHATWAIFU_TEST_PAYLOAD": str(payload),
+            "CHATWAIFU_TEST_FORBIDDEN": str(tmp_path),
+            "CHATWAIFU_TEST_PYTHON": os.fspath(Path(sys.executable)),
+        }
+    )
+    command = (
+        ". $env:CHATWAIFU_TEST_COMMON; "
+        "Assert-WorkerPackPayloadHasNoBuildPaths "
+        "-PayloadRoot $env:CHATWAIFU_TEST_PAYLOAD "
+        "-ScannerPython $env:CHATWAIFU_TEST_PYTHON "
+        "-ForbiddenPaths @($env:CHATWAIFU_TEST_FORBIDDEN)"
+    )
+
+    safe = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+    assert safe.returncode == 0, safe.stdout + safe.stderr
+
+    leaked_path = f"{tmp_path}\\python.exe"
+    leaked_files = (
+        (scripts / "no-extension", f"#!{leaked_path}\n".encode()),
+        (payload / "launcher.exe", b"MZ" + leaked_path.encode("utf-16-le")),
+    )
+    for leaked_file, contents in leaked_files:
+        leaked_file.write_bytes(contents)
+        rejected = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                command,
+            ],
+            check=False,
+            capture_output=True,
+            env=environment,
+            text=True,
+        )
+        assert rejected.returncode != 0
+        assert "worker payload embeds a forbidden local build path" in (
+            rejected.stdout + rejected.stderr
+        )
+        assert leaked_file.relative_to(payload).as_posix() in (
+            rejected.stdout + rejected.stderr
+        )
+        leaked_file.unlink()

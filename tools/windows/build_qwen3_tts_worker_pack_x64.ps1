@@ -154,6 +154,11 @@ try {
 
     $MetadataRoot = Join-Path $PayloadRoot "metadata"
     New-Item -ItemType Directory -Path $MetadataRoot -Force | Out-Null
+    # Inventory the final runtime, not the temporary packaging environment.
+    # All dependency installs are complete at this point, so strip pip and
+    # launcher templates before importlib.metadata records shipped packages.
+    Remove-WorkerPackPackagingTools -PortablePythonRoot $PortablePythonRoot
+    Remove-WorkerPackBuilderMetadata -PortablePythonRoot $PortablePythonRoot
     Invoke-WorkerPackChecked $PortablePython @(
         "-I",
         (Join-Path $RepoRoot "tools\windows\write_python_inventory.py"),
@@ -177,7 +182,6 @@ try {
         redistribution = "owner-only; license review required"
     })
 
-    Remove-WorkerPackPackagingTools -PortablePythonRoot $PortablePythonRoot
     Remove-WorkerPackBuilderMetadata -PortablePythonRoot $PortablePythonRoot
 
     $Manifest = [ordered]@{
@@ -233,6 +237,10 @@ try {
     }
     Write-WorkerPackJson -Path $ManifestTemplate -Value $Manifest
 
+    Assert-WorkerPackPayloadHasNoBuildPaths `
+        -PayloadRoot $PayloadRoot `
+        -ScannerPython $BuilderPython `
+        -ForbiddenPaths @($RepoRoot, $WorkRoot, $StagingRoot, $ResolvedModelSource)
     Assert-WorkerPackPayloadX64 -PayloadRoot $PayloadRoot
 
     Invoke-WorkerPackChecked $BuilderPython @(

@@ -1,0 +1,100 @@
+"""Reject local build paths embedded anywhere in a Worker Pack payload."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from collections.abc import Iterable, Sequence
+from pathlib import Path
+
+_CHUNK_SIZE = 8 * 1024 * 1024
+
+
+class PayloadPathLeakError(RuntimeError):
+    """Raised when a staged payload embeds a forbidden local path."""
+
+
+def _path_markers(paths: Iterable[str]) -> tuple[bytes, ...]:
+    markers: set[bytes] = set()
+    for raw_path in paths:
+        resolved = str(Path(raw_path).expanduser().resolve(strict=True)).rstrip("\\/")
+        if not resolved:
+            raise ValueError("forbidden paths must not resolve to a filesystem root")
+        variants = {
+            resolved,
+            resolved.replace("\\", "/"),
+            resolved.replace("/", "\\"),
+        }
+        for variant in variants:
+            for encoding in ("utf-8", "utf-16-le", "utf-16-be"):
+                # The file stream is byte-lowered for Windows' ASCII case folding.
+                # Preserve non-ASCII path bytes verbatim so exact Unicode paths also match.
+                marker = variant.encode(encoding).lower()
+                if marker:
+                    markers.add(marker)
+    if not markers:
+        raise ValueError("at least one forbidden path is required")
+    return tuple(sorted(markers, key=len, reverse=True))
+
+
+def _file_contains_marker(path: Path, markers: Sequence[bytes]) -> bool:
+    overlap = max(len(marker) for marker in markers) - 1
+    carry = b""
+    with path.open("rb") as stream:
+        while chunk := stream.read(_CHUNK_SIZE):
+            folded = (carry + chunk).lower()
+            if any(marker in folded for marker in markers):
+                return True
+            carry = folded[-overlap:] if overlap else b""
+    return False
+
+
+def assert_payload_has_no_build_paths(root: Path, forbidden_paths: Sequence[str]) -> None:
+    resolved_root = root.expanduser().resolve(strict=True)
+    if not resolved_root.is_dir():
+        raise ValueError(f"payload root is not a directory: {resolved_root}")
+    markers = _path_markers(forbidden_paths)
+    file_count = 0
+    byte_count = 0
+    for directory, directory_names, file_names in os.walk(
+        resolved_root, followlinks=False
+    ):
+        directory_names.sort(key=str.casefold)
+        file_names.sort(key=str.casefold)
+        for file_name in file_names:
+            path = Path(directory, file_name)
+            if not path.is_file():
+                continue
+            file_count += 1
+            byte_count += path.stat().st_size
+            if _file_contains_marker(path, markers):
+                relative = path.relative_to(resolved_root).as_posix()
+                raise PayloadPathLeakError(
+                    f"worker payload embeds a forbidden local build path: {relative!r}"
+                )
+    print(
+        "Verified worker payload contains no local build paths "
+        f"across {file_count} files and {byte_count} bytes."
+    )
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--forbidden-path", action="append", required=True)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        assert_payload_has_no_build_paths(args.root, args.forbidden_path)
+    except (OSError, PayloadPathLeakError, ValueError) as error:
+        print(f"worker-payload-paths: error: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

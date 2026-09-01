@@ -1,5 +1,7 @@
 # Shared, source-only helpers for Windows x64 Worker Pack builders.
 
+$script:WorkerPackCommonRoot = $PSScriptRoot
+
 function Invoke-WorkerPackChecked {
     param(
         [Parameter(Mandatory = $true)][string]$FilePath,
@@ -93,6 +95,24 @@ function Assert-WorkerPackPayloadX64 {
         Assert-WorkerPackX64Pe $NativeFile.FullName
     }
     Write-Host "Verified $($NativeFiles.Count) native payload files as PE machine 0x8664."
+}
+
+function Assert-WorkerPackPayloadHasNoBuildPaths {
+    param(
+        [Parameter(Mandatory = $true)][string]$PayloadRoot,
+        [Parameter(Mandatory = $true)][string]$ScannerPython,
+        [Parameter(Mandatory = $true)][string[]]$ForbiddenPaths
+    )
+
+    $Scanner = Join-Path $script:WorkerPackCommonRoot "scan_worker_pack_payload.py"
+    if (-not (Test-Path -LiteralPath $Scanner -PathType Leaf)) {
+        throw "Worker Pack payload path scanner is missing: $Scanner"
+    }
+    $Arguments = @("-I", $Scanner, "--root", $PayloadRoot)
+    foreach ($ForbiddenPath in $ForbiddenPaths) {
+        $Arguments += @("--forbidden-path", $ForbiddenPath)
+    }
+    Invoke-WorkerPackChecked $ScannerPython $Arguments
 }
 
 function Assert-WorkerPackPathUnderRoot {
@@ -253,13 +273,13 @@ function Remove-WorkerPackPackagingTools {
         }
     }
 
+    # Worker manifests launch the relocated interpreter directly with `-I -m`.
+    # Every console script is therefore builder-only. uv/distlib launchers embed the
+    # staging interpreter path in both the PE launcher and its shebang, while scripts
+    # without an extension can carry the same leak, so remove the directory as a unit.
     $ScriptsRoot = Join-Path $PortablePythonRoot "Scripts"
     if (Test-Path -LiteralPath $ScriptsRoot -PathType Container) {
-        foreach ($Entry in @(Get-ChildItem -LiteralPath $ScriptsRoot -File -Force | Where-Object {
-            $_.Name -match '^pip(?:3(?:\.\d+)?)?(?:\.exe|-script\.py)?$'
-        })) {
-            Remove-Item -LiteralPath $Entry.FullName -Force
-        }
+        Remove-Item -LiteralPath $ScriptsRoot -Recurse -Force
     }
 
     # Some runtime dependencies still import setuptools' Python modules, so retain those.
