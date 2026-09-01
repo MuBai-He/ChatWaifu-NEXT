@@ -223,6 +223,15 @@ sidecars, and Package `LocalCache` layers. These checks prevent a packaged shell
 silently splitting settings, selection, model receipts, or SQLite state across two Windows
 namespaces.
 
+An unpackaged Host launched as a child of an MSIX application such as Codex can also receive a
+kernel-reported image spelling below that parent's `Packages/<family>/LocalCache/Local` namespace.
+The Host rewrites only that exact component shape beneath the non-redirected Known Folder, validates
+the bounded package-family spelling and same-relative-path image, and then discovers Runtime/helper
+resources beside the physical Host. It intentionally does not require a separate filesystem probe
+of `LocalAppData/Packages/<family>`: inherited package redirection can hide that directory from the
+child even though Windows reported the virtual image path, which otherwise causes a false permanent
+restart circuit.
+
 A real foreground Tauri-window observation, not a build inference, confirmed the private Ningning
 Live2D model rendered and animated over the transparent pet surface, settings opened and scrolled,
 Runtime and the selected local providers reached ready, text chat updated progressively, and a

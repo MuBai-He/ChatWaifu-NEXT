@@ -70,6 +70,13 @@ publisher authenticity. The first owner-only offline flow trusts the archive exp
 the owner. A public download catalog requires signatures and license review before it may install
 without an explicit local-file action.
 
+The Desktop Settings local-file action is the end-user installation boundary on Windows. It opens a
+native picker for one `.cwpack`, stops the supervised Runtime/Worker graph, delegates verification,
+installation, and activation to the frozen Runtime's existing pack installer, and starts Runtime
+again. Users may skip all packs during onboarding and use text or cloud providers; a base installer
+must never imply that a CUDA/voice pack is bundled. Repository PowerShell remains an advanced
+release/recovery wrapper around the same contract, not a second end-user archive format.
+
 The only exception to immutable exact-version installation is an explicit owner-requested repair
 after Runtime verification has already proved that exact installed target invalid. Repair accepts
 only the original archive whose identity and hashes match the surviving receipt/manifest metadata,

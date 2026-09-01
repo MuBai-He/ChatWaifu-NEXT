@@ -84,13 +84,36 @@ The Runtime sidecar owns installation, activation, dynamic host/port/token injec
 and restart. Pack manifests contain only their namespaced static `CHATWAIFU_STT_WORKER_*` or
 `CHATWAIFU_NEURAL_TTS_WORKER_*` settings and never store endpoint credentials.
 
+## Release distribution and user choice
+
+Publish the base NSIS installer and each licensed Worker Pack as separate release artifacts. The
+download page should list the pack's purpose, supported OS/architecture/accelerator, expanded size,
+license, version, byte size, and SHA-256 sidecar. Never put an owner-only checkpoint or voice pack in
+a public release merely because its `.cwpack` build passed acceptance.
+
+Users do not need a Worker Pack to install or start ChatWaifu NEXT. They can use text chat and
+configured cloud providers, skip every local model during onboarding, and add local capabilities
+later from **Settings → Data → Worker Pack management → Select and install**. The native picker
+accepts one `.cwpack`; the Host stops the active Runtime graph, invokes the frozen Runtime's strict
+installer, fully verifies and atomically activates the archive, then starts Runtime again. Reinstall
+and normal uninstall preserve installed packs as user data. The downloaded archive is not needed for
+normal use after a successful install, although retaining or re-downloading that exact archive is
+required for an explicit repair of the same version.
+
+The base EXE must not silently fetch or install CUDA, PyTorch, model weights, or a voice pack. A
+future signed catalog may streamline downloads, but publisher authentication, license review,
+hardware compatibility, explicit user choice, progress/cancellation, and the same strict installer
+remain release gates.
+
 ## Install into ChatWaifu NEXT
 
-Install the base x64 NSIS package first. Then run the repository helper from a normal PowerShell
-session; administrator privileges are not required because both the application and model packs are
-per-user. The helper resolves the installed Runtime from the current-user uninstall registry,
-proves that it is an x64 PE, fully verifies the archive, installs it atomically, and activates that
-exact version.
+For normal users, install the base x64 NSIS package, open Settings → Data, and use **Select and
+install**. Administrator privileges are not required because both the application and model packs
+are per-user.
+
+Release engineering and recovery can instead run the repository helper from a normal PowerShell
+session. It resolves the installed Runtime from the current-user uninstall registry, proves that it
+is an x64 PE, fully verifies the archive, installs it atomically, and activates that exact version.
 
 ```powershell
 .\tools\windows\install_worker_pack_x64.ps1 `
@@ -100,8 +123,9 @@ exact version.
     -ArchivePath .\dist\windows\worker-packs\chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack
 ```
 
-Restart ChatWaifu NEXT after installation. On the next frozen-Runtime boot both selected workers
-start on ephemeral authenticated loopback ports. If Whisper cannot load or Qwen's real CUDA
+The Settings action restarts Runtime automatically; the repository helper still requires restarting
+ChatWaifu NEXT afterward. On the next frozen-Runtime boot both selected workers start on ephemeral
+authenticated loopback ports. If Whisper cannot load or Qwen's real CUDA
 execution probe fails, Runtime keeps the corresponding built-in/network fallback instead of
 advertising a broken local provider. Runtime routes Numba's native cache to a unique per-launch
 directory outside the verified pack and removes it during orderly shutdown; the build smoke fully

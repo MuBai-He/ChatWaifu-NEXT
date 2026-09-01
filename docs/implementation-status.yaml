@@ -98,7 +98,7 @@ validation:
   remote_ci_matrix: pending_first_remote_run
   native_windows_x64_cuda:
     status: owner_only_install_acceptance_passed_with_explicit_human_gates
-    validated_product_commit: 87ad553
+    validated_product_commit: f4d7c34
     platform:
       windows: "Windows 11 Pro 25H2 build 26200.9168"
       native_architecture: AMD64
@@ -124,8 +124,8 @@ validation:
     artifacts:
       installer:
         filename: "ChatWaifu NEXT_0.2.0_x64-setup.exe"
-        size_bytes: 128214044
-        sha256: de1612598ff8a20974000349b5425a122db7229390c6861c016aa3c13aba94a6
+        size_bytes: 128343398
+        sha256: 55deb9979f1fc7167e1734fd33e3025293187082512a4c591a888091cb172d77
       faster_whisper_pack:
         filename: chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack
         size_bytes: 250542825
@@ -155,6 +155,8 @@ validation:
       - "Repeated Start Menu launch of the final candidate reactivated the existing avatar while process inspection retained one product Host, one internal supervisor, and one Runtime instead of creating a duplicate service/Worker graph"
       - "The final 9a5bd8d9 candidate staged the AppContainer helper before Host compilation through a directory resource tree; a clean installed smoke proved Host, Runtime, and helper PE 0x8664, dynamic Runtime health on port 9005, forced-exit descendant/listener cleanup, uninstall cleanup, and user-data/Worker-Pack retention"
       - "The 87ad553 candidate reached installed Runtime ready on dynamic port 13077 in 10.492 seconds with both retained Worker Packs, then the explicit Data-settings action verified 2 packs and 36,326 files; forced Host exit removed the supervisor, Runtime, Workers, and listener"
+      - "The f4d7c34 candidate safely remapped a Codex MSIX LocalCache process-image path to the existing physical per-user NSIS image without probing the package directory through inherited redirection; the installed physical Host, supervisor, and Frozen Runtime then reached ready on a dynamic port"
+      - "Windows Settings now opens a native cwpack-only picker and installs through the Frozen Runtime strict contract while serializing full graph shutdown and restart; Web passed 37 files and 158 tests, the Tauri suite passed 36 tests, and the Tauri configuration gate passed 11 tests"
     computer_use_window_observation:
       - "Native development Tauri showed the animated private Live2D overlay with transparent empty-point click-through while avatar, subtitle, composer, controls, and native avatar drag remained interactive"
       - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
@@ -163,6 +165,7 @@ validation:
       - "Historical installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; the repeated full payload scan has since moved out of ordinary startup into the explicit Data-settings integrity action, while the corrected 455-second Web resolution budget remains for genuinely slow model initialization"
       - "The final installed Tauri window visibly rendered sharper Live2D hair, face, and clothing edges after compensating the WebGL backing buffer for the 1.34 CSS visual scale; settings visibly reported connected Runtime 0.1.0"
       - "The rebuilt installed candidate automatically opened the five-step first-run guide and the Data page visibly reported successful full verification for faster-whisper (5,103 files) and Qwen3-TTS (31,223 files)"
+      - "The f4d7c34 installed guide visibly centered each checklist label with its checkmark; the Data page displayed the optional Worker Pack manager and opened the native Windows picker titled 选择 ChatWaifu Worker Pack with a cwpack filter, without selecting or installing an archive during this observation"
     pending_human_or_privacy_confirmation:
       - "One installed microphone utterance produced a 2920 ms / 93440-byte VAD capture and a faster-whisper final transcript, proving capture, VAD auto-end, and STT return; the transcription was materially inaccurate and remains a quality risk"
       - "The user explicitly did not speak during the final playback-time interruption attempt, so real voice barge-in is not accepted and must not be defaulted to passing"

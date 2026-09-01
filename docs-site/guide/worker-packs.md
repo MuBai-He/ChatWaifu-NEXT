@@ -4,10 +4,10 @@
 代码、原生库、模型与带校验和的 manifest；安装后的 Runtime 负责动态端口、Bearer Token、健康检查、
 重启与激活版本。
 
-::: warning 目标机验收状态
-仓库已经实现 pack 合约、构建器、原子安装、校验、Runtime 监管和非 Windows 测试；真实 Windows x64
-CUDA pack 构建及目标 CUDA 笔记本安装态推理尚未完成。`-SkipModelSmoke` 只能排查构建环境，不能作为
-发行验收结果。
+::: warning 发布与许可边界
+原生 Windows x64/RTX 3090 已完成 CUDA 与安装态技术验收，但宁宁 checkpoint、Live2D 与声线仍是
+owner-only 资产，不能因构建通过就公开发布。`-SkipModelSmoke` 只能排查构建环境，不能作为发行验收
+结果。
 :::
 
 ## 为什么不塞进基础安装包
@@ -70,7 +70,12 @@ dist/windows/worker-packs/smoke/
 
 ## 安装到 ChatWaifu NEXT
 
-先安装基础 NSIS 候选，再从普通 PowerShell 安装 pack：
+基础 NSIS 与 `.cwpack` 分开分发。用户可以第一次完全不装本地模型，先用文字聊天或云端 Provider；
+之后打开 **设置 → 数据 → Worker Pack 管理 → 选择并安装**，选中单个 `.cwpack`。应用会完整校验、
+按当前用户原子安装并自动重启本地 Runtime。重装或普通卸载会保留已安装的 pack；安装成功后日常运行
+不依赖下载的归档，但修复同版本仍需要完全相同的原始文件。
+
+发布/恢复人员也可以从普通 PowerShell 使用仓库脚本：
 
 ```powershell
 .\tools\windows\install_worker_pack_x64.ps1 `

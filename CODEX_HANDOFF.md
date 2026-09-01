@@ -16,12 +16,12 @@ Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**
 ```text
 Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
 Branch:     codex/windows-installer
-Validated product-code commit: 87ad553
+Validated product-code commit: f4d7c34
 Original remote handoff baseline: b03a38b
 Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收基本完成，明确的人耳/语音抢话门仍开放
 ```
 
-`87ad553` 是最终安装候选包含的产品代码点；其后的测试格式与文档提交不改变安装载荷，最终远端同步
+`f4d7c34` 是当前最终安装候选包含的产品代码点；其后的文档提交不改变安装载荷，最终远端同步
 仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
 
@@ -66,6 +66,15 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   `13077`；已保留的 Qwen3-TTS/Whisper Pack 不再触发启动时全树哈希。随后从“数据”页主动
   校验 2 个 Pack、36,326 个文件通过（Whisper 5,103，Qwen 31,223），设置窗口在校验期间保持响应。
   强制结束主 Host 后 supervisor、Runtime、Worker 与端口 `13077` 全部自动清理。
+- 从 Codex MSIX 包进程启动 NSIS 安装版时，Windows 可能把当前进程映像报告为 Codex package
+  `LocalCache` 下的虚拟路径；旧代码又在同一重定向上下文探测物理 `Packages` 目录，导致有效的
+  `%LOCALAPPDATA%\ChatWaifu NEXT\chatwaifu-desktop-host.exe` 被误判不存在并打开自动恢复熔断。
+  `f4d7c34` 将映射约束为 OS 返回的 LocalAppData、单一合法 package-family 和同相对路径的现有
+  x64 映像，不再执行会被继承重定向欺骗的目录探测。重装候选从该环境启动后实际形成物理 Host、
+  supervisor、Frozen Runtime 进程树，Runtime 在动态端口进入 `ready`。
+- Windows 安装版“设置 → 数据”现在提供原生 `.cwpack` 文件选择与安装入口。用户可在首次引导
+  跳过全部本地模型，之后再选择单独下载的包；安装动作复用 Frozen Runtime 的严格 manifest、哈希、
+  平台、PE 与原子激活契约，维护期间停止整棵 Runtime graph，成功或失败后均恢复本地服务。
 - 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
   进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
   安装、健康启动、重复启动抑制、强退、卸载与两种注册表视图/快捷方式清理；正常托盘退出仍见下方。
@@ -74,11 +83,11 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   实机还暴露了播放中连接麦克风会把同一 generation 尾段丢在 WAV/WebRTC 交界的问题；`f7bccde`
   将输出所有权延迟到下一 generation 再切换，并加入尾段不断流/下一轮 WebRTC 独占回归测试。
 - 最终根目录 Python 门禁为 537 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
-  通过。Web 为 36 files/155 tests，Tauri 为 34 tests，桌面 UI production build 通过。
+  通过。当前 Web 为 37 files/158 tests，Tauri 为 36 tests，桌面 UI production build 通过。
 
 | 产物 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,214,044 | `de1612598ff8a20974000349b5425a122db7229390c6861c016aa3c13aba94a6` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,343,398 | `55deb9979f1fc7167e1734fd33e3025293187082512a4c591a888091cb172d77` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 
@@ -92,6 +101,9 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   backing buffer 渲染，不再把低分辨率画布放大 1.34 倍。设置页实见 `已连接 / Runtime 0.1.0`。
 - 新候选首次启动真实自动打开五步设置引导，明确解释基础 EXE、独立 `.cwpack`、聊天 API、
   TTS、麦克风/STT 与 VAD；“数据”页真实显示双 Pack 完整性校验通过结果。
+- `f4d7c34` 候选首次引导的三条说明已实际观察到文字与对勾垂直居中；“数据”页实际显示可选
+  Worker Pack 管理区，点击后打开标题为“选择 ChatWaifu Worker Pack”、筛选为 `*.cwpack` 的
+  Windows 原生文件选择器。验收未选择 archive，因此没有通过该 UI 重装任何模型包。
 - 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
   合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
   冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。
@@ -131,6 +143,8 @@ single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker 
 视觉缩放补偿 backing buffer；Windows installer 则先建立目录型 helper 资源树，再编译 Host，从而避免
 增量构建缓存遗漏 helper。桌面产品另有首次启动引导，明确基础 EXE 与可选 `.cwpack` 的边界，并引导
 用户配置聊天 API、角色 TTS、麦克风与 STT/VAD；完成状态只保存版本化布尔值，密钥仍由 Runtime 管理。
+安装版还支持用户以后从“设置 → 数据”选择本地 `.cwpack`，并通过 Frozen Runtime 的既有严格契约安装；
+Codex/MSIX `LocalCache` 虚拟进程路径会安全还原到同一用户物理安装映像，不再误触发自动恢复熔断。
 不要通过关闭 smoke、
 固定端口或 `sleep` 绕过剩余验收。
 
@@ -140,7 +154,7 @@ single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker 
 git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
 cd ChatWaifu-NEXT
 git switch codex/windows-installer
-git rev-parse --short HEAD  # 应为 5ed61c8 或其后续提交
+git rev-parse --short HEAD  # 应为 f4d7c34 或其后续提交
 
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\windows\bootstrap_x64.ps1
