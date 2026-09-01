@@ -45,6 +45,22 @@ component versions remain independent.
 
 Tauri development and builds always invoke the Desktop Vite profile and consume
 `apps/web/dist/desktop`. The ordinary `build` command remains the unsigned no-bundle developer host.
+
+On an Apple Silicon Mac, an owner-only application package is assembled with:
+
+```bash
+make build-macos-owner-package
+```
+
+This uses an isolated Python 3.12 packaging environment, freezes the base Runtime as PyInstaller
+onedir, embeds it at `Contents/Resources/runtime-sidecar/`, produces unsigned `.app` and `.dmg`
+artifacts, rejects local TTS/STT SDKs and common model-weight formats, then smoke-tests both the
+embedded Runtime and the complete Host-to-Runtime lifecycle. It includes the small Silero VAD asset
+needed by the base realtime Runtime, but no PyTorch, Transformers, Qwen, GPT-SoVITS,
+faster-whisper, voice checkpoint, or training data. If ignored local Live2D assets are present, the
+owner package contains them and remains private; it is not a public release candidate. See
+`docs/operations/macos-owner-package.md`.
+
 On Windows, an x64 installer candidate is assembled separately from a `win-amd64` Python environment:
 
 ```powershell

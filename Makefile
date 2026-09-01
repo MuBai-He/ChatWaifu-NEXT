@@ -2,7 +2,7 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: bootstrap demo desktop build-web build-desktop-ui build-desktop-host dev-docs build-docs preview-docs publish-docs verify-release format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
+.PHONY: bootstrap demo desktop build-web build-desktop-ui build-desktop-host build-macos-owner-package dev-docs build-docs preview-docs publish-docs verify-release format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
 	$(UV) sync --all-packages --all-groups
@@ -25,6 +25,9 @@ build-desktop-ui:
 
 build-desktop-host:
 	$(PNPM) --filter @chatwaifu/desktop build
+
+build-macos-owner-package:
+	bash tools/macos/build_owner_package_arm64.sh
 
 dev-docs:
 	$(PNPM) docs:dev

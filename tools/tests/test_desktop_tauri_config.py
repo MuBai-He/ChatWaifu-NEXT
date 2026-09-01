@@ -44,6 +44,48 @@ def test_windows_release_script_explicitly_targets_x64() -> None:
     )
 
 
+def test_macos_owner_package_embeds_runtime_without_local_model_packs() -> None:
+    package = cast(
+        dict[str, object],
+        json.loads((ROOT / "apps/desktop/package.json").read_text(encoding="utf-8")),
+    )
+    scripts = cast(dict[str, object], package["scripts"])
+    config = cast(
+        dict[str, object],
+        json.loads(
+            (ROOT / "apps/desktop/src-tauri/tauri.macos.conf.json").read_text(encoding="utf-8")
+        ),
+    )
+    bundle = cast(dict[str, object], config["bundle"])
+    resources = cast(dict[str, object], bundle["resources"])
+    macos = cast(dict[str, object], bundle["macOS"])
+    build_script = (ROOT / "tools/macos/build_owner_package_arm64.sh").read_text(encoding="utf-8")
+    runtime_spec = (ROOT / "packaging/runtime/chatwaifu-runtime.spec").read_text(encoding="utf-8")
+
+    assert scripts["build:macos-package"] == (
+        "tauri build --bundles app,dmg --config src-tauri/tauri.macos.conf.json --no-sign"
+    )
+    assert bundle["active"] is True
+    assert bundle["targets"] == ["app", "dmg"]
+    assert resources == {"../../../dist/macos/runtime-sidecar/": "runtime-sidecar/"}
+    assert macos["minimumSystemVersion"] == "14.0"
+    assert "tools/build_runtime_sidecar.py --platform macos" in build_script
+    assert "tools/smoke_runtime_sidecar.py" in build_script
+    assert "tools/macos/smoke_packaged_app.py" in build_script
+    assert "Contents/Resources/runtime-sidecar/chatwaifu-runtime" in build_script
+    assert "*.safetensors" in build_script
+    assert "*.sqlite" in build_script
+    for package_name in (
+        "faster_whisper",
+        "mlx",
+        "qwen_tts",
+        "torch",
+        "torchaudio",
+        "transformers",
+    ):
+        assert f'"{package_name}"' in runtime_spec
+
+
 def test_windows_installer_uses_the_versioned_installed_resource_layout() -> None:
     base = cast(
         dict[str, object],
@@ -718,7 +760,7 @@ def test_windows_installer_validates_every_frozen_runtime_native_file_as_pe_x64(
 
 
 def test_frozen_windows_runtime_uses_chatwaifu_file_identity_and_icon() -> None:
-    spec_path = ROOT / "packaging/windows/chatwaifu-runtime.spec"
+    spec_path = ROOT / "packaging/runtime/chatwaifu-runtime.spec"
     spec = spec_path.read_text(encoding="utf-8")
     compile(spec, str(spec_path), "exec")
     build_script = (ROOT / "tools/windows/build_installer_x64.ps1").read_text(encoding="utf-8")

@@ -140,6 +140,13 @@ providers and uses the safe avatar fallback when vendor assets are absent. A loc
 explicitly overlay ignored Live2D assets into a private test build, but that output cannot enter CI,
 tags, or a public release.
 
+The Apple Silicon owner-package path follows the same immutable Runtime versus per-user data
+boundary. Its release Host resolves `Contents/Resources/runtime-sidecar/chatwaifu-runtime` rather
+than the Windows `.exe` name. The build rejects local neural TTS/STT packages and common weight
+formats, but retains the base Runtime's small Silero VAD asset. It produces unsigned `.app` and
+`.dmg` artifacts for local testing, embeds any already-present ignored Live2D assets, and therefore
+does not satisfy signing, notarization, or public asset-license gates.
+
 The audio-element fallback may create a silent user-gesture probe before asynchronous TTS is ready.
 That probe is never allowed to hold the playback queue indefinitely: arrival of the first real,
 active-generation segment immediately promotes the probe element to real playback. A late probe

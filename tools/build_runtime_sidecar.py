@@ -14,14 +14,18 @@ from pathlib import Path
 from nltk_resources import configure_nltk_data_environment, ensure_punkt_tab
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = ROOT / "packaging" / "windows" / "chatwaifu-runtime.spec"
+SPEC = ROOT / "packaging" / "runtime" / "chatwaifu-runtime.spec"
 
 
 def main() -> int:
     arguments = _parser().parse_args()
-    platform_name = arguments.platform or ("windows" if os.name == "nt" else "macos")
-    if platform_name == "windows" and os.name != "nt":
-        raise RuntimeError("Windows Runtime sidecars must be frozen on Windows")
+    current_platform = _current_platform_name()
+    platform_name = arguments.platform or current_platform
+    if platform_name != current_platform:
+        raise RuntimeError(
+            f"{platform_name} Runtime sidecars must be frozen on {platform_name}; "
+            f"current platform is {current_platform}"
+        )
     output_root = ROOT / "dist" / platform_name
     work_root = ROOT / "build" / "pyinstaller" / platform_name
     nltk_root = configure_nltk_data_environment()
@@ -56,6 +60,14 @@ def main() -> int:
     )
     print(executable)
     return 0
+
+
+def _current_platform_name() -> str:
+    if os.name == "nt":
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    return "linux"
 
 
 def _verify_bundle(bundle: Path, executable: Path) -> None:

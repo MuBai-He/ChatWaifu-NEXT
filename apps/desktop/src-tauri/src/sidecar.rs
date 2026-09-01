@@ -933,7 +933,15 @@ fn adjacent_appcontainer_launcher(current_executable: &std::path::Path) -> PathB
 fn packaged_runtime_executable(resource_dir: &Path) -> PathBuf {
     resource_dir
         .join("runtime-sidecar")
-        .join("chatwaifu-runtime.exe")
+        .join(packaged_runtime_filename())
+}
+
+fn packaged_runtime_filename() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "chatwaifu-runtime.exe"
+    } else {
+        "chatwaifu-runtime"
+    }
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -1379,8 +1387,8 @@ mod tests {
         MAX_AUTOMATIC_RESTARTS, RUNTIME_SERVER_STARTUP_BUDGET_SECONDS,
         STARTUP_SUPERVISOR_GRACE_SECONDS, STARTUP_TIMEOUT, WORKER_PACK_STARTUP_BUDGET_SECONDS,
         WorkerPackInstallResult, adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
-        packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
-        select_packaged_component_root, should_request_start,
+        packaged_runtime_executable, packaged_runtime_filename, restart_backoff,
+        runtime_supervisor_exit_code_from, select_packaged_component_root, should_request_start,
         strict_localcache_physical_image_candidate, user_roots_from_known_folders,
         valid_package_family_component,
     };
@@ -1468,7 +1476,9 @@ mod tests {
         let component_root = select_packaged_component_root(resources, None).unwrap();
         assert_eq!(
             packaged_runtime_executable(&component_root),
-            resources.join("runtime-sidecar/chatwaifu-runtime.exe")
+            resources
+                .join("runtime-sidecar")
+                .join(packaged_runtime_filename())
         );
         assert_eq!(
             packaged_appcontainer_launcher(&component_root),
@@ -1488,9 +1498,8 @@ mod tests {
 
         assert_eq!(
             packaged_runtime_executable(&component_root),
-            Path::new(
-                "C:/Users/test/AppData/Local/ChatWaifu NEXT/runtime-sidecar/chatwaifu-runtime.exe"
-            )
+            Path::new("C:/Users/test/AppData/Local/ChatWaifu NEXT/runtime-sidecar")
+                .join(packaged_runtime_filename())
         );
         assert_eq!(
             packaged_appcontainer_launcher(&component_root),

@@ -52,6 +52,7 @@ ChatWaifu NEXT（ChatWaifuV2）想做一件很简单的事：让你喜欢的角�
 | Web           | Galgame 对话、Live2D、Avatar Lab             | `make dev-web` / `make build-web`          | `apps/web/dist/web`     |
 | Desktop UI    | 透明桌宠、独立设置、托盘                     | `make build-desktop-ui`                    | `apps/web/dist/desktop` |
 | Desktop Host  | Tauri 窗口、sidecar、安装生命周期            | `make desktop` / `make build-desktop-host` | 原生开发 Host           |
+| macOS ARM64   | Desktop + 冻结基础 Runtime                   | `make build-macos-owner-package`           | 未签名 `.dmg` / `.app`  |
 | Windows x64   | Desktop + 冻结 Runtime + AppContainer helper | `tools\windows\build_installer_x64.ps1`    | NSIS 安装候选           |
 | Local AI Pack | 隔离 Python、模型 SDK、权重、CUDA            | Windows Worker Pack builders               | 独立 `.cwpack`          |
 

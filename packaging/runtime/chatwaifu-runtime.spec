@@ -40,6 +40,19 @@ for package in (
 ):
     hiddenimports += collect_submodules(package)
 
+# Local neural workers are independently installed capabilities. Keeping their
+# SDKs out of the base Runtime makes the macOS/Windows application package
+# model-free and prevents a developer environment from silently bloating it.
+excluded_local_model_packages = [
+    "faster_whisper",
+    "mlx",
+    "mlx_lm",
+    "qwen_tts",
+    "torch",
+    "torchaudio",
+    "transformers",
+]
+
 a = Analysis(
     [str(ROOT / "tools" / "run_packaged_runtime.py")],
     pathex=[
@@ -53,7 +66,13 @@ a = Analysis(
     hookspath=[str(ROOT / "packaging" / "pyinstaller-hooks")],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["tkinter", "matplotlib", "IPython", "pytest"],
+    excludes=[
+        "tkinter",
+        "matplotlib",
+        "IPython",
+        "pytest",
+        *excluded_local_model_packages,
+    ],
     noarchive=False,
     optimize=0,
 )

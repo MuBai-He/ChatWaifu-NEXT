@@ -62,6 +62,7 @@ validation:
     - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
     - browser full reload reports no new console warnings or errors
     - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
+    - Apple Silicon owner packaging produces unsigned app and DMG artifacts with an embedded base Runtime, excludes local neural model packs and weights, passes embedded Runtime health, launches the complete packaged Host-to-Runtime path, and cleans the sidecar on Host exit
     - Windows 11 ARM64 VM runs the win-amd64 Python 3.12 environment with Ruff, Pyright, and all 118 Python tests passing
     - Windows Web formatting, lint, type checks, 80 unit tests, and the production Web build pass serially
     - Windows x64 Rust target passes Clippy and 11 Tauri tests, then produces a release EXE verified as PE machine 0x8664
@@ -249,6 +250,7 @@ phases:
       - Rust shutdown terminates and waits for the owned service child so ordinary desktop exit leaves no orphan Runtime or workers
       - The service stack watches its owning Rust PID and self-cleans after abrupt development hot reloads that bypass normal Tauri exit events
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
+      - Apple Silicon owner packaging freezes the base Runtime into the Tauri resource root, emits unsigned app, DMG, portable app zip, and SHA-256 artifacts, rejects local neural model packs and weights, then passes embedded Runtime plus complete Host lifecycle smoke
       - Windows x64 development launcher keeps Vite hot reload and Rust logs attached while preserving the x86_64-pc-windows-msvc target on Windows-on-ARM
       - Windows development without local model assets degrades to a healthy dynamic-port Demo Runtime with fake TTS and disabled STT; cloud TTS remains discoverable and Ctrl+C leaves no Runtime listener
       - Windows parent-watchdog liveness checks use a non-signaling process handle instead of POSIX kill-zero semantics; a real x64 development smoke remains alive through Runtime readiness and cleans host plus listeners on intentional Ctrl+C
