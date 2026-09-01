@@ -65,6 +65,11 @@ describe("ModelSettingsPanel", () => {
           updated_at: new Date().toISOString(),
         }),
     );
+    vi.mocked(runtimeClient.testModelConfiguration).mockResolvedValue({
+      role: "chat",
+      status: "ok",
+      characters: 12,
+    });
   });
 
   afterEach(() => {
@@ -110,6 +115,40 @@ describe("ModelSettingsPanel", () => {
       throw new Error("expected chat model input");
     expect(chatModel.value).toBe("demo-chat");
     expect(screen.queryByDisplayValue("secret-test-value")).toBeNull();
+  });
+
+  it("keeps model tests clickable while the sticky save notice is visible", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    const chatModel = await screen.findByRole("textbox", {
+      name: "聊天模型 模型 ID",
+    });
+    const chatCard = chatModel.closest("section");
+    if (!chatCard) throw new Error("expected chat model card");
+    const saveButton = Array.from(chatCard.querySelectorAll("button")).find(
+      (button) => button.textContent === "保存",
+    );
+    const testButton = Array.from(chatCard.querySelectorAll("button")).find(
+      (button) => button.textContent === "测试",
+    );
+    if (!saveButton || !testButton)
+      throw new Error("expected chat model actions");
+
+    fireEvent.click(saveButton);
+    const saveNotice = await screen.findByText("聊天模型已保存");
+    expect(saveNotice.getAttribute("role")).toBe("status");
+    expect(testButton.disabled).toBe(false);
+
+    fireEvent.click(testButton);
+
+    await waitFor(() =>
+      expect(runtimeClient.testModelConfiguration).toHaveBeenCalledWith(
+        "chat",
+      ),
+    );
+    expect(await screen.findByText("聊天模型连接 ok，返回 12 字符")).toBeTruthy();
   });
 });
 
