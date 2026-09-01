@@ -12,7 +12,9 @@ param(
 
     [string]$RuntimePath = "",
 
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+
+    [switch]$RepairInvalid
 )
 
 Set-StrictMode -Version Latest
@@ -20,6 +22,9 @@ $ErrorActionPreference = "Stop"
 
 if ($env:OS -ne "Windows_NT") {
     throw "Worker Packs can only be installed into the Windows desktop product on Windows."
+}
+if ($VerifyOnly -and $RepairInvalid) {
+    throw "-VerifyOnly and -RepairInvalid cannot be used together."
 }
 $RootHelper = Join-Path $PSScriptRoot "worker_pack_install_roots.ps1"
 . $RootHelper
@@ -157,10 +162,11 @@ try {
         return
     }
 
-    & $ResolvedRuntime --worker-pack install $ResolvedArchive
+    $InstallAction = if ($RepairInvalid) { "repair" } else { "install" }
+    & $ResolvedRuntime --worker-pack $InstallAction $ResolvedArchive
     $InstallExitCode = $LASTEXITCODE
     if ($InstallExitCode -ne 0) {
-        throw "Worker Pack installation failed with exit code $InstallExitCode."
+        throw "Worker Pack $InstallAction failed with exit code $InstallExitCode."
     }
 } finally {
     [Environment]::SetEnvironmentVariable(

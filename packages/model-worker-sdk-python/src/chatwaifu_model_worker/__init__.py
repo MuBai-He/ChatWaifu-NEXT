@@ -26,6 +26,7 @@ from chatwaifu_model_worker.pack_installer import (
     install_archive,
     load_installed_pack,
     remove_directory_tree,
+    repair_archive,
     semver_sort_key,
     verify_archive,
 )
@@ -101,6 +102,7 @@ __all__ = [
     "load_installed_pack",
     "pack_tts_pcm_frame",
     "remove_directory_tree",
+    "repair_archive",
     "semver_sort_key",
     "unpack_tts_pcm_frame",
     "verify_archive",

@@ -820,10 +820,12 @@ def _write_json_file(path: Path, value: Any, *, exclusive: bool) -> None:
     filesystem_path.chmod(0o600)
 
 
-def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
-    """Install an archive through same-volume staging and one final rename."""
-
-    verified = verify_archive(archive_path)
+def _prepare_install_target(
+    verified: VerifiedWorkerPackArchive,
+    root: Path,
+    *,
+    operation: str,
+) -> tuple[Path, Path]:
     expanded_root = root.expanduser()
     _reject_reparse_ancestors(expanded_root, label="worker pack installation path")
     resolved_root = _ordinary_path(_filesystem_path(expanded_root).resolve())
@@ -836,16 +838,18 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
     _preflight_free_space(
         pack_root,
         expanded_bytes=sum(file.size for file in verified.manifest.files),
-        operation="worker pack installation",
+        operation=operation,
     )
-    target = pack_root / verified.manifest.version
-    if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
-        raise WorkerPackError(f"worker pack is already installed: {target}")
+    return pack_root, pack_root / verified.manifest.version
 
+
+def _stage_verified_installation(
+    verified: VerifiedWorkerPackArchive,
+    pack_root: Path,
+) -> Path:
     temporary = _ordinary_path(
         Path(tempfile.mkdtemp(prefix=".install-", dir=_filesystem_path(pack_root)))
     )
-    renamed = False
     try:
         _extract_verified_payload(verified, temporary)
         manifest_path = temporary / MANIFEST_NAME
@@ -868,6 +872,28 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
             receipt.model_dump(mode="json"),
             exclusive=True,
         )
+    except BaseException:
+        if _filesystem_path(temporary).exists():
+            shutil.rmtree(_filesystem_path(temporary), ignore_errors=True)
+        raise
+    return temporary
+
+
+def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
+    """Install an archive through same-volume staging and one final rename."""
+
+    verified = verify_archive(archive_path)
+    pack_root, target = _prepare_install_target(
+        verified,
+        root,
+        operation="worker pack installation",
+    )
+    if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
+        raise WorkerPackError(f"worker pack is already installed: {target}")
+
+    temporary = _stage_verified_installation(verified, pack_root)
+    renamed = False
+    try:
         # The staging directory lives inside pack_root, so the final rename never crosses volumes.
         if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
             raise WorkerPackError(
@@ -883,6 +909,109 @@ def install_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
             shutil.rmtree(_filesystem_path(target), ignore_errors=True)
         raise
 
+    return installed
+
+
+def _require_matching_repair_source(
+    target: Path,
+    verified: VerifiedWorkerPackArchive,
+) -> InstalledWorkerPack:
+    try:
+        installed = load_installed_pack(target, verify_payload=False)
+    except WorkerPackError as error:
+        raise WorkerPackError(
+            "worker pack repair requires intact, matching install metadata; "
+            f"refusing to replace {target}"
+        ) from error
+    if installed.receipt.manifest_sha256 != verified.manifest_sha256:
+        raise WorkerPackError(
+            f"worker pack repair archive does not match the installed manifest: {target}"
+        )
+    if installed.receipt.archive_sha256 != verified.archive_sha256:
+        raise WorkerPackError(
+            "worker pack repair requires the exact archive used for the installed version: "
+            f"{target}"
+        )
+    return installed
+
+
+def repair_archive(archive_path: Path, root: Path) -> InstalledWorkerPack:
+    """Replace one invalid install with its exact verified archive, with rollback.
+
+    Repair is deliberately separate from installation: a valid version is never
+    overwritten, and damaged metadata or a different archive remains a manual
+    investigation instead of becoming an implicit destructive upgrade.
+    """
+
+    verified = verify_archive(archive_path)
+    pack_root, target = _prepare_install_target(
+        verified,
+        root,
+        operation="worker pack repair",
+    )
+    if not _filesystem_path(target).exists():
+        raise WorkerPackError(f"worker pack repair target is not installed: {target}")
+    _require_real_directory(target, label="worker pack repair target")
+    _require_matching_repair_source(target, verified)
+    try:
+        load_installed_pack(target, verify_payload=True)
+    except WorkerPackError:
+        pass
+    else:
+        raise WorkerPackError(f"worker pack is already valid; repair refused: {target}")
+
+    temporary = _stage_verified_installation(verified, pack_root)
+    backup = _ordinary_path(
+        Path(tempfile.mkdtemp(prefix=".repair-backup-", dir=_filesystem_path(pack_root.parent)))
+    )
+    # mkdtemp reserves a unique name, but os.replace requires the destination to
+    # be absent when moving a non-empty directory on Windows.
+    _filesystem_path(backup).rmdir()
+    backup_moved = False
+    replacement_moved = False
+    try:
+        # Re-check immediately before the destructive rename. Another process
+        # repairing or reinstalling the same version must not be overwritten.
+        _require_matching_repair_source(target, verified)
+        try:
+            load_installed_pack(target, verify_payload=True)
+        except WorkerPackError:
+            pass
+        else:
+            raise WorkerPackError(f"worker pack became valid before repair: {target}")
+        os.replace(_filesystem_path(target), _filesystem_path(backup))
+        backup_moved = True
+        os.replace(_filesystem_path(temporary), _filesystem_path(target))
+        replacement_moved = True
+        installed = load_installed_pack(target, verify_payload=True)
+    except BaseException as repair_error:
+        if _filesystem_path(temporary).exists():
+            shutil.rmtree(_filesystem_path(temporary), ignore_errors=True)
+        if replacement_moved and _filesystem_path(target).exists():
+            shutil.rmtree(_filesystem_path(target), ignore_errors=True)
+        if backup_moved and _filesystem_path(backup).exists():
+            if _filesystem_path(target).exists() or _path_is_link_or_reparse(target):
+                raise WorkerPackError(
+                    "worker pack repair failed and the original install could not be restored; "
+                    f"preserved backup at {backup}"
+                ) from repair_error
+            try:
+                os.replace(_filesystem_path(backup), _filesystem_path(target))
+            except OSError as rollback_error:
+                raise WorkerPackError(
+                    "worker pack repair failed and rollback could not restore the original; "
+                    f"preserved backup at {backup}"
+                ) from rollback_error
+        elif _filesystem_path(backup).exists():
+            _filesystem_path(backup).rmdir()
+        raise
+
+    try:
+        remove_directory_tree(backup)
+    except WorkerPackError as error:
+        raise WorkerPackError(
+            f"worker pack repair succeeded, but the invalid backup could not be removed: {backup}"
+        ) from error
     return installed
 
 
@@ -1207,6 +1336,12 @@ def _build_parser() -> argparse.ArgumentParser:
     install.add_argument("archive", type=Path)
     install.add_argument("--root", type=Path, required=True)
     install.add_argument("--json", action="store_true")
+    repair = subcommands.add_parser(
+        "repair", help="atomically replace an invalid version with its exact verified archive"
+    )
+    repair.add_argument("archive", type=Path)
+    repair.add_argument("--root", type=Path, required=True)
+    repair.add_argument("--json", action="store_true")
     listing = subcommands.add_parser("list", help="list installed worker packs with valid receipts")
     listing.add_argument("--root", type=Path, required=True)
     listing.add_argument("--json", action="store_true")
@@ -1258,6 +1393,10 @@ def main(argv: list[str] | None = None) -> int:
             installed = install_archive(cast(Path, args.archive), cast(Path, args.root))
             _print_result(_pack_json(installed), as_json=cast(bool, args.json), action="installed")
             return 0
+        if args.command == "repair":
+            installed = repair_archive(cast(Path, args.archive), cast(Path, args.root))
+            _print_result(_pack_json(installed), as_json=cast(bool, args.json), action="repaired")
+            return 0
         if args.command == "list":
             packs, errors = discover_installed_packs(cast(Path, args.root))
             if args.json:
@@ -1296,7 +1435,7 @@ def _print_result(
     value: dict[str, Any],
     *,
     as_json: bool,
-    action: Literal["built", "verified", "installed", "activated"],
+    action: Literal["built", "verified", "installed", "repaired", "activated"],
 ) -> None:
     if as_json:
         print(json.dumps(value, ensure_ascii=False, indent=2))

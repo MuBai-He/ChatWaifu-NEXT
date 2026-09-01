@@ -193,6 +193,7 @@ def _run_worker_pack_command(
         activate_pack,
         discover_installed_packs,
         install_archive,
+        repair_archive,
         verify_archive,
     )
 
@@ -202,6 +203,8 @@ def _run_worker_pack_command(
     verify.add_argument("archive", type=Path)
     install = commands.add_parser("install")
     install.add_argument("archive", type=Path)
+    repair = commands.add_parser("repair")
+    repair.add_argument("archive", type=Path)
     commands.add_parser("list")
     activate = commands.add_parser("activate")
     activate.add_argument("pack_id")
@@ -231,6 +234,23 @@ def _run_worker_pack_command(
             )
             payload = {
                 "action": "installed_and_activated",
+                "pack_id": installed.manifest.pack_id,
+                "version": installed.manifest.version,
+                "kind": installed.manifest.worker.kind,
+                "path": str(installed.root),
+                "config_path": str(config_path),
+                "restart_required": True,
+            }
+        elif parsed.command == "repair":
+            installed = repair_archive(parsed.archive, pack_root)
+            _, config_path = activate_pack(
+                installed.manifest.pack_id,
+                version=installed.manifest.version,
+                root=pack_root,
+                config_root=config_root,
+            )
+            payload = {
+                "action": "repaired_and_activated",
                 "pack_id": installed.manifest.pack_id,
                 "version": installed.manifest.version,
                 "kind": installed.manifest.worker.kind,

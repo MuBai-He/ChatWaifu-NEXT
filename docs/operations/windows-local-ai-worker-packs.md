@@ -103,8 +103,27 @@ exact version.
 Restart ChatWaifu NEXT after installation. On the next frozen-Runtime boot both selected workers
 start on ephemeral authenticated loopback ports. If Whisper cannot load or Qwen's real CUDA
 execution probe fails, Runtime keeps the corresponding built-in/network fallback instead of
-advertising a broken local provider. `-VerifyOnly` validates an archive without changing the active
-selection; `-RuntimePath` can target a reviewed portable Runtime during release testing.
+advertising a broken local provider. Runtime routes Numba's native cache to a unique per-launch
+directory outside the verified pack and removes it during orderly shutdown; the build smoke fully
+re-verifies the installed tree after real inference and shutdown. This matters because `-B` and
+`PYTHONDONTWRITEBYTECODE` stop CPython bytecode writes but do not stop libraries such as Numba from
+creating their own cache directories.
+
+`-VerifyOnly` validates an archive without changing the active selection; `-RuntimePath` can target
+a reviewed portable Runtime during release testing. Normal installation never overwrites an
+existing version. If a full Runtime re-verification has already rejected that version, restore it
+only from the exact original archive with the explicit repair path:
+
+```powershell
+.\tools\windows\install_worker_pack_x64.ps1 `
+    -ArchivePath .\dist\windows\worker-packs\chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack `
+    -RepairInvalid
+```
+
+Repair verifies and stages the archive before moving anything, refuses to overwrite a valid pack,
+refuses a different archive or damaged identity metadata, swaps the invalid directory on the same
+volume, verifies the replacement, and restores the original directory if replacement verification
+fails. Restart ChatWaifu NEXT afterward.
 
 ## Physical per-user roots and redirected shells
 

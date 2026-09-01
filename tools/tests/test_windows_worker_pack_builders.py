@@ -110,7 +110,9 @@ def test_installed_pack_helper_uses_frozen_runtime_and_checks_x64() -> None:
     assert '"runtime-sidecar\\chatwaifu-runtime.exe"' in installer
     assert "0x8664" in installer
     assert "--worker-pack verify" in installer
-    assert "--worker-pack install" in installer
+    assert "[switch]$RepairInvalid" in installer
+    assert 'if ($RepairInvalid) { "repair" } else { "install" }' in installer
+    assert "--worker-pack $InstallAction" in installer
     assert "InstallLocation" in installer
     assert "CurrentUser" in installer
     assert "python" not in installer.casefold()

@@ -450,6 +450,79 @@ def test_install_refuses_existing_version_without_overwriting(tmp_path: Path) ->
     assert marker.read_text(encoding="utf-8") == "user-owned"
 
 
+def test_repair_replaces_only_an_invalid_install_from_its_exact_archive(tmp_path: Path) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    unexpected = installed.root / "library/__pycache__"
+    unexpected.mkdir(parents=True)
+
+    repaired = worker_packs.repair_archive(archive, tmp_path / "packs")
+
+    assert repaired.root == installed.root
+    assert not unexpected.exists()
+    assert repaired.receipt.archive_sha256 == hashlib.sha256(archive.read_bytes()).hexdigest()
+    worker_packs.load_installed_pack(repaired.root, verify_payload=True)
+    assert not list((tmp_path / "packs").glob(".repair-backup-*"))
+
+
+def test_repair_refuses_to_overwrite_a_valid_install(tmp_path: Path) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    before = (installed.root / "install-receipt.json").read_bytes()
+
+    with pytest.raises(worker_packs.WorkerPackError, match="already valid"):
+        worker_packs.repair_archive(archive, tmp_path / "packs")
+
+    assert (installed.root / "install-receipt.json").read_bytes() == before
+
+
+def test_repair_refuses_a_different_archive_for_the_same_manifest(tmp_path: Path) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    (installed.root / "undeclared").mkdir()
+    different_archive = tmp_path / "different-worker.zip"
+    different_archive.write_bytes(archive.read_bytes())
+    with zipfile.ZipFile(different_archive, "a") as candidate:
+        candidate.comment = b"same manifest, different archive"
+
+    with pytest.raises(worker_packs.WorkerPackError, match="exact archive"):
+        worker_packs.repair_archive(different_archive, tmp_path / "packs")
+
+    assert (installed.root / "undeclared").is_dir()
+
+
+def test_repair_rolls_back_when_the_replacement_fails_final_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    unexpected = installed.root / "undeclared"
+    unexpected.mkdir()
+    real_load = worker_packs.load_installed_pack
+
+    def fail_replacement(
+        path: Path,
+        *,
+        verify_payload: bool = False,
+    ) -> worker_packs.InstalledWorkerPack:
+        loaded = real_load(path, verify_payload=verify_payload)
+        if Path(path) == installed.root and verify_payload and not unexpected.exists():
+            raise worker_packs.WorkerPackError("forced post-repair verification failure")
+        return loaded
+
+    monkeypatch.setattr(worker_packs, "load_installed_pack", fail_replacement)
+
+    with pytest.raises(worker_packs.WorkerPackError, match="forced post-repair"):
+        worker_packs.repair_archive(archive, tmp_path / "packs")
+
+    assert unexpected.is_dir()
+    with pytest.raises(worker_packs.WorkerPackError, match="undeclared directories"):
+        real_load(installed.root, verify_payload=True)
+    assert not list((tmp_path / "packs").glob(".repair-backup-*"))
+    assert not list(installed.root.parent.glob(".install-*"))
+
+
 def test_reverify_detects_installed_payload_tampering(tmp_path: Path) -> None:
     archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})
     installed = worker_packs.install_archive(archive, tmp_path / "packs")
