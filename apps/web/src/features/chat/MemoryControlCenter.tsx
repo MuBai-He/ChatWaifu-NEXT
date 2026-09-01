@@ -6,6 +6,7 @@ import type {
 import { useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "./ModalPortal";
+import "./memory-control-center.css";
 import {
   correctMemory,
   decideMemoryProposal,

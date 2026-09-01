@@ -111,6 +111,41 @@ test("desktop settings is an app-like control surface without chat ownership", a
   expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
   expect(metrics.overflowY).toBe("auto");
 
+  const memoryDialogLayout = await page.evaluate<{
+    overlayPosition: string;
+    overlayTop: string;
+    overlayDisplay: string;
+    dialogDisplay: string;
+    dialogMaxHeight: string;
+  }>(`
+    (() => {
+      const overlay = document.createElement("div");
+      overlay.className = "memory-center-overlay";
+      const dialog = document.createElement("section");
+      dialog.className = "memory-center";
+      overlay.append(dialog);
+      document.body.append(overlay);
+      try {
+        const overlayStyle = getComputedStyle(overlay);
+        const dialogStyle = getComputedStyle(dialog);
+        return {
+          overlayPosition: overlayStyle.position,
+          overlayTop: overlayStyle.top,
+          overlayDisplay: overlayStyle.display,
+          dialogDisplay: dialogStyle.display,
+          dialogMaxHeight: dialogStyle.maxHeight,
+        };
+      } finally {
+        overlay.remove();
+      }
+    })()
+  `);
+  expect(memoryDialogLayout.overlayPosition).toBe("fixed");
+  expect(memoryDialogLayout.overlayTop).toBe("0px");
+  expect(memoryDialogLayout.overlayDisplay).toBe("grid");
+  expect(memoryDialogLayout.dialogDisplay).toBe("grid");
+  expect(memoryDialogLayout.dialogMaxHeight).not.toBe("none");
+
   const screenshot = await page.screenshot({
     animations: "disabled",
     path: testInfo.outputPath("desktop-settings.png"),
