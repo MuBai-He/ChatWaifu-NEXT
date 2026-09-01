@@ -1019,11 +1019,11 @@ fn user_roots_from_known_folders(
 fn desktop_user_roots(app: &AppHandle) -> Result<DesktopUserRoots, String> {
     #[cfg(target_os = "windows")]
     {
-        return user_roots_from_known_folders(
+        user_roots_from_known_folders(
             &windows_physical_local_app_data()?,
             &windows_physical_roaming_app_data()?,
             &app.config().identifier,
-        );
+        )
     }
 
     #[cfg(not(target_os = "windows"))]
