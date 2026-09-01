@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
+import multiprocessing
 import struct
 import subprocess
 import threading
@@ -28,7 +30,11 @@ from chatwaifu_model_worker import (
     WorkerPackPlatform,
     WorkerPackWorker,
 )
-from chatwaifu_runtime.worker_packs import ManagedWorker, WorkerPackSupervisor
+from chatwaifu_runtime.worker_packs import (
+    InstalledWorkerPack,
+    ManagedWorker,
+    WorkerPackSupervisor,
+)
 
 
 class _FakeProcess:
@@ -56,6 +62,17 @@ class _FakeProcess:
         if self.running:
             raise subprocess.TimeoutExpired("fake-worker", 0)
         return self.return_code
+
+
+class _UnstoppableProcess(_FakeProcess):
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def kill(self) -> None:
+        self.killed = True
+
+    def wait(self, timeout: float | None = None) -> int:
+        raise subprocess.TimeoutExpired("unstoppable-worker", 0 if timeout is None else timeout)
 
 
 def _health_payload() -> dict[str, object]:
@@ -165,6 +182,20 @@ def _supervisor(tmp_path: Path, **environment: str) -> WorkerPackSupervisor:
         **environment,
     }
     return WorkerPackSupervisor(values, platform_os="windows", architecture="x86_64")
+
+
+def _hold_worker_cache_lease(tmp_path: str, ready: Any) -> None:
+    """Own a cache lease until the test deliberately terminates this process."""
+
+    supervisor = _supervisor(Path(tmp_path))
+    pack = supervisor.discover()[0]
+    cache_root, cache_lease = supervisor._create_worker_cache(pack)
+    try:
+        assert cache_root.is_dir()
+        ready.set()
+        threading.Event().wait()
+    finally:
+        supervisor._release_worker_cache_lease(cache_lease)
 
 
 def test_discovers_receipted_compatible_pack_and_rejects_tampering(tmp_path: Path) -> None:
@@ -300,6 +331,168 @@ def test_python_worker_stays_immutable_and_discoverable_after_first_launch(
     supervisor._workers.append(managed)
     supervisor.stop()
     assert not numba_cache.exists()
+
+
+def test_start_reaps_only_lease_proven_dead_launch_caches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_test_pack(tmp_path / "data")
+    owner = _supervisor(tmp_path)
+    pack = owner.discover()[0]
+    active, active_lease = owner._create_worker_cache(pack)
+    (active / "active.bin").write_bytes(b"active")
+    abandoned, abandoned_lease = owner._create_worker_cache(pack)
+    (abandoned / "native-cache.bin").write_bytes(b"stale")
+    assert owner._release_worker_cache_lease(abandoned_lease) is None
+
+    cache_namespace = active.parent
+    missing_marker = cache_namespace / "launch-missing-marker"
+    missing_marker.mkdir()
+    not_ready = cache_namespace / "launch-not-ready"
+    not_ready.mkdir()
+    (not_ready / worker_pack_module._WORKER_CACHE_OWNER_FILE).write_text(
+        json.dumps(
+            {
+                "schema_version": worker_pack_module._WORKER_CACHE_OWNER_SCHEMA_VERSION,
+                "runtime_pid": 1,
+                "instance_id": "0" * 32,
+            }
+        ),
+        encoding="utf-8",
+    )
+    corrupt_marker = cache_namespace / "launch-corrupt-marker"
+    corrupt_marker.mkdir()
+    (corrupt_marker / worker_pack_module._WORKER_CACHE_OWNER_READY_FILE).write_bytes(b"ready")
+    (corrupt_marker / worker_pack_module._WORKER_CACHE_OWNER_FILE).write_text(
+        "not-json", encoding="utf-8"
+    )
+    unmanaged = cache_namespace / "owner-data"
+    unmanaged.mkdir()
+    (unmanaged / "keep.txt").write_text("keep", encoding="utf-8")
+
+    reaper = _supervisor(tmp_path)
+
+    def no_packs() -> list[InstalledWorkerPack]:
+        return []
+
+    monkeypatch.setattr(reaper, "discover", no_packs)
+    reaper.start()
+
+    assert not abandoned.exists()
+    assert (active / "active.bin").read_bytes() == b"active"
+    assert missing_marker.is_dir()
+    assert not_ready.is_dir()
+    assert corrupt_marker.is_dir()
+    assert (unmanaged / "keep.txt").read_text(encoding="utf-8") == "keep"
+    assert owner._release_worker_cache_lease(active_lease) is None
+    assert owner._remove_worker_cache(active) is None
+
+
+def test_start_scans_for_stale_caches_on_both_sides_of_pack_discovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    supervisor = _supervisor(tmp_path)
+    calls: list[str] = []
+
+    def reap() -> None:
+        calls.append("reap")
+
+    def discover() -> list[InstalledWorkerPack]:
+        calls.append("discover")
+        return []
+
+    monkeypatch.setattr(supervisor, "_reap_stale_worker_caches", reap)
+    monkeypatch.setattr(supervisor, "discover", discover)
+
+    supervisor.start()
+
+    assert calls == ["reap", "discover", "reap"]
+
+
+def test_stale_cache_reaper_reports_non_contention_lock_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _install_test_pack(tmp_path / "data")
+    owner = _supervisor(tmp_path)
+    cache_root, cache_lease = owner._create_worker_cache(owner.discover()[0])
+    assert owner._release_worker_cache_lease(cache_lease) is None
+
+    def fail_lock(_lease: Any) -> None:
+        raise OSError(errno.EINVAL, "invalid lock request")
+
+    monkeypatch.setattr(worker_pack_module, "_lock_worker_cache_lease", fail_lock)
+    owner._reap_stale_worker_caches()
+
+    assert cache_root.is_dir()
+    error = capsys.readouterr().err
+    assert "preserved an unverifiable entry" in error
+    assert "invalid lock request" in error
+
+
+def test_stale_cache_lease_is_released_when_owner_process_is_killed(tmp_path: Path) -> None:
+    _install_test_pack(tmp_path / "data")
+    context = multiprocessing.get_context("spawn")
+    ready = context.Event()
+    owner = context.Process(target=_hold_worker_cache_lease, args=(str(tmp_path), ready))
+    owner.start()
+    try:
+        assert ready.wait(10), "cache owner did not acquire its lease"
+        launch_directories = tuple((tmp_path / "data" / "worker-cache").glob("*/*/launch-*"))
+        assert len(launch_directories) == 1
+        launch_directory = launch_directories[0]
+
+        reaper = _supervisor(tmp_path)
+        reaper._reap_stale_worker_caches()
+        assert launch_directory.is_dir()
+
+        owner.terminate()
+        owner.join(10)
+        assert not owner.is_alive()
+
+        for _attempt in range(256):
+            reaper._reap_stale_worker_caches()
+            if not launch_directory.exists():
+                break
+        assert not launch_directory.exists()
+        assert launch_directory.parent.is_dir()
+        assert launch_directory.parent.parent.is_dir()
+        assert (tmp_path / "data" / "worker-cache").is_dir()
+    finally:
+        if owner.is_alive():
+            owner.kill()
+            owner.join(10)
+        owner.close()
+
+
+def test_stale_cache_reaper_never_follows_linked_namespaces(tmp_path: Path) -> None:
+    external = tmp_path / "external"
+    external.mkdir()
+    sentinel = external / "sentinel.txt"
+    sentinel.write_text("keep", encoding="utf-8")
+    cache_root = tmp_path / "data" / "worker-cache"
+    cache_root.mkdir(parents=True)
+    linked_pack = cache_root / "linked-pack"
+    real_pack = cache_root / "real-pack"
+    real_pack.mkdir()
+    linked_version = real_pack / "linked-version"
+    real_version = real_pack / "0.1.0"
+    real_version.mkdir()
+    linked_launch = real_version / "launch-linked"
+    try:
+        linked_pack.symlink_to(external, target_is_directory=True)
+        linked_version.symlink_to(external, target_is_directory=True)
+        linked_launch.symlink_to(external, target_is_directory=True)
+    except OSError as error:
+        pytest.skip(f"directory symlink creation is unavailable: {error}")
+
+    _supervisor(tmp_path).start()
+
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+    assert linked_pack.exists()
+    assert linked_version.exists()
+    assert linked_launch.exists()
 
 
 def test_tts_capabilities_configure_the_generic_runtime_worker_route(tmp_path: Path) -> None:
@@ -482,8 +675,10 @@ def test_explicit_port_collision_retries_with_a_new_process(
 
     assert managed.process is cast(Any, ready)
     assert managed.base_url == "http://127.0.0.1:43128"
-    managed.process.terminate()
-    managed.log_stream.close()
+    supervisor._workers.append(managed)
+    supervisor.stop()
+    assert managed.cache_root is not None
+    assert not managed.cache_root.exists()
 
 
 def test_stt_and_tts_start_concurrently_with_one_shared_deadline(
@@ -632,3 +827,45 @@ def test_failed_worker_reports_crash_and_stop_closes_every_worker_log(
 
     assert supervisor.bootstrap_workers == []
     assert stream.closed is True
+
+
+def test_stop_retains_cache_lease_until_worker_exit_is_confirmed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _install_test_pack(tmp_path / "data")
+    supervisor = _supervisor(tmp_path)
+    pack = supervisor.discover()[0]
+    cache_root, cache_lease = supervisor._create_worker_cache(pack)
+    process = _UnstoppableProcess()
+    stream = (tmp_path / "worker.log").open("ab")
+    supervisor._workers.append(
+        ManagedWorker(
+            pack=pack,
+            process=cast(Any, process),
+            log_stream=stream,
+            base_url="http://127.0.0.1:43127",
+            token="worker-token",
+            capabilities=TtsWorkerCapabilities(
+                provider_id="qwen3_tts_torch",
+                display_name="Local worker",
+                model="test-model",
+                languages=["zh"],
+            ),
+            cache_root=cache_root,
+            cache_lease=cache_lease,
+        )
+    )
+
+    supervisor.stop()
+
+    assert cache_root.is_dir()
+    assert not cache_lease.closed
+    assert supervisor.bootstrap_workers == ["tts:qwen3_tts_torch@0.1.0"]
+    assert "is still running; cache lease retained" in capsys.readouterr().err
+
+    process.running = False
+    supervisor.stop()
+
+    assert not cache_root.exists()
+    assert cache_lease.closed
+    assert supervisor.bootstrap_workers == []

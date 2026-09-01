@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
+import importlib
 import json
 import os
 import platform
@@ -18,7 +20,7 @@ from collections.abc import MutableMapping
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO, Literal, cast
+from typing import Any, BinaryIO, Literal, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
@@ -36,6 +38,11 @@ WorkerKind = Literal["stt", "tts"]
 _MAX_PROBE_BYTES = 1_048_576
 _LOG_ROTATE_BYTES = 5 * 1024 * 1024
 _MAX_PORT_BIND_ATTEMPTS = 3
+_WORKER_CACHE_OWNER_FILE = ".owner-lock.json"
+_WORKER_CACHE_OWNER_READY_FILE = ".owner-ready"
+_WORKER_CACHE_OWNER_SCHEMA_VERSION = "1.0"
+_MAX_WORKER_CACHE_OWNER_BYTES = 4_096
+_WORKER_CACHE_LOCK_CONTENTION_ERRNOS = frozenset({errno.EACCES, errno.EAGAIN, errno.EDEADLK})
 WORKER_PACK_STARTUP_BUDGET_SECONDS = 300.0
 
 
@@ -62,6 +69,7 @@ class ManagedWorker:
     token: str
     capabilities: SttWorkerCapabilities | TtsWorkerCapabilities
     cache_root: Path | None = None
+    cache_lease: BinaryIO | None = None
 
     @property
     def kind(self) -> WorkerKind:
@@ -120,7 +128,15 @@ class WorkerPackSupervisor:
         stopped = cancel_event or threading.Event()
         if stopped.is_set():
             return
+        if not self._reap_worker_caches_or_disable():
+            return
         installed = self.discover()
+        # Windows can briefly retain a terminated process's byte-range lock even
+        # after its process object is signaled. Pack verification is a useful
+        # lifecycle boundary: scan again after that real work, without sleeping
+        # or spinning, and before this Runtime creates any new launch caches.
+        if not self._reap_worker_caches_or_disable():
+            return
         try:
             selected = self._select(installed)
         except Exception as error:
@@ -174,6 +190,7 @@ class WorkerPackSupervisor:
 
     def stop(self) -> None:
         errors: list[str] = []
+        still_running: list[ManagedWorker] = []
         for managed in reversed(self._workers):
             try:
                 if managed.process.poll() is None:
@@ -198,10 +215,28 @@ class WorkerPackSupervisor:
                     managed.log_stream.close()
                 except OSError as error:
                     errors.append(f"{managed.bootstrap_name} log close failed: {error}")
-                cache_error = self._remove_worker_cache(managed.cache_root)
-                if cache_error is not None:
-                    errors.append(f"{managed.bootstrap_name} cache cleanup failed: {cache_error}")
-        self._workers.clear()
+                try:
+                    process_exited = process.poll() is not None
+                except OSError as error:
+                    process_exited = False
+                    errors.append(f"{managed.bootstrap_name} exit check failed: {error}")
+                if not process_exited:
+                    errors.append(
+                        f"{managed.bootstrap_name} is still running; cache lease retained"
+                    )
+                    still_running.append(managed)
+                else:
+                    lease_error = self._release_worker_cache_lease(managed.cache_lease)
+                    if lease_error is not None:
+                        errors.append(
+                            f"{managed.bootstrap_name} cache lease release failed: {lease_error}"
+                        )
+                    cache_error = self._remove_worker_cache(managed.cache_root)
+                    if cache_error is not None:
+                        errors.append(
+                            f"{managed.bootstrap_name} cache cleanup failed: {cache_error}"
+                        )
+        self._workers = list(reversed(still_running))
         for error in errors:
             print(
                 f"Worker Pack cleanup warning: {error}",
@@ -350,8 +385,9 @@ class WorkerPackSupervisor:
             creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         process: subprocess.Popen[bytes] | None = None
         cache_root: Path | None = None
+        cache_lease: BinaryIO | None = None
         try:
-            cache_root = self._create_worker_cache(pack)
+            cache_root, cache_lease = self._create_worker_cache(pack)
             worker_environment = self._worker_environment(
                 pack,
                 port=port,
@@ -413,6 +449,13 @@ class WorkerPackSupervisor:
             except OSError:
                 pass
             log_stream.close()
+            lease_error = self._release_worker_cache_lease(cache_lease)
+            if lease_error is not None:
+                print(
+                    f"Worker Pack launch cache lease release warning: {lease_error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
             cache_error = self._remove_worker_cache(cache_root)
             if cache_error is not None:
                 print(
@@ -437,6 +480,7 @@ class WorkerPackSupervisor:
             token=token,
             capabilities=capabilities,
             cache_root=cache_root,
+            cache_lease=cache_lease,
         )
 
     def _worker_environment(
@@ -505,36 +549,260 @@ class WorkerPackSupervisor:
         )
         return result
 
-    def _create_worker_cache(self, pack: InstalledWorkerPack) -> Path:
-        namespace = self._cache_root / pack.manifest.pack_id / pack.manifest.version
-        namespace.mkdir(parents=True, exist_ok=True, mode=0o700)
-        resolved_namespace = namespace.resolve()
-        if self._data_root not in resolved_namespace.parents:
-            raise RuntimeError("Worker cache directory escapes the configured data root")
-        if pack.root == resolved_namespace or pack.root in resolved_namespace.parents:
+    def _create_worker_cache(self, pack: InstalledWorkerPack) -> tuple[Path, BinaryIO]:
+        cache_root = self._validated_cache_root(create=True)
+        pack_namespace = cache_root / pack.manifest.pack_id
+        pack_namespace.mkdir(exist_ok=True, mode=0o700)
+        resolved_pack_namespace = self._validated_cache_namespace(
+            pack_namespace, expected_parent=cache_root
+        )
+        version_namespace = resolved_pack_namespace / pack.manifest.version
+        version_namespace.mkdir(exist_ok=True, mode=0o700)
+        resolved_namespace = self._validated_cache_namespace(
+            version_namespace, expected_parent=resolved_pack_namespace
+        )
+        resolved_pack = pack.root.resolve(strict=True)
+        if (
+            resolved_pack == resolved_namespace
+            or resolved_pack in resolved_namespace.parents
+            or resolved_namespace in resolved_pack.parents
+        ):
             raise RuntimeError("Worker cache directory must remain outside the verified pack")
-        return Path(tempfile.mkdtemp(prefix="launch-", dir=resolved_namespace)).resolve()
+
+        launch_directory = Path(
+            tempfile.mkdtemp(prefix="launch-", dir=resolved_namespace)
+        ).resolve()
+        lease: BinaryIO | None = None
+        try:
+            marker = launch_directory / _WORKER_CACHE_OWNER_FILE
+            lease = marker.open("x+b")
+            lease.write(
+                json.dumps(
+                    {
+                        "schema_version": _WORKER_CACHE_OWNER_SCHEMA_VERSION,
+                        "runtime_pid": os.getpid(),
+                        "instance_id": secrets.token_hex(16),
+                    },
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            lease.flush()
+            _lock_worker_cache_lease(lease)
+            (launch_directory / _WORKER_CACHE_OWNER_READY_FILE).write_bytes(b"ready")
+        except BaseException:
+            if lease is not None:
+                lease.close()
+            shutil.rmtree(launch_directory, ignore_errors=True)
+            raise
+        return launch_directory, lease
+
+    def _reap_stale_worker_caches(self) -> None:
+        """Remove only lease-proven caches abandoned by a crashed Runtime."""
+        if not self._cache_root.exists():
+            return
+        cache_root = self._validated_cache_root(create=False)
+        try:
+            pack_namespaces = tuple(cache_root.iterdir())
+        except OSError as error:
+            print(
+                f"Worker Pack stale cache scan warning: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return
+        for pack_namespace in pack_namespaces:
+            if pack_namespace.name.startswith("."):
+                continue
+            try:
+                resolved_pack_namespace = self._validated_cache_namespace(
+                    pack_namespace, expected_parent=cache_root
+                )
+                version_namespaces = tuple(resolved_pack_namespace.iterdir())
+            except (OSError, RuntimeError) as error:
+                print(
+                    f"Worker Pack stale cache scan warning at {pack_namespace}: {error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                continue
+            for version_namespace in version_namespaces:
+                try:
+                    resolved_version_namespace = self._validated_cache_namespace(
+                        version_namespace, expected_parent=resolved_pack_namespace
+                    )
+                    launch_directories = tuple(resolved_version_namespace.glob("launch-*"))
+                except (OSError, RuntimeError) as error:
+                    print(
+                        f"Worker Pack stale cache scan warning at {version_namespace}: {error}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    continue
+                for launch_directory in launch_directories:
+                    if _is_link_like(launch_directory) or not launch_directory.is_dir():
+                        print(
+                            "Worker Pack stale cache scan preserved an unsafe entry at "
+                            f"{launch_directory}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        continue
+                    lease, lease_error = self._acquire_stale_worker_cache_lease(launch_directory)
+                    if lease_error is not None:
+                        print(
+                            "Worker Pack stale cache scan preserved an unverifiable entry at "
+                            f"{launch_directory}: {lease_error}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                    if lease is None:
+                        continue
+                    release_error = self._release_worker_cache_lease(lease)
+                    if release_error is not None:
+                        print(
+                            "Worker Pack stale cache lease release warning at "
+                            f"{launch_directory}: {release_error}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        continue
+                    cache_error = self._remove_worker_cache(launch_directory)
+                    if cache_error is not None:
+                        print(
+                            "Worker Pack stale launch cache cleanup warning at "
+                            f"{launch_directory}: {cache_error}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+
+    def _reap_worker_caches_or_disable(self) -> bool:
+        try:
+            self._reap_stale_worker_caches()
+        except (OSError, RuntimeError) as error:
+            print(
+                f"Worker Pack cache root is unsafe; optional workers stay disabled: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return False
+        return True
+
+    def _validated_cache_root(self, *, create: bool) -> Path:
+        if create:
+            self._cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if _is_link_like(self._cache_root) or not self._cache_root.is_dir():
+            raise RuntimeError("Worker cache root is not a real directory")
+        resolved = self._cache_root.resolve(strict=True)
+        if resolved != self._data_root and self._data_root not in resolved.parents:
+            raise RuntimeError("Worker cache root escapes the configured data root")
+        resolved_pack_root = self._pack_root.resolve()
+        if (
+            resolved == resolved_pack_root
+            or resolved in resolved_pack_root.parents
+            or resolved_pack_root in resolved.parents
+        ):
+            raise RuntimeError("Worker cache root overlaps the Worker Pack install root")
+        return resolved
+
+    def _validated_cache_namespace(self, path: Path, *, expected_parent: Path) -> Path:
+        if _is_link_like(path) or not path.is_dir():
+            raise RuntimeError("cache namespace is not a real directory")
+        resolved = path.resolve(strict=True)
+        if resolved.parent != expected_parent:
+            raise RuntimeError("cache namespace escapes its expected parent")
+        return resolved
+
+    def _acquire_stale_worker_cache_lease(
+        self, launch_directory: Path
+    ) -> tuple[BinaryIO | None, str | None]:
+        ready = launch_directory / _WORKER_CACHE_OWNER_READY_FILE
+        if _is_link_like(ready) or not ready.is_file():
+            return None, "owner readiness marker is missing or unsafe"
+        marker = launch_directory / _WORKER_CACHE_OWNER_FILE
+        if _is_link_like(marker) or not marker.is_file():
+            return None, "owner marker is missing or unsafe"
+        try:
+            lease = marker.open("r+b")
+        except OSError as error:
+            return None, str(error)
+        try:
+            _lock_worker_cache_lease(lease)
+        except OSError as error:
+            lease.close()
+            if error.errno in _WORKER_CACHE_LOCK_CONTENTION_ERRNOS:
+                return None, None
+            return None, str(error)
+        try:
+            lease.seek(0)
+            raw = lease.read(_MAX_WORKER_CACHE_OWNER_BYTES + 1)
+            if len(raw) > _MAX_WORKER_CACHE_OWNER_BYTES:
+                raise ValueError("owner marker exceeds the size limit")
+            parsed: object = json.loads(raw)
+            if not isinstance(parsed, dict):
+                raise ValueError("owner marker must be an object")
+            payload = cast(dict[str, object], parsed)
+            if payload.get("schema_version") != _WORKER_CACHE_OWNER_SCHEMA_VERSION:
+                raise ValueError("owner marker schema_version is invalid")
+            runtime_pid = payload.get("runtime_pid")
+            instance_id = payload.get("instance_id")
+            if not isinstance(runtime_pid, int) or runtime_pid <= 0:
+                raise ValueError("owner marker runtime_pid is invalid")
+            if not isinstance(instance_id, str) or len(instance_id) != 32:
+                raise ValueError("owner marker instance_id is invalid")
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            release_error = self._release_worker_cache_lease(lease)
+            detail = str(error)
+            if release_error is not None:
+                detail += f"; lease release failed: {release_error}"
+            return None, detail
+        return lease, None
+
+    def _release_worker_cache_lease(self, lease: BinaryIO | None) -> str | None:
+        if lease is None:
+            return None
+        error_text: str | None = None
+        try:
+            _unlock_worker_cache_lease(lease)
+        except OSError as error:
+            error_text = str(error)
+        try:
+            lease.close()
+        except OSError as error:
+            error_text = f"{error_text}; {error}" if error_text else str(error)
+        return error_text
 
     def _remove_worker_cache(self, cache_root: Path | None) -> str | None:
         if cache_root is None:
             return None
+        if _is_link_like(cache_root):
+            return f"refusing to remove a linked cache directory: {cache_root}"
         try:
-            resolved = cache_root.resolve(strict=True)
+            managed_root = self._validated_cache_root(create=False)
+            relative = cache_root.relative_to(managed_root)
         except FileNotFoundError:
             return None
-        except OSError as error:
+        except (OSError, RuntimeError, ValueError) as error:
             return str(error)
-        if self._cache_root.resolve() not in resolved.parents:
-            return f"refusing to remove cache outside the managed root: {resolved}"
+        if len(relative.parts) != 3 or not cache_root.name.startswith("launch-"):
+            return f"refusing to remove a cache outside the managed launch layout: {cache_root}"
+        pack_namespace, version_namespace = cache_root.parent.parent, cache_root.parent
+        try:
+            resolved_pack_namespace = self._validated_cache_namespace(
+                pack_namespace, expected_parent=managed_root
+            )
+            self._validated_cache_namespace(
+                version_namespace, expected_parent=resolved_pack_namespace
+            )
+            resolved = self._validated_cache_namespace(
+                cache_root, expected_parent=version_namespace.resolve(strict=True)
+            )
+        except (OSError, RuntimeError) as error:
+            return str(error)
         try:
             shutil.rmtree(resolved)
         except OSError as error:
             return str(error)
-        for parent in (resolved.parent, resolved.parent.parent, self._cache_root):
-            try:
-                parent.rmdir()
-            except OSError:
-                pass
         return None
 
     def _pack_placeholders(self, pack: InstalledWorkerPack) -> dict[str, str]:
@@ -625,6 +893,37 @@ class WorkerPackSupervisor:
             path.replace(previous)
         start_offset = path.stat().st_size if path.is_file() else 0
         return path.open("ab", buffering=0), path, start_offset
+
+
+def _is_link_like(path: Path) -> bool:
+    try:
+        attributes = int(getattr(path.stat(follow_symlinks=False), "st_file_attributes", 0))
+        reparse_flag = int(
+            getattr(importlib.import_module("stat"), "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+        )
+        return path.is_symlink() or path.is_junction() or bool(attributes & reparse_flag)
+    except OSError:
+        return False
+
+
+def _lock_worker_cache_lease(lease: BinaryIO) -> None:
+    lease.seek(0)
+    if os.name == "nt":
+        msvcrt = cast(Any, importlib.import_module("msvcrt"))
+        msvcrt.locking(lease.fileno(), msvcrt.LK_NBLCK, 1)
+        return
+    fcntl = cast(Any, importlib.import_module("fcntl"))
+    fcntl.flock(lease.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _unlock_worker_cache_lease(lease: BinaryIO) -> None:
+    lease.seek(0)
+    if os.name == "nt":
+        msvcrt = cast(Any, importlib.import_module("msvcrt"))
+        msvcrt.locking(lease.fileno(), msvcrt.LK_UNLCK, 1)
+        return
+    fcntl = cast(Any, importlib.import_module("fcntl"))
+    fcntl.flock(lease.fileno(), fcntl.LOCK_UN)
 
 
 def _resolve_pack_path(pack_root: Path, raw_path: str) -> Path:
