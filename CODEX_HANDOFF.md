@@ -5,7 +5,7 @@
 
 ---
 
-## 0.1 2026-09-01 当前接手状态
+## 0.1 2026-09-02 当前接手状态
 
 本节是跨机器接手入口，优先于本文后面的历史首轮任务。第 8、9 节记录的是项目初始化时的
 Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**。当前事实以
@@ -16,12 +16,12 @@ Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**
 ```text
 Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
 Branch:     codex/windows-installer
-Validated product-code commit: 6ff2470
+Validated product-code commit: 5ed61c8
 Original remote handoff baseline: b03a38b
 Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收基本完成，明确的人耳/语音抢话门仍开放
 ```
 
-`6ff2470` 是最终安装候选包含的产品代码点；其后的测试与文档提交不改变安装载荷，最终远端同步
+`5ed61c8` 是最终安装候选包含的产品代码点；其后的文档提交不改变安装载荷，最终远端同步
 仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
 
@@ -58,6 +58,10 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   NSIS 生成的 `uninstall.exe` stub。Runtime 和两个 Worker 使用动态回环端口。
 - 最终候选补上 Tauri 官方 single-instance 插件：连续两次从开始菜单启动只保留一个产品 Host、
   一个 supervisor 和一个 Runtime，第二次启动会重新显示现有宁宁窗口，不会复制 CUDA/Worker 进程树。
+- 2026-09-02 的实机复验修正了 Live2D 画布被 CSS 放大 1.34 倍后由 compositor 二次插值造成的
+  角色模糊，并把 WebGL backing buffer 按实际视觉缩放补偿；同时修正了增量构建时 AppContainer
+  helper 单文件资源可能漏出 NSIS 的 staging 顺序/布局。重建候选的 Host、Runtime、helper 均为
+  PE `0x8664`，仓库完整 installed smoke 在动态端口 `9005` 通过。
 - 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
   进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
   安装、健康启动、重复启动抑制、强退、卸载与两种注册表视图/快捷方式清理；正常托盘退出仍见下方。
@@ -70,7 +74,7 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 
 | 产物 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,243,973 | `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,213,645 | `9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 
@@ -80,10 +84,12 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   字幕、输入框和按钮仍可点击，拖动人物可移动原生窗口。设置窗口可以打开、排版和独立滚动正常。
 - 从安装态快捷方式启动后，Runtime 最终进入 `ready`，设置页显示 Runtime、faster-whisper 与
   Qwen3-TTS CUDA provider 就绪；聊天、模型保存/测试和记忆中心均可操作。
+- 2026-09-02 的最终安装态真实窗口再次显示透明、动画化宁宁；头发、脸部与衣服边缘按补偿后的
+  backing buffer 渲染，不再把低分辨率画布放大 1.34 倍。设置页实见 `已连接 / Runtime 0.1.0`。
 - 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
   合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
   冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。
-- 完整安装态两 pack 冷启动在本机既观察到约 151 秒，也观察到约 443 秒；后者主要消耗在每次启动
+- 完整安装态两 pack 冷启动在本机观察到约 151 秒、186 秒和 443 秒；后两者主要消耗在每次启动
   对 Qwen 31,223 个文件/约 5.4 GB archive 展开内容做完整哈希。Web 等待预算已调整为 455 秒以覆盖
   native host 的 450 秒预算，并补上 ready 事件监听注册竞态测试。443 秒虽然仍在界内，但已经是明确的
   可用性风险，后续必须在不降低完整性校验的前提下做可证明的可信缓存/增量验证优化。
@@ -102,7 +108,7 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 - 安装态播放 ACK 与 transport 级无重叠已由协议/Runtime 状态验证，但扬声器主观无重叠仍需要播放中抢话与人耳观察；安装态
   透明空白区域点击穿透也尚未与开发态证据分开复验。
 - 自动化已证明最终候选卸载后程序目录、开始菜单/桌面快捷方式、标准卸载项和 manufacturer metadata
-  删除且用户数据/两个 Worker Pack 保留；本轮最终状态已卸载。Computer Use 不能定位 Windows 通知区，
+  删除且用户数据/两个 Worker Pack 保留；2026-09-02 复验后已重新安装并启动最终候选。Computer Use 不能定位 Windows 通知区，
   因此没有把 Alt+F4 的“隐藏到托盘”误报成正常退出，托盘菜单正常退出仍需人工补验。长时间多轮语音
   压力、installed AppContainer/MCP profile/ACL reconciliation、签名和私有角色资产许可审查仍是发布门。
 - Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
@@ -115,7 +121,9 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
 区分活跃与 crash-owned cache，只回收可证明失主且路径深度/重解析检查通过的 `launch-*`；安装 helper
 只允许用相同 archive 对已验证为损坏的 exact version 做显式原子 repair；Demo LLM 不再把隐藏记忆
 上下文/来源标签原样念出；播放协调器不会在同一 generation 中途切换到新建 WebRTC；Tauri 的
-single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker graph。不要通过关闭 smoke、
+single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker graph。Live2D canvas 现在按 CSS
+视觉缩放补偿 backing buffer；Windows installer 则先建立目录型 helper 资源树，再编译 Host，从而避免
+增量构建缓存遗漏 helper。不要通过关闭 smoke、
 固定端口或 `sleep` 绕过剩余验收。
 
 ### Windows 干净接手命令
@@ -124,7 +132,7 @@ single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker 
 git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
 cd ChatWaifu-NEXT
 git switch codex/windows-installer
-git rev-parse --short HEAD  # 应为 6ff2470 或其后续提交
+git rev-parse --short HEAD  # 应为 5ed61c8 或其后续提交
 
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\windows\bootstrap_x64.ps1

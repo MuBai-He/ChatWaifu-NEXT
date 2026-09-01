@@ -166,7 +166,7 @@ only the resulting measurements and hashes are recorded here.
 | ----------------------------------------------------- | ------------: | ------------------------------------------------------------------ |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack`         | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` |   250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` (owner-only)     |   128,243,973 | `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` (owner-only)     |   128,213,645 | `9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b` |
 
 Qwen used Torch `2.7.1+cu126` on `cuda:0` and verified its model tensors on the RTX 3090. The final
 post-inference integrity smoke's first controlled post-load Chinese inference and subsequent warm

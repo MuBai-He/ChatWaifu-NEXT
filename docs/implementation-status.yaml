@@ -96,7 +96,7 @@ validation:
   remote_ci_matrix: pending_first_remote_run
   native_windows_x64_cuda:
     status: owner_only_install_acceptance_passed_with_explicit_human_gates
-    validated_product_commit: 6ff2470
+    validated_product_commit: 5ed61c8
     platform:
       windows: "Windows 11 Pro 25H2 build 26200.9168"
       native_architecture: AMD64
@@ -122,8 +122,8 @@ validation:
     artifacts:
       installer:
         filename: "ChatWaifu NEXT_0.2.0_x64-setup.exe"
-        size_bytes: 128243973
-        sha256: e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063
+        size_bytes: 128213645
+        sha256: 9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b
       faster_whisper_pack:
         filename: chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack
         size_bytes: 250542825
@@ -151,13 +151,14 @@ validation:
       - "A real installed run exposed a missing final playback ACK when the microphone WebRTC connection took ownership mid-generation; the playback coordinator now defers that handoff to the next generation and a regression proves the current WAV tail completes before WebRTC becomes the sole owner"
       - "The final installed playback replay connected the microphone during segment one: the current generation completed 4/4 local audio_element segments with terminal ACK, then the next generation completed 4/4 WebRTC-only segments with terminal ACK and strictly alternating started/stopped order"
       - "Repeated Start Menu launch of the final candidate reactivated the existing avatar while process inspection retained one product Host, one internal supervisor, and one Runtime instead of creating a duplicate service/Worker graph"
-      - "The final e8c7883a candidate's forced-exit replay removed the 15-process Host/WebView/supervisor/Runtime/two-Worker descendant tree and all three listeners; its final silent uninstall removed the product root, shortcuts, both uninstall registry views, and manufacturer metadata while retaining SQLite, settings, and both Worker Packs"
+      - "The final 9a5bd8d9 candidate staged the AppContainer helper before Host compilation through a directory resource tree; a clean installed smoke proved Host, Runtime, and helper PE 0x8664, dynamic Runtime health on port 9005, forced-exit descendant/listener cleanup, uninstall cleanup, and user-data/Worker-Pack retention"
     computer_use_window_observation:
       - "Native development Tauri showed the animated private Live2D overlay with transparent empty-point click-through while avatar, subtitle, composer, controls, and native avatar drag remained interactive"
       - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
       - "Installed text, model save/test, and memory-center flows were interactive; the private memory marker remained visible after reinstall and restart"
       - "Installed Chinese and Japanese text turns showed progressive subtitles and playback while process-level GPU sampling recorded real CUDA activity; the prior playback stopped 1.502 seconds before the next turn, so this was sequential playback rather than barge-in"
-      - "Installed two-pack cold starts were observed at approximately 151 seconds and approximately 443 seconds; both crossed the former 125-second Web deadline and reached ready within the corrected 455-second Web resolution budget"
+      - "Installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; all crossed the former 125-second Web deadline and reached ready within the corrected 455-second Web resolution budget"
+      - "The final installed Tauri window visibly rendered sharper Live2D hair, face, and clothing edges after compensating the WebGL backing buffer for the 1.34 CSS visual scale; settings visibly reported connected Runtime 0.1.0"
     pending_human_or_privacy_confirmation:
       - "One installed microphone utterance produced a 2920 ms / 93440-byte VAD capture and a faster-whisper final transcript, proving capture, VAD auto-end, and STT return; the transcription was materially inaccurate and remains a quality risk"
       - "The user explicitly did not speak during the final playback-time interruption attempt, so real voice barge-in is not accepted and must not be defaulted to passing"

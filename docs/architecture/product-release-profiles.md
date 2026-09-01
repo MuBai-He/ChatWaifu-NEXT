@@ -88,8 +88,8 @@ publication. Those remain part of the full run below.
 
 On 2026-09-01 an owner-only private-overlay candidate was built, installed, and exercised on native
 AMD64 Windows 11 Pro 25H2 build 26200.9168 with an RTX 3090. The final rebuilt candidate was
-`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,243,973 bytes, SHA-256
-`e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063`. It remains a local artifact
+`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,213,645 bytes, SHA-256
+`9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b`. It remains a local artifact
 because it contains an explicitly supplied private Live2D overlay and is unsigned.
 
 Automated inspection proved the Host, frozen Runtime, helper, 294 installed product native files,

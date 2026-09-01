@@ -185,8 +185,9 @@ On 2026-09-01 the owner-only path was repeated on native AMD64 Windows 11 Pro 25
 `ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,212,119 bytes, with SHA-256
 `ba50b28735a7c67e57be0646568b406e18982846349ef0b73a11f99a16f9d53f`. That pre-fix candidate
 exposed stale NSIS manufacturer metadata during uninstall. The rebuilt final candidate containing the
-post-uninstall correction, playback-handoff fix, and single-instance guard is 128,243,973 bytes with
-SHA-256 `e8c7883eadc76a55aed45a3105aa19acb9ad981d4dc52c48d1984433caa5a063`. This hash identifies
+post-uninstall correction, playback-handoff fix, single-instance guard, Live2D render-scale
+compensation, and directory-staged AppContainer helper is 128,213,645 bytes with SHA-256
+`9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b`. This hash identifies
 only a local owner candidate; it does not make its private overlay redistributable.
 
 Automated artifact and installed-path inspection proved a `win-amd64` frozen Python Runtime, the
