@@ -296,6 +296,44 @@ def test_windows_install_rollback_removes_payload_beyond_legacy_max_path(
     assert list(filesystem_path(namespace).iterdir()) == []
 
 
+@pytest.mark.skipif(os.name != "nt", reason="requires Win32 extended-length paths")
+def test_windows_remove_directory_tree_beyond_legacy_max_path(tmp_path: Path) -> None:
+    root = tmp_path / "worker-smoke-runtime"
+    long_file = root.joinpath(
+        *(f"nested-package-assets-{index}-" + "x" * 48 for index in range(4)),
+        "frontend-bundle.js",
+    )
+    filesystem_path = worker_packs.__dict__["_filesystem_path"]
+    filesystem_long_file = filesystem_path(long_file)
+    filesystem_long_file.parent.mkdir(parents=True)
+    filesystem_long_file.write_bytes(b"long-path-smoke-payload")
+
+    assert len(os.path.abspath(long_file)) > 260
+    worker_packs.remove_directory_tree(root)
+
+    assert not filesystem_path(root).exists()
+
+
+def test_remove_directory_tree_preserves_cleanup_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "worker-smoke-runtime"
+    target.mkdir()
+
+    def fail_removal(_path: Path) -> None:
+        raise PermissionError("forced cleanup failure")
+
+    monkeypatch.setattr(worker_packs.shutil, "rmtree", fail_removal)
+
+    with pytest.raises(
+        worker_packs.WorkerPackError, match="could not remove directory tree"
+    ) as caught:
+        worker_packs.remove_directory_tree(target)
+
+    assert isinstance(caught.value.__cause__, PermissionError)
+    assert target.is_dir()
+
+
 @pytest.mark.skipif(os.name != "nt", reason="requires Windows path namespaces")
 @pytest.mark.parametrize(
     "path",

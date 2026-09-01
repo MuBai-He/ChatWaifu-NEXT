@@ -401,8 +401,11 @@ def test_smoke_pack_persists_structured_result_json(
         ),
     )
 
+    temporary_roots: list[Path] = []
+
     def install_archive(archive: Path, root: Path) -> InstalledWorkerPack:
-        del archive, root
+        del archive
+        temporary_roots.append(root.parent)
         return installed
 
     monkeypatch.setattr(smoke, "install_archive", install_archive)
@@ -464,3 +467,56 @@ def test_smoke_pack_persists_structured_result_json(
         "model_size_bytes": 0,
     }
     assert persisted["artifacts"]["result_json"] == smoke.RESULT_FILE_NAME
+    assert len(temporary_roots) == 1
+    assert not temporary_roots[0].exists()
+
+
+def test_smoke_pack_propagates_temporary_tree_cleanup_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _manifest()
+    archive = tmp_path / "candidate.cwpack"
+    archive.write_bytes(b"test archive")
+    installed = cast(
+        InstalledWorkerPack,
+        SimpleNamespace(
+            manifest=manifest,
+            root=tmp_path / "installed",
+            receipt=SimpleNamespace(
+                archive_sha256="a" * 64,
+                manifest_sha256="b" * 64,
+            ),
+        ),
+    )
+    temporary_roots: list[Path] = []
+
+    def install_archive(_archive: Path, _root: Path) -> InstalledWorkerPack:
+        temporary_roots.append(_root.parent)
+        return installed
+
+    def smoke_extracted(*args: object, **kwargs: object) -> dict[str, object]:
+        del args, kwargs
+        return {}
+
+    monkeypatch.setattr(smoke, "install_archive", install_archive)
+    monkeypatch.setattr(smoke, "_smoke_extracted", smoke_extracted)
+
+    def fail_cleanup(_path: Path, *, missing_ok: bool = False) -> None:
+        assert missing_ok is True
+        raise RuntimeError("forced smoke cleanup failure")
+
+    real_cleanup = smoke.remove_directory_tree
+    monkeypatch.setattr(smoke, "remove_directory_tree", fail_cleanup)
+
+    try:
+        with pytest.raises(RuntimeError, match="forced smoke cleanup failure"):
+            smoke.smoke_pack(
+                archive,
+                kind="tts",
+                timeout=5,
+                smoke_wav=None,
+                output_directory=tmp_path / "smoke",
+            )
+    finally:
+        for temporary_root in temporary_roots:
+            real_cleanup(temporary_root, missing_ok=True)

@@ -268,6 +268,27 @@ def _preflight_free_space(destination: Path, *, expanded_bytes: int, operation: 
         )
 
 
+def remove_directory_tree(path: Path, *, missing_ok: bool = False) -> None:
+    """Remove one real directory tree, including Windows paths beyond ``MAX_PATH``.
+
+    Callers must supply the exact lifecycle-owned directory. A symlink, junction,
+    or other reparse point is rejected instead of being followed, and cleanup
+    failures remain fatal so a release smoke cannot silently leave a large worker
+    runtime behind.
+    """
+
+    _reject_link_or_reparse(path, label="directory tree removal target")
+    filesystem_path = _filesystem_path(path)
+    try:
+        shutil.rmtree(filesystem_path)
+    except FileNotFoundError:
+        if missing_ok:
+            return
+        raise WorkerPackError(f"directory tree removal target does not exist: {path}") from None
+    except OSError as error:
+        raise WorkerPackError(f"could not remove directory tree: {path}") from error
+
+
 def _manifest_json(manifest: WorkerPackManifest) -> bytes:
     return (
         json.dumps(

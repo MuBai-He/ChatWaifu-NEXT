@@ -29,6 +29,7 @@ from chatwaifu_model_worker import (
     WorkerPackEntrypoint,
     WorkerPackManifest,
     install_archive,
+    remove_directory_tree,
 )
 
 BUFFER_SIZE = 4 * 1024 * 1024
@@ -117,8 +118,9 @@ def smoke_pack(
     if cancel_probe_seconds <= 0:
         raise ValueError("cancel probe duration must be positive")
     output_directory.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="chatwaifu-worker-pack-smoke-") as temporary:
-        installed = install_archive(archive, Path(temporary) / "installed-packs")
+    temporary = Path(tempfile.mkdtemp(prefix="chatwaifu-worker-pack-smoke-"))
+    try:
+        installed = install_archive(archive, temporary / "installed-packs")
         manifest = installed.manifest
         if manifest.worker.kind != kind:
             raise RuntimeError(f"Worker pack kind is {manifest.worker.kind!r}, expected {kind!r}")
@@ -133,6 +135,8 @@ def smoke_pack(
             transcript_expectations=transcript_expectations or TranscriptExpectations(),
             cancel_probe_seconds=cancel_probe_seconds,
         )
+    finally:
+        remove_directory_tree(temporary, missing_ok=True)
     result: dict[str, object] = {
         "schema_version": RESULT_SCHEMA_VERSION,
         "archive": {
