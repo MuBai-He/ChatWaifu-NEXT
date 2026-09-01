@@ -34,7 +34,11 @@ async def test_conversation_cancel_does_not_swallow_its_callers_cancellation() -
 
     generation_task = asyncio.create_task(active_generation())
     cast(Any, service)._active = {
-        session_id: SimpleNamespace(generation_id=generation_id, task=generation_task)
+        session_id: SimpleNamespace(
+            generation_id=generation_id,
+            task=generation_task,
+            completing=False,
+        )
     }
     cancelling = asyncio.create_task(service.cancel(session_id, "test cancellation"))
     await cancellation_seen.wait()
