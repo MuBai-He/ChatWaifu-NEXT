@@ -1,7 +1,13 @@
 import { useState } from "react";
 
+import { ProductIcon } from "../../components/ProductIcon";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
 import type { SettingsRuntimeContext } from "./DesktopSettingsContext";
+import { DesktopOnboardingDialog } from "./DesktopOnboardingDialog";
+import {
+  completeDesktopOnboarding,
+  isDesktopOnboardingCompleted,
+} from "./desktopOnboarding";
 import { connectionDetail, connectionLabel } from "./desktopRuntimeStatus";
 import {
   desktopSettingsRegistry,
@@ -19,6 +25,9 @@ export function DesktopSettingsPage() {
   const desktop = useDesktopPreferences();
   const [sectionId, setSectionId] =
     useState<DesktopSettingsSectionId>("appearance");
+  const [onboardingOpen, setOnboardingOpen] = useState(
+    () => desktop.desktopHost && !isDesktopOnboardingCompleted(),
+  );
 
   const resetConversationAndMemory = async () => {
     return runtime.resetAll();
@@ -104,15 +113,28 @@ export function DesktopSettingsPage() {
         </nav>
 
         <footer>
-          <i className={context.runtime.connection} />
-          <div>
-            <strong>{connectionLabel(context.runtime.connection)}</strong>
-            <small>
-              {connectionDetail(
-                context.runtime.connection,
-                context.runtime.health?.version,
-              )}
-            </small>
+          <button
+            className="desktop-settings-guide-button"
+            type="button"
+            onClick={() => setOnboardingOpen(true)}
+          >
+            <ProductIcon name="story" />
+            <span>
+              <strong>新手引导</strong>
+              <small>API、声音与麦克风</small>
+            </span>
+          </button>
+          <div className="desktop-settings-runtime-summary">
+            <i className={context.runtime.connection} />
+            <div>
+              <strong>{connectionLabel(context.runtime.connection)}</strong>
+              <small>
+                {connectionDetail(
+                  context.runtime.connection,
+                  context.runtime.health?.version,
+                )}
+              </small>
+            </div>
           </div>
         </footer>
       </aside>
@@ -143,6 +165,19 @@ export function DesktopSettingsPage() {
           ) : null}
         </div>
       </section>
+
+      <DesktopOnboardingDialog
+        open={onboardingOpen}
+        onDefer={() => setOnboardingOpen(false)}
+        onComplete={() => {
+          completeDesktopOnboarding();
+          setOnboardingOpen(false);
+        }}
+        onNavigate={(section) => {
+          setSectionId(section);
+          setOnboardingOpen(false);
+        }}
+      />
     </main>
   );
 }

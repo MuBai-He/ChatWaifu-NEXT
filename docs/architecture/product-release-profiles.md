@@ -3,6 +3,21 @@
 ChatWaifu NEXT uses one repository and one `main` branch, but produces two independently versioned
 frontend graphs.
 
+## Branch integration discipline
+
+Platform installer branches are temporary acceptance branches, not alternate product trunks.
+Windows-only scripts, NSIS resources, and `cfg(windows)` Host code may mature there, but protocol,
+Runtime, provider contracts, and shared React behavior must land once through reviewed commits and
+cross-platform gates. After a stable slice passes, open a PR to the shared integration branch in
+dependency order (contract/Runtime before UI before packaging) or cherry-pick that complete commit
+when a PR cannot yet merge. Do not reimplement the same feature separately on macOS and Windows.
+
+While a platform candidate remains open, regularly merge or rebase the current shared branch into it
+and resolve conflicts there; never merge an installer branch directly into a release tag at the end
+of a long divergence. New product features start from the shared branch, and release/platform branches
+consume them. Platform release readiness and artifact versions remain independent even though their
+source commit must be reachable from `main` before public tagging.
+
 | Product | Owned surfaces                   | Build command           | Frontend artifact       | Tag              |
 | ------- | -------------------------------- | ----------------------- | ----------------------- | ---------------- |
 | Web     | Galgame conversation, Avatar Lab | `make build-web`        | `apps/web/dist/web`     | `web-vX.Y.Z`     |
@@ -116,10 +131,12 @@ Torch `2.7.1+cu126` reported CUDA 12.6 available and ran Qwen tensors on `cuda:0
 non-silent, unclipped Chinese and Japanese WAVs; faster-whisper produced a non-empty, coherent
 Japanese CPU-`int8` transcript with its fixed revision and fully offline model directory. Both pack
 smokes covered cancellation, unload, process exit, and port closure. Installed two-pack cold starts
-took about 151 seconds and about 443 seconds, so the Web resolver was corrected from 125 seconds to 455 seconds,
-beyond the native bounded startup window of 300 seconds for Workers, 120 seconds for Runtime, and
-30 seconds of supervisor grace. The near-bound full-pack verification path remains a product usability
-risk and cannot be "fixed" by disabling hashes or readiness checks.
+took about 151 seconds and about 443 seconds when every startup still repeated a full payload scan.
+The Web resolver was corrected from 125 seconds to 455 seconds, beyond the native bounded startup
+window of 300 seconds for Workers, 120 seconds for Runtime, and 30 seconds of supervisor grace.
+Ordinary startup now performs receipt/manifest and entrypoint verification without the full tree
+walk; users can run the unchanged exact-tree/hash/PE check explicitly from Data settings, and install,
+activation, repair, and release acceptance still require it.
 
 Actual Tauri-window observation separately confirmed the private Ningning model rendered and
 animated over the transparent pet window, settings opened and scrolled, local providers reached

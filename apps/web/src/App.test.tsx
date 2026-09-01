@@ -22,6 +22,12 @@ const nativeWindow = vi.hoisted(() => ({
   startDragging: vi.fn().mockResolvedValue(undefined),
 }));
 
+const nativeCore = vi.hoisted(() => ({
+  invoke: vi.fn((command: string) =>
+    Promise.resolve(command === "get_desktop_preferences" ? {} : undefined),
+  ),
+}));
+
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
   snapshot: null,
@@ -147,10 +153,17 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => nativeWindow,
 }));
 
+vi.mock("@tauri-apps/api/core", () => nativeCore);
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => undefined),
+}));
+
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
     window.localStorage?.clear();
+    window.sessionStorage?.clear();
     session.voiceState = "disconnected";
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";
@@ -239,6 +252,20 @@ describe("ChatWaifu usable demo", () => {
       clientY: 120,
     });
     expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("opens the control center for first-run desktop onboarding", async () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+
+    render(<CurrentProduct />);
+
+    await waitFor(() =>
+      expect(nativeCore.invoke).toHaveBeenCalledWith("show_control_center"),
+    );
   });
 
   it.each(["touched_head", "touched_body", "touched_avatar"])(

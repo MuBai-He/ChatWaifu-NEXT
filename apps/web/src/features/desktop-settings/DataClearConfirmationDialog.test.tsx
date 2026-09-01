@@ -22,6 +22,9 @@ describe("DataClearConfirmationDialog", () => {
         resetting: false,
         refreshMemories: vi.fn(),
       },
+      runtime: {
+        connection: "connected",
+      },
       resetConversationAndMemory: onConfirm,
     } as unknown as DesktopSettingsContext;
     render(<DataSettingsSection context={context} />);

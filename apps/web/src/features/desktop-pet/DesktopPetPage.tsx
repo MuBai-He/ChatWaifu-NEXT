@@ -12,6 +12,10 @@ import { useDesktopPreferences } from "./useDesktopPreferences";
 import { useDesktopAvatarDrag } from "./useDesktopAvatarDrag";
 import { isPointInsideDesktopPetChrome } from "./desktopPetInteractionRegions";
 import { useDesktopPointerPresence } from "./useDesktopPointerPresence";
+import {
+  releaseDesktopOnboardingAutoOpen,
+  shouldAutoOpenDesktopOnboarding,
+} from "../desktop-settings/desktopOnboarding";
 
 export function DesktopPetPage() {
   const {
@@ -46,6 +50,7 @@ export function DesktopPetPage() {
   const pushToTalkGuardRef = useRef<(() => void) | null>(null);
   const {
     preferences,
+    desktopHost,
     error: preferenceError,
     setDisplay,
   } = useDesktopPreferences();
@@ -148,23 +153,38 @@ export function DesktopPetPage() {
     }
   };
 
-  const openControlCenter = async () => {
+  const openControlCenter = useCallback(async (): Promise<boolean> => {
     setControlError(null);
     try {
       if ("__TAURI_INTERNALS__" in window) {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("show_control_center");
-        return;
+        return true;
       }
       window.location.assign("/desktop-settings");
+      return true;
     } catch (openError: unknown) {
       const reason =
         openError instanceof Error ? openError.message : String(openError);
       setControlError(
         reason ? `无法打开桌宠设置：${reason}` : "无法打开桌宠设置",
       );
+      return false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoOpenDesktopOnboarding(desktopHost)) return;
+    const autoOpen = async () => {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("show_control_center");
+      } catch {
+        releaseDesktopOnboardingAutoOpen();
+      }
+    };
+    void autoOpen();
+  }, [desktopHost]);
 
   return (
     <main

@@ -48,8 +48,22 @@ Example:
 - `SettingsSecretField` is write-only. It renders configured state but never receives a saved key.
 - `useSettingsOperation` permits one active action, blocks duplicate clicks, and normalizes pending,
   success, and error notices. Runtime/client timeouts still own network termination.
+- The Data section owns the explicit full Worker Pack integrity action. Desktop startup performs only
+  bounded metadata and entrypoint checks; the action runs exact-tree, payload-hash, reparse, and PE
+  verification outside Runtime's media event loop.
 - Changing the active TTS provider still uses the existing session command, which cancels the active
   generation before switching. The registry does not bypass realtime cancellation rules.
+
+## First-run guide
+
+The desktop control center owns a platform-neutral first-run guide for the installed macOS and Windows
+products. The pet asks the native Host to show the control center once per process session until the
+guide is completed. Completion stores only a versioned boolean in WebView local storage; API keys,
+provider credentials, model configuration, and microphone state continue through their existing
+Runtime or OS boundaries. The guide explains the base-app versus optional `.cwpack` boundary and
+links to the registered model, voice, and companion sections instead of creating duplicate settings
+forms. “以后再说” defers until a later launch; “完成引导” suppresses future automatic display, while
+the sidebar button always reopens it.
 
 ## Test gate
 

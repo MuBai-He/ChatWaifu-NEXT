@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-09-01"
+updated_at: "2026-09-02"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -74,6 +74,8 @@ validation:
     - proactive policy and API tests cover cross-midnight quiet hours, busy deferral, cooldown, daily budget, hidden system turns, and natural Demo fallback
     - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
     - browser desktop-settings smoke confirms app-like fixed-window layout, internal scroll, working display preferences, and no conversation/media controls
+    - desktop first-run guide contract covers base EXE versus optional Worker Packs, chat API, TTS, microphone/STT, VAD, settings navigation, deferral, completion persistence, and native control-center auto-open
+    - Runtime startup uses receipt/manifest identity plus selected entrypoint hashing without a full payload walk; the Data settings action retains exact-tree, SHA-256, reparse, and PE verification on demand outside the media event loop
     - browser native WeChat settings smoke reaches a real Tencent QR authorization, renders one QR with no manual identity or verification input, has no horizontal overflow or console error, and cancels back to the clean unbound state
     - direct Tencent QR endpoint probe returns both opaque authorization identity and render content without exposing either in logs; macOS Keychain health probe is available
     - Chromium real Live2D renders in Avatar Lab and main chat
@@ -157,7 +159,7 @@ validation:
       - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
       - "Installed text, model save/test, and memory-center flows were interactive; the private memory marker remained visible after reinstall and restart"
       - "Installed Chinese and Japanese text turns showed progressive subtitles and playback while process-level GPU sampling recorded real CUDA activity; the prior playback stopped 1.502 seconds before the next turn, so this was sequential playback rather than barge-in"
-      - "Installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; all crossed the former 125-second Web deadline and reached ready within the corrected 455-second Web resolution budget"
+      - "Historical installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; the repeated full payload scan has since moved out of ordinary startup into the explicit Data-settings integrity action, while the corrected 455-second Web resolution budget remains for genuinely slow model initialization"
       - "The final installed Tauri window visibly rendered sharper Live2D hair, face, and clothing edges after compensating the WebGL backing buffer for the 1.34 CSS visual scale; settings visibly reported connected Runtime 0.1.0"
     pending_human_or_privacy_confirmation:
       - "One installed microphone utterance produced a 2920 ms / 93440-byte VAD capture and a faster-whisper final transcript, proving capture, VAD auto-end, and STT return; the transcription was materially inaccurate and remains a quality risk"
@@ -257,7 +259,7 @@ phases:
       - Computer Use observed the installed shortcut launch the real pet and control center, Runtime and both selected workers reach ready, text/model/memory flows operate, and the private memory marker remain present after reinstall and restart
       - Connecting the microphone during an installed WAV generation exposed a dropped tail segment with no playback ACK; the frontend now defers WebRTC ownership until the next generation, with a regression covering tail completion and exclusive next-generation remote playback
       - Application exit no longer persists the avatar as hidden; moved and resized state still persists, and a Rust regression test covers application exit separately from an explicit visibility change
-      - The Web desktop Runtime resolution budget is 455 seconds, covering the native host 450-second budget; tests cover delayed CUDA-ready and ready-before-listener-registration paths, while a real approximately 443-second complete-pack verification boot remains a serious usability risk
+      - The Web desktop Runtime resolution budget remains 455 seconds for the native host's bounded model readiness; tests cover delayed CUDA-ready and ready-before-listener-registration paths, while ordinary startup no longer repeats the historical approximately 443-second complete-pack scan and the full audit is an explicit Data-settings operation
       - Windows bin/lib targets now use distinct artifact names, removing the Cargo PDB collision while preserving the packaged executable identity
       - The NSIS post-uninstall hook removes only stale manufacturer install metadata during a real uninstall and preserves all AppData; smoke gates now cover both registry views and both Start Menu/Desktop shortcuts
       - The rebuilt owner-only installer containing the hook passed a native install/health/forced-exit/uninstall replay; its product tree, shortcuts, uninstall entries, and manufacturer metadata were gone afterward while settings/data roots, selection, and both Worker Packs remained
