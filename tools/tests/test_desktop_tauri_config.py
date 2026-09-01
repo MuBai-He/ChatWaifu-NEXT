@@ -69,9 +69,7 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
     assert bundle["targets"] == ["nsis"]
     assert resources == {
         "../../../dist/windows/runtime-sidecar/": "runtime-sidecar/",
-        "binaries/chatwaifu-appcontainer-host-x86_64-pc-windows-msvc.exe": (
-            "bin/chatwaifu-appcontainer-host.exe"
-        ),
+        "../../../build/windows-installer/resources/": "./",
     }
     assert windows["webviewInstallMode"] == {"type": "downloadBootstrapper"}
     assert windows["allowDowngrades"] is False
@@ -175,8 +173,13 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "Remove-GeneratedInstallerArtifacts -Directory $NsisRoot" in script
     assert "Sort-Object LastWriteTimeUtc" not in script
     assert "$Installers.Count -ne 1" in script
-    assert script.count("Remove-Item -LiteralPath $StagedHelper") >= 2
-    assert "apps/desktop/src-tauri/binaries/chatwaifu-appcontainer-host-*.exe" in gitignore
+    assert '$InstallerResourceRoot = Join-Path $RepoRoot "build\\windows-installer\\resources"' in script
+    assert '$StagedHelper = Join-Path $InstallerResourceRoot' in script
+    assert script.count("Remove-Item -LiteralPath $InstallerResourceRoot") >= 2
+    assert script.index('"--package", "chatwaifu-appcontainer-host"') < script.index(
+        '"clippy",'
+    )
+    assert "build/" in gitignore
 
 
 POWERSHELLS = tuple(

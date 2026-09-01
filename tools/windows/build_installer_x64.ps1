@@ -22,7 +22,8 @@ $Target = "x86_64-pc-windows-msvc"
 $RuntimeRoot = Join-Path $RepoRoot "dist\windows\runtime-sidecar"
 $RuntimeExecutable = Join-Path $RuntimeRoot "chatwaifu-runtime.exe"
 $HelperExecutable = Join-Path $RepoRoot "target\$Target\release\chatwaifu-appcontainer-host.exe"
-$StagedHelper = Join-Path $RepoRoot "apps\desktop\src-tauri\binaries\chatwaifu-appcontainer-host-$Target.exe"
+$InstallerResourceRoot = Join-Path $RepoRoot "build\windows-installer\resources"
+$StagedHelper = Join-Path $InstallerResourceRoot "bin\chatwaifu-appcontainer-host.exe"
 $PytestBaseTemp = Join-Path $RepoRoot "build\pytest\windows-installer"
 $Live2DDestination = Join-Path $RepoRoot "apps\web\public\vendor\live2d"
 $NsisRoot = Join-Path $RepoRoot "target\$Target\release\bundle\nsis"
@@ -376,6 +377,18 @@ try {
     )
 
     Invoke-Checked $Rustup @("target", "add", $Target)
+    Invoke-Checked $Cargo @(
+        "build",
+        "--package", "chatwaifu-appcontainer-host",
+        "--release",
+        "--locked",
+        "--target", $Target
+    )
+    Remove-Item -LiteralPath $InstallerResourceRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path (Split-Path $StagedHelper) -Force | Out-Null
+    Copy-Item -Path $HelperExecutable -Destination $StagedHelper -Force
+    Assert-X64Pe $StagedHelper
+
     if (-not $SkipChecks) {
         if (Test-Path $PytestBaseTemp) {
             Remove-Item -Path $PytestBaseTemp -Recurse -Force
@@ -395,17 +408,6 @@ try {
         )
         Invoke-Checked $Cargo @("test", "--package", "chatwaifu-desktop-host", "--target", $Target)
     }
-    Invoke-Checked $Cargo @(
-        "build",
-        "--package", "chatwaifu-appcontainer-host",
-        "--release",
-        "--locked",
-        "--target", $Target
-    )
-    Remove-Item -LiteralPath $StagedHelper -Force -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Path (Split-Path $StagedHelper) -Force | Out-Null
-    Copy-Item -Path $HelperExecutable -Destination $StagedHelper -Force
-
     Remove-GeneratedInstallerArtifacts -Directory $NsisRoot `
         -Filters @("*-setup.exe")
     Remove-GeneratedInstallerArtifacts -Directory $InstallerOutput `
@@ -440,7 +442,7 @@ try {
     Write-Host "Windows x64 installer: $FinalInstaller"
     Write-Host "SHA256: $($Digest.Hash.ToLowerInvariant())"
 } finally {
-    Remove-Item -LiteralPath $StagedHelper -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $InstallerResourceRoot -Recurse -Force -ErrorAction SilentlyContinue
     if ($null -eq $PreviousUvProject) {
         Remove-Item Env:UV_PROJECT -ErrorAction SilentlyContinue
     } else {

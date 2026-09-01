@@ -8,7 +8,7 @@
     "longDescription": "ChatWaifu NEXT desktop pet with a self-contained local Runtime and configurable model and voice providers.",
     "resources": {
       "../../../dist/windows/runtime-sidecar/": "runtime-sidecar/",
-      "binaries/chatwaifu-appcontainer-host-x86_64-pc-windows-msvc.exe": "bin/chatwaifu-appcontainer-host.exe"
+      "../../../build/windows-installer/resources/": "./"
     },
     "windows": {
       "allowDowngrades": false,
