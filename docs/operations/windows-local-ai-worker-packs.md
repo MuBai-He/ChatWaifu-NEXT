@@ -105,3 +105,72 @@ start on ephemeral authenticated loopback ports. If Whisper cannot load or Qwen'
 execution probe fails, Runtime keeps the corresponding built-in/network fallback instead of
 advertising a broken local provider. `-VerifyOnly` validates an archive without changing the active
 selection; `-RuntimePath` can target a reviewed portable Runtime during release testing.
+
+## Physical per-user roots and redirected shells
+
+Do not derive the installed-pack destination by concatenating the current process's `%APPDATA%` or
+`%LOCALAPPDATA%`. A packaged terminal, IDE, or automation host can expose a Package `LocalCache`
+view even while the installed Desktop product uses the physical user profile. The installer helper
+resolves physical RoamingAppData and LocalAppData through `SHGetKnownFolderPath` with
+`KF_FLAG_NO_PACKAGE_REDIRECTION`; the expected roots are therefore:
+
+```text
+RoamingAppData/local.chatwaifu.next/runtime
+LocalAppData/local.chatwaifu.next/runtime
+```
+
+Before it reads the archive, the helper rejects Package `LocalCache` spellings, junctions, symlinks,
+other reparse-point parents, and a probe whose final handle path does not exactly match the physical
+Known Folder. It also refuses to leave a failed probe behind. If that check asks for a standalone
+shell, close the packaged task terminal and run the same command from ordinary PowerShell or Windows
+Terminal; do not bypass the check or copy the pack tree manually. Database inspection or recovery
+must likewise use the physical local-drive namespace and keep each SQLite main/WAL/SHM family
+together.
+
+## 2026-09-01 native x64/CUDA acceptance record
+
+The following owner-only artifacts were built and re-verified on native AMD64 Windows 11 with an
+RTX 3090. The Qwen checkpoint and the installer's private Live2D overlay remain non-redistributable;
+only the resulting measurements and hashes are recorded here.
+
+| Artifact                                              |         Bytes | SHA-256                                                            |
+| ----------------------------------------------------- | ------------: | ------------------------------------------------------------------ |
+| `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack`         | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
+| `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` |   250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` (owner-only)     |   128,195,690 | `9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3` |
+
+Qwen used Torch `2.7.1+cu126` on `cuda:0` and verified its model tensors on the RTX 3090. The direct
+Worker smoke's first controlled post-load Chinese inference and subsequent warm Japanese inference
+produced non-silent, unclipped 1.84-second and 1.92-second PCM16 WAVs in 14,691.977 ms and
+4,471.212 ms. The first inference left 2,164,438,016 CUDA bytes allocated and
+2,302,672,896 reserved. faster-whisper used the fixed model revision
+`ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66`, CPU `int8`, and `local_files_only=true`; it returned a
+non-empty, coherent Japanese transcript for the 21.455-second smoke WAV in 876.589 ms. Both packs
+passed cancellation, unload, child-process exit, and listening-port closure.
+
+All 393 native Qwen files, all 159 native Whisper files, and the installed Host, frozen Runtime, and
+AppContainer helper were PE Machine `0x8664`. The installed graph selected independent ephemeral
+ports for Runtime and both Workers. A two-pack cold boot reached ready in about 151 seconds, beyond
+the former 125-second frontend cutoff but within the native 300-second Worker + 120-second Runtime +
+30-second supervisor bound. Desktop Web resolution now waits 455 seconds, five seconds longer than
+that full 450-second native window. Do not replace health/capability readiness with `Start-Sleep`.
+
+### Evidence boundary and remaining release work
+
+- Automated evidence covers hashes, archive/manifest verification, offline materialization, PE
+  architecture, CUDA tensor placement and memory, waveform structure/levels, Whisper transcript
+  non-emptiness, authenticated protocol calls, cancellation/unload, and process/port cleanup.
+- Actual foreground-window observation covers Ningning rendering/animation, transparency, settings
+  layout/scrolling, Runtime/provider ready state, progressive text chat, and retained memory across
+  reinstall/restart. These are not inferred from a successful build.
+- Speaker playback and objective WAV checks do not constitute human-ear approval. Voice identity,
+  pronunciation, speed, clipping perception, and reference-sample similarity require an explicit
+  human listening record; microphone/VAD acceptance is also tracked separately.
+- The owner-only NSIS artifact is neither signed nor publishable. Installed AppContainer/MCP
+  execution and uninstall profile/owned-ACL reconciliation remain pending.
+- The exercised pre-fix candidate exposed stale `HKCU\Software\MuBai\ChatWaifu NEXT` manufacturer
+  metadata after data-preserving uninstall. The rebuilt final candidate's post-uninstall hook passed
+  a native real-machine replay: both standard uninstall registry views, Start Menu/Desktop shortcuts,
+  the immutable product tree, and manufacturer product metadata were clear afterward, while AppData,
+  local-AI selection, and both Worker Packs remained. Installed AppContainer profile/owned-ACL
+  reconciliation is still separate; do not equate this NSIS result with that security-state gate.

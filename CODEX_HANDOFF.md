@@ -16,12 +16,14 @@ Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**
 ```text
 Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
 Branch:     codex/windows-installer
-Commit:     5cc655a
-Platform:   下一轮在原生 Windows x64 + NVIDIA CUDA 电脑验收
+Validated product-code commit: e644d13
+Original remote handoff baseline: b03a38b
+Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收进行中
 ```
 
-该提交已经推送。源代码工作区干净，不需要从 macOS 复制完整工程目录。Windows 机器应从 Git
-干净 clone；macOS 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
+`e644d13` 是最终安装候选包含的产品代码点；其后的测试与文档提交不改变安装载荷，最终远端同步
+仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
+的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
 
 ### 当前产品能力
 
@@ -33,20 +35,71 @@ Platform:   下一轮在原生 Windows x64 + NVIDIA CUDA 电脑验收
 - 桌宠透明空白区域可穿透点击；Live2D 命中区域、字幕、输入框和悬浮控件仍可交互。
 - 原生微信 iLink 扫码接入已进入该分支，但它不属于本次 CUDA 验收的阻塞项。
 
-### Windows CUDA 下一目标
+### 2026-09-01 原生 Windows x64/CUDA 实机结果
 
-先证明真实硬件路径，不继续扩功能：
+下面严格区分机器自动化、Codex Computer Use 的真实窗口观察和仍需要用户确认的项目。私有模型、
+Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git。
 
-1. 在原生 Windows x64 上完成干净 checkout 和 x64 工具链 bootstrap。
-2. 确认 `nvidia-smi`、驱动、CUDA 12.6 PyTorch wheel 与 Qwen3-TTS 实际执行设备。
-3. 构建并真实推理验收 Qwen3-TTS 宁宁 CUDA `.cwpack`。
-4. 构建并真实转写验收 faster-whisper Base CPU-int8 `.cwpack`。
-5. 构建带本地私有 Live2D overlay 的 owner-only NSIS 候选，安装两个 pack 后从开始菜单运行。
-6. 验证中文/日文 TTS、麦克风 STT、抢话取消、设置/记忆持久化、进程退出和重启恢复。
-7. 记录显卡、驱动、Windows、WebView2、安装包/pack SHA-256 和所有真实失败。
+#### 自动化与进程级验证
 
-尚未完成的发布门包括：原生 CUDA 实机验收、干净账户完整安装态流程、签名、私有角色资产许可审查
-和公开发布。Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
+- Windows 11 Pro 25H2 build 26200.9168，原生 AMD64，Ryzen 9 7900X；PowerShell 7.6.4 x64。
+- NVIDIA GeForce RTX 3090（24 GiB、compute capability 8.6），驱动 616.56；`nvidia-smi`
+  报告 CUDA 13.4，直接加载 `nvcuda.dll` 得到 Driver API 13.4。WebView2 为 152.0.4191.53 x64。
+- Git 2.45.1.windows.1、uv 0.12.7 x86_64、Node 23.9.0、pnpm 11.19.0、Rust 1.98.0；
+  Python 3.12.10 为 win-amd64，Rust target 为 `x86_64-pc-windows-msvc`。
+- Qwen3-TTS pack 使用 Torch 2.7.1+cu126，`torch.cuda.is_available()` 为真，模型参数与 tensor
+  实际位于 `cuda:0`。Direct Worker 模型加载后的首个中文受控推理为 14.692 秒、随后日文热态推理为 4.471 秒；两份 24 kHz WAV
+  均非静音、无削波，取消、卸载与动态监听端口关闭通过。推理后 Torch allocated/reserved 分别约
+  2.164/2.303 GB，安装态首次生成观察到整卡占用约增加 2.2 GiB。
+- faster-whisper Base 固定 revision pack 在完全离线模型目录执行 CPU int8，21.455 秒日文样音
+  在 0.877 秒内得到非空且合理的日文转写；取消、卸载与监听端口关闭通过。
+- owner-only NSIS 候选已在当前非提权用户安装。Host、Frozen Runtime、AppContainer helper 及
+  所有枚举到的 pack EXE、DLL、PYD 均为 PE `0x8664`；Runtime 和两个 Worker 使用动态回环端口。
+- 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
+  进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
+  安装、健康启动、强退、卸载与两种注册表视图/快捷方式清理；正常退出与语音后的最终卸载仍见下方。
+- 安装态 Runtime API 证明中文 4 段、日文 5 段播放均收到 `stopped/ended` ACK，`played_pts_ms`
+  等于各段 duration；后续键盘新回合取消旧 generation 后未观察到旧 generation 的迟到文本、音频或播放事件。
+- 最终根目录 Python 门禁为 521 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
+  通过。Web 为 32 files/143 tests，Tauri 为 34 tests，Clippy 通过。
+
+| 产物 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,195,690 | `9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3` |
+| `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
+| `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
+
+#### Computer Use 真实窗口观察
+
+- 开发态真实 Tauri 桌宠透明显示并加载、动画化本地宁宁 Live2D；透明空白区域可穿透，人物、
+  字幕、输入框和按钮仍可点击，拖动人物可移动原生窗口。设置窗口可以打开、排版和独立滚动正常。
+- 从安装态快捷方式启动后，Runtime 最终进入 `ready`，设置页显示 Runtime、faster-whisper 与
+  Qwen3-TTS CUDA provider 就绪；聊天、模型保存/测试和记忆中心均可操作。
+- 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
+  合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
+  冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。
+- 首次 CUDA Worker 冷启动实测约 151 秒。Web 等待预算已调整为 455 秒以覆盖 native host 的
+  450 秒预算，并补上 ready 事件监听注册竞态测试；实际安装态跨过旧 125 秒上限后仍成功 ready。
+
+#### 尚未完成或不能由自动化宣称
+
+- 安装态麦克风操作已触发 WebView 权限提示；截至本记录用户尚未决定“允许”或“阻止”，Codex 不代点
+  隐私权限。因此安装态真实麦克风输入、faster-whisper 回填、VAD 自动结束和播放中语音抢话仍待用户授权后验收。
+- CUDA 中文/日文样音与参考音均已通过扬声器发声，波形客观指标通过；但音色、爆音、截断、速度和
+  与参考样音的主观比较必须由人耳确认，当前不能写成“人工听感通过”。
+- 安装态播放 ACK 已由协议/Runtime 状态验证，但扬声器无重叠仍需要播放中抢话与人耳观察；安装态
+  透明空白区域点击穿透也尚未与开发态证据分开复验。
+- 自动化已证明最终候选卸载后程序目录、开始菜单/桌面快捷方式、标准卸载项和 manufacturer metadata
+  删除且用户数据/两个 Worker Pack 保留；当前为麦克风验收重新安装，正常托盘退出和语音后的最终
+  卸载仍待收尾。长时间多轮语音压力、installed AppContainer/MCP profile/ACL reconciliation、签名和
+  私有角色资产许可审查仍是发布门。
+- Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
+
+本轮已落地的根因修复包括：拒绝重解析/重定向的 Worker Pack 安装根、使私有 Live2D staging
+具备崩溃安全回滚、隔离 Windows 数据库恢复命名空间、修正安装根 lint 门、避免应用退出把 avatar
+可见性持久化为隐藏、覆盖 CUDA 冷启动等待预算与 ready 监听竞态、清理 data-preserving NSIS 卸载
+遗留的 manufacturer metadata、消除 Windows PDB 目标名碰撞，以及让 generation completion 成为
+真正的最终事件屏障。不要通过关闭 smoke、固定端口或 `sleep` 绕过剩余验收。
 
 ### Windows 干净接手命令
 
@@ -54,7 +107,7 @@ Platform:   下一轮在原生 Windows x64 + NVIDIA CUDA 电脑验收
 git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
 cd ChatWaifu-NEXT
 git switch codex/windows-installer
-git rev-parse --short HEAD  # 应为 5cc655a 或其后续提交
+git rev-parse --short HEAD  # 应为 e644d13 或其后续提交
 
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\windows\bootstrap_x64.ps1

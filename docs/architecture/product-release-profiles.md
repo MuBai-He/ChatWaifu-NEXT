@@ -59,8 +59,8 @@ Creating `dist\windows\installer\*.exe` is not the Desktop release gate. A `desk
 be described as installable only after a clean Windows account installs it, launches the embedded
 Runtime without developer tools, exercises settings/data persistence and AppContainer execution,
 exits without orphan processes, uninstalls while retaining user data, and passes license/signing
-policy. The recorded owner-only basic smoke below covers only a subset of that matrix, so the output
-remains an unsigned local installer candidate rather than a distributable release.
+policy. The recorded owner-only smokes below cover only subsets of that matrix, so their outputs
+remain unsigned local installer candidates rather than distributable releases.
 
 ### Automated basic installed smoke
 
@@ -83,6 +83,54 @@ VM using x64 emulation. The automated smoke is not a clean-account product accep
 exercise foreground UI/chat/settings/memory/audio, normal exit, reinstall/update, installed
 AppContainer/MCP execution or profile/ACL cleanup, native x64/CUDA hardware, licensing, signing, or
 publication. Those remain part of the full run below.
+
+### Native Windows x64/CUDA owner-only record
+
+On 2026-09-01 an owner-only private-overlay candidate was built, installed, and exercised on native
+AMD64 Windows 11 Pro 25H2 build 26200.9168 with an RTX 3090. The final rebuilt candidate was
+`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,195,690 bytes, SHA-256
+`9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3`. It remains a local artifact
+because it contains an explicitly supplied private Live2D overlay and is unsigned.
+
+Automated inspection proved the Host, frozen Runtime, helper, and all inspected bundled EXE/DLL/PYD
+files were PE Machine `0x8664`. The current-user install required no elevation, resolved the physical
+LocalAppData/RoamingAppData Known Folders, created the Start Menu shortcut, started Runtime and two
+Worker Packs on dynamic authenticated loopback ports, and reused retained settings, SQLite memory,
+pack receipts, and activation selection after reinstall. The Worker Pack helper now explicitly
+rejects Package `LocalCache`, reparse, or final-handle path redirection instead of trusting a
+packaged caller's environment variables.
+
+The independently installed pack artifacts were:
+
+| Pack                                                  |         Bytes | SHA-256                                                            |
+| ----------------------------------------------------- | ------------: | ------------------------------------------------------------------ |
+| `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack`         | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
+| `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` |   250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
+
+Torch `2.7.1+cu126` reported CUDA 12.6 available and ran Qwen tensors on `cuda:0`. The pack generated
+non-silent, unclipped Chinese and Japanese WAVs; faster-whisper produced a non-empty, coherent
+Japanese CPU-`int8` transcript with its fixed revision and fully offline model directory. Both pack
+smokes covered cancellation, unload, process exit, and port closure. One installed two-pack cold
+start took about 151 seconds, so the Web resolver was corrected from 125 seconds to 455 seconds,
+beyond the native bounded startup window of 300 seconds for Workers, 120 seconds for Runtime, and
+30 seconds of supervisor grace.
+
+Actual Tauri-window observation separately confirmed the private Ningning model rendered and
+animated over the transparent pet window, settings opened and scrolled, local providers reached
+ready, text responses updated progressively, and a persisted memory survived reinstall/restart.
+This is stronger evidence than build success, but it does not make automated waveform statistics or
+speaker playback a human-ear judgment. Human voice/reference comparison and microphone/VAD evidence
+must be labeled separately in a final acceptance report.
+
+This run still leaves release gates open. The exercised pre-fix candidate exposed stale
+`HKCU\Software\MuBai\ChatWaifu NEXT` manufacturer metadata after data-preserving uninstall. The
+rebuilt final candidate's narrowly scoped post-uninstall hook then passed a native real-machine
+replay: both standard uninstall registry views, Start Menu/Desktop shortcuts, the immutable product
+tree, and manufacturer metadata were clear afterward, while AppData, local-AI selection, and both
+Worker Packs remained. Installed AppContainer/MCP execution and profile/owned-ACL reconciliation
+remain unproved. Licensing, notices, executable/installer signing, clean-account base-candidate
+testing, and remote publication remain mandatory before a `desktop-v*` artifact may be described as
+distributable.
 
 ### Windows installer acceptance run
 

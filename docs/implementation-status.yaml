@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-31"
+updated_at: "2026-09-01"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -12,6 +12,8 @@ out_of_order_slices:
 
 validation:
   local_platform: macos-arm64
+  local_recorded_at: "2026-08-31"
+  local_record_scope: historical_macos_baseline_not_current_native_windows_head
   python: "3.12.14"
   node: "26.0.0"
   pnpm: "11.19.0"
@@ -92,6 +94,69 @@ validation:
       - generated ChatWaifu Cubism bridge
       - local-only Ayachi Nene model adapted from the user-supplied archive
   remote_ci_matrix: pending_first_remote_run
+  native_windows_x64_cuda:
+    status: owner_only_install_acceptance_in_progress
+    platform:
+      windows: "Windows 11 Pro 25H2 build 26200.9168"
+      native_architecture: AMD64
+      cpu: "AMD Ryzen 9 7900X"
+      powershell: "7.6.4 x64"
+      webview2: "152.0.4191.53 x64"
+    nvidia:
+      gpu: "NVIDIA GeForce RTX 3090"
+      vram_bytes: 25769279488
+      driver: "616.56"
+      nvidia_smi_cuda: "13.4"
+      cuda_driver_api: "13.4"
+      compute_capability: "8.6"
+    toolchain:
+      git: "2.45.1.windows.1"
+      uv: "0.12.7 x86_64"
+      node: "23.9.0"
+      pnpm: "11.19.0"
+      rust: "1.98.0"
+      python: "3.12.10 win-amd64"
+      rust_target: x86_64-pc-windows-msvc
+      native_binary_machine: "PE 0x8664"
+    artifacts:
+      installer:
+        filename: "ChatWaifu NEXT_0.2.0_x64-setup.exe"
+        size_bytes: 128195690
+        sha256: 9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3
+      faster_whisper_pack:
+        filename: chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack
+        size_bytes: 250542825
+        sha256: 86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96
+      qwen3_tts_cuda_pack:
+        filename: chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack
+        size_bytes: 5443989887
+        sha256: af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9
+    automated_evidence:
+      - "Qwen3-TTS Torch 2.7.1+cu126 reported CUDA available and placed model parameters and inference tensors on cuda:0"
+      - "Qwen3-TTS produced non-silent unclipped 24 kHz Chinese and Japanese WAVs; the first controlled post-load direct Worker inference was Chinese at 14691.977 ms and the subsequent warm Japanese inference was 4471.212 ms"
+      - "Qwen3-TTS cancellation, unload, and dynamic listener closure passed; post-inference Torch allocated/reserved memory was 2164438016/2302672896 bytes"
+      - "faster-whisper used fixed model revision ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66 and a fully offline model directory for real CPU int8 inference; a 21455 ms Japanese sample produced a non-empty reasonable transcript in 876.589 ms"
+      - "faster-whisper cancellation, unload, and dynamic listener closure passed"
+      - "The owner-only NSIS candidate installed without elevation; Tauri Host, Frozen Runtime, AppContainer helper, and enumerated pack EXE/DLL/PYD files were PE 0x8664"
+      - "Installed Runtime and both workers reached healthy state on dynamic loopback ports; forced-exit process-tree and listener cleanup passed"
+      - "A reinstall preserved settings, SQLite data, installed pack receipts and selection, and the pre-existing private memory marker"
+      - "Installed Runtime playback state recorded stopped/ended ACK with played PTS equal to duration for all four Chinese and five Japanese segments; a later typed supersession emitted no old-generation text, audio, playback, or spoken-text events after cancellation"
+      - "The final root Python matrix passed 521 tests with 5 explicit platform/probe skips; Pyright and Ruff passed, Web passed 32 files and 143 tests, and Tauri passed 34 tests plus Clippy"
+      - "A completion publication barrier now makes assistant.generation_completed the last generation-scoped event; the regression test forces concurrent cancellation inside the publication window without sleep"
+      - "The rebuilt final candidate passed the native data-preserving install/health/forced-exit/uninstall replay: immutable files, both shortcuts, both standard uninstall views, and manufacturer metadata were removed while AppData, selection, and both Worker Packs remained"
+    computer_use_window_observation:
+      - "Native development Tauri showed the animated private Live2D overlay with transparent empty-point click-through while avatar, subtitle, composer, controls, and native avatar drag remained interactive"
+      - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
+      - "Installed text, model save/test, and memory-center flows were interactive; the private memory marker remained visible after reinstall and restart"
+      - "Installed Chinese and Japanese text turns showed progressive subtitles and playback while process-level GPU sampling recorded real CUDA activity; the prior playback stopped 1.502 seconds before the next turn, so this was sequential playback rather than barge-in"
+      - "A real approximately 151-second CUDA cold start crossed the former 125-second Web deadline and reached ready with the corrected 455-second Web resolution budget"
+    pending_human_or_privacy_confirmation:
+      - "The WebView microphone permission decision must be made by the user; installed microphone capture, faster-whisper transcript return, VAD auto-end, and playback-time voice barge-in are not yet accepted"
+      - "Chinese and Japanese CUDA outputs and reference samples were sent to speakers and passed objective waveform checks, but human listening has not yet confirmed timbre, clipping, truncation, speed, or reference similarity"
+      - "Installed playback ACK passed at the protocol/state layer, but audible non-overlap still needs playback-time interruption and human observation"
+      - "Installed transparent empty-point click-through has not yet been re-verified separately from the passing native development-window observation"
+      - "The final candidate is reinstalled for microphone acceptance; normal tray-exit cleanup and the post-voice end-state uninstall remain to be completed"
+      - "Long-running multi-turn voice stress, installed AppContainer MCP profile/ACL reconciliation, signing, and private asset license review remain release gates"
 
 phases:
   - id: 0
@@ -139,7 +204,7 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, desktop-pet/settings modules, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: desktop_pet_runtime_supervision_and_windows_installer_basic_smoke_passed_pending_full_release_acceptance
+    status: native_windows_x64_owner_only_install_reinstall_and_foreground_ui_passed_acceptance_in_progress
     evidence:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
       - The compile-time Desktop product graph owns only desktop-pet and control-center surfaces, emits apps/web/dist/desktop, and is the only frontend Tauri consumes
@@ -174,7 +239,17 @@ phases:
       - ADR 0027 fixes NSIS current-user delivery, a PyInstaller onedir Runtime under the Tauri resource root, immutable-resource versus per-user-data ownership, retained data on uninstall, and the exclusion of CUDA weights and private Live2D/voice assets from the redistributable base
       - A Windows-only packaging slice defines frozen-Runtime collection and smoke, x64 PE checks, fixed Runtime/helper resource staging, NSIS assembly, and a private explicit Live2D overlay
       - On 2026-08-30 an unsigned owner-only private-overlay candidate passed a real current-user install on a Windows 11 ARM VM under x64 emulation, covering registry and Start Menu layout, Host/Runtime/helper PE 0x8664, Runtime identity and dynamic-port health, Tauri user roots plus SQLite, forced-host Runtime/listener cleanup, uninstall removal of immutable resources, and byte-identical config/data marker retention
-      - That basic installed smoke is not full release acceptance; clean-account foreground UI/chat/settings/memory/audio, normal exit, update/reinstall reuse, installed AppContainer/MCP execution and profile/ACL reconciliation, native x64/CUDA hardware, asset/license review, signing, and remote publication remain pending
+      - That 2026-08-30 Windows-on-ARM result remains historical basic-smoke evidence and is not used as proof of native Windows x64/CUDA behavior
+      - On 2026-09-01 the owner-only NSIS candidate installed without elevation on native Windows 11 AMD64; Host, Frozen Runtime, AppContainer helper, and enumerated native pack binaries were PE 0x8664, and Runtime plus both workers reached healthy state on dynamic loopback ports
+      - Automated native acceptance covered installed layout and Start Menu identity, pack receipt and selection, forced-exit process-tree and listener cleanup, and reinstall retention of settings, SQLite data, packs, and selection
+      - Computer Use observed the native development overlay render and animate the private Live2D model with transparent empty-point click-through, retained avatar/control interaction and native dragging, and a correctly laid out independently scrolling settings window
+      - Computer Use observed the installed shortcut launch the real pet and control center, Runtime and both selected workers reach ready, text/model/memory flows operate, and the private memory marker remain present after reinstall and restart
+      - Application exit no longer persists the avatar as hidden; moved and resized state still persists, and a Rust regression test covers application exit separately from an explicit visibility change
+      - The Web desktop Runtime resolution budget is 455 seconds, covering the native host 450-second budget; tests cover a 151-second delayed CUDA-ready path plus ready-before-listener-registration cleanup
+      - Windows bin/lib targets now use distinct artifact names, removing the Cargo PDB collision while preserving the packaged executable identity
+      - The NSIS post-uninstall hook removes only stale manufacturer install metadata during a real uninstall and preserves all AppData; smoke gates now cover both registry views and both Start Menu/Desktop shortcuts
+      - The rebuilt owner-only installer containing the hook passed a native install/health/forced-exit/uninstall replay; its product tree, shortcuts, uninstall entries, and manufacturer metadata were gone afterward while settings/data roots, selection, and both Worker Packs remained
+      - Installed microphone STT/VAD/playback-time barge-in remains pending the user's WebView privacy decision; installed empty-point click-through, human audio comparison, final normal tray exit and post-voice end-state uninstall, installed AppContainer/MCP reconciliation, asset/license review, signing, and remote publication remain pending
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
@@ -233,7 +308,7 @@ phases:
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
-    status: stt_and_dual_neural_tts_worker_slices_and_versioned_windows_pack_contract_implemented_target_build_pending
+    status: native_windows_cpu_and_cuda_pack_validation_passed_pending_full_product_voice_acceptance
     evidence:
       - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
@@ -255,7 +330,11 @@ phases:
       - The supplied Nene voice ID is bound to batch qwen3-tts-vc-2026-01-22 and is rejected by the realtime adapter until a voice is created for qwen3-tts-vc-realtime-2026-01-15
       - Versioned `.cwpack` contract, canonical Zip64/SHA-256 build and install paths, PE x64 checks, atomic activation, dynamic endpoint/token injection, health/inference smoke, unload, restart, and Runtime supervision are implemented for independently managed local workers
       - Windows builders exist for offline faster-whisper Base CPU int8 and Qwen3-TTS Torch/CUDA 12.6 with a supplied local CustomVoice checkpoint; the target account does not need Python, uv, or a manually created venv
-      - On the current macOS host, real Windows x64 CUDA pack construction and installed inference on the intended CUDA laptop have not been run; x64-emulated/base-host checks do not count as CUDA acceptance
+      - On 2026-09-01 native Windows x64 built and validated the faster-whisper Base CPU-int8 pack at fixed model revision ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66 through a fully offline model directory, real non-empty Japanese transcription, cancellation, unload, and listener closure
+      - On 2026-09-01 native Windows x64 built and validated the Qwen3-TTS Torch 2.7.1+cu126 pack from pinned upstream commit 022e286b98fbec7e1e916cb940cdf532cd9f488e on an RTX 3090; CUDA was available and the model parameters and inference tensors were on cuda:0
+      - The Qwen pack produced non-silent unclipped Chinese and Japanese 24 kHz WAVs; the first controlled post-load direct Worker inference was 14691.977 ms and the subsequent warm inference was 4471.212 ms; cancellation, unload, listener closure, and CUDA memory reporting passed
+      - The two pack archives are canonical version 0.1.0 artifacts with recorded SHA-256 values under validation.native_windows_x64_cuda; no private models, voices, generated WAVs, or installed pack payloads are distributable repository content
+      - Computer Use observed installed Chinese and Japanese sequential text turns and progressive subtitle/playback behavior while process-level GPU sampling confirmed CUDA synthesis; the prior playback stopped 1.502 seconds before the next turn, so typed/voice barge-in and audible non-overlap remain pending
   - id: 9
     name: real-cascade-models
     status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset
@@ -358,7 +437,7 @@ entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
-  - Native x64/CUDA clean-account foreground product UX, normal exit, update/reinstall reuse, license review, and signed Tauri delivery remain pending for the Windows NSIS candidate; x64-emulated basic install/start/health/forced-exit/uninstall/data-retention smoke has passed
+  - Native Windows x64 owner-only install, foreground Live2D/settings/text/model/memory flows, CUDA Chinese/Japanese synthesis, playback ACK, forced-exit cleanup, reinstall reuse, and the rebuilt candidate's data-preserving uninstall replay have passed; microphone STT/VAD/playback-time barge-in awaits the user's WebView permission decision, while installed empty-point click-through, human listening, final normal tray exit/post-voice end-state uninstall, a clean-account pass, signing, and asset-license review remain pending
   - The Windows x64 AppContainer helper passed developer acceptance and its packaged path/PE identity were checked after install, but installed MCP execution and profile/ACL reconciliation remain pending real Windows acceptance
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
@@ -372,12 +451,14 @@ constraints:
   live2d_core_committed: false
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: true
-  live2d_real_renderer_validation_scope: local_chromium_and_macos_tauri_ayachi_nene_local_only
+  live2d_real_renderer_validation_scope: local_chromium_macos_tauri_and_native_windows_x64_tauri_private_ayachi_nene_local_only
   pipecat_dependency_added: true
   pipecat_version: "1.7.0"
-  browser_microphone_validated: backend_equivalent_audio_and_ui_entry
+  browser_microphone_validated: backend_equivalent_audio_and_ui_entry_native_windows_installed_permission_pending
   local_stt_worker: faster-whisper-base-cpu-int8
-  local_tts_worker: selectable-qwen3-tts-mlx-default-and-gpt-sovits-cpufast
+  local_tts_worker: selectable-qwen3-tts-mlx-qwen3-tts-torch-cuda-and-gpt-sovits-cpufast
+  native_windows_x64_cuda_worker_pack_validation: direct_worker_smoke_passed
+  native_windows_installed_voice_acceptance: text_triggered_cuda_playback_observed_microphone_and_human_listening_pending
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5

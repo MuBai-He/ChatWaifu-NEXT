@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Validation state: Contract, installer, Runtime supervision, and host-independent tests implemented; real Windows x64 CPU/CUDA pack build and installed-product smoke pending
+- Validation state: Contract plus native Windows x64 CPU/CUDA builds, real inference, offline installation, and installed supervision validated on 2026-09-01; public distribution/signing and the remaining full-product release matrix are pending
 
 ## Context
 
@@ -125,6 +125,54 @@ offline model path resolution. Release acceptance additionally requires a clean 
 CPU/CUDA machine, non-silent Chinese and Japanese Qwen output, multilingual Whisper transcription,
 repeated interruption, process cleanup, retained packs across base-app uninstall, and a no-network
 cold start.
+
+### Native Windows x64 acceptance record
+
+The first native acceptance run completed on 2026-09-01 on an RTX 3090 (compute capability 8.6)
+with NVIDIA driver 616.56. PyTorch reported `2.7.1+cu126`, CUDA 12.6 available, and both the model
+tensors and inference device at `cuda:0`; no CUDA/PyTorch dependency was added to the base Runtime.
+
+The resulting immutable artifacts were:
+
+| Pack                                                  | Archive bytes | Archive SHA-256                                                    | Expanded bytes | Verified files / native PE files |
+| ----------------------------------------------------- | ------------: | ------------------------------------------------------------------ | -------------: | -------------------------------: |
+| `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack`         | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |  8,159,811,077 |                     31,223 / 393 |
+| `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` |   250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |    447,862,039 |                      5,103 / 159 |
+
+Every listed native executable, DLL, and PYD reported PE Machine `0x8664`. The Qwen manifest hash was
+`c899f6f570b90b618e207563128c411c1b85e981681dc56ebb150f33c4b70f4c`; the Whisper manifest hash
+was `82ffc2af56c5593aeae878c2da1d5875aec833483ccf0094bc2dcce0a9b220b9`. The Qwen source was
+pinned to commit `022e286b98fbec7e1e916cb940cdf532cd9f488e`, and the Whisper model to revision
+`ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66`.
+
+In the direct Worker smoke, the first controlled post-load Chinese inference generated a 1.84-second
+WAV in 14,691.977 ms, and the subsequent warm Japanese inference generated a 1.92-second WAV in
+4,471.212 ms. Both were well-formed PCM16 containers with expected nonzero duration and tail metrics,
+non-silent and unclipped; their RMS levels were -20.156 dBFS and -19.051 dBFS respectively. CUDA memory measured
+2,164,438,016 allocated and 2,302,672,896 reserved bytes after inference, with a 2,321,547,264-byte
+drop in free GPU memory. These measurements prove real CUDA execution and viable waveforms, not a
+human judgment about voice identity, pronunciation, speed, or subjective audio quality.
+
+The fixed-revision faster-whisper pack ran CPU `int8` with `local_files_only=true`, transcribed the
+21.455-second Japanese smoke recording to non-empty, coherent text in 876.589 ms, and started from
+the fully materialized model directory with network caches disabled. The exact private-validation
+transcript and generated WAVs remain local smoke artifacts and are not part of the archive or
+repository.
+
+Both installed-pack smokes authenticated health/capabilities on dynamically assigned loopback
+ports, verified identity, exercised inference, cancellation and unload, and confirmed process and
+listener closure. A full installed cold start took about 151 seconds with both selected packs. The
+native startup contract therefore remains bounded at 300 seconds for Workers, 120 seconds for the
+Runtime server, and 30 seconds of supervisor grace; Desktop Web resolution waits 455 seconds so its
+timeout exceeds the complete 450-second native bound. This is a bounded readiness contract, not an
+arbitrary synchronization sleep.
+
+During native installation, a packaged tool host exposed that `%APPDATA%` and `%LOCALAPPDATA%` may
+name a Package `LocalCache` layer instead of the physical user's Known Folders. The pack helper now
+uses `SHGetKnownFolderPath(..., KF_FLAG_NO_PACKAGE_REDIRECTION)`, rejects reparse or Package
+`LocalCache` roots, and proves a probe file's final handle path before archive verification and
+activation. Consequently an ambiguous or redirected caller fails closed rather than installing a
+valid pack into a namespace the installed Runtime cannot discover.
 
 ## Consequences
 

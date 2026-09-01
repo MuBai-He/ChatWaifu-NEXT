@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Validation state: Unsigned owner-only basic installed smoke passed under Windows x64 emulation; full release and signing acceptance pending
+- Validation state: Unsigned owner-only native Windows x64 installed-path, foreground-window, and data-preserving NSIS uninstall replay passed on 2026-09-01; public release, signing, and installed AppContainer profile/ACL reconciliation remain pending
 
 ## Context
 
@@ -177,6 +177,71 @@ execution and profile/ACL reconciliation of the installed AppContainer helper. I
 replace native Windows x64/CUDA-laptop validation, asset/license review, executable and installer
 signing, or the remote release gate. Because the candidate contains a private overlay, it remains a
 local owner-only artifact and cannot be redistributed.
+
+### Observed native Windows x64 owner-only acceptance
+
+On 2026-09-01 the owner-only path was repeated on native AMD64 Windows 11 Pro 25H2 build
+26200.9168 with an NVIDIA RTX 3090. The private-overlay NSIS candidate was
+`ChatWaifu NEXT_0.2.0_x64-setup.exe`, 128,212,119 bytes, with SHA-256
+`ba50b28735a7c67e57be0646568b406e18982846349ef0b73a11f99a16f9d53f`. That pre-fix candidate
+exposed stale NSIS manufacturer metadata during uninstall. The rebuilt final candidate containing the
+post-uninstall correction is 128,195,690 bytes with SHA-256
+`9e699509510241afd574fad6105d60250f9174b85cb78833a83035bad4e549f3`. This hash identifies
+only a local owner candidate; it does not make its private overlay redistributable.
+
+Automated artifact and installed-path inspection proved a `win-amd64` frozen Python Runtime, the
+`x86_64-pc-windows-msvc` Tauri target, PE Machine `0x8664` for the installed Host, Runtime, and
+AppContainer helper, and `0x8664` for every inspected frozen native DLL/PYD. A current-user install
+placed immutable resources under the physical LocalAppData installation root and created the
+Start Menu shortcut without elevation. Runtime and both selected Worker Packs bound independently
+assigned loopback ports; one recorded installed boot used Runtime port 12557 and Worker ports 14351
+and 14353, but those values are observations rather than configuration or stable API.
+
+Writable roots were verified against the physical Windows Known Folders rather than trusting a
+possibly package-redirected environment spelling:
+
+```text
+LocalAppData/ChatWaifu NEXT
+RoamingAppData/local.chatwaifu.next/runtime
+LocalAppData/local.chatwaifu.next/runtime
+```
+
+The offline pack installer now resolves RoamingAppData and LocalAppData with
+`KF_FLAG_NO_PACKAGE_REDIRECTION`, rejects Package `LocalCache` spellings and reparse-point parents,
+and checks a temporary file's final handle path before verifying or activating a pack. Database
+recovery applies the same fail-closed namespace principle to UNC inputs, hard-link aliases, SQLite
+sidecars, and Package `LocalCache` layers. These checks prevent a packaged shell or tool host from
+silently splitting settings, selection, model receipts, or SQLite state across two Windows
+namespaces.
+
+A real foreground Tauri-window observation, not a build inference, confirmed the private Ningning
+Live2D model rendered and animated over the transparent pet surface, settings opened and scrolled,
+Runtime and the selected local providers reached ready, text chat updated progressively, and a
+stored memory survived reinstall and restart. The installed CUDA graph needed about 151 seconds on
+one cold boot. Native supervision intentionally allows 300 seconds for selected Workers, 120 seconds
+for the Runtime server, and 30 seconds of supervisor grace; the Web resolver now waits 455 seconds,
+five seconds beyond that complete 450-second native bound, instead of abandoning a healthy CUDA
+start at the former 125-second cutoff.
+
+Automated process inspection proved forced Host termination removed the Host, supervisor, Runtime,
+both Workers, and their listeners. Reinstall preserved the physical per-user database, model-pack
+receipts, activation selection, and the test memory. The recorded foreground observation does not
+convert objective WAV checks into a human listening result: human-ear sound-quality judgment and
+the microphone/VAD path must be reported separately from automated waveform, GPU, protocol, and
+window evidence.
+
+This native run is still not the public Desktop release gate. The first data-preserving uninstall
+exposed that Tauri's generated NSIS flow left `HKCU\Software\MuBai\ChatWaifu NEXT` pointing at the
+removed installation. A repository-owned `NSIS_HOOK_POSTUNINSTALL` now deletes only that installer
+metadata on a real uninstall, leaves AppData and Worker Packs untouched, and source/smoke tests cover
+both standard registry views plus Start Menu and Desktop shortcuts. The rebuilt final candidate was
+then installed, reached dynamic Runtime health, survived the forced-exit cleanup check, and uninstalled
+on the native machine: the immutable product tree, both shortcuts, uninstall entries, and manufacturer
+metadata were absent afterward, while settings/data roots, pack selection, and both Worker Packs
+remained. Installed AppContainer/MCP execution and uninstall-time profile/owned-ACL reconciliation
+remain unproved, as do licensing, third-party notices,
+signatures, and public-release automation. None of those gaps may be hidden by the successful
+owner-only UI, CUDA, or process-cleanup evidence.
 
 Unsigned local candidates are permitted for owner testing and will carry the expected Windows trust
 warning. A public `desktop-v*` release additionally requires a selected project license, reviewed
