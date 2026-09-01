@@ -282,6 +282,22 @@ function Remove-WorkerPackPackagingTools {
         Remove-Item -LiteralPath $ScriptsRoot -Recurse -Force
     }
 
+    # Transformers ships a test helper containing a restricted upstream CI token.
+    # It is not imported by the worker runtime and must not enter an offline pack.
+    $TransformersRoot = Join-Path $SitePackagesRoot "transformers"
+    $TestingUtils = Join-Path $TransformersRoot "testing_utils.py"
+    if (Test-Path -LiteralPath $TestingUtils -PathType Leaf) {
+        Remove-Item -LiteralPath $TestingUtils -Force
+    }
+    $TransformersCache = Join-Path $TransformersRoot "__pycache__"
+    if (Test-Path -LiteralPath $TransformersCache -PathType Container) {
+        foreach ($TestingCache in @(Get-ChildItem -LiteralPath $TransformersCache -File -Force | Where-Object {
+            $_.Name -match '^testing_utils\..*\.py[co]$'
+        })) {
+            Remove-Item -LiteralPath $TestingCache.FullName -Force
+        }
+    }
+
     # Some runtime dependencies still import setuptools' Python modules, so retain those.
     # Its cli/gui executables are installer launcher templates (x86/x64/ARM), never runtime
     # entrypoints for a frozen Worker Pack, and would otherwise violate the x64-only payload.

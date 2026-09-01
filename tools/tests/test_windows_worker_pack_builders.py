@@ -209,6 +209,8 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     setuptools_package = portable / "Lib/site-packages/setuptools"
     runtime_package = portable / "Lib/site-packages/runtime_dependency"
     runtime_dist_info = portable / "Lib/site-packages/runtime_dependency-1.2.3.dist-info"
+    transformers_package = portable / "Lib/site-packages/transformers"
+    transformers_cache = transformers_package / "__pycache__"
     scripts = portable / "Scripts"
     for directory in (
         pip_package / "_vendor/distlib",
@@ -216,6 +218,7 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
         setuptools_package,
         runtime_package,
         runtime_dist_info,
+        transformers_cache,
         scripts,
     ):
         directory.mkdir(parents=True, exist_ok=True)
@@ -240,6 +243,14 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     (portable / "python.exe").write_bytes(b"portable-interpreter")
     (portable / "python312.dll").write_bytes(b"runtime-dll")
     (runtime_package / "runtime.pyd").write_bytes(b"runtime-extension")
+    (transformers_package / "testing_utils.py").write_text(
+        "TEST_ONLY = True\n", encoding="utf-8"
+    )
+    (transformers_package / "modeling_utils.py").write_text(
+        "RUNTIME = True\n", encoding="utf-8"
+    )
+    (transformers_cache / "testing_utils.cpython-312.pyc").write_bytes(b"test cache")
+    (transformers_cache / "modeling_utils.cpython-312.pyc").write_bytes(b"runtime cache")
 
     environment = os.environ.copy()
     environment.update(
@@ -274,6 +285,10 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     assert (runtime_package / "keep.py").is_file()
     assert (runtime_package / "runtime.pyd").is_file()
     assert runtime_dist_info.is_dir()
+    assert not (transformers_package / "testing_utils.py").exists()
+    assert not list(transformers_cache.glob("testing_utils.*.py[co]"))
+    assert (transformers_package / "modeling_utils.py").is_file()
+    assert (transformers_cache / "modeling_utils.cpython-312.pyc").is_file()
     assert (portable / "python.exe").is_file()
     assert (portable / "python312.dll").is_file()
 
@@ -366,10 +381,50 @@ def test_worker_pack_builder_rejects_build_paths_in_every_file_type(
             text=True,
         )
         assert rejected.returncode != 0
-        assert "worker payload embeds a forbidden local build path" in (
+        assert "worker payload contains a forbidden local build path" in (
             rejected.stdout + rejected.stderr
         )
         assert leaked_file.relative_to(payload).as_posix() in (
             rejected.stdout + rejected.stderr
         )
         leaked_file.unlink()
+
+
+def test_worker_pack_builder_rejects_huggingface_token_without_echoing_it(
+    tmp_path: Path,
+) -> None:
+    payload = tmp_path / "staging/payload"
+    payload.mkdir(parents=True)
+    secret = b"hf_" + (b"A" * 34)
+    secret_file = payload / "third-party-test-helper.py"
+    secret_file.write_bytes(b'TOKEN = "' + secret + b'"\n')
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_SCANNER": str(
+                WINDOWS_TOOLS / "scan_worker_pack_payload.py"
+            ),
+            "CHATWAIFU_TEST_PAYLOAD": str(payload),
+            "CHATWAIFU_TEST_FORBIDDEN": str(tmp_path / "unrelated-build-root"),
+        }
+    )
+    (tmp_path / "unrelated-build-root").mkdir()
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            environment["CHATWAIFU_TEST_SCANNER"],
+            "--root",
+            environment["CHATWAIFU_TEST_PAYLOAD"],
+            "--forbidden-path",
+            environment["CHATWAIFU_TEST_FORBIDDEN"],
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+    )
+    output = completed.stdout + completed.stderr
+    assert completed.returncode != 0
+    assert b"Hugging Face access-token material" in output
+    assert secret_file.name.encode() in output
+    assert secret not in output

@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 _CHUNK_SIZE = 8 * 1024 * 1024
+_HF_TOKEN_PATTERN = re.compile(
+    rb"(?<![A-Za-z0-9_])hf_[A-Za-z0-9]{34}(?![A-Za-z0-9])"
+)
 
 
-class PayloadPathLeakError(RuntimeError):
-    """Raised when a staged payload embeds a forbidden local path."""
+class PayloadContentError(RuntimeError):
+    """Raised when a staged payload embeds forbidden local or credential material."""
 
 
 def _path_markers(paths: Iterable[str]) -> tuple[bytes, ...]:
@@ -38,19 +42,22 @@ def _path_markers(paths: Iterable[str]) -> tuple[bytes, ...]:
     return tuple(sorted(markers, key=len, reverse=True))
 
 
-def _file_contains_marker(path: Path, markers: Sequence[bytes]) -> bool:
-    overlap = max(len(marker) for marker in markers) - 1
+def _file_violation(path: Path, markers: Sequence[bytes]) -> str | None:
+    overlap = max(max(len(marker) for marker in markers), 40) - 1
     carry = b""
     with path.open("rb") as stream:
         while chunk := stream.read(_CHUNK_SIZE):
-            folded = (carry + chunk).lower()
+            window = carry + chunk
+            folded = window.lower()
             if any(marker in folded for marker in markers):
-                return True
-            carry = folded[-overlap:] if overlap else b""
-    return False
+                return "a forbidden local build path"
+            if _HF_TOKEN_PATTERN.search(window):
+                return "Hugging Face access-token material"
+            carry = window[-overlap:] if overlap else b""
+    return None
 
 
-def assert_payload_has_no_build_paths(root: Path, forbidden_paths: Sequence[str]) -> None:
+def assert_payload_is_sanitized(root: Path, forbidden_paths: Sequence[str]) -> None:
     resolved_root = root.expanduser().resolve(strict=True)
     if not resolved_root.is_dir():
         raise ValueError(f"payload root is not a directory: {resolved_root}")
@@ -68,13 +75,14 @@ def assert_payload_has_no_build_paths(root: Path, forbidden_paths: Sequence[str]
                 continue
             file_count += 1
             byte_count += path.stat().st_size
-            if _file_contains_marker(path, markers):
+            violation = _file_violation(path, markers)
+            if violation is not None:
                 relative = path.relative_to(resolved_root).as_posix()
-                raise PayloadPathLeakError(
-                    f"worker payload embeds a forbidden local build path: {relative!r}"
+                raise PayloadContentError(
+                    f"worker payload contains {violation}: {relative!r}"
                 )
     print(
-        "Verified worker payload contains no local build paths "
+        "Verified worker payload contains no local build paths or credential material "
         f"across {file_count} files and {byte_count} bytes."
     )
 
@@ -89,8 +97,8 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        assert_payload_has_no_build_paths(args.root, args.forbidden_path)
-    except (OSError, PayloadPathLeakError, ValueError) as error:
+        assert_payload_is_sanitized(args.root, args.forbidden_path)
+    except (OSError, PayloadContentError, ValueError) as error:
         print(f"worker-payload-paths: error: {error}", file=sys.stderr)
         return 1
     return 0
