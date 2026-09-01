@@ -12,6 +12,7 @@ import type { AvatarCue, AvatarInteractionEvent } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getAvatarCanvasLayoutSize,
+  getAvatarCanvasRenderPixelRatio,
   mapClientPointToAvatarCanvas,
 } from "./avatarCanvasGeometry";
 
@@ -67,7 +68,7 @@ export function useChatAvatar() {
       controllerRef.current?.resize(
         layout.width || 420,
         layout.height || 420,
-        window.devicePixelRatio || 1,
+        getAvatarCanvasRenderPixelRatio(canvas, window.devicePixelRatio || 1),
       );
     };
     resize();

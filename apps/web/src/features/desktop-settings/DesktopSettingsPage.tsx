@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
 import type { SettingsRuntimeContext } from "./DesktopSettingsContext";
+import { connectionDetail, connectionLabel } from "./desktopRuntimeStatus";
 import {
   desktopSettingsRegistry,
   type DesktopSettingsSectionId,
@@ -107,9 +108,10 @@ export function DesktopSettingsPage() {
           <div>
             <strong>{connectionLabel(context.runtime.connection)}</strong>
             <small>
-              {context.runtime.health?.version
-                ? `Runtime ${context.runtime.health.version}`
-                : "本地服务"}
+              {connectionDetail(
+                context.runtime.connection,
+                context.runtime.health?.version,
+              )}
             </small>
           </div>
         </footer>
@@ -143,12 +145,4 @@ export function DesktopSettingsPage() {
       </section>
     </main>
   );
-}
-
-function connectionLabel(
-  connection: "connecting" | "connected" | "offline",
-): string {
-  if (connection === "connected") return "已连接";
-  if (connection === "connecting") return "正在连接";
-  return "Runtime 离线";
 }
