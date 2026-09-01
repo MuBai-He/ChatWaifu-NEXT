@@ -421,7 +421,8 @@ fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
                 .path()
                 .resource_dir()
                 .map_err(|error| format!("无法定位打包 Runtime：{error}"))?;
-            let executable = packaged_runtime_executable(&resource_dir);
+            let component_root = packaged_component_root_for_process(&resource_dir)?;
+            let executable = packaged_runtime_executable(&component_root);
             if !executable.is_file() {
                 return Err(format!("打包 Runtime 不存在：{}", executable.display()));
             }
@@ -440,8 +441,7 @@ fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
         };
     #[cfg(target_os = "windows")]
     let mut command = {
-        let current_executable = std::env::current_exe()
-            .map_err(|error| format!("无法定位 Windows Runtime supervisor：{error}"))?;
+        let current_executable = runtime_supervisor_executable()?;
         let mut command = Command::new(current_executable);
         command
             .arg(RUNTIME_SUPERVISOR_ARGUMENT)
@@ -479,7 +479,8 @@ fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
             .path()
             .resource_dir()
             .map_err(|error| format!("无法定位 AppContainer helper 资源目录：{error}"))?;
-        let packaged_launcher = packaged_appcontainer_launcher(&resource_dir);
+        let component_root = packaged_component_root_for_process(&resource_dir)?;
+        let packaged_launcher = packaged_appcontainer_launcher(&component_root);
         let launcher = if packaged_launcher.is_file() {
             Some(packaged_launcher)
         } else if cfg!(debug_assertions) {
@@ -831,6 +832,80 @@ fn packaged_appcontainer_launcher(resource_dir: &Path) -> PathBuf {
         .join("chatwaifu-appcontainer-host.exe")
 }
 
+fn packaged_component_root_for_process(resource_dir: &Path) -> Result<PathBuf, String> {
+    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    {
+        let current_image = windows_current_process_image_path()?;
+        select_packaged_component_root(resource_dir, Some(&current_image))
+    }
+    #[cfg(any(not(target_os = "windows"), debug_assertions))]
+    {
+        select_packaged_component_root(resource_dir, None)
+    }
+}
+
+fn select_packaged_component_root(
+    resource_dir: &Path,
+    physical_current_executable: Option<&Path>,
+) -> Result<PathBuf, String> {
+    let Some(current_executable) = physical_current_executable else {
+        return Ok(resource_dir.to_path_buf());
+    };
+    current_executable
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(Path::to_path_buf)
+        .ok_or_else(|| {
+            format!(
+                "Windows 当前进程映像没有可用的安装目录：{}",
+                current_executable.display()
+            )
+        })
+}
+
+#[cfg(target_os = "windows")]
+fn runtime_supervisor_executable() -> Result<PathBuf, String> {
+    #[cfg(not(debug_assertions))]
+    {
+        windows_current_process_image_path()
+    }
+    #[cfg(debug_assertions)]
+    {
+        std::env::current_exe()
+            .map_err(|error| format!("无法定位 Windows Runtime supervisor：{error}"))
+    }
+}
+
+/// Returns the physical Win32 image path rather than a packaged parent's
+/// virtualized view of `current_exe`.
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub fn windows_current_process_image_path() -> Result<PathBuf, String> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, QueryFullProcessImageNameW};
+
+    // Win32 extended-length paths are capped at 32,767 UTF-16 code units.
+    const IMAGE_PATH_BUFFER_UNITS: usize = 32_768;
+    let mut buffer = vec![0_u16; IMAGE_PATH_BUFFER_UNITS];
+    let mut length =
+        u32::try_from(buffer.len()).map_err(|_| "Windows 当前进程映像缓冲区长度溢出".to_owned())?;
+    let succeeded = unsafe {
+        QueryFullProcessImageNameW(GetCurrentProcess(), 0, buffer.as_mut_ptr(), &mut length)
+    };
+    if succeeded == 0 {
+        return Err(format!(
+            "QueryFullProcessImageNameW failed with Windows error {}",
+            unsafe { GetLastError() }
+        ));
+    }
+    if length == 0 {
+        return Err("QueryFullProcessImageNameW returned an empty image path".to_owned());
+    }
+    buffer.truncate(length as usize);
+    Ok(PathBuf::from(OsString::from_wide(&buffer)))
+}
+
 fn open_sidecar_log(app: &AppHandle) -> Result<std::fs::File, String> {
     let directory = app
         .path()
@@ -920,7 +995,7 @@ mod tests {
         STARTUP_SUPERVISOR_GRACE_SECONDS, STARTUP_TIMEOUT, WORKER_PACK_STARTUP_BUDGET_SECONDS,
         adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
         packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
-        should_request_start,
+        select_packaged_component_root, should_request_start,
     };
     use crate::runtime_health::RuntimeLifecycleState;
     use std::ffi::OsString;
@@ -961,16 +1036,51 @@ mod tests {
     }
 
     #[test]
-    fn packaged_components_are_resolved_from_the_tauri_resource_root() {
+    fn unpackaged_components_keep_the_tauri_resource_root() {
         let resources = Path::new("C:/Program Files/ChatWaifu NEXT/resources");
+        let component_root = select_packaged_component_root(resources, None).unwrap();
         assert_eq!(
-            packaged_runtime_executable(resources),
+            packaged_runtime_executable(&component_root),
             resources.join("runtime-sidecar/chatwaifu-runtime.exe")
         );
         assert_eq!(
-            packaged_appcontainer_launcher(resources),
+            packaged_appcontainer_launcher(&component_root),
             resources.join("bin/chatwaifu-appcontainer-host.exe")
         );
+    }
+
+    #[test]
+    fn windows_packaged_components_ignore_a_virtualized_tauri_resource_root() {
+        let virtual_resources = Path::new(
+            "C:/Users/test/AppData/Local/Packages/OpenAI.Codex/LocalCache/Local/ChatWaifu NEXT",
+        );
+        let physical_image =
+            Path::new("C:/Users/test/AppData/Local/ChatWaifu NEXT/chatwaifu-desktop-host.exe");
+        let component_root =
+            select_packaged_component_root(virtual_resources, Some(physical_image)).unwrap();
+
+        assert_eq!(
+            packaged_runtime_executable(&component_root),
+            Path::new(
+                "C:/Users/test/AppData/Local/ChatWaifu NEXT/runtime-sidecar/chatwaifu-runtime.exe"
+            )
+        );
+        assert_eq!(
+            packaged_appcontainer_launcher(&component_root),
+            Path::new(
+                "C:/Users/test/AppData/Local/ChatWaifu NEXT/bin/chatwaifu-appcontainer-host.exe"
+            )
+        );
+    }
+
+    #[test]
+    fn packaged_component_root_rejects_an_image_without_a_parent() {
+        let error = select_packaged_component_root(
+            Path::new("C:/virtual/resources"),
+            Some(Path::new("chatwaifu-desktop-host.exe")),
+        )
+        .unwrap_err();
+        assert!(error.contains("没有可用的安装目录"));
     }
 
     #[test]

@@ -21,6 +21,9 @@ use runtime_health::RuntimeStatus;
 use sidecar::RuntimeHost;
 
 pub use sidecar::runtime_supervisor_exit_code;
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub use sidecar::windows_current_process_image_path;
 
 pub const HOST_ROLE: &str = "os-capabilities-and-sidecar-management";
 pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
