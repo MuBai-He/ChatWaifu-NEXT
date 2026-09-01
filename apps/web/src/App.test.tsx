@@ -237,8 +237,8 @@ describe("ChatWaifu usable demo", () => {
     session.avatarManifest = LIVE2D_LAB_MANIFEST;
     render(<CurrentProduct />);
 
-    expect(screen.getByText(/Live2D 模型：ayachi-nene-local/)).toBeTruthy();
-    expect(screen.getByText(/模型作者：涂抹一画/)).toBeTruthy();
+    expect(screen.getByText(/Live2D 模型作者：涂抹一画/)).toBeTruthy();
+    expect(screen.queryByText(/ayachi-nene-local/)).toBeNull();
   });
 
   it("renders the transparent desktop-pet surface on its dedicated route", () => {

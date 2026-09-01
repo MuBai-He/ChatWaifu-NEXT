@@ -30,10 +30,6 @@ export function AppearanceSettingsSection({
               role="group"
             >
               <div>
-                <dt>模型标识</dt>
-                <dd>{appearance.avatarManifest.avatarId}</dd>
-              </div>
-              <div>
                 <dt>模型作者</dt>
                 <dd>{attribution.modelAuthor ?? "未随本地资产提供"}</dd>
               </div>
@@ -51,12 +47,6 @@ export function AppearanceSettingsSection({
                   ) : (
                     attribution.sourceLabel
                   )}
-                </dd>
-              </div>
-              <div>
-                <dt>权利与用途</dt>
-                <dd>
-                  {attribution.rightsNotice}；{attribution.usageNotice}
                 </dd>
               </div>
             </dl>

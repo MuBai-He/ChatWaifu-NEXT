@@ -498,7 +498,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
           </span>
           {avatarManifest?.attribution ? (
             <span>
-              Live2D 模型：{avatarManifest.avatarId} · 模型作者：
+              Live2D 模型作者：
               {avatarManifest.attribution.modelAuthor ?? "资产未提供"}
             </span>
           ) : null}

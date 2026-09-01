@@ -12,11 +12,10 @@ describe("AppearanceSettingsSection", () => {
     const attribution = screen.getByRole("group", {
       name: "Live2D 模型与署名",
     });
-    expect(attribution.textContent).toContain("ayachi-nene-local");
     expect(attribution.textContent).toContain("模型作者");
     expect(attribution.textContent).toContain("涂抹一画");
-    expect(attribution.textContent).toContain("YUZUSOFT/JUNOS");
-    expect(attribution.textContent).toContain("仅限私人研究与本机验证");
+    expect(attribution.textContent).not.toContain("模型标识");
+    expect(attribution.textContent).not.toContain("权利与用途");
     expect(
       screen
         .getByRole("link", { name: /拥有全服装的Live2D宁宁/ })
