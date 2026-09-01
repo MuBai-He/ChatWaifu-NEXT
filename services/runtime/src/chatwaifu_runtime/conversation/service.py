@@ -601,6 +601,7 @@ class ConversationService:
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,
+                recalled_memory_texts=compilation.recalled_memory_texts,
                 trigger=trigger,
             )
             async for delta in self._agent.stream(

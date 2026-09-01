@@ -17,6 +17,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolExchange,
     LlmToolResult,
 )
+from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
     build_messages,
@@ -125,6 +126,44 @@ def _sse_response(*payloads: dict[str, object]) -> httpx2.Response:
 
 async def _events(provider: OpenAiCompatibleLlmProvider, request: LlmRequest) -> list[object]:
     return [event async for event in provider.stream(request)]
+
+
+@pytest.mark.asyncio
+async def test_demo_llm_renders_memory_without_runtime_prompt_markup() -> None:
+    provider = DemoLlmProvider(chunk_delay_ms=0)
+    request = LlmRequest(
+        generation_id=uuid4(),
+        system_prompt="internal system prompt",
+        character_name="绫地宁宁",
+        user_text="你还记得吗？",
+        context=(
+            (
+                "system",
+                "记忆: 仅使用以下经过策略、隐私与来源检查的内容:\n"
+                "- [relevant] 我的 Windows CUDA 验收编号是 NENE-WIN-CUDA-0901。",
+            ),
+            (
+                "system",
+                "[UNTRUSTED MEMORY SOURCE]\n"
+                "memory_id=MEMORY-ID-MUST-STAY-HIDDEN;"
+                "provider_id=PROVIDER-MUST-STAY-HIDDEN;"
+                "conversation_key=CONVERSATION-MUST-STAY-HIDDEN",
+            ),
+        ),
+        recalled_memory_texts=("我的 Windows CUDA 验收编号是 NENE-WIN-CUDA-0901。",),
+    )
+
+    events = [event async for event in provider.stream(request)]
+    response = "".join(event.text for event in events if isinstance(event, LlmTextDelta))
+
+    assert "我还记得\uff1a我的 Windows CUDA 验收编号是 NENE-WIN-CUDA-0901。" in response
+    assert "记忆:" not in response
+    assert "仅使用以下经过策略" not in response
+    assert "[relevant]" not in response
+    assert "UNTRUSTED MEMORY SOURCE" not in response
+    assert "MEMORY-ID-MUST-STAY-HIDDEN" not in response
+    assert "PROVIDER-MUST-STAY-HIDDEN" not in response
+    assert "CONVERSATION-MUST-STAY-HIDDEN" not in response
 
 
 @pytest.mark.asyncio

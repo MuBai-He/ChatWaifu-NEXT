@@ -79,6 +79,7 @@ class LlmRequest:
     character_name: str = "ChatWaifu"
     context: tuple[tuple[str, str], ...] = ()
     history: tuple[tuple[str, str], ...] = ()
+    recalled_memory_texts: tuple[str, ...] = ()
     trigger: Literal["user", "proactive"] = "user"
     tools: tuple[LlmToolDefinition, ...] = ()
     tool_exchanges: tuple[LlmToolExchange, ...] = ()

@@ -220,4 +220,5 @@ async def test_prompt_compiler_budgets_durable_memory_source_and_drops_oversized
     assert '"sender_key":"wechat-owner-sender"' in source_context
     assert '"received_at":' in source_context
     assert malicious_label not in source_context
+    assert result.recalled_memory_texts == ("用户上午通过微信约好晚上继续聊 Python",)
     assert result.report.memory_tokens <= 300

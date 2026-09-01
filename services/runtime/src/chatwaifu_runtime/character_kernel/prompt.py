@@ -36,6 +36,7 @@ class PromptCompilation:
     system_prompt: str
     context: tuple[tuple[str, str], ...]
     history: tuple[tuple[str, str], ...]
+    recalled_memory_texts: tuple[str, ...]
     report: PromptBudgetReport
 
 
@@ -68,7 +69,7 @@ class PromptCompiler:
             memory,
             min(memory_budget, max(280, memory_budget // 2)),
         )
-        memory_text = _memory_text(
+        memory_text, recalled_memory_texts = _memory_text(
             memory,
             max(0, memory_budget - _tokens(memory_source_text)),
         )
@@ -153,6 +154,7 @@ class PromptCompiler:
             system_prompt=system_prompt,
             context=tuple(context),
             history=tuple(selected_history),
+            recalled_memory_texts=recalled_memory_texts,
             report=PromptBudgetReport(
                 model_role="chat",
                 budget=total_budget,
@@ -260,8 +262,9 @@ def _plan_text(plan: ResponsePlan) -> str:
     )
 
 
-def _memory_text(packet: MemoryContextPacket, budget: int) -> str:
+def _memory_text(packet: MemoryContextPacket, budget: int) -> tuple[str, tuple[str, ...]]:
     lines: list[str] = []
+    recalled: list[str] = []
     used = 0
     for label, excerpt in _memory_excerpts(packet):
         line = f"- [{label}] {excerpt.text}"
@@ -269,8 +272,9 @@ def _memory_text(packet: MemoryContextPacket, budget: int) -> str:
         if used + cost > budget:
             continue
         lines.append(line)
+        recalled.append(excerpt.text)
         used += cost
-    return "\n".join(lines)
+    return "\n".join(lines), tuple(recalled)
 
 
 def _memory_excerpts(

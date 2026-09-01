@@ -655,8 +655,34 @@ def test_explicit_memory_survives_sessions_and_forget_tombstones(client: TestCli
     second_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
     second_session_id = str(second_session["session_id"])
     recalled_reply = _submit_and_wait(http, second_session_id, "你还记得我的喜好吗?")
-    assert "记忆:" in recalled_reply
+    assert "我还记得\uff1a" in recalled_reply
     assert "我喜欢蓝色" in recalled_reply
+    assert "记忆:" not in recalled_reply
+    assert "[relevant]" not in recalled_reply
+    recalled_events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{second_session_id}/events?limit=500").json(),
+        )["items"],
+    )
+    prompt_report = cast(
+        dict[str, object],
+        next(
+            event for event in recalled_events if event["event_type"] == "character.prompt_compiled"
+        )["payload"],
+    )["report"]
+    assert int(str(cast(dict[str, object], prompt_report)["memory_tokens"])) > 0
+    spoken_segments = [
+        str(cast(dict[str, object], event["payload"])["text"])
+        for event in recalled_events
+        if event["event_type"] == "assistant.text_segment_committed"
+    ]
+    assert spoken_segments
+    assert all("记忆:" not in segment for segment in spoken_segments)
+    assert all("[relevant]" not in segment for segment in spoken_segments)
+    assert all("仅使用以下经过策略" not in segment for segment in spoken_segments)
+    assert all("UNTRUSTED MEMORY SOURCE" not in segment for segment in spoken_segments)
 
     _submit_and_wait(http, second_session_id, "请忘记我喜欢蓝色")
     assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 0
