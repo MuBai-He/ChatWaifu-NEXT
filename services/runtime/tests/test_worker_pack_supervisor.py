@@ -30,6 +30,9 @@ from chatwaifu_model_worker import (
     WorkerPackPlatform,
     WorkerPackWorker,
 )
+from chatwaifu_model_worker.pack_installer import (
+    InstalledWorkerPack as InstalledWorkerPackReceipt,
+)
 from chatwaifu_runtime.worker_packs import (
     InstalledWorkerPack,
     ManagedWorker,
@@ -209,6 +212,33 @@ def test_discovers_receipted_compatible_pack_and_rejects_tampering(tmp_path: Pat
     ]
     (root / "payload" / "worker.exe").write_bytes(b"tampered")
     assert supervisor.discover() == []
+
+
+def test_startup_discovery_skips_the_complete_payload_rehash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_test_pack(tmp_path / "data")
+    supervisor = _supervisor(tmp_path)
+    original = worker_pack_module.load_installed_pack
+    verification_modes: list[tuple[bool, bool]] = []
+
+    def tracked_load(
+        path: Path,
+        *,
+        verify_payload: bool = False,
+        verify_declared_paths: bool = True,
+    ) -> InstalledWorkerPackReceipt:
+        verification_modes.append((verify_payload, verify_declared_paths))
+        return original(
+            path,
+            verify_payload=verify_payload,
+            verify_declared_paths=verify_declared_paths,
+        )
+
+    monkeypatch.setattr(worker_pack_module, "load_installed_pack", tracked_load)
+
+    assert len(supervisor.discover()) == 1
+    assert verification_modes == [(False, False)]
 
 
 def test_auto_selection_uses_semver_and_explicit_config_is_authoritative(

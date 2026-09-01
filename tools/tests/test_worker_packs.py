@@ -532,6 +532,27 @@ def test_reverify_detects_installed_payload_tampering(tmp_path: Path) -> None:
         worker_packs.load_installed_pack(installed.root, verify_payload=True)
 
 
+def test_metadata_only_load_does_not_walk_every_declared_payload(
+    tmp_path: Path,
+) -> None:
+    archive = _write_archive(
+        tmp_path / "worker.zip",
+        {"bin/worker.exe": _pe(), "models/default/model.bin": b"weights"},
+    )
+    installed = worker_packs.install_archive(archive, tmp_path / "packs")
+    (installed.root / "models" / "default" / "model.bin").unlink()
+
+    loaded = worker_packs.load_installed_pack(
+        installed.root,
+        verify_payload=False,
+        verify_declared_paths=False,
+    )
+
+    assert loaded.manifest.pack_id == "faster-whisper-cpu"
+    with pytest.raises(worker_packs.WorkerPackError, match="could not inspect"):
+        worker_packs.load_installed_pack(installed.root)
+
+
 @pytest.mark.parametrize("extra", ["extra.txt", "models/default/undeclared.bin"])
 def test_full_reverify_rejects_undeclared_installed_files(tmp_path: Path, extra: str) -> None:
     archive = _write_archive(tmp_path / "worker.zip", {"bin/worker.exe": _pe()})

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import NoReturn, cast
 from uuid import UUID, uuid4
 
+from chatwaifu_model_worker import WorkerPackError, discover_installed_packs
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationSnapshot,
@@ -62,6 +63,8 @@ from chatwaifu_runtime.api.models import (
     TtsProviderSelectionRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
+    WorkerPackIntegrityItem,
+    WorkerPackIntegrityResponse,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
@@ -121,6 +124,41 @@ async def runtime_health(request: Request) -> RuntimeHealth:
         dropped_events=container.event_hub.dropped_events,
         providers=providers,
         resources=container.resources.status().model_dump(mode="json"),
+    )
+
+
+@router.post(
+    "/worker-packs/integrity/verify",
+    response_model=WorkerPackIntegrityResponse,
+)
+def verify_worker_pack_integrity(request: Request) -> WorkerPackIntegrityResponse:
+    """Run the expensive, complete Worker Pack hash check only on demand.
+
+    This is deliberately a synchronous FastAPI route so Starlette executes the
+    scan in its worker thread pool instead of blocking Runtime's media event loop.
+    """
+
+    pack_root = _container(request).settings.data_dir / "worker-packs"
+    try:
+        installed, errors = discover_installed_packs(pack_root, verify_payload=True)
+    except WorkerPackError as error:
+        installed, errors = [], [str(error)[:500]]
+    packs = [
+        WorkerPackIntegrityItem(
+            pack_id=pack.manifest.pack_id,
+            version=pack.manifest.version,
+            kind=pack.manifest.worker.kind,
+            backend=pack.manifest.worker.backend,
+            file_count=len(pack.manifest.files),
+            size_bytes=sum(file.size for file in pack.manifest.files),
+        )
+        for pack in installed
+    ]
+    return WorkerPackIntegrityResponse(
+        valid=not errors,
+        checked_at=datetime.now(UTC),
+        packs=packs,
+        errors=errors,
     )
 
 

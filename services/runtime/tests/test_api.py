@@ -9,11 +9,13 @@ import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Protocol, cast
 from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.events import GenericCoreEvent
+from chatwaifu_runtime.api import routes as runtime_routes
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.main import create_app
@@ -177,6 +179,71 @@ def test_recovery_snapshot_replays_from_an_active_generation(
             generation_started = cast(dict[str, object], websocket.receive_json())
         assert generation_started["event_type"] == "assistant.generation_started"
         assert generation_started["generation_id"] == accepted["generation_id"]
+
+
+def test_worker_pack_integrity_check_hashes_all_payloads_on_demand(
+    client: TestClient,
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[Path, bool]] = []
+    manifest = SimpleNamespace(
+        pack_id="qwen3-tts-nene-cu126",
+        version="0.1.0",
+        worker=SimpleNamespace(kind="tts", backend="qwen3_tts_torch"),
+        files=[SimpleNamespace(size=12), SimpleNamespace(size=30)],
+    )
+
+    def discover(
+        path: Path, *, verify_payload: bool = False
+    ) -> tuple[list[SimpleNamespace], list[str]]:
+        calls.append((path, verify_payload))
+        return [SimpleNamespace(manifest=manifest)], []
+
+    monkeypatch.setattr(runtime_routes, "discover_installed_packs", discover)
+    http = cast(RuntimeHttpClient, client)
+
+    response = http.post("/v1/worker-packs/integrity/verify", json={})
+
+    assert response.status_code == 200
+    payload = cast(dict[str, object], response.json())
+    assert payload["valid"] is True
+    assert payload["errors"] == []
+    assert payload["packs"] == [
+        {
+            "pack_id": "qwen3-tts-nene-cu126",
+            "version": "0.1.0",
+            "kind": "tts",
+            "backend": "qwen3_tts_torch",
+            "file_count": 2,
+            "size_bytes": 42,
+        }
+    ]
+    assert calls == [(runtime_settings.data_dir / "worker-packs", True)]
+
+
+def test_worker_pack_integrity_check_reports_invalid_installs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def discover_invalid(
+        _path: Path, *, verify_payload: bool = False
+    ) -> tuple[list[SimpleNamespace], list[str]]:
+        return [], ["payload digest mismatch"]
+
+    monkeypatch.setattr(
+        runtime_routes,
+        "discover_installed_packs",
+        discover_invalid,
+    )
+    http = cast(RuntimeHttpClient, client)
+
+    response = http.post("/v1/worker-packs/integrity/verify", json={})
+
+    assert response.status_code == 200
+    payload = cast(dict[str, object], response.json())
+    assert payload["valid"] is False
+    assert payload["packs"] == []
+    assert payload["errors"] == ["payload digest mismatch"]
 
 
 def test_model_roles_are_independent_and_api_keys_never_echo(

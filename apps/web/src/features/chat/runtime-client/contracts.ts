@@ -313,6 +313,34 @@ export type ResourceStatus = z.infer<typeof resourceStatusSchema>;
 export type CompanionSettings = z.infer<typeof companionSettingsSchema>;
 export type CompanionStatus = z.infer<typeof companionStatusSchema>;
 
+export const workerPackIntegrityItemSchema = z
+  .object({
+    pack_id: z.string().min(1),
+    version: z.string().min(1),
+    kind: z.enum(["stt", "tts"]),
+    backend: z.string().min(1),
+    file_count: z.number().int().nonnegative(),
+    size_bytes: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
+export const workerPackIntegrityResponseSchema = z
+  .object({
+    schema_version: z.literal("1.0"),
+    valid: z.boolean(),
+    checked_at: dateTime,
+    packs: z.array(workerPackIntegrityItemSchema),
+    errors: z.array(z.string()),
+  })
+  .passthrough();
+
+export type WorkerPackIntegrityItem = z.infer<
+  typeof workerPackIntegrityItemSchema
+>;
+export type WorkerPackIntegrityResponse = z.infer<
+  typeof workerPackIntegrityResponseSchema
+>;
+
 export const ttsStreamMessageSchema = z
   .object({
     type: z.literal("chatwaifu.tts_stream"),

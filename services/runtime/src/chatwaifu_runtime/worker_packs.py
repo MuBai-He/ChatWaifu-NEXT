@@ -277,10 +277,15 @@ class WorkerPackSupervisor:
         pack_root = manifest_path.parent.resolve()
         if self._pack_root not in pack_root.parents:
             raise ValueError("pack root escapes the configured Worker Pack directory")
-        # Installed model packs remain executable input. Re-hash the complete
-        # declared tree and reject injected files on every Runtime boot rather
-        # than trusting only the installation-time receipt.
-        installed = load_installed_pack(pack_root, verify_payload=True)
+        # Startup discovery validates the signed installation identity, the
+        # declared path shape, and the executable below. Complete payload hashing
+        # is intentionally user-triggered from Settings because multi-gigabyte
+        # model packs must not turn every desktop launch into a disk-wide scan.
+        installed = load_installed_pack(
+            pack_root,
+            verify_payload=False,
+            verify_declared_paths=False,
+        )
         manifest = installed.manifest
         expected_root = (self._pack_root / manifest.pack_id / manifest.version).resolve()
         if pack_root != expected_root:

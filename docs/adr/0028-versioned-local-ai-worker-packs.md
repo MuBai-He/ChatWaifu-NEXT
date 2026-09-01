@@ -87,12 +87,21 @@ are authoritative.
 
 For each selected pack Runtime:
 
-1. verifies the receipt, manifest identity, platform, and entrypoint hash;
+1. verifies the receipt and manifest identity, platform, and entrypoint size/hash without walking or
+   hashing the complete payload tree;
 2. assigns a free loopback port and a fresh random bearer token;
 3. launches the direct entrypoint with a minimal environment and offline Hugging Face policy;
 4. waits for authenticated `/v1/health` and `/v1/capabilities`;
 5. compares returned provider/model identity with the manifest; and
 6. injects only the negotiated endpoint into the existing STT or generic TTS adapter settings.
+
+Installation, activation, explicit repair, release smoke, and the user-triggered Settings action all
+retain complete verification: every declared payload size and SHA-256, exact tree membership, reparse
+rejection, and native PE architecture. Ordinary application startup intentionally does not repeat
+that multi-gigabyte scan. It trusts the matching receipt/manifest pair, keeps the pack root and
+entrypoint fail-closed, and lets a missing or modified non-entrypoint payload surface either in the
+explicit Settings check or as a Worker readiness failure. This is a deliberate startup-latency versus
+early-tamper-detection tradeoff, not a claim that metadata-only discovery proves full integrity.
 
 Worker stdout and stderr go to bounded per-user logs, never into the sidecar bootstrap protocol.
 Workers inherit the frozen Runtime's Windows kill-on-close Job. Orderly shutdown terminates and then
@@ -179,15 +188,13 @@ repository.
 
 Both installed-pack smokes authenticated health/capabilities on dynamically assigned loopback
 ports, verified identity, exercised inference, cancellation and unload, and confirmed process and
-listener closure. Full installed cold starts with both selected packs were observed at about 151
-seconds and about 443 seconds; the latter spent most of its time re-verifying the Qwen pack's 31,223
-files and multi-gigabyte payload. The
-native startup contract therefore remains bounded at 300 seconds for Workers, 120 seconds for the
-Runtime server, and 30 seconds of supervisor grace; Desktop Web resolution waits 455 seconds so its
-timeout exceeds the complete 450-second native bound. This is a bounded readiness contract, not an
-arbitrary synchronization sleep. The near-bound 443-second path is nevertheless a product usability
-risk; a future optimization must retain fail-closed integrity, for example through a trustworthy
-receipt-backed verification cache, rather than skipping checks.
+listener closure. Earlier full-verification cold starts with both selected packs were observed at
+about 151 seconds and about 443 seconds; the latter spent most of its time re-reading the Qwen pack's
+31,223 files and multi-gigabyte payload. Startup no longer performs that full scan. The native
+readiness contract remains bounded at 300 seconds for Workers, 120 seconds for the Runtime server,
+and 30 seconds of supervisor grace; Desktop Web resolution still waits 455 seconds for genuinely
+slow model initialization. Full integrity remains available from Settings and remains mandatory at
+installation, activation, repair, and release acceptance.
 
 During native installation, a packaged tool host exposed that `%APPDATA%` and `%LOCALAPPDATA%` may
 name a Package `LocalCache` layer instead of the physical user's Known Folders. The pack helper now

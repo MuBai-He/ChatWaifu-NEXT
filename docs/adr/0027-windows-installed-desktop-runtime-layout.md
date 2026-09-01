@@ -227,17 +227,18 @@ A real foreground Tauri-window observation, not a build inference, confirmed the
 Live2D model rendered and animated over the transparent pet surface, settings opened and scrolled,
 Runtime and the selected local providers reached ready, text chat updated progressively, and a
 stored memory survived reinstall and restart. The installed CUDA graph needed about 151 seconds on
-one cold boot and about 443 seconds on a later complete-pack verification boot. Native supervision
+one cold boot and about 443 seconds on a later complete-pack verification boot under the former
+always-rehash policy. Native supervision
 intentionally allows 300 seconds for selected Workers, 120 seconds
 for the Runtime server, and 30 seconds of supervisor grace; the Web resolver now waits 455 seconds,
 five seconds beyond that complete 450-second native bound, instead of abandoning a healthy CUDA
 start at the former 125-second cutoff.
 
-The 443-second path is within the contract but not an acceptable steady-state user experience. The
-dominant work is repeated integrity hashing of the Qwen pack's 31,223 files and multi-gigabyte
-payload. Any future optimization must retain fail-closed receipt/hash semantics, such as through a
-trustworthy verification cache invalidated by file identity changes; increasing timeouts again or
-skipping verification is not a resolution.
+The 443-second path was within the contract but not an acceptable steady-state user experience. ADR
+0028 now assigns ordinary startup a bounded receipt/manifest plus entrypoint check and assigns the
+complete exact-tree/hash/PE audit to an explicit Data-settings operation. Installation, activation,
+repair, and release smoke remain fail-closed and fully verified; the startup change does not weaken
+those artifact gates or replace authenticated readiness with a delay.
 
 Automated process inspection proved final-candidate forced Host termination removed the complete
 15-process descendant tree (Host, WebView2, supervisor, Runtime, both Workers, and console helpers)

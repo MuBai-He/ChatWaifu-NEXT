@@ -179,12 +179,14 @@ passed cancellation, unload, child-process exit, and listening-port closure.
 
 All 393 native Qwen files, all 159 native Whisper files, and the installed Host, frozen Runtime, and
 AppContainer helper were PE Machine `0x8664`. The installed graph selected independent ephemeral
-ports for Runtime and both Workers. Two-pack cold boots reached ready in about 151 seconds and, on a
-later full verification boot, about 443 seconds. The latter is within but uncomfortably close to the
-native 300-second Worker + 120-second Runtime + 30-second supervisor bound. Desktop Web resolution
-waits 455 seconds, five seconds longer than that full 450-second window. The repeated full hash of the
-Qwen pack is a usability risk; optimize it only with a fail-closed, receipt-backed integrity design.
-Do not replace health/capability readiness with `Start-Sleep`.
+ports for Runtime and both Workers. Historical two-pack cold boots reached ready in about 151 seconds
+and, on a later full-verification boot, about 443 seconds. Runtime startup now reads and validates the
+receipt/manifest identity and hashes the selected entrypoint, but does not stat or hash every declared
+payload. Use **设置 → 数据 → Worker Pack 完整性 → 开始完整校验** whenever a complete on-disk audit is
+needed; it verifies the exact tree, every SHA-256, reparse rejection, and PE architecture in a Runtime
+worker thread. Installation, activation, repair, and release smoke also continue to require that full
+check. The 455-second Desktop wait remains a readiness bound for genuinely slow model initialization,
+not a reason to add `Start-Sleep`.
 
 ### Evidence boundary and remaining release work
 

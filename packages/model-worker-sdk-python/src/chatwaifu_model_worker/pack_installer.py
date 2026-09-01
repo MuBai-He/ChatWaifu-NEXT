@@ -1125,8 +1125,13 @@ def _verify_installed_payload_tree(resolved: Path, manifest: WorkerPackManifest)
             )
 
 
-def load_installed_pack(path: Path, *, verify_payload: bool = False) -> InstalledWorkerPack:
-    """Load an installed pack and optionally verify its complete immutable file tree."""
+def load_installed_pack(
+    path: Path,
+    *,
+    verify_payload: bool = False,
+    verify_declared_paths: bool = True,
+) -> InstalledWorkerPack:
+    """Load installed metadata and optionally verify declared paths or full payload bytes."""
 
     expanded = path.expanduser()
     _reject_reparse_ancestors(expanded, label="installed worker pack path")
@@ -1163,7 +1168,8 @@ def load_installed_pack(path: Path, *, verify_payload: bool = False) -> Installe
         raise WorkerPackError(f"installed worker pack receipt file count mismatch: {resolved}")
     if resolved.parent.name != manifest.pack_id or resolved.name != manifest.version:
         raise WorkerPackError(f"installed worker pack directory identity mismatch: {resolved}")
-    _verify_declared_installed_paths(resolved, manifest)
+    if verify_declared_paths or verify_payload:
+        _verify_declared_installed_paths(resolved, manifest)
     if verify_payload:
         _verify_installed_payload_tree(resolved, manifest)
     return InstalledWorkerPack(root=resolved, manifest=manifest, receipt=receipt)

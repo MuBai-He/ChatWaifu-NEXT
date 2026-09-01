@@ -23,6 +23,23 @@ class RuntimeHealth(BaseModel):
     resources: dict[str, object]
 
 
+class WorkerPackIntegrityItem(BaseModel):
+    pack_id: str
+    version: str
+    kind: Literal["stt", "tts"]
+    backend: str
+    file_count: int = Field(ge=0)
+    size_bytes: int = Field(ge=0)
+
+
+class WorkerPackIntegrityResponse(BaseModel):
+    schema_version: Literal["1.0"] = "1.0"
+    valid: bool
+    checked_at: AwareDatetime
+    packs: list[WorkerPackIntegrityItem]
+    errors: list[str]
+
+
 class SessionRecoveryMessage(BaseModel):
     turn_id: UUID
     role: Literal["user", "assistant"]
