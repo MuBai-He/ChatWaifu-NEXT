@@ -7,11 +7,12 @@ import io
 import wave
 
 import numpy as np
+from numpy.typing import NDArray
 
 from chatwaifu_tts_neural_worker.audio import wave_bytes
 
 
-def _decode_pcm16(audio: bytes) -> tuple[np.ndarray, int]:
+def _decode_pcm16(audio: bytes) -> tuple[NDArray[np.int16], int]:
     with wave.open(io.BytesIO(audio), "rb") as source:
         assert source.getnchannels() == 1
         assert source.getsampwidth() == 2

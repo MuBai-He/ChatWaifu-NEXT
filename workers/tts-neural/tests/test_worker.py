@@ -21,6 +21,7 @@ from chatwaifu_model_worker import (
     unpack_tts_pcm_frame,
 )
 from fastapi.testclient import TestClient
+from numpy.typing import NDArray
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
 from chatwaifu_tts_neural_worker.engines import (
@@ -182,13 +183,13 @@ class FakeTorchQwenModel:
     def get_supported_speakers(self) -> list[str]:
         return ["ayachi_nene_local"]
 
-    def generate_custom_voice(self, **kwargs: object) -> tuple[list[np.ndarray], int]:
+    def generate_custom_voice(self, **kwargs: object) -> tuple[list[NDArray[np.float32]], int]:
         self.calls.append(("custom", kwargs))
         if self._cancel_event is not None:
             self._cancel_event.set()
         return [np.ones(2_400, dtype=np.float32) * 0.1], 24_000
 
-    def generate_voice_clone(self, **kwargs: object) -> tuple[list[np.ndarray], int]:
+    def generate_voice_clone(self, **kwargs: object) -> tuple[list[NDArray[np.float32]], int]:
         self.calls.append(("clone", kwargs))
         return [np.ones(1_200, dtype=np.float32) * 0.1], 24_000
 
@@ -311,22 +312,40 @@ def test_qwen_torch_rejects_model_parameters_on_the_wrong_device(tmp_path: Path)
 def test_qwen_torch_runtime_diagnostics_come_from_torch_and_loaded_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    def get_device_capability(_device_index: int) -> tuple[int, int]:
+        return (8, 6)
+
+    def get_device_name(_device_index: int) -> str:
+        return "NVIDIA GeForce RTX 3090"
+
+    def mem_get_info(_device_index: int) -> tuple[int, int]:
+        return (20_000_000_000, 25_769_803_776)
+
+    def memory_allocated(_device_index: int) -> int:
+        return 4_000_000_000
+
+    def memory_reserved(_device_index: int) -> int:
+        return 4_500_000_000
+
+    def device(_device_name: str) -> SimpleNamespace:
+        return SimpleNamespace(index=0)
+
     settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
     engine = QwenTorchEngine(settings, model_loader=lambda _: FakeTorchQwenModel())
     fake_cuda = SimpleNamespace(
         is_available=lambda: True,
         current_device=lambda: 0,
-        get_device_capability=lambda _: (8, 6),
-        get_device_name=lambda _: "NVIDIA GeForce RTX 3090",
-        mem_get_info=lambda _: (20_000_000_000, 25_769_803_776),
-        memory_allocated=lambda _: 4_000_000_000,
-        memory_reserved=lambda _: 4_500_000_000,
+        get_device_capability=get_device_capability,
+        get_device_name=get_device_name,
+        mem_get_info=mem_get_info,
+        memory_allocated=memory_allocated,
+        memory_reserved=memory_reserved,
     )
     fake_torch = SimpleNamespace(
         __version__="2.7.1+cu126",
         version=SimpleNamespace(cuda="12.6"),
         cuda=fake_cuda,
-        device=lambda _: SimpleNamespace(index=0),
+        device=device,
     )
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
 
