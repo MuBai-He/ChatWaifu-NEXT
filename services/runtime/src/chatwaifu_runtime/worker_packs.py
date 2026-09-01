@@ -608,6 +608,8 @@ def _is_python_interpreter(executable: Path) -> bool:
     if not name.startswith("python3"):
         return False
     version = name[len("python3") :]
+    if version.startswith("."):
+        version = version[1:]
     return bool(version) and all(part.isdigit() for part in version.split("."))
 
 

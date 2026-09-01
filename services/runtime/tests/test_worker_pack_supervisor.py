@@ -231,13 +231,16 @@ def test_worker_environment_is_minimal_and_supervisor_owns_endpoint_secrets(
     assert environment["HF_HUB_OFFLINE"] == "1"
 
 
+@pytest.mark.parametrize("interpreter_name", ["python.exe", "python3.exe", "python3.12.exe"])
 def test_python_worker_stays_immutable_and_discoverable_after_first_launch(
+    interpreter_name: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    executable_path = f"payload/python/{interpreter_name}"
     root = _install_test_pack(
         tmp_path / "data",
-        executable_path="payload/python/python.exe",
+        executable_path=executable_path,
         arguments=["-I", "-m", "test_worker.main"],
     )
     supervisor = _supervisor(tmp_path)
@@ -266,7 +269,7 @@ def test_python_worker_stays_immutable_and_discoverable_after_first_launch(
 
     assert commands == [
         [
-            str(root / "payload/python/python.exe"),
+            str(root / executable_path),
             "-B",
             "-I",
             "-m",
