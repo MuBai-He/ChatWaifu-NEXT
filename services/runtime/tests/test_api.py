@@ -1,19 +1,23 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
+import asyncio
 import json
 import os
 import shutil
 import sqlite3
+import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.events import GenericCoreEvent
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.main import create_app
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
@@ -454,6 +458,8 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     )
     assert final_cue["name"] == "idle"
     assert final_cue["priority"] == 90
+    assert int(str(avatar_events[-1]["sequence"])) < int(str(completed["sequence"]))
+    assert generation_events[-1]["event_type"] == "assistant.generation_completed"
     audio_event = next(
         item for item in generation_events if item["event_type"] == "assistant.audio_chunk_queued"
     )
@@ -1011,15 +1017,66 @@ def test_reset_rolls_back_all_truth_and_audio_when_one_delete_fails(
 
 def test_reset_event_is_live_and_keeps_the_session_cursor_monotonic(
     client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     http = cast(RuntimeHttpClient, client)
     session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
     session_id = str(session["session_id"])
-    _submit_and_wait(http, session_id, "跨窗口重置前的消息")
+    portal = client.portal
+    assert portal is not None
+    app = cast(FastAPI, client.app)
+    container = cast(RuntimeContainer, app.state.container)
+
+    async def create_completion_release() -> asyncio.Event:
+        return asyncio.Event()
+
+    completion_release = portal.call(create_completion_release)
+    completion_published = threading.Event()
+    original_publish = container.event_hub.publish
+
+    async def publish_with_completion_barrier(event: dict[str, object]) -> None:
+        await original_publish(event)
+        if event.get("event_type") == "assistant.generation_completed":
+            completion_published.set()
+            await completion_release.wait()
+
+    monkeypatch.setattr(container.event_hub, "publish", publish_with_completion_barrier)
+
+    accepted = cast(
+        dict[str, object],
+        http.post(
+            f"/v1/sessions/{session_id}/turns",
+            json={"text": "跨窗口重置前的消息"},
+        ).json(),
+    )
+    generation_id = str(accepted["generation_id"])
+    assert completion_published.wait(timeout=2)
+
+    async def cancel_at_completion_barrier() -> bool:
+        cancel_started = asyncio.Event()
+
+        async def cancel_generation() -> bool:
+            cancel_started.set()
+            return await container.conversation.cancel(UUID(session_id), "completion_barrier_test")
+
+        cancel_task = asyncio.create_task(cancel_generation())
+        await cancel_started.wait()
+        completion_release.set()
+        return await cancel_task
+
+    assert portal.call(cancel_at_completion_barrier) is False
     before = cast(
         list[dict[str, object]],
         cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
     )
+    generation_events = [
+        event for event in before if str(event.get("generation_id")) == generation_id
+    ]
+    assert generation_events[-1]["event_type"] == "assistant.generation_completed"
+    assert not {
+        "assistant.generation_cancelled",
+        "conversation.interrupted",
+    }.intersection(str(event["event_type"]) for event in generation_events)
     cursor = max(int(str(event["sequence"])) for event in before)
 
     with client.websocket_connect(

@@ -69,6 +69,7 @@ logger = logging.getLogger(__name__)
 class _ActiveGeneration:
     generation_id: UUID
     task: asyncio.Task[None]
+    completing: bool = False
 
 
 class ConversationService:
@@ -293,6 +294,12 @@ class ConversationService:
         active = self._active.get(session_id)
         if active is None or active.task.done():
             return False
+        if active.completing:
+            # Completion is the generation's publication barrier. Once its
+            # terminal sequence starts, interruption waits for that sequence
+            # instead of appending cancellation facts after the completed event.
+            await asyncio.shield(active.task)
+            return False
         active.task.cancel(reason)
         try:
             await active.task
@@ -397,7 +404,8 @@ class ConversationService:
     async def stop(self) -> None:
         active = tuple(self._active.values())
         for generation in active:
-            generation.task.cancel("runtime_stopping")
+            if not generation.completing:
+                generation.task.cancel("runtime_stopping")
         if active:
             await asyncio.gather(*(item.task for item in active), return_exceptions=True)
         self._active.clear()
@@ -653,6 +661,7 @@ class ConversationService:
         emit_avatar: bool,
         source_context: ConversationSourceContext | None,
     ) -> None:
+        self._begin_completion(accepted)
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
         await self._repository.complete_generation(
@@ -664,13 +673,13 @@ class ConversationService:
             occurred_at=now,
             set_session_idle=self._is_current(accepted),
         )
+        if emit_avatar:
+            await self._emit_avatar(accepted, "state", "idle", priority=90)
         await self._emit_generic(
             accepted,
             "assistant.generation_completed",
             {"text": output, "assistant_turn_id": str(assistant_turn_id)},
         )
-        if emit_avatar:
-            await self._emit_avatar(accepted, "state", "idle", priority=90)
 
     async def _cancelled(
         self,
@@ -783,6 +792,11 @@ class ConversationService:
     def _ensure_current(self, accepted: GenerationAccepted) -> None:
         if not self._is_current(accepted):
             raise asyncio.CancelledError("generation is no longer active")
+
+    def _begin_completion(self, accepted: GenerationAccepted) -> None:
+        self._ensure_current(accepted)
+        active = self._active[accepted.session_id]
+        active.completing = True
 
     def _is_current(self, accepted: GenerationAccepted) -> bool:
         active = self._active.get(accepted.session_id)
