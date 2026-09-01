@@ -221,6 +221,16 @@ fn get_runtime_status(state: State<'_, DesktopState>) -> Result<RuntimeStatus, S
 
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window(AVATAR_OVERLAY_LABEL) {
+                if let Err(error) = window.show() {
+                    eprintln!("desktop single-instance show avatar failed: {error}");
+                }
+                if let Err(error) = window.set_focus() {
+                    eprintln!("desktop single-instance focus avatar failed: {error}");
+                }
+            }
+        }))
         .manage(DesktopState::default())
         .setup(|app| {
             restore_preferences(app.handle())?;
