@@ -1,6 +1,7 @@
 """Runtime Skill permission, MCP plugin, timeout, cancellation, and lifecycle tests."""
 
 import json
+import os
 import sqlite3
 import sys
 import time
@@ -312,7 +313,8 @@ def test_persisted_stdio_mcp_host_discovers_and_routes_capabilities(
     listed = http.get("/v1/mcp/connections")
     assert "write-only-test-token" not in listed.text
     secret_path = runtime_settings.data_dir / "mcp-secrets.json"
-    assert secret_path.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert secret_path.stat().st_mode & 0o777 == 0o600
     assert http.delete(f"/v1/mcp/connections/{connection_id}").status_code == 200
 
 

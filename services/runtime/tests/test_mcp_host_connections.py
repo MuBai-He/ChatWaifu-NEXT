@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from collections.abc import Iterable
@@ -124,7 +125,8 @@ def test_secret_store_serializes_concurrent_read_modify_write(tmp_path: Path) ->
     assert {connection_id: store.get(connection_id) for connection_id, _ in entries} == {
         connection_id: token for connection_id, token in entries
     }
-    assert (tmp_path / "mcp-secrets.json").stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert (tmp_path / "mcp-secrets.json").stat().st_mode & 0o777 == 0o600
 
 
 @pytest.mark.skipif(
