@@ -2123,14 +2123,22 @@
 .vn-disclosure {
   position: absolute;
   z-index: 21;
+  display: grid;
+  gap: 1px;
   right: 6%;
-  bottom: 9px;
+  bottom: 6px;
   left: 6%;
   margin: 0;
   overflow: hidden;
-  color: rgb(255 245 251 / 26%);
-  font-size: 0.5rem;
+  color: rgb(255 245 251 / 52%);
+  font-size: 0.52rem;
+  line-height: 1.35;
   text-align: center;
+  text-shadow: 0 1px 3px rgb(24 10 22 / 56%);
+}
+
+.vn-disclosure span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

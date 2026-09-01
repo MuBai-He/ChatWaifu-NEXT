@@ -35,6 +35,7 @@ export function DesktopSettingsPage() {
   const context: SettingsRuntimeContext = {
     canvasRef: runtime.canvasRef,
     appearance: {
+      avatarManifest: runtime.avatarManifest,
       snapshot: runtime.snapshot,
       rendererKind: runtime.rendererKind,
       character: runtime.character,

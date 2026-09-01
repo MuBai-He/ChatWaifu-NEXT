@@ -11,7 +11,7 @@ export function connectionDetail(
   runtimeVersion?: string,
 ): string {
   if (connection === "connecting") {
-    return "正在校验并加载本地模型，首次启动可能需要几分钟";
+    return "正在启动 Runtime 与已启用的本地模型，首次加载可能需要几分钟";
   }
   if (connection === "connected" && runtimeVersion) {
     return `Runtime ${runtimeVersion}`;

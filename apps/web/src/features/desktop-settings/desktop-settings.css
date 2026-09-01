@@ -341,6 +341,43 @@
   line-height: 1.65;
 }
 
+.desktop-settings-avatar-attribution {
+  display: grid;
+  gap: 6px;
+  margin: 15px 0 0;
+  padding-top: 13px;
+  border-top: 1px solid rgb(119 80 112 / 11%);
+}
+
+.desktop-settings-avatar-attribution > div {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 68px minmax(0, 1fr);
+}
+
+.desktop-settings-avatar-attribution dt,
+.desktop-settings-avatar-attribution dd {
+  margin: 0;
+  font-size: 0.59rem;
+  line-height: 1.45;
+}
+
+.desktop-settings-avatar-attribution dt {
+  color: #9d6389;
+  font-weight: 600;
+}
+
+.desktop-settings-avatar-attribution dd {
+  color: var(--settings-muted);
+  overflow-wrap: anywhere;
+}
+
+.desktop-settings-avatar-attribution a {
+  color: #875176;
+  text-decoration-color: rgb(135 81 118 / 34%);
+  text-underline-offset: 2px;
+}
+
 .desktop-settings-preview-note,
 .desktop-settings-info,
 .desktop-settings-error {

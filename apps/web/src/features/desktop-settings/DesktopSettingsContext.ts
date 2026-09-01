@@ -7,7 +7,7 @@ export interface SettingsRuntimeContext {
   canvasRef: SettingsRuntimeState["canvasRef"];
   appearance: Pick<
     SettingsRuntimeState,
-    "snapshot" | "rendererKind" | "character"
+    "avatarManifest" | "snapshot" | "rendererKind" | "character"
   >;
   voice: Pick<
     SettingsRuntimeState,

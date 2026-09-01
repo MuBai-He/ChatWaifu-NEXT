@@ -68,6 +68,12 @@ Official sources:
 The demo can adapt a user-supplied `AYACHI NENE.7z` without committing or redistributing any
 character asset:
 
+- Model author: **涂抹一画**
+- Source: [“[Live2D模型免费分享] 拥有全服装的Live2D宁宁！”](https://www.bilibili.com/video/BV1MLgYzmEz9)
+
+The attribution identifies the supplied local model; it does not grant this repository commercial
+or secondary-distribution rights.
+
 ```bash
 uv run python tools/setup_ayachi_nene_model.py
 make build-live2d-bridge

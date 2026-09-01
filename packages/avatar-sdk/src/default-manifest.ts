@@ -31,9 +31,19 @@ export const AVATAR_LAB_MANIFEST: AvatarManifest = {
 
 export const LIVE2D_LAB_MANIFEST: AvatarManifest = {
   ...AVATAR_LAB_MANIFEST,
+  avatarId: "ayachi-nene-local",
+  displayName: "绫地宁宁 · 本地 Live2D",
   rendererKind: "live2d",
+  attribution: {
+    modelAuthor: "涂抹一画",
+    sourceLabel: "[Live2D模型免费分享] 拥有全服装的Live2D宁宁！",
+    sourceUrl: "https://www.bilibili.com/video/BV1MLgYzmEz9",
+    rightsNotice: "绫地宁宁与《サノバウィッチ》相关权利归 YUZUSOFT/JUNOS",
+    usageNotice: "仅限私人研究与本机验证，不属于可公开分发资产",
+  },
   capabilities: {
     ...AVATAR_LAB_MANIFEST.capabilities,
+    avatar_id: "ayachi-nene-local",
     renderer_kind: "live2d",
   },
   live2d: {

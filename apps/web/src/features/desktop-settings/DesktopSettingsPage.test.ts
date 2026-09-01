@@ -5,7 +5,9 @@ import { connectionDetail, connectionLabel } from "./desktopRuntimeStatus";
 describe("desktop Runtime status copy", () => {
   it("explains that local models are loading during a cold start", () => {
     expect(connectionLabel("connecting")).toBe("正在启动");
-    expect(connectionDetail("connecting")).toContain("首次启动可能需要几分钟");
+    expect(connectionDetail("connecting")).not.toContain("校验");
+    expect(connectionDetail("connecting")).toContain("正在启动 Runtime");
+    expect(connectionDetail("connecting")).toContain("首次加载可能需要几分钟");
   });
 
   it("shows the Runtime version only after connection", () => {

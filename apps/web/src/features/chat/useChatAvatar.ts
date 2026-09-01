@@ -24,19 +24,19 @@ export function useChatAvatar() {
   );
   const [rendererKind, setRendererKind] = useState<"live2d" | "fake">("live2d");
   const [avatarWarning, setAvatarWarning] = useState<string | null>(null);
+  const avatarManifest =
+    rendererKind === "live2d" ? LIVE2D_LAB_MANIFEST : AVATAR_LAB_MANIFEST;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let disposed = false;
     setSnapshot(null);
-    const manifest =
-      rendererKind === "live2d" ? LIVE2D_LAB_MANIFEST : AVATAR_LAB_MANIFEST;
     const renderer =
       rendererKind === "live2d"
         ? new Live2DAvatarRenderer(canvas)
         : new FakeAvatarRenderer(canvas);
-    const controller = new AvatarController(renderer, manifest);
+    const controller = new AvatarController(renderer, avatarManifest);
     controllerRef.current = controller;
     const unsubscribe = controller.subscribe(setSnapshot);
 
@@ -82,7 +82,7 @@ export function useChatAvatar() {
       controller.dispose();
       if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [rendererKind]);
+  }, [avatarManifest, rendererKind]);
 
   const applyCue = useCallback((cue: AvatarCue) => {
     controllerRef.current?.applyCue(cue);
@@ -150,6 +150,7 @@ export function useChatAvatar() {
 
   return {
     canvasRef,
+    avatarManifest,
     snapshot,
     rendererKind,
     avatarWarning,

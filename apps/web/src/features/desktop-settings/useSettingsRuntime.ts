@@ -148,6 +148,7 @@ export function useSettingsRuntime() {
 
   return {
     canvasRef: avatar.canvasRef,
+    avatarManifest: avatar.avatarManifest,
     snapshot: avatar.snapshot,
     rendererKind: avatar.rendererKind,
     health,

@@ -21,6 +21,7 @@ type ChatDemoPageProps = {
 export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const {
     canvasRef,
+    avatarManifest,
     snapshot,
     rendererKind,
     avatarWarning,
@@ -490,10 +491,18 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
           </form>
         </section>
 
-        <p className="vn-disclosure">
-          {character?.content_notice ??
-            "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
-        </p>
+        <div className="vn-disclosure">
+          <span>
+            {character?.content_notice ??
+              "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
+          </span>
+          {avatarManifest?.attribution ? (
+            <span>
+              Live2D 模型：{avatarManifest.avatarId} · 模型作者：
+              {avatarManifest.attribution.modelAuthor ?? "资产未提供"}
+            </span>
+          ) : null}
+        </div>
       </section>
     </main>
   );

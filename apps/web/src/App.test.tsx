@@ -1,3 +1,7 @@
+import {
+  AVATAR_LAB_MANIFEST,
+  LIVE2D_LAB_MANIFEST,
+} from "@chatwaifu/avatar-sdk";
 import { createRef } from "react";
 import {
   cleanup,
@@ -30,6 +34,7 @@ const nativeCore = vi.hoisted(() => ({
 
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
+  avatarManifest: AVATAR_LAB_MANIFEST,
   snapshot: null,
   rendererKind: "fake" as const,
   avatarWarning: null as string | null,
@@ -165,6 +170,7 @@ describe("ChatWaifu usable demo", () => {
     window.localStorage?.clear();
     window.sessionStorage?.clear();
     session.voiceState = "disconnected";
+    session.avatarManifest = AVATAR_LAB_MANIFEST;
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";
     session.voiceTransmitting = false;
@@ -225,6 +231,14 @@ describe("ChatWaifu usable demo", () => {
     if (!(sendButton instanceof HTMLButtonElement))
       throw new Error("expected send button");
     expect(sendButton.disabled).toBe(true);
+  });
+
+  it("shows the active Live2D model id and known author status", () => {
+    session.avatarManifest = LIVE2D_LAB_MANIFEST;
+    render(<CurrentProduct />);
+
+    expect(screen.getByText(/Live2D 模型：ayachi-nene-local/)).toBeTruthy();
+    expect(screen.getByText(/模型作者：涂抹一画/)).toBeTruthy();
   });
 
   it("renders the transparent desktop-pet surface on its dedicated route", () => {
