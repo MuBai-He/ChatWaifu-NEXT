@@ -342,6 +342,7 @@ class WorkerPackSupervisor:
         arguments = [
             _expand_placeholders(argument, replacements) for argument in entrypoint.arguments
         ]
+        arguments = _immutable_python_arguments(manifest, executable, arguments)
         log_stream, log_path, log_start_offset = self._open_log(manifest.pack_id)
         creation_flags = 0
         if os.name == "nt":
@@ -575,6 +576,39 @@ def _expand_placeholders(value: str, replacements: dict[str, str]) -> str:
     for placeholder, replacement in replacements.items():
         expanded = expanded.replace(placeholder, replacement)
     return expanded
+
+
+def _immutable_python_arguments(
+    manifest: WorkerPackManifest,
+    executable: Path,
+    arguments: list[str],
+) -> list[str]:
+    """Prevent Python Worker Packs from mutating their verified install tree.
+
+    Python's isolated mode (``-I``) implies ``-E``, so it ignores the
+    ``PYTHONDONTWRITEBYTECODE`` environment policy projected by the supervisor.
+    The command-line ``-B`` flag remains authoritative in isolated mode. Keep
+    this compatibility guard in Runtime as well as current pack builders so
+    already-issued, otherwise valid packs stay immutable across restarts.
+    """
+
+    if manifest.platform.python_abi is None or not _is_python_interpreter(executable):
+        return arguments
+    if "-B" in arguments:
+        return arguments
+    return ["-B", *arguments]
+
+
+def _is_python_interpreter(executable: Path) -> bool:
+    name = executable.name.casefold()
+    if name.endswith(".exe"):
+        name = name[:-4]
+    if name in {"python", "pythonw", "python3"}:
+        return True
+    if not name.startswith("python3"):
+        return False
+    version = name[len("python3") :]
+    return bool(version) and all(part.isdigit() for part in version.split("."))
 
 
 def _sha256_file(path: Path) -> str:

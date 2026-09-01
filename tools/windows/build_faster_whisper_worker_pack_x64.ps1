@@ -158,7 +158,7 @@ try {
             model = "faster-whisper-base"
             entrypoint = [ordered]@{
                 executable = "payload/python/python.exe"
-                arguments = @("-I", "-m", "chatwaifu_asr_worker.main")
+                arguments = @("-B", "-I", "-m", "chatwaifu_asr_worker.main")
                 working_directory = "."
                 environment = [ordered]@{
                     CHATWAIFU_STT_WORKER_WORKER_ID = "asr-faster-whisper-base-cpu-int8"

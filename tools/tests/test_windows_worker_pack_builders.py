@@ -40,6 +40,7 @@ def test_windows_builders_use_one_canonical_worker_pack_contract() -> None:
         assert "worker_pack_archive.py" not in script
         assert "Assert-WorkerPackPayloadX64" in script
         assert "Assert-WorkerPackSemanticVersion" in script
+        assert 'arguments = @("-B", "-I", "-m",' in script
         assert "CHATWAIFU_STT_WORKER_HOST" not in script
         assert "CHATWAIFU_STT_WORKER_PORT" not in script
         assert "CHATWAIFU_STT_WORKER_TOKEN" not in script

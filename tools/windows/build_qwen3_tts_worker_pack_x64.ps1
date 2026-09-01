@@ -203,7 +203,7 @@ try {
             model = "Qwen3-TTS-12Hz-0.6B-Nene"
             entrypoint = [ordered]@{
                 executable = "payload/python/python.exe"
-                arguments = @("-I", "-m", "chatwaifu_tts_neural_worker.main")
+                arguments = @("-B", "-I", "-m", "chatwaifu_tts_neural_worker.main")
                 working_directory = "."
                 environment = [ordered]@{
                     CHATWAIFU_NEURAL_TTS_WORKER_BACKEND = "qwen3_tts_torch"
