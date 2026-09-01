@@ -125,6 +125,73 @@ describe("PlaybackCoordinator", () => {
     instance.dispose();
   });
 
+  it("defers a mid-generation WebRTC handoff so queued WAV audio is not lost", async () => {
+    let activeGeneration = "generation-1";
+    const audios: FakeAudio[] = [];
+    const instance = new PlaybackCoordinator({
+      enabled: true,
+      isGenerationActive: (generationId) =>
+        generationId === activeGeneration,
+      sendReceipt: vi.fn().mockResolvedValue(undefined),
+      stopRemotePlayback: vi.fn(),
+      onSubtitle: vi.fn(),
+      onError: vi.fn(),
+      onLipSyncStart: vi.fn(),
+      onLipSyncStop: vi.fn(),
+      createAudio: () => {
+        const audio = new FakeAudio();
+        audios.push(audio);
+        return audio;
+      },
+    });
+    instance.startGeneration("generation-1");
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "第一句",
+      durationMs: 1_000,
+      url: "/audio/segment-1.wav",
+    });
+
+    instance.setRemoteConnected(true);
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-2",
+      segmentIndex: 1,
+      text: "连接麦克风后仍应播放的尾句",
+      durationMs: 1_000,
+      url: "/audio/segment-2.wav",
+    });
+
+    expect(instance.currentOwner).toBe("audio_element");
+    expect(audios[0].pause).not.toHaveBeenCalled();
+    audios[0].currentTime = 1;
+    audios[0].onended?.(new Event("ended"));
+    await Promise.resolve();
+    expect(audios).toHaveLength(2);
+    expect(audios[1].play).toHaveBeenCalledOnce();
+
+    activeGeneration = "generation-2";
+    instance.startGeneration("generation-2");
+    expect(audios[1].pause).toHaveBeenCalledOnce();
+    expect(instance.currentOwner).toBe("webrtc");
+
+    instance.registerQueuedAudio({
+      generationId: "generation-2",
+      streamId: "stream-2",
+      segmentId: "segment-3",
+      segmentIndex: 0,
+      text: "下一轮由 WebRTC 独占",
+      durationMs: 1_000,
+      url: "/audio/segment-3.wav",
+    });
+    expect(audios).toHaveLength(2);
+    instance.dispose();
+  });
+
   it("forwards the selected transport receipt exactly once", () => {
     const { instance, sendReceipt } = coordinator();
     instance.setRemoteConnected(true);

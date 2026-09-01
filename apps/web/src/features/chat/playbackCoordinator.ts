@@ -37,7 +37,9 @@ interface PlaybackCoordinatorOptions {
  */
 export class PlaybackCoordinator {
   private owner: PlaybackOwner = "idle";
+  private remoteTransportConnected = false;
   private remoteConnected = false;
+  private activeGenerationId: string | null = null;
   private audioPlayer: GenerationAudioPlayer | null = null;
   private pcmPlayer: PcmStreamPlayer | null = null;
   private wavGenerationId: string | null = null;
@@ -62,21 +64,31 @@ export class PlaybackCoordinator {
   }
 
   setRemoteConnected(connected: boolean): void {
-    this.remoteConnected = connected;
+    this.remoteTransportConnected = connected;
     if (connected) {
-      this.clearFallbackTimers();
-      this.clearPcmStallTimers();
-      this.audioPlayer?.stop();
-      this.pcmPlayer?.cancel();
-      this.wavGenerationId = null;
-      this.owner = "webrtc";
-    } else if (this.owner === "webrtc") {
+      // A newly-created WebRTC forwarder only observes Runtime events emitted
+      // after it subscribed. Switching an in-flight generation from the local
+      // queue would therefore discard audio that was already queued (and can
+      // also miss a later segment when the forwarder did not observe that
+      // generation's start event). Keep the current generation on its existing
+      // transport and hand ownership to WebRTC at the next generation boundary.
+      if (this.activeGenerationId === null) this.enableRemotePlayback();
+      return;
+    }
+    this.remoteConnected = false;
+    if (this.owner === "webrtc") {
       this.owner = "idle";
       this.options.onLipSyncStop();
     }
   }
 
   startGeneration(generationId: string): void {
+    if (
+      this.remoteTransportConnected &&
+      this.activeGenerationId !== generationId
+    )
+      this.enableRemotePlayback();
+    this.activeGenerationId = generationId;
     if (
       this.wavGenerationId !== null &&
       this.wavGenerationId !== generationId
@@ -195,6 +207,10 @@ export class PlaybackCoordinator {
     this.stalledSegments.clear();
     this.fallbackItems.clear();
     this.streamedSegments.clear();
+    if (!generationId || generationId === this.activeGenerationId) {
+      this.activeGenerationId = null;
+      if (this.remoteTransportConnected) this.enableRemotePlayback();
+    }
   }
 
   resetSubtitles(): void {
@@ -203,6 +219,8 @@ export class PlaybackCoordinator {
   }
 
   dispose(): void {
+    this.remoteTransportConnected = false;
+    this.remoteConnected = false;
     this.stop();
     this.audioPlayer?.dispose();
     this.audioPlayer = null;
@@ -214,6 +232,17 @@ export class PlaybackCoordinator {
     this.clearPcmStallTimers();
     this.stalledSegments.clear();
     this.reporter.dispose();
+  }
+
+  private enableRemotePlayback(): void {
+    if (!this.remoteTransportConnected || this.remoteConnected) return;
+    this.remoteConnected = true;
+    this.clearFallbackTimers();
+    this.clearPcmStallTimers();
+    this.audioPlayer?.stop();
+    this.pcmPlayer?.cancel();
+    this.wavGenerationId = null;
+    this.owner = "webrtc";
   }
 
   private getAudioPlayer(): GenerationAudioPlayer | null {
