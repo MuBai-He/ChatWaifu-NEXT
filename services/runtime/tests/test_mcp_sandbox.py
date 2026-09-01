@@ -1,5 +1,6 @@
 """OS sandbox policy tests for local MCP processes."""
 
+import json
 import shutil
 import socket
 import subprocess
@@ -99,7 +100,8 @@ def test_macos_plan_uses_seatbelt_and_denies_network(tmp_path: Path) -> None:
     assert plan.enforced is True
     assert plan.command[:2] == ("/usr/bin/sandbox-exec", "-p")
     assert "(deny network*)" in plan.command[2]
-    assert str(tmp_path) in plan.command[2]
+    expected_root = json.dumps(str(tmp_path), ensure_ascii=True)
+    assert f"(subpath {expected_root})" in plan.command[2]
 
 
 def test_linux_plan_uses_namespaces_without_binding_home(tmp_path: Path) -> None:
