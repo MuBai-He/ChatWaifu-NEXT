@@ -7,9 +7,11 @@ import json
 import os
 import platform
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import MutableMapping
@@ -59,6 +61,7 @@ class ManagedWorker:
     base_url: str
     token: str
     capabilities: SttWorkerCapabilities | TtsWorkerCapabilities
+    cache_root: Path | None = None
 
     @property
     def kind(self) -> WorkerKind:
@@ -90,6 +93,7 @@ class WorkerPackSupervisor:
         self._config_root = Path(environment["CHATWAIFU_CONFIG_DIR"]).resolve()
         self._pack_root = self._data_root / "worker-packs"
         self._log_root = self._data_root / "worker-logs"
+        self._cache_root = self._data_root / "worker-cache"
         self._platform_os = platform_os or _current_platform_os()
         self._architecture = architecture or _current_architecture()
         self._workers: list[ManagedWorker] = []
@@ -194,6 +198,9 @@ class WorkerPackSupervisor:
                     managed.log_stream.close()
                 except OSError as error:
                     errors.append(f"{managed.bootstrap_name} log close failed: {error}")
+                cache_error = self._remove_worker_cache(managed.cache_root)
+                if cache_error is not None:
+                    errors.append(f"{managed.bootstrap_name} cache cleanup failed: {cache_error}")
         self._workers.clear()
         for error in errors:
             print(
@@ -337,18 +344,25 @@ class WorkerPackSupervisor:
         working_directory = _resolve_pack_path(pack.root, entrypoint.working_directory)
         port = _free_loopback_port()
         token = secrets.token_urlsafe(32)
-        worker_environment = self._worker_environment(pack, port=port, token=token)
-        replacements = self._pack_placeholders(pack)
-        arguments = [
-            _expand_placeholders(argument, replacements) for argument in entrypoint.arguments
-        ]
-        arguments = _immutable_python_arguments(manifest, executable, arguments)
         log_stream, log_path, log_start_offset = self._open_log(manifest.pack_id)
         creation_flags = 0
         if os.name == "nt":
             creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         process: subprocess.Popen[bytes] | None = None
+        cache_root: Path | None = None
         try:
+            cache_root = self._create_worker_cache(pack)
+            worker_environment = self._worker_environment(
+                pack,
+                port=port,
+                token=token,
+                cache_root=cache_root,
+            )
+            replacements = self._pack_placeholders(pack)
+            arguments = [
+                _expand_placeholders(argument, replacements) for argument in entrypoint.arguments
+            ]
+            arguments = _immutable_python_arguments(manifest, executable, arguments)
             process = subprocess.Popen(
                 [str(executable), *arguments],
                 cwd=working_directory,
@@ -399,6 +413,13 @@ class WorkerPackSupervisor:
             except OSError:
                 pass
             log_stream.close()
+            cache_error = self._remove_worker_cache(cache_root)
+            if cache_error is not None:
+                print(
+                    f"Worker Pack launch cache cleanup warning: {cache_error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
             if (
                 isinstance(error, RuntimeError)
                 and not isinstance(error, _WorkerStartupCancelled)
@@ -415,6 +436,7 @@ class WorkerPackSupervisor:
             base_url=base_url,
             token=token,
             capabilities=capabilities,
+            cache_root=cache_root,
         )
 
     def _worker_environment(
@@ -423,6 +445,7 @@ class WorkerPackSupervisor:
         *,
         port: int,
         token: str,
+        cache_root: Path | None = None,
     ) -> dict[str, str]:
         allowed_host_keys = {
             "APPDATA",
@@ -455,6 +478,14 @@ class WorkerPackSupervisor:
         replacements = self._pack_placeholders(pack)
         for key, value in pack.manifest.worker.entrypoint.environment.items():
             result[key] = _expand_placeholders(value, replacements)
+        # Numba's on-disk cache is independent of CPython bytecode generation.
+        # Libraries such as librosa use ``jit(cache=True)`` and otherwise create
+        # ``__pycache__`` inside site-packages even with ``-B`` and
+        # PYTHONDONTWRITEBYTECODE. Keep that mutable executable cache outside the
+        # verified Worker Pack, isolate it per launch so stale native cache files
+        # are never trusted by a later process, and clean it when the worker stops.
+        if cache_root is not None:
+            result["NUMBA_CACHE_DIR"] = str(cache_root)
         worker = pack.manifest.worker
         if worker.kind == "stt":
             prefix = "CHATWAIFU_STT_WORKER_"
@@ -473,6 +504,38 @@ class WorkerPackSupervisor:
             }
         )
         return result
+
+    def _create_worker_cache(self, pack: InstalledWorkerPack) -> Path:
+        namespace = self._cache_root / pack.manifest.pack_id / pack.manifest.version
+        namespace.mkdir(parents=True, exist_ok=True, mode=0o700)
+        resolved_namespace = namespace.resolve()
+        if self._data_root not in resolved_namespace.parents:
+            raise RuntimeError("Worker cache directory escapes the configured data root")
+        if pack.root == resolved_namespace or pack.root in resolved_namespace.parents:
+            raise RuntimeError("Worker cache directory must remain outside the verified pack")
+        return Path(tempfile.mkdtemp(prefix="launch-", dir=resolved_namespace)).resolve()
+
+    def _remove_worker_cache(self, cache_root: Path | None) -> str | None:
+        if cache_root is None:
+            return None
+        try:
+            resolved = cache_root.resolve(strict=True)
+        except FileNotFoundError:
+            return None
+        except OSError as error:
+            return str(error)
+        if self._cache_root.resolve() not in resolved.parents:
+            return f"refusing to remove cache outside the managed root: {resolved}"
+        try:
+            shutil.rmtree(resolved)
+        except OSError as error:
+            return str(error)
+        for parent in (resolved.parent, resolved.parent.parent, self._cache_root):
+            try:
+                parent.rmdir()
+            except OSError:
+                pass
+        return None
 
     def _pack_placeholders(self, pack: InstalledWorkerPack) -> dict[str, str]:
         return {

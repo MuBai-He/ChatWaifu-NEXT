@@ -409,6 +409,14 @@ def test_smoke_pack_persists_structured_result_json(
         return installed
 
     monkeypatch.setattr(smoke, "install_archive", install_archive)
+    verified_roots: list[Path] = []
+
+    def load_installed_pack(path: Path, *, verify_payload: bool = False) -> InstalledWorkerPack:
+        assert verify_payload is True
+        verified_roots.append(path)
+        return installed
+
+    monkeypatch.setattr(smoke, "load_installed_pack", load_installed_pack)
 
     def smoke_extracted(*args: object, **kwargs: object) -> dict[str, object]:
         del args, kwargs
@@ -468,6 +476,7 @@ def test_smoke_pack_persists_structured_result_json(
     }
     assert persisted["artifacts"]["result_json"] == smoke.RESULT_FILE_NAME
     assert len(temporary_roots) == 1
+    assert verified_roots == [installed.root]
     assert not temporary_roots[0].exists()
 
 
@@ -500,6 +509,16 @@ def test_smoke_pack_propagates_temporary_tree_cleanup_failure(
 
     monkeypatch.setattr(smoke, "install_archive", install_archive)
     monkeypatch.setattr(smoke, "_smoke_extracted", smoke_extracted)
+
+    def load_installed_pack(
+        _path: Path,
+        *,
+        verify_payload: bool = False,
+    ) -> InstalledWorkerPack:
+        del verify_payload
+        return installed
+
+    monkeypatch.setattr(smoke, "load_installed_pack", load_installed_pack)
 
     def fail_cleanup(_path: Path, *, missing_ok: bool = False) -> None:
         assert missing_ok is True
