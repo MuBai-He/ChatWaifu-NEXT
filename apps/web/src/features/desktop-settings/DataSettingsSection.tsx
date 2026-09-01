@@ -9,6 +9,10 @@ import {
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { DataClearConfirmationDialog } from "./DataClearConfirmationDialog";
+import {
+  installWorkerPackArchive,
+  selectWorkerPackArchive,
+} from "./desktopWorkerPacks";
 import { McpConnectionsPanel } from "./McpConnectionsPanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsGroup, SettingsStatus } from "./SettingsPrimitives";
@@ -22,7 +26,33 @@ export function DataSettingsSection({
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [integrity, setIntegrity] =
     useState<WorkerPackIntegrityResponse | null>(null);
-  const { busy, notice, run } = useSettingsOperation<"integrity">();
+  const { busy, notice, run, setNotice } = useSettingsOperation<
+    "install" | "integrity"
+  >();
+  const desktopHost = context.desktop?.desktopHost ?? false;
+  const workerPackInstallSupported =
+    desktopHost && /Windows/i.test(window.navigator.userAgent);
+
+  const installLocalPack = async () => {
+    let archive: string | null;
+    try {
+      archive = await selectWorkerPackArchive();
+    } catch (error: unknown) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "无法选择 Worker Pack",
+      });
+      return;
+    }
+    if (!archive) return;
+    await run("install", () => installWorkerPackArchive(archive), {
+      pending:
+        "正在完整校验并安装 Worker Pack；大型模型可能需要几分钟，请保持应用运行…",
+      success: (result) =>
+        `已安装并启用 ${result.pack_id}@${result.version}；本地服务正在重启。`,
+      error: "Worker Pack 安装失败",
+    });
+  };
 
   const verifyIntegrity = async () => {
     await run(
@@ -81,12 +111,33 @@ export function DataSettingsSection({
       </div>
 
       <SettingsGroup
-        title="Worker Pack 完整性"
-        description="仅在你主动操作时执行完整文件哈希；日常启动只做快速安全检查"
+        title="Worker Pack 管理"
+        description="本地语音与识别包是可选项，可在首次配置时跳过，之后随时安装"
       >
+        <div className="worker-pack-action-row">
+          <div>
+            <strong>从本机安装 .cwpack</strong>
+            <small>
+              选择单独下载的模型包；应用会完整校验、按用户安装并重启本地服务。
+            </small>
+          </div>
+          <button
+            type="button"
+            disabled={!workerPackInstallSupported || busy !== null}
+            title={
+              workerPackInstallSupported
+                ? undefined
+                : "当前请在 ChatWaifu Windows 安装版中使用"
+            }
+            onClick={() => void installLocalPack()}
+          >
+            <ProductIcon name="plus" />
+            {busy === "install" ? "正在安装…" : "选择并安装"}
+          </button>
+        </div>
         <div className="desktop-settings-danger-row">
           <div>
-            <strong>校验本地语音与语音识别包</strong>
+            <strong>完整校验本地语音与语音识别包</strong>
             <small>
               检查清单、SHA-256、额外文件和 Windows PE
               架构。校验期间仍可使用设置页。

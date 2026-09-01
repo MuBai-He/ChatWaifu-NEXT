@@ -562,7 +562,8 @@
 .desktop-settings-toggle-row,
 .desktop-settings-select-row,
 .desktop-settings-provider,
-.desktop-settings-danger-row {
+.desktop-settings-danger-row,
+.worker-pack-action-row {
   display: flex;
   min-height: 66px;
   gap: 20px;
@@ -700,14 +701,40 @@
 
 .desktop-settings-toggle-row:last-child,
 .desktop-settings-provider:last-child,
-.desktop-settings-danger-row:last-child {
+.desktop-settings-danger-row:last-child,
+.worker-pack-action-row:last-child {
   border-bottom: 0;
+}
+
+.worker-pack-action-row button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgb(119 77 111 / 20%);
+  border-radius: 8px;
+  color: #6d4468;
+  background: rgb(255 255 255 / 80%);
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.worker-pack-action-row button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.worker-pack-action-row button svg {
+  width: 14px;
+  height: 14px;
 }
 
 .desktop-settings-toggle-row > span,
 .desktop-settings-select-row > div,
 .desktop-settings-provider > div,
-.desktop-settings-danger-row > div {
+.desktop-settings-danger-row > div,
+.worker-pack-action-row > div {
   display: grid;
   min-width: 0;
   gap: 4px;
@@ -716,7 +743,8 @@
 .desktop-settings-toggle-row strong,
 .desktop-settings-select-row strong,
 .desktop-settings-provider strong,
-.desktop-settings-danger-row strong {
+.desktop-settings-danger-row strong,
+.worker-pack-action-row strong {
   font-size: 0.73rem;
   font-weight: 600;
 }
@@ -724,7 +752,8 @@
 .desktop-settings-toggle-row small,
 .desktop-settings-select-row small,
 .desktop-settings-provider small,
-.desktop-settings-danger-row small {
+.desktop-settings-danger-row small,
+.worker-pack-action-row small {
   overflow: hidden;
   color: var(--settings-muted);
   font-size: 0.63rem;
@@ -1345,7 +1374,7 @@
 
 .desktop-onboarding-body li {
   display: grid;
-  align-items: start;
+  align-items: center;
   padding: 11px 12px;
   border: 1px solid rgb(119 80 112 / 9%);
   border-radius: 11px;

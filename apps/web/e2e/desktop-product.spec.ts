@@ -47,6 +47,34 @@ test("desktop settings is an app-like control surface without chat ownership", a
     0,
   );
 
+  await page.getByRole("button", { name: /新手引导/ }).click();
+  const onboardingItem = page.locator(".desktop-onboarding-body li").first();
+  await expect(onboardingItem).toBeVisible();
+  const onboardingAlignment = await page.evaluate<{
+    alignItems: string;
+    iconOffset: number;
+    textOffset: number;
+  }>(`(() => {
+    const item = document.querySelector(".desktop-onboarding-body li");
+    if (!item) throw new Error("onboarding row is missing");
+    const icon = item.querySelector("svg");
+    const text = item.querySelector("span");
+    if (!icon || !text) throw new Error("onboarding row content is missing");
+    const rowRect = item.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const textRect = text.getBoundingClientRect();
+    const center = (rect) => rect.top + rect.height / 2;
+    return {
+      alignItems: getComputedStyle(item).alignItems,
+      iconOffset: Math.abs(center(iconRect) - center(rowRect)),
+      textOffset: Math.abs(center(textRect) - center(rowRect)),
+    };
+  })()`);
+  expect(onboardingAlignment.alignItems).toBe("center");
+  expect(onboardingAlignment.iconOffset).toBeLessThan(1);
+  expect(onboardingAlignment.textOffset).toBeLessThan(1);
+  await page.getByRole("button", { name: "稍后继续新手引导" }).click();
+
   const subtitles = page.getByRole("switch", { name: "显示字幕" });
   await expect(subtitles).toBeEnabled();
   await subtitles.click();

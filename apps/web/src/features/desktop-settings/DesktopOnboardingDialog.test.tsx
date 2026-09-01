@@ -21,6 +21,7 @@ describe("desktop onboarding dialog", () => {
       screen.getByRole("heading", { name: "欢迎来到 ChatWaifu NEXT" }),
     ).toBeTruthy();
     expect(screen.getByText(/不包含 CUDA、PyTorch 或大型模型/)).toBeTruthy();
+    expect(screen.getByText(/现在可跳过，以后在“数据”页随时安装/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "下一步" }));
     expect(

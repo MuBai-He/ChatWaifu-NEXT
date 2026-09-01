@@ -1,6 +1,7 @@
 use crate::runtime_health::{
     RuntimeBootstrap, RuntimeLifecycleState, RuntimeStatus, parse_bootstrap_line,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     ffi::{OsStr, OsString},
     fs::{self, OpenOptions},
@@ -37,6 +38,17 @@ struct DesktopUserRoots {
     config: PathBuf,
     data: PathBuf,
     logs: PathBuf,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+pub struct WorkerPackInstallResult {
+    pub action: String,
+    pub pack_id: String,
+    pub version: String,
+    pub kind: String,
+    pub path: PathBuf,
+    pub config_path: PathBuf,
+    pub restart_required: bool,
 }
 
 pub fn runtime_supervisor_exit_code() -> Option<i32> {
@@ -86,6 +98,7 @@ enum SupervisorCommand {
 pub struct RuntimeHost {
     control: Mutex<Option<Sender<SupervisorCommand>>>,
     join: Mutex<Option<JoinHandle<()>>>,
+    maintenance: Mutex<()>,
     status: Arc<Mutex<RuntimeStatus>>,
 }
 
@@ -143,6 +156,13 @@ impl RuntimeHost {
     }
 
     pub fn shutdown_and_wait(&self) {
+        let Ok(_maintenance) = self.maintenance.lock() else {
+            return;
+        };
+        self.shutdown_and_wait_locked();
+    }
+
+    fn shutdown_and_wait_locked(&self) {
         let _ = self.send(SupervisorCommand::Shutdown);
         let join = self.join.lock().ok().and_then(|mut value| value.take());
         if let Some(join) = join {
@@ -150,6 +170,27 @@ impl RuntimeHost {
         }
         if let Ok(mut control) = self.control.lock() {
             *control = None;
+        }
+    }
+
+    pub fn install_worker_pack(
+        &self,
+        app: AppHandle,
+        archive: PathBuf,
+    ) -> Result<WorkerPackInstallResult, String> {
+        let _maintenance = lock(&self.maintenance, "Worker Pack maintenance")?;
+        self.shutdown_and_wait_locked();
+        let install = install_worker_pack_archive(&app, &archive);
+        let restart = self.ensure_started(app);
+        match (install, restart) {
+            (Ok(installed), Ok(_)) => Ok(installed),
+            (Err(error), Ok(_)) => Err(error),
+            (Ok(_), Err(restart_error)) => Err(format!(
+                "Worker Pack 已安装，但本地服务重启失败：{restart_error}"
+            )),
+            (Err(error), Err(restart_error)) => {
+                Err(format!("{error}；本地服务恢复失败：{restart_error}"))
+            }
         }
     }
 
@@ -162,6 +203,76 @@ impl RuntimeHost {
             .send(command)
             .map_err(|_| "Runtime supervisor is unavailable".to_owned())
     }
+}
+
+#[cfg(target_os = "windows")]
+fn install_worker_pack_archive(
+    app: &AppHandle,
+    archive: &Path,
+) -> Result<WorkerPackInstallResult, String> {
+    let archive = archive
+        .canonicalize()
+        .map_err(|error| format!("无法读取 Worker Pack：{error}"))?;
+    if !archive.is_file()
+        || archive
+            .extension()
+            .is_none_or(|extension| !extension.eq_ignore_ascii_case("cwpack"))
+    {
+        return Err("请选择一个现有的 .cwpack 文件".to_owned());
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        let _ = app;
+        Err("开发模式不从设置页安装 Worker Pack；请使用已安装的 Windows 版本".to_owned())
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        use std::os::windows::process::CommandExt;
+
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("无法定位打包 Runtime：{error}"))?;
+        let component_root = packaged_component_root_for_process(&resource_dir)?;
+        let runtime = packaged_runtime_executable(&component_root);
+        if !runtime.is_file() {
+            return Err(format!("打包 Runtime 不存在：{}", runtime.display()));
+        }
+        let user_roots = desktop_user_roots(app)?;
+        let output = Command::new(runtime)
+            .arg("--worker-pack")
+            .arg("install")
+            .arg(&archive)
+            .env("CHATWAIFU_CONFIG_DIR", user_roots.config.join("runtime"))
+            .env("CHATWAIFU_DATA_DIR", user_roots.data.join("runtime"))
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map_err(|error| format!("无法启动 Worker Pack 安装器：{error}"))?;
+        if !output.status.success() {
+            let detail = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            return Err(if detail.is_empty() {
+                format!("Worker Pack 安装失败：{}", output.status)
+            } else {
+                format!("Worker Pack 安装失败：{detail}")
+            });
+        }
+        serde_json::from_slice(&output.stdout)
+            .map_err(|error| format!("Worker Pack 安装结果无效：{error}"))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn install_worker_pack_archive(
+    _app: &AppHandle,
+    _archive: &Path,
+) -> Result<WorkerPackInstallResult, String> {
+    Err("当前设置入口仅支持 Windows Worker Pack".to_owned())
 }
 
 fn should_request_start(state: &RuntimeLifecycleState) -> bool {
@@ -1070,16 +1181,16 @@ fn validated_physical_image_candidate(
     if let Some((path_package_family, mapped)) =
         strict_localcache_physical_image_mapping(image, physical_local_app_data)
     {
-        // GetCurrentPackageFamilyName may report NO_PACKAGE for these inherited
-        // children. Keep this mapping bounded by the OS-provided user root, one
-        // package-family component, an existing package directory, and an
-        // existing same-relative-path image. Never accept LocalCache itself as
-        // the physical fallback when one of these checks fails.
-        if !windows_physical_path_is_directory(
-            &physical_local_app_data
-                .join("Packages")
-                .join(&path_package_family),
-        ) || !windows_physical_path_is_file(&mapped)
+        // The path came from QueryFullProcessImageNameW, not user input. Keep
+        // the rewrite bounded by the OS-provided user root, one syntactically
+        // valid package-family component, and an existing same-relative-path
+        // image. Do not probe LocalAppData\Packages here: inherited package
+        // redirection can itself hide that physical directory from the child,
+        // which made a valid NSIS install enter a permanent restart circuit
+        // when launched by Codex. Never accept LocalCache itself as the
+        // physical fallback when the mapped image check fails.
+        if !valid_package_family_component(&path_package_family)
+            || !windows_physical_path_is_file(&mapped)
         {
             return None;
         }
@@ -1134,6 +1245,16 @@ fn strict_localcache_physical_image_mapping(
         return None;
     }
     Some((path_package_family, physical_local_app_data.join(payload)))
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn valid_package_family_component(value: &OsStr) -> bool {
+    let value = value.to_string_lossy();
+    !value.is_empty()
+        && value.len() <= 255
+        && value
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || ".-_".contains(character))
 }
 
 #[cfg(target_os = "windows")]
@@ -1257,13 +1378,14 @@ mod tests {
     use super::{
         MAX_AUTOMATIC_RESTARTS, RUNTIME_SERVER_STARTUP_BUDGET_SECONDS,
         STARTUP_SUPERVISOR_GRACE_SECONDS, STARTUP_TIMEOUT, WORKER_PACK_STARTUP_BUDGET_SECONDS,
-        adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
+        WorkerPackInstallResult, adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
         packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
         select_packaged_component_root, should_request_start,
         strict_localcache_physical_image_candidate, user_roots_from_known_folders,
+        valid_package_family_component,
     };
     use crate::runtime_health::RuntimeLifecycleState;
-    use std::ffi::OsString;
+    use std::ffi::{OsStr, OsString};
     use std::path::Path;
     use std::time::Duration;
 
@@ -1428,6 +1550,42 @@ mod tests {
                 "unexpected mapping for {image}"
             );
         }
+    }
+
+    #[test]
+    fn localcache_mapping_accepts_only_a_bounded_package_family_component() {
+        assert!(valid_package_family_component(OsStr::new(
+            "OpenAI.Codex_2p2nqsd0c76g0"
+        )));
+        for invalid in ["", "OpenAI Codex", "OpenAI/Codex", "..\\OpenAI.Codex"] {
+            assert!(
+                !valid_package_family_component(OsStr::new(invalid)),
+                "unexpected valid package family: {invalid}"
+            );
+        }
+        assert!(!valid_package_family_component(OsStr::new(
+            &"a".repeat(256)
+        )));
+    }
+
+    #[test]
+    fn worker_pack_install_result_matches_the_frozen_runtime_contract() {
+        let result: WorkerPackInstallResult = serde_json::from_str(
+            r#"{
+                "action": "installed_and_activated",
+                "pack_id": "chatwaifu-faster-whisper-base-cpu-int8",
+                "version": "0.1.0",
+                "kind": "stt",
+                "path": "C:\\packs\\whisper\\0.1.0",
+                "config_path": "C:\\config\\worker-packs.json",
+                "restart_required": true
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(result.action, "installed_and_activated");
+        assert_eq!(result.kind, "stt");
+        assert!(result.restart_required);
     }
 
     #[test]

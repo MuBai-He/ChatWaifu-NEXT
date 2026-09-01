@@ -18,7 +18,7 @@ use tauri::{
 };
 
 use runtime_health::RuntimeStatus;
-use sidecar::RuntimeHost;
+use sidecar::{RuntimeHost, WorkerPackInstallResult};
 
 pub use sidecar::runtime_supervisor_exit_code;
 #[cfg(target_os = "windows")]
@@ -215,12 +215,29 @@ fn restart_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, Stri
 }
 
 #[tauri::command]
+async fn install_worker_pack(
+    app: AppHandle,
+    archive_path: PathBuf,
+) -> Result<WorkerPackInstallResult, String> {
+    let worker_app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        worker_app
+            .state::<DesktopState>()
+            .runtime
+            .install_worker_pack(worker_app.clone(), archive_path)
+    })
+    .await
+    .map_err(|error| format!("Worker Pack 安装任务失败：{error}"))?
+}
+
+#[tauri::command]
 fn get_runtime_status(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
     state.runtime.status()
 }
 
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window(AVATAR_OVERLAY_LABEL) {
                 if let Err(error) = window.show() {
@@ -254,6 +271,7 @@ pub fn run() {
             start_runtime,
             stop_runtime,
             restart_runtime,
+            install_worker_pack,
             get_runtime_status,
         ])
         .build(tauri::generate_context!())

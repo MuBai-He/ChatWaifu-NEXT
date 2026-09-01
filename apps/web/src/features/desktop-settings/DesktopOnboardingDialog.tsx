@@ -26,7 +26,7 @@ const steps: OnboardingStep[] = [
     icon: "pet",
     points: [
       "基础安装程序包含桌面端和本地 Runtime，不包含 CUDA、PyTorch 或大型模型。",
-      "本地 TTS / Whisper 通过独立 .cwpack 安装；重装应用会保留这些用户数据。",
+      "本地 TTS / Whisper 通过独立 .cwpack 安装；现在可跳过，以后在“数据”页随时安装。",
       "你可以混用云端 API 与本地 Worker Pack，不需要一次配置所有能力。",
     ],
   },
