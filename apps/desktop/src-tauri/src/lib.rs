@@ -359,6 +359,9 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
     if window.label() != AVATAR_OVERLAY_LABEL {
         return;
     }
+    if !avatar_window_event_persists_preferences(event) {
+        return;
+    }
 
     let state = window.state::<DesktopState>();
     let update = match event {
@@ -370,10 +373,7 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
             preferences.overlay_width = Some(size.width);
             preferences.overlay_height = Some(size.height);
         }),
-        WindowEvent::Destroyed => update_preferences(&state, |preferences| {
-            preferences.overlay_visible = false;
-        }),
-        _ => return,
+        _ => unreachable!("filtered avatar window event changed before persistence"),
     };
     match update {
         Ok(preferences) => {
@@ -383,6 +383,10 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
         }
         Err(error) => eprintln!("desktop preference update failed: {error}"),
     }
+}
+
+fn avatar_window_event_persists_preferences(event: &WindowEvent) -> bool {
+    matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_))
 }
 
 fn restore_preferences(app: &AppHandle) -> tauri::Result<()> {
@@ -588,12 +592,13 @@ fn window_error(error: tauri::Error) -> String {
 mod tests {
     use super::{
         APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
-        HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost,
-        set_avatar_overlay_always_on_top, set_avatar_overlay_click_through,
-        set_avatar_overlay_interaction_region_active, set_avatar_overlay_visible,
-        should_ignore_cursor_events, show_control_center,
+        HOST_ROLE, NATIVE_SURFACE_QUERY, avatar_window_event_persists_preferences,
+        effective_overlay_topmost, set_avatar_overlay_always_on_top,
+        set_avatar_overlay_click_through, set_avatar_overlay_interaction_region_active,
+        set_avatar_overlay_visible, should_ignore_cursor_events, show_control_center,
     };
     use std::future::Future;
+    use tauri::{PhysicalPosition, PhysicalSize, WindowEvent};
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
@@ -661,6 +666,19 @@ mod tests {
     fn older_preference_files_receive_safe_defaults() {
         let preferences: DesktopPreferences = serde_json::from_str("{}").unwrap();
         assert_eq!(preferences, DesktopPreferences::default());
+    }
+
+    #[test]
+    fn application_exit_does_not_persist_the_avatar_as_hidden() {
+        assert!(!avatar_window_event_persists_preferences(
+            &WindowEvent::Destroyed
+        ));
+        assert!(avatar_window_event_persists_preferences(
+            &WindowEvent::Moved(PhysicalPosition::new(40, 60))
+        ));
+        assert!(avatar_window_event_persists_preferences(
+            &WindowEvent::Resized(PhysicalSize::new(430, 650))
+        ));
     }
 
     #[test]
