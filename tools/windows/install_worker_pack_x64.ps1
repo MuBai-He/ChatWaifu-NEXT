@@ -21,12 +21,11 @@ $ErrorActionPreference = "Stop"
 if ($env:OS -ne "Windows_NT") {
     throw "Worker Packs can only be installed into the Windows desktop product on Windows."
 }
-if (-not $env:APPDATA -or -not $env:LOCALAPPDATA) {
-    throw "APPDATA and LOCALAPPDATA are required to resolve the Tauri per-user Runtime roots."
-}
-
-$RuntimeConfigRoot = Join-Path (Join-Path $env:APPDATA $AppIdentifier) "runtime"
-$RuntimeDataRoot = Join-Path (Join-Path $env:LOCALAPPDATA $AppIdentifier) "runtime"
+$RootHelper = Join-Path $PSScriptRoot "worker_pack_install_roots.ps1"
+. $RootHelper
+$UserRoots = Get-WorkerPackInstallUserRoots -AppIdentifier $AppIdentifier
+$RuntimeConfigRoot = $UserRoots.Config
+$RuntimeDataRoot = $UserRoots.Data
 
 $ResolvedArchive = (Resolve-Path -LiteralPath $ArchivePath).Path
 if ([System.IO.Path]::GetExtension($ResolvedArchive) -ine ".cwpack") {

@@ -27,9 +27,7 @@ def test_windows_builders_use_one_canonical_worker_pack_contract() -> None:
         assert 'Join-Path $RepoRoot "tools\\worker_packs.py"' in script
         assert '$WorkerPackTool, "build"' in script
         assert '$WorkerPackTool, "verify"' in script
-        assert script.count('"--break-system-packages"') == script.count(
-            '"pip", "install"'
-        )
+        assert script.count('"--break-system-packages"') == script.count('"pip", "install"')
         assert "Remove-WorkerPackPackagingTools" in script
         last_install = script.rfind('"pip", "install"')
         strip_runtime = script.index("Remove-WorkerPackPackagingTools")
@@ -120,16 +118,22 @@ def test_installed_pack_helper_uses_frozen_runtime_and_checks_x64() -> None:
 
 def test_installed_pack_helper_uses_tauri_user_roots_and_restores_environment() -> None:
     installer = _script("install_worker_pack_x64.ps1")
+    roots = _script("worker_pack_install_roots.ps1")
 
     assert '[string]$AppIdentifier = "local.chatwaifu.next"' in installer
-    assert (
-        '$RuntimeConfigRoot = Join-Path (Join-Path $env:APPDATA $AppIdentifier) "runtime"'
-        in installer
-    )
-    assert (
-        '$RuntimeDataRoot = Join-Path (Join-Path $env:LOCALAPPDATA $AppIdentifier) "runtime"'
-        in installer
-    )
+    assert '"worker_pack_install_roots.ps1"' in installer
+    assert "Get-WorkerPackInstallUserRoots -AppIdentifier $AppIdentifier" in installer
+    assert '"f1b32785-6fba-4fcf-9d55-7b8e7f157091"' in roots
+    assert '"3eb685db-65f9-4cf6-a03a-e3ef65729f3d"' in roots
+    assert "KfFlagNoPackageRedirection = 0x00010000" in roots
+    assert "GetFinalPathNameByHandle" in roots
+    assert "Assert-WorkerPackInstallUnredirectedRoot" in roots
+    assert '-Label "RoamingAppData"' in roots
+    assert '-Label "LocalAppData"' in roots
+    assert "junction, symlink, or reparse point" in roots
+    assert "standalone PowerShell or Windows Terminal window" in roots
+    assert "$env:APPDATA" not in installer
+    assert "$env:LOCALAPPDATA" not in installer
     assert '"CHATWAIFU_CONFIG_DIR",\n        $RuntimeConfigRoot' in installer
     assert '"CHATWAIFU_DATA_DIR",\n        $RuntimeDataRoot' in installer
     assert "try {" in installer
@@ -168,7 +172,12 @@ try {
 } catch {
     $FailureMessage = $_.Exception.Message
 }
-if ($FailureMessage -notlike "Worker Pack verification failed*") {
+if (
+    $FailureMessage -notlike "Worker Pack verification failed*" -and
+    $FailureMessage -notlike (
+        "Worker Pack installation stopped before verification or activation*"
+    )
+) {
     throw "The helper did not reach the expected frozen Runtime failure: $FailureMessage"
 }
 if ($env:CHATWAIFU_CONFIG_DIR -cne "sentinel-config") {
@@ -200,6 +209,116 @@ if ($env:CHATWAIFU_DATA_DIR -cne "sentinel-data") {
     assert "environment-restored" in completed.stdout
 
 
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows path handles")
+def test_worker_pack_install_root_probe_fails_closed_and_cleans_up(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "physical-roaming"
+    root.mkdir()
+    redirected = tmp_path / "Packages/Example.Package/LocalCache/Roaming"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_ROOT_HELPER": str(WINDOWS_TOOLS / "worker_pack_install_roots.ps1"),
+            "CHATWAIFU_TEST_PHYSICAL_ROOT": str(root),
+            "CHATWAIFU_TEST_REDIRECTED": str(redirected),
+        }
+    )
+    command = r"""
+$ErrorActionPreference = "Stop"
+. $env:CHATWAIFU_TEST_ROOT_HELPER
+$FailureMessage = $null
+try {
+    Assert-WorkerPackInstallUnredirectedRoot `
+        -Root $env:CHATWAIFU_TEST_PHYSICAL_ROOT `
+        -Label "RoamingAppData" `
+        -FinalPathResolver {
+            param($Stream)
+            Join-Path $env:CHATWAIFU_TEST_REDIRECTED ([IO.Path]::GetFileName($Stream.Name))
+        }
+} catch {
+    $FailureMessage = $_.Exception.Message
+}
+if ($FailureMessage -notlike (
+    "Worker Pack installation stopped before verification or activation*"
+)) {
+    throw "Redirected probe did not fail closed: $FailureMessage"
+}
+if ($FailureMessage -notlike "*standalone PowerShell or Windows Terminal window*") {
+    throw "Redirected probe omitted the standalone-shell recovery instruction."
+}
+$Leftovers = @(Get-ChildItem -LiteralPath $env:CHATWAIFU_TEST_PHYSICAL_ROOT -Force)
+if ($Leftovers.Count -ne 0) {
+    throw "Probe cleanup left files behind: $($Leftovers.FullName -join ', ')"
+}
+"redirect-rejected-and-cleaned"
+"""
+
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "redirect-rejected-and-cleaned" in completed.stdout
+    assert list(root.iterdir()) == []
+
+
+@pytest.mark.skipif(os.name != "nt", reason="requires Windows junctions")
+def test_worker_pack_install_root_rejects_reparse_path(tmp_path: Path) -> None:
+    target = tmp_path / "physical-root"
+    target.mkdir()
+    junction = tmp_path / "redirected-root"
+    created = subprocess.run(
+        ["cmd.exe", "/d", "/c", "mklink", "/J", str(junction), str(target)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CHATWAIFU_TEST_ROOT_HELPER": str(WINDOWS_TOOLS / "worker_pack_install_roots.ps1"),
+            "CHATWAIFU_TEST_REPARSE_ROOT": str(junction),
+        }
+    )
+    try:
+        completed = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                ". $env:CHATWAIFU_TEST_ROOT_HELPER; "
+                "Assert-WorkerPackInstallUnredirectedRoot "
+                "-Root $env:CHATWAIFU_TEST_REPARSE_ROOT -Label LocalAppData",
+            ],
+            check=False,
+            capture_output=True,
+            env=environment,
+            text=True,
+        )
+        assert completed.returncode != 0
+        assert "junction, symlink, or reparse point" in (completed.stdout + completed.stderr)
+        assert list(target.iterdir()) == []
+    finally:
+        junction.rmdir()
+
+
 @pytest.mark.skipif(os.name != "nt", reason="requires Windows PowerShell")
 def test_worker_pack_builder_removes_all_pack_only_launchers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -226,10 +345,7 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     (pip_package / "_vendor/distlib/t32.exe").write_bytes(b"not-a-runtime-binary")
     (pip_dist_info / "METADATA").write_text("Name: pip\n", encoding="utf-8")
     (runtime_dist_info / "METADATA").write_text(
-        "Metadata-Version: 2.1\n"
-        "Name: runtime-dependency\n"
-        "Version: 1.2.3\n"
-        "License: MIT\n",
+        "Metadata-Version: 2.1\nName: runtime-dependency\nVersion: 1.2.3\nLicense: MIT\n",
         encoding="utf-8",
     )
     (runtime_package / "keep.py").write_text("VALUE = 1\n", encoding="utf-8")
@@ -244,12 +360,8 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     (portable / "python.exe").write_bytes(b"portable-interpreter")
     (portable / "python312.dll").write_bytes(b"runtime-dll")
     (runtime_package / "runtime.pyd").write_bytes(b"runtime-extension")
-    (transformers_package / "testing_utils.py").write_text(
-        "TEST_ONLY = True\n", encoding="utf-8"
-    )
-    (transformers_package / "modeling_utils.py").write_text(
-        "RUNTIME = True\n", encoding="utf-8"
-    )
+    (transformers_package / "testing_utils.py").write_text("TEST_ONLY = True\n", encoding="utf-8")
+    (transformers_package / "modeling_utils.py").write_text("RUNTIME = True\n", encoding="utf-8")
     (transformers_cache / "testing_utils.cpython-312.pyc").write_bytes(b"test cache")
     (transformers_cache / "modeling_utils.cpython-312.pyc").write_bytes(b"runtime cache")
 
@@ -307,9 +419,7 @@ def test_worker_pack_builder_removes_all_pack_only_launchers(
     inventory_tool = WINDOWS_TOOLS / "write_python_inventory.py"
     inventory_path = tmp_path / "python-packages.json"
     namespace = runpy.run_path(str(inventory_tool))
-    monkeypatch.setattr(
-        sys, "argv", [str(inventory_tool), "--output", str(inventory_path)]
-    )
+    monkeypatch.setattr(sys, "argv", [str(inventory_tool), "--output", str(inventory_path)])
     assert namespace["main"]() == 0
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
     actual = [(package["name"], package["version"]) for package in inventory["packages"]]
@@ -385,9 +495,7 @@ def test_worker_pack_builder_rejects_build_paths_in_every_file_type(
         assert "worker payload contains a forbidden local build path" in (
             rejected.stdout + rejected.stderr
         )
-        assert leaked_file.relative_to(payload).as_posix() in (
-            rejected.stdout + rejected.stderr
-        )
+        assert leaked_file.relative_to(payload).as_posix() in (rejected.stdout + rejected.stderr)
         leaked_file.unlink()
 
 
@@ -402,9 +510,7 @@ def test_worker_pack_builder_rejects_huggingface_token_without_echoing_it(
     environment = os.environ.copy()
     environment.update(
         {
-            "CHATWAIFU_TEST_SCANNER": str(
-                WINDOWS_TOOLS / "scan_worker_pack_payload.py"
-            ),
+            "CHATWAIFU_TEST_SCANNER": str(WINDOWS_TOOLS / "scan_worker_pack_payload.py"),
             "CHATWAIFU_TEST_PAYLOAD": str(payload),
             "CHATWAIFU_TEST_FORBIDDEN": str(tmp_path / "unrelated-build-root"),
         }
