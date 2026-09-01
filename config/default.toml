@@ -5,6 +5,8 @@ port = 8765
 [storage]
 kind = "sqlite"
 journal_mode = "wal"
+synchronous = "full"
+wal_autocheckpoint_pages = 1000
 foreign_keys = true
 busy_timeout_ms = 5000
 

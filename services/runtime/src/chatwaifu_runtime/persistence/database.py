@@ -27,6 +27,10 @@ class MigrationChecksumError(MigrationError):
     """An already-applied migration no longer matches its immutable script."""
 
 
+class DatabaseIntegrityError(RuntimeError):
+    """The existing SQLite file failed a read-only startup integrity check."""
+
+
 class Database:
     def __init__(
         self,
@@ -52,14 +56,47 @@ class Database:
             await _execute_and_close(
                 connection, f"PRAGMA busy_timeout={self._config.busy_timeout_ms}"
             )
+            await _execute_and_close(connection, "PRAGMA cell_size_check=ON")
+            await _assert_integrity(connection)
             await _execute_and_close(
                 connection,
                 f"PRAGMA foreign_keys={'ON' if self._config.foreign_keys else 'OFF'}",
             )
             if str(self._path) != ":memory:":
-                await _execute_and_close(
+                journal_mode = await _pragma_value(
                     connection, f"PRAGMA journal_mode={self._config.journal_mode.upper()}"
                 )
+                if str(journal_mode).casefold() != self._config.journal_mode.casefold():
+                    raise RuntimeError(
+                        "SQLite refused the configured journal mode: "
+                        f"expected {self._config.journal_mode}, received {journal_mode}"
+                    )
+                synchronous = self._config.synchronous.upper()
+                await _execute_and_close(connection, f"PRAGMA synchronous={synchronous}")
+                actual_synchronous = _integer_pragma(
+                    await _pragma_value(connection, "PRAGMA synchronous"),
+                    "PRAGMA synchronous",
+                )
+                expected_synchronous = {"FULL": 2, "EXTRA": 3}[synchronous]
+                if actual_synchronous != expected_synchronous:
+                    raise RuntimeError(
+                        "SQLite refused the configured synchronous mode: "
+                        f"expected {expected_synchronous}, received {actual_synchronous}"
+                    )
+                await _execute_and_close(
+                    connection,
+                    f"PRAGMA wal_autocheckpoint={self._config.wal_autocheckpoint_pages}",
+                )
+                actual_autocheckpoint = _integer_pragma(
+                    await _pragma_value(connection, "PRAGMA wal_autocheckpoint"),
+                    "PRAGMA wal_autocheckpoint",
+                )
+                if actual_autocheckpoint != self._config.wal_autocheckpoint_pages:
+                    raise RuntimeError(
+                        "SQLite refused the configured WAL autocheckpoint bound: "
+                        f"expected {self._config.wal_autocheckpoint_pages}, "
+                        f"received {actual_autocheckpoint}"
+                    )
             self._connection = connection
             await self.migrate()
         except BaseException:
@@ -309,3 +346,31 @@ async def _execute_and_close(
 ) -> None:
     cursor = await _finish_before_cancelling(connection.execute(query, parameters))
     await _finish_before_cancelling(cursor.close())
+
+
+async def _pragma_value(connection: aiosqlite.Connection, query: str) -> object:
+    cursor = await _finish_before_cancelling(connection.execute(query))
+    try:
+        row = await _finish_before_cancelling(cursor.fetchone())
+    finally:
+        await _finish_before_cancelling(cursor.close())
+    if row is None:
+        raise RuntimeError(f"SQLite pragma returned no value: {query}")
+    return row[0]
+
+
+def _integer_pragma(value: object, query: str) -> int:
+    if not isinstance(value, int):
+        raise RuntimeError(f"SQLite pragma returned a non-integer value: {query}")
+    return value
+
+
+async def _assert_integrity(connection: aiosqlite.Connection) -> None:
+    """Recover a valid WAL snapshot, then reject corruption before any migration write."""
+
+    try:
+        result = await _pragma_value(connection, "PRAGMA quick_check(1)")
+    except aiosqlite.DatabaseError as error:
+        raise DatabaseIntegrityError(f"SQLite startup integrity check failed: {error}") from error
+    if str(result) != "ok":
+        raise DatabaseIntegrityError(f"SQLite startup integrity check failed: {result}")

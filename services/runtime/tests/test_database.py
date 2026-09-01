@@ -1,8 +1,10 @@
 """Persistence, sequence, and outbox tests."""
 
 import asyncio
+import hashlib
 import json
 import sqlite3
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -15,6 +17,7 @@ from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.persistence.database import (
     Database,
+    DatabaseIntegrityError,
     MigrationCatalogError,
     MigrationChecksumError,
 )
@@ -407,3 +410,119 @@ async def test_unknown_legacy_migration_is_rejected_before_ledger_upgrade(
         }
     assert columns == ["version"]
     assert "known_record" not in tables
+
+
+@pytest.mark.asyncio
+async def test_database_enforces_durable_wal_settings(tmp_path: Path) -> None:
+    path = tmp_path / "durable-wal.db"
+    database = Database(
+        path,
+        StorageConfig(
+            database_path=path,
+            synchronous="full",
+            wal_autocheckpoint_pages=37,
+        ),
+    )
+    await database.open()
+    try:
+        journal_mode = await database.fetchone("PRAGMA journal_mode")
+        synchronous = await database.fetchone("PRAGMA synchronous")
+        autocheckpoint = await database.fetchone("PRAGMA wal_autocheckpoint")
+        cell_size_check = await database.fetchone("PRAGMA cell_size_check")
+        assert journal_mode is not None and journal_mode[0] == "wal"
+        assert synchronous is not None and synchronous[0] == 2
+        assert autocheckpoint is not None and autocheckpoint[0] == 37
+        assert cell_size_check is not None and cell_size_check[0] == 1
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_corrupt_database_fails_closed_before_migration_writes(tmp_path: Path) -> None:
+    path = tmp_path / "corrupt.db"
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE protected_records(value TEXT NOT NULL)")
+        connection.executemany(
+            "INSERT INTO protected_records(value) VALUES (?)",
+            ((f"record-{index}-" + "x" * 2048,) for index in range(50)),
+        )
+        page_size = int(connection.execute("PRAGMA page_size").fetchone()[0])
+        root_page = int(
+            connection.execute(
+                "SELECT rootpage FROM sqlite_master WHERE name = 'protected_records'"
+            ).fetchone()[0]
+        )
+
+    with path.open("r+b") as database_file:
+        database_file.seek((root_page - 1) * page_size)
+        database_file.write(b"\0" * page_size)
+    digest_before = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    database = Database(
+        path,
+        StorageConfig(database_path=path),
+        migrations=((1, "CREATE TABLE must_not_exist(value TEXT NOT NULL);"),),
+    )
+    with pytest.raises(DatabaseIntegrityError, match="startup integrity check failed"):
+        await database.open()
+
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == digest_before
+    with sqlite3.connect(path) as connection:
+        assert connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'must_not_exist'"
+        ).fetchone() is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="validates Windows TerminateProcess recovery")
+@pytest.mark.asyncio
+async def test_windows_force_exit_recovers_wal_without_partial_domain_rows(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "force-exit.db"
+    fixture = Path(__file__).parent / "fixtures" / "sqlite_force_exit_writer.py"
+
+    for _cycle in range(8):
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            str(fixture),
+            str(path),
+            "8",
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        assert process.stdout is not None
+        assert process.stderr is not None
+        try:
+            line = (await process.stdout.readline()).decode("utf-8").strip()
+            stderr = ""
+            if line != "READY_TO_TERMINATE":
+                stderr = (await process.stderr.read()).decode("utf-8", errors="replace")
+            assert line == "READY_TO_TERMINATE", (
+                f"force-exit fixture failed before its commit boundary: {line!r}; "
+                f"stderr={stderr}"
+            )
+            process.kill()
+            await asyncio.wait_for(process.wait(), timeout=10)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await asyncio.wait_for(process.wait(), timeout=10)
+
+        recovered = Database(path, StorageConfig(database_path=path))
+        await recovered.open()
+        try:
+            integrity = await recovered.fetchone("PRAGMA quick_check(1)")
+            assert integrity is not None and integrity[0] == "ok"
+            counts = await recovered.fetchone(
+                """
+                SELECT
+                    (SELECT COUNT(*) FROM events),
+                    (SELECT COUNT(*) FROM outbox),
+                    (SELECT COUNT(*) FROM playback_ack_commands)
+                """
+            )
+            assert counts is not None
+            assert counts[0] == counts[1] == counts[2]
+        finally:
+            await recovered.close()

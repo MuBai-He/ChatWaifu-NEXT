@@ -6,7 +6,7 @@ import tomllib
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Self, cast
+from typing import Literal, Self, cast
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
@@ -40,7 +40,9 @@ class StorageConfig(BaseModel):
 
     kind: str = "sqlite"
     database_path: Path | None = None
-    journal_mode: str = "wal"
+    journal_mode: Literal["wal"] = "wal"
+    synchronous: Literal["full", "extra"] = "full"
+    wal_autocheckpoint_pages: int = Field(default=1000, ge=1, le=100_000)
     foreign_keys: bool = True
     busy_timeout_ms: int = Field(default=5000, ge=100, le=60_000)
 
