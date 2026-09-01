@@ -1,6 +1,6 @@
 #![cfg(target_os = "windows")]
 
-use chatwaifu_desktop_host::{
+use chatwaifu_desktop_host_lib::{
     windows_current_process_image_path, windows_physical_user_root_paths,
 };
 use std::ffi::OsString;

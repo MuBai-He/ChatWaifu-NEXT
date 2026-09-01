@@ -6,6 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [lib]
+name = "chatwaifu_desktop_host_lib"
 path = "src/lib.rs"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
