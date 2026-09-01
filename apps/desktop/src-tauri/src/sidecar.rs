@@ -881,6 +881,26 @@ fn runtime_supervisor_executable() -> Result<PathBuf, String> {
 #[cfg(target_os = "windows")]
 #[doc(hidden)]
 pub fn windows_current_process_image_path() -> Result<PathBuf, String> {
+    let win32_image = query_current_process_image_path(0)?;
+    // A process inherited from a packaged parent can receive a LocalCache view
+    // here even though its image was loaded from an ordinary NSIS directory.
+    // Ask Shell for the current user's non-redirected root and only rewrite the
+    // exact package-redirection shape validated below.
+    let physical_local_app_data = windows_physical_local_app_data().ok();
+    if let Some(physical_image) =
+        validated_physical_image_candidate(&win32_image, physical_local_app_data.as_deref())
+    {
+        return Ok(physical_image);
+    }
+
+    Err(format!(
+        "Windows 当前进程映像无法解析为物理文件：{}",
+        win32_image.display()
+    ))
+}
+
+#[cfg(target_os = "windows")]
+fn query_current_process_image_path(format: u32) -> Result<PathBuf, String> {
     use std::os::windows::ffi::OsStringExt;
     use windows_sys::Win32::Foundation::GetLastError;
     use windows_sys::Win32::System::Threading::{GetCurrentProcess, QueryFullProcessImageNameW};
@@ -891,7 +911,12 @@ pub fn windows_current_process_image_path() -> Result<PathBuf, String> {
     let mut length =
         u32::try_from(buffer.len()).map_err(|_| "Windows 当前进程映像缓冲区长度溢出".to_owned())?;
     let succeeded = unsafe {
-        QueryFullProcessImageNameW(GetCurrentProcess(), 0, buffer.as_mut_ptr(), &mut length)
+        QueryFullProcessImageNameW(
+            GetCurrentProcess(),
+            format,
+            buffer.as_mut_ptr(),
+            &mut length,
+        )
     };
     if succeeded == 0 {
         return Err(format!(
@@ -904,6 +929,166 @@ pub fn windows_current_process_image_path() -> Result<PathBuf, String> {
     }
     buffer.truncate(length as usize);
     Ok(PathBuf::from(OsString::from_wide(&buffer)))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_local_app_data() -> Result<PathBuf, String> {
+    use windows_sys::Win32::System::Com::CoTaskMemFree;
+    use windows_sys::Win32::UI::Shell::{
+        FOLDERID_LocalAppData, KF_FLAG_NO_PACKAGE_REDIRECTION, SHGetKnownFolderPath,
+    };
+
+    let mut pointer = std::ptr::null_mut();
+    let result = unsafe {
+        SHGetKnownFolderPath(
+            &FOLDERID_LocalAppData,
+            KF_FLAG_NO_PACKAGE_REDIRECTION as u32,
+            std::ptr::null_mut(),
+            &mut pointer,
+        )
+    };
+    if result < 0 {
+        return Err(format!(
+            "SHGetKnownFolderPath(LocalAppData, NO_PACKAGE_REDIRECTION) failed with HRESULT 0x{:08x}",
+            result as u32
+        ));
+    }
+    if pointer.is_null() {
+        return Err("SHGetKnownFolderPath returned a null LocalAppData path".to_owned());
+    }
+    let path = unsafe {
+        let mut length = 0_usize;
+        while length < 32_768 && *pointer.add(length) != 0 {
+            length += 1;
+        }
+        let value = if length == 32_768 {
+            Err("SHGetKnownFolderPath returned an unterminated LocalAppData path".to_owned())
+        } else {
+            use std::os::windows::ffi::OsStringExt;
+            Ok(PathBuf::from(OsString::from_wide(
+                std::slice::from_raw_parts(pointer, length),
+            )))
+        };
+        CoTaskMemFree(pointer.cast());
+        value
+    }?;
+    if !path.is_absolute() || !windows_physical_path_is_directory(&path) {
+        return Err(format!(
+            "Windows physical LocalAppData is not an existing absolute directory: {}",
+            path.display()
+        ));
+    }
+    Ok(path)
+}
+
+#[cfg(target_os = "windows")]
+fn validated_physical_image_candidate(
+    image: &Path,
+    physical_local_app_data: Option<&Path>,
+) -> Option<PathBuf> {
+    if let Some(local_app_data) = physical_local_app_data
+        && let Some((path_package_family, mapped)) =
+            strict_localcache_physical_image_mapping(image, local_app_data)
+    {
+        // GetCurrentPackageFamilyName may report NO_PACKAGE for these inherited
+        // children. Keep this mapping bounded by the OS-provided user root, one
+        // package-family component, an existing package directory, and an
+        // existing same-relative-path image. Never accept LocalCache itself as
+        // the physical fallback when one of these checks fails.
+        if !windows_physical_path_is_directory(
+            &local_app_data.join("Packages").join(&path_package_family),
+        ) || !windows_physical_path_is_file(&mapped)
+        {
+            return None;
+        }
+        return Some(mapped);
+    }
+    windows_physical_path_is_file(image).then(|| image.to_path_buf())
+}
+
+#[cfg(test)]
+fn strict_localcache_physical_image_candidate(
+    image: &Path,
+    physical_local_app_data: &Path,
+    package_family: &OsStr,
+) -> Option<PathBuf> {
+    let (path_package_family, candidate) =
+        strict_localcache_physical_image_mapping(image, physical_local_app_data)?;
+    (path_package_family == package_family).then_some(candidate)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn strict_localcache_physical_image_mapping(
+    image: &Path,
+    physical_local_app_data: &Path,
+) -> Option<(OsString, PathBuf)> {
+    let relative = image.strip_prefix(physical_local_app_data).ok()?;
+    let mut components = relative.components();
+    match components.next()? {
+        std::path::Component::Normal(value) if value == OsStr::new("Packages") => {}
+        _ => return None,
+    }
+    let path_package_family = match components.next()? {
+        std::path::Component::Normal(value) if !value.is_empty() => value.to_os_string(),
+        _ => return None,
+    };
+    match components.next()? {
+        std::path::Component::Normal(value) if value == OsStr::new("LocalCache") => {}
+        _ => return None,
+    }
+    match components.next()? {
+        std::path::Component::Normal(value) if value == OsStr::new("Local") => {}
+        _ => return None,
+    }
+
+    let mut payload = PathBuf::new();
+    for component in components {
+        match component {
+            std::path::Component::Normal(value) => payload.push(value),
+            _ => return None,
+        }
+    }
+    if payload.as_os_str().is_empty() || payload.file_name() != image.file_name() {
+        return None;
+    }
+    Some((path_package_family, physical_local_app_data.join(payload)))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_path_is_file(path: &Path) -> bool {
+    windows_physical_path_attributes(path).is_some_and(|attributes| attributes & 0x10 == 0)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_path_is_directory(path: &Path) -> bool {
+    windows_physical_path_attributes(path).is_some_and(|attributes| attributes & 0x10 != 0)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_path_attributes(path: &Path) -> Option<u32> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+
+    let mut path_units = path.as_os_str().encode_wide().collect::<Vec<_>>();
+    let mut verbatim = if path_units.starts_with(&[b'\\' as u16, b'\\' as u16]) {
+        let mut value = "\\\\?\\UNC\\".encode_utf16().collect::<Vec<_>>();
+        value.extend_from_slice(&path_units[2..]);
+        value
+    } else if path_units.len() >= 3
+        && ((u16::from(b'A')..=u16::from(b'Z')).contains(&path_units[0])
+            || (u16::from(b'a')..=u16::from(b'z')).contains(&path_units[0]))
+        && path_units[1] == b':' as u16
+        && (path_units[2] == u16::from(b'\\') || path_units[2] == u16::from(b'/'))
+    {
+        let mut value = "\\\\?\\".encode_utf16().collect::<Vec<_>>();
+        value.append(&mut path_units);
+        value
+    } else {
+        return None;
+    };
+    verbatim.push(0);
+    let attributes = unsafe { GetFileAttributesW(verbatim.as_ptr()) };
+    (attributes != INVALID_FILE_ATTRIBUTES).then_some(attributes)
 }
 
 fn open_sidecar_log(app: &AppHandle) -> Result<std::fs::File, String> {
@@ -996,6 +1181,7 @@ mod tests {
         adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
         packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
         select_packaged_component_root, should_request_start,
+        strict_localcache_physical_image_candidate,
     };
     use crate::runtime_health::RuntimeLifecycleState;
     use std::ffi::OsString;
@@ -1081,6 +1267,48 @@ mod tests {
         )
         .unwrap_err();
         assert!(error.contains("没有可用的安装目录"));
+    }
+
+    #[test]
+    fn codex_localcache_image_maps_to_the_physical_current_user_install() {
+        let physical_local_app_data = Path::new("C:/Users/alice/AppData/Local");
+        let package_family = OsString::from("OpenAI.Codex_2p2nqsd0c76g0");
+        let virtual_image = Path::new(
+            "C:/Users/alice/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Local/ChatWaifu NEXT/chatwaifu-desktop-host.exe",
+        );
+
+        assert_eq!(
+            strict_localcache_physical_image_candidate(
+                virtual_image,
+                physical_local_app_data,
+                &package_family,
+            ),
+            Some(
+                Path::new("C:/Users/alice/AppData/Local/ChatWaifu NEXT/chatwaifu-desktop-host.exe")
+                    .to_path_buf()
+            )
+        );
+    }
+
+    #[test]
+    fn localcache_mapping_rejects_an_unrelated_or_near_match_package_path() {
+        let physical_local_app_data = Path::new("C:/Users/alice/AppData/Local");
+        let package_family = OsString::from("OpenAI.Codex_2p2nqsd0c76g0");
+        for image in [
+            "C:/Users/alice/AppData/Local/Packages/Other.Package/LocalCache/Local/ChatWaifu NEXT/chatwaifu-desktop-host.exe",
+            "C:/Users/alice/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/LocalOther/ChatWaifu NEXT/chatwaifu-desktop-host.exe",
+            "C:/Users/other/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Local/ChatWaifu NEXT/chatwaifu-desktop-host.exe",
+        ] {
+            assert_eq!(
+                strict_localcache_physical_image_candidate(
+                    Path::new(image),
+                    physical_local_app_data,
+                    &package_family,
+                ),
+                None,
+                "unexpected mapping for {image}"
+            );
+        }
     }
 
     #[test]
