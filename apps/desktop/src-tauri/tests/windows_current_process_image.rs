@@ -1,6 +1,8 @@
 #![cfg(target_os = "windows")]
 
-use chatwaifu_desktop_host::windows_current_process_image_path;
+use chatwaifu_desktop_host::{
+    windows_current_process_image_path, windows_physical_user_root_paths,
+};
 use std::ffi::OsString;
 use std::fs;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
@@ -13,6 +15,33 @@ const CHILD_PROBE_MARKER: &str = "CHATWAIFU_PHYSICAL_IMAGE=";
 const CHILD_PROBE_ERROR_MARKER: &str = "CHATWAIFU_PHYSICAL_IMAGE_ERROR=";
 const CURRENT_IMAGE_TEST_NAME: &str =
     "query_full_process_image_name_returns_the_real_test_process_image";
+
+#[test]
+fn persistent_roots_bypass_package_redirection_and_keep_sqlite_sidecars_together() {
+    let (config_root, data_root, log_root) =
+        windows_physical_user_root_paths("local.chatwaifu.next")
+            .expect("physical Windows user roots should resolve");
+
+    for root in [&config_root, &data_root, &log_root] {
+        assert!(
+            root.is_absolute(),
+            "root should be absolute: {}",
+            root.display()
+        );
+        assert!(
+            !root.to_string_lossy().contains("\\Packages\\"),
+            "root entered a package-redirection namespace: {}",
+            root.display()
+        );
+    }
+    assert_eq!(log_root, data_root.join("logs"));
+
+    let database = data_root.join("runtime/chatwaifu.db");
+    let wal = database.with_file_name("chatwaifu.db-wal");
+    let shared_memory = database.with_file_name("chatwaifu.db-shm");
+    assert_eq!(database.parent(), wal.parent());
+    assert_eq!(database.parent(), shared_memory.parent());
+}
 
 #[test]
 fn query_full_process_image_name_returns_the_real_test_process_image() {

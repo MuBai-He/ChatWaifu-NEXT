@@ -32,6 +32,13 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(
 const SIDECAR_LOG_MAX_BYTES: u64 = 5 * 1024 * 1024;
 const RUNTIME_SUPERVISOR_ARGUMENT: &str = "--chatwaifu-runtime-supervisor";
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DesktopUserRoots {
+    config: PathBuf,
+    data: PathBuf,
+    logs: PathBuf,
+}
+
 pub fn runtime_supervisor_exit_code() -> Option<i32> {
     runtime_supervisor_exit_code_from(std::env::args_os().skip(1))
 }
@@ -459,16 +466,9 @@ fn spawn_service_stack(app: &AppHandle) -> Result<Child, String> {
     if let Some(current_dir) = current_dir {
         command.current_dir(current_dir);
     }
-    let config_dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|error| format!("桌宠配置目录不可用：{error}"))?
-        .join("runtime");
-    let data_dir = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|error| format!("桌宠数据目录不可用：{error}"))?
-        .join("runtime");
+    let user_roots = desktop_user_roots(app)?;
+    let config_dir = user_roots.config.join("runtime");
+    let data_dir = user_roots.data.join("runtime");
     command
         .env("CHATWAIFU_CONFIG_DIR", config_dir)
         .env("CHATWAIFU_DATA_DIR", data_dir);
@@ -933,15 +933,30 @@ fn query_current_process_image_path(format: u32) -> Result<PathBuf, String> {
 
 #[cfg(target_os = "windows")]
 fn windows_physical_local_app_data() -> Result<PathBuf, String> {
+    use windows_sys::Win32::UI::Shell::FOLDERID_LocalAppData;
+
+    windows_physical_known_folder(&FOLDERID_LocalAppData, "LocalAppData")
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_roaming_app_data() -> Result<PathBuf, String> {
+    use windows_sys::Win32::UI::Shell::FOLDERID_RoamingAppData;
+
+    windows_physical_known_folder(&FOLDERID_RoamingAppData, "RoamingAppData")
+}
+
+#[cfg(target_os = "windows")]
+fn windows_physical_known_folder(
+    folder_id: &windows_sys::core::GUID,
+    label: &str,
+) -> Result<PathBuf, String> {
     use windows_sys::Win32::System::Com::CoTaskMemFree;
-    use windows_sys::Win32::UI::Shell::{
-        FOLDERID_LocalAppData, KF_FLAG_NO_PACKAGE_REDIRECTION, SHGetKnownFolderPath,
-    };
+    use windows_sys::Win32::UI::Shell::{KF_FLAG_NO_PACKAGE_REDIRECTION, SHGetKnownFolderPath};
 
     let mut pointer = std::ptr::null_mut();
     let result = unsafe {
         SHGetKnownFolderPath(
-            &FOLDERID_LocalAppData,
+            folder_id,
             KF_FLAG_NO_PACKAGE_REDIRECTION as u32,
             std::ptr::null_mut(),
             &mut pointer,
@@ -949,12 +964,12 @@ fn windows_physical_local_app_data() -> Result<PathBuf, String> {
     };
     if result < 0 {
         return Err(format!(
-            "SHGetKnownFolderPath(LocalAppData, NO_PACKAGE_REDIRECTION) failed with HRESULT 0x{:08x}",
+            "SHGetKnownFolderPath({label}, NO_PACKAGE_REDIRECTION) failed with HRESULT 0x{:08x}",
             result as u32
         ));
     }
     if pointer.is_null() {
-        return Err("SHGetKnownFolderPath returned a null LocalAppData path".to_owned());
+        return Err(format!("SHGetKnownFolderPath returned a null {label} path"));
     }
     let path = unsafe {
         let mut length = 0_usize;
@@ -974,11 +989,77 @@ fn windows_physical_local_app_data() -> Result<PathBuf, String> {
     }?;
     if !path.is_absolute() || !windows_physical_path_is_directory(&path) {
         return Err(format!(
-            "Windows physical LocalAppData is not an existing absolute directory: {}",
+            "Windows physical {label} is not an existing absolute directory: {}",
             path.display()
         ));
     }
     Ok(path)
+}
+
+fn user_roots_from_known_folders(
+    local_app_data: &Path,
+    roaming_app_data: &Path,
+    identifier: &str,
+) -> Result<DesktopUserRoots, String> {
+    if identifier.is_empty()
+        || !identifier
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || ".-_".contains(character))
+    {
+        return Err("桌宠应用标识不能安全映射到用户目录".to_owned());
+    }
+    let local_root = local_app_data.join(identifier);
+    Ok(DesktopUserRoots {
+        config: roaming_app_data.join(identifier),
+        data: local_root.clone(),
+        logs: local_root.join("logs"),
+    })
+}
+
+fn desktop_user_roots(app: &AppHandle) -> Result<DesktopUserRoots, String> {
+    #[cfg(target_os = "windows")]
+    {
+        return user_roots_from_known_folders(
+            &windows_physical_local_app_data()?,
+            &windows_physical_roaming_app_data()?,
+            &app.config().identifier,
+        );
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(DesktopUserRoots {
+            config: app
+                .path()
+                .app_config_dir()
+                .map_err(|error| format!("桌宠配置目录不可用：{error}"))?,
+            data: app
+                .path()
+                .app_local_data_dir()
+                .map_err(|error| format!("桌宠数据目录不可用：{error}"))?,
+            logs: app
+                .path()
+                .app_log_dir()
+                .map_err(|error| format!("桌宠日志目录不可用：{error}"))?,
+        })
+    }
+}
+
+pub(crate) fn desktop_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    desktop_user_roots(app).map(|roots| roots.config)
+}
+
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub fn windows_physical_user_root_paths(
+    identifier: &str,
+) -> Result<(PathBuf, PathBuf, PathBuf), String> {
+    let roots = user_roots_from_known_folders(
+        &windows_physical_local_app_data()?,
+        &windows_physical_roaming_app_data()?,
+        identifier,
+    )?;
+    Ok((roots.config, roots.data, roots.logs))
 }
 
 #[cfg(target_os = "windows")]
@@ -1093,10 +1174,7 @@ fn windows_physical_path_attributes(path: &Path) -> Option<u32> {
 }
 
 fn open_sidecar_log(app: &AppHandle) -> Result<std::fs::File, String> {
-    let directory = app
-        .path()
-        .app_log_dir()
-        .map_err(|error| format!("桌宠日志目录不可用：{error}"))?;
+    let directory = desktop_user_roots(app)?.logs;
     fs::create_dir_all(&directory).map_err(|error| format!("无法创建桌宠日志目录：{error}"))?;
     let current = directory.join("runtime-sidecar.log");
     if current
@@ -1182,7 +1260,7 @@ mod tests {
         adjacent_appcontainer_launcher, packaged_appcontainer_launcher,
         packaged_runtime_executable, restart_backoff, runtime_supervisor_exit_code_from,
         select_packaged_component_root, should_request_start,
-        strict_localcache_physical_image_candidate,
+        strict_localcache_physical_image_candidate, user_roots_from_known_folders,
     };
     use crate::runtime_health::RuntimeLifecycleState;
     use std::ffi::OsString;
@@ -1203,6 +1281,46 @@ mod tests {
         assert_eq!(RUNTIME_SERVER_STARTUP_BUDGET_SECONDS, 120);
         assert_eq!(STARTUP_SUPERVISOR_GRACE_SECONDS, 30);
         assert_eq!(STARTUP_TIMEOUT, Duration::from_secs(450));
+    }
+
+    #[test]
+    fn physical_known_folders_define_one_stable_app_namespace() {
+        let roots = user_roots_from_known_folders(
+            Path::new("C:/Users/test/AppData/Local"),
+            Path::new("C:/Users/test/AppData/Roaming"),
+            "local.chatwaifu.next",
+        )
+        .unwrap();
+
+        assert_eq!(
+            roots.config,
+            Path::new("C:/Users/test/AppData/Roaming/local.chatwaifu.next")
+        );
+        assert_eq!(
+            roots.data,
+            Path::new("C:/Users/test/AppData/Local/local.chatwaifu.next")
+        );
+        assert_eq!(roots.logs, roots.data.join("logs"));
+    }
+
+    #[test]
+    fn physical_known_folders_reject_an_identifier_that_can_escape_the_root() {
+        for identifier in [
+            "",
+            "../local.chatwaifu.next",
+            "local/chatwaifu",
+            "local\\chatwaifu",
+        ] {
+            assert!(
+                user_roots_from_known_folders(
+                    Path::new("C:/Users/test/AppData/Local"),
+                    Path::new("C:/Users/test/AppData/Roaming"),
+                    identifier,
+                )
+                .is_err(),
+                "unexpected safe identifier: {identifier}"
+            );
+        }
     }
 
     #[test]
