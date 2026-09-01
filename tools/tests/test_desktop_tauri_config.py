@@ -173,12 +173,13 @@ def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> 
     assert "Remove-GeneratedInstallerArtifacts -Directory $NsisRoot" in script
     assert "Sort-Object LastWriteTimeUtc" not in script
     assert "$Installers.Count -ne 1" in script
-    assert '$InstallerResourceRoot = Join-Path $RepoRoot "build\\windows-installer\\resources"' in script
-    assert '$StagedHelper = Join-Path $InstallerResourceRoot' in script
-    assert script.count("Remove-Item -LiteralPath $InstallerResourceRoot") >= 2
-    assert script.index('"--package", "chatwaifu-appcontainer-host"') < script.index(
-        '"clippy",'
+    assert (
+        '$InstallerResourceRoot = Join-Path $RepoRoot "build\\windows-installer\\resources"'
+        in script
     )
+    assert "$StagedHelper = Join-Path $InstallerResourceRoot" in script
+    assert script.count("Remove-Item -LiteralPath $InstallerResourceRoot") >= 2
+    assert script.index('"--package", "chatwaifu-appcontainer-host"') < script.index('"clippy",')
     assert "build/" in gitignore
 
 

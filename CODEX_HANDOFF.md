@@ -16,12 +16,12 @@ Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**
 ```text
 Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
 Branch:     codex/windows-installer
-Validated product-code commit: 5ed61c8
+Validated product-code commit: 87ad553
 Original remote handoff baseline: b03a38b
 Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收基本完成，明确的人耳/语音抢话门仍开放
 ```
 
-`5ed61c8` 是最终安装候选包含的产品代码点；其后的文档提交不改变安装载荷，最终远端同步
+`87ad553` 是最终安装候选包含的产品代码点；其后的测试格式与文档提交不改变安装载荷，最终远端同步
 仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
 的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
 
@@ -62,6 +62,10 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   角色模糊，并把 WebGL backing buffer 按实际视觉缩放补偿；同时修正了增量构建时 AppContainer
   helper 单文件资源可能漏出 NSIS 的 staging 顺序/布局。重建候选的 Host、Runtime、helper 均为
   PE `0x8664`，仓库完整 installed smoke 在动态端口 `9005` 通过。
+- 2026-09-02 的按需完整性候选从安装态启动到 Runtime `ready` 仅 10.492 秒，使用动态端口
+  `13077`；已保留的 Qwen3-TTS/Whisper Pack 不再触发启动时全树哈希。随后从“数据”页主动
+  校验 2 个 Pack、36,326 个文件通过（Whisper 5,103，Qwen 31,223），设置窗口在校验期间保持响应。
+  强制结束主 Host 后 supervisor、Runtime、Worker 与端口 `13077` 全部自动清理。
 - 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
   进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
   安装、健康启动、重复启动抑制、强退、卸载与两种注册表视图/快捷方式清理；正常托盘退出仍见下方。
@@ -69,12 +73,12 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   等于各段 duration；后续键盘新回合取消旧 generation 后未观察到旧 generation 的迟到文本、音频或播放事件。
   实机还暴露了播放中连接麦克风会把同一 generation 尾段丢在 WAV/WebRTC 交界的问题；`f7bccde`
   将输出所有权延迟到下一 generation 再切换，并加入尾段不断流/下一轮 WebRTC 独占回归测试。
-- 最终根目录 Python 门禁为 533 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
-  通过。Web 为 32 files/144 tests，workspace 共 183 tests，Tauri 为 34 tests，Clippy 通过。
+- 最终根目录 Python 门禁为 537 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
+  通过。Web 为 36 files/155 tests，Tauri 为 34 tests，桌面 UI production build 通过。
 
 | 产物 | 字节数 | SHA-256 |
 | --- | ---: | --- |
-| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,213,645 | `9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b` |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,214,044 | `de1612598ff8a20974000349b5425a122db7229390c6861c016aa3c13aba94a6` |
 | `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
 | `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
 
@@ -86,6 +90,8 @@ Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git�
   Qwen3-TTS CUDA provider 就绪；聊天、模型保存/测试和记忆中心均可操作。
 - 2026-09-02 的最终安装态真实窗口再次显示透明、动画化宁宁；头发、脸部与衣服边缘按补偿后的
   backing buffer 渲染，不再把低分辨率画布放大 1.34 倍。设置页实见 `已连接 / Runtime 0.1.0`。
+- 新候选首次启动真实自动打开五步设置引导，明确解释基础 EXE、独立 `.cwpack`、聊天 API、
+  TTS、麦克风/STT 与 VAD；“数据”页真实显示双 Pack 完整性校验通过结果。
 - 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
   合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
   冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。

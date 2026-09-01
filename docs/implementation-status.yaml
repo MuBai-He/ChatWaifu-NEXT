@@ -98,7 +98,7 @@ validation:
   remote_ci_matrix: pending_first_remote_run
   native_windows_x64_cuda:
     status: owner_only_install_acceptance_passed_with_explicit_human_gates
-    validated_product_commit: 5ed61c8
+    validated_product_commit: 87ad553
     platform:
       windows: "Windows 11 Pro 25H2 build 26200.9168"
       native_architecture: AMD64
@@ -124,8 +124,8 @@ validation:
     artifacts:
       installer:
         filename: "ChatWaifu NEXT_0.2.0_x64-setup.exe"
-        size_bytes: 128213645
-        sha256: 9a5bd8d962d4adc32b3599ebb03762bcd8111d82a71e235f2f17c8fe39e7698b
+        size_bytes: 128214044
+        sha256: de1612598ff8a20974000349b5425a122db7229390c6861c016aa3c13aba94a6
       faster_whisper_pack:
         filename: chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack
         size_bytes: 250542825
@@ -144,7 +144,7 @@ validation:
       - "Installed Runtime and both workers reached healthy state on dynamic loopback ports; forced-exit process-tree and listener cleanup passed"
       - "A reinstall preserved settings, SQLite data, installed pack receipts and selection, and the pre-existing private memory marker"
       - "Installed Runtime playback state recorded stopped/ended ACK with played PTS equal to duration for all four Chinese and five Japanese segments; a later typed supersession emitted no old-generation text, audio, playback, or spoken-text events after cancellation"
-      - "The final root Python matrix passed 533 tests with 5 explicit platform/probe skips; Pyright and Ruff passed, Web passed 32 files and 144 tests, the TypeScript workspace passed 183 tests, and Tauri passed 34 tests plus Clippy"
+      - "The final root Python matrix passed 537 tests with 5 explicit platform/probe skips; Pyright and Ruff passed, Web passed 36 files and 155 tests, the Desktop UI production build passed, and Tauri passed 34 tests"
       - "A completion publication barrier now makes assistant.generation_completed the last generation-scoped event; the regression test forces concurrent cancellation inside the publication window without sleep"
       - "The rebuilt final candidate passed the native data-preserving install/health/forced-exit/uninstall replay: immutable files, both shortcuts, both standard uninstall views, and manufacturer metadata were removed while AppData, selection, and both Worker Packs remained"
       - "A forced installed-Host exit removed the five-process Host/supervisor/Runtime/two-Worker graph and listeners on observed dynamic ports 4076, 2934, and 2935; the next Runtime start removed both exact crash-owned launch caches before creating new owner leases"
@@ -154,6 +154,7 @@ validation:
       - "The final installed playback replay connected the microphone during segment one: the current generation completed 4/4 local audio_element segments with terminal ACK, then the next generation completed 4/4 WebRTC-only segments with terminal ACK and strictly alternating started/stopped order"
       - "Repeated Start Menu launch of the final candidate reactivated the existing avatar while process inspection retained one product Host, one internal supervisor, and one Runtime instead of creating a duplicate service/Worker graph"
       - "The final 9a5bd8d9 candidate staged the AppContainer helper before Host compilation through a directory resource tree; a clean installed smoke proved Host, Runtime, and helper PE 0x8664, dynamic Runtime health on port 9005, forced-exit descendant/listener cleanup, uninstall cleanup, and user-data/Worker-Pack retention"
+      - "The 87ad553 candidate reached installed Runtime ready on dynamic port 13077 in 10.492 seconds with both retained Worker Packs, then the explicit Data-settings action verified 2 packs and 36,326 files; forced Host exit removed the supervisor, Runtime, Workers, and listener"
     computer_use_window_observation:
       - "Native development Tauri showed the animated private Live2D overlay with transparent empty-point click-through while avatar, subtitle, composer, controls, and native avatar drag remained interactive"
       - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
@@ -161,6 +162,7 @@ validation:
       - "Installed Chinese and Japanese text turns showed progressive subtitles and playback while process-level GPU sampling recorded real CUDA activity; the prior playback stopped 1.502 seconds before the next turn, so this was sequential playback rather than barge-in"
       - "Historical installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; the repeated full payload scan has since moved out of ordinary startup into the explicit Data-settings integrity action, while the corrected 455-second Web resolution budget remains for genuinely slow model initialization"
       - "The final installed Tauri window visibly rendered sharper Live2D hair, face, and clothing edges after compensating the WebGL backing buffer for the 1.34 CSS visual scale; settings visibly reported connected Runtime 0.1.0"
+      - "The rebuilt installed candidate automatically opened the five-step first-run guide and the Data page visibly reported successful full verification for faster-whisper (5,103 files) and Qwen3-TTS (31,223 files)"
     pending_human_or_privacy_confirmation:
       - "One installed microphone utterance produced a 2920 ms / 93440-byte VAD capture and a faster-whisper final transcript, proving capture, VAD auto-end, and STT return; the transcription was materially inaccurate and remains a quality risk"
       - "The user explicitly did not speak during the final playback-time interruption attempt, so real voice barge-in is not accepted and must not be defaulted to passing"
