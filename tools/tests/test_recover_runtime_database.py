@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import os
@@ -18,6 +19,46 @@ TURN_ID = "00000000-0000-4000-8000-000000000002"
 GENERATION_ID = "00000000-0000-4000-8000-000000000003"
 EVENT_ID = "00000000-0000-4000-8000-000000000004"
 MEMORY_ID = "00000000-0000-4000-8000-000000000005"
+
+
+def _create_windows_junction(link: Path, target: Path) -> None:
+    completed = subprocess.run(
+        ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        pytest.skip(f"could not create a native Windows junction: {detail}")
+
+
+def _loopback_admin_unc(path: Path) -> Path:
+    resolved = path.resolve(strict=False)
+    drive = resolved.drive
+    if len(drive) != 2 or drive[1] != ":":
+        pytest.skip(f"test path is not on a drive-letter volume: {resolved}")
+    tail = str(resolved)[len(drive) :].lstrip("\\/")
+    return Path(f"\\\\localhost\\{drive[0]}$\\{tail}")
+
+
+def _windows_short_path(path: Path) -> Path:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_short_path = kernel32.GetShortPathNameW
+    get_short_path.argtypes = [
+        ctypes.c_wchar_p,
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+    ]
+    get_short_path.restype = ctypes.c_uint32
+    required = get_short_path(str(path), None, 0)
+    if required == 0:
+        pytest.skip(f"8.3 short names are unavailable (Win32 error {ctypes.get_last_error()})")
+    buffer = ctypes.create_unicode_buffer(required + 1)
+    written = get_short_path(str(path), buffer, len(buffer))
+    if written == 0 or written >= len(buffer):
+        pytest.skip(f"8.3 short-name lookup failed (Win32 error {ctypes.get_last_error()})")
+    return Path(buffer.value)
 
 
 def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
@@ -168,6 +209,83 @@ def test_target_modified_after_no_replace_publication_is_not_blessed_or_deleted(
     assert (backup / "recovery-failure.json").is_file()
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows hard-link enumeration")
+def test_target_redirected_into_package_local_cache_is_not_blessed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    backup = tmp_path / "backup"
+    _seed_source(source)
+    layered_target = (
+        tmp_path / "Packages" / "Example.Package" / "LocalCache" / "Local" / target.name
+    )
+
+    def package_layers(path: Path, _physical_root: Path) -> tuple[str, ...]:
+        if path == target and path.exists():
+            return (str(layered_target),)
+        return ()
+
+    monkeypatch.setattr(
+        recovery,
+        "_windows_physical_local_app_data",
+        lambda: tmp_path,
+    )
+    monkeypatch.setattr(
+        recovery,
+        "_windows_package_local_cache_family_paths",
+        package_layers,
+    )
+
+    with pytest.raises(recovery.RecoveryError, match="published target entered"):
+        recovery.recover_runtime_database(
+            source,
+            target,
+            backup,
+            runtime_stopped=True,
+        )
+
+    assert not target.exists()
+    assert not (backup / "recovery-report.json").exists()
+    assert (backup / "recovery-failure.json").is_file()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows path policy")
+def test_published_target_redirected_into_roaming_local_cache_is_not_blessed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    backup = tmp_path / "backup"
+    _seed_source(source)
+    redirected_target = (
+        tmp_path / "Packages" / "Example.Package" / "LocalCache" / "Roaming" / target.name
+    )
+    original_final_path = recovery._windows_final_existing_path  # pyright: ignore[reportPrivateUsage]
+
+    def final_path(path: Path) -> Path:
+        if path == target and target.exists():
+            return redirected_target
+        return original_final_path(path)
+
+    monkeypatch.setattr(recovery, "_windows_final_existing_path", final_path)
+
+    with pytest.raises(
+        recovery.RecoveryError,
+        match=r"published target entered.*Package LocalCache",
+    ):
+        recovery.recover_runtime_database(
+            source,
+            target,
+            backup,
+            runtime_stopped=True,
+        )
+
+    assert not target.exists()
+    assert not (backup / "recovery-report.json").exists()
+    assert (backup / "recovery-failure.json").is_file()
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="requires Win32 file sharing")
 def test_recovery_rejects_a_live_sqlite_writer(tmp_path: Path) -> None:
     source = tmp_path / "source.db"
@@ -212,6 +330,267 @@ def test_recovery_rejects_independent_sidecars_for_a_main_file_alias(tmp_path: P
 
     assert selected_wal.read_bytes() == b"selected namespace WAL"
     assert alternate_wal.read_bytes() == b"alternate namespace WAL"
+    assert not (tmp_path / "backup").exists()
+
+
+def test_package_local_cache_audit_detects_sidecars_without_a_layer_main(
+    tmp_path: Path,
+) -> None:
+    physical_local_app_data = tmp_path / "physical-local-app-data"
+    source = physical_local_app_data / "vendor" / "runtime" / "chatwaifu.db"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"physical main")
+    layer_main = (
+        physical_local_app_data
+        / "Packages"
+        / "Example.Package"
+        / "LocalCache"
+        / "Local"
+        / source.relative_to(physical_local_app_data)
+    )
+    layer_main.parent.mkdir(parents=True)
+    layer_wal = layer_main.with_name(layer_main.name + "-wal")
+    layer_shm = layer_main.with_name(layer_main.name + "-shm")
+    layer_wal.write_bytes(b"private WAL")
+    layer_shm.write_bytes(b"private SHM")
+
+    result = recovery._windows_package_local_cache_family_paths(  # pyright: ignore[reportPrivateUsage]
+        source, physical_local_app_data
+    )
+
+    assert result == tuple(sorted((str(layer_shm.absolute()), str(layer_wal.absolute()))))
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Win32 file sharing")
+def test_recovery_refuses_a_package_local_cache_layered_family(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    physical_local_app_data = tmp_path / "physical-local-app-data"
+    source = physical_local_app_data / "vendor" / "runtime" / "chatwaifu.db"
+    source.parent.mkdir(parents=True)
+    _seed_source(source)
+    source_digest = _sha256(source)
+    layer_wal = (
+        physical_local_app_data
+        / "Packages"
+        / "Example.Package"
+        / "LocalCache"
+        / "Local"
+        / source.relative_to(physical_local_app_data)
+    ).with_name(source.name + "-wal")
+    layer_wal.parent.mkdir(parents=True)
+    layer_wal.write_bytes(b"independent private WAL")
+    monkeypatch.setattr(
+        recovery,
+        "_windows_physical_local_app_data",
+        lambda: physical_local_app_data,
+    )
+
+    with pytest.raises(recovery.RecoveryError, match="Package LocalCache layered"):
+        recovery.recover_runtime_database(
+            source,
+            tmp_path / "target.db",
+            tmp_path / "backup",
+            runtime_stopped=True,
+        )
+
+    assert _sha256(source) == source_digest
+    assert layer_wal.read_bytes() == b"independent private WAL"
+    assert not (tmp_path / "target.db").exists()
+    assert not (tmp_path / "backup").exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows path policy")
+@pytest.mark.parametrize("cache_scope", ["Local", "Roaming"])
+@pytest.mark.parametrize("output_kind", ["target", "backup directory"])
+def test_recovery_refuses_explicit_package_local_cache_output_paths(
+    tmp_path: Path, cache_scope: str, output_kind: str
+) -> None:
+    source = tmp_path / "source.db"
+    _seed_source(source)
+    local_cache = tmp_path / "Packages" / "Example.Package" / "LocalCache" / cache_scope
+    local_cache.mkdir(parents=True)
+    target = local_cache / "target.db" if output_kind == "target" else tmp_path / "target.db"
+    backup = local_cache / "backup" if output_kind == "backup directory" else tmp_path / "backup"
+
+    with pytest.raises(recovery.RecoveryError, match=output_kind):
+        recovery.recover_runtime_database(
+            source,
+            target,
+            backup,
+            runtime_stopped=True,
+        )
+
+    assert not target.exists()
+    assert not backup.exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows junctions")
+@pytest.mark.parametrize("cache_scope", ["Local", "Roaming"])
+@pytest.mark.parametrize(
+    ("input_kind", "error_label"),
+    [
+        ("source", "source"),
+        ("target", "target"),
+        ("backup", "backup directory"),
+    ],
+)
+def test_recovery_refuses_package_local_cache_hidden_behind_a_junction(
+    tmp_path: Path, cache_scope: str, input_kind: str, error_label: str
+) -> None:
+    package_local = (
+        tmp_path / "real-root" / "Packages" / "Example.Package" / "LocalCache" / cache_scope
+    )
+    package_local.mkdir(parents=True)
+    opaque_alias = tmp_path / "opaque-alias"
+    _create_windows_junction(opaque_alias, package_local)
+    try:
+        source = tmp_path / "source.db"
+        target = tmp_path / "target.db"
+        backup = tmp_path / "backup"
+        if input_kind == "source":
+            source = opaque_alias / "source.db"
+            _seed_source(package_local / source.name)
+        else:
+            _seed_source(source)
+        if input_kind == "target":
+            target = opaque_alias / target.name
+        if input_kind == "backup":
+            backup = opaque_alias / backup.name
+
+        with pytest.raises(
+            recovery.RecoveryError,
+            match=rf"{error_label}.*Package LocalCache",
+        ):
+            recovery.recover_runtime_database(
+                source,
+                target,
+                backup,
+                runtime_stopped=True,
+            )
+
+        assert not target.exists()
+        assert not backup.exists()
+    finally:
+        opaque_alias.rmdir()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows junctions")
+def test_source_junction_into_physical_local_app_data_cannot_skip_layer_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    physical_local_app_data = tmp_path / "physical-local-app-data"
+    physical_source = physical_local_app_data / "vendor" / "runtime" / "chatwaifu.db"
+    physical_source.parent.mkdir(parents=True)
+    _seed_source(physical_source)
+    layer_wal = (
+        physical_local_app_data
+        / "Packages"
+        / "Example.Package"
+        / "LocalCache"
+        / "Local"
+        / physical_source.relative_to(physical_local_app_data)
+    ).with_name(physical_source.name + "-wal")
+    layer_wal.parent.mkdir(parents=True)
+    layer_wal.write_bytes(b"independent package-private WAL")
+
+    opaque_local_root = tmp_path / "opaque-local-root"
+    _create_windows_junction(opaque_local_root, physical_local_app_data)
+    try:
+        aliased_source = opaque_local_root / physical_source.relative_to(physical_local_app_data)
+        assert os.path.samefile(aliased_source, physical_source)
+        monkeypatch.setattr(
+            recovery,
+            "_windows_physical_local_app_data",
+            lambda: physical_local_app_data,
+        )
+
+        with pytest.raises(recovery.RecoveryError, match="Package LocalCache layered"):
+            recovery.recover_runtime_database(
+                aliased_source,
+                tmp_path / "target.db",
+                tmp_path / "backup",
+                runtime_stopped=True,
+            )
+
+        assert layer_wal.read_bytes() == b"independent package-private WAL"
+        assert not (tmp_path / "target.db").exists()
+        assert not (tmp_path / "backup").exists()
+    finally:
+        opaque_local_root.rmdir()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires loopback Windows UNC")
+@pytest.mark.parametrize("input_kind", ["source", "target", "backup directory"])
+def test_recovery_rejects_loopback_unc_aliases_fail_closed(tmp_path: Path, input_kind: str) -> None:
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    backup = tmp_path / "backup"
+    _seed_source(source)
+    unc_root = _loopback_admin_unc(tmp_path)
+    try:
+        if not unc_root.is_dir():
+            pytest.skip(f"loopback administrative share is unavailable: {unc_root}")
+    except OSError as error:
+        pytest.skip(f"loopback administrative share is unavailable: {error}")
+
+    if input_kind == "source":
+        source = unc_root / source.name
+        assert os.path.samefile(source, tmp_path / source.name)
+    elif input_kind == "target":
+        target = unc_root / target.name
+    else:
+        backup = unc_root / backup.name
+
+    with pytest.raises(
+        recovery.RecoveryError,
+        match=rf"{input_kind}.*UNC paths are not supported",
+    ):
+        recovery.recover_runtime_database(
+            source,
+            target,
+            backup,
+            runtime_stopped=True,
+        )
+
+    assert not target.exists()
+    assert not backup.exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="requires Windows 8.3 names")
+@pytest.mark.parametrize("cache_scope", ["Local", "Roaming"])
+def test_recovery_rejects_package_local_cache_hidden_by_an_8dot3_path(
+    tmp_path: Path, cache_scope: str
+) -> None:
+    physical_source = (
+        tmp_path
+        / "Packages"
+        / "Example Package With Long Name"
+        / "LocalCache"
+        / cache_scope
+        / "Some Long Database Name.db"
+    )
+    physical_source.parent.mkdir(parents=True)
+    _seed_source(physical_source)
+    short_source = _windows_short_path(physical_source)
+    assert os.path.samefile(short_source, physical_source)
+    if recovery._is_package_local_cache_path(  # pyright: ignore[reportPrivateUsage]
+        short_source
+    ):
+        pytest.skip(f"short path did not obscure LocalCache: {short_source}")
+
+    with pytest.raises(
+        recovery.RecoveryError,
+        match=r"source.*Package LocalCache",
+    ):
+        recovery.recover_runtime_database(
+            short_source,
+            tmp_path / "target.db",
+            tmp_path / "backup",
+            runtime_stopped=True,
+        )
+
+    assert not (tmp_path / "target.db").exists()
     assert not (tmp_path / "backup").exists()
 
 
@@ -322,9 +701,7 @@ def test_recovery_copies_main_wal_shm_family_and_reads_committed_wal(tmp_path: P
     source_shm = source.with_name(source.name + "-shm")
     assert source_wal.stat().st_size > 0
     assert source_shm.stat().st_size > 0
-    family_digests = {
-        path.name: _sha256(path) for path in (source, source_wal, source_shm)
-    }
+    family_digests = {path.name: _sha256(path) for path in (source, source_wal, source_shm)}
 
     report = recovery.recover_runtime_database(
         source,
@@ -355,9 +732,7 @@ def test_invalid_durable_json_fails_closed_and_leaves_raw_backup(tmp_path: Path)
     _seed_source(source)
     connection = sqlite3.connect(source)
     try:
-        connection.execute(
-            "UPDATE tts_provider_configs SET configuration_json = 'not-json'"
-        )
+        connection.execute("UPDATE tts_provider_configs SET configuration_json = 'not-json'")
         connection.commit()
     finally:
         connection.close()

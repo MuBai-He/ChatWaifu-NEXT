@@ -102,7 +102,10 @@ class FamilyFile:
 @dataclass(frozen=True)
 class AliasAudit:
     selected_path: str
+    selected_final_path: str
     alternate_main_paths: tuple[str, ...]
+    physical_local_app_data: str | None
+    package_local_cache_family_paths: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -183,6 +186,26 @@ def recover_runtime_database(
                 _verify_raw_backup(source_family, raw_backup, source.name)
                 published_identity = _file_identity(building_target)
                 _publish_new_target(building_target, target)
+                if os.name == "nt" and alias_audit.physical_local_app_data is not None:
+                    try:
+                        final_target = _windows_path_for_namespace_policy(
+                            "published target", target, existing=True
+                        )
+                    except RecoveryError as error:
+                        raise RecoveryError(
+                            "published target entered an unsafe Windows namespace; "
+                            "refusing to bless a redirected database: "
+                            f"{error}"
+                        ) from error
+                    redirected_target_paths = _windows_package_local_cache_family_paths(
+                        final_target, Path(alias_audit.physical_local_app_data)
+                    )
+                    if redirected_target_paths:
+                        raise RecoveryError(
+                            "published target entered a Package LocalCache layer; "
+                            "refusing to bless a redirected database: "
+                            + ", ".join(redirected_target_paths)
+                        )
                 if not _matches_file_identity(target, published_identity):
                     raise RecoveryError("published target changed before it could be verified")
 
@@ -265,21 +288,28 @@ def _validate_paths(
     if not target.parent.is_dir():
         raise RecoveryError(f"target parent directory does not exist: {target.parent}")
     if not backup_directory.parent.is_dir():
-        raise RecoveryError(
-            f"backup parent directory does not exist: {backup_directory.parent}"
-        )
+        raise RecoveryError(f"backup parent directory does not exist: {backup_directory.parent}")
 
-    normalized_source = os.path.normcase(str(source.resolve(strict=True)))
-    normalized_target = os.path.normcase(str(target.resolve(strict=False)))
-    normalized_backup = os.path.normcase(str(backup_directory.resolve(strict=False)))
+    if os.name == "nt":
+        canonical_source = _windows_path_for_namespace_policy("source", source, existing=True)
+        canonical_target = _windows_path_for_namespace_policy("target", target, existing=False)
+        canonical_backup = _windows_path_for_namespace_policy(
+            "backup directory", backup_directory, existing=False
+        )
+    else:
+        canonical_source = source.resolve(strict=True)
+        canonical_target = target.resolve(strict=False)
+        canonical_backup = backup_directory.resolve(strict=False)
+
+    normalized_source = os.path.normcase(str(canonical_source))
+    normalized_target = os.path.normcase(str(canonical_target))
+    normalized_backup = os.path.normcase(str(canonical_backup))
     if normalized_source == normalized_target:
         raise RecoveryError("source and target must be different paths")
     if normalized_target == normalized_backup:
         raise RecoveryError("target and backup directory must be different paths")
     source_family_paths = {
-        os.path.normcase(
-            str(source.with_name(source.name + suffix).resolve(strict=False))
-        )
+        os.path.normcase(str(canonical_source.with_name(canonical_source.name + suffix)))
         for suffix in _FAMILY_SUFFIXES
     }
     if normalized_target in source_family_paths:
@@ -287,16 +317,33 @@ def _validate_paths(
     if normalized_backup in source_family_paths:
         raise RecoveryError("backup directory must not alias a source database family path")
 
-    if os.name == "nt" and _is_package_local_cache_path(source):
-        raise RecoveryError(
-            "source must use the physical LocalAppData spelling, not a Package LocalCache path"
-        )
-
 
 def _audit_source_aliases(source: Path) -> AliasAudit:
     aliases = {source}
+    selected_final_path = str(source)
+    physical_local_app_data_text: str | None = None
+    package_family_paths: tuple[str, ...] = ()
     if os.name == "nt":
+        final_source = _windows_path_for_namespace_policy("source", source, existing=True)
+        selected_final_path = str(final_source)
+        physical_local_app_data = _windows_path_for_namespace_policy(
+            "physical LocalAppData",
+            _windows_physical_local_app_data(),
+            existing=True,
+        )
+        physical_local_app_data_text = str(physical_local_app_data)
+        package_family_paths = _windows_package_local_cache_family_paths(
+            final_source, physical_local_app_data
+        )
+        if package_family_paths:
+            raise RecoveryError(
+                "physical LocalAppData source has a Package LocalCache layered "
+                "SQLite family; refusing a merged database namespace: "
+                + ", ".join(package_family_paths)
+            )
         aliases.update(_windows_hardlink_aliases(source))
+        for alias in aliases:
+            _windows_path_for_namespace_policy("source hard-link alias", alias, existing=True)
     else:
         for candidate in source.parent.iterdir():
             try:
@@ -307,9 +354,7 @@ def _audit_source_aliases(source: Path) -> AliasAudit:
 
     selected_key = _normalized_path(source)
     by_key = {_normalized_path(alias): alias.absolute() for alias in aliases}
-    alternate = tuple(
-        sorted(str(alias) for key, alias in by_key.items() if key != selected_key)
-    )
+    alternate = tuple(sorted(str(alias) for key, alias in by_key.items() if key != selected_key))
     conflicts: list[str] = []
     for alias_text in alternate:
         alias = Path(alias_text)
@@ -331,18 +376,25 @@ def _audit_source_aliases(source: Path) -> AliasAudit:
             "alternate main-file namespace has an independent SQLite sidecar: "
             + ", ".join(sorted(conflicts))
         )
-    return AliasAudit(selected_path=str(source), alternate_main_paths=alternate)
+    return AliasAudit(
+        selected_path=str(source),
+        selected_final_path=selected_final_path,
+        alternate_main_paths=alternate,
+        physical_local_app_data=physical_local_app_data_text,
+        package_local_cache_family_paths=package_family_paths,
+    )
 
 
-def _validate_alias_output_paths(
-    audit: AliasAudit, target: Path, backup_directory: Path
-) -> None:
+def _validate_alias_output_paths(audit: AliasAudit, target: Path, backup_directory: Path) -> None:
     protected: set[str] = set()
-    for main_text in (audit.selected_path, *audit.alternate_main_paths):
+    for main_text in (
+        audit.selected_path,
+        audit.selected_final_path,
+        *audit.alternate_main_paths,
+    ):
         main = Path(main_text)
         protected.update(
-            _normalized_path(main.with_name(main.name + suffix))
-            for suffix in _FAMILY_SUFFIXES
+            _normalized_path(main.with_name(main.name + suffix)) for suffix in _FAMILY_SUFFIXES
         )
     if _normalized_path(target) in protected:
         raise RecoveryError("target must not occupy any source-alias database family path")
@@ -386,10 +438,226 @@ def _is_package_local_cache_path(path: Path) -> bool:
         if (
             parts[index] == "packages"
             and parts[index + 2] == "localcache"
-            and parts[index + 3] == "local"
+            and parts[index + 3] in {"local", "roaming"}
         ):
             return True
     return False
+
+
+def _windows_path_for_namespace_policy(label: str, path: Path, *, existing: bool) -> Path:
+    """Resolve reparse points and short names before applying local path policy.
+
+    Output paths do not exist yet, so their existing parent is resolved through a
+    handle and the leaf name is appended. UNC inputs are rejected conservatively:
+    even a loopback administrative share retains a distinct MUP spelling, which
+    cannot be proven to share the physical LocalAppData namespace and sidecars.
+    """
+
+    if _is_windows_unc_path(path):
+        raise RecoveryError(
+            f"{label} must use a local drive path; UNC paths are not supported: {path}"
+        )
+
+    if existing:
+        final_path = _windows_final_existing_path(path)
+    else:
+        final_parent = _windows_final_existing_path(path.parent)
+        final_path = final_parent / path.name
+
+    if _is_windows_unc_path(final_path):
+        raise RecoveryError(
+            f"{label} resolves to a UNC path that cannot be audited safely: {final_path}"
+        )
+    if _is_package_local_cache_path(path) or _is_package_local_cache_path(final_path):
+        raise RecoveryError(f"{label} must not use a Package LocalCache path: {final_path}")
+    return final_path
+
+
+def _windows_final_existing_path(path: Path) -> Path:
+    """Return the normalized DOS path reported for an existing Win32 handle."""
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_file = kernel32.CreateFileW
+    create_file.argtypes = [
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+    ]
+    create_file.restype = ctypes.c_void_p
+    get_final_path = kernel32.GetFinalPathNameByHandleW
+    get_final_path.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+    ]
+    get_final_path.restype = ctypes.c_uint32
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = [ctypes.c_void_p]
+    close_handle.restype = ctypes.c_int
+
+    share_read_write_delete = 0x00000001 | 0x00000002 | 0x00000004
+    open_existing = 3
+    backup_semantics = 0x02000000
+    invalid_handle = ctypes.c_void_p(-1).value
+    handle = create_file(
+        str(path),
+        0,
+        share_read_write_delete,
+        None,
+        open_existing,
+        backup_semantics,
+        None,
+    )
+    if handle in (None, invalid_handle):
+        error_code = ctypes.get_last_error()
+        raise RecoveryError(
+            f"could not resolve final Windows path for {path} (Win32 error {error_code})"
+        )
+    try:
+        required = get_final_path(handle, None, 0, 0)
+        if required == 0:
+            error_code = ctypes.get_last_error()
+            raise RecoveryError(
+                f"could not size final Windows path for {path} (Win32 error {error_code})"
+            )
+        buffer = ctypes.create_unicode_buffer(required + 1)
+        written = get_final_path(handle, buffer, len(buffer), 0)
+        if written == 0 or written >= len(buffer):
+            error_code = ctypes.get_last_error()
+            raise RecoveryError(
+                f"could not read final Windows path for {path} (Win32 error {error_code})"
+            )
+        value = buffer.value
+    finally:
+        close_handle(handle)
+
+    extended_unc_prefix = "\\\\?\\UNC\\"
+    extended_prefix = "\\\\?\\"
+    if value.casefold().startswith(extended_unc_prefix.casefold()):
+        value = "\\\\" + value[len(extended_unc_prefix) :]
+    elif value.startswith(extended_prefix) and re.match(
+        r"^[A-Za-z]:\\", value[len(extended_prefix) :]
+    ):
+        value = value[len(extended_prefix) :]
+    elif value.startswith(extended_prefix):
+        raise RecoveryError(f"final Windows path has no auditable DOS drive spelling: {value}")
+    if not value:
+        raise RecoveryError(f"final Windows path resolution returned empty for {path}")
+    return Path(value)
+
+
+def _is_windows_unc_path(path: Path) -> bool:
+    value = str(path)
+    casefolded = value.casefold()
+    if casefolded.startswith("\\\\?\\unc\\"):
+        return True
+    if casefolded.startswith("\\\\?\\"):
+        return False
+    return value.startswith("\\\\")
+
+
+def _windows_physical_local_app_data() -> Path:
+    """Return LocalAppData without the current package's redirected spelling."""
+
+    class Guid(ctypes.Structure):
+        _fields_ = (
+            ("data1", ctypes.c_uint32),
+            ("data2", ctypes.c_uint16),
+            ("data3", ctypes.c_uint16),
+            ("data4", ctypes.c_ubyte * 8),
+        )
+
+    folder_id = Guid.from_buffer_copy(UUID("f1b32785-6fba-4fcf-9d55-7b8e7f157091").bytes_le)
+    shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+    get_path = shell32.SHGetKnownFolderPath
+    get_path.argtypes = [
+        ctypes.POINTER(Guid),
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_path.restype = ctypes.c_long
+    ole32 = ctypes.WinDLL("ole32", use_last_error=True)
+    free_memory = ole32.CoTaskMemFree
+    free_memory.argtypes = [ctypes.c_void_p]
+    free_memory.restype = None
+
+    no_package_redirection = 0x00010000
+    raw_path = ctypes.c_void_p()
+    result = get_path(
+        ctypes.byref(folder_id),
+        no_package_redirection,
+        None,
+        ctypes.byref(raw_path),
+    )
+    if result != 0:
+        raise RecoveryError(
+            "could not resolve physical LocalAppData with "
+            "KF_FLAG_NO_PACKAGE_REDIRECTION "
+            f"(HRESULT 0x{result & 0xFFFFFFFF:08x})"
+        )
+    if raw_path.value is None:
+        raise RecoveryError("physical LocalAppData resolution returned no path")
+    try:
+        value = ctypes.wstring_at(raw_path.value)
+    finally:
+        free_memory(raw_path)
+    if not value:
+        raise RecoveryError("physical LocalAppData resolution returned an empty path")
+    return Path(value).absolute()
+
+
+def _windows_package_local_cache_family_paths(
+    source: Path, physical_local_app_data: Path
+) -> tuple[str, ...]:
+    """Find package-private members layered over a physical LocalAppData family."""
+
+    if os.name == "nt":
+        if _is_windows_unc_path(source) or _is_windows_unc_path(physical_local_app_data):
+            raise RecoveryError(
+                "Package LocalCache audit requires local-drive source and root paths"
+            )
+        source = _windows_final_existing_path(source)
+        physical_local_app_data = _windows_final_existing_path(physical_local_app_data)
+    if _is_package_local_cache_path(source):
+        raise RecoveryError(
+            "source must use the physical LocalAppData spelling, not a Package LocalCache path"
+        )
+    try:
+        relative_source = source.absolute().relative_to(physical_local_app_data.absolute())
+    except ValueError:
+        return ()
+
+    packages_root = physical_local_app_data / "Packages"
+    try:
+        package_roots = tuple(packages_root.iterdir())
+    except FileNotFoundError:
+        return ()
+    except OSError as error:
+        raise RecoveryError(
+            f"could not enumerate Package LocalCache roots under {packages_root}: {error}"
+        ) from error
+
+    layered_members: list[str] = []
+    for package_root in package_roots:
+        candidate_main = package_root / "LocalCache" / "Local" / relative_source
+        for suffix in _FAMILY_SUFFIXES:
+            candidate = candidate_main.with_name(candidate_main.name + suffix)
+            try:
+                candidate.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as error:
+                raise RecoveryError(
+                    f"could not audit Package LocalCache family member {candidate}: {error}"
+                ) from error
+            layered_members.append(str(candidate.absolute()))
+    return tuple(sorted(layered_members))
 
 
 @contextmanager
@@ -753,9 +1021,7 @@ def _select_provenance_events(
         for row in snapshots["memory_sources"].dictionaries()
     }
     for row in snapshots["memory_proposals"].dictionaries():
-        raw_evidence = _required_string(
-            row, "evidence_event_ids_json", table="memory_proposals"
-        )
+        raw_evidence = _required_string(row, "evidence_event_ids_json", table="memory_proposals")
         evidence = _load_json(raw_evidence, "memory_proposals.evidence_event_ids_json")
         if not isinstance(evidence, list):
             raise RecoveryError("memory proposal evidence must be a list of non-empty event IDs")
@@ -877,9 +1143,7 @@ def _recover_sessions(
             found = []
             lookup_was_corrupt = True
             lookup_corrupt += 1
-            corrupt_lookup_hashes.append(
-                hashlib.sha256(session_id.encode("utf-8")).hexdigest()
-            )
+            corrupt_lookup_hashes.append(hashlib.sha256(session_id.encode("utf-8")).hexdigest())
         recovered_next = max(1, max_sequences.get(session_id, 0) + 1)
         if len(found) == 1:
             row = list(_normalize_row(found[0]))
@@ -951,9 +1215,7 @@ def _infer_default_character(snapshots: dict[str, TableSnapshot]) -> str:
     return "default"
 
 
-def _infer_session_character(
-    session_id: str, snapshots: dict[str, TableSnapshot]
-) -> str | None:
+def _infer_session_character(session_id: str, snapshots: dict[str, TableSnapshot]) -> str | None:
     connection_by_id = {
         _required_string(row, "connection_id", table="channel_connections"): _required_string(
             row, "character_id", table="channel_connections"
@@ -961,9 +1223,7 @@ def _infer_session_character(
         for row in snapshots["channel_connections"].dictionaries()
     }
     candidates: set[str | None] = {
-        connection_by_id.get(
-            _required_string(row, "connection_id", table="channel_bindings")
-        )
+        connection_by_id.get(_required_string(row, "connection_id", table="channel_bindings"))
         for row in snapshots["channel_bindings"].dictionaries()
         if row.get("session_id") == session_id
     }
@@ -1018,12 +1278,9 @@ def _validate_logical_references(
         _required_string(row, "generation_id", table="generations"): row
         for row in snapshots["generations"].dictionaries()
     }
-    event_ids = {
-        _required_string(row, "event_id", table="events") for row in events.dictionaries()
-    }
+    event_ids = {_required_string(row, "event_id", table="events") for row in events.dictionaries()}
     events_by_id = {
-        _required_string(row, "event_id", table="events"): row
-        for row in events.dictionaries()
+        _required_string(row, "event_id", table="events"): row for row in events.dictionaries()
     }
     for row in snapshots["memory_sources"].dictionaries():
         event_id = _required_string(row, "source_event_id", table="memory_sources")
@@ -1103,9 +1360,7 @@ def _validate_logical_references(
         for row in snapshots["channel_turns"].dictionaries()
     }
     for delivery_id, delivery in deliveries.items():
-        channel_turn_id = _required_string(
-            delivery, "channel_turn_id", table="channel_deliveries"
-        )
+        channel_turn_id = _required_string(delivery, "channel_turn_id", table="channel_deliveries")
         channel_turn = channel_turns.get(channel_turn_id)
         if channel_turn is None or channel_turn.get("delivery_id") != delivery_id:
             raise RecoveryError("channel delivery linkage is incomplete")
@@ -1152,8 +1407,7 @@ def _validate_legacy_memory(legacy: TableSnapshot, canonical: TableSnapshot) -> 
         for row in canonical.dictionaries()
     }
     legacy_ids = {
-        _required_string(row, "memory_id", table="memory_items")
-        for row in legacy.dictionaries()
+        _required_string(row, "memory_id", table="memory_items") for row in legacy.dictionaries()
     }
     missing = sorted(legacy_ids - canonical_ids)
     if missing:
@@ -1183,9 +1437,7 @@ def _write_recovered_rows(
         raise
 
 
-def _insert_snapshot(
-    connection: sqlite3.Connection, table: str, snapshot: TableSnapshot
-) -> None:
+def _insert_snapshot(connection: sqlite3.Connection, table: str, snapshot: TableSnapshot) -> None:
     if not snapshot.rows:
         return
     columns = ", ".join(_quote(column) for column in snapshot.columns)
@@ -1246,9 +1498,7 @@ def _verify_target(
             0
         ]
     )
-    records_fts = int(
-        connection.execute("SELECT COUNT(*) FROM memory_records_fts").fetchone()[0]
-    )
+    records_fts = int(connection.execute("SELECT COUNT(*) FROM memory_records_fts").fetchone()[0])
     if active_records != records_fts:
         raise RecoveryError("canonical memory FTS projection is inconsistent")
 
@@ -1396,9 +1646,7 @@ def _snapshot_summary(snapshots: dict[str, TableSnapshot]) -> dict[str, object]:
     }
 
 
-def _family_report(
-    family: dict[str, FamilyFile], *, root: Path | None = None
-) -> dict[str, object]:
+def _family_report(family: dict[str, FamilyFile], *, root: Path | None = None) -> dict[str, object]:
     report: dict[str, object] = {}
     for suffix, metadata in family.items():
         entry: dict[str, object] = asdict(metadata)
@@ -1422,9 +1670,7 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _write_json_exclusive(
-    path: Path, payload: dict[str, object]
-) -> tuple[int, int, int, str]:
+def _write_json_exclusive(path: Path, payload: dict[str, object]) -> tuple[int, int, int, str]:
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
     )
