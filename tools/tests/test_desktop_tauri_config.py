@@ -60,6 +60,9 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
     resources = cast(dict[str, object], bundle["resources"])
     windows = cast(dict[str, object], bundle["windows"])
     nsis = cast(dict[str, object], windows["nsis"])
+    installer_hooks = (ROOT / "apps/desktop/src-tauri/windows/installer-hooks.nsh").read_text(
+        encoding="utf-8"
+    )
 
     assert base_bundle["active"] is False
     assert bundle["active"] is True
@@ -72,7 +75,17 @@ def test_windows_installer_uses_the_versioned_installed_resource_layout() -> Non
     }
     assert windows["webviewInstallMode"] == {"type": "downloadBootstrapper"}
     assert windows["allowDowngrades"] is False
-    assert nsis == {"installMode": "currentUser"}
+    assert nsis == {
+        "installMode": "currentUser",
+        "installerHooks": "./windows/installer-hooks.nsh",
+    }
+    assert "!macro NSIS_HOOK_POSTUNINSTALL" in installer_hooks
+    assert "${If} $UpdateMode <> 1" in installer_hooks
+    assert 'DeleteRegKey HKCU "${MANUPRODUCTKEY}"' in installer_hooks
+    assert 'DeleteRegKey /ifempty HKCU "${MANUKEY}"' in installer_hooks
+    assert "APPDATA" not in installer_hooks
+    assert "LOCALAPPDATA" not in installer_hooks
+    assert "RmDir" not in installer_hooks
 
 
 def test_windows_installer_build_is_x64_private_asset_safe_and_checksummed() -> None:

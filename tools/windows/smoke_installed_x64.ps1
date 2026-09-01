@@ -24,6 +24,9 @@ param(
     [string]$AppIdentifier = "local.chatwaifu.next",
 
     [ValidateNotNullOrEmpty()]
+    [string]$Manufacturer = "MuBai",
+
+    [ValidateNotNullOrEmpty()]
     [string]$HostExecutableName = "chatwaifu-desktop-host.exe"
 )
 
@@ -61,6 +64,17 @@ $ConfigMarker = Join-Path $ConfigRoot $MarkerName
 $DataMarker = Join-Path $DataRoot $MarkerName
 $StartMenuShortcut = Join-Path $env:APPDATA (
     "Microsoft\Windows\Start Menu\Programs\$ProductName.lnk"
+)
+$DesktopRoot = [System.Environment]::GetFolderPath(
+    [System.Environment+SpecialFolder]::DesktopDirectory
+)
+if (-not $DesktopRoot) {
+    throw "Windows did not resolve the current user's Desktop known folder."
+}
+$DesktopShortcut = Join-Path $DesktopRoot "$ProductName.lnk"
+$CurrentUserRegistryViews = @(
+    [Microsoft.Win32.RegistryView]::Registry64,
+    [Microsoft.Win32.RegistryView]::Registry32
 )
 $HostProcess = $null
 $RuntimeProcessId = $null
@@ -159,14 +173,13 @@ function Assert-RuntimeFileIdentity {
 }
 
 function Get-CurrentUserUninstallEntries {
-    param([Parameter(Mandatory = $true)][string]$DisplayName)
+    param(
+        [Parameter(Mandatory = $true)][string]$DisplayName,
+        [Microsoft.Win32.RegistryView[]]$RegistryViews = $CurrentUserRegistryViews
+    )
 
     $Entries = @()
-    $Views = @(
-        [Microsoft.Win32.RegistryView]::Registry64,
-        [Microsoft.Win32.RegistryView]::Registry32
-    )
-    foreach ($View in $Views) {
+    foreach ($View in $RegistryViews) {
         $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
             [Microsoft.Win32.RegistryHive]::CurrentUser,
             $View
@@ -217,6 +230,41 @@ function Get-CurrentUserUninstallEntries {
     # A 64-bit process can observe the same logical entry through both views on
     # some Windows configurations. De-duplicate only byte-identical records.
     return @($Entries | Sort-Object RegistryKey, UninstallString -Unique)
+}
+
+function Get-CurrentUserManufacturerProductMetadata {
+    param(
+        [Parameter(Mandatory = $true)][string]$ManufacturerName,
+        [Parameter(Mandatory = $true)][string]$DisplayName,
+        [Microsoft.Win32.RegistryView[]]$RegistryViews = $CurrentUserRegistryViews
+    )
+
+    $RegistryPath = "Software\$ManufacturerName\$DisplayName"
+    $Entries = @()
+    foreach ($View in $RegistryViews) {
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+            [Microsoft.Win32.RegistryHive]::CurrentUser,
+            $View
+        )
+        try {
+            $ProductKey = $Base.OpenSubKey($RegistryPath, $false)
+            if ($null -eq $ProductKey) {
+                continue
+            }
+            try {
+                $Entries += [PSCustomObject]@{
+                    RegistryView = [string]$View
+                    RegistryKey = $RegistryPath
+                    InstallLocation = [string]$ProductKey.GetValue("", "")
+                }
+            } finally {
+                $ProductKey.Dispose()
+            }
+        } finally {
+            $Base.Dispose()
+        }
+    }
+    return @($Entries)
 }
 
 function Split-ExecutableCommand {
@@ -499,6 +547,17 @@ $ExistingEntries = @(Get-CurrentUserUninstallEntries $ProductName)
 if ($ExistingEntries.Count -ne 0) {
     throw "A current-user '$ProductName' installation already exists. Use a clean test account or uninstall it explicitly before this destructive installer smoke."
 }
+$ExistingManufacturerMetadata = @(
+    Get-CurrentUserManufacturerProductMetadata $Manufacturer $ProductName
+)
+if ($ExistingManufacturerMetadata.Count -ne 0) {
+    throw "Installer metadata already exists for '$Manufacturer\$ProductName'; the installed smoke requires a clean registry baseline."
+}
+foreach ($ShortcutPath in @($StartMenuShortcut, $DesktopShortcut)) {
+    if (Test-Path -LiteralPath $ShortcutPath) {
+        throw "A pre-existing ChatWaifu shortcut prevents an isolated installed smoke: $ShortcutPath"
+    }
+}
 $ExistingHostProcesses = @(Get-Process `
     -Name ([System.IO.Path]::GetFileNameWithoutExtension($HostExecutableName)) `
     -ErrorAction SilentlyContinue)
@@ -557,6 +616,30 @@ try {
     if (-not (Test-PathEqual $Shortcut.TargetPath $HostExecutable)) {
         throw "Start Menu shortcut targets an unexpected executable: $($Shortcut.TargetPath)"
     }
+    if (-not (Test-Path $DesktopShortcut -PathType Leaf)) {
+        throw "Silent NSIS install did not create the current-user Desktop shortcut: $DesktopShortcut"
+    }
+    $DesktopShortcutEntry = (New-Object -ComObject WScript.Shell).CreateShortcut(
+        $DesktopShortcut
+    )
+    if (-not (Test-PathEqual $DesktopShortcutEntry.TargetPath $HostExecutable)) {
+        throw "Desktop shortcut targets an unexpected executable: $($DesktopShortcutEntry.TargetPath)"
+    }
+    $ManufacturerMetadata = @(
+        Get-CurrentUserManufacturerProductMetadata $Manufacturer $ProductName
+    )
+    if ($ManufacturerMetadata.Count -eq 0) {
+        throw "NSIS did not register installer metadata under '$Manufacturer\$ProductName'."
+    }
+    foreach ($Metadata in $ManufacturerMetadata) {
+        if (-not $Metadata.InstallLocation -or
+            -not (Test-PathEqual $Metadata.InstallLocation $InstallRoot)) {
+            throw (
+                "Unexpected manufacturer install location in $($Metadata.RegistryView): " +
+                "'$($Metadata.InstallLocation)'"
+            )
+        }
+    }
     foreach ($RelativePath in $RequiredRuntimeResources) {
         $ResourcePath = Join-Path $InstallRoot $RelativePath
         if (-not (Test-Path $ResourcePath -PathType Leaf)) {
@@ -614,12 +697,26 @@ try {
         throw "NSIS uninstaller exited with code $($Uninstaller.ExitCode)."
     }
     Wait-ForPathRemoval -Path $InstallRoot -TimeoutSeconds $CleanupTimeoutSeconds
-    $RemainingEntries = @(Get-CurrentUserUninstallEntries $ProductName)
-    if ($RemainingEntries.Count -ne 0) {
-        throw "Silent uninstall left a current-user uninstall registry entry behind."
+    foreach ($RegistryView in $CurrentUserRegistryViews) {
+        $RemainingEntries = @(
+            Get-CurrentUserUninstallEntries $ProductName -RegistryViews @($RegistryView)
+        )
+        if ($RemainingEntries.Count -ne 0) {
+            throw "Silent uninstall left a standard uninstall entry in the $RegistryView view."
+        }
+        $RemainingManufacturerMetadata = @(
+            Get-CurrentUserManufacturerProductMetadata $Manufacturer $ProductName `
+                -RegistryViews @($RegistryView)
+        )
+        if ($RemainingManufacturerMetadata.Count -ne 0) {
+            throw "Silent uninstall left manufacturer product metadata in the $RegistryView view."
+        }
     }
     if (Test-Path $StartMenuShortcut) {
         throw "Silent uninstall left the Start Menu shortcut behind: $StartMenuShortcut"
+    }
+    if (Test-Path $DesktopShortcut) {
+        throw "Silent uninstall left the Desktop shortcut behind: $DesktopShortcut"
     }
 
     foreach ($Root in @($ConfigRoot, $DataRoot, $LogRoot)) {

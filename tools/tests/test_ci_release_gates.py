@@ -93,6 +93,14 @@ def test_windows_installed_product_smoke_covers_layout_lifecycle_and_data() -> N
     assert "bin\\chatwaifu-appcontainer-host.exe" in smoke
     assert "ChatWaifu NEXT Runtime" in smoke
     assert "Start Menu\\Programs\\$ProductName.lnk" in smoke
+    assert "SpecialFolder]::DesktopDirectory" in smoke
+    assert "Silent uninstall left the Desktop shortcut behind" in smoke
+    assert "Get-CurrentUserManufacturerProductMetadata" in smoke
+    assert "Silent uninstall left manufacturer product metadata" in smoke
+    assert "[Microsoft.Win32.RegistryView]::Registry64" in smoke
+    assert "[Microsoft.Win32.RegistryView]::Registry32" in smoke
+    assert "-RegistryViews @($RegistryView)" in smoke
+    assert "Silent uninstall left a standard uninstall entry" in smoke
     assert "$UnquotedPath = $Path.Trim().Trim('\"')" in smoke
     assert "/v1/runtime/health" in smoke
     assert '$RuntimeSupervisorArgument = "--chatwaifu-runtime-supervisor"' in smoke
