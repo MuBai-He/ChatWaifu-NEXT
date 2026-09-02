@@ -4,7 +4,7 @@
 
 <h1 align="center">ChatWaifu NEXT</h1>
 
-<p align="center"><strong>想聊的时候，她一直都在。</strong></p>
+<p align="center"><strong>在屏幕的一隅，写下属于你们的日常物语。</strong></p>
 
 <p align="center">
   <img src="docs-site/public/brand/moonlit-room.png" alt="月夜书桌与窗边的 ChatWaifu NEXT 氛围场景" width="100%" />

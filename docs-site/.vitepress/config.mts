@@ -3,7 +3,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   lang: "zh-CN",
   title: "ChatWaifu NEXT",
-  description: "把喜欢的角色留在桌面上。她会听你说话，也会记得。",
+  description: "在屏幕的一隅，写下属于你们的日常物语。",
   base: "/ChatWaifu-NEXT-docs/",
   cleanUrls: true,
   lastUpdated: true,
