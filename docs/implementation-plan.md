@@ -1,9 +1,9 @@
 # ChatWaifu Next 详细实现方案与顺序表
 
-> 配套架构：`CHATWAIFU_NEXT_ARCHITECTURE.md`  
+> 配套架构：`docs/architecture/master-architecture.md`  
 > 执行对象：Codex 与项目开发者  
 > 原则：先协议、再假实现、再纵向链路、最后接真实模型  
-> 工作量标记：S / M / L / XL，仅表示相对复杂度，不表示日历时间  
+> 工作量标记：S / M / L / XL，仅表示相对复杂度，不表示日历时间
 
 ---
 
@@ -37,25 +37,25 @@ Codex 每次只实现一个明确阶段或一个可验收子任务。不得一�
 
 ## 1. 总体实施顺序
 
-| 阶段 | 名称 | 核心产物 | 依赖 | 相对工作量 |
-|---:|---|---|---|---|
-| 0 | 仓库与工程地基 | Monorepo、CI、开发命令、ADR | 无 | M |
-| 1 | 协议与代码生成 | Event、Command、Audio、Avatar、Skill、Memory schema | 0 | L |
-| 2 | Live2D Avatar Lab | 官方 Web SDK、Cue、口型假信号、动作分层 | 0,1 | L |
-| 3 | Tauri 桌面宿主 | 双窗口、托盘、Sidecar 管理、设置存储 | 2 | L |
-| 4 | Runtime 基础内核 | Config、EventHub、EventStore、Session 管理 | 0,1 | L |
-| 5 | Pipecat 实时传输 | SmallWebRTC、RTVI、麦克风与播放 loopback | 3,4 | L |
-| 6 | Fake Cascade 垂直切片 | FakeASR→FakeLLM→FakeTTS→Live2D | 1-5 | L |
-| 7 | 打断与 Generation 语义 | 端到端取消、迟到帧丢弃、实际播放记录 | 6 | XL |
-| 8 | Model Worker 与 Supervisor | Worker RPC、健康、显存策略、崩溃回退 | 4,7 | XL |
-| 9 | 真实 Cascade 模型 | ASR、LLM、TTS Adapter 与基准 | 8 | XL |
-| 10 | Skill 与 Plugin Runtime | Agent Skills、MCP、权限、异步 Job | 4,7 | XL |
-| 11 | Memory Kernel | Event projection、多类型记忆、检索、删除 | 4,7 | XL |
-| 12 | Character Kernel | Persona、关系、情绪、Prompt Compiler、Cue Planner | 10,11 | L |
-| 13 | Cloud Realtime | OpenAI、Gemini Adapter、Shadow Transcript | 7,8,12 | XL |
-| 14 | 双脑与 Local Omni | delegate_reasoning、MiniCPM-o Adapter、fallback | 10-13 | XL |
-| 15 | 主动行为与 Ambient | Scheduler、quiet hours、场景事件、频控 | 10-14 | L |
-| 16 | 发布工程 | 安装、更新、模型管理、签名、隐私审计 | 0-15 | XL |
+| 阶段 | 名称                       | 核心产物                                            | 依赖   | 相对工作量 |
+| ---: | -------------------------- | --------------------------------------------------- | ------ | ---------- |
+|    0 | 仓库与工程地基             | Monorepo、CI、开发命令、ADR                         | 无     | M          |
+|    1 | 协议与代码生成             | Event、Command、Audio、Avatar、Skill、Memory schema | 0      | L          |
+|    2 | Live2D Avatar Lab          | 官方 Web SDK、Cue、口型假信号、动作分层             | 0,1    | L          |
+|    3 | Tauri 桌面宿主             | 双窗口、托盘、Sidecar 管理、设置存储                | 2      | L          |
+|    4 | Runtime 基础内核           | Config、EventHub、EventStore、Session 管理          | 0,1    | L          |
+|    5 | Pipecat 实时传输           | SmallWebRTC、RTVI、麦克风与播放 loopback            | 3,4    | L          |
+|    6 | Fake Cascade 垂直切片      | FakeASR→FakeLLM→FakeTTS→Live2D                      | 1-5    | L          |
+|    7 | 打断与 Generation 语义     | 端到端取消、迟到帧丢弃、实际播放记录                | 6      | XL         |
+|    8 | Model Worker 与 Supervisor | Worker RPC、健康、显存策略、崩溃回退                | 4,7    | XL         |
+|    9 | 真实 Cascade 模型          | ASR、LLM、TTS Adapter 与基准                        | 8      | XL         |
+|   10 | Skill 与 Plugin Runtime    | Agent Skills、MCP、权限、异步 Job                   | 4,7    | XL         |
+|   11 | Memory Kernel              | Event projection、多类型记忆、检索、删除            | 4,7    | XL         |
+|   12 | Character Kernel           | Persona、关系、情绪、Prompt Compiler、Cue Planner   | 10,11  | L          |
+|   13 | Cloud Realtime             | OpenAI、Gemini Adapter、Shadow Transcript           | 7,8,12 | XL         |
+|   14 | 双脑与 Local Omni          | delegate_reasoning、MiniCPM-o Adapter、fallback     | 10-13  | XL         |
+|   15 | 主动行为与 Ambient         | Scheduler、quiet hours、场景事件、频控              | 10-14  | L          |
+|   16 | 发布工程                   | 安装、更新、模型管理、签名、隐私审计                | 0-15   | XL         |
 
 并行建议：
 
@@ -969,8 +969,7 @@ class InterruptionCoordinator:
         session_id: UUID,
         reason: str,
         source: str,
-    ) -> InterruptionReport:
-        ...
+    ) -> InterruptionReport: ...
 ```
 
 并发执行：
@@ -1172,7 +1171,7 @@ Worker health 返回：
   "model_loaded": true,
   "queue_depth": 0,
   "device": "cuda:0",
-  "memory": {"vram_used_mb": 4200},
+  "memory": { "vram_used_mb": 4200 },
   "capabilities": ["tts.streaming", "tts.cancel"]
 }
 ```
@@ -2326,21 +2325,21 @@ Screenshots/traces if UI or latency related
 
 # 21. 风险登记表
 
-| 风险 | 影响 | 预防措施 | 触发后的处理 |
-|---|---|---|---|
-| Pipecat API 升级 | 实时层破坏 | pin 版本、Adapter、contract test | 独立升级 PR |
-| Live2D 许可或分发限制 | 无法公开打包 | Vendor 隔离、发布前审查 | 提供用户自行放置 SDK 方案 |
-| Tauri macOS 透明窗口限制 | App Store 不兼容 | 多发行 profile | Store build 关闭透明 overlay |
-| 模型依赖冲突 | Runtime 无法安装 | 独立 Worker 环境 | Worker 回退或禁用 |
-| GPU OOM | 会话中断 | Resource Manager、懒加载 | 退回小模型/CPU/云端 |
-| 打断竞态 | 旧语音复活 | generation invalidation | 强制新 Session 或清队列 |
-| 记忆幻觉写入 | 角色长期误记 | proposal + provenance + committer | UI 更正、supersede、评估集 |
-| Skill 工具过多 | 模型选择混乱 | 渐进加载、Top-K | 限制 active tools |
-| 插件越权 | 数据或系统风险 | Permission Broker、子进程、信任等级 | 禁用插件、撤销 grant |
-| 云端上下文泄漏 | 隐私风险 | Egress Policy、敏感过滤 | 阻断 provider、审计事件 |
-| Realtime provider 断线 | 对话冻结 | Runtime 真相源、fallback | 新建 session 或 Cascade |
-| 音频口型漂移 | 角色违和 | actual playback clock | analyser fallback / resync |
-| 过度主动 | 用户反感 | quiet hours、频控、默认关闭 ambient | 自动降低频率、全局关闭 |
+| 风险                     | 影响             | 预防措施                            | 触发后的处理                 |
+| ------------------------ | ---------------- | ----------------------------------- | ---------------------------- |
+| Pipecat API 升级         | 实时层破坏       | pin 版本、Adapter、contract test    | 独立升级 PR                  |
+| Live2D 许可或分发限制    | 无法公开打包     | Vendor 隔离、发布前审查             | 提供用户自行放置 SDK 方案    |
+| Tauri macOS 透明窗口限制 | App Store 不兼容 | 多发行 profile                      | Store build 关闭透明 overlay |
+| 模型依赖冲突             | Runtime 无法安装 | 独立 Worker 环境                    | Worker 回退或禁用            |
+| GPU OOM                  | 会话中断         | Resource Manager、懒加载            | 退回小模型/CPU/云端          |
+| 打断竞态                 | 旧语音复活       | generation invalidation             | 强制新 Session 或清队列      |
+| 记忆幻觉写入             | 角色长期误记     | proposal + provenance + committer   | UI 更正、supersede、评估集   |
+| Skill 工具过多           | 模型选择混乱     | 渐进加载、Top-K                     | 限制 active tools            |
+| 插件越权                 | 数据或系统风险   | Permission Broker、子进程、信任等级 | 禁用插件、撤销 grant         |
+| 云端上下文泄漏           | 隐私风险         | Egress Policy、敏感过滤             | 阻断 provider、审计事件      |
+| Realtime provider 断线   | 对话冻结         | Runtime 真相源、fallback            | 新建 session 或 Cascade      |
+| 音频口型漂移             | 角色违和         | actual playback clock               | analyser fallback / resync   |
+| 过度主动                 | 用户反感         | quiet hours、频控、默认关闭 ambient | 自动降低频率、全局关闭       |
 
 ---
 

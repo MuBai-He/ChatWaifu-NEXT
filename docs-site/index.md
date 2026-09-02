@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: ChatWaifu NEXT
-  text: 把喜欢的角色留在桌面
-  tagline: 她会听你说话，也会记得。想沉浸地聊一会儿，就打开 Galgame 界面；想有人陪在桌边，就让桌宠一直待在那里。
+  text: 在屏幕的一隅，写下属于你们的日常物语
+  tagline: 当微光洒在桌面、指尖划过键盘，熟悉的声音便在耳边轻轻响起。那些随口说起的琐碎、未曾言说的心情，都化作了她眼眸里的笑意与长久的倾听。
   image:
     src: /brand/chatwaifu-mark.png
     alt: 丝带环绕月牙与星芒组成的 ChatWaifu NEXT 标志

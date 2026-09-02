@@ -4,7 +4,7 @@
 
 <h1 align="center">ChatWaifu NEXT</h1>
 
-<p align="center"><strong>把喜欢的角色，留在触手可及的桌边。</strong></p>
+<p align="center"><strong>在屏幕的一隅，写下属于你们的日常物语。</strong></p>
 
 <p align="center">
   <img src="docs-site/public/brand/moonlit-room.png" alt="月夜书桌与窗边的 ChatWaifu NEXT 氛围场景" width="100%" />
@@ -267,9 +267,8 @@ make build-desktop-ui
 ## 文档与项目沿革
 
 - [安装与使用 Wiki](https://mubai-he.github.io/ChatWaifu-NEXT-docs/)
-- [架构方案](CHATWAIFU_NEXT_ARCHITECTURE.md)
-- [实现计划](CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md)
-- [交接与不变量](CODEX_HANDOFF.md)
+- [架构方案](docs/architecture/master-architecture.md)
+- [实现计划](docs/implementation-plan.md)
 - [实现状态](docs/implementation-status.yaml)
 - [Web/Desktop 发行模型](docs/architecture/product-release-profiles.md)
 - [外部消息渠道统一边界](docs/architecture/external-channels.md)

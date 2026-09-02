@@ -1,6 +1,6 @@
 # Contributing
 
-Read `CODEX_HANDOFF.md`, `docs/implementation-status.yaml`, relevant ADRs, and the
+Read `docs/architecture/master-architecture.md`, `docs/implementation-plan.md`, `docs/implementation-status.yaml`, relevant ADRs, and the
 applicable `.agents/skills/` entry before changing code. Work on one accepted phase
 or vertical slice at a time.
 
