@@ -96,7 +96,7 @@ export class RuntimeSocketClient {
       if (!this.isCurrent(epoch, sessionId)) return;
       const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const ticket = await acquireWsTicket(conn);
+      const ticket = await acquireWsTicket("events", conn);
       if (!this.isCurrent(epoch, sessionId)) return;
       const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(
@@ -155,7 +155,7 @@ export class RuntimeSocketClient {
       if (!this.isCurrent(epoch, sessionId)) return;
       const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const ticket = await acquireWsTicket(conn);
+      const ticket = await acquireWsTicket("audio", conn);
       if (!this.isCurrent(epoch, sessionId)) return;
       const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -21,6 +22,8 @@ from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
+
+logger = logging.getLogger(__name__)
 
 USER_SCOPE = "local"
 type RelationshipStage = Literal["acquaintance", "familiar", "trusted", "close"]
@@ -63,6 +66,47 @@ class CharacterKernelService:
             )
             relationship_row = await cursor_rel.fetchone()
             await cursor_rel.close()
+
+            if affect_row is not None and relationship_row is not None:
+                aff_rev = int(affect_row["revision"])
+                rel_rev = int(relationship_row["revision"])
+                if aff_rev != rel_rev:
+                    target_revision = max(aff_rev, rel_rev)
+                    logger.warning(
+                        "Character kernel revision split detected for %s "
+                        "(affect=%d, relationship=%d); reconciling both to revision=%d",
+                        character_id,
+                        aff_rev,
+                        rel_rev,
+                        target_revision,
+                    )
+                    c1 = await connection.execute(
+                        "UPDATE character_states SET revision = ? "
+                        "WHERE character_id = ? AND user_scope = ?",
+                        (target_revision, character_id, USER_SCOPE),
+                    )
+                    await c1.close()
+                    c2 = await connection.execute(
+                        "UPDATE relationship_states SET revision = ? "
+                        "WHERE character_id = ? AND user_scope = ?",
+                        (target_revision, character_id, USER_SCOPE),
+                    )
+                    await c2.close()
+
+                    cursor_affect = await connection.execute(
+                        "SELECT * FROM character_states WHERE character_id = ? AND user_scope = ?",
+                        (character_id, USER_SCOPE),
+                    )
+                    affect_row = await cursor_affect.fetchone()
+                    await cursor_affect.close()
+
+                    cursor_rel = await connection.execute(
+                        "SELECT * FROM relationship_states "
+                        "WHERE character_id = ? AND user_scope = ?",
+                        (character_id, USER_SCOPE),
+                    )
+                    relationship_row = await cursor_rel.fetchone()
+                    await cursor_rel.close()
 
         now = datetime.now(UTC)
         if affect_row is None or relationship_row is None:
