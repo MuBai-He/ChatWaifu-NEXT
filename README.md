@@ -260,7 +260,7 @@ make build-desktop-ui
 - 密钥由 Runtime 只写保存，不进入浏览器 local storage；本地模型 Worker 使用动态 loopback token。
 - 不可信插件必须通过真实 OS 沙箱；无法强制执行时 fail closed，不静默退化成“软隔离”。
 - 本项目是非官方同人技术 Demo，与 YUZUSOFT/JUNOS、Live2D Inc. 或声优本人无隶属关系。
-- 仓库发行许可证尚未选定。在 [LICENSES.md](LICENSES.md) 更新前，不要公开再分发仓库或 owner-only 资产。
+- 源码采用 [PolyForm Noncommercial License 1.0.0](LICENSE) 许可，允许个人非商用与研究；商业用途、闭源集成或商业 SaaS 需获得项目所有者单独商业授权。第三方资产与角色 IP 边界详见 [LICENSES.md](LICENSES.md)。
 
 安全问题请按 [SECURITY.md](SECURITY.md) 通过私有渠道报告。
 

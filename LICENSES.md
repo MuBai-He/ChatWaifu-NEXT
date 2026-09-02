@@ -1,7 +1,9 @@
 # Licensing status
 
-The project distribution license has not yet been selected. Do not publish or
-redistribute the repository until the owner records that decision.
+The ChatWaifu NEXT source code is licensed under the **PolyForm Noncommercial License 1.0.0**
+(see `LICENSE`). Noncommercial use, personal study, local research, and noncommercial modification
+are permitted. Commercial use, paid SaaS, productized commercial distribution, and proprietary
+derivatives require a separate commercial license from the project owner.
 
 Third-party code, models, voice assets, Live2D Core, Cubism models, and character
 resources retain their own licenses. Every future worker/model manifest must include
