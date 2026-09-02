@@ -3,7 +3,7 @@ const DEFAULT_MAX_QUEUED_CODE_POINTS = 4_096;
 
 interface StreamingTextProjectorCallbacks {
   onReveal(generationId: string, text: string): void;
-  onComplete(generationId: string): void;
+  onComplete(generationId: string, finalText?: string): void;
 }
 
 interface StreamingTextProjectorOptions {
@@ -24,6 +24,8 @@ export class StreamingTextProjector {
   private completionRequested = false;
   private timer: number | null = null;
   private disposed = false;
+  private revealedText = "";
+  private finalText?: string;
 
   constructor(
     private readonly callbacks: StreamingTextProjectorCallbacks,
@@ -40,6 +42,8 @@ export class StreamingTextProjector {
     this.queue.length = 0;
     this.generationId = generationId;
     this.completionRequested = false;
+    this.revealedText = "";
+    this.finalText = undefined;
   }
 
   push(generationId: string, text: string): void {
@@ -54,17 +58,26 @@ export class StreamingTextProjector {
     this.queue.push(...Array.from(text));
     const overflow = this.queue.length - this.maxQueuedCodePoints;
     if (overflow > 0) {
-      this.callbacks.onReveal(
-        generationId,
-        this.queue.splice(0, overflow).join(""),
-      );
+      const drained = this.queue.splice(0, overflow).join("");
+      this.revealedText += drained;
+      this.callbacks.onReveal(generationId, drained);
     }
     this.schedule();
   }
 
-  complete(generationId: string): void {
+  complete(generationId: string, finalText?: string): void {
     if (this.disposed || generationId !== this.generationId) return;
     this.completionRequested = true;
+    if (typeof finalText === "string") {
+      this.finalText = finalText;
+      const currentKnown = this.revealedText + this.queue.join("");
+      if (finalText.startsWith(currentKnown)) {
+        const missingSuffix = finalText.slice(currentKnown.length);
+        if (missingSuffix.length > 0) {
+          this.queue.push(...Array.from(missingSuffix));
+        }
+      }
+    }
     if (this.queue.length === 0) {
       this.finish(generationId);
       return;
@@ -78,6 +91,8 @@ export class StreamingTextProjector {
     this.queue.length = 0;
     this.generationId = null;
     this.completionRequested = false;
+    this.revealedText = "";
+    this.finalText = undefined;
   }
 
   dispose(): void {
@@ -86,6 +101,8 @@ export class StreamingTextProjector {
     this.clearTimer();
     this.queue.length = 0;
     this.generationId = null;
+    this.revealedText = "";
+    this.finalText = undefined;
   }
 
   private schedule(): void {
@@ -99,7 +116,9 @@ export class StreamingTextProjector {
     if (!generationId || this.queue.length === 0) return;
 
     const count = revealCount(this.queue.length);
-    this.callbacks.onReveal(generationId, this.queue.splice(0, count).join(""));
+    const chunk = this.queue.splice(0, count).join("");
+    this.revealedText += chunk;
+    this.callbacks.onReveal(generationId, chunk);
     if (this.queue.length > 0) {
       this.schedule();
     } else if (this.completionRequested) {
@@ -109,9 +128,12 @@ export class StreamingTextProjector {
 
   private finish(generationId: string): void {
     if (generationId !== this.generationId) return;
+    const finalText = this.finalText;
     this.generationId = null;
     this.completionRequested = false;
-    this.callbacks.onComplete(generationId);
+    this.revealedText = "";
+    this.finalText = undefined;
+    this.callbacks.onComplete(generationId, finalText);
   }
 
   private clearTimer(): void {

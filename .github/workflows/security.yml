@@ -42,8 +42,14 @@ jobs:
           install: false
       - run: uv sync --all-packages --all-groups --locked
       - run: pnpm install --frozen-lockfile
-      # PYSEC-2026-3740: NLTK regex/grammar parser issue. ChatWaifu only consumes
-      # pre-bundled Punkt sentence tokenization (nltk.sent_tokenize), so untrusted
-      # grammar parsing is unreachable. Review/expiry: 2026-10-31 (tracking upstream 3.10.4 release).
+      # PYSEC-2026-3740 / CVE-2026-81726:
+      # Affects NLTK model-artifact import/export APIs that bypass pathsec:
+      # TransitionParser, AveragedPerceptron, PerceptronTagger.save_to_json,
+      # and save_maxent_params.
+      #
+      # ChatWaifu does not expose or invoke these APIs with caller-controlled
+      # paths. NLTK is present only as a transitive/runtime resource dependency.
+      # Re-review: 2026-10-31.
+      # Remove this ignore when an upstream patched version is available.
       - run: uv run --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
       - run: pnpm audit --audit-level high

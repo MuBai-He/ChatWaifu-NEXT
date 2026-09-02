@@ -92,4 +92,62 @@ describe("runtimeEventReducer", () => {
 
     expect(reset).toEqual(initialRuntimeViewState);
   });
+  it("replaces partial generation text with calibrated full text", () => {
+    const state = {
+      ...initialRuntimeViewState,
+      messages: [
+        {
+          id: "generation-a",
+          role: "assistant" as const,
+          text: "宁宁的前半句",
+          generationId: "generation-a",
+          pending: true,
+        },
+      ],
+    };
+
+    const replaced = runtimeEventReducer(state, {
+      type: "text_replaced",
+      generationId: "generation-a",
+      text: "宁宁的前半句与校准后的后半句。",
+    });
+
+    expect(replaced.messages[0].text).toBe("宁宁的前半句与校准后的后半句。");
+    expect(replaced.messages[0].pending).toBe(true);
+  });
+
+  it("calibrates empty message on assistant.generation_completed", () => {
+    const state = {
+      ...initialRuntimeViewState,
+      messages: [
+        {
+          id: "generation-a",
+          role: "assistant" as const,
+          text: "",
+          generationId: "generation-a",
+          pending: true,
+        },
+      ],
+    };
+
+    const completed = runtimeEventReducer(state, {
+      type: "runtime_event",
+      event: {
+        event_id: "00000000-0000-4000-8000-000000000101",
+        schema_version: "1.0",
+        event_type: "assistant.generation_completed",
+        session_id: "00000000-0000-4000-8000-000000000201",
+        generation_id: "generation-a",
+        sequence: 43,
+        occurred_at: "2026-08-29T00:00:00Z",
+        source: "runtime.conversation",
+        privacy: "local",
+        payload: {
+          text: "兜底校准文本",
+        },
+      } as unknown as DomainEvent,
+    });
+
+    expect(completed.messages[0].text).toBe("兜底校准文本");
+  });
 });

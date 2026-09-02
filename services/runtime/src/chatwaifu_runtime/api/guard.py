@@ -14,7 +14,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from chatwaifu_runtime.config.settings import Settings
 
-type TicketPurpose = Literal["events", "audio"]
+type TicketPurpose = Literal["events", "audio", "admin_events"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +22,7 @@ class WebSocketTicketClaims:
     expiry: float
     purpose: TicketPurpose
     origin: str | None = None
+    session_id: str | None = None
 
 
 LOOPBACK_HOSTS: Final[frozenset[str]] = frozenset(
@@ -49,6 +50,7 @@ class WebSocketTicketStore:
         self,
         purpose: TicketPurpose = "events",
         origin: str | None = None,
+        session_id: str | None = None,
         ttl_seconds: float = 30.0,
     ) -> str:
         async with self._lock:
@@ -56,10 +58,14 @@ class WebSocketTicketStore:
             self._evict_expired(now)
             ticket = secrets.token_urlsafe(32)
             normalized_origin = origin.strip().lower() if origin and origin.strip() else None
+            normalized_session_id = (
+                session_id.strip() if session_id and session_id.strip() else None
+            )
             self._tickets[ticket] = WebSocketTicketClaims(
                 expiry=now + ttl_seconds,
                 purpose=purpose,
                 origin=normalized_origin,
+                session_id=normalized_session_id,
             )
             return ticket
 
@@ -68,6 +74,7 @@ class WebSocketTicketStore:
         ticket: str | None,
         expected_purpose: TicketPurpose | None = None,
         origin: str | None = None,
+        session_id: str | None = None,
     ) -> bool:
         if not ticket:
             return False
@@ -77,12 +84,27 @@ class WebSocketTicketStore:
             claims = self._tickets.pop(ticket, None)
             if claims is None or claims.expiry < now:
                 return False
-            if expected_purpose is not None and claims.purpose != expected_purpose:
-                return False
+            if expected_purpose is not None:
+                if claims.purpose == "admin_events":
+                    if expected_purpose not in ("events", "admin_events"):
+                        return False
+                elif claims.purpose != expected_purpose:
+                    return False
             if claims.origin is not None:
                 if not origin:
                     return False
                 if claims.origin != origin.strip().lower():
+                    return False
+            normalized_session_id = (
+                session_id.strip() if session_id and session_id.strip() else None
+            )
+            if claims.purpose == "events":
+                if not claims.session_id:
+                    return False
+                if claims.session_id != normalized_session_id:
+                    return False
+            elif claims.session_id is not None:
+                if claims.session_id != normalized_session_id:
                     return False
             return True
 
@@ -248,6 +270,7 @@ class LocalClientGuardMiddleware:
             query_string = scope.get("query_string", b"").decode("latin-1", errors="ignore")
             query_params = urllib.parse.parse_qs(query_string)
             ticket = query_params.get("ticket", [None])[0]
+            ws_session_id = query_params.get("session_id", [None])[0]
             bearer_token = self._extract_bearer_token(auth_header)
 
             authenticated = False
@@ -256,6 +279,7 @@ class LocalClientGuardMiddleware:
                     ticket,
                     expected_purpose=expected_purpose,
                     origin=origin_header,
+                    session_id=ws_session_id,
                 )
             elif bearer_token:
                 authenticated = self._is_token_valid(bearer_token)

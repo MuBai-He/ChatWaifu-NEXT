@@ -8,7 +8,7 @@ import { getSessionEvents } from "./runtime-client/sessionsClient";
 import {
   acquireWsTicket,
   resolveRuntimeConnection,
-  runtimeWebSocketUrl,
+  runtimeWebSocketUrlFromConnection,
 } from "./runtimeEndpoint";
 
 export const RUNTIME_EVENT_NOTIFICATION = "chatwaifu:runtime-event";
@@ -94,13 +94,11 @@ export class RuntimeSocketClient {
     try {
       const conn = await resolveRuntimeConnection(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
+      const baseUrl = runtimeWebSocketUrlFromConnection(conn);
+      const ticket = await acquireWsTicket("events", conn, sessionId);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const ticket = await acquireWsTicket("events", conn);
-      if (!this.isCurrent(epoch, sessionId)) return;
-      const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(
-        `${baseUrl}/v1/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${this.lastSequence}${ticketParam}`,
+        `${baseUrl}/v1/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${this.lastSequence}&ticket=${encodeURIComponent(ticket)}`,
       );
       if (!this.isCurrent(epoch, sessionId)) {
         socket.close();
@@ -153,13 +151,11 @@ export class RuntimeSocketClient {
     try {
       const conn = await resolveRuntimeConnection(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
+      const baseUrl = runtimeWebSocketUrlFromConnection(conn);
+      const ticket = await acquireWsTicket("audio", conn, sessionId);
       if (!this.isCurrent(epoch, sessionId)) return;
-      const ticket = await acquireWsTicket("audio", conn);
-      if (!this.isCurrent(epoch, sessionId)) return;
-      const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(
-        `${baseUrl}/v1/audio/stream?session_id=${encodeURIComponent(sessionId)}${ticketParam}`,
+        `${baseUrl}/v1/audio/stream?session_id=${encodeURIComponent(sessionId)}&ticket=${encodeURIComponent(ticket)}`,
       );
       if (!this.isCurrent(epoch, sessionId)) {
         socket.close();

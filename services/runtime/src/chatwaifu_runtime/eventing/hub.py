@@ -13,19 +13,52 @@ type RuntimeEvent = dict[str, object]
 type EventFilter = Callable[[RuntimeEvent], bool]
 
 
+class EventRetentionClass(StrEnum):
+    CRITICAL = "critical"
+    DOMAIN = "domain"
+    EPHEMERAL = "ephemeral"
+
+
+class EventDispatchMode(StrEnum):
+    PREEMPTIVE = "preemptive"
+    ORDERED = "ordered"
+
+
 class EventDeliveryClass(StrEnum):
     CONTROL = "control"
     DOMAIN = "domain"
     TELEMETRY = "telemetry"
 
 
-_PRIORITY_ORDER: dict[EventDeliveryClass, int] = {
-    EventDeliveryClass.CONTROL: 0,
-    EventDeliveryClass.DOMAIN: 1,
-    EventDeliveryClass.TELEMETRY: 2,
+_DISPATCH_PRIO: dict[EventDispatchMode, int] = {
+    EventDispatchMode.PREEMPTIVE: 0,
+    EventDispatchMode.ORDERED: 1,
 }
 
-_CONTROL_EXACT_TYPES: frozenset[str] = frozenset(
+_RETENTION_WEIGHT: dict[EventRetentionClass, int] = {
+    EventRetentionClass.EPHEMERAL: 0,
+    EventRetentionClass.DOMAIN: 1,
+    EventRetentionClass.CRITICAL: 2,
+}
+
+_PREEMPTIVE_EXACT_TYPES: frozenset[str] = frozenset(
+    {
+        "session.interrupted",
+        "session.cancelled",
+        "conversation.interruption_requested",
+        "conversation.interrupted",
+        "assistant.generation_cancelled",
+        "skill.confirmation_requested",
+        "skill.confirmation_decided",
+        "skill.run_cancelled",
+        "runtime_skill.permission_requested",
+        "runtime_skill.permission_decided",
+        "runtime_skill.cancelled",
+        "system.error_raised",
+    }
+)
+
+_CRITICAL_RETENTION_TYPES: frozenset[str] = frozenset(
     {
         "session.interrupted",
         "session.cancelled",
@@ -36,6 +69,8 @@ _CONTROL_EXACT_TYPES: frozenset[str] = frozenset(
         "assistant.generation_cancelled",
         "assistant.generation_failed",
         "assistant.generation_completed",
+        "assistant.audio_chunk_queued",
+        "assistant.text_segment_committed",
         "assistant.playback_stopped",
         "skill.confirmation_requested",
         "skill.confirmation_decided",
@@ -47,56 +82,83 @@ _CONTROL_EXACT_TYPES: frozenset[str] = frozenset(
     }
 )
 
-_TELEMETRY_EXACT_TYPES: frozenset[str] = frozenset(
+_EPHEMERAL_RETENTION_TYPES: frozenset[str] = frozenset(
     {
         "assistant.text_delta",
         "assistant.playback_progress",
         "user.transcript_partial",
-        "user.speech_started",
-        "user.speech_stopped",
         "avatar.debug_sample",
         "audio.meter",
     }
 )
 
 
-def classify_event(event: object) -> EventDeliveryClass:
+def _extract_event_type(event: object) -> str:
     if isinstance(event, str):
-        event_type = event
-    elif isinstance(event, dict):
+        return event
+    if isinstance(event, dict):
         event_dict = cast(dict[str, object], event)
         raw_type = event_dict.get("event_type")
-        event_type = str(raw_type) if raw_type is not None else ""
-    else:
-        raw_attr = getattr(event, "event_type", "")
-        event_type = str(raw_attr) if raw_attr is not None else ""
+        return str(raw_type) if raw_type is not None else ""
+    raw_attr = getattr(event, "event_type", "")
+    return str(raw_attr) if raw_attr is not None else ""
 
+
+def classify_dispatch_mode(event: object) -> EventDispatchMode:
+    event_type = _extract_event_type(event)
     if not event_type:
-        return EventDeliveryClass.DOMAIN
+        return EventDispatchMode.ORDERED
 
-    if event_type in _CONTROL_EXACT_TYPES or event_type.startswith("system."):
-        return EventDeliveryClass.CONTROL
+    if event_type in _PREEMPTIVE_EXACT_TYPES or event_type.startswith("system."):
+        return EventDispatchMode.PREEMPTIVE
+    if (
+        event_type.endswith(".cancelled")
+        or event_type.endswith(".interrupted")
+        or event_type.endswith(".interruption_requested")
+    ):
+        return EventDispatchMode.PREEMPTIVE
+
+    return EventDispatchMode.ORDERED
+
+
+def classify_retention(event: object) -> EventRetentionClass:
+    event_type = _extract_event_type(event)
+    if not event_type:
+        return EventRetentionClass.DOMAIN
+
+    if event_type in _CRITICAL_RETENTION_TYPES or event_type.startswith("system."):
+        return EventRetentionClass.CRITICAL
     if (
         event_type.endswith(".cancelled")
         or event_type.endswith(".interrupted")
         or event_type.endswith(".interruption_requested")
         or event_type.endswith(".failed")
+        or event_type.endswith(".completed")
         or event_type.endswith(".confirmation_requested")
         or event_type.endswith(".confirmation_decided")
         or event_type.endswith(".permission_requested")
         or event_type.endswith(".permission_decided")
     ):
-        return EventDeliveryClass.CONTROL
+        return EventRetentionClass.CRITICAL
 
-    if event_type in _TELEMETRY_EXACT_TYPES or event_type.startswith("telemetry."):
-        return EventDeliveryClass.TELEMETRY
+    if event_type in _EPHEMERAL_RETENTION_TYPES or event_type.startswith("telemetry."):
+        return EventRetentionClass.EPHEMERAL
     if (
         event_type.endswith(".progress")
         or event_type.endswith(".delta")
         or event_type.endswith(".meter")
     ):
-        return EventDeliveryClass.TELEMETRY
+        return EventRetentionClass.EPHEMERAL
 
+    return EventRetentionClass.DOMAIN
+
+
+def classify_event(event: object) -> EventDeliveryClass:
+    retention = classify_retention(event)
+    if retention == EventRetentionClass.CRITICAL:
+        return EventDeliveryClass.CONTROL
+    if retention == EventRetentionClass.EPHEMERAL:
+        return EventDeliveryClass.TELEMETRY
     return EventDeliveryClass.DOMAIN
 
 
@@ -105,7 +167,7 @@ class EventSubscription:
     queue_size: int
     event_filter: EventFilter | None = None
     dropped_events: int = 0
-    _queue: asyncio.PriorityQueue[tuple[int, int, RuntimeEvent]] = field(init=False)
+    _queue: asyncio.PriorityQueue[tuple[int, int, int, RuntimeEvent]] = field(init=False)
     _seq: int = field(init=False, default=0)
     _closed: bool = False
 
@@ -117,53 +179,57 @@ class EventSubscription:
         if self._closed or (self.event_filter and not self.event_filter(event)):
             return
 
-        delivery_class = classify_event(event)
-        prio = _PRIORITY_ORDER[delivery_class]
+        dispatch_mode = classify_dispatch_mode(event)
+        dispatch_prio = _DISPATCH_PRIO[dispatch_mode]
+        retention = classify_retention(event)
+        retention_weight = _RETENTION_WEIGHT[retention]
 
         if not self._queue.full():
             self._seq += 1
-            self._queue.put_nowait((prio, self._seq, event))
+            self._queue.put_nowait((dispatch_prio, self._seq, retention_weight, event))
             return
 
-        # Queue is full, handle laned eviction
-        items: list[tuple[int, int, RuntimeEvent]] | None = getattr(self._queue, "_queue", None)
+        # Queue is full, handle laned retention-aware eviction
+        items: list[tuple[int, int, int, RuntimeEvent]] | None = getattr(
+            self._queue, "_queue", None
+        )
         if items is None:
             return
 
-        if delivery_class == EventDeliveryClass.TELEMETRY:
-            # Telemetry is discarded without displacing existing events
+        if retention == EventRetentionClass.EPHEMERAL:
+            # Ephemeral events are discarded without displacing existing events
             self.dropped_events += 1
             return
 
         victim_idx: int | None = None
-        if delivery_class == EventDeliveryClass.DOMAIN:
-            # Try to evict oldest telemetry event (prio 2)
-            for i, (p, s, _) in enumerate(items):
-                if p == 2:
+        if retention == EventRetentionClass.DOMAIN:
+            # Try to evict oldest ephemeral event (weight 0)
+            for i, (_, s, w, _) in enumerate(items):
+                if w == 0:
                     if victim_idx is None or s < items[victim_idx][1]:
                         victim_idx = i
-            # If no telemetry, evict oldest domain event (prio 1)
+            # If no ephemeral, evict oldest domain event (weight 1)
             if victim_idx is None:
-                for i, (p, s, _) in enumerate(items):
-                    if p == 1:
+                for i, (_, s, w, _) in enumerate(items):
+                    if w == 1:
                         if victim_idx is None or s < items[victim_idx][1]:
                             victim_idx = i
-        elif delivery_class == EventDeliveryClass.CONTROL:
-            # Try finding telemetry first (prio 2)
-            for i, (p, s, _) in enumerate(items):
-                if p == 2:
+        elif retention == EventRetentionClass.CRITICAL:
+            # Try finding oldest ephemeral first (weight 0)
+            for i, (_, s, w, _) in enumerate(items):
+                if w == 0:
                     if victim_idx is None or s < items[victim_idx][1]:
                         victim_idx = i
-            # If no telemetry, find oldest domain event (prio 1)
+            # If no ephemeral, find oldest domain event (weight 1)
             if victim_idx is None:
-                for i, (p, s, _) in enumerate(items):
-                    if p == 1:
+                for i, (_, s, w, _) in enumerate(items):
+                    if w == 1:
                         if victim_idx is None or s < items[victim_idx][1]:
                             victim_idx = i
-            # If all are control, evict oldest control event (prio 0)
+            # If all are critical, evict oldest critical event (weight 2)
             if victim_idx is None:
-                for i, (p, s, _) in enumerate(items):
-                    if p == 0:
+                for i, (_, s, w, _) in enumerate(items):
+                    if w == 2:
                         if victim_idx is None or s < items[victim_idx][1]:
                             victim_idx = i
 
@@ -171,7 +237,7 @@ class EventSubscription:
             del items[victim_idx]
             heapq.heapify(items)
             self._seq += 1
-            self._queue.put_nowait((prio, self._seq, event))
+            self._queue.put_nowait((dispatch_prio, self._seq, retention_weight, event))
             self.dropped_events += 1
             return
 
@@ -179,7 +245,7 @@ class EventSubscription:
         self.dropped_events += 1
 
     async def receive(self) -> RuntimeEvent:
-        _, _, event = await self._queue.get()
+        _, _, _, event = await self._queue.get()
         return event
 
     def close(self) -> None:

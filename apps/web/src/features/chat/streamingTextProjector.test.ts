@@ -73,4 +73,51 @@ describe("StreamingTextProjector", () => {
 
     expect(visible).toBe(text);
   });
+  it("completes with final terminal text matching delta stream", () => {
+    vi.useFakeTimers();
+    let visible = "";
+    let completedWith: string | undefined;
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        visible += text;
+      },
+      onComplete: (_generationId, finalText) => {
+        completedWith = finalText;
+      },
+    });
+
+    const fullText = "宁宁的第一句话和第二句话。";
+    projector.start("generation-1");
+    projector.push("generation-1", "宁宁的第一句话");
+    projector.push("generation-1", "和第二句话。");
+    projector.complete("generation-1", fullText);
+    vi.runAllTimers();
+
+    expect(visible).toBe(fullText);
+    expect(completedWith).toBe(fullText);
+  });
+
+  it("recovers missing suffix when a delta is dropped before completion", () => {
+    vi.useFakeTimers();
+    let visible = "";
+    let completedWith: string | undefined;
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        visible += text;
+      },
+      onComplete: (_generationId, finalText) => {
+        completedWith = finalText;
+      },
+    });
+
+    const fullText = "宁宁的前半句与丢失的后半句。";
+    projector.start("generation-1");
+    projector.push("generation-1", "宁宁的前半句");
+    // Missing delta: '与丢失的后半句。' was not received over websocket
+    projector.complete("generation-1", fullText);
+    vi.runAllTimers();
+
+    expect(visible).toBe(fullText);
+    expect(completedWith).toBe(fullText);
+  });
 });

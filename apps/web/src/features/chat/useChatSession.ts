@@ -142,8 +142,11 @@ export function useChatSession({
           if (generationId !== activeGeneration.current) return;
           dispatch({ type: "text_revealed", generationId, text });
         },
-        onComplete: (generationId) => {
+        onComplete: (generationId, finalText) => {
           if (generationId !== activeGeneration.current) return;
+          if (typeof finalText === "string" && finalText.length > 0) {
+            dispatch({ type: "text_replaced", generationId, text: finalText });
+          }
           dispatch({ type: "text_completed", generationId });
         },
       });
@@ -262,7 +265,10 @@ export function useChatSession({
           break;
         case "assistant.generation_completed":
           if (!generationId || generationId !== activeGeneration.current) break;
-          getTextProjector().complete(generationId);
+          getTextProjector().complete(
+            generationId,
+            payloadText(event.payload.text),
+          );
           void getMemory()
             .then(setMemories)
             .catch(() => undefined);
