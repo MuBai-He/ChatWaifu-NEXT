@@ -87,6 +87,51 @@ def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None
     assert "token" not in line.casefold()
 
 
+def test_dev_service_lifecycle_stops_owned_runtime(
+    monkeypatch: Any,
+) -> None:
+    events: list[str] = []
+
+    class _Process:
+        pid = 4321
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+    def no_profiles(**_kwargs: object) -> dict[str, dict[str, object]]:
+        return {}
+
+    def no_stt(**_kwargs: object) -> None:
+        return None
+
+    def runtime_port(*_args: object, **_kwargs: object) -> dict[str, int]:
+        return {"runtime": 41001}
+
+    def ignore(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    def spawn(*_args: object, **_kwargs: object) -> _Process:
+        return _Process()
+
+    monkeypatch.setattr(desktop_services, "_load_available_tts_profiles", no_profiles)
+    monkeypatch.setattr(desktop_services, "_resolve_stt_worker_python", no_stt)
+    monkeypatch.setattr(desktop_services, "_allocate_ports", runtime_port)
+    monkeypatch.setattr(desktop_services, "_start_parent_watchdog", ignore)
+    monkeypatch.setattr(desktop_services.signal, "signal", ignore)
+    monkeypatch.setattr(desktop_services.subprocess, "Popen", spawn)
+    monkeypatch.setattr(desktop_services, "_wait_for_url", ignore)
+    monkeypatch.setattr(desktop_services, "_write_bootstrap", ignore)
+
+    def stop(_processes: object) -> None:
+        events.append("runtime.stop")
+
+    monkeypatch.setattr(desktop_services, "_stop_processes", stop)
+
+    assert desktop_services.main() == 0
+    assert events == ["runtime.stop"]
+
+
 def test_parent_watchdog_requires_a_real_supervisor_pid(monkeypatch: Any) -> None:
     started: list[tuple[object, ...]] = []
 

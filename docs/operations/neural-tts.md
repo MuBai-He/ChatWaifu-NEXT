@@ -39,5 +39,9 @@ unload is therefore part of the correctness path rather than a cosmetic optimiza
 - Qwen cancellation closes the generator and explicitly resets the MLX speech-decoder stream state.
 - Switching or closing the last session calls `/v1/model/unload` on the old worker.
 
-The current worker/Runtime boundary returns complete WAV segments. Low-latency chunk delivery and
-playback acknowledgements remain separate realtime hardening work.
+Worker Protocol v2 lets the validated Qwen MLX and GPT-SoVITS paths stream ordered,
+generation-scoped PCM16 over an authenticated WebSocket. Runtime applies bounded fan-out,
+cancellation and playback acknowledgements, while still retaining a complete WAV as reconnect and
+history fallback. The Windows Qwen3-TTS Torch/CUDA pack currently reports
+`native_streaming=false`: its official wrapper generates the complete waveform before Runtime can
+deliver it, so that backend does not yet provide true first-chunk latency.

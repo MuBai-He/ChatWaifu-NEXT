@@ -633,4 +633,178 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON skill_runs(generation_id, created_at DESC);
         """,
     ),
+    (
+        17,
+        """
+        ALTER TABLE turns ADD COLUMN source_context_json TEXT;
+
+        CREATE TABLE channel_connections (
+            connection_id TEXT PRIMARY KEY,
+            provider_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            principal_scope TEXT NOT NULL,
+            account_key TEXT,
+            allowed_sender_keys_json TEXT NOT NULL DEFAULT '[]',
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+            timeout_seconds REAL NOT NULL DEFAULT 120 CHECK(timeout_seconds > 0),
+            access_token_hash TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'untested'
+                CHECK(status IN ('untested', 'ready', 'degraded', 'error', 'disabled')),
+            last_error_json TEXT,
+            last_seen_at TEXT,
+            revision INTEGER NOT NULL DEFAULT 1 CHECK(revision >= 1),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
+        );
+
+        CREATE TABLE channel_bindings (
+            binding_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            conversation_key TEXT NOT NULL,
+            sender_key TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(connection_id, conversation_key),
+            UNIQUE(connection_id, session_id)
+        );
+
+        CREATE TABLE channel_turns (
+            channel_turn_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            binding_id TEXT NOT NULL REFERENCES channel_bindings(binding_id) ON DELETE CASCADE,
+            external_message_id TEXT NOT NULL,
+            content_sha256 TEXT NOT NULL,
+            account_key TEXT,
+            conversation_key TEXT NOT NULL,
+            chat_type TEXT NOT NULL DEFAULT 'direct'
+                CHECK(chat_type IN ('direct', 'group')),
+            conversation_label TEXT,
+            sender_key TEXT NOT NULL,
+            sender_display_name TEXT,
+            principal_scope TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            turn_id TEXT NOT NULL,
+            generation_id TEXT NOT NULL,
+            status TEXT NOT NULL
+                CHECK(status IN (
+                    'accepted', 'processing', 'completed', 'cancelling',
+                    'cancelled', 'failed', 'timed_out'
+                )),
+            reply_text TEXT,
+            error_json TEXT,
+            delivery_id TEXT UNIQUE,
+            revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+            accepted_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            completed_at TEXT,
+            UNIQUE(connection_id, external_message_id)
+        );
+
+        CREATE TABLE channel_deliveries (
+            delivery_id TEXT PRIMARY KEY,
+            channel_turn_id TEXT NOT NULL UNIQUE
+                REFERENCES channel_turns(channel_turn_id) ON DELETE CASCADE,
+            connection_id TEXT NOT NULL
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            status TEXT NOT NULL
+                CHECK(status IN ('pending', 'sending', 'delivered', 'failed', 'cancelled')),
+            attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt >= 1),
+            provider_message_id TEXT,
+            last_error_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            delivered_at TEXT
+        );
+
+        CREATE INDEX channel_connections_provider_status_idx
+            ON channel_connections(provider_id, status, updated_at DESC);
+        CREATE INDEX channel_bindings_connection_idx
+            ON channel_bindings(connection_id, updated_at DESC);
+        CREATE INDEX channel_turns_connection_status_idx
+            ON channel_turns(connection_id, status, updated_at DESC);
+        CREATE INDEX channel_turns_generation_idx
+            ON channel_turns(generation_id);
+        CREATE INDEX channel_deliveries_connection_status_idx
+            ON channel_deliveries(connection_id, status, updated_at DESC);
+        """,
+    ),
+    (
+        18,
+        """
+        ALTER TABLE memory_sources ADD COLUMN channel_attribution_json TEXT;
+
+        UPDATE memory_sources AS source
+        SET channel_attribution_json = (
+            SELECT json_object(
+                'schema_version', '1.0',
+                'provider_id', json_extract(turn.source_context_json, '$.provider_id'),
+                'connection_id', json_extract(turn.source_context_json, '$.connection_id'),
+                'account_key', json_extract(turn.source_context_json, '$.account_key'),
+                'principal_scope', COALESCE(
+                    json_extract(turn.source_context_json, '$.principal_scope'), 'local'
+                ),
+                'chat_type', json_extract(turn.source_context_json, '$.chat_type'),
+                'conversation_key',
+                    json_extract(turn.source_context_json, '$.conversation_key'),
+                'sender_key', json_extract(turn.source_context_json, '$.sender_key'),
+                'received_at', COALESCE(
+                    json_extract(turn.source_context_json, '$.received_at'),
+                    source.created_at
+                ),
+                'conversation_label',
+                    json_extract(turn.source_context_json, '$.conversation_label'),
+                'sender_display_name',
+                    json_extract(turn.source_context_json, '$.sender_display_name')
+            )
+            FROM turns AS turn
+            WHERE turn.turn_id = source.turn_id
+              AND turn.source_context_json IS NOT NULL
+              AND json_valid(turn.source_context_json)
+              AND json_extract(turn.source_context_json, '$.provider_id') IS NOT NULL
+        )
+        WHERE source.turn_id IS NOT NULL
+          AND EXISTS (
+              SELECT 1 FROM turns AS turn
+              WHERE turn.turn_id = source.turn_id
+                AND turn.source_context_json IS NOT NULL
+                AND json_valid(turn.source_context_json)
+                AND json_extract(turn.source_context_json, '$.provider_id') IS NOT NULL
+          );
+
+        CREATE INDEX memory_sources_channel_provider_idx
+            ON memory_sources(
+                json_extract(channel_attribution_json, '$.provider_id'),
+                created_at
+            )
+            WHERE channel_attribution_json IS NOT NULL;
+        """,
+    ),
+    (
+        19,
+        """
+        ALTER TABLE channel_deliveries ADD COLUMN lease_id TEXT;
+        ALTER TABLE channel_deliveries ADD COLUMN lease_expires_at TEXT;
+
+        CREATE INDEX channel_deliveries_lease_idx
+            ON channel_deliveries(status, lease_expires_at)
+            WHERE status = 'sending';
+        """,
+    ),
+    (
+        20,
+        """
+        CREATE TABLE channel_adapter_checkpoints (
+            connection_id TEXT PRIMARY KEY
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            cursor TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL
+        );
+        """,
+    ),
 )

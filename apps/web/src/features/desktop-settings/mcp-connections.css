@@ -72,6 +72,11 @@
   font-size: 1.25rem;
 }
 
+.mcp-connections-panel > header button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .mcp-connections-notice {
   margin: 12px 0 0;
   padding: 9px 11px;
@@ -374,6 +379,19 @@
   border-radius: 999px;
   background: #d5cfd6;
   cursor: pointer;
+}
+
+.mcp-connection-list > div:first-child button,
+.mcp-connection-list article > div button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mcp-connection-list > div:first-child button svg,
+.mcp-connection-list article > div button svg {
+  width: 12px;
+  height: 12px;
 }
 
 .mcp-connection-check-row input[role="switch"]::after {

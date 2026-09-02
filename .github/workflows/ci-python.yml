@@ -84,7 +84,10 @@ jobs:
       - uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "0.12.5"
-          python-version: "3.12"
+          # The neural worker is intentionally embedded in the Python 3.10
+          # GPT-SoVITS environment, so its minimum supported interpreter is
+          # the compatibility gate. The workspace job above covers 3.12.
+          python-version: "3.10"
           enable-cache: true
           cache-dependency-glob: workers/tts-neural/uv.lock
       - run: uv sync --all-groups --locked

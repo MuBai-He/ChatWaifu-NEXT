@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-08-29"
+updated_at: "2026-09-02"
 current_phase: 12
 next_phase: 13
 phase_2_entry_allowed: true
@@ -8,9 +8,12 @@ continuous_demo_delivery_authorized: true
 out_of_order_slices:
   - phase_3_native_runtime_supervision
   - phase_15_idle_proactive_companion
+  - phase_17_external_channel_gateway
 
 validation:
   local_platform: macos-arm64
+  local_recorded_at: "2026-08-31"
+  local_record_scope: historical_macos_baseline_not_current_native_windows_head
   python: "3.12.14"
   node: "26.0.0"
   pnpm: "11.19.0"
@@ -32,9 +35,15 @@ validation:
     - make setup-neural-tts-workers
     - make build-live2d-bridge
     - make check-live2d-vendor
+    - uv run pytest (432 passed, 10 Windows-only acceptance tests skipped)
+    - Ruff format and lint plus Pyright (0 errors)
+    - pnpm workspace tests (18 protocol, 21 Avatar SDK, and 137 Web tests passed)
+    - Prettier workspace check and generated channel-schema byte-stability check
+    - cargo fmt plus workspace all-targets check
     - pnpm build
     - make build-web plus isolated Web artifact verification
     - make build-desktop-ui plus isolated Desktop artifact verification
+    - make build-docs
     - uv run python tools/run_demo.py --no-open
     - real aiortc Chinese audio through Pipecat VAD, faster-whisper STT, generation, and WebRTC TTS
     - two-utterance barge-in cancels the first generation and completes the second generation
@@ -53,6 +62,7 @@ validation:
     - browser reload after Runtime event-catalog synchronization shows no unknown-event notice or console warning/error
     - browser full reload reports no new console warnings or errors
     - Tauri 2.11 macOS host passes cargo check, clippy, tests, and no-bundle release build
+    - Apple Silicon owner packaging produces unsigned app and DMG artifacts with an embedded base Runtime, excludes local neural model packs and weights, passes embedded Runtime health, launches the complete packaged Host-to-Runtime path, and cleans the sidecar on Host exit
     - Windows 11 ARM64 VM runs the win-amd64 Python 3.12 environment with Ruff, Pyright, and all 118 Python tests passing
     - Windows Web formatting, lint, type checks, 80 unit tests, and the production Web build pass serially
     - Windows x64 Rust target passes Clippy and 11 Tauri tests, then produces a release EXE verified as PE machine 0x8664
@@ -65,6 +75,10 @@ validation:
     - proactive policy and API tests cover cross-midnight quiet hours, busy deferral, cooldown, daily budget, hidden system turns, and natural Demo fallback
     - real macOS transparent always-on-top overlay renders the local Ayachi Nene Live2D model and dialogue over other applications
     - browser desktop-settings smoke confirms app-like fixed-window layout, internal scroll, working display preferences, and no conversation/media controls
+    - desktop first-run guide contract covers base EXE versus optional Worker Packs, chat API, TTS, microphone/STT, VAD, settings navigation, deferral, completion persistence, and native control-center auto-open
+    - Runtime startup uses receipt/manifest identity plus selected entrypoint hashing without a full payload walk; the Data settings action retains exact-tree, SHA-256, reparse, and PE verification on demand outside the media event loop
+    - browser native WeChat settings smoke reaches a real Tencent QR authorization, renders one QR with no manual identity or verification input, has no horizontal overflow or console error, and cancels back to the clean unbound state
+    - direct Tencent QR endpoint probe returns both opaque authorization identity and render content without exposing either in logs; macOS Keychain health probe is available
     - Chromium real Live2D renders in Avatar Lab and main chat
     - real OpenAI-compatible two-turn Nene conversation preserves recent dialogue context
     - real Kokoro worker produces generation-scoped 24 kHz WAV for the Nene response
@@ -83,6 +97,84 @@ validation:
       - generated ChatWaifu Cubism bridge
       - local-only Ayachi Nene model adapted from the user-supplied archive
   remote_ci_matrix: pending_first_remote_run
+  native_windows_x64_cuda:
+    status: owner_only_install_acceptance_passed_with_explicit_human_gates
+    validated_product_commit: f4d7c34
+    platform:
+      windows: "Windows 11 Pro 25H2 build 26200.9168"
+      native_architecture: AMD64
+      cpu: "AMD Ryzen 9 7900X"
+      powershell: "7.6.4 x64"
+      webview2: "152.0.4191.53 x64"
+    nvidia:
+      gpu: "NVIDIA GeForce RTX 3090"
+      vram_bytes: 25769279488
+      driver: "616.56"
+      nvidia_smi_cuda: "13.4"
+      cuda_driver_api: "13.4"
+      compute_capability: "8.6"
+    toolchain:
+      git: "2.45.1.windows.1"
+      uv: "0.12.7 x86_64"
+      node: "23.9.0"
+      pnpm: "11.19.0"
+      rust: "1.98.0"
+      python: "3.12.10 win-amd64"
+      rust_target: x86_64-pc-windows-msvc
+      native_binary_machine: "PE 0x8664"
+    artifacts:
+      installer:
+        filename: "ChatWaifu NEXT_0.2.0_x64-setup.exe"
+        size_bytes: 128343398
+        sha256: 55deb9979f1fc7167e1734fd33e3025293187082512a4c591a888091cb172d77
+      faster_whisper_pack:
+        filename: chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack
+        size_bytes: 250542825
+        sha256: 86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96
+      qwen3_tts_cuda_pack:
+        filename: chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack
+        size_bytes: 5443989887
+        sha256: af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9
+    automated_evidence:
+      - "Qwen3-TTS Torch 2.7.1+cu126 reported CUDA available and placed model parameters and inference tensors on cuda:0"
+      - "Qwen3-TTS produced non-silent unclipped 24 kHz Chinese and Japanese WAVs; the final post-inference integrity smoke measured Chinese at 15129.724 ms and the subsequent warm Japanese inference at 4665.135 ms"
+      - "Qwen3-TTS cancellation, unload, and dynamic listener closure passed; post-inference Torch allocated/reserved memory was 2164438016/2302672896 bytes"
+      - "faster-whisper used fixed model revision ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66 and a fully offline model directory for real CPU int8 inference; a 21455 ms Japanese sample produced a non-empty reasonable transcript in 862.951 ms"
+      - "faster-whisper cancellation, unload, and dynamic listener closure passed"
+      - "The owner-only NSIS candidate installed without elevation; Tauri Host, Frozen Runtime, AppContainer helper, 294 installed product native files, and all 552 pack EXE/DLL/PYD files were PE 0x8664; the sole PE 0x014c file was the generated NSIS uninstall.exe stub"
+      - "Installed Runtime and both workers reached healthy state on dynamic loopback ports; forced-exit process-tree and listener cleanup passed"
+      - "A reinstall preserved settings, SQLite data, installed pack receipts and selection, and the pre-existing private memory marker"
+      - "Installed Runtime playback state recorded stopped/ended ACK with played PTS equal to duration for all four Chinese and five Japanese segments; a later typed supersession emitted no old-generation text, audio, playback, or spoken-text events after cancellation"
+      - "The final root Python matrix passed 537 tests with 5 explicit platform/probe skips; Pyright and Ruff passed, Web passed 36 files and 155 tests, the Desktop UI production build passed, and Tauri passed 34 tests"
+      - "A completion publication barrier now makes assistant.generation_completed the last generation-scoped event; the regression test forces concurrent cancellation inside the publication window without sleep"
+      - "The rebuilt final candidate passed the native data-preserving install/health/forced-exit/uninstall replay: immutable files, both shortcuts, both standard uninstall views, and manufacturer metadata were removed while AppData, selection, and both Worker Packs remained"
+      - "A forced installed-Host exit removed the five-process Host/supervisor/Runtime/two-Worker graph and listeners on observed dynamic ports 4076, 2934, and 2935; the next Runtime start removed both exact crash-owned launch caches before creating new owner leases"
+      - "Worker launch caches use per-launch OS locks and ready markers; live, unknown, malformed, unready, symlink, junction, and other reparse entries are preserved, and only an exact verifiably stale launch directory is removed"
+      - "Demo replies consume typed budgeted recall instead of rendering hidden prompt/history text; API and spoken-segment tests reject memory headers, provenance labels, and opaque source sentinels"
+      - "A real installed run exposed a missing final playback ACK when the microphone WebRTC connection took ownership mid-generation; the playback coordinator now defers that handoff to the next generation and a regression proves the current WAV tail completes before WebRTC becomes the sole owner"
+      - "The final installed playback replay connected the microphone during segment one: the current generation completed 4/4 local audio_element segments with terminal ACK, then the next generation completed 4/4 WebRTC-only segments with terminal ACK and strictly alternating started/stopped order"
+      - "Repeated Start Menu launch of the final candidate reactivated the existing avatar while process inspection retained one product Host, one internal supervisor, and one Runtime instead of creating a duplicate service/Worker graph"
+      - "The final 9a5bd8d9 candidate staged the AppContainer helper before Host compilation through a directory resource tree; a clean installed smoke proved Host, Runtime, and helper PE 0x8664, dynamic Runtime health on port 9005, forced-exit descendant/listener cleanup, uninstall cleanup, and user-data/Worker-Pack retention"
+      - "The 87ad553 candidate reached installed Runtime ready on dynamic port 13077 in 10.492 seconds with both retained Worker Packs, then the explicit Data-settings action verified 2 packs and 36,326 files; forced Host exit removed the supervisor, Runtime, Workers, and listener"
+      - "The f4d7c34 candidate safely remapped a Codex MSIX LocalCache process-image path to the existing physical per-user NSIS image without probing the package directory through inherited redirection; the installed physical Host, supervisor, and Frozen Runtime then reached ready on a dynamic port"
+      - "Windows Settings now opens a native cwpack-only picker and installs through the Frozen Runtime strict contract while serializing full graph shutdown and restart; Web passed 37 files and 158 tests, the Tauri suite passed 36 tests, and the Tauri configuration gate passed 11 tests"
+    computer_use_window_observation:
+      - "Native development Tauri showed the animated private Live2D overlay with transparent empty-point click-through while avatar, subtitle, composer, controls, and native avatar drag remained interactive"
+      - "The installed shortcut opened the real pet and control center; settings layout and scrolling worked and Runtime, faster-whisper, and Qwen3-TTS CUDA reported ready"
+      - "Installed text, model save/test, and memory-center flows were interactive; the private memory marker remained visible after reinstall and restart"
+      - "Installed Chinese and Japanese text turns showed progressive subtitles and playback while process-level GPU sampling recorded real CUDA activity; the prior playback stopped 1.502 seconds before the next turn, so this was sequential playback rather than barge-in"
+      - "Historical installed two-pack cold starts were observed at approximately 151 seconds, 186 seconds, and 443 seconds; the repeated full payload scan has since moved out of ordinary startup into the explicit Data-settings integrity action, while the corrected 455-second Web resolution budget remains for genuinely slow model initialization"
+      - "The final installed Tauri window visibly rendered sharper Live2D hair, face, and clothing edges after compensating the WebGL backing buffer for the 1.34 CSS visual scale; settings visibly reported connected Runtime 0.1.0"
+      - "The rebuilt installed candidate automatically opened the five-step first-run guide and the Data page visibly reported successful full verification for faster-whisper (5,103 files) and Qwen3-TTS (31,223 files)"
+      - "The f4d7c34 installed guide visibly centered each checklist label with its checkmark; the Data page displayed the optional Worker Pack manager and opened the native Windows picker titled 选择 ChatWaifu Worker Pack with a cwpack filter, without selecting or installing an archive during this observation"
+    pending_human_or_privacy_confirmation:
+      - "One installed microphone utterance produced a 2920 ms / 93440-byte VAD capture and a faster-whisper final transcript, proving capture, VAD auto-end, and STT return; the transcription was materially inaccurate and remains a quality risk"
+      - "The user explicitly did not speak during the final playback-time interruption attempt, so real voice barge-in is not accepted and must not be defaulted to passing"
+      - "Chinese and Japanese CUDA outputs and reference samples were sent to speakers and passed objective waveform checks, but human listening has not yet confirmed timbre, clipping, truncation, speed, or reference similarity"
+      - "Installed playback ACK passed at the protocol/state layer, but audible non-overlap still needs playback-time interruption and human observation"
+      - "Installed transparent empty-point click-through has not yet been re-verified separately from the passing native development-window observation"
+      - "Normal tray-menu exit cleanup could not be driven because the Computer Use surface cannot target the Windows notification area; Alt+F4 correctly hid the tray application and is not reported as an exit pass"
+      - "Long-running multi-turn voice stress, installed AppContainer MCP profile/ACL reconciliation, signing, and private asset license review remain release gates"
 
 phases:
   - id: 0
@@ -90,8 +182,9 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Python, TypeScript, and Rust lockfiles exist
-      - Eight GitHub Actions workflows are configured, including independent Web and Desktop tag gates
-      - Twenty-six ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012 and ADR 0026 defines product release profiles
+      - Nine GitHub Actions workflows are configured, including independent Web and Desktop tag gates plus a documentation build and dependency-audit gate
+      - A VitePress installation and extension site builds locally and is publicly served from an audited static Pages mirror while the canonical product source remains private
+      - Thirty ADRs exist; ADR 0014 supersedes the default-TTS decision in ADR 0012, ADR 0026 defines product release profiles, ADR 0027 fixes the Windows installed-resource and user-data boundary, ADR 0028 defines versioned local AI Worker Packs, ADR 0029 fixes a provider-neutral external channel boundary, and ADR 0030 selects the Runtime-native WeChat iLink adapter
       - Seven project Codex Development Skills pass quick validation
       - Local bootstrap, lint, typecheck, test, and build gates pass
   - id: 1
@@ -99,9 +192,9 @@ phases:
     status: implemented_pending_ci
     evidence:
       - Pydantic protocol source covers all required Phase 1 model families
-      - 31 versioned JSON Schemas are generated deterministically
+      - 51 versioned JSON Schemas are generated deterministically
       - Generated TypeScript declarations and Zod runtime parsers are present
-      - 13 Python tests and 9 TypeScript contract tests pass
+      - 22 Python tests and 18 TypeScript contract tests pass
       - Python-to-TypeScript and TypeScript-to-Python golden fixtures pass
       - Unknown major versions, unknown types, and invalid payloads are rejected
       - Same-major optional fields are accepted
@@ -129,14 +222,14 @@ phases:
       - Production Web build succeeds without Runtime, Tauri, Pipecat, desktop-pet/settings modules, or proprietary vendor files
   - id: 3
     name: tauri-desktop-host
-    status: desktop_pet_and_native_runtime_supervision_implemented_pending_packaging
+    status: native_windows_x64_owner_only_install_reinstall_and_foreground_ui_passed_human_gates_open
     evidence:
       - Tauri 2.11 owns only OS windows, tray, capabilities, and desktop preferences while React owns Live2D and conversation presentation
       - The compile-time Desktop product graph owns only desktop-pet and control-center surfaces, emits apps/web/dist/desktop, and is the only frontend Tauri consumes
       - Web and Desktop have independent 0.2.0 release trains and exact web-v*/desktop-v* tag validation while sharing one main branch
       - A transparent undecorated always-on-top avatar overlay shares the existing semantic Avatar and Runtime path
       - The normal control-center window is created lazily and closing it hides rather than terminates the desktop pet
-      - The control-center renders a dedicated five-section desktop settings surface instead of reusing the visual-novel conversation page
+      - The control-center renders a dedicated six-section desktop settings surface instead of reusing the visual-novel conversation page
       - A typed desktop settings registry is the single navigation/composition entry; existing sections use shared layout, write-only secret, and mutually-exclusive async-operation primitives with platform visibility and availability hooks
       - The native host injects an explicit control-center surface marker before frontend scripts; development URLs carry the same marker, while immutable labels and paths remain fallbacks, preventing stale Windows WebView context from mounting the desktop-pet page in settings
       - Focused desktop settings temporarily promote the control center and demote the always-on-top avatar, restoring both normal settings z-order and the persisted avatar preference on blur or close
@@ -145,10 +238,10 @@ phases:
       - Tray actions show or hide the avatar, open desktop settings, recover mouse click-through, and quit cleanly
       - Overlay position, size, visibility, always-on-top, click-through, and subtitle visibility persist atomically in the OS application config directory
       - Tauri broadcasts persisted preference changes so the settings window and active overlay remain synchronized
-      - Settings navigation, generated application assets, and the title-free macOS template tray icon share a local moon-and-spark visual identity
+      - Web, desktop-pet, and control-center functional icons share the typed Lucide SVG boundary while favicon, generated application assets, settings branding, and the tray use the existing Web crescent-and-ribbon mark
       - The overlay interaction rail stays hidden at rest, reveals on pointer or keyboard interaction, and keeps its compact typed-message composer available for drafts, sends, HUD, and push-to-talk
       - The compact HUD owns only subtitle visibility; the former online label and decorative drag strip are removed, while pressing and moving any authored or visible-mesh avatar hit starts native window dragging synchronously without converting the gesture into a touch
-      - The inactive macOS overlay accepts the first mouse action and uses bounded global physical-cursor tracking to reveal controls without focus, temporarily suspending persisted click-through only while the pointer is inside
+      - The inactive overlay uses bounded global physical-cursor tracking to reveal controls without focus while transparent points keep passing through; only Live2D mesh hits, marked UI chrome, modal guards, avatar gestures, and push-to-talk request temporary native capture
       - The avatar overlay disables inactive WebView throttling so streaming text, audio progress, Live2D, and subtitle paging continue without mouse focus or selection
       - Desktop-pet pending replies show only the typing caret; compact subtitles fold paragraph gaps, retain all text in a bounded three-line viewport, and turn forward in whole-line steps from actual audio-element or WebRTC playback progress instead of token arrival
       - make desktop supervises workers, Runtime, Web, and Tauri and tears down the complete process group on termination
@@ -157,10 +250,28 @@ phases:
       - Rust shutdown terminates and waits for the owned service child so ordinary desktop exit leaves no orphan Runtime or workers
       - The service stack watches its owning Rust PID and self-cleans after abrupt development hot reloads that bypass normal Tauri exit events
       - Local macOS smoke confirmed transparent composition and real Ayachi Nene Live2D rendering
+      - Apple Silicon owner packaging freezes the base Runtime into the Tauri resource root, emits unsigned app, DMG, portable app zip, and SHA-256 artifacts, rejects local neural model packs and weights, then passes embedded Runtime plus complete Host lifecycle smoke
       - Windows x64 development launcher keeps Vite hot reload and Rust logs attached while preserving the x86_64-pc-windows-msvc target on Windows-on-ARM
       - Windows development without local model assets degrades to a healthy dynamic-port Demo Runtime with fake TTS and disabled STT; cloud TTS remains discoverable and Ctrl+C leaves no Runtime listener
       - Windows parent-watchdog liveness checks use a non-signaling process handle instead of POSIX kill-zero semantics; a real x64 development smoke remains alive through Runtime readiness and cleans host plus listeners on intentional Ctrl+C
       - A real Windows x64 Tauri smoke renders the local Ayachi Nene Live2D model transparently after the launcher bounds the ignored 8192px source texture to a preserved 4096px runtime copy
+      - ADR 0027 fixes NSIS current-user delivery, a PyInstaller onedir Runtime under the Tauri resource root, immutable-resource versus per-user-data ownership, retained data on uninstall, and the exclusion of CUDA weights and private Live2D/voice assets from the redistributable base
+      - A Windows-only packaging slice defines frozen-Runtime collection and smoke, x64 PE checks, fixed Runtime/helper resource staging, NSIS assembly, and a private explicit Live2D overlay
+      - On 2026-08-30 an unsigned owner-only private-overlay candidate passed a real current-user install on a Windows 11 ARM VM under x64 emulation, covering registry and Start Menu layout, Host/Runtime/helper PE 0x8664, Runtime identity and dynamic-port health, Tauri user roots plus SQLite, forced-host Runtime/listener cleanup, uninstall removal of immutable resources, and byte-identical config/data marker retention
+      - That 2026-08-30 Windows-on-ARM result remains historical basic-smoke evidence and is not used as proof of native Windows x64/CUDA behavior
+      - On 2026-09-01 the owner-only NSIS candidate installed without elevation on native Windows 11 AMD64; Host, Frozen Runtime, AppContainer helper, and enumerated native pack binaries were PE 0x8664, and Runtime plus both workers reached healthy state on dynamic loopback ports
+      - Automated native acceptance covered installed layout and Start Menu identity, pack receipt and selection, forced-exit process-tree and listener cleanup, and reinstall retention of settings, SQLite data, packs, and selection
+      - A hard Host kill left only two exact crash-owned worker-cache launch directories; the next Runtime boot reclaimed both through per-launch OS-lock leases without deleting any active or unverifiable cache namespace
+      - Computer Use observed the native development overlay render and animate the private Live2D model with transparent empty-point click-through, retained avatar/control interaction and native dragging, and a correctly laid out independently scrolling settings window
+      - Computer Use observed the installed shortcut launch the real pet and control center, Runtime and both selected workers reach ready, text/model/memory flows operate, and the private memory marker remain present after reinstall and restart
+      - Connecting the microphone during an installed WAV generation exposed a dropped tail segment with no playback ACK; the frontend now defers WebRTC ownership until the next generation, with a regression covering tail completion and exclusive next-generation remote playback
+      - Application exit no longer persists the avatar as hidden; moved and resized state still persists, and a Rust regression test covers application exit separately from an explicit visibility change
+      - The Web desktop Runtime resolution budget remains 455 seconds for the native host's bounded model readiness; tests cover delayed CUDA-ready and ready-before-listener-registration paths, while ordinary startup no longer repeats the historical approximately 443-second complete-pack scan and the full audit is an explicit Data-settings operation
+      - Windows bin/lib targets now use distinct artifact names, removing the Cargo PDB collision while preserving the packaged executable identity
+      - The NSIS post-uninstall hook removes only stale manufacturer install metadata during a real uninstall and preserves all AppData; smoke gates now cover both registry views and both Start Menu/Desktop shortcuts
+      - The rebuilt owner-only installer containing the hook passed a native install/health/forced-exit/uninstall replay; its product tree, shortcuts, uninstall entries, and manufacturer metadata were gone afterward while settings/data roots, selection, and both Worker Packs remained
+      - The final Tauri Host uses the official single-instance plugin first in the builder chain; a real repeated Start Menu launch reactivated the existing avatar without creating a second Runtime graph
+      - One installed microphone utterance completed VAD and faster-whisper return, but recognition quality was poor; playback-time voice barge-in remains unproved because the user did not speak during the final attempt. Installed empty-point click-through, human audio comparison, normal tray-menu exit, installed AppContainer/MCP reconciliation, asset/license review, signing, and remote publication remain pending
   - id: 4
     name: runtime-core
     status: basic_demo_implemented_pending_remote_ci
@@ -178,6 +289,7 @@ phases:
       - Runtime persists idempotent segment playback acknowledgements and projects only completely heard sentences into generation spoken_text
       - Structured memory records survive sessions, keep source-event provenance, and forget uses auditable tombstones
       - Confirmed reset quarantines owned WAVs, atomically clears current-session turns/events plus current character/user memory and relationship truth, restores audio on transaction failure, and preserves unrelated scopes
+      - Desktop settings discloses that scoped reset boundary before deletion and requires a second typed confirmation while explicitly preserving model routes, API keys, plugins, MCP, channels, and unrelated scopes
       - Reset keeps the session ready, rejects late output, and resumes from a collision-free event sequence while retaining any cross-scope provenance event that must remain auditable
       - SQLite migrations apply script plus checksummed ledger entry atomically, reject edited or newer versions, and recover cleanly after injected failure
       - Runtime startup rolls back every successfully started component on failure; shutdown aggregates cleanup errors, continues teardown, and retries only failed steps
@@ -218,7 +330,7 @@ phases:
       - Two-utterance real audio validation cancelled the first generation and completed only the second
   - id: 8
     name: isolated-model-workers
-    status: stt_and_dual_neural_tts_worker_slices_implemented_other_workers_pending
+    status: native_windows_cpu_and_cuda_pack_validation_passed_installed_text_tts_and_mic_stt_observed_voice_barge_in_pending
     evidence:
       - Versioned model-worker SDK defines authenticated STT/TTS request, result, health, and identity contracts
       - faster-whisper 1.2.1 runs in its own locked environment and loopback-authenticated process
@@ -238,6 +350,15 @@ phases:
       - Web and desktop settings expose one Aliyun Bailian provider entry, with the concrete Qwen VC or CosyVoice adapter selected inside the shared API panel and resolved before the Runtime session command
       - The configured cosyvoice-v3.5-plus cloned voice passed regional target-model preflight, a real six-fragment PCM conversation stream, generation completion, and 206 WAV fallback retrieval
       - The supplied Nene voice ID is bound to batch qwen3-tts-vc-2026-01-22 and is rejected by the realtime adapter until a voice is created for qwen3-tts-vc-realtime-2026-01-15
+      - Versioned `.cwpack` contract, canonical Zip64/SHA-256 build and install paths, PE x64 checks, atomic activation, dynamic endpoint/token injection, health/inference smoke, unload, restart, and Runtime supervision are implemented for independently managed local workers
+      - Windows builders exist for offline faster-whisper Base CPU int8 and Qwen3-TTS Torch/CUDA 12.6 with a supplied local CustomVoice checkpoint; the target account does not need Python, uv, or a manually created venv
+      - On 2026-09-01 native Windows x64 built and validated the faster-whisper Base CPU-int8 pack at fixed model revision ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66 through a fully offline model directory, real non-empty Japanese transcription, cancellation, unload, and listener closure
+      - On 2026-09-01 native Windows x64 built and validated the Qwen3-TTS Torch 2.7.1+cu126 pack from pinned upstream commit 022e286b98fbec7e1e916cb940cdf532cd9f488e on an RTX 3090; CUDA was available and the model parameters and inference tensors were on cuda:0
+      - The Qwen pack produced non-silent unclipped Chinese and Japanese 24 kHz WAVs; the final controlled direct Worker inference was 15129.724 ms and the subsequent warm inference was 4665.135 ms; cancellation, unload, listener closure, and CUDA memory reporting passed
+      - Runtime routes Numba/native caches to owner-locked per-launch directories outside immutable packs; orderly stop removes its own lease, and startup reaps only an exact cache whose prior OS lock is provably released
+      - Exact-version installation remains immutable by default; explicit repair first proves the installed target invalid and accepts only the exact original archive/identity metadata through a same-volume verified swap with rollback
+      - The two pack archives are canonical version 0.1.0 artifacts with recorded SHA-256 values under validation.native_windows_x64_cuda; no private models, voices, generated WAVs, or installed pack payloads are distributable repository content
+      - Computer Use observed installed Chinese and Japanese sequential text turns and progressive subtitle/playback behavior while process-level GPU sampling confirmed CUDA synthesis; one real microphone utterance completed VAD and installed faster-whisper transcription, but recognition quality was poor and playback-time voice barge-in remains pending because the user did not speak during that attempt
   - id: 9
     name: real-cascade-models
     status: real_llm_and_selectable_character_tts_demo_implemented_pending_voice_asset
@@ -269,7 +390,7 @@ phases:
       - Sandbox snapshots persist the actual backend and only resource limits it really enforces; OCI enforces process, memory, and CPU limits while Seatbelt/bubblewrap report no portable resource-limit claim
       - ADR 0025 accepts a ChatWaifu-owned x64 Windows AppContainer host with stable permission-subject profiles, durable ACL journals and reconciliation, protected-descendant grants, restricted stdio inheritance, creation-time Job-list containment, and explicit network capabilities
       - An unelevated x64 helper (PE 0x8664) passed real Windows 11 token, filesystem, ACL cleanup, external-LAN deny/allow, loopback denial, inherited-handle exclusion, MCP stdio, process-count, Job-memory, launcher-kill, parent-EOF, and reconciliation probes on 2026-08-29
-      - Windows required-sandbox execution discovers the sibling helper and fails closed when it is missing or policy preparation fails; signed installer and frozen-sidecar validation remain release work
+      - Windows required-sandbox execution fails closed when the configured helper is missing or policy preparation fails; the frozen installed layout and Runtime health passed a basic x64-emulated smoke, while installed AppContainer execution and uninstall profile/ACL reconciliation remain release work
       - Runtime publishes a policy-filtered standard Streamable HTTP MCP server at /mcp with loopback Host and Origin protection, optional Bearer authentication, and no adapter bypass
       - MCP bearer tokens are write-only, atomically stored mode-0600, and use a compensating cross-store mutation journal; corrupt secret or journal storage fails closed
       - Deny-by-default audit summaries retain only explicitly schema-whitelisted public fields, resolve local $ref/allOf sensitivity, keep real results process-local, and prevent secrets, file bodies, prompt arguments, PII, or arbitrary MCP payloads from entering runs, tool-call rows, events, or outbox
@@ -319,6 +440,20 @@ phases:
       - Ambient generation uses Character Kernel, memory retrieval, semantic avatar cues, TTS, cancellation, and playback ACK without fabricating a visible user turn
       - Demo fallback emits a natural fixed check-in rather than exposing the internal ambient instruction
       - The dedicated companion settings panel reports daily use and controls attention, quiet hours, proactive limits, resource sleep, and native Runtime recovery
+  - id: 17
+    name: external-channel-gateway
+    status: native_weixin_owner_direct_text_implemented_pending_real_account_acceptance
+    evidence:
+      - ADR 0029 assigns messaging transport and credentials to adapters while ChatWaifu Runtime remains the sole owner of character, memory, relationship, model, Skill, session, and delivery state; ADR 0030 selects a Runtime-native Tencent iLink adapter instead of a second agent or bridge process
+      - Versioned Python/JSON Schema/generated TypeScript contracts and Zod parsers cover provider discovery, QR authorization lifecycle, sanitized connections, idempotent ingress, turn polling/cancellation, exclusive delivery leases, and lease-bound ACK
+      - SQLite repositories persist connection-scoped token hashes, stable conversation/sender bindings, message idempotency, Runtime lineage, source context, delivery state, non-secret adapter cursors, and restart reconciliation behind an ExternalChannelRepository port
+      - External text turns reuse ConversationService and Character/Memory/model routing while disabling TTS, local audio, Avatar output, and tools; Runtime tests prove duplicate reuse, changed-content conflict, owner/group fail-closed behavior, cross-session source continuity, exclusive lease/reclaim, and lease-bound ACK
+      - Conversation turns and long-term MemorySource provenance keep provider, connection, account, principal, chat type, stable conversation/sender keys, received time, and optional untrusted labels; Prompt Compiler emits separate budgeted recent-channel and recalled-memory source JSON so a later local session retains WeChat attribution after recent history rolls over
+      - Runtime owns QR start/poll/verification/confirmation, OS-keyring credential journaling, crash recovery, one cancellable long-poll task per connection, capped jittered reconnect, context-bound delivery, stable client ids, cursor commit after durable decisions, and lease-matched ACK
+      - The public manual-connection/token-rotation path and launcher discovery file were removed; the browser can neither type provider identities nor receive gateway or provider credentials
+      - Desktop settings presents one responsive WeChat scan flow, shows a verification input only when requested, cancels stale long polls, and reuses the generic connection delete route for full local unbind
+      - PyInstaller explicitly collects HTTP/keyring metadata and platform backends; a frozen macOS Runtime import, TLS/keyring discovery, startup, and stdin-EOF shutdown smoke passes, while Windows resolves the Credential Manager backend dependency
+      - Wire, lifecycle, failure-isolation, crash-recovery, cancellation, source-provenance, and complete getupdates-to-delivery tests pass; a real scanned WeChat owner round trip and installed Windows/Linux credential-store acceptance remain pending
 
 entry_blockers:
   - Windows and Linux CI results have not run on a remote repository
@@ -326,24 +461,28 @@ entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets
-  - Signed packaged Tauri delivery and a frozen release sidecar remain pending
-  - The Windows x64 AppContainer helper passed developer acceptance, but signed installer delivery and frozen Windows Runtime sidecar validation remain pending
+  - Native Windows x64 owner-only install, foreground Live2D/settings/text/model/memory flows, CUDA Chinese/Japanese synthesis, playback ACK, forced-exit cleanup, reinstall reuse, duplicate-launch suppression, and the rebuilt candidate's data-preserving uninstall replay have passed; one microphone/VAD/faster-whisper round trip completed but recognition quality was poor, and playback-time voice barge-in remains unproved because the user did not speak during that attempt. Installed empty-point click-through, human listening, normal tray-menu exit, a clean-account pass, signing, and asset-license review remain pending
+  - The Windows x64 AppContainer helper passed developer acceptance and its packaged path/PE identity were checked after install, but installed MCP execution and profile/ACL reconciliation remain pending real Windows acceptance
   - Generic RTVI control, public-network TURN, and multi-machine recovery remain pending
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
   - Proactive prospective-memory, Skill-completion, calendar, and scene event sources plus ignore-adaptive frequency remain pending
+  - The native WeChat iLink adapter passes local wire and lifecycle tests, but a real owner QR scan/direct-text round trip and installed Windows/Linux credential-store acceptance remain pending
+  - Memory sources persist typed channel attribution and retrieval/prompt projection preserve it, but the memory UI does not yet display that provenance; QQ/group and multi-human identity/privacy policy acceptance remain pending, and display labels must never become authorization or deduplication keys
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
   live2d_core_committed: false
   live2d_framework_release: "5-r.5"
   live2d_real_renderer_validated: true
-  live2d_real_renderer_validation_scope: local_chromium_and_macos_tauri_ayachi_nene_local_only
+  live2d_real_renderer_validation_scope: local_chromium_macos_tauri_and_native_windows_x64_tauri_private_ayachi_nene_local_only
   pipecat_dependency_added: true
   pipecat_version: "1.7.0"
-  browser_microphone_validated: backend_equivalent_audio_and_ui_entry
+  browser_microphone_validated: backend_equivalent_audio_and_ui_entry_native_windows_installed_permission_pending
   local_stt_worker: faster-whisper-base-cpu-int8
-  local_tts_worker: selectable-qwen3-tts-mlx-default-and-gpt-sovits-cpufast
+  local_tts_worker: selectable-qwen3-tts-mlx-qwen3-tts-torch-cuda-and-gpt-sovits-cpufast
+  native_windows_x64_cuda_worker_pack_validation: direct_worker_smoke_passed
+  native_windows_installed_voice_acceptance: text_cuda_playback_and_one_mic_vad_stt_round_trip_observed_voice_barge_in_and_human_listening_pending
   runtime_server_implemented: true
   database_business_tables_implemented: true
   persistence_target: sqlite-wal-fts5
@@ -352,3 +491,4 @@ constraints:
   memory_temporal_graph: reserved_null_port
   character_kernel: persistent-affect-relationship-response-plan-and-prompt-compiler
   model_configuration: runtime-db-plus-write-only-local-secret-store
+  external_channel_gateway: native_weixin_owner_direct_text_implemented_pending_real_account_acceptance

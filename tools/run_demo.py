@@ -133,7 +133,7 @@ def main() -> int:
             "CHATWAIFU_STT__PROVIDER": "faster_whisper_worker",
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
-            "CHATWAIFU_STT__LANGUAGE": "zh",
+            "CHATWAIFU_STT__LANGUAGE": "auto",
             # Clear the legacy single-provider override from an older local .env.
             "CHATWAIFU_TTS__PROVIDER": "null",
             "CHATWAIFU_TTS__DEFAULT_PROVIDER": "qwen3_tts_mlx",

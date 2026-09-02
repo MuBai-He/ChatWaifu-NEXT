@@ -5,6 +5,7 @@
 
 import asyncio
 import io
+import sys
 import threading
 import wave
 from collections.abc import Iterator
@@ -20,12 +21,16 @@ from chatwaifu_model_worker import (
     unpack_tts_pcm_frame,
 )
 from fastapi.testclient import TestClient
+from numpy.typing import NDArray
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
 from chatwaifu_tts_neural_worker.engines import (
     EnginePcmChunk,
     QwenMlxEngine,
+    QwenTorchEngine,
+    SynthesisCancelled,
     SynthesisEngine,
+    collect_torch_runtime_diagnostics,
 )
 from chatwaifu_tts_neural_worker.main import create_app
 from chatwaifu_tts_neural_worker.service import SynthesisService
@@ -165,6 +170,236 @@ def test_qwen_custom_voice_rejects_missing_profile_speaker(settings: WorkerSetti
     model = FakeCustomVoiceQwenModel()
     with pytest.raises(RuntimeError, match="requires qwen_voice"):
         QwenMlxEngine(settings, model_loader=lambda _: model)
+
+
+class FakeTorchQwenModel:
+    def __init__(self, *, cancel_event: threading.Event | None = None) -> None:
+        self.calls: list[tuple[str, dict[str, object]]] = []
+        self._cancel_event = cancel_event
+        self.device = "cuda:0"
+        parameter = SimpleNamespace(device="cuda:0")
+        self.model = SimpleNamespace(parameters=lambda: iter((parameter,)))
+
+    def get_supported_speakers(self) -> list[str]:
+        return ["ayachi_nene_local"]
+
+    def generate_custom_voice(self, **kwargs: object) -> tuple[list[NDArray[np.float32]], int]:
+        self.calls.append(("custom", kwargs))
+        if self._cancel_event is not None:
+            self._cancel_event.set()
+        return [np.ones(2_400, dtype=np.float32) * 0.1], 24_000
+
+    def generate_voice_clone(self, **kwargs: object) -> tuple[list[NDArray[np.float32]], int]:
+        self.calls.append(("clone", kwargs))
+        return [np.ones(1_200, dtype=np.float32) * 0.1], 24_000
+
+
+def _torch_settings(tmp_path: Path, *, qwen_voice: str | None) -> WorkerSettings:
+    reference = tmp_path / "reference.wav"
+    reference.write_bytes(_wave_bytes())
+    return WorkerSettings(
+        port=8767,
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        backend="qwen3_tts_torch",
+        provider_id="qwen3_tts_torch",
+        display_name="Qwen3-TTS · CUDA",
+        worker_id="tts-qwen-cuda-test",
+        model="nene-qwen3-0.6b",
+        model_dir=tmp_path,
+        qwen_voice=qwen_voice,
+        reference_audio=None if qwen_voice else reference,
+        reference_text=None if qwen_voice else "参考文本。",
+        device="cuda:0",
+        preload=False,
+    )
+
+
+def test_qwen_torch_custom_voice_uses_trained_speaker_and_complete_wave(
+    tmp_path: Path,
+) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel()
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="ayachi_nene_local",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    audio, sample_rate, duration_ms = engine.synthesize(request, threading.Event())
+
+    assert audio.startswith(b"RIFF")
+    assert sample_rate == 24_000
+    assert duration_ms == 100
+    method, options = model.calls[0]
+    assert method == "custom"
+    assert options["speaker"] == "ayachi_nene_local"
+    assert options["language"] == "Chinese"
+    assert "ref_audio" not in options
+    capabilities = SynthesisService(settings, engine_factory=lambda _: engine).capabilities()
+    assert capabilities.supports_voice_cloning is False
+    assert capabilities.native_streaming is False
+    assert capabilities.stream_protocols == []
+
+
+def test_qwen_torch_base_uses_reference_voice_clone(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice=None)
+    model = FakeTorchQwenModel()
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="おかえりなさい。",
+        language="ja",
+        voice_id="reference",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    engine.synthesize(request, threading.Event())
+
+    method, options = model.calls[0]
+    assert method == "clone"
+    assert options["language"] == "Japanese"
+    assert options["ref_audio"] == str(settings.reference_audio)
+    assert options["ref_text"] == "参考文本。"
+
+
+def test_qwen_torch_drops_native_result_after_generation_is_cancelled(
+    tmp_path: Path,
+) -> None:
+    cancel_event = threading.Event()
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel(cancel_event=cancel_event)
+    engine = QwenTorchEngine(settings, model_loader=lambda _: model)
+    request = TtsSynthesisRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        text="欢迎回来。",
+        language="zh",
+        voice_id="ayachi_nene_local",
+        speaker_id=0,
+        speed=1.0,
+    )
+
+    with pytest.raises(SynthesisCancelled):
+        engine.synthesize(request, cancel_event)
+
+
+def test_qwen_torch_rejects_model_parameters_on_the_wrong_device(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    model = FakeTorchQwenModel()
+    parameter = SimpleNamespace(device="cpu")
+    model.model = SimpleNamespace(parameters=lambda: iter((parameter,)))
+
+    with pytest.raises(RuntimeError, match="not entirely on cuda:0"):
+        QwenTorchEngine(settings, model_loader=lambda _: model)
+
+
+def test_qwen_torch_runtime_diagnostics_come_from_torch_and_loaded_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def get_device_capability(_device_index: int) -> tuple[int, int]:
+        return (8, 6)
+
+    def get_device_name(_device_index: int) -> str:
+        return "NVIDIA GeForce RTX 3090"
+
+    def mem_get_info(_device_index: int) -> tuple[int, int]:
+        return (20_000_000_000, 25_769_803_776)
+
+    def memory_allocated(_device_index: int) -> int:
+        return 4_000_000_000
+
+    def memory_reserved(_device_index: int) -> int:
+        return 4_500_000_000
+
+    def device(_device_name: str) -> SimpleNamespace:
+        return SimpleNamespace(index=0)
+
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    engine = QwenTorchEngine(settings, model_loader=lambda _: FakeTorchQwenModel())
+    fake_cuda = SimpleNamespace(
+        is_available=lambda: True,
+        current_device=lambda: 0,
+        get_device_capability=get_device_capability,
+        get_device_name=get_device_name,
+        mem_get_info=mem_get_info,
+        memory_allocated=memory_allocated,
+        memory_reserved=memory_reserved,
+    )
+    fake_torch = SimpleNamespace(
+        __version__="2.7.1+cu126",
+        version=SimpleNamespace(cuda="12.6"),
+        cuda=fake_cuda,
+        device=device,
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    diagnostics = collect_torch_runtime_diagnostics(settings, engine)
+
+    assert diagnostics is not None
+    assert diagnostics["torch_version"] == "2.7.1+cu126"
+    assert diagnostics["torch_cuda_version"] == "12.6"
+    assert diagnostics["cuda_device_name"] == "NVIDIA GeForce RTX 3090"
+    assert diagnostics["cuda_compute_capability"] == "8.6"
+    assert diagnostics["cuda_total_memory_bytes"] == 25_769_803_776
+    assert diagnostics["model_device"] == "cuda:0"
+    assert diagnostics["model_parameter_devices"] == ["cuda:0"]
+
+
+def test_qwen_torch_validates_target_accelerator_before_reporting_ready(
+    tmp_path: Path,
+) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+    validated: list[WorkerSettings] = []
+    service = SynthesisService(
+        settings,
+        engine_factory=lambda _: FakeEngine(),
+        startup_validator=validated.append,
+    )
+
+    async def exercise() -> None:
+        await service.start()
+        assert service.health().model_loaded is False
+        await service.close()
+
+    asyncio.run(exercise())
+
+    assert validated == [settings]
+
+
+def test_qwen_torch_accelerator_failure_prevents_worker_startup(tmp_path: Path) -> None:
+    settings = _torch_settings(tmp_path, qwen_voice="ayachi_nene_local")
+
+    def fail(_: WorkerSettings) -> None:
+        raise RuntimeError("CUDA driver is unavailable")
+
+    service = SynthesisService(
+        settings,
+        engine_factory=lambda _: FakeEngine(),
+        startup_validator=fail,
+    )
+
+    async def exercise() -> None:
+        with pytest.raises(RuntimeError, match="CUDA driver is unavailable"):
+            await service.start()
+        await service.close()
+
+    asyncio.run(exercise())
 
 
 def test_worker_returns_identity_scoped_wave_and_unloads(client: TestClient) -> None:

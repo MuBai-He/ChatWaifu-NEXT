@@ -8,9 +8,19 @@ import {
   parseAudioFrameHeader,
   parseAvatarCue,
   parseAvatarInteractionEvent,
+  parseChannelAuthorizationSnapshot,
+  parseChannelAuthorizationStartRequest,
+  parseChannelAuthorizationVerificationRequest,
+  parseChannelConnectionSnapshot,
+  parseChannelDeliveryAcknowledgement,
+  parseChannelDeliveryClaimRequest,
+  parseChannelInboundTextMessage,
+  parseChannelTurnSnapshot,
   parseCommandEnvelope,
   parseEventEnvelope,
   parseMcpCapabilitySnapshot,
+  parseMemoryChannelAttribution,
+  parseMemorySource,
   parseSessionSnapshot,
   parseSkillRunSnapshot,
 } from "../src/index";
@@ -253,5 +263,201 @@ describe("cross-language protocol fixtures", () => {
     expect(() =>
       parseSkillRunSnapshot({ ...run, turn_id: "not-a-uuid" }),
     ).toThrow();
+  });
+
+  it("preserves versioned channel attribution on memory sources", () => {
+    const channelAttribution = parseMemoryChannelAttribution({
+      schema_version: "1.0",
+      provider_id: "weixin_ilink",
+      connection_id: "00000000-0000-4000-8000-000000000951",
+      account_key: "wechat-owner-account",
+      principal_scope: "local",
+      chat_type: "direct",
+      conversation_key: "wechat-direct-owner",
+      sender_key: "wechat-owner-sender",
+      received_at: "2026-08-31T08:00:00Z",
+      conversation_label: "与木白的微信私聊",
+      sender_display_name: "木白",
+    });
+    const source = parseMemorySource({
+      source_id: "00000000-0000-4000-8000-000000000952",
+      memory_id: "00000000-0000-4000-8000-000000000953",
+      source_event_id: "00000000-0000-4000-8000-000000000954",
+      session_id: "00000000-0000-4000-8000-000000000955",
+      turn_id: "00000000-0000-4000-8000-000000000956",
+      source_kind: "user_turn",
+      created_at: "2026-08-31T08:00:01Z",
+      channel_attribution: channelAttribution,
+    });
+
+    expect(source.channel_attribution?.provider_id).toBe("weixin_ilink");
+    expect(source.channel_attribution?.received_at).toBe(
+      "2026-08-31T08:00:00Z",
+    );
+    expect(() =>
+      parseMemoryChannelAttribution({
+        ...channelAttribution,
+        schema_version: "2.0",
+      }),
+    ).toThrow();
+  });
+
+  it("parses Python-owned external channel identity without provider state", () => {
+    const message = parseChannelInboundTextMessage(
+      fixture("python-channel-inbound-text-message.json"),
+    );
+    expect(message.account_key).toBe("provider-account-001");
+    expect(message.external_message_id).toBe("provider-message-001");
+    expect(message.conversation_key).toBe("provider-direct-conversation-001");
+    expect(message.sender_key).toBe("provider-sender-001");
+    expect(message.principal_scope).toBe("owner/local");
+    expect(message.conversation_label).toBe("与宁宁的测试会话");
+    expect(message.sender_display_name).toBe("木白");
+    expect(message.chat_type).toBe("direct");
+    expect(message.kind).toBe("text");
+    expect(
+      parseChannelInboundTextMessage({ ...message, chat_type: "group" })
+        .chat_type,
+    ).toBe("group");
+    expect(() =>
+      parseChannelInboundTextMessage({ ...message, kind: "image" }),
+    ).toThrow();
+    expect(() =>
+      parseChannelInboundTextMessage({ ...message, schema_version: "1.1" }),
+    ).toThrow();
+  });
+
+  it("validates provider-neutral channel authorization without credentials", () => {
+    const request = parseChannelAuthorizationStartRequest({
+      schema_version: "1.0",
+      provider_id: "weixin_ilink",
+      character_id: "ayachi_nene",
+    });
+    expect(request.method).toBe("qr_code");
+    expect(request.principal_scope).toBe("local");
+
+    const verification = parseChannelAuthorizationVerificationRequest({
+      verification_code: "271828",
+    });
+    expect(verification.verification_code).toBe("271828");
+    expect(() =>
+      parseChannelAuthorizationVerificationRequest({
+        verification_code: "code with spaces",
+      }),
+    ).toThrow();
+
+    const now = "2026-08-31T08:00:00Z";
+    const pending = parseChannelAuthorizationSnapshot({
+      schema_version: "1.0",
+      auth_session_id: "00000000-0000-4000-8000-000000000b01",
+      provider_id: "weixin_ilink",
+      status: "pending",
+      qr_code_content: "https://example.invalid/opaque-qr-content",
+      expires_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+    expect(pending.verification_required).toBe(false);
+    expect(() =>
+      parseChannelAuthorizationSnapshot({
+        ...pending,
+        status: "verification_required",
+        verification_required: false,
+      }),
+    ).toThrow();
+    expect(() =>
+      parseChannelAuthorizationSnapshot({
+        ...pending,
+        status: "confirmed",
+        qr_code_content: null,
+      }),
+    ).toThrow();
+  });
+
+  it("parses TypeScript-owned delivery acknowledgements in both languages", () => {
+    const acknowledgement = parseChannelDeliveryAcknowledgement(
+      fixture("typescript-channel-delivery-ack.json"),
+    );
+    expect(acknowledgement.status).toBe("delivered");
+    expect(acknowledgement.lease_id).toBe(
+      "00000000-0000-4000-8000-000000000903",
+    );
+    expect(acknowledgement.provider_message_id).toBe("provider-reply-001");
+    expect(() =>
+      parseChannelDeliveryAcknowledgement({
+        ...acknowledgement,
+        status: "failed",
+      }),
+    ).toThrow();
+  });
+
+  it("requires a bounded delivery lease before provider send", () => {
+    const claim = parseChannelDeliveryClaimRequest({
+      schema_version: "1.0",
+      delivery_id: "00000000-0000-4000-8000-000000000901",
+      channel_turn_id: "00000000-0000-4000-8000-000000000902",
+      lease_id: "00000000-0000-4000-8000-000000000903",
+      lease_seconds: 60,
+    });
+    expect(claim.lease_seconds).toBe(60);
+    expect(() =>
+      parseChannelDeliveryClaimRequest({ ...claim, lease_seconds: 301 }),
+    ).toThrow();
+  });
+
+  it("validates channel connection revisions and durable delivery state", () => {
+    const connectionId = "00000000-0000-4000-8000-000000000a01";
+    const now = "2026-08-29T00:00:00Z";
+    const connection = parseChannelConnectionSnapshot({
+      schema_version: "1.0",
+      configuration: {
+        schema_version: "1.0",
+        connection_id: connectionId,
+        provider_id: "example_direct",
+        name: "External direct channel",
+        character_id: "nene",
+        principal_scope: "owner/local",
+        account_key: "provider-account-001",
+        allowed_sender_keys: ["provider-sender-001"],
+      },
+      revision: 1,
+      status: "ready",
+      created_at: now,
+      updated_at: now,
+    });
+    expect(connection.revision).toBe(1);
+    expect(connection.configuration.allowed_sender_keys).toEqual([
+      "provider-sender-001",
+    ]);
+    expect(connection.capabilities.chat_types).toEqual(["direct"]);
+    expect(() =>
+      parseChannelConnectionSnapshot({ ...connection, revision: 0 }),
+    ).toThrow();
+
+    const turn = parseChannelTurnSnapshot({
+      schema_version: "1.0",
+      channel_turn_id: "00000000-0000-4000-8000-000000000a02",
+      connection_id: connectionId,
+      account_key: "provider-account-001",
+      external_message_id: "provider-message-001",
+      conversation_key: "provider-direct-conversation-001",
+      sender_key: "provider-sender-001",
+      principal_scope: "owner/local",
+      chat_type: "direct",
+      conversation_label: "与宁宁的测试会话",
+      sender_display_name: "木白",
+      session_id: "00000000-0000-4000-8000-000000000a03",
+      turn_id: "00000000-0000-4000-8000-000000000a04",
+      generation_id: "00000000-0000-4000-8000-000000000a05",
+      status: "completed",
+      reply_text: "今天也请多关照。",
+      delivery_id: "00000000-0000-4000-8000-000000000a06",
+      delivery_status: "delivered",
+      revision: 3,
+      created_at: now,
+      updated_at: now,
+      completed_at: now,
+    });
+    expect(turn.delivery_status).toBe("delivered");
   });
 });

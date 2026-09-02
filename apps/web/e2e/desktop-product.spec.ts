@@ -3,6 +3,32 @@ import { expect, test } from "@playwright/test";
 test("desktop settings is an app-like control surface without chat ownership", async ({
   page,
 }, testInfo) => {
+  await page.route(
+    "http://127.0.0.1:8765/v1/model-configurations",
+    async (route) => {
+      if (route.request().method() === "OPTIONS") {
+        await route.fulfill({
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Headers": "content-type",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          items: [
+            modelConfiguration("chat", "openai_compatible", "chat-model"),
+            modelConfiguration("memory_extraction", "demo", "memory-demo"),
+            modelConfiguration("memory_summary", "demo", "summary-demo"),
+            modelConfiguration("embedding", "local_hash", "local-hash-64-v1"),
+          ],
+        },
+        headers: { "Access-Control-Allow-Origin": "*" },
+      });
+    },
+  );
   await page.setViewportSize({ width: 960, height: 700 });
   await page.goto("/desktop-settings");
 
@@ -12,10 +38,42 @@ test("desktop settings is an app-like control surface without chat ownership", a
   await expect(
     page.getByRole("navigation", { name: "设置分类" }),
   ).toBeVisible();
+  await expect(page.locator(".desktop-settings-app-icon img")).toBeVisible();
+  await expect(
+    page.locator(".desktop-settings-sidebar nav svg.lucide"),
+  ).toHaveCount(6);
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Conversation" })).toHaveCount(
     0,
   );
+
+  await page.getByRole("button", { name: /新手引导/ }).click();
+  const onboardingItem = page.locator(".desktop-onboarding-body li").first();
+  await expect(onboardingItem).toBeVisible();
+  const onboardingAlignment = await page.evaluate<{
+    alignItems: string;
+    iconOffset: number;
+    textOffset: number;
+  }>(`(() => {
+    const item = document.querySelector(".desktop-onboarding-body li");
+    if (!item) throw new Error("onboarding row is missing");
+    const icon = item.querySelector("svg");
+    const text = item.querySelector("span");
+    if (!icon || !text) throw new Error("onboarding row content is missing");
+    const rowRect = item.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const textRect = text.getBoundingClientRect();
+    const center = (rect) => rect.top + rect.height / 2;
+    return {
+      alignItems: getComputedStyle(item).alignItems,
+      iconOffset: Math.abs(center(iconRect) - center(rowRect)),
+      textOffset: Math.abs(center(textRect) - center(rowRect)),
+    };
+  })()`);
+  expect(onboardingAlignment.alignItems).toBe("center");
+  expect(onboardingAlignment.iconOffset).toBeLessThan(1);
+  expect(onboardingAlignment.textOffset).toBeLessThan(1);
+  await page.getByRole("button", { name: "稍后继续新手引导" }).click();
 
   const subtitles = page.getByRole("switch", { name: "显示字幕" });
   await expect(subtitles).toBeEnabled();
@@ -27,6 +85,41 @@ test("desktop settings is an app-like control surface without chat ownership", a
     page.getByRole("heading", { level: 1, name: "声音" }),
   ).toBeVisible();
   await expect(page.getByText(/设置页不会建立第二条媒体链路/)).toBeVisible();
+
+  await page.getByRole("button", { name: /模型.*AI 与记忆路由/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "模型" }),
+  ).toBeVisible();
+  const modelLayout = await page.evaluate<{
+    panelDisplay: string;
+    headingDisplay: string;
+    panelGap: string;
+    cardDisplay: string;
+    inputWidth: string;
+  }>(`
+    (() => {
+      const panel = document.querySelector(".model-settings");
+      const heading = document.querySelector(".model-settings-heading");
+      const card = document.querySelector(".model-role-card");
+      const input = card?.querySelector("input:not([type=checkbox])");
+      if (!panel || !heading || !card || !input) {
+        throw new Error("model settings layout is missing");
+      }
+      const panelStyle = getComputedStyle(panel);
+      return {
+        panelDisplay: panelStyle.display,
+        headingDisplay: getComputedStyle(heading).display,
+        panelGap: panelStyle.gap,
+        cardDisplay: getComputedStyle(card).display,
+        inputWidth: getComputedStyle(input).width,
+      };
+    })()
+  `);
+  expect(modelLayout.panelDisplay).toBe("grid");
+  expect(modelLayout.headingDisplay).toBe("flex");
+  expect(modelLayout.panelGap).not.toBe("normal");
+  expect(modelLayout.cardDisplay).toBe("grid");
+  expect(Number.parseFloat(modelLayout.inputWidth)).toBeGreaterThan(200);
 
   const metrics = await page.evaluate<{
     pageHeight: number;
@@ -46,12 +139,66 @@ test("desktop settings is an app-like control surface without chat ownership", a
   expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
   expect(metrics.overflowY).toBe("auto");
 
+  const memoryDialogLayout = await page.evaluate<{
+    overlayPosition: string;
+    overlayTop: string;
+    overlayDisplay: string;
+    dialogDisplay: string;
+    dialogMaxHeight: string;
+  }>(`
+    (() => {
+      const overlay = document.createElement("div");
+      overlay.className = "memory-center-overlay";
+      const dialog = document.createElement("section");
+      dialog.className = "memory-center";
+      overlay.append(dialog);
+      document.body.append(overlay);
+      try {
+        const overlayStyle = getComputedStyle(overlay);
+        const dialogStyle = getComputedStyle(dialog);
+        return {
+          overlayPosition: overlayStyle.position,
+          overlayTop: overlayStyle.top,
+          overlayDisplay: overlayStyle.display,
+          dialogDisplay: dialogStyle.display,
+          dialogMaxHeight: dialogStyle.maxHeight,
+        };
+      } finally {
+        overlay.remove();
+      }
+    })()
+  `);
+  expect(memoryDialogLayout.overlayPosition).toBe("fixed");
+  expect(memoryDialogLayout.overlayTop).toBe("0px");
+  expect(memoryDialogLayout.overlayDisplay).toBe("grid");
+  expect(memoryDialogLayout.dialogDisplay).toBe("grid");
+  expect(memoryDialogLayout.dialogMaxHeight).not.toBe("none");
+
   const screenshot = await page.screenshot({
     animations: "disabled",
     path: testInfo.outputPath("desktop-settings.png"),
   });
   expect(screenshot.byteLength).toBeGreaterThan(10_000);
 });
+
+function modelConfiguration(
+  role: "chat" | "memory_extraction" | "memory_summary" | "embedding",
+  provider: "demo" | "openai_compatible" | "local_hash",
+  model: string,
+) {
+  return {
+    role,
+    provider,
+    model,
+    base_url:
+      provider === "openai_compatible" ? "http://127.0.0.1:9999/v1" : "",
+    timeout_seconds: 60,
+    context_window: 8192,
+    enabled: true,
+    api_key_configured: false,
+    updated_at: "2026-08-31T00:00:00Z",
+  };
+}
 
 test("desktop pet reveals its controls and composer while the pointer is over the pet", async ({
   page,
@@ -73,13 +220,22 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   await expect(composer.locator("..")).toHaveCSS("opacity", "0");
   await expect(composer.locator("..")).toHaveCSS("pointer-events", "none");
 
-  await page.getByRole("button", { name: "摸摸绫地宁宁" }).hover({
-    position: { x: 200, y: 80 },
-  });
+  // Empty transparent window space still reveals the rail; native capture is
+  // decided separately from this window-presence signal.
+  await page.mouse.move(10, 10);
 
   await expect(shell).toHaveAttribute("data-pointer-inside", "true");
   await expect(actions).toHaveCSS("opacity", "1");
   await expect(actions).toHaveCSS("pointer-events", "auto");
+  await expect(actions).toHaveAttribute("data-native-interactive", "true");
+  await expect(actions.locator("svg.lucide")).toHaveCount(3);
+  await expect(composer.locator("..")).toHaveAttribute(
+    "data-native-interactive",
+    "true",
+  );
+  await expect(
+    page.locator(".desktop-pet-composer svg.lucide-send"),
+  ).toBeVisible();
   await expect(composer.locator("..")).toHaveCSS("opacity", "1");
   await expect(composer.locator("..")).toHaveCSS("pointer-events", "auto");
 

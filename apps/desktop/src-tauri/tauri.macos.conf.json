@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "publisher": "MuBai",
+    "shortDescription": "Local-first realtime AI character desktop companion",
+    "longDescription": "ChatWaifu NEXT desktop pet with a self-contained Runtime, no bundled local neural model packs, and configurable cloud model and voice providers.",
+    "resources": {
+      "../../../dist/macos/runtime-sidecar/": "runtime-sidecar/",
+      "../../../OWNER_ASSET_NOTICE.md": "OWNER_ASSET_NOTICE.md"
+    },
+    "category": "Entertainment",
+    "macOS": {
+      "minimumSystemVersion": "14.0",
+      "dmg": {
+        "background": "assets/dmg-background.png",
+        "windowSize": {
+          "width": 720,
+          "height": 480
+        },
+        "appPosition": {
+          "x": 190,
+          "y": 265
+        },
+        "applicationFolderPosition": {
+          "x": 530,
+          "y": 265
+        }
+      }
+    }
+  }
+}

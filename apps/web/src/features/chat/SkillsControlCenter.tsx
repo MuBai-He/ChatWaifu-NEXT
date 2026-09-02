@@ -6,6 +6,7 @@ import type {
   SkillRunSnapshot,
 } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "./ModalPortal";
 import {
   cancelSkillRun,
@@ -154,6 +155,7 @@ export function SkillsControlCenter({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} disabled={!sessionId}>
+        <ProductIcon name="skills" />
         Skills &amp; 插件
       </button>
       {open ? (
@@ -181,7 +183,7 @@ export function SkillsControlCenter({
                 onClick={() => setOpen(false)}
                 aria-label="关闭 Skills 控制中心"
               >
-                ×
+                <ProductIcon name="close" />
               </button>
             </header>
 
@@ -202,6 +204,7 @@ export function SkillsControlCenter({
                       disabled={busy !== null}
                       onClick={() => void refresh()}
                     >
+                      <ProductIcon name="refresh" />
                       刷新
                     </button>
                   </small>
@@ -295,7 +298,8 @@ export function SkillsControlCenter({
                       void act("install-example", installExamplePlugin)
                     }
                   >
-                    + 安装 Local Echo 测试插件
+                    <ProductIcon name="plus" />
+                    安装 Local Echo 测试插件
                   </button>
                 ) : null}
                 <div className="local-plugin-install">

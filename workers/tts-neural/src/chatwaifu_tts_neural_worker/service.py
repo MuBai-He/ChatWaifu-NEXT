@@ -16,6 +16,7 @@ from chatwaifu_model_worker import (
     TtsSynthesisResult,
     TtsWorkerCapabilities,
     WorkerHealth,
+    WorkerRuntimeDiagnostics,
 )
 
 from chatwaifu_tts_neural_worker.config import WorkerSettings
@@ -24,6 +25,8 @@ from chatwaifu_tts_neural_worker.engines import (
     SynthesisCancelled,
     SynthesisEngine,
     build_engine,
+    collect_torch_runtime_diagnostics,
+    validate_runtime_accelerator,
 )
 
 
@@ -40,9 +43,11 @@ class SynthesisService:
         self,
         settings: WorkerSettings,
         engine_factory: Callable[[WorkerSettings], SynthesisEngine] = build_engine,
+        startup_validator: Callable[[WorkerSettings], None] = validate_runtime_accelerator,
     ) -> None:
         self._settings = settings
         self._engine_factory = engine_factory
+        self._startup_validator = startup_validator
         self._engine: SynthesisEngine | None = None
         self._load_lock = asyncio.Lock()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=settings.provider_id)
@@ -52,6 +57,8 @@ class SynthesisService:
         self._engine_generation_id: UUID | None = None
 
     async def start(self) -> None:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._executor, self._startup_validator, self._settings)
         if self._settings.preload:
             await self._ensure_loaded()
 
@@ -183,6 +190,7 @@ class SynthesisService:
 
     def health(self) -> WorkerHealth:
         queue_depth = sum(not task.done() for task in self._jobs.values())
+        runtime_diagnostics = collect_torch_runtime_diagnostics(self._settings, self._engine)
         return WorkerHealth(
             status="busy" if queue_depth else "ready",
             worker_id=self._settings.worker_id,
@@ -191,11 +199,17 @@ class SynthesisService:
             queue_depth=queue_depth,
             device=self._engine.device if self._engine is not None else self._settings.device,
             capabilities=["tts.synthesize", "tts.cancel", "tts.unload", "health"],
+            runtime_diagnostics=(
+                WorkerRuntimeDiagnostics.model_validate(runtime_diagnostics)
+                if runtime_diagnostics is not None
+                else None
+            ),
         )
 
     def capabilities(self) -> TtsWorkerCapabilities:
-        qwen = self._settings.backend == "qwen3_tts_mlx"
+        qwen = self._settings.backend in {"qwen3_tts_mlx", "qwen3_tts_torch"}
         fixed_qwen_voice = qwen and self._settings.qwen_voice is not None
+        native_streaming = self._settings.backend != "qwen3_tts_torch"
         return TtsWorkerCapabilities(
             provider_id=self._settings.provider_id,
             display_name=self._settings.display_name,
@@ -205,8 +219,8 @@ class SynthesisService:
             supports_style=False,
             supports_speed=False,
             supports_pitch=False,
-            native_streaming=True,
-            stream_protocols=["pcm.v2"],
+            native_streaming=native_streaming,
+            stream_protocols=["pcm.v2"] if native_streaming else [],
             local_only=True,
         )
 

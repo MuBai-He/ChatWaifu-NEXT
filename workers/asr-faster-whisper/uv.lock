@@ -64,6 +64,7 @@ name = "chatwaifu-asr-faster-whisper-worker"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "av" },
     { name = "chatwaifu-model-worker-sdk" },
     { name = "fastapi" },
     { name = "faster-whisper" },
@@ -82,6 +83,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "av", specifier = ">=11,<19" },
     { name = "chatwaifu-model-worker-sdk", directory = "../../packages/model-worker-sdk-python" },
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "faster-whisper", specifier = "==1.2.1" },

@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Isolated faster-whisper ASR worker for ChatWaifu NEXT"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+  "av>=11,<19",
   "chatwaifu-model-worker-sdk",
   "fastapi>=0.116,<1",
   "faster-whisper==1.2.1",
@@ -45,7 +46,11 @@ venv = ".venv"
 
 [tool.ruff]
 line-length = 100
+src = ["src"]
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["chatwaifu_asr_worker"]

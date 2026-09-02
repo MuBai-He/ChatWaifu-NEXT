@@ -1,19 +1,25 @@
 """Runtime HTTP and WebSocket acceptance tests."""
 
+import asyncio
 import json
 import os
 import shutil
 import sqlite3
+import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Protocol, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from chatwaifu_protocol.events import GenericCoreEvent
+from chatwaifu_runtime.api import routes as runtime_routes
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.main import create_app
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
@@ -47,6 +53,20 @@ def test_browser_cors_allows_memory_mutation_methods(
         method.strip() for method in response.headers["access-control-allow-methods"].split(",")
     }
     assert {"PUT", "PATCH", "DELETE"}.issubset(allowed)
+
+
+def test_packaged_tauri_origin_can_call_runtime(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    response = http.options(
+        "/v1/runtime/health",
+        headers={
+            "Origin": "http://tauri.localhost",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://tauri.localhost"
 
 
 def test_health_session_persistence_and_event_stream(client: TestClient) -> None:
@@ -159,6 +179,71 @@ def test_recovery_snapshot_replays_from_an_active_generation(
             generation_started = cast(dict[str, object], websocket.receive_json())
         assert generation_started["event_type"] == "assistant.generation_started"
         assert generation_started["generation_id"] == accepted["generation_id"]
+
+
+def test_worker_pack_integrity_check_hashes_all_payloads_on_demand(
+    client: TestClient,
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[Path, bool]] = []
+    manifest = SimpleNamespace(
+        pack_id="qwen3-tts-nene-cu126",
+        version="0.1.0",
+        worker=SimpleNamespace(kind="tts", backend="qwen3_tts_torch"),
+        files=[SimpleNamespace(size=12), SimpleNamespace(size=30)],
+    )
+
+    def discover(
+        path: Path, *, verify_payload: bool = False
+    ) -> tuple[list[SimpleNamespace], list[str]]:
+        calls.append((path, verify_payload))
+        return [SimpleNamespace(manifest=manifest)], []
+
+    monkeypatch.setattr(runtime_routes, "discover_installed_packs", discover)
+    http = cast(RuntimeHttpClient, client)
+
+    response = http.post("/v1/worker-packs/integrity/verify", json={})
+
+    assert response.status_code == 200
+    payload = cast(dict[str, object], response.json())
+    assert payload["valid"] is True
+    assert payload["errors"] == []
+    assert payload["packs"] == [
+        {
+            "pack_id": "qwen3-tts-nene-cu126",
+            "version": "0.1.0",
+            "kind": "tts",
+            "backend": "qwen3_tts_torch",
+            "file_count": 2,
+            "size_bytes": 42,
+        }
+    ]
+    assert calls == [(runtime_settings.data_dir / "worker-packs", True)]
+
+
+def test_worker_pack_integrity_check_reports_invalid_installs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def discover_invalid(
+        _path: Path, *, verify_payload: bool = False
+    ) -> tuple[list[SimpleNamespace], list[str]]:
+        return [], ["payload digest mismatch"]
+
+    monkeypatch.setattr(
+        runtime_routes,
+        "discover_installed_packs",
+        discover_invalid,
+    )
+    http = cast(RuntimeHttpClient, client)
+
+    response = http.post("/v1/worker-packs/integrity/verify", json={})
+
+    assert response.status_code == 200
+    payload = cast(dict[str, object], response.json())
+    assert payload["valid"] is False
+    assert payload["packs"] == []
+    assert payload["errors"] == ["payload digest mismatch"]
 
 
 def test_model_roles_are_independent_and_api_keys_never_echo(
@@ -440,6 +525,8 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     )
     assert final_cue["name"] == "idle"
     assert final_cue["priority"] == 90
+    assert int(str(avatar_events[-1]["sequence"])) < int(str(completed["sequence"]))
+    assert generation_events[-1]["event_type"] == "assistant.generation_completed"
     audio_event = next(
         item for item in generation_events if item["event_type"] == "assistant.audio_chunk_queued"
     )
@@ -635,8 +722,34 @@ def test_explicit_memory_survives_sessions_and_forget_tombstones(client: TestCli
     second_session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
     second_session_id = str(second_session["session_id"])
     recalled_reply = _submit_and_wait(http, second_session_id, "你还记得我的喜好吗?")
-    assert "记忆:" in recalled_reply
+    assert "我还记得\uff1a" in recalled_reply
     assert "我喜欢蓝色" in recalled_reply
+    assert "记忆:" not in recalled_reply
+    assert "[relevant]" not in recalled_reply
+    recalled_events = cast(
+        list[dict[str, object]],
+        cast(
+            dict[str, object],
+            http.get(f"/v1/sessions/{second_session_id}/events?limit=500").json(),
+        )["items"],
+    )
+    prompt_report = cast(
+        dict[str, object],
+        next(
+            event for event in recalled_events if event["event_type"] == "character.prompt_compiled"
+        )["payload"],
+    )["report"]
+    assert int(str(cast(dict[str, object], prompt_report)["memory_tokens"])) > 0
+    spoken_segments = [
+        str(cast(dict[str, object], event["payload"])["text"])
+        for event in recalled_events
+        if event["event_type"] == "assistant.text_segment_committed"
+    ]
+    assert spoken_segments
+    assert all("记忆:" not in segment for segment in spoken_segments)
+    assert all("[relevant]" not in segment for segment in spoken_segments)
+    assert all("仅使用以下经过策略" not in segment for segment in spoken_segments)
+    assert all("UNTRUSTED MEMORY SOURCE" not in segment for segment in spoken_segments)
 
     _submit_and_wait(http, second_session_id, "请忘记我喜欢蓝色")
     assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 0
@@ -997,15 +1110,66 @@ def test_reset_rolls_back_all_truth_and_audio_when_one_delete_fails(
 
 def test_reset_event_is_live_and_keeps_the_session_cursor_monotonic(
     client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     http = cast(RuntimeHttpClient, client)
     session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
     session_id = str(session["session_id"])
-    _submit_and_wait(http, session_id, "跨窗口重置前的消息")
+    portal = client.portal
+    assert portal is not None
+    app = cast(FastAPI, client.app)
+    container = cast(RuntimeContainer, app.state.container)
+
+    async def create_completion_release() -> asyncio.Event:
+        return asyncio.Event()
+
+    completion_release = portal.call(create_completion_release)
+    completion_published = threading.Event()
+    original_publish = container.event_hub.publish
+
+    async def publish_with_completion_barrier(event: dict[str, object]) -> None:
+        await original_publish(event)
+        if event.get("event_type") == "assistant.generation_completed":
+            completion_published.set()
+            await completion_release.wait()
+
+    monkeypatch.setattr(container.event_hub, "publish", publish_with_completion_barrier)
+
+    accepted = cast(
+        dict[str, object],
+        http.post(
+            f"/v1/sessions/{session_id}/turns",
+            json={"text": "跨窗口重置前的消息"},
+        ).json(),
+    )
+    generation_id = str(accepted["generation_id"])
+    assert completion_published.wait(timeout=2)
+
+    async def cancel_at_completion_barrier() -> bool:
+        cancel_started = asyncio.Event()
+
+        async def cancel_generation() -> bool:
+            cancel_started.set()
+            return await container.conversation.cancel(UUID(session_id), "completion_barrier_test")
+
+        cancel_task = asyncio.create_task(cancel_generation())
+        await cancel_started.wait()
+        completion_release.set()
+        return await cancel_task
+
+    assert portal.call(cancel_at_completion_barrier) is False
     before = cast(
         list[dict[str, object]],
         cast(dict[str, object], http.get(f"/v1/sessions/{session_id}/events").json())["items"],
     )
+    generation_events = [
+        event for event in before if str(event.get("generation_id")) == generation_id
+    ]
+    assert generation_events[-1]["event_type"] == "assistant.generation_completed"
+    assert not {
+        "assistant.generation_cancelled",
+        "conversation.interrupted",
+    }.intersection(str(event["event_type"]) for event in generation_events)
     cursor = max(int(str(event["sequence"])) for event in before)
 
     with client.websocket_connect(

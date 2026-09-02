@@ -101,7 +101,9 @@ Plugin authors must write through `CHATWAIFU_PLUGIN_DATA_DIR` or their working d
 backend with real x64 filesystem, network, inherited-handle, Job, memory, MCP lifecycle,
 cancellation, and reconciliation probes. The API still rejects untrusted required-sandbox stdio
 whenever the sibling helper is missing or cannot enforce the immutable plan; it never silently
-falls back to a cleaned environment. Signed installer and frozen-sidecar validation remain separate
+falls back to a cleaned environment. ADR 0027 now records frozen-sidecar packaging and basic
+installed Runtime health/uninstall validation under Windows x64 emulation. Signed delivery and
+execution plus profile/ACL reconciliation through the installed AppContainer helper remain separate
 release gates.
 
 The SQLite adapter remains replaceable behind the domain port. Moving to another durable store must

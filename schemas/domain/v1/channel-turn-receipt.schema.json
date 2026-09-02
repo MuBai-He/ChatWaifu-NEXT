@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "ChannelChatType": {
+      "description": "Conversation shapes understood by this schema major.",
+      "enum": [
+        "direct",
+        "group"
+      ],
+      "title": "ChannelChatType",
+      "type": "string"
+    },
+    "ChannelTurnStatus": {
+      "enum": [
+        "accepted",
+        "processing",
+        "completed",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "timed_out"
+      ],
+      "title": "ChannelTurnStatus",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-turn-receipt.schema.json",
+  "description": "Admission receipt returned before or while a channel turn is processed.",
+  "properties": {
+    "accepted_at": {
+      "format": "date-time",
+      "title": "Accepted At",
+      "type": "string"
+    },
+    "account_key": {
+      "anyOf": [
+        {
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Account Key"
+    },
+    "channel_turn_id": {
+      "format": "uuid",
+      "title": "Channel Turn Id",
+      "type": "string"
+    },
+    "chat_type": {
+      "$ref": "#/$defs/ChannelChatType",
+      "default": "direct"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "conversation_key": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Conversation Key",
+      "type": "string"
+    },
+    "conversation_label": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Untrusted display label only",
+      "title": "Conversation Label"
+    },
+    "duplicate": {
+      "default": false,
+      "title": "Duplicate",
+      "type": "boolean"
+    },
+    "external_message_id": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "External Message Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "format": "uuid",
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "poll_after_ms": {
+      "anyOf": [
+        {
+          "maximum": 60000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Poll After Ms"
+    },
+    "principal_scope": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Principal Scope",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sender_display_name": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Untrusted display label only",
+      "title": "Sender Display Name"
+    },
+    "sender_key": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Sender Key",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ChannelTurnStatus"
+    },
+    "turn_id": {
+      "format": "uuid",
+      "title": "Turn Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "channel_turn_id",
+    "connection_id",
+    "external_message_id",
+    "conversation_key",
+    "sender_key",
+    "principal_scope",
+    "session_id",
+    "turn_id",
+    "generation_id",
+    "status",
+    "revision",
+    "accepted_at"
+  ],
+  "title": "ChannelTurnReceipt",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

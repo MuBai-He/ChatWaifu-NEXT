@@ -1,0 +1,145 @@
+{
+  "$defs": {
+    "ChannelAuthorizationMethod": {
+      "description": "Interactive authorization methods exposed to trusted local clients.",
+      "enum": [
+        "qr_code"
+      ],
+      "title": "ChannelAuthorizationMethod",
+      "type": "string"
+    },
+    "ChannelChatType": {
+      "description": "Conversation shapes understood by this schema major.",
+      "enum": [
+        "direct",
+        "group"
+      ],
+      "title": "ChannelChatType",
+      "type": "string"
+    },
+    "ChannelMessageKind": {
+      "description": "Message payload kinds understood by this schema major.",
+      "enum": [
+        "text"
+      ],
+      "title": "ChannelMessageKind",
+      "type": "string"
+    },
+    "ChannelProviderCapabilities": {
+      "description": "Transport behavior advertised by one provider adapter.\n\nThe first provider advertises only direct text by default. ``group`` is a\nprotocol capability for future adapters, but a Runtime must reject it until\nits provider registration and local policy explicitly enable group chat.",
+      "properties": {
+        "authorization_methods": {
+          "description": "Interactive authorization methods implemented by the local adapter; an empty list means connection provisioning is external",
+          "items": {
+            "$ref": "#/$defs/ChannelAuthorizationMethod"
+          },
+          "maxItems": 8,
+          "title": "Authorization Methods",
+          "type": "array"
+        },
+        "chat_types": {
+          "items": {
+            "$ref": "#/$defs/ChannelChatType"
+          },
+          "minItems": 1,
+          "title": "Chat Types",
+          "type": "array"
+        },
+        "inbound_message_kinds": {
+          "items": {
+            "$ref": "#/$defs/ChannelMessageKind"
+          },
+          "minItems": 1,
+          "title": "Inbound Message Kinds",
+          "type": "array"
+        },
+        "max_text_chars": {
+          "default": 20000,
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Text Chars",
+          "type": "integer"
+        },
+        "outbound_message_kinds": {
+          "items": {
+            "$ref": "#/$defs/ChannelMessageKind"
+          },
+          "minItems": 1,
+          "title": "Outbound Message Kinds",
+          "type": "array"
+        },
+        "supports_cancellation": {
+          "default": true,
+          "title": "Supports Cancellation",
+          "type": "boolean"
+        },
+        "supports_delivery_ack": {
+          "default": true,
+          "title": "Supports Delivery Ack",
+          "type": "boolean"
+        },
+        "supports_partial_replies": {
+          "default": false,
+          "title": "Supports Partial Replies",
+          "type": "boolean"
+        },
+        "supports_proactive_messages": {
+          "default": false,
+          "title": "Supports Proactive Messages",
+          "type": "boolean"
+        },
+        "supports_typing": {
+          "default": false,
+          "title": "Supports Typing",
+          "type": "boolean"
+        }
+      },
+      "title": "ChannelProviderCapabilities",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-provider-registration.schema.json",
+  "description": "Discoverable definition for a provider-neutral channel adapter.",
+  "properties": {
+    "capabilities": {
+      "$ref": "#/$defs/ChannelProviderCapabilities"
+    },
+    "description": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "provider_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider_id",
+    "version",
+    "name",
+    "description"
+  ],
+  "title": "ChannelProviderRegistration",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

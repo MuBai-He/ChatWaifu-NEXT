@@ -61,6 +61,19 @@ class SttTranscriptionResult(WorkerModel):
     provider: str = Field(min_length=1, max_length=128)
 
 
+class SttWorkerCapabilities(WorkerModel):
+    """Provider-neutral discovery metadata exposed by ASR workers."""
+
+    schema_version: Literal["1.0"] = WORKER_SCHEMA_VERSION
+    provider_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]{1,127}$")
+    display_name: str = Field(min_length=1, max_length=128)
+    model: str = Field(min_length=1, max_length=256)
+    languages: list[str] = Field(min_length=1, max_length=32)
+    supports_partial: bool = False
+    supports_word_timestamps: bool = False
+    local_only: bool = True
+
+
 class TtsSynthesisRequest(WorkerRequest):
     text: str = Field(min_length=1, max_length=5000)
     language: str = Field(min_length=2, max_length=32)
@@ -177,6 +190,23 @@ class TtsWorkerCapabilities(WorkerModel):
     local_only: bool = True
 
 
+class WorkerRuntimeDiagnostics(WorkerModel):
+    """Optional, read-only accelerator evidence exposed by local Workers."""
+
+    torch_version: str | None = Field(default=None, min_length=1, max_length=128)
+    torch_cuda_version: str | None = Field(default=None, min_length=1, max_length=64)
+    cuda_available: bool | None = None
+    cuda_device_index: int | None = Field(default=None, ge=0)
+    cuda_device_name: str | None = Field(default=None, min_length=1, max_length=256)
+    cuda_compute_capability: str | None = Field(default=None, pattern=r"^[0-9]+\.[0-9]+$")
+    cuda_total_memory_bytes: int | None = Field(default=None, ge=0)
+    cuda_free_memory_bytes: int | None = Field(default=None, ge=0)
+    cuda_memory_allocated_bytes: int | None = Field(default=None, ge=0)
+    cuda_memory_reserved_bytes: int | None = Field(default=None, ge=0)
+    model_device: str | None = Field(default=None, min_length=1, max_length=64)
+    model_parameter_devices: list[str] = Field(default_factory=list, max_length=16)
+
+
 class WorkerHealth(WorkerModel):
     schema_version: Literal["1.0"] = WORKER_SCHEMA_VERSION
     status: Literal["starting", "ready", "busy", "degraded"]
@@ -186,3 +216,4 @@ class WorkerHealth(WorkerModel):
     queue_depth: int = Field(ge=0)
     device: str = Field(min_length=1, max_length=64)
     capabilities: list[str] = Field(default_factory=list)
+    runtime_diagnostics: WorkerRuntimeDiagnostics | None = None

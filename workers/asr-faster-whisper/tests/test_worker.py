@@ -1,18 +1,31 @@
 # Starlette's TestClient methods inherit partially untyped httpx compatibility overloads.
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+# pyright: reportPrivateUsage=false, reportUnknownMemberType=false, reportUnknownVariableType=false
 
+import asyncio
 import base64
+import threading
 from collections.abc import Iterator
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from chatwaifu_model_worker import SttTranscriptionRequest, SttTranscriptionResult
 from fastapi.testclient import TestClient
 
 from chatwaifu_asr_worker.config import WorkerSettings
 from chatwaifu_asr_worker.main import create_app
-from chatwaifu_asr_worker.service import TranscriptionEngine, TranscriptionService
+from chatwaifu_asr_worker.service import (
+    TranscriptionEngine,
+    TranscriptionService,
+    _prepare_whisper_audio,
+    _resolve_model_source,
+)
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
 
 
 class FakeEngine(TranscriptionEngine):
@@ -43,6 +56,120 @@ def test_worker_requires_ephemeral_token(client: TestClient) -> None:
     health = client.get("/v1/health", headers={"Authorization": "Bearer test-token"})
     assert health.status_code == 200
     assert health.json()["model_loaded"] is True
+    capabilities = client.get("/v1/capabilities", headers={"Authorization": "Bearer test-token"})
+    assert capabilities.status_code == 200
+    assert capabilities.json() == {
+        "schema_version": "1.0",
+        "provider_id": "faster-whisper",
+        "display_name": "faster-whisper · 本地",
+        "model": "base",
+        "languages": ["zh", "ja", "en"],
+        "supports_partial": False,
+        "supports_word_timestamps": False,
+        "local_only": True,
+    }
+
+
+def test_offline_pack_resolves_the_materialized_model_directory(tmp_path: Path) -> None:
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "config.json").write_text("{}", encoding="utf-8")
+    (model_dir / "model.bin").write_bytes(b"weights")
+    (model_dir / "tokenizer.json").write_text("{}", encoding="utf-8")
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model="base",
+        model_dir=model_dir,
+        local_files_only=True,
+        preload=False,
+    )
+
+    assert _resolve_model_source(settings) == str(model_dir.resolve())
+
+
+def test_offline_pack_rejects_an_incomplete_model_directory(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model="base",
+        model_dir=tmp_path / "missing-model",
+        local_files_only=True,
+        preload=False,
+    )
+
+    with pytest.raises(RuntimeError, match=r"config.json, model.bin, tokenizer.json"):
+        _resolve_model_source(settings)
+
+
+def test_whisper_audio_resampler_preserves_24khz_duration_and_pitch() -> None:
+    source_rate = 24_000
+    frequency = 440
+    time = np.arange(source_rate, dtype=np.float64) / source_rate
+    pcm16 = (np.sin(2 * np.pi * frequency * time) * 16_000).astype(np.int16).tobytes()
+
+    audio = _prepare_whisper_audio(pcm16, sample_rate=source_rate, channels=1)
+
+    assert audio.dtype == np.float32
+    assert audio.shape == (16_000,)
+    assert np.max(np.abs(audio)) == pytest.approx(16_000 / 32_768, abs=0.01)
+    positive_crossings = np.count_nonzero((audio[:-1] <= 0) & (audio[1:] > 0))
+    assert positive_crossings == pytest.approx(frequency, abs=2)
+
+
+def test_whisper_audio_resampler_downmixes_16khz_stereo() -> None:
+    left = np.full(160, 16_384, dtype=np.int16)
+    right = np.zeros(160, dtype=np.int16)
+    interleaved = np.column_stack((left, right)).reshape(-1).tobytes()
+
+    audio = _prepare_whisper_audio(interleaved, sample_rate=16_000, channels=2)
+
+    assert audio.shape == (160,)
+    assert audio == pytest.approx(np.full(160, 0.25, dtype=np.float32), abs=1e-6)
+
+
+class CapturingEngine(TranscriptionEngine):
+    def __init__(self) -> None:
+        self.audio: np.ndarray | None = None
+
+    def transcribe(
+        self,
+        audio: np.ndarray,
+        *,
+        language: str | None,
+    ) -> tuple[str, str | None]:
+        self.audio = audio
+        return "采样率正确。", language
+
+
+@pytest.mark.anyio
+async def test_worker_resamples_24khz_but_reports_original_duration(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+    )
+    engine = CapturingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    pcm16 = np.zeros(24_000, dtype=np.int16).tobytes()
+    request = SttTranscriptionRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        job_id=uuid4(),
+        audio_base64=base64.b64encode(pcm16).decode("ascii"),
+        sample_rate=24_000,
+        channels=1,
+        language="zh",
+    )
+
+    try:
+        result = await service.transcribe(request)
+    finally:
+        await service.close()
+
+    assert engine.audio is not None
+    assert engine.audio.shape == (16_000,)
+    assert result.duration_ms == 1_000
 
 
 def test_worker_transcribes_pcm_with_generation_identity(client: TestClient) -> None:
@@ -98,3 +225,92 @@ def test_worker_unloads_idle_model_and_loads_again_on_demand(client: TestClient)
 
     assert response.status_code == 200
     assert client.get("/v1/health", headers=headers).json()["model_loaded"] is True
+
+
+class BlockingEngine(TranscriptionEngine):
+    def __init__(self) -> None:
+        self.first_started = threading.Event()
+        self.release_first = threading.Event()
+        self.second_started = threading.Event()
+        self._lock = threading.Lock()
+        self._calls = 0
+        self.concurrent = 0
+        self.max_concurrent = 0
+
+    def transcribe(
+        self,
+        audio: np.ndarray,
+        *,
+        language: str | None,
+    ) -> tuple[str, str | None]:
+        with self._lock:
+            self._calls += 1
+            call = self._calls
+            self.concurrent += 1
+            self.max_concurrent = max(self.max_concurrent, self.concurrent)
+        try:
+            if call == 1:
+                self.first_started.set()
+                self.release_first.wait(timeout=2)
+                return "迟到旧结果", language
+            self.second_started.set()
+            return "第二轮", language
+        finally:
+            with self._lock:
+                self.concurrent -= 1
+
+
+def _request(*, generation_id: UUID | None = None) -> SttTranscriptionRequest:
+    return SttTranscriptionRequest(
+        request_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=generation_id or uuid4(),
+        job_id=uuid4(),
+        audio_base64=base64.b64encode(b"\x00\x01" * 160).decode("ascii"),
+        sample_rate=16_000,
+        channels=1,
+        language="zh",
+    )
+
+
+@pytest.mark.anyio
+async def test_cancelled_native_transcription_never_overlaps_next_generation(
+    tmp_path: Path,
+) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+    )
+    engine = BlockingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    first = _request()
+    second = _request()
+    first_task = asyncio.create_task(service.transcribe(first))
+    second_task: asyncio.Task[SttTranscriptionResult] | None = None
+    try:
+        assert await asyncio.to_thread(engine.first_started.wait, 1)
+        assert service.cancel(first.generation_id) is True
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+        assert await service.unload() is False
+
+        second_task = asyncio.create_task(service.transcribe(second))
+        await asyncio.sleep(0)
+        assert engine.second_started.is_set() is False
+
+        engine.release_first.set()
+        result = await asyncio.wait_for(second_task, timeout=1)
+        assert result.text == "第二轮"
+        assert engine.max_concurrent == 1
+    finally:
+        engine.release_first.set()
+        for task in (first_task, second_task):
+            if task is not None and not task.done():
+                task.cancel()
+        await asyncio.gather(
+            *(task for task in (first_task, second_task) if task is not None),
+            return_exceptions=True,
+        )
+        await service.close()

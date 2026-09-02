@@ -44,14 +44,14 @@
   box-shadow: 0 7px 20px rgb(92 48 87 / 20%);
 }
 
-.desktop-settings-app-icon svg {
-  width: 24px;
-  height: 24px;
-  stroke-width: 1.55;
+.desktop-settings-app-icon img {
+  width: 31px;
+  height: 31px;
+  object-fit: contain;
 }
 
 .desktop-settings-sidebar > header div,
-.desktop-settings-sidebar > footer div,
+.desktop-settings-runtime-summary div,
 .desktop-settings-sidebar nav button div {
   display: grid;
   min-width: 0;
@@ -131,17 +131,47 @@
 }
 
 .desktop-settings-sidebar > footer {
-  display: flex;
-  gap: 9px;
-  align-items: center;
+  display: grid;
   margin: 0 7px;
-  padding: 12px;
+  gap: 7px;
+}
+
+.desktop-settings-guide-button,
+.desktop-settings-runtime-summary {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  padding: 10px 11px;
   border: 1px solid rgb(72 53 76 / 8%);
   border-radius: 11px;
   background: rgb(255 255 255 / 42%);
+  gap: 9px;
 }
 
-.desktop-settings-sidebar > footer > i {
+.desktop-settings-guide-button {
+  color: #59495a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.desktop-settings-guide-button:hover {
+  background: rgb(255 255 255 / 72%);
+}
+
+.desktop-settings-guide-button > svg {
+  width: 17px;
+  flex: 0 0 auto;
+  color: #885b80;
+}
+
+.desktop-settings-guide-button > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.desktop-settings-runtime-summary > i {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
@@ -150,12 +180,12 @@
   box-shadow: 0 0 0 4px rgb(208 154 77 / 10%);
 }
 
-.desktop-settings-sidebar > footer > i.connected {
+.desktop-settings-runtime-summary > i.connected {
   background: #65a979;
   box-shadow: 0 0 0 4px rgb(101 169 121 / 10%);
 }
 
-.desktop-settings-sidebar > footer > i.offline {
+.desktop-settings-runtime-summary > i.offline {
   background: #c86e78;
 }
 
@@ -309,6 +339,43 @@
   color: var(--settings-muted);
   font-size: 0.7rem;
   line-height: 1.65;
+}
+
+.desktop-settings-avatar-attribution {
+  display: grid;
+  gap: 6px;
+  margin: 15px 0 0;
+  padding-top: 13px;
+  border-top: 1px solid rgb(119 80 112 / 11%);
+}
+
+.desktop-settings-avatar-attribution > div {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 68px minmax(0, 1fr);
+}
+
+.desktop-settings-avatar-attribution dt,
+.desktop-settings-avatar-attribution dd {
+  margin: 0;
+  font-size: 0.59rem;
+  line-height: 1.45;
+}
+
+.desktop-settings-avatar-attribution dt {
+  color: #9d6389;
+  font-weight: 600;
+}
+
+.desktop-settings-avatar-attribution dd {
+  color: var(--settings-muted);
+  overflow-wrap: anywhere;
+}
+
+.desktop-settings-avatar-attribution a {
+  color: #875176;
+  text-decoration-color: rgb(135 81 118 / 34%);
+  text-underline-offset: 2px;
 }
 
 .desktop-settings-preview-note,
@@ -532,7 +599,8 @@
 .desktop-settings-toggle-row,
 .desktop-settings-select-row,
 .desktop-settings-provider,
-.desktop-settings-danger-row {
+.desktop-settings-danger-row,
+.worker-pack-action-row {
   display: flex;
   min-height: 66px;
   gap: 20px;
@@ -670,14 +738,40 @@
 
 .desktop-settings-toggle-row:last-child,
 .desktop-settings-provider:last-child,
-.desktop-settings-danger-row:last-child {
+.desktop-settings-danger-row:last-child,
+.worker-pack-action-row:last-child {
   border-bottom: 0;
+}
+
+.worker-pack-action-row button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgb(119 77 111 / 20%);
+  border-radius: 8px;
+  color: #6d4468;
+  background: rgb(255 255 255 / 80%);
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.worker-pack-action-row button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.worker-pack-action-row button svg {
+  width: 14px;
+  height: 14px;
 }
 
 .desktop-settings-toggle-row > span,
 .desktop-settings-select-row > div,
 .desktop-settings-provider > div,
-.desktop-settings-danger-row > div {
+.desktop-settings-danger-row > div,
+.worker-pack-action-row > div {
   display: grid;
   min-width: 0;
   gap: 4px;
@@ -686,7 +780,8 @@
 .desktop-settings-toggle-row strong,
 .desktop-settings-select-row strong,
 .desktop-settings-provider strong,
-.desktop-settings-danger-row strong {
+.desktop-settings-danger-row strong,
+.worker-pack-action-row strong {
   font-size: 0.73rem;
   font-weight: 600;
 }
@@ -694,7 +789,8 @@
 .desktop-settings-toggle-row small,
 .desktop-settings-select-row small,
 .desktop-settings-provider small,
-.desktop-settings-danger-row small {
+.desktop-settings-danger-row small,
+.worker-pack-action-row small {
   overflow: hidden;
   color: var(--settings-muted);
   font-size: 0.63rem;
@@ -935,7 +1031,9 @@
 }
 
 .desktop-settings-tool-card > button {
+  display: inline-flex;
   margin-top: auto;
+  align-items: center;
   padding: 8px 13px;
   border: 1px solid rgb(151 87 127 / 18%);
   border-radius: 8px;
@@ -943,6 +1041,12 @@
   background: rgb(231 205 222 / 42%);
   cursor: pointer;
   font-size: 0.66rem;
+  gap: 7px;
+}
+
+.desktop-settings-tool-card > button > svg {
+  width: 14px;
+  height: 14px;
 }
 
 .desktop-settings-tool-card > button:disabled {
@@ -951,7 +1055,10 @@
 }
 
 .desktop-settings-danger-row button {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
   padding: 8px 12px;
   border: 1px solid rgb(186 76 91 / 22%);
   border-radius: 8px;
@@ -961,9 +1068,50 @@
   font-size: 0.65rem;
 }
 
+.desktop-settings-danger-row button svg {
+  width: 14px;
+  height: 14px;
+}
+
 .desktop-settings-danger-row button:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.worker-pack-integrity-list,
+.worker-pack-integrity-errors {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 14px;
+  list-style: none;
+  gap: 7px;
+}
+
+.worker-pack-integrity-list li {
+  display: grid;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 52%);
+  gap: 2px;
+}
+
+.worker-pack-integrity-list strong,
+.worker-pack-integrity-list span,
+.worker-pack-integrity-errors li {
+  overflow-wrap: anywhere;
+  font-size: 0.62rem;
+}
+
+.worker-pack-integrity-list span {
+  color: var(--settings-muted);
+}
+
+.worker-pack-integrity-errors {
+  color: #9b4050;
+}
+
+.desktop-settings-group > div > .desktop-settings-info {
+  margin: 0 18px 14px;
 }
 
 .desktop-settings-error {
@@ -973,6 +1121,405 @@
   color: #984453;
   background: rgb(255 241 243 / 96%);
   box-shadow: 0 7px 24px rgb(67 37 43 / 10%);
+}
+
+.data-clear-overlay {
+  position: fixed;
+  z-index: 1400;
+  display: grid;
+  padding: 24px;
+  overflow: auto;
+  background: rgb(35 24 39 / 42%);
+  inset: 0;
+  place-items: center;
+  backdrop-filter: blur(16px);
+  overscroll-behavior: contain;
+}
+
+.data-clear-dialog {
+  width: min(620px, 100%);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 22px;
+  color: var(--settings-text, #29242d);
+  background: rgb(252 249 251 / 98%);
+  box-shadow: 0 32px 110px rgb(36 20 38 / 34%);
+  animation: data-clear-in 170ms ease-out;
+}
+
+.data-clear-dialog > header {
+  display: grid;
+  align-items: center;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid rgb(86 67 91 / 11%);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+}
+
+.data-clear-dialog-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  color: #a44352;
+  background: rgb(218 102 118 / 11%);
+}
+
+.data-clear-dialog-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.data-clear-dialog header small {
+  color: #a05f72;
+  font: 0.56rem var(--mono);
+  letter-spacing: 0.13em;
+}
+
+.data-clear-dialog header h2 {
+  margin: 3px 0 0;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: 1.16rem;
+  font-weight: 550;
+}
+
+.data-clear-dialog-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(86 67 91 / 13%);
+  border-radius: 10px;
+  color: #776d79;
+  background: rgb(255 255 255 / 76%);
+  cursor: pointer;
+}
+
+.data-clear-dialog-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.data-clear-dialog-body {
+  padding: 22px 24px 24px;
+}
+
+.data-clear-dialog-body > p {
+  margin: 0 0 18px;
+  color: #756b76;
+  font-size: 0.7rem;
+  line-height: 1.65;
+}
+
+.data-clear-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.data-clear-scope-grid section {
+  padding: 15px 16px;
+  border: 1px solid rgb(87 67 91 / 10%);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 70%);
+}
+
+.data-clear-scope-grid section:first-child {
+  border-color: rgb(183 72 89 / 14%);
+  background: rgb(252 239 242 / 72%);
+}
+
+.data-clear-scope-grid strong {
+  color: #5e515d;
+  font-size: 0.68rem;
+}
+
+.data-clear-scope-grid section:first-child strong {
+  color: #9b3e4e;
+}
+
+.data-clear-scope-grid ul {
+  margin: 9px 0 0;
+  padding-left: 17px;
+  color: #7d727d;
+  font-size: 0.62rem;
+  line-height: 1.75;
+}
+
+.data-clear-confirmation-field {
+  display: grid;
+  gap: 8px;
+  color: #685e69;
+  font-size: 0.67rem;
+  font-weight: 600;
+}
+
+.data-clear-confirmation-field input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgb(178 74 91 / 24%);
+  border-radius: 10px;
+  outline: none;
+  color: #332b34;
+  background: white;
+  font-size: 0.72rem;
+}
+
+.data-clear-confirmation-field input:focus {
+  border-color: rgb(178 74 91 / 52%);
+  box-shadow: 0 0 0 3px rgb(178 74 91 / 9%);
+}
+
+.data-clear-dialog > footer {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 14px 24px;
+  border-top: 1px solid rgb(86 67 91 / 10%);
+  background: rgb(246 240 245 / 62%);
+  gap: 8px;
+}
+
+.data-clear-dialog > footer button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid rgb(86 67 91 / 15%);
+  border-radius: 9px;
+  color: #655a66;
+  background: rgb(255 255 255 / 82%);
+  cursor: pointer;
+  font-size: 0.65rem;
+  gap: 7px;
+}
+
+.data-clear-dialog > footer button.danger {
+  border-color: rgb(178 74 91 / 24%);
+  color: white;
+  background: linear-gradient(145deg, #b95d72, #8b4058);
+}
+
+.data-clear-dialog > footer button:disabled,
+.data-clear-dialog-close:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.data-clear-dialog > footer svg {
+  width: 14px;
+  height: 14px;
+}
+
+.desktop-onboarding-backdrop {
+  position: fixed;
+  z-index: 500;
+  display: grid;
+  padding: 24px;
+  background: rgb(38 28 42 / 34%);
+  inset: 0;
+  place-items: center;
+  backdrop-filter: blur(12px);
+}
+
+.desktop-onboarding-dialog {
+  width: min(680px, 100%);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 85%);
+  border-radius: 22px;
+  background: rgb(250 247 250 / 98%);
+  box-shadow: 0 32px 110px rgb(36 20 38 / 34%);
+  animation: data-clear-in 170ms ease-out;
+}
+
+.desktop-onboarding-dialog > header {
+  display: grid;
+  align-items: center;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid rgb(86 67 91 / 11%);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+}
+
+.desktop-onboarding-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  background: linear-gradient(145deg, #b96896, #70446e);
+}
+
+.desktop-onboarding-icon svg {
+  width: 21px;
+}
+
+.desktop-onboarding-dialog header small {
+  color: #a05f83;
+  font: 0.56rem var(--mono);
+  letter-spacing: 0.13em;
+}
+
+.desktop-onboarding-dialog header h2 {
+  margin: 3px 0 0;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", Georgia, serif;
+  font-size: 1.16rem;
+  font-weight: 550;
+}
+
+.desktop-onboarding-dialog > header > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(86 67 91 / 11%);
+  border-radius: 50%;
+  color: #766a76;
+  background: rgb(255 255 255 / 76%);
+  cursor: pointer;
+}
+
+.desktop-onboarding-dialog > header > button svg {
+  width: 16px;
+}
+
+.desktop-onboarding-body {
+  min-height: 315px;
+  padding: 24px;
+}
+
+.desktop-onboarding-body > p {
+  margin: 0 0 17px;
+  color: #655b67;
+  font-size: 0.74rem;
+  line-height: 1.65;
+}
+
+.desktop-onboarding-body ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 10px;
+}
+
+.desktop-onboarding-body li {
+  display: grid;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid rgb(119 80 112 / 9%);
+  border-radius: 11px;
+  color: #6f6470;
+  background: rgb(255 255 255 / 62%);
+  font-size: 0.68rem;
+  line-height: 1.55;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.desktop-onboarding-body li svg {
+  width: 15px;
+  color: #8a5e82;
+}
+
+.desktop-onboarding-action {
+  margin-top: 16px;
+  padding: 9px 13px;
+  border: 1px solid rgb(122 76 112 / 16%);
+  border-radius: 9px;
+  color: #704968;
+  background: rgb(244 230 240 / 82%);
+  cursor: pointer;
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.desktop-onboarding-dialog > footer {
+  display: grid;
+  min-height: 70px;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid rgb(86 67 91 / 10%);
+  background: rgb(246 240 245 / 62%);
+  grid-template-columns: minmax(100px, 1fr) auto minmax(100px, 1fr);
+  gap: 14px;
+}
+
+.desktop-onboarding-dialog > footer > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.desktop-onboarding-dialog > footer button {
+  min-height: 34px;
+  padding: 8px 13px;
+  border: 1px solid rgb(86 67 91 / 15%);
+  border-radius: 9px;
+  color: #655a66;
+  background: rgb(255 255 255 / 82%);
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.desktop-onboarding-dialog > footer button.quiet {
+  justify-self: start;
+  border-color: transparent;
+  background: transparent;
+}
+
+.desktop-onboarding-dialog > footer button.primary {
+  border-color: rgb(111 69 105 / 25%);
+  color: white;
+  background: linear-gradient(145deg, #b96796, #74456f);
+}
+
+.desktop-onboarding-dialog > footer ol {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 6px;
+}
+
+.desktop-onboarding-dialog > footer ol li {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(112 89 110 / 22%);
+}
+
+.desktop-onboarding-dialog > footer ol li.active {
+  width: 18px;
+  border-radius: 999px;
+  background: #8c5d83;
+}
+
+@keyframes data-clear-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@media (max-width: 620px) {
+  .data-clear-scope-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-onboarding-dialog > footer {
+    grid-template-columns: 1fr auto;
+  }
+
+  .desktop-onboarding-dialog > footer ol {
+    display: none;
+  }
 }
 
 @media (max-width: 780px) {

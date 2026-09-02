@@ -48,7 +48,11 @@ venv = ".venv"
 
 [tool.ruff]
 line-length = 100
+src = ["src"]
 target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["chatwaifu_tts_neural_worker"]

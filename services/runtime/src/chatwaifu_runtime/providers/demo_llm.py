@@ -27,15 +27,7 @@ class DemoLlmProvider:
                 yield LlmTextDelta(chunk)
             yield LlmResponseCompleted("stop")
             return
-        remembered = next(
-            (
-                text
-                for role, text in request.context
-                if role == "system" and text.startswith("记忆:")
-            ),
-            None,
-        )
-        memory_note = f" {remembered}" if remembered else ""
+        memory_note = _memory_note(request.recalled_memory_texts)
         response = (
             f"你好，我是{request.character_name}，ChatWaifu NEXT 的本地演示角色。"
             f"我收到你说的: “{request.user_text.strip()}”。"
@@ -61,3 +53,9 @@ def _chunks(text: str) -> tuple[str, ...]:
     if pending:
         chunks.append(pending)
     return tuple(chunks) or (text,)
+
+
+def _memory_note(recalled_memory_texts: tuple[str, ...]) -> str:
+    """Render recalled facts without exposing Runtime-owned prompt markup."""
+    excerpts = tuple(text.strip() for text in recalled_memory_texts if text.strip())
+    return " 我还记得\uff1a" + "\uff1b".join(excerpts) if excerpts else ""

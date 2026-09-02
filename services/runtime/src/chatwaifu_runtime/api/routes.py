@@ -5,11 +5,24 @@ import base64
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import NoReturn, cast
 from uuid import UUID, uuid4
 
+from chatwaifu_model_worker import WorkerPackError, discover_installed_packs
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.channels import (
+    ChannelAuthorizationSnapshot,
+    ChannelAuthorizationStartRequest,
+    ChannelAuthorizationVerificationRequest,
+    ChannelConnectionConfiguration,
+    ChannelDeliveryAcknowledgement,
+    ChannelDeliveryClaimRequest,
+    ChannelErrorResponse,
+    ChannelInboundTextMessage,
+    ChannelTurnCancelRequest,
+)
 from chatwaifu_protocol.commands import PlaybackAckCommand
+from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_protocol.skills import McpConnectionConfiguration, SkillInvocation
 from fastapi import (
@@ -50,9 +63,15 @@ from chatwaifu_runtime.api.models import (
     TtsProviderSelectionRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
+    WorkerPackIntegrityItem,
+    WorkerPackIntegrityResponse,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.models import CompanionSettingsUpdate
+from chatwaifu_runtime.external_channels.service import (
+    CreatedChannelConnection,
+    ExternalChannelError,
+)
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
 
 router = APIRouter(prefix="/v1")
@@ -60,6 +79,36 @@ router = APIRouter(prefix="/v1")
 
 def _container(request: Request) -> RuntimeContainer:
     return request.app.state.container
+
+
+def _channel_access_token(request: Request) -> str:
+    authorization = request.headers.get("authorization", "")
+    scheme, separator, token = authorization.partition(" ")
+    if separator != " " or scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="channel adapter bearer token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token.strip()
+
+
+def _raise_channel_error(error: ExternalChannelError) -> NoReturn:
+    body = ChannelErrorResponse(
+        error=StructuredError(
+            code=error.code,
+            message=str(error),
+            retryable=error.retryable,
+            component="external_channels",
+        ),
+        retry_after_ms=500 if error.retryable else None,
+    )
+    headers = {"WWW-Authenticate": "Bearer"} if error.http_status == 401 else None
+    raise HTTPException(
+        status_code=error.http_status,
+        detail=body.model_dump(mode="json"),
+        headers=headers,
+    ) from error
 
 
 @router.get("/runtime/health", response_model=RuntimeHealth)
@@ -75,6 +124,41 @@ async def runtime_health(request: Request) -> RuntimeHealth:
         dropped_events=container.event_hub.dropped_events,
         providers=providers,
         resources=container.resources.status().model_dump(mode="json"),
+    )
+
+
+@router.post(
+    "/worker-packs/integrity/verify",
+    response_model=WorkerPackIntegrityResponse,
+)
+def verify_worker_pack_integrity(request: Request) -> WorkerPackIntegrityResponse:
+    """Run the expensive, complete Worker Pack hash check only on demand.
+
+    This is deliberately a synchronous FastAPI route so Starlette executes the
+    scan in its worker thread pool instead of blocking Runtime's media event loop.
+    """
+
+    pack_root = _container(request).settings.data_dir / "worker-packs"
+    try:
+        installed, errors = discover_installed_packs(pack_root, verify_payload=True)
+    except WorkerPackError as error:
+        installed, errors = [], [str(error)[:500]]
+    packs = [
+        WorkerPackIntegrityItem(
+            pack_id=pack.manifest.pack_id,
+            version=pack.manifest.version,
+            kind=pack.manifest.worker.kind,
+            backend=pack.manifest.worker.backend,
+            file_count=len(pack.manifest.files),
+            size_bytes=sum(file.size for file in pack.manifest.files),
+        )
+        for pack in installed
+    ]
+    return WorkerPackIntegrityResponse(
+        valid=not errors,
+        checked_at=datetime.now(UTC),
+        packs=packs,
+        errors=errors,
     )
 
 
@@ -138,6 +222,230 @@ async def runtime_version() -> dict[str, str]:
 @router.get("/config")
 async def runtime_config(request: Request) -> dict[str, object]:
     return _container(request).settings.public_dict()
+
+
+@router.get("/channel-providers")
+async def read_channel_providers(request: Request) -> dict[str, object]:
+    items = [
+        item.model_dump(mode="json") for item in _container(request).external_channels.providers()
+    ]
+    return {"schema_version": "1.0", "items": items, "count": len(items)}
+
+
+@router.post(
+    "/channel-auth-sessions",
+    response_model=ChannelAuthorizationSnapshot,
+    status_code=status.HTTP_201_CREATED,
+)
+async def start_channel_authorization(
+    request: Request, body: ChannelAuthorizationStartRequest
+) -> ChannelAuthorizationSnapshot:
+    try:
+        return await _container(request).channel_management.start_authorization(body)
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+
+
+@router.get(
+    "/channel-auth-sessions/{auth_session_id}",
+    response_model=ChannelAuthorizationSnapshot,
+)
+async def read_channel_authorization(
+    request: Request,
+    auth_session_id: UUID,
+    wait_seconds: float = Query(default=0, ge=0, le=30),
+) -> ChannelAuthorizationSnapshot:
+    try:
+        return await _container(request).channel_management.get_authorization(
+            auth_session_id, wait_seconds=wait_seconds
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+
+
+@router.post(
+    "/channel-auth-sessions/{auth_session_id}/verification",
+    response_model=ChannelAuthorizationSnapshot,
+)
+async def verify_channel_authorization(
+    request: Request,
+    auth_session_id: UUID,
+    body: ChannelAuthorizationVerificationRequest,
+) -> ChannelAuthorizationSnapshot:
+    try:
+        return await _container(request).channel_management.submit_verification(
+            auth_session_id, body
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+
+
+@router.delete(
+    "/channel-auth-sessions/{auth_session_id}",
+)
+async def cancel_channel_authorization(request: Request, auth_session_id: UUID) -> dict[str, bool]:
+    try:
+        await _container(request).channel_management.cancel_authorization(auth_session_id)
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return {"ok": True}
+
+
+@router.get("/channel-connections")
+async def read_channel_connections(request: Request) -> dict[str, object]:
+    items = [
+        item.model_dump(mode="json")
+        for item in await _container(request).external_channels.list_connections()
+    ]
+    return {"schema_version": "1.0", "items": items, "count": len(items)}
+
+
+@router.get("/channel-connections/{connection_id}")
+async def read_channel_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.get_connection(connection_id)
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.put("/channel-connections/{connection_id}")
+async def update_channel_connection(
+    request: Request,
+    connection_id: UUID,
+    body: ChannelConnectionConfiguration,
+    expected_revision: int = Query(ge=1),
+) -> dict[str, object]:
+    if body.connection_id != connection_id:
+        raise HTTPException(status_code=409, detail="connection id path/body mismatch")
+    try:
+        updated = await _container(request).external_channels.update_connection(
+            body,
+            expected_revision=expected_revision,
+            rotate_access_token=False,
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    snapshot = updated.snapshot if isinstance(updated, CreatedChannelConnection) else updated
+    await _container(request).channel_management.connection_configuration_changed(snapshot)
+    return {
+        "schema_version": "1.0",
+        "connection": snapshot.model_dump(mode="json"),
+    }
+
+
+@router.delete("/channel-connections/{connection_id}")
+async def delete_channel_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        await _container(request).channel_management.remove_connection(connection_id)
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return {"connection_id": str(connection_id), "removed": True}
+
+
+@router.post("/channel-connections/{connection_id}/test")
+async def test_channel_connection(request: Request, connection_id: UUID) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.test_connection(connection_id)
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.post(
+    "/channel-connections/{connection_id}/messages",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def submit_channel_message(
+    request: Request,
+    connection_id: UUID,
+    body: ChannelInboundTextMessage,
+) -> dict[str, object]:
+    if body.connection_id != connection_id:
+        raise HTTPException(status_code=409, detail="connection id path/body mismatch")
+    try:
+        receipt = await _container(request).external_channels.ingest(
+            body, access_token=_channel_access_token(request)
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return receipt.model_dump(mode="json")
+
+
+@router.get("/channel-connections/{connection_id}/messages/{channel_turn_id}")
+async def read_channel_turn(
+    request: Request,
+    connection_id: UUID,
+    channel_turn_id: UUID,
+    wait_seconds: float = Query(default=0, ge=0, le=30),
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.wait_for_turn(
+            connection_id,
+            channel_turn_id,
+            access_token=_channel_access_token(request),
+            wait_seconds=wait_seconds,
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.post("/channel-connections/{connection_id}/messages/{channel_turn_id}/interrupt")
+async def interrupt_channel_turn(
+    request: Request,
+    connection_id: UUID,
+    channel_turn_id: UUID,
+    body: ChannelTurnCancelRequest,
+) -> dict[str, object]:
+    try:
+        receipt = await _container(request).external_channels.interrupt(
+            connection_id,
+            channel_turn_id,
+            access_token=_channel_access_token(request),
+            reason=body.reason,
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return receipt.model_dump(mode="json")
+
+
+@router.post("/channel-connections/{connection_id}/deliveries/{delivery_id}/ack")
+async def acknowledge_channel_delivery(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+    body: ChannelDeliveryAcknowledgement,
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.acknowledge_delivery(
+            connection_id,
+            delivery_id,
+            body,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.post("/channel-connections/{connection_id}/deliveries/{delivery_id}/claim")
+async def claim_channel_delivery(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+    body: ChannelDeliveryClaimRequest,
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.claim_delivery(
+            connection_id,
+            delivery_id,
+            body,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
 
 
 @router.get("/model-configurations")

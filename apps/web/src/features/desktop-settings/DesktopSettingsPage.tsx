@@ -1,7 +1,14 @@
 import { useState } from "react";
 
+import { ProductIcon } from "../../components/ProductIcon";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
 import type { SettingsRuntimeContext } from "./DesktopSettingsContext";
+import { DesktopOnboardingDialog } from "./DesktopOnboardingDialog";
+import {
+  completeDesktopOnboarding,
+  isDesktopOnboardingCompleted,
+} from "./desktopOnboarding";
+import { connectionDetail, connectionLabel } from "./desktopRuntimeStatus";
 import {
   desktopSettingsRegistry,
   type DesktopSettingsSectionId,
@@ -18,19 +25,17 @@ export function DesktopSettingsPage() {
   const desktop = useDesktopPreferences();
   const [sectionId, setSectionId] =
     useState<DesktopSettingsSectionId>("appearance");
+  const [onboardingOpen, setOnboardingOpen] = useState(
+    () => desktop.desktopHost && !isDesktopOnboardingCompleted(),
+  );
 
   const resetConversationAndMemory = async () => {
-    if (
-      !window.confirm(
-        "确定清空当前对话、全部明确记忆和本地生成语音吗？此操作无法撤销。",
-      )
-    )
-      return;
-    await runtime.resetAll();
+    return runtime.resetAll();
   };
   const context: SettingsRuntimeContext = {
     canvasRef: runtime.canvasRef,
     appearance: {
+      avatarManifest: runtime.avatarManifest,
       snapshot: runtime.snapshot,
       rendererKind: runtime.rendererKind,
       character: runtime.character,
@@ -109,14 +114,28 @@ export function DesktopSettingsPage() {
         </nav>
 
         <footer>
-          <i className={context.runtime.connection} />
-          <div>
-            <strong>{connectionLabel(context.runtime.connection)}</strong>
-            <small>
-              {context.runtime.health?.version
-                ? `Runtime ${context.runtime.health.version}`
-                : "本地服务"}
-            </small>
+          <button
+            className="desktop-settings-guide-button"
+            type="button"
+            onClick={() => setOnboardingOpen(true)}
+          >
+            <ProductIcon name="story" />
+            <span>
+              <strong>新手引导</strong>
+              <small>API、声音与麦克风</small>
+            </span>
+          </button>
+          <div className="desktop-settings-runtime-summary">
+            <i className={context.runtime.connection} />
+            <div>
+              <strong>{connectionLabel(context.runtime.connection)}</strong>
+              <small>
+                {connectionDetail(
+                  context.runtime.connection,
+                  context.runtime.health?.version,
+                )}
+              </small>
+            </div>
           </div>
         </footer>
       </aside>
@@ -147,14 +166,19 @@ export function DesktopSettingsPage() {
           ) : null}
         </div>
       </section>
+
+      <DesktopOnboardingDialog
+        open={onboardingOpen}
+        onDefer={() => setOnboardingOpen(false)}
+        onComplete={() => {
+          completeDesktopOnboarding();
+          setOnboardingOpen(false);
+        }}
+        onNavigate={(section) => {
+          setSectionId(section);
+          setOnboardingOpen(false);
+        }}
+      />
     </main>
   );
-}
-
-function connectionLabel(
-  connection: "connecting" | "connected" | "offline",
-): string {
-  if (connection === "connected") return "已连接";
-  if (connection === "connecting") return "正在连接";
-  return "Runtime 离线";
 }

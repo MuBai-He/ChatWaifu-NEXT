@@ -1,0 +1,25 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-authorization-verification-request.schema.json",
+  "description": "Submit a short pairing code requested by the provider authorization flow.",
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "verification_code": {
+      "maxLength": 32,
+      "minLength": 1,
+      "pattern": "^[0-9A-Za-z-]+$",
+      "title": "Verification Code",
+      "type": "string"
+    }
+  },
+  "required": [
+    "verification_code"
+  ],
+  "title": "ChannelAuthorizationVerificationRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

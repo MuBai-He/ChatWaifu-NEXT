@@ -37,9 +37,12 @@ interface PlaybackCoordinatorOptions {
  */
 export class PlaybackCoordinator {
   private owner: PlaybackOwner = "idle";
+  private remoteTransportConnected = false;
   private remoteConnected = false;
+  private activeGenerationId: string | null = null;
   private audioPlayer: GenerationAudioPlayer | null = null;
   private pcmPlayer: PcmStreamPlayer | null = null;
+  private wavGenerationId: string | null = null;
   private readonly streamedSegments = new Map<string, AudioPlaybackItem>();
   private readonly fallbackItems = new Map<string, AudioPlaybackItem>();
   private readonly fallbackTimers = new Map<string, number>();
@@ -61,20 +64,38 @@ export class PlaybackCoordinator {
   }
 
   setRemoteConnected(connected: boolean): void {
-    this.remoteConnected = connected;
+    this.remoteTransportConnected = connected;
     if (connected) {
-      this.clearFallbackTimers();
-      this.clearPcmStallTimers();
-      this.audioPlayer?.stop();
-      this.pcmPlayer?.cancel();
-      this.owner = "webrtc";
-    } else if (this.owner === "webrtc") {
+      // A newly-created WebRTC forwarder only observes Runtime events emitted
+      // after it subscribed. Switching an in-flight generation from the local
+      // queue would therefore discard audio that was already queued (and can
+      // also miss a later segment when the forwarder did not observe that
+      // generation's start event). Keep the current generation on its existing
+      // transport and hand ownership to WebRTC at the next generation boundary.
+      if (this.activeGenerationId === null) this.enableRemotePlayback();
+      return;
+    }
+    this.remoteConnected = false;
+    if (this.owner === "webrtc") {
       this.owner = "idle";
       this.options.onLipSyncStop();
     }
   }
 
   startGeneration(generationId: string): void {
+    if (
+      this.remoteTransportConnected &&
+      this.activeGenerationId !== generationId
+    )
+      this.enableRemotePlayback();
+    this.activeGenerationId = generationId;
+    if (
+      this.wavGenerationId !== null &&
+      this.wavGenerationId !== generationId
+    ) {
+      this.audioPlayer?.stop();
+      this.wavGenerationId = null;
+    }
     this.clearFallbackTimers();
     this.clearPcmStallTimers();
     this.stalledSegments.clear();
@@ -94,8 +115,11 @@ export class PlaybackCoordinator {
       return;
     }
     if (this.owner === "pcm_stream") return;
+    const player = this.getAudioPlayer();
+    if (!player) return;
+    this.wavGenerationId = item.generationId;
     this.owner = "audio_element";
-    this.getAudioPlayer()?.enqueue(item);
+    player.enqueue(item);
   }
 
   consumePcm(message: TtsStreamMessage): void {
@@ -103,6 +127,14 @@ export class PlaybackCoordinator {
       !this.options.enabled ||
       this.remoteConnected ||
       !this.options.isGenerationActive(message.generation_id)
+    )
+      return;
+    // Batch providers publish their already-complete WAV as a burst of
+    // pseudo-stream packets. The durable WAV event is the reliable path for
+    // those providers and avoids overrunning the bounded live-stream fan-out.
+    if (
+      !message.native_streaming ||
+      this.wavGenerationId === message.generation_id
     )
       return;
     const player = this.getPcmPlayer();
@@ -168,12 +200,17 @@ export class PlaybackCoordinator {
     this.pcmPlayer?.cancel();
     this.options.stopRemotePlayback(generationId);
     this.options.onLipSyncStop();
+    this.wavGenerationId = null;
     this.owner = "idle";
     this.clearFallbackTimers();
     this.clearPcmStallTimers();
     this.stalledSegments.clear();
     this.fallbackItems.clear();
     this.streamedSegments.clear();
+    if (!generationId || generationId === this.activeGenerationId) {
+      this.activeGenerationId = null;
+      if (this.remoteTransportConnected) this.enableRemotePlayback();
+    }
   }
 
   resetSubtitles(): void {
@@ -182,6 +219,8 @@ export class PlaybackCoordinator {
   }
 
   dispose(): void {
+    this.remoteTransportConnected = false;
+    this.remoteConnected = false;
     this.stop();
     this.audioPlayer?.dispose();
     this.audioPlayer = null;
@@ -193,6 +232,17 @@ export class PlaybackCoordinator {
     this.clearPcmStallTimers();
     this.stalledSegments.clear();
     this.reporter.dispose();
+  }
+
+  private enableRemotePlayback(): void {
+    if (!this.remoteTransportConnected || this.remoteConnected) return;
+    this.remoteConnected = true;
+    this.clearFallbackTimers();
+    this.clearPcmStallTimers();
+    this.audioPlayer?.stop();
+    this.pcmPlayer?.cancel();
+    this.wavGenerationId = null;
+    this.owner = "webrtc";
   }
 
   private getAudioPlayer(): GenerationAudioPlayer | null {
@@ -242,7 +292,6 @@ export class PlaybackCoordinator {
         isGenerationActive: this.options.isGenerationActive,
         onStreamAccepted: (item) => {
           this.clearFallbackTimer(item.segmentId);
-          this.audioPlayer?.stop();
           this.owner = "pcm_stream";
           this.streamedSegments.set(item.segmentId, item);
           this.armPcmStallTimer(item.segmentId);
@@ -292,9 +341,15 @@ export class PlaybackCoordinator {
     const fallback = this.fallbackItems.get(segmentId);
     if (!fallback || !this.options.isGenerationActive(fallback.generationId))
       return;
+    const player = this.getAudioPlayer();
+    if (!player) return;
     this.fallbackItems.delete(segmentId);
+    // Runtime audio packets and durable WAV events use separate sockets. Once
+    // a generation has entered the ordered WAV queue, later PCM for another
+    // sentence must not take over and interrupt audio that is already playing.
+    this.wavGenerationId = fallback.generationId;
     this.owner = "audio_element";
-    this.getAudioPlayer()?.enqueue(fallback);
+    player.enqueue(fallback);
   }
 
   private playNextDeferredFallback(): void {

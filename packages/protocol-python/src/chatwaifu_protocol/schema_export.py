@@ -8,6 +8,24 @@ from pydantic import BaseModel, TypeAdapter
 
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
+from chatwaifu_protocol.channels import (
+    ChannelAuthorizationSnapshot,
+    ChannelAuthorizationStartRequest,
+    ChannelAuthorizationVerificationRequest,
+    ChannelConnectionConfiguration,
+    ChannelConnectionSnapshot,
+    ChannelDeliveryAcknowledgement,
+    ChannelDeliveryClaimRequest,
+    ChannelDeliverySnapshot,
+    ChannelErrorResponse,
+    ChannelGatewayStatusSnapshot,
+    ChannelInboundTextMessage,
+    ChannelProviderRegistration,
+    ChannelTurnCancelReceipt,
+    ChannelTurnCancelRequest,
+    ChannelTurnReceipt,
+    ChannelTurnSnapshot,
+)
 from chatwaifu_protocol.character import (
     CharacterKernelSnapshot,
     PromptBudgetReport,
@@ -19,6 +37,7 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import EventModel
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
 from chatwaifu_protocol.memory import (
+    MemoryChannelAttribution,
     MemoryContextPacket,
     MemoryProposal,
     MemoryRecord,
@@ -57,10 +76,27 @@ class ProtocolCatalog(ProtocolModel):
     character_kernel: CharacterKernelSnapshot
     response_plan: ResponsePlan
     prompt_budget: PromptBudgetReport
+    channel_authorization_start_request: ChannelAuthorizationStartRequest
+    channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
+    channel_authorization: ChannelAuthorizationSnapshot
+    channel_provider: ChannelProviderRegistration
+    channel_connection_configuration: ChannelConnectionConfiguration
+    channel_connection: ChannelConnectionSnapshot
+    channel_gateway_status: ChannelGatewayStatusSnapshot
+    channel_inbound_text: ChannelInboundTextMessage
+    channel_turn_receipt: ChannelTurnReceipt
+    channel_turn: ChannelTurnSnapshot
+    channel_delivery_acknowledgement: ChannelDeliveryAcknowledgement
+    channel_delivery_claim_request: ChannelDeliveryClaimRequest
+    channel_delivery: ChannelDeliverySnapshot
+    channel_turn_cancel_request: ChannelTurnCancelRequest
+    channel_turn_cancel_receipt: ChannelTurnCancelReceipt
+    channel_error: ChannelErrorResponse
     skill: SkillDefinition
     skill_run: SkillRunSnapshot
     skill_result: SkillResult
     memory: MemoryRecord
+    memory_channel_attribution: MemoryChannelAttribution
     memory_proposal: MemoryProposal
     memory_context: MemoryContextPacket
     memory_source: MemorySource
@@ -84,11 +120,28 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "avatar-cue": AvatarCue,
     "avatar-interaction-event": AvatarInteractionEvent,
     "character-kernel-snapshot": CharacterKernelSnapshot,
+    "channel-authorization-snapshot": ChannelAuthorizationSnapshot,
+    "channel-authorization-start-request": ChannelAuthorizationStartRequest,
+    "channel-authorization-verification-request": ChannelAuthorizationVerificationRequest,
+    "channel-connection-configuration": ChannelConnectionConfiguration,
+    "channel-connection-snapshot": ChannelConnectionSnapshot,
+    "channel-delivery-acknowledgement": ChannelDeliveryAcknowledgement,
+    "channel-delivery-claim-request": ChannelDeliveryClaimRequest,
+    "channel-delivery-snapshot": ChannelDeliverySnapshot,
+    "channel-error-response": ChannelErrorResponse,
+    "channel-gateway-status-snapshot": ChannelGatewayStatusSnapshot,
+    "channel-inbound-text-message": ChannelInboundTextMessage,
+    "channel-provider-registration": ChannelProviderRegistration,
+    "channel-turn-cancel-receipt": ChannelTurnCancelReceipt,
+    "channel-turn-cancel-request": ChannelTurnCancelRequest,
+    "channel-turn-receipt": ChannelTurnReceipt,
+    "channel-turn-snapshot": ChannelTurnSnapshot,
     "command-envelope": TypeAdapter(CommandModel),
     "conversation-interruption": ConversationInterruption,
     "event-envelope": TypeAdapter(EventModel),
     "generation-snapshot": GenerationSnapshot,
     "memory-context-packet": MemoryContextPacket,
+    "memory-channel-attribution": MemoryChannelAttribution,
     "memory-proposal": MemoryProposal,
     "memory-record": MemoryRecord,
     "memory-source": MemorySource,

@@ -1,6 +1,12 @@
 import type { AvatarInteractionEvent } from "@chatwaifu/protocol";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useRef, type PointerEventHandler } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type PointerEventHandler,
+} from "react";
+import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 
 const dragThresholdPx = 6;
 
@@ -10,6 +16,7 @@ type AvatarGesture = {
   startY: number;
   hitAvatar: boolean;
   dragging: boolean;
+  releaseInteractionGuard: (() => void) | null;
 };
 
 type DesktopAvatarDragOptions = {
@@ -30,12 +37,19 @@ export function useDesktopAvatarDrag({
     (event) => {
       if (event.button !== 0) return;
       const hits = hitTest(event.clientX, event.clientY);
+      if (gestureRef.current) {
+        releaseGestureInteractionGuard(gestureRef.current);
+      }
       gestureRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         hitAvatar: hits.length > 0,
         dragging: false,
+        releaseInteractionGuard:
+          hits.length > 0
+            ? acquireNativeInteractionGuard("avatar-gesture")
+            : null,
       };
       event.currentTarget.setPointerCapture?.(event.pointerId);
     },
@@ -64,8 +78,10 @@ export function useDesktopAvatarDrag({
       try {
         void getCurrentWindow()
           .startDragging()
-          .catch((dragError: unknown) => reportDragError(dragError, onError));
+          .catch((dragError: unknown) => reportDragError(dragError, onError))
+          .finally(() => releaseGestureInteractionGuard(gesture));
       } catch (dragError: unknown) {
+        releaseGestureInteractionGuard(gesture);
         reportDragError(dragError, onError);
       }
     },
@@ -77,6 +93,7 @@ export function useDesktopAvatarDrag({
       const gesture = gestureRef.current;
       if (!gesture || gesture.pointerId !== event.pointerId) return;
       gestureRef.current = null;
+      releaseGestureInteractionGuard(gesture);
       releasePointerCapture(event.currentTarget, event.pointerId);
       if (gesture.hitAvatar && !gesture.dragging) touch();
     },
@@ -86,9 +103,20 @@ export function useDesktopAvatarDrag({
   const cancelGesture = useCallback<PointerEventHandler<HTMLButtonElement>>(
     (event) => {
       if (gestureRef.current?.pointerId === event.pointerId) {
+        releaseGestureInteractionGuard(gestureRef.current);
         gestureRef.current = null;
       }
       releasePointerCapture(event.currentTarget, event.pointerId);
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      if (gestureRef.current) {
+        releaseGestureInteractionGuard(gestureRef.current);
+      }
+      gestureRef.current = null;
     },
     [],
   );
@@ -99,6 +127,11 @@ export function useDesktopAvatarDrag({
     onPointerUp: finishGesture,
     onPointerCancel: cancelGesture,
   };
+}
+
+function releaseGestureInteractionGuard(gesture: AvatarGesture) {
+  gesture.releaseInteractionGuard?.();
+  gesture.releaseInteractionGuard = null;
 }
 
 function releasePointerCapture(element: HTMLButtonElement, pointerId: number) {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Literal, Protocol
 from uuid import UUID
@@ -17,6 +18,20 @@ from chatwaifu_runtime.providers.contracts import (
     TtsPcmChunk,
 )
 from chatwaifu_runtime.providers.factory import ProviderSet
+
+_JAPANESE_KANA = re.compile(r"[\u3041-\u3096\u30a1-\u30fa\u31f0-\u31ff\uff66-\uff9d]")
+
+
+def synthesis_language_for_text(text: str, configured_language: str) -> str:
+    """Use a Japanese hint only when the segment carries unambiguous kana.
+
+    The character profile remains the fallback for Han-only and Latin text, which
+    avoids guessing between Chinese and Japanese from shared ideographs.  Hiragana
+    or katakana is a strong enough signal to let multilingual voices speak a
+    Japanese response through the same provider contract.
+    """
+
+    return "ja" if _JAPANESE_KANA.search(text) is not None else configured_language
 
 
 class GenericEmitter(Protocol):
@@ -95,7 +110,7 @@ class ConversationSpeechPipeline:
                     segment_id=asset.asset_id,
                     text=normalized,
                     destination=asset.path,
-                    language=voice.language,
+                    language=synthesis_language_for_text(normalized, voice.language),
                     voice_id=voice.voice_id,
                     speaker_id=voice.speaker_id,
                     speed=voice.speed,

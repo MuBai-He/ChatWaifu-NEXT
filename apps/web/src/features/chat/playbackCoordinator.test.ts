@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayableAudio } from "./audioPlayer";
 import { PlaybackCoordinator } from "./playbackCoordinator";
+import type { PlaybackAckReceipt } from "./runtimeClient";
 
 class FakeAudio implements PlayableAudio {
   src = "";
@@ -124,6 +125,72 @@ describe("PlaybackCoordinator", () => {
     instance.dispose();
   });
 
+  it("defers a mid-generation WebRTC handoff so queued WAV audio is not lost", async () => {
+    let activeGeneration = "generation-1";
+    const audios: FakeAudio[] = [];
+    const instance = new PlaybackCoordinator({
+      enabled: true,
+      isGenerationActive: (generationId) => generationId === activeGeneration,
+      sendReceipt: vi.fn().mockResolvedValue(undefined),
+      stopRemotePlayback: vi.fn(),
+      onSubtitle: vi.fn(),
+      onError: vi.fn(),
+      onLipSyncStart: vi.fn(),
+      onLipSyncStop: vi.fn(),
+      createAudio: () => {
+        const audio = new FakeAudio();
+        audios.push(audio);
+        return audio;
+      },
+    });
+    instance.startGeneration("generation-1");
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "第一句",
+      durationMs: 1_000,
+      url: "/audio/segment-1.wav",
+    });
+
+    instance.setRemoteConnected(true);
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-2",
+      segmentIndex: 1,
+      text: "连接麦克风后仍应播放的尾句",
+      durationMs: 1_000,
+      url: "/audio/segment-2.wav",
+    });
+
+    expect(instance.currentOwner).toBe("audio_element");
+    expect(audios[0].pause).not.toHaveBeenCalled();
+    audios[0].currentTime = 1;
+    audios[0].onended?.(new Event("ended"));
+    await Promise.resolve();
+    expect(audios).toHaveLength(2);
+    expect(audios[1].play).toHaveBeenCalledOnce();
+
+    activeGeneration = "generation-2";
+    instance.startGeneration("generation-2");
+    expect(audios[1].pause).toHaveBeenCalledOnce();
+    expect(instance.currentOwner).toBe("webrtc");
+
+    instance.registerQueuedAudio({
+      generationId: "generation-2",
+      streamId: "stream-2",
+      segmentId: "segment-3",
+      segmentIndex: 0,
+      text: "下一轮由 WebRTC 独占",
+      durationMs: 1_000,
+      url: "/audio/segment-3.wav",
+    });
+    expect(audios).toHaveLength(2);
+    instance.dispose();
+  });
+
   it("forwards the selected transport receipt exactly once", () => {
     const { instance, sendReceipt } = coordinator();
     instance.setRemoteConnected(true);
@@ -212,6 +279,50 @@ describe("PlaybackCoordinator", () => {
     instance.dispose();
   });
 
+  it("uses the WAV queue for a provider that only pseudo-streams a complete wave", () => {
+    const audio = new FakeAudio();
+    const context = new FakeContext();
+    const instance = new PlaybackCoordinator({
+      enabled: true,
+      isGenerationActive: () => true,
+      sendReceipt: vi.fn().mockResolvedValue(undefined),
+      stopRemotePlayback: vi.fn(),
+      onSubtitle: vi.fn(),
+      onError: vi.fn(),
+      onLipSyncStart: vi.fn(),
+      onLipSyncStop: vi.fn(),
+      createAudio: () => audio,
+      createAudioContext: () => context as unknown as AudioContext,
+    });
+    instance.startGeneration("generation-1");
+    instance.consumePcm({
+      ...streamMessage("started"),
+      native_streaming: false,
+    });
+    instance.consumePcm({
+      ...streamMessage("chunk"),
+      native_streaming: false,
+      pcm16_base64: "AAA=",
+    });
+
+    expect(context.sources).toHaveLength(0);
+    expect(instance.currentOwner).toBe("idle");
+
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "完整 WAV",
+      durationMs: 1_000,
+      url: "/audio/complete.wav",
+    });
+
+    expect(audio.play).toHaveBeenCalledOnce();
+    expect(instance.currentOwner).toBe("audio_element");
+    instance.dispose();
+  });
+
   it("plays the bounded WAV fallback when promised PCM never arrives", async () => {
     const audio = new FakeAudio();
     const instance = new PlaybackCoordinator({
@@ -243,6 +354,151 @@ describe("PlaybackCoordinator", () => {
 
     expect(audio.play).toHaveBeenCalledOnce();
     expect(instance.currentOwner).toBe("audio_element");
+    instance.dispose();
+  });
+
+  it("keeps queued WAV playback when later PCM arrives for the same generation", async () => {
+    const audios: FakeAudio[] = [];
+    const context = new FakeContext();
+    const receipts: PlaybackAckReceipt[] = [];
+    const sendReceipt = vi.fn((receipt: PlaybackAckReceipt) => {
+      receipts.push(receipt);
+      return Promise.resolve();
+    });
+    const stopRemotePlayback = vi.fn();
+    const instance = new PlaybackCoordinator({
+      enabled: true,
+      isGenerationActive: (generationId) => generationId === "generation-1",
+      sendReceipt,
+      stopRemotePlayback,
+      onSubtitle: vi.fn(),
+      onError: vi.fn(),
+      onLipSyncStart: vi.fn(),
+      onLipSyncStop: vi.fn(),
+      createAudio: () => {
+        const audio = new FakeAudio();
+        audios.push(audio);
+        return audio;
+      },
+      createAudioContext: () => context as unknown as AudioContext,
+    });
+    instance.startGeneration("generation-1");
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "第一句",
+      durationMs: 1_000,
+      url: "/audio/segment-1.wav",
+    });
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-2",
+      segmentIndex: 1,
+      text: "第二句",
+      durationMs: 1_000,
+      url: "/audio/segment-2.wav",
+    });
+
+    expect(audios).toHaveLength(1);
+    expect(audios[0].play).toHaveBeenCalledOnce();
+    audios[0].currentTime = 0.55;
+    instance.consumePcm({
+      ...streamMessage("started"),
+      segment_id: "segment-2",
+      segment_index: 1,
+      text: "第二句",
+    });
+    instance.consumePcm({
+      ...streamMessage("chunk"),
+      segment_id: "segment-2",
+      segment_index: 1,
+      text: "第二句",
+      pcm16_base64: "AAA=",
+    });
+
+    expect(audios[0].pause).not.toHaveBeenCalled();
+    expect(context.sources).toHaveLength(0);
+    expect(instance.currentOwner).toBe("audio_element");
+
+    audios[0].currentTime = 1;
+    audios[0].onended?.(new Event("ended"));
+    await Promise.resolve();
+
+    expect(audios).toHaveLength(2);
+    expect(audios[1].play).toHaveBeenCalledOnce();
+    expect(
+      receipts.some(
+        (receipt) =>
+          receipt.segmentId === "segment-1" &&
+          receipt.phase === "stopped" &&
+          receipt.reason === "interrupted",
+      ),
+    ).toBe(false);
+
+    instance.stop("generation-1");
+
+    expect(audios[1].pause).toHaveBeenCalled();
+    expect(stopRemotePlayback).toHaveBeenCalledWith("generation-1");
+    instance.dispose();
+  });
+
+  it("stops an older WAV generation before accepting pure PCM for the next one", () => {
+    let activeGeneration = "generation-1";
+    const audio = new FakeAudio();
+    const context = new FakeContext();
+    const instance = new PlaybackCoordinator({
+      enabled: true,
+      isGenerationActive: (generationId) => generationId === activeGeneration,
+      sendReceipt: vi.fn().mockResolvedValue(undefined),
+      stopRemotePlayback: vi.fn(),
+      onSubtitle: vi.fn(),
+      onError: vi.fn(),
+      onLipSyncStart: vi.fn(),
+      onLipSyncStop: vi.fn(),
+      createAudio: () => audio,
+      createAudioContext: () => context as unknown as AudioContext,
+    });
+    instance.startGeneration("generation-1");
+    instance.registerQueuedAudio({
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "旧回复",
+      durationMs: 1_000,
+      url: "/audio/old.wav",
+    });
+
+    activeGeneration = "generation-2";
+    instance.startGeneration("generation-2");
+
+    expect(audio.pause).toHaveBeenCalledOnce();
+    instance.consumePcm(streamMessage("started"));
+    instance.consumePcm({
+      ...streamMessage("chunk"),
+      pcm16_base64: "AAA=",
+    });
+    expect(context.sources).toHaveLength(0);
+
+    instance.consumePcm({
+      ...streamMessage("started"),
+      generation_id: "generation-2",
+      segment_id: "segment-new",
+      text: "新回复",
+    });
+    instance.consumePcm({
+      ...streamMessage("chunk"),
+      generation_id: "generation-2",
+      segment_id: "segment-new",
+      text: "新回复",
+      pcm16_base64: "AAA=",
+    });
+
+    expect(context.sources).toHaveLength(1);
+    expect(instance.currentOwner).toBe("pcm_stream");
     instance.dispose();
   });
 

@@ -56,9 +56,12 @@
 
 ## Release exclusions
 
-The basic demo includes a real-Windows-tested x64 AppContainer backend, but does not yet claim a
-signed installer or frozen Windows Runtime sidecar. It also does not claim public TURN/RTVI
-data-channel control, trained custom voice weights, cloud realtime,
+The basic demo includes a real-Windows-tested x64 AppContainer backend, a frozen Windows Runtime
+sidecar, and an unsigned NSIS owner-only candidate that passed basic installed
+health/uninstall/data retention smoke under x64 emulation. It does not claim a signed or
+distributable installer, native
+x64/CUDA acceptance, or installed AppContainer execution/reconciliation. It also does not claim
+public TURN/RTVI data-channel control, trained custom voice weights, cloud realtime,
 multi-machine workers, proactive ambient behavior, semantic vector retrieval, temporal graph
 reasoning, or a completed LongMemEval gate. Playback acknowledgements and long-running multi-turn
 voice stress tests remain hardening work rather than hidden completed features.

@@ -1,0 +1,24 @@
+{
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "MuBai",
+    "category": "Entertainment",
+    "shortDescription": "Local-first realtime AI character desktop companion",
+    "longDescription": "ChatWaifu NEXT desktop pet with a self-contained local Runtime and configurable model and voice providers.",
+    "resources": {
+      "../../../dist/windows/runtime-sidecar/": "runtime-sidecar/",
+      "../../../build/windows-installer/resources/": "./"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "./windows/installer-hooks.nsh"
+      }
+    }
+  }
+}

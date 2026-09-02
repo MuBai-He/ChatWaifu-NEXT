@@ -6,6 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [lib]
+name = "chatwaifu_desktop_host_lib"
 path = "src/lib.rs"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -17,3 +18,17 @@ libc = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri = { version = "2.11.5", features = ["image-png", "macos-private-api", "tray-icon"] }
+tauri-plugin-dialog = "2.7.3"
+tauri-plugin-single-instance = "2.4.4"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Console",
+  "Win32_System_JobObjects",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+] }

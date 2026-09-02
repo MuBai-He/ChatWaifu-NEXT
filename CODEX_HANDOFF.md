@@ -5,6 +5,195 @@
 
 ---
 
+## 0.1 2026-09-02 当前接手状态
+
+本节是跨机器接手入口，优先于本文后面的历史首轮任务。第 8、9 节记录的是项目初始化时的
+Phase 0/1 约束，已经完成，**不得再把它们当作当前任务限制**。当前事实以
+`docs/implementation-status.yaml`、已接受 ADR 和当前 checkout 为准。
+
+### Git 基线
+
+```text
+Repository: https://github.com/MuBai-He/ChatWaifu-NEXT.git
+Branch:     codex/windows-installer
+Validated product-code commit: f4d7c34
+Original remote handoff baseline: b03a38b
+Platform:   原生 Windows 11 x64 + NVIDIA CUDA；owner-only 安装态验收基本完成，明确的人耳/语音抢话门仍开放
+```
+
+`f4d7c34` 是当前最终安装候选包含的产品代码点；其后的文档提交不改变安装载荷，最终远端同步
+仍应以当前分支最新 HEAD 为准。源代码工作区不需要从 macOS 复制完整工程目录。Windows 机器应从 Git 干净 clone；macOS
+的 `.venv`、`.local/envs`、`node_modules`、`target` 和构建缓存不可复用。
+
+### 当前产品能力
+
+- Web 与 Desktop 是一个仓库、一个产品内核、两个独立构建 profile。
+- Tauri 桌宠、独立设置窗口、Live2D、文本/语音会话、播放 ACK、打断和设备恢复已经连通。
+- Character Kernel、结构化记忆、分角色模型路由、Runtime Skills/MCP、权限确认和插件隔离已经落地。
+- TTS 共用统一 Provider contract；本地 Qwen3-TTS、GPT-SoVITS 与百炼 Qwen/CosyVoice 可配置切换。
+- Windows 基础安装包、冻结 Runtime、AppContainer helper 和 `.cwpack` Worker Pack 边界已经实现。
+- 桌宠透明空白区域可穿透点击；Live2D 命中区域、字幕、输入框和悬浮控件仍可交互。
+- 原生微信 iLink 扫码接入已进入该分支，但它不属于本次 CUDA 验收的阻塞项。
+
+### 2026-09-01 原生 Windows x64/CUDA 实机结果
+
+下面严格区分机器自动化、Codex Computer Use 的真实窗口观察和仍需要用户确认的项目。私有模型、
+Live2D、生成音频、密钥、数据库和本机资产路径均不进入 Git。
+
+#### 自动化与进程级验证
+
+- Windows 11 Pro 25H2 build 26200.9168，原生 AMD64，Ryzen 9 7900X；PowerShell 7.6.4 x64。
+- NVIDIA GeForce RTX 3090（24 GiB、compute capability 8.6），驱动 616.56；`nvidia-smi`
+  报告 CUDA 13.4，直接加载 `nvcuda.dll` 得到 Driver API 13.4。WebView2 为 152.0.4191.53 x64。
+- Git 2.45.1.windows.1、uv 0.12.7 x86_64、Node 23.9.0、pnpm 11.19.0、Rust 1.98.0；
+  Python 3.12.10 为 win-amd64，Rust target 为 `x86_64-pc-windows-msvc`。
+- Qwen3-TTS pack 使用 Torch 2.7.1+cu126，`torch.cuda.is_available()` 为真，模型参数与 tensor
+  实际位于 `cuda:0`。最终 post-inference integrity smoke 的首个中文受控推理为 15.130 秒、随后日文热态推理为 4.665 秒；两份 24 kHz WAV
+  均非静音、无削波，取消、卸载与动态监听端口关闭通过。推理后 Torch allocated/reserved 分别约
+  2.164/2.303 GB，安装态首次生成观察到整卡占用约增加 2.2 GiB。
+- faster-whisper Base 固定 revision pack 在完全离线模型目录执行 CPU int8，21.455 秒日文样音
+  在 0.863 秒内得到非空且合理的日文转写；取消、卸载与监听端口关闭通过。
+- owner-only NSIS 候选已在当前非提权用户安装。Host、Frozen Runtime、AppContainer helper、
+  294 个安装载荷原生文件及 552 个 pack EXE/DLL/PYD 均为 PE `0x8664`；唯一 `0x014c` 文件是
+  NSIS 生成的 `uninstall.exe` stub。Runtime 和两个 Worker 使用动态回环端口。
+- 最终候选补上 Tauri 官方 single-instance 插件：连续两次从开始菜单启动只保留一个产品 Host、
+  一个 supervisor 和一个 Runtime，第二次启动会重新显示现有宁宁窗口，不会复制 CUDA/Worker 进程树。
+- 2026-09-02 的实机复验修正了 Live2D 画布被 CSS 放大 1.34 倍后由 compositor 二次插值造成的
+  角色模糊，并把 WebGL backing buffer 按实际视觉缩放补偿；同时修正了增量构建时 AppContainer
+  helper 单文件资源可能漏出 NSIS 的 staging 顺序/布局。重建候选的 Host、Runtime、helper 均为
+  PE `0x8664`，仓库完整 installed smoke 在动态端口 `9005` 通过。
+- 2026-09-02 的按需完整性候选从安装态启动到 Runtime `ready` 仅 10.492 秒，使用动态端口
+  `13077`；已保留的 Qwen3-TTS/Whisper Pack 不再触发启动时全树哈希。随后从“数据”页主动
+  校验 2 个 Pack、36,326 个文件通过（Whisper 5,103，Qwen 31,223），设置窗口在校验期间保持响应。
+  强制结束主 Host 后 supervisor、Runtime、Worker 与端口 `13077` 全部自动清理。
+- 从 Codex MSIX 包进程启动 NSIS 安装版时，Windows 可能把当前进程映像报告为 Codex package
+  `LocalCache` 下的虚拟路径；旧代码又在同一重定向上下文探测物理 `Packages` 目录，导致有效的
+  `%LOCALAPPDATA%\ChatWaifu NEXT\chatwaifu-desktop-host.exe` 被误判不存在并打开自动恢复熔断。
+  `f4d7c34` 将映射约束为 OS 返回的 LocalAppData、单一合法 package-family 和同相对路径的现有
+  x64 映像，不再执行会被继承重定向欺骗的目录探测。重装候选从该环境启动后实际形成物理 Host、
+  supervisor、Frozen Runtime 进程树，Runtime 在动态端口进入 `ready`。
+- Windows 安装版“设置 → 数据”现在提供原生 `.cwpack` 文件选择与安装入口。用户可在首次引导
+  跳过全部本地模型，之后再选择单独下载的包；安装动作复用 Frozen Runtime 的严格 manifest、哈希、
+  平台、PE 与原子激活契约，维护期间停止整棵 Runtime graph，成功或失败后均恢复本地服务。
+- 自动化已验证开始菜单/桌面快捷方式、安装目录、Worker Pack receipt/selection、强制终止后的完整
+  进程树与端口清理，以及重装后的设置、SQLite 数据、pack 和选择保留。最终哈希候选还真实完成了
+  安装、健康启动、重复启动抑制、强退、卸载与两种注册表视图/快捷方式清理；正常托盘退出仍见下方。
+- 安装态 Runtime API 证明已播放的中文/日文段落均收到 `stopped/ended` ACK，`played_pts_ms`
+  等于各段 duration；后续键盘新回合取消旧 generation 后未观察到旧 generation 的迟到文本、音频或播放事件。
+  实机还暴露了播放中连接麦克风会把同一 generation 尾段丢在 WAV/WebRTC 交界的问题；`f7bccde`
+  将输出所有权延迟到下一 generation 再切换，并加入尾段不断流/下一轮 WebRTC 独占回归测试。
+- 最终根目录 Python 门禁为 537 passed、5 个明确平台/显式探针 skip；Pyright 0、Ruff lint/format
+  通过。当前 Web 为 37 files/158 tests，Tauri 为 36 tests，桌面 UI production build 通过。
+
+| 产物 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `ChatWaifu NEXT_0.2.0_x64-setup.exe` | 128,343,398 | `55deb9979f1fc7167e1734fd33e3025293187082512a4c591a888091cb172d77` |
+| `chatwaifu-faster-whisper-base-cpu-int8-0.1.0.cwpack` | 250,542,825 | `86cf28dc4d07e32587c1be29751e11d5d682f0d461e0d808808b78d894bd4d96` |
+| `chatwaifu-qwen3-tts-nene-cu126-0.1.0.cwpack` | 5,443,989,887 | `af33a0f7afb105eeacd6c7a7de7071819afbf4916ba5d85a11a7817f146c00e9` |
+
+#### Computer Use 真实窗口观察
+
+- 开发态真实 Tauri 桌宠透明显示并加载、动画化本地宁宁 Live2D；透明空白区域可穿透，人物、
+  字幕、输入框和按钮仍可点击，拖动人物可移动原生窗口。设置窗口可以打开、排版和独立滚动正常。
+- 从安装态快捷方式启动后，Runtime 最终进入 `ready`，设置页显示 Runtime、faster-whisper 与
+  Qwen3-TTS CUDA provider 就绪；聊天、模型保存/测试和记忆中心均可操作。
+- 2026-09-02 的最终安装态真实窗口再次显示透明、动画化宁宁；头发、脸部与衣服边缘按补偿后的
+  backing buffer 渲染，不再把低分辨率画布放大 1.34 倍。设置页实见 `已连接 / Runtime 0.1.0`。
+- 新候选首次启动真实自动打开五步设置引导，明确解释基础 EXE、独立 `.cwpack`、聊天 API、
+  TTS、麦克风/STT 与 VAD；“数据”页真实显示双 Pack 完整性校验通过结果。
+- `f4d7c34` 候选首次引导的三条说明已实际观察到文字与对勾垂直居中；“数据”页实际显示可选
+  Worker Pack 管理区，点击后打开标题为“选择 ChatWaifu Worker Pack”、筛选为 `*.cwpack` 的
+  Windows 原生文件选择器。验收未选择 archive，因此没有通过该 UI 重装任何模型包。
+- 安装态分别提交中文和日文消息，窗口显示逐步字幕/播放进度，同时进程级 GPU 采样确认真实 CUDA
+  合成。旧回合最后一段播放在新回合提交前 1.502 秒已经停止，因此这两轮只能证明顺序播放，不能
+  冒充播放中的 typed/voice barge-in。重装并重启后，先前写入的私有记忆标记仍能在记忆中心看到。
+- 历史安装态两 pack 冷启动在本机观察到约 151 秒、186 秒和 443 秒，主要消耗在每次启动读取
+  Qwen 31,223 个文件。按产品要求，普通启动现在只验证 receipt/manifest 身份、平台和入口文件哈希，
+  不再遍历或哈希完整 payload；完整 exact-tree/SHA-256/reparse/PE 校验移到“设置 → 数据”的显式操作，
+  安装、激活、repair 和发布 smoke 仍强制完整校验。Web 455 秒预算继续覆盖真实模型冷加载。
+
+#### 尚未完成或不能由自动化宣称
+
+- 应用内麦克风连接已成功，未出现可由 Codex确认的 Windows 隐私弹窗。一次真实输入产生了 2,920 ms /
+  93,440-byte VAD utterance，并由安装态 faster-whisper 回填为 `明明也好 今天的延期不錯`；这证明采集、
+  VAD 自动结束和 Worker 回填链路工作，但对目标句的识别质量不理想。最终一次抢话提示期间用户明确表示
+  没有说话，因此播放中的真实语音 barge-in 不能默认写成已通过。
+- 最终安装态播放协调回归实际记录：麦克风在本轮第 1 段播放中连接后，本轮 4/4 段继续由
+  `audio_element` 顺序播放并全部收到 ended ACK；下一轮 4/4 段全部由 `webrtc` 独占并收到 ended ACK，
+  各段 started/stopped 严格交替。它证明 transport handoff 和协议级不重叠，不等同于人耳抢话通过。
+- CUDA 中文/日文样音与参考音均已通过扬声器发声，波形客观指标通过；但音色、爆音、截断、速度和
+  与参考样音的主观比较必须由人耳确认，当前不能写成“人工听感通过”。
+- 安装态播放 ACK 与 transport 级无重叠已由协议/Runtime 状态验证，但扬声器主观无重叠仍需要播放中抢话与人耳观察；安装态
+  透明空白区域点击穿透也尚未与开发态证据分开复验。
+- 自动化已证明最终候选卸载后程序目录、开始菜单/桌面快捷方式、标准卸载项和 manufacturer metadata
+  删除且用户数据/两个 Worker Pack 保留；2026-09-02 复验后已重新安装并启动最终候选。Computer Use 不能定位 Windows 通知区，
+  因此没有把 Alt+F4 的“隐藏到托盘”误报成正常退出，托盘菜单正常退出仍需人工补验。长时间多轮语音
+  压力、installed AppContainer/MCP profile/ACL reconciliation、签名和私有角色资产许可审查仍是发布门。
+- Qwen Torch wrapper 当前先生成完整波形，不能宣称 Provider 原生首 chunk 流式。
+
+本轮已落地的根因修复包括：拒绝重解析/重定向的 Worker Pack 安装根、使私有 Live2D staging
+具备崩溃安全回滚、隔离 Windows 数据库恢复命名空间、修正安装根 lint 门、避免应用退出把 avatar
+可见性持久化为隐藏、覆盖 CUDA 冷启动等待预算与 ready 监听竞态、清理 data-preserving NSIS 卸载
+遗留的 manufacturer metadata、消除 Windows PDB 目标名碰撞，以及让 generation completion 成为
+真正的最终事件屏障。此外，Runtime 现在把 Numba/native cache 放进每次启动的 owner lease，以 OS 文件锁
+区分活跃与 crash-owned cache，只回收可证明失主且路径深度/重解析检查通过的 `launch-*`；安装 helper
+只允许用相同 archive 对已验证为损坏的 exact version 做显式原子 repair；Demo LLM 不再把隐藏记忆
+上下文/来源标签原样念出；播放协调器不会在同一 generation 中途切换到新建 WebRTC；Tauri 的
+single-instance guard 会激活现有桌宠而不是复制整套 Runtime/Worker graph。Live2D canvas 现在按 CSS
+视觉缩放补偿 backing buffer；Windows installer 则先建立目录型 helper 资源树，再编译 Host，从而避免
+增量构建缓存遗漏 helper。桌面产品另有首次启动引导，明确基础 EXE 与可选 `.cwpack` 的边界，并引导
+用户配置聊天 API、角色 TTS、麦克风与 STT/VAD；完成状态只保存版本化布尔值，密钥仍由 Runtime 管理。
+安装版还支持用户以后从“设置 → 数据”选择本地 `.cwpack`，并通过 Frozen Runtime 的既有严格契约安装；
+Codex/MSIX `LocalCache` 虚拟进程路径会安全还原到同一用户物理安装映像，不再误触发自动恢复熔断。
+不要通过关闭 smoke、
+固定端口或 `sleep` 绕过剩余验收。
+
+### Windows 干净接手命令
+
+```powershell
+git clone https://github.com/MuBai-He/ChatWaifu-NEXT.git
+cd ChatWaifu-NEXT
+git switch codex/windows-installer
+git rev-parse --short HEAD  # 应为 f4d7c34 或其后续提交
+
+Set-ExecutionPolicy -Scope Process Bypass
+.\tools\windows\bootstrap_x64.ps1
+.\tools\windows\dev_x64.ps1
+```
+
+先用 `dev_x64.ps1` 验证窗口、Runtime 和本地资源，再构建发布形态。模型 pack 和安装包命令见
+`docs/operations/windows-local-ai-worker-packs.md` 与 `docs/architecture/product-release-profiles.md`。
+
+### 只单独转移这些本地私有资产
+
+| 资产 | macOS 侧已存在的目录 | Windows 建议落点 | 约大小 |
+| --- | --- | --- | ---: |
+| 宁宁 Qwen3-TTS 原始 CustomVoice checkpoint | `ChatWaifu-Nene-Qwen3-TTS/20260825-155901/checkpoint-epoch-0` | `C:\models\nene-qwen3-tts\checkpoint-epoch-0` | 2.3 GB |
+| 已适配的宁宁 Live2D 模型 | `apps/web/public/vendor/live2d/model` | clone 后同一仓库相对路径 | 46 MB |
+| GPT-SoVITS 宁宁模型，可选 | `nene` | `C:\models\nene-gpt-sovits` | 313 MB |
+
+不要复制整个 `.local`。其中包含 macOS/MLX 专用环境、缓存、历史音频、数据库和明文 secret 文件；
+既不能在 Windows 运行，也不应作为机器迁移包。模型/API 密钥在 Windows 设置界面重新填写。当前
+CUDA 验收只需要前两项；faster-whisper 由固定 revision 的 Windows builder 下载并封装。
+
+Qwen 与 Whisper pack 的标准命令：
+
+```powershell
+.\tools\windows\build_qwen3_tts_worker_pack_x64.ps1 `
+    -ModelSource C:\models\nene-qwen3-tts\checkpoint-epoch-0 `
+    -Voice ayachi_nene_local `
+    -PackVersion 0.1.0
+
+.\tools\windows\build_faster_whisper_worker_pack_x64.ps1 `
+    -SmokeWav C:\validation\speech.wav `
+    -PackVersion 0.1.0
+```
+
+新 Codex 开始时先读取本节、`docs/implementation-status.yaml`、ADR 0027/0028 和上述两份 Windows
+文档；先观察真实 Windows/CUDA 基线，再修改代码，不要根据 macOS 结果宣称 Windows 已通过。
+
+---
+
 ## 1. 你的角色
 
 你是 ChatWaifu Next 的实现代理。你的任务是按照既定架构，以小步、可测试、可审计的方式建立一个本地优先的实时 AI 角色运行时。
@@ -203,7 +392,7 @@ schema/test
 
 ---
 
-## 8. 首轮任务范围
+## 8. 历史首轮任务范围（已完成，不再约束当前任务）
 
 第一轮只能实现 Phase 0 和 Phase 1。不要接 Pipecat、Live2D、Tauri sidecar 或任何真实模型。
 
@@ -243,7 +432,7 @@ Contract tests
 
 ---
 
-## 9. 首轮建议命令
+## 9. 历史首轮建议命令
 
 根据实际平台调整，但目标命令必须保持：
 

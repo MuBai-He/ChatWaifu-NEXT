@@ -25,6 +25,8 @@ dependencies = [
   "structlog>=25,<27",
   "uvicorn[standard]>=0.35,<1",
   "websockets>=17,<18",
+  "httpx>=0.28,<1",
+  "keyring>=25.7,<26",
 ]
 
 [project.scripts]

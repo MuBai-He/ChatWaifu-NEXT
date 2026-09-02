@@ -9,6 +9,12 @@ export type DesktopRuntimeStatus = {
 
 const browserRuntimeUrl = "http://127.0.0.1:8765";
 const statusEvent = "desktop-runtime-status-changed";
+// Keep this beyond the native supervisor's complete bounded startup window:
+// 300s for selected Worker Packs, 120s for the Runtime server, and 30s of
+// supervisor grace. A shorter Web timer abandons healthy CUDA cold starts and
+// leaves the desktop session permanently offline even when native startup later
+// reaches ready. The final 5s is only for delivery of the native ready event.
+export const DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS = 455_000;
 let cachedRuntimeUrl: string | null = null;
 let pendingResolution: Promise<string> | null = null;
 
@@ -71,7 +77,7 @@ async function resolveDesktopRuntimeUrl(): Promise<string> {
       finish(() =>
         reject(new Error("本地 Runtime 启动超时，请在设置中重启本地服务。")),
       );
-    }, 125_000);
+    }, DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS);
     const finish = (complete: () => void) => {
       if (settled) return;
       settled = true;
@@ -95,10 +101,15 @@ async function resolveDesktopRuntimeUrl(): Promise<string> {
       }
     })
       .then((stop) => {
+        if (settled) {
+          stop();
+          return null;
+        }
         unlisten = stop;
         return invoke<DesktopRuntimeStatus>("start_runtime");
       })
       .then((status) => {
+        if (!status) return;
         const endpoint = endpointFrom(status);
         if (endpoint) finish(() => resolve(endpoint));
       })

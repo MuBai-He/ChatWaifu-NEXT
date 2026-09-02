@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { BrandMark } from "../../components/BrandMark";
+import { ProductIcon } from "../../components/ProductIcon";
 import { MemoryControlCenter } from "./MemoryControlCenter";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { SkillConfirmationPrompt } from "./SkillConfirmationPrompt";
@@ -19,6 +21,7 @@ type ChatDemoPageProps = {
 export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const {
     canvasRef,
+    avatarManifest,
     snapshot,
     rendererKind,
     avatarWarning,
@@ -125,10 +128,8 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
 
         <header className="vn-topbar">
           <a className="vn-brand" href="/" aria-label="ChatWaifu NEXT home">
-            <span className="vn-brand-ornament" aria-hidden="true">
-              <i />
-              <b>✦</b>
-              <i />
+            <span className="vn-brand-mark" aria-hidden="true">
+              <BrandMark />
             </span>
             <span className="vn-brand-copy">
               <small>LOCAL CHARACTER STORY</small>
@@ -188,6 +189,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               setSettingsOpen(false);
             }}
           >
+            <ProductIcon name="history" />
             <small>LOG</small>
             历史
           </button>
@@ -199,6 +201,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               setHistoryOpen(false);
             }}
           >
+            <ProductIcon name="controlCenter" />
             <small>CONFIG</small>
             设置
           </button>
@@ -216,7 +219,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 aria-label="关闭对话历史"
                 onClick={() => setHistoryOpen(false)}
               >
-                ×
+                <ProductIcon name="close" />
               </button>
             </header>
             <div className="vn-history-list" ref={historyRef}>
@@ -253,7 +256,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 aria-label="关闭角色和模型设置"
                 onClick={() => setSettingsOpen(false)}
               >
-                ×
+                <ProductIcon name="close" />
               </button>
             </header>
             <label>
@@ -380,7 +383,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               {currentText}
               {currentMessage?.pending ? <i className="typing-caret" /> : null}
             </p>
-            <span className="vn-continue" aria-hidden="true" />
+            <ProductIcon className="vn-continue" name="continue" />
           </div>
           <div className="vn-dialogue-actions">
             <button
@@ -396,6 +399,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               aria-label={voiceConnected ? "断开麦克风" : "连接麦克风"}
               aria-pressed={voiceConnected}
             >
+              <ProductIcon name="microphone" />
               <small>VOICE</small>
               {voiceConnected ? "已连接" : "语音"}
             </button>
@@ -430,6 +434,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 aria-label="按住说话"
                 aria-pressed={voiceTransmitting}
               >
+                <ProductIcon name="pushToTalk" />
                 {voiceTransmitting ? "松开发送" : "按住说话"}
               </button>
             ) : null}
@@ -439,6 +444,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               disabled={!sessionId || resetting}
               aria-label="打断当前回复"
             >
+              <ProductIcon name="stop" />
               <small>STOP</small>
               打断
             </button>
@@ -448,6 +454,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               disabled={!sessionId || resetting}
               aria-label="重置对话和记忆"
             >
+              <ProductIcon name="reset" />
               <small>RESET</small>
               {resetting ? "重置中" : "重置"}
             </button>
@@ -479,15 +486,23 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               aria-label="Send message"
             >
               发送
-              <span>↵</span>
+              <ProductIcon name="send" />
             </button>
           </form>
         </section>
 
-        <p className="vn-disclosure">
-          {character?.content_notice ??
-            "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
-        </p>
+        <div className="vn-disclosure">
+          <span>
+            {character?.content_notice ??
+              "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
+          </span>
+          {avatarManifest?.attribution ? (
+            <span>
+              Live2D 模型作者：
+              {avatarManifest.attribution.modelAuthor ?? "资产未提供"}
+            </span>
+          ) : null}
+        </div>
       </section>
     </main>
   );

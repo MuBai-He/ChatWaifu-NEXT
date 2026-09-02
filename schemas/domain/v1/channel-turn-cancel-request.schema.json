@@ -1,0 +1,29 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-turn-cancel-request.schema.json",
+  "properties": {
+    "reason": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reason",
+    "requested_at"
+  ],
+  "title": "ChannelTurnCancelRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

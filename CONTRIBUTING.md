@@ -8,6 +8,14 @@ Run `make format`, `make lint`, `make typecheck`, `make test`, and the affected 
 gate. Generated protocol files must be refreshed with `make generate-protocol` and
 must not be edited by hand.
 
+User-facing installation and extension documentation lives in `docs-site/`. Run
+`make dev-docs` while authoring and `make build-docs` before submitting changes.
+Keep the root README focused on the verified shortest path; put platform-specific
+walkthroughs, screenshots, and troubleshooting in the documentation site.
+The source in this repository is canonical. `make publish-docs` intentionally
+publishes only the audited static build to the separate public Pages repository;
+run it only when a public documentation update is intended.
+
 Do not commit model weights, proprietary Live2D Core files, credentials, user media,
 private character assets, or generated local data.
 

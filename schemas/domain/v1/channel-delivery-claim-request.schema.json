@@ -1,0 +1,42 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-delivery-claim-request.schema.json",
+  "description": "Acquire a short server-timed lease before invoking a provider send API.",
+  "properties": {
+    "channel_turn_id": {
+      "format": "uuid",
+      "title": "Channel Turn Id",
+      "type": "string"
+    },
+    "delivery_id": {
+      "format": "uuid",
+      "title": "Delivery Id",
+      "type": "string"
+    },
+    "lease_id": {
+      "format": "uuid",
+      "title": "Lease Id",
+      "type": "string"
+    },
+    "lease_seconds": {
+      "default": 60,
+      "maximum": 300,
+      "minimum": 5,
+      "title": "Lease Seconds",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "delivery_id",
+    "channel_turn_id",
+    "lease_id"
+  ],
+  "title": "ChannelDeliveryClaimRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ProductIcon } from "../../components/ProductIcon";
+import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import { useChatSession } from "../chat/useChatSession";
 import {
@@ -8,7 +10,12 @@ import {
 } from "../chat/subtitlePlayback";
 import { useDesktopPreferences } from "./useDesktopPreferences";
 import { useDesktopAvatarDrag } from "./useDesktopAvatarDrag";
+import { isPointInsideDesktopPetChrome } from "./desktopPetInteractionRegions";
 import { useDesktopPointerPresence } from "./useDesktopPointerPresence";
+import {
+  releaseDesktopOnboardingAutoOpen,
+  shouldAutoOpenDesktopOnboarding,
+} from "../desktop-settings/desktopOnboarding";
 
 export function DesktopPetPage() {
   const {
@@ -40,12 +47,20 @@ export function DesktopPetPage() {
   const [sending, setSending] = useState(false);
   const dialogueRef = useRef<HTMLParagraphElement>(null);
   const subtitleGenerationRef = useRef<string | null>(null);
+  const pushToTalkGuardRef = useRef<(() => void) | null>(null);
   const {
     preferences,
+    desktopHost,
     error: preferenceError,
     setDisplay,
   } = useDesktopPreferences();
-  const pointerPresence = useDesktopPointerPresence();
+  const isInteractiveAtPoint = useCallback(
+    (clientX: number, clientY: number) =>
+      hitTest(clientX, clientY).length > 0 ||
+      isPointInsideDesktopPetChrome(document, { x: clientX, y: clientY }),
+    [hitTest],
+  );
+  const pointerPresence = useDesktopPointerPresence({ isInteractiveAtPoint });
   const avatarDrag = useDesktopAvatarDrag({
     hitTest,
     touch,
@@ -106,6 +121,26 @@ export function DesktopPetPage() {
     );
   }, [displayDialogue, latestAssistant?.generationId, subtitlePlayback]);
 
+  useEffect(
+    () => () => {
+      pushToTalkGuardRef.current?.();
+      pushToTalkGuardRef.current = null;
+    },
+    [],
+  );
+
+  const beginDesktopPushToTalk = () => {
+    pushToTalkGuardRef.current?.();
+    pushToTalkGuardRef.current = acquireNativeInteractionGuard("push-to-talk");
+    beginPushToTalk();
+  };
+
+  const endDesktopPushToTalk = () => {
+    endPushToTalk();
+    pushToTalkGuardRef.current?.();
+    pushToTalkGuardRef.current = null;
+  };
+
   const sendDraft = async () => {
     const text = draft.trim();
     if (!text || !canSend || sending) return;
@@ -118,23 +153,38 @@ export function DesktopPetPage() {
     }
   };
 
-  const openControlCenter = async () => {
+  const openControlCenter = useCallback(async (): Promise<boolean> => {
     setControlError(null);
     try {
       if ("__TAURI_INTERNALS__" in window) {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("show_control_center");
-        return;
+        return true;
       }
       window.location.assign("/desktop-settings");
+      return true;
     } catch (openError: unknown) {
       const reason =
         openError instanceof Error ? openError.message : String(openError);
       setControlError(
         reason ? `无法打开桌宠设置：${reason}` : "无法打开桌宠设置",
       );
+      return false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoOpenDesktopOnboarding(desktopHost)) return;
+    const autoOpen = async () => {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("show_control_center");
+      } catch {
+        releaseDesktopOnboardingAutoOpen();
+      }
+    };
+    void autoOpen();
+  }, [desktopHost]);
 
   return (
     <main
@@ -148,6 +198,7 @@ export function DesktopPetPage() {
       }
       data-pointer-inside={pointerPresence.pointerInside}
       onPointerEnter={pointerPresence.onPointerEnter}
+      onPointerMove={pointerPresence.onPointerMove}
       onPointerLeave={pointerPresence.onPointerLeave}
     >
       <SkillConfirmationPrompt sessionId={sessionId} />
@@ -165,7 +216,11 @@ export function DesktopPetPage() {
       </button>
 
       {preferences.showSubtitles && (displayDialogue || pending) ? (
-        <section className="desktop-pet-dialogue" aria-live="polite">
+        <section
+          className="desktop-pet-dialogue"
+          aria-live="polite"
+          data-native-interactive="true"
+        >
           <small>{character?.display_name ?? "绫地宁宁"}</small>
           <p ref={dialogueRef}>
             {displayDialogue}
@@ -175,7 +230,10 @@ export function DesktopPetPage() {
       ) : null}
 
       {displaySettingsOpen ? (
-        <fieldset className="desktop-pet-display-settings">
+        <fieldset
+          className="desktop-pet-display-settings"
+          data-native-interactive="true"
+        >
           <legend>显示</legend>
           <label>
             <input
@@ -194,6 +252,7 @@ export function DesktopPetPage() {
 
       <form
         className="desktop-pet-composer"
+        data-native-interactive="true"
         onSubmit={(event) => {
           event.preventDefault();
           void sendDraft();
@@ -214,20 +273,22 @@ export function DesktopPetPage() {
           title="发送"
           disabled={!canSend || sending || !draft.trim()}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m5 12 12-7-3.8 14-2.4-5-5.8-2Zm5.8 2L17 5" />
-          </svg>
+          <ProductIcon name="send" />
         </button>
       </form>
 
-      <nav className="desktop-pet-actions" aria-label="桌宠操作">
+      <nav
+        className="desktop-pet-actions"
+        aria-label="桌宠操作"
+        data-native-interactive="true"
+      >
         <button
           type="button"
           onClick={() => void openControlCenter()}
           aria-label="打开控制中心"
           title="打开控制中心"
         >
-          ◇
+          <ProductIcon name="controlCenter" />
         </button>
         <button
           className={displaySettingsOpen ? "active" : ""}
@@ -237,7 +298,7 @@ export function DesktopPetPage() {
           aria-expanded={displaySettingsOpen}
           title="字幕与状态显示"
         >
-          HUD
+          <ProductIcon name="captions" />
         </button>
         <button
           className={
@@ -267,10 +328,7 @@ export function DesktopPetPage() {
                 : "连接麦克风"
           }
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v4M9 21h6" />
-          </svg>
+          <ProductIcon name="microphone" />
         </button>
         {voiceConnected && voiceActivationMode === "push_to_talk" ? (
           <button
@@ -278,22 +336,26 @@ export function DesktopPetPage() {
             type="button"
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture?.(event.pointerId);
-              beginPushToTalk();
+              beginDesktopPushToTalk();
             }}
-            onPointerUp={endPushToTalk}
-            onPointerCancel={endPushToTalk}
-            onBlur={endPushToTalk}
+            onPointerUp={endDesktopPushToTalk}
+            onPointerCancel={endDesktopPushToTalk}
+            onBlur={endDesktopPushToTalk}
             aria-label="按住说话"
             aria-pressed={voiceTransmitting}
             title="按住说话"
           >
-            TALK
+            <ProductIcon name="pushToTalk" />
           </button>
         ) : null}
       </nav>
 
       {avatarWarning || error || preferenceError || controlError ? (
-        <p className="desktop-pet-notice" role="status">
+        <p
+          className="desktop-pet-notice"
+          role="status"
+          data-native-interactive="true"
+        >
           {controlError ??
             preferenceError ??
             error ??

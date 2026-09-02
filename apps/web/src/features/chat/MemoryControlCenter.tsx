@@ -4,7 +4,9 @@ import type {
   MemorySource,
 } from "@chatwaifu/protocol";
 import { useState } from "react";
+import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "./ModalPortal";
+import "./memory-control-center.css";
 import {
   correctMemory,
   decideMemoryProposal,
@@ -133,6 +135,7 @@ export function MemoryControlCenter({
   return (
     <>
       <button type="button" onClick={openCenter} disabled={!sessionId}>
+        <ProductIcon name="memory" />
         记忆中心
         {proposals.length ? (
           <span className="memory-proposal-badge">{proposals.length}</span>
@@ -163,9 +166,7 @@ export function MemoryControlCenter({
                 aria-label="关闭记忆中心"
                 onClick={() => setOpen(false)}
               >
-                <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
+                <ProductIcon name="close" />
               </button>
             </header>
 

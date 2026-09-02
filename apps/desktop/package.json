@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build --no-bundle",
-    "build:windows-x64": "tauri build --no-bundle --target x86_64-pc-windows-msvc"
+    "build:macos-package": "tauri build --bundles app,dmg --config src-tauri/tauri.macos.conf.json --no-sign",
+    "build:windows-x64": "tauri build --no-bundle --target x86_64-pc-windows-msvc",
+    "build:windows-installer": "tauri build --target x86_64-pc-windows-msvc --bundles nsis --config src-tauri/tauri.installer.conf.json"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.4"

@@ -3,7 +3,7 @@ display_name: 绫地宁宁
 tagline: 《サノバウィッチ》主题的非官方本地角色 Demo
 greeting: 欢迎回来。那个……今天也要在这里陪我聊一会儿吗？
 accent_color: "#d96b96"
-content_notice: 非官方同人技术 Demo。绫地宁宁与《サノバウィッチ》相关权利归 YUZUSOFT/JUNOS；当前 Live2D 与本地训练语音均为仅限私人研究的可替换资产，并非原作官方服务或真人。
+content_notice: 非官方同人技术 Demo。绫地宁宁与《サノバウィッチ》相关权利归 YUZUSOFT/JUNOS；当前 Live2D 模型作者为 Bilibili「涂抹一画」，项目维护者确认已获本项目使用及随完整安装包二次分发许可；本地训练语音是独立的可替换资产，并非原作官方服务或真人。
 style:
   verbosity: concise
   warmth: 0.72

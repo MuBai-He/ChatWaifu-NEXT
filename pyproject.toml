@@ -23,6 +23,9 @@ dev = [
   "pytest-asyncio>=1.1,<2",
   "ruff>=0.12,<1",
 ]
+packaging = [
+  "pyinstaller==6.22.2",
+]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"

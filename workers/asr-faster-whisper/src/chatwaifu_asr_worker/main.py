@@ -10,7 +10,12 @@ from typing import Annotated
 from uuid import UUID
 
 import uvicorn
-from chatwaifu_model_worker import SttTranscriptionRequest, SttTranscriptionResult, WorkerHealth
+from chatwaifu_model_worker import (
+    SttTranscriptionRequest,
+    SttTranscriptionResult,
+    SttWorkerCapabilities,
+    WorkerHealth,
+)
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from chatwaifu_asr_worker.config import WorkerSettings
@@ -45,6 +50,14 @@ def create_app(
     async def health() -> WorkerHealth:
         return transcription.health()
 
+    @app.get(
+        "/v1/capabilities",
+        response_model=SttWorkerCapabilities,
+        dependencies=[Depends(authorize)],
+    )
+    async def capabilities() -> SttWorkerCapabilities:
+        return transcription.capabilities()
+
     @app.post(
         "/v1/transcribe",
         response_model=SttTranscriptionResult,
@@ -67,7 +80,7 @@ def create_app(
     async def unload() -> dict[str, object]:
         return {"unloaded": await transcription.unload()}
 
-    _ = health, transcribe, cancel, unload
+    _ = health, capabilities, transcribe, cancel, unload
 
     return app
 

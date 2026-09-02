@@ -8,6 +8,7 @@ export function AppearanceSettingsSection({
 }) {
   const { appearance, canvasRef, desktop } = context;
   const disabled = desktop.loading || desktop.saving;
+  const attribution = appearance.avatarManifest.attribution;
   return (
     <>
       <section className="desktop-settings-preview-card">
@@ -22,12 +23,40 @@ export function AppearanceSettingsSection({
             {appearance.snapshot?.status ?? "loading"}
           </p>
           <span>拖动宁宁角色本体可移动桌宠，拖动窗口边缘可调整大小。</span>
+          {attribution ? (
+            <dl
+              className="desktop-settings-avatar-attribution"
+              aria-label="Live2D 模型与署名"
+              role="group"
+            >
+              <div>
+                <dt>模型作者</dt>
+                <dd>{attribution.modelAuthor ?? "未随本地资产提供"}</dd>
+              </div>
+              <div>
+                <dt>模型来源</dt>
+                <dd>
+                  {attribution.sourceUrl ? (
+                    <a
+                      href={attribution.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {attribution.sourceLabel}
+                    </a>
+                  ) : (
+                    attribution.sourceLabel
+                  )}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
         </div>
       </section>
 
       {!desktop.desktopHost ? (
         <p className="desktop-settings-preview-note">
-          当前是浏览器预览；窗口置顶、显示和鼠标穿透会在桌面版中生效。
+          当前是浏览器预览；窗口置顶、显示和透明区域穿透会在桌面版中生效。
         </p>
       ) : null}
 
@@ -47,8 +76,8 @@ export function AppearanceSettingsSection({
           onChange={desktop.setAlwaysOnTop}
         />
         <SettingsToggle
-          label="鼠标穿透"
-          description="开启后点击会落到下方窗口，可在本设置页或托盘关闭"
+          label="透明区域穿透"
+          description="开启后角色、字幕和控件仍可点击，空白区域会点击到下方窗口"
           checked={desktop.preferences.clickThrough}
           disabled={disabled}
           onChange={desktop.setClickThrough}

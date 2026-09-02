@@ -20,6 +20,11 @@ vi.mock("../chat/runtimeClient", () => ({
 vi.mock("../chat/useChatAvatar", () => ({
   useChatAvatar: () => ({
     canvasRef: { current: null },
+    avatarManifest: {
+      avatarId: "avatar-lab",
+      displayName: "Avatar Lab",
+      rendererKind: "fake",
+    },
     snapshot: {},
     rendererKind: "fallback",
     resetAvatar: vi.fn(),

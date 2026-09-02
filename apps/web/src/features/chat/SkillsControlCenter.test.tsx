@@ -92,7 +92,7 @@ describe("SkillsControlCenter", () => {
     fireEvent.click(screen.getByRole("button", { name: "Skills & 插件" }));
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "+ 安装 Local Echo 测试插件",
+        name: "安装 Local Echo 测试插件",
       }),
     );
     await waitFor(() => expect(installExamplePlugin).toHaveBeenCalledOnce());

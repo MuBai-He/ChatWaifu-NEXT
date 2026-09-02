@@ -4,9 +4,26 @@ import type {
   AvatarCapabilityManifest,
   AvatarCue,
   AvatarInteractionEvent,
+  ChannelAuthorizationSnapshot,
+  ChannelAuthorizationStartRequest,
+  ChannelAuthorizationVerificationRequest,
+  ChannelConnectionConfiguration,
+  ChannelConnectionSnapshot,
+  ChannelDeliveryAcknowledgement,
+  ChannelDeliveryClaimRequest,
+  ChannelDeliverySnapshot,
+  ChannelErrorResponse,
+  ChannelGatewayStatusSnapshot,
+  ChannelInboundTextMessage,
+  ChannelProviderRegistration,
+  ChannelTurnCancelReceipt,
+  ChannelTurnCancelRequest,
+  ChannelTurnReceipt,
+  ChannelTurnSnapshot,
   CharacterKernelSnapshot,
   McpCapabilitySnapshot,
   McpConnectionSnapshot,
+  MemoryChannelAttribution,
   MemoryProposal,
   MemoryRecord,
   MemorySource,
@@ -327,6 +344,7 @@ const genericCoreEventTypes = [
   "voice.utterance_ignored",
   "companion.proactive_triggered",
   "companion.proactive_deferred",
+  "channel.delivery_acknowledged",
   "resource.models_slept",
   "resource.models_woke",
 ] as const;
@@ -554,6 +572,22 @@ const memoryProposalSchema = z
   })
   .passthrough();
 
+const memoryChannelAttributionSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    provider_id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,127}$/),
+    connection_id: uuid,
+    account_key: z.string().min(1).max(512).nullish(),
+    principal_scope: z.string().min(1).max(256),
+    chat_type: z.enum(["direct", "group"]),
+    conversation_key: z.string().min(1).max(512),
+    sender_key: z.string().min(1).max(512),
+    received_at: awareDateTime,
+    conversation_label: z.string().min(1).max(256).nullish(),
+    sender_display_name: z.string().min(1).max(256).nullish(),
+  })
+  .passthrough();
+
 const memorySourceSchema = z
   .object({
     source_id: uuid,
@@ -568,6 +602,7 @@ const memorySourceSchema = z
       "migration",
     ]),
     created_at: awareDateTime,
+    channel_attribution: memoryChannelAttributionSchema.nullish(),
   })
   .passthrough();
 
@@ -579,6 +614,364 @@ const structuredErrorSchema = z
     component: z.string().min(1),
     details: z.record(z.string(), z.unknown()).default({}),
     correlation_id: uuid.nullish(),
+  })
+  .passthrough();
+
+const channelSchemaVersion = z.literal("1.0");
+const channelTurnStatusSchema = z.enum([
+  "accepted",
+  "processing",
+  "completed",
+  "cancelling",
+  "cancelled",
+  "failed",
+  "timed_out",
+]);
+const channelDeliveryStatusSchema = z.enum([
+  "pending",
+  "sending",
+  "delivered",
+  "failed",
+  "cancelled",
+]);
+const channelProviderCapabilitiesSchema = z
+  .object({
+    authorization_methods: z.array(z.literal("qr_code")).max(8).default([]),
+    chat_types: z
+      .array(z.enum(["direct", "group"]))
+      .min(1)
+      .default(["direct"]),
+    inbound_message_kinds: z.array(z.literal("text")).min(1).default(["text"]),
+    outbound_message_kinds: z.array(z.literal("text")).min(1).default(["text"]),
+    supports_typing: z.boolean().default(false),
+    supports_partial_replies: z.boolean().default(false),
+    supports_delivery_ack: z.boolean().default(true),
+    supports_cancellation: z.boolean().default(true),
+    supports_proactive_messages: z.boolean().default(false),
+    max_text_chars: z.number().int().min(1).max(1_000_000).default(20_000),
+  })
+  .passthrough();
+
+const channelProviderRegistrationSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    provider_id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,127}$/),
+    version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/),
+    name: z.string().min(1).max(128),
+    description: z.string().min(1).max(2_000),
+    capabilities: channelProviderCapabilitiesSchema.default(() =>
+      channelProviderCapabilitiesSchema.parse({}),
+    ),
+  })
+  .passthrough();
+
+const channelConnectionConfigurationSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    connection_id: uuid,
+    provider_id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,127}$/),
+    name: z.string().min(1).max(128),
+    character_id: z.string().min(1).max(256),
+    principal_scope: z.string().min(1).max(256),
+    account_key: z.string().min(1).max(512).nullish(),
+    allowed_sender_keys: z
+      .array(z.string().min(1).max(512))
+      .max(64)
+      .default([]),
+    enabled: z.boolean().default(true),
+    timeout_seconds: z.number().positive().max(600).default(120),
+  })
+  .passthrough();
+
+const channelConnectionSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    configuration: channelConnectionConfigurationSchema,
+    revision: z.number().int().min(1),
+    status: z
+      .enum(["untested", "ready", "degraded", "error", "disabled"])
+      .default("untested"),
+    capabilities: channelProviderCapabilitiesSchema.default(() =>
+      channelProviderCapabilitiesSchema.parse({}),
+    ),
+    last_error: structuredErrorSchema.nullish(),
+    last_seen_at: awareDateTime.nullish(),
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+  })
+  .passthrough();
+
+const channelAuthorizationStartRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    provider_id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,127}$/),
+    method: z.literal("qr_code").default("qr_code"),
+    character_id: z.string().min(1).max(256),
+    connection_name: z.string().min(1).max(128).nullish(),
+    principal_scope: z.string().min(1).max(256).default("local"),
+  })
+  .passthrough();
+
+const channelAuthorizationVerificationRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    verification_code: z
+      .string()
+      .min(1)
+      .max(32)
+      .regex(/^[0-9A-Za-z-]+$/),
+  })
+  .passthrough();
+
+const channelAuthorizationSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    auth_session_id: uuid,
+    provider_id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,127}$/),
+    method: z.literal("qr_code").default("qr_code"),
+    status: z.enum([
+      "pending",
+      "scanned",
+      "verification_required",
+      "confirmed",
+      "expired",
+      "cancelled",
+      "failed",
+    ]),
+    qr_code_content: z.string().min(1).max(8_192).nullish(),
+    verification_required: z.boolean().default(false),
+    connection: channelConnectionSnapshotSchema.nullish(),
+    error: structuredErrorSchema.nullish(),
+    status_message: z.string().min(1).max(1_000).nullish(),
+    poll_after_ms: z.number().int().nonnegative().max(60_000).nullish(),
+    expires_at: awareDateTime,
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+  })
+  .passthrough()
+  .superRefine((snapshot, context) => {
+    const activeStatuses = new Set([
+      "pending",
+      "scanned",
+      "verification_required",
+    ]);
+    if (activeStatuses.has(snapshot.status) && !snapshot.qr_code_content) {
+      context.addIssue({
+        code: "custom",
+        message: "active QR authorization snapshots require qr_code_content",
+        path: ["qr_code_content"],
+      });
+    }
+    if (
+      snapshot.verification_required !==
+      (snapshot.status === "verification_required")
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "verification_required must match the verification_required status",
+        path: ["verification_required"],
+      });
+    }
+    if (snapshot.status === "confirmed" && !snapshot.connection) {
+      context.addIssue({
+        code: "custom",
+        message: "confirmed authorization snapshots require a connection",
+        path: ["connection"],
+      });
+    }
+    if (snapshot.status === "failed" && !snapshot.error) {
+      context.addIssue({
+        code: "custom",
+        message: "failed authorization snapshots require an error",
+        path: ["error"],
+      });
+    }
+    if (snapshot.status !== "failed" && snapshot.error) {
+      context.addIssue({
+        code: "custom",
+        message: "only failed authorization snapshots may include an error",
+        path: ["error"],
+      });
+    }
+  });
+
+const channelGatewayStatusSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    status: z.enum(["ready", "degraded", "error"]),
+    provider_count: z.number().int().nonnegative(),
+    enabled_connection_count: z.number().int().nonnegative(),
+    checked_at: awareDateTime,
+  })
+  .passthrough();
+
+const channelInboundTextMessageSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    connection_id: uuid,
+    account_key: z.string().min(1).max(512).nullish(),
+    external_message_id: z.string().min(1).max(512),
+    conversation_key: z.string().min(1).max(512),
+    sender_key: z.string().min(1).max(512),
+    principal_scope: z.string().min(1).max(256),
+    chat_type: z.enum(["direct", "group"]).default("direct"),
+    kind: z.literal("text").default("text"),
+    text: z.string().min(1).max(20_000),
+    conversation_label: z.string().min(1).max(256).nullish(),
+    sender_display_name: z.string().min(1).max(256).nullish(),
+    received_at: awareDateTime,
+    reply_to_external_message_id: z.string().min(1).max(512).nullish(),
+  })
+  .passthrough();
+
+const channelTurnReceiptSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    channel_turn_id: uuid,
+    connection_id: uuid,
+    account_key: z.string().min(1).max(512).nullish(),
+    external_message_id: z.string().min(1).max(512),
+    conversation_key: z.string().min(1).max(512),
+    sender_key: z.string().min(1).max(512),
+    principal_scope: z.string().min(1).max(256),
+    chat_type: z.enum(["direct", "group"]).default("direct"),
+    conversation_label: z.string().min(1).max(256).nullish(),
+    sender_display_name: z.string().min(1).max(256).nullish(),
+    session_id: uuid,
+    turn_id: uuid,
+    generation_id: uuid,
+    status: channelTurnStatusSchema,
+    duplicate: z.boolean().default(false),
+    revision: z.number().int().nonnegative(),
+    accepted_at: awareDateTime,
+    poll_after_ms: z.number().int().nonnegative().max(60_000).nullish(),
+  })
+  .passthrough();
+
+const channelTurnSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    channel_turn_id: uuid,
+    connection_id: uuid,
+    account_key: z.string().min(1).max(512).nullish(),
+    external_message_id: z.string().min(1).max(512),
+    conversation_key: z.string().min(1).max(512),
+    sender_key: z.string().min(1).max(512),
+    principal_scope: z.string().min(1).max(256),
+    chat_type: z.enum(["direct", "group"]).default("direct"),
+    conversation_label: z.string().min(1).max(256).nullish(),
+    sender_display_name: z.string().min(1).max(256).nullish(),
+    session_id: uuid,
+    turn_id: uuid,
+    generation_id: uuid,
+    status: channelTurnStatusSchema,
+    reply_text: z.string().max(100_000).nullish(),
+    delivery_id: uuid.nullish(),
+    delivery_status: channelDeliveryStatusSchema.nullish(),
+    error: structuredErrorSchema.nullish(),
+    revision: z.number().int().nonnegative(),
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+    completed_at: awareDateTime.nullish(),
+  })
+  .passthrough();
+
+const channelDeliveryAcknowledgementSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    channel_turn_id: uuid,
+    lease_id: uuid,
+    status: z.enum(["delivered", "failed", "cancelled"]),
+    provider_message_id: z.string().min(1).max(512).nullish(),
+    error: structuredErrorSchema.nullish(),
+    acknowledged_at: awareDateTime,
+  })
+  .passthrough()
+  .superRefine((acknowledgement, context) => {
+    if (acknowledgement.status === "delivered" && acknowledgement.error) {
+      context.addIssue({
+        code: "custom",
+        message: "delivered acknowledgements cannot include an error",
+        path: ["error"],
+      });
+    }
+    if (acknowledgement.status === "failed" && !acknowledgement.error) {
+      context.addIssue({
+        code: "custom",
+        message: "failed acknowledgements require an error",
+        path: ["error"],
+      });
+    }
+  });
+
+const channelDeliveryClaimRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    channel_turn_id: uuid,
+    lease_id: uuid,
+    lease_seconds: z.number().int().min(5).max(300).default(60),
+  })
+  .passthrough();
+
+const channelDeliverySnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    channel_turn_id: uuid,
+    connection_id: uuid,
+    status: channelDeliveryStatusSchema,
+    attempt: z.number().int().min(1).default(1),
+    lease_id: uuid.nullish(),
+    lease_expires_at: awareDateTime.nullish(),
+    provider_message_id: z.string().min(1).max(512).nullish(),
+    last_error: structuredErrorSchema.nullish(),
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+    delivered_at: awareDateTime.nullish(),
+  })
+  .passthrough()
+  .superRefine((snapshot, context) => {
+    if (
+      snapshot.status === "sending" &&
+      (!snapshot.lease_id || !snapshot.lease_expires_at)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "sending delivery snapshots require an active lease",
+        path: ["lease_id"],
+      });
+    }
+  });
+
+const channelTurnCancelRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    reason: z.string().min(1).max(1_000),
+    requested_at: awareDateTime,
+  })
+  .passthrough();
+
+const channelTurnCancelReceiptSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    channel_turn_id: uuid,
+    accepted: z.boolean(),
+    status: channelTurnStatusSchema,
+    revision: z.number().int().nonnegative(),
+    acknowledged_at: awareDateTime,
+  })
+  .passthrough();
+
+const channelErrorResponseSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    error: structuredErrorSchema,
+    channel_turn_id: uuid.nullish(),
+    external_message_id: z.string().min(1).max(512).nullish(),
+    retry_after_ms: z.number().int().nonnegative().max(600_000).nullish(),
   })
   .passthrough();
 
@@ -820,6 +1213,122 @@ export function parseCharacterKernelSnapshot(
   return characterKernelSnapshotSchema.parse(input) as CharacterKernelSnapshot;
 }
 
+export function parseChannelProviderRegistration(
+  input: unknown,
+): ChannelProviderRegistration {
+  return channelProviderRegistrationSchema.parse(
+    input,
+  ) as ChannelProviderRegistration;
+}
+
+export function parseChannelAuthorizationStartRequest(
+  input: unknown,
+): ChannelAuthorizationStartRequest {
+  return channelAuthorizationStartRequestSchema.parse(
+    input,
+  ) as ChannelAuthorizationStartRequest;
+}
+
+export function parseChannelAuthorizationVerificationRequest(
+  input: unknown,
+): ChannelAuthorizationVerificationRequest {
+  return channelAuthorizationVerificationRequestSchema.parse(
+    input,
+  ) as ChannelAuthorizationVerificationRequest;
+}
+
+export function parseChannelAuthorizationSnapshot(
+  input: unknown,
+): ChannelAuthorizationSnapshot {
+  return channelAuthorizationSnapshotSchema.parse(
+    input,
+  ) as ChannelAuthorizationSnapshot;
+}
+
+export function parseChannelConnectionConfiguration(
+  input: unknown,
+): ChannelConnectionConfiguration {
+  return channelConnectionConfigurationSchema.parse(
+    input,
+  ) as ChannelConnectionConfiguration;
+}
+
+export function parseChannelConnectionSnapshot(
+  input: unknown,
+): ChannelConnectionSnapshot {
+  return channelConnectionSnapshotSchema.parse(
+    input,
+  ) as ChannelConnectionSnapshot;
+}
+
+export function parseChannelGatewayStatusSnapshot(
+  input: unknown,
+): ChannelGatewayStatusSnapshot {
+  return channelGatewayStatusSnapshotSchema.parse(
+    input,
+  ) as ChannelGatewayStatusSnapshot;
+}
+
+export function parseChannelInboundTextMessage(
+  input: unknown,
+): ChannelInboundTextMessage {
+  return channelInboundTextMessageSchema.parse(
+    input,
+  ) as ChannelInboundTextMessage;
+}
+
+export function parseChannelTurnReceipt(input: unknown): ChannelTurnReceipt {
+  return channelTurnReceiptSchema.parse(input) as ChannelTurnReceipt;
+}
+
+export function parseChannelTurnSnapshot(input: unknown): ChannelTurnSnapshot {
+  return channelTurnSnapshotSchema.parse(input) as ChannelTurnSnapshot;
+}
+
+export function parseChannelDeliveryAcknowledgement(
+  input: unknown,
+): ChannelDeliveryAcknowledgement {
+  return channelDeliveryAcknowledgementSchema.parse(
+    input,
+  ) as ChannelDeliveryAcknowledgement;
+}
+
+export function parseChannelDeliveryClaimRequest(
+  input: unknown,
+): ChannelDeliveryClaimRequest {
+  return channelDeliveryClaimRequestSchema.parse(
+    input,
+  ) as ChannelDeliveryClaimRequest;
+}
+
+export function parseChannelDeliverySnapshot(
+  input: unknown,
+): ChannelDeliverySnapshot {
+  return channelDeliverySnapshotSchema.parse(input) as ChannelDeliverySnapshot;
+}
+
+export function parseChannelTurnCancelRequest(
+  input: unknown,
+): ChannelTurnCancelRequest {
+  return channelTurnCancelRequestSchema.parse(
+    input,
+  ) as ChannelTurnCancelRequest;
+}
+
+export function parseChannelTurnCancelReceipt(
+  input: unknown,
+): ChannelTurnCancelReceipt {
+  return channelTurnCancelReceiptSchema.parse(
+    input,
+  ) as ChannelTurnCancelReceipt;
+}
+
+export function parseChannelErrorResponse(
+  input: unknown,
+): ChannelErrorResponse {
+  return channelErrorResponseSchema.parse(input) as ChannelErrorResponse;
+}
+
 export function parseMemoryRecord(input: unknown): MemoryRecord {
   return memoryRecordSchema.parse(input) as MemoryRecord;
 }
@@ -830,6 +1339,14 @@ export function parseMemoryProposal(input: unknown): MemoryProposal {
 
 export function parseMemorySource(input: unknown): MemorySource {
   return memorySourceSchema.parse(input) as MemorySource;
+}
+
+export function parseMemoryChannelAttribution(
+  input: unknown,
+): MemoryChannelAttribution {
+  return memoryChannelAttributionSchema.parse(
+    input,
+  ) as MemoryChannelAttribution;
 }
 
 export function parseSkillDefinition(input: unknown): SkillDefinition {

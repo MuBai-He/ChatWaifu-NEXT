@@ -78,14 +78,6 @@ export class PcmStreamPlayer {
       !this.callbacks.isGenerationActive(message.generationId)
     )
       return;
-    const previous = this.active;
-    if (previous) {
-      if (!previous.completed) this.stop("interrupted");
-      else {
-        this.draining.add(previous);
-        this.active = null;
-      }
-    }
     const item: AudioPlaybackItem = {
       generationId: message.generationId,
       streamId: message.streamId,
@@ -95,6 +87,23 @@ export class PcmStreamPlayer {
       durationMs: 0,
       url: "",
     };
+    const previous = this.active;
+    if (previous) {
+      if (previous.item.segmentId === item.segmentId) return;
+      if (!previous.completed) {
+        if (previous.item.generationId === item.generationId) {
+          // A reconnect can lose the preceding completion envelope. Preserve
+          // audio already accepted for that generation and route the later
+          // segment to its complete-WAV fallback instead of cutting speech.
+          this.callbacks.onStreamRejected(item);
+          return;
+        }
+        this.stop("interrupted");
+      } else {
+        this.draining.add(previous);
+        this.active = null;
+      }
+    }
     this.active = {
       item,
       sampleRate: message.sampleRate,
@@ -377,15 +386,15 @@ export class PcmStreamPlayer {
   private fail(message: string): void {
     const active = this.active;
     this.callbacks.onPlaybackError(message);
-    if (active && !active.accepted)
-      this.callbacks.onStreamRejected(active.item);
-    this.stop("error");
+    if (!active) return;
+    if (!active.accepted) this.callbacks.onStreamRejected(active.item);
+    this.stopStream(active, "error");
   }
 
   private reject(active: ActiveStream): void {
     if (this.active !== active) return;
     this.callbacks.onStreamRejected(active.item);
-    this.stop("error");
+    this.stopStream(active, "error");
   }
 
   private stop(reason: "interrupted" | "error"): void {
@@ -419,10 +428,19 @@ export class PcmStreamPlayer {
     active.pendingBytes = 0;
     if (active.startTime !== null)
       this.callbacks.onPlaybackStop(active.item, this.position(active), reason);
+    this.recalculateScheduleCursor();
     if (!this.active && !this.draining.size) {
-      this.scheduleCursor = this.context?.currentTime ?? 0;
       this.stopProgressLoop();
     }
+  }
+
+  private recalculateScheduleCursor(): void {
+    const contextTime = this.context?.currentTime ?? 0;
+    const remaining = [...this.draining, ...(this.active ? [this.active] : [])];
+    this.scheduleCursor = remaining.reduce(
+      (cursor, stream) => Math.max(cursor, stream.scheduledUntil),
+      contextTime,
+    );
   }
 
   private findStream(segmentId: string): ActiveStream | null {

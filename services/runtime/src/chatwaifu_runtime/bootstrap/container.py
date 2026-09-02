@@ -20,12 +20,19 @@ from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkClient
+from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
+from chatwaifu_runtime.external_channels.management import ChannelManagementService
+from chatwaifu_runtime.external_channels.service import ExternalChannelService
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
+from chatwaifu_runtime.persistence.sqlite_external_channels import (
+    SQLiteExternalChannelRepository,
+)
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.playback.service import PlaybackService
@@ -104,6 +111,7 @@ class RuntimeContainer:
             self.event_publisher,
         )
         self.conversation_repository = SQLiteConversationRepository(self.database, self.event_store)
+        self.external_channel_repository = SQLiteExternalChannelRepository(self.database)
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
         )
@@ -146,6 +154,21 @@ class RuntimeContainer:
             self.prompt_compiler,
             self.agent,
         )
+        self.external_channels = ExternalChannelService(
+            self.external_channel_repository,
+            self.conversation_repository,
+            self.sessions,
+            self.conversation,
+            self.characters,
+            self.event_hub,
+            self.event_publisher,
+        )
+        self.channel_management = ChannelManagementService(
+            self.external_channels,
+            self.external_channel_repository,
+            KeyringChannelCredentialStore(),
+            WeixinILinkClient(),
+        )
         self.resources = ResourceLifecycleService(
             self.companion_settings,
             self.activity,
@@ -168,6 +191,7 @@ class RuntimeContainer:
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,
+                stt_config=settings.stt,
                 publisher=self.event_publisher,
                 event_hub=self.event_hub,
                 conversation=self.conversation,
@@ -212,6 +236,8 @@ class RuntimeContainer:
 
                 await self.memory.start()
                 await self.runtime_skills.start()
+                await self.external_channels.start()
+                await self.channel_management.start()
                 await self.resources.start()
                 await self.ambient.start()
             except BaseException as error:
@@ -261,6 +287,8 @@ class RuntimeContainer:
             _CleanupStep("ambient", lambda: self.ambient.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),
+            _CleanupStep("channel_management", lambda: self.channel_management.stop()),
+            _CleanupStep("external_channels", lambda: self.external_channels.stop()),
             _CleanupStep("conversation", lambda: self.conversation.stop()),
             _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),
             _CleanupStep("memory", lambda: self.memory.stop()),

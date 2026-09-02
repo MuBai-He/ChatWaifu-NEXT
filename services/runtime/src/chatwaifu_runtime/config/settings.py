@@ -6,13 +6,23 @@ import tomllib
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Self, cast
+from typing import Literal, Self, cast
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+
+def _resource_root() -> Path:
+    """Resolve immutable product resources for source and frozen runtimes."""
+
+    configured = os.environ.get("CHATWAIFU_RESOURCE_ROOT", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path(__file__).resolve().parents[5]
+
+
+PROJECT_ROOT = _resource_root()
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "default.toml"
 
 
@@ -30,7 +40,9 @@ class StorageConfig(BaseModel):
 
     kind: str = "sqlite"
     database_path: Path | None = None
-    journal_mode: str = "wal"
+    journal_mode: Literal["wal"] = "wal"
+    synchronous: Literal["full", "extra"] = "full"
+    wal_autocheckpoint_pages: int = Field(default=1000, ge=1, le=100_000)
     foreign_keys: bool = True
     busy_timeout_ms: int = Field(default=5000, ge=100, le=60_000)
 
@@ -135,7 +147,10 @@ class SttConfig(BaseModel):
     provider: str = "disabled"
     worker_url: str = "http://127.0.0.1:8766"
     worker_token: SecretStr | None = None
-    language: str = Field(default="zh", min_length=2, max_length=32)
+    # ``auto`` is normalized to ``None`` at the STT domain boundary so local
+    # engines can identify Chinese, Japanese, or English without a hard-coded
+    # language hint.
+    language: str = Field(default="auto", min_length=2, max_length=32)
     timeout_seconds: float = Field(default=60.0, gt=0, le=300)
 
 

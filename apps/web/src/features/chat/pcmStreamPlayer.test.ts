@@ -100,6 +100,127 @@ describe("PCM stream player", () => {
     expect(failed).not.toHaveBeenCalled();
   });
 
+  it("rejects a later segment without interrupting an incomplete segment in the same generation", () => {
+    const context = new FakeContext();
+    const rejected = vi.fn();
+    const stopped = vi.fn();
+    const player = new PcmStreamPlayer(
+      () => context as unknown as AudioContext,
+      {
+        isGenerationActive: () => true,
+        onStreamAccepted: vi.fn(),
+        onStreamRejected: rejected,
+        onStreamActivity: vi.fn(),
+        onPlaybackStart: vi.fn(),
+        onPlaybackProgress: vi.fn(),
+        onPlaybackStop: stopped,
+        onPlaybackError: vi.fn(),
+      },
+    );
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "第一句",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+    player.push("segment-1", 0, new Uint8Array([0, 0]));
+
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-2",
+      segmentIndex: 1,
+      text: "第二句",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+
+    expect(rejected).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-2" }),
+    );
+    expect(context.sources[0].stop).not.toHaveBeenCalled();
+    expect(stopped).not.toHaveBeenCalled();
+
+    player.complete("segment-1", 10);
+    context.currentTime = 1;
+    context.sources[0].finish();
+    expect(stopped).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-1" }),
+      expect.objectContaining({ playedPtsMs: 10 }),
+      "ended",
+    );
+  });
+
+  it("does not stop a draining segment when the next PCM segment fails", () => {
+    const context = new FakeContext();
+    const stopped = vi.fn();
+    const rejected = vi.fn();
+    const player = new PcmStreamPlayer(
+      () => context as unknown as AudioContext,
+      {
+        isGenerationActive: () => true,
+        onStreamAccepted: vi.fn(),
+        onStreamRejected: rejected,
+        onStreamActivity: vi.fn(),
+        onPlaybackStart: vi.fn(),
+        onPlaybackProgress: vi.fn(),
+        onPlaybackStop: stopped,
+        onPlaybackError: vi.fn(),
+      },
+    );
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-1",
+      segmentIndex: 0,
+      text: "第一句",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+    player.push("segment-1", 0, new Uint8Array([0, 0]));
+    player.complete("segment-1", 10);
+    player.start({
+      phase: "started",
+      generationId: "generation-1",
+      streamId: "stream-1",
+      segmentId: "segment-2",
+      segmentIndex: 1,
+      text: "第二句",
+      sampleRate: 24_000,
+      channels: 1,
+      nativeStreaming: true,
+    });
+
+    player.push("segment-2", 2, new Uint8Array([0, 0]));
+
+    expect(rejected).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-2" }),
+    );
+    expect(context.sources[0].stop).not.toHaveBeenCalled();
+    expect(stopped).not.toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-1" }),
+      expect.anything(),
+      expect.anything(),
+    );
+
+    context.currentTime = 1;
+    context.sources[0].finish();
+    expect(stopped).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: "segment-1" }),
+      expect.objectContaining({ playedPtsMs: 10 }),
+      "ended",
+    );
+  });
+
   it("rejects an out-of-order fragment instead of playing stale audio", () => {
     const context = new FakeContext();
     const failed = vi.fn();

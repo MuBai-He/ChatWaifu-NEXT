@@ -1,3 +1,7 @@
+import {
+  AVATAR_LAB_MANIFEST,
+  LIVE2D_LAB_MANIFEST,
+} from "@chatwaifu/avatar-sdk";
 import { createRef } from "react";
 import {
   cleanup,
@@ -22,8 +26,15 @@ const nativeWindow = vi.hoisted(() => ({
   startDragging: vi.fn().mockResolvedValue(undefined),
 }));
 
+const nativeCore = vi.hoisted(() => ({
+  invoke: vi.fn((command: string) =>
+    Promise.resolve(command === "get_desktop_preferences" ? {} : undefined),
+  ),
+}));
+
 const session = {
   canvasRef: createRef<HTMLCanvasElement>(),
+  avatarManifest: AVATAR_LAB_MANIFEST,
   snapshot: null,
   rendererKind: "fake" as const,
   avatarWarning: null as string | null,
@@ -147,11 +158,19 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => nativeWindow,
 }));
 
+vi.mock("@tauri-apps/api/core", () => nativeCore);
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => undefined),
+}));
+
 describe("ChatWaifu usable demo", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/");
     window.localStorage?.clear();
+    window.sessionStorage?.clear();
     session.voiceState = "disconnected";
+    session.avatarManifest = AVATAR_LAB_MANIFEST;
     session.voiceConnected = false;
     session.voiceActivationMode = "push_to_talk";
     session.voiceTransmitting = false;
@@ -214,6 +233,14 @@ describe("ChatWaifu usable demo", () => {
     expect(sendButton.disabled).toBe(true);
   });
 
+  it("shows the active Live2D model id and known author status", () => {
+    session.avatarManifest = LIVE2D_LAB_MANIFEST;
+    render(<CurrentProduct />);
+
+    expect(screen.getByText(/Live2D 模型作者：涂抹一画/)).toBeTruthy();
+    expect(screen.queryByText(/ayachi-nene-local/)).toBeNull();
+  });
+
   it("renders the transparent desktop-pet surface on its dedicated route", () => {
     window.history.replaceState({}, "", "/desktop-pet");
 
@@ -239,6 +266,20 @@ describe("ChatWaifu usable demo", () => {
       clientY: 120,
     });
     expect(session.touch).toHaveBeenCalledOnce();
+  });
+
+  it("opens the control center for first-run desktop onboarding", async () => {
+    window.history.replaceState({}, "", "/desktop-pet");
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+
+    render(<CurrentProduct />);
+
+    await waitFor(() =>
+      expect(nativeCore.invoke).toHaveBeenCalledWith("show_control_center"),
+    );
   });
 
   it.each(["touched_head", "touched_body", "touched_avatar"])(
@@ -481,9 +522,9 @@ describe("ChatWaifu usable demo", () => {
       name: "设置分类",
     });
     expect(settingsNavigation).toBeTruthy();
-    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(5);
+    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(6);
     expect(
-      document.querySelector(".desktop-settings-app-icon svg"),
+      document.querySelector(".desktop-settings-app-icon img"),
     ).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Conversation" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();

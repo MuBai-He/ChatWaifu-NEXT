@@ -17,8 +17,12 @@ class WorkerSettings(BaseSettings):
     port: int = Field(default=8766, ge=1, le=65_535)
     token: SecretStr
     worker_id: str = "asr-faster-whisper"
+    provider_id: str = "faster-whisper"
+    display_name: str = "faster-whisper · 本地"
     model: str = "base"
     model_dir: Path = Path(".local/models/faster-whisper")
+    local_files_only: bool = False
     device: str = "cpu"
     compute_type: str = "int8"
     preload: bool = True
+    shutdown_timeout_seconds: float = Field(default=5.0, gt=0, le=30)

@@ -534,6 +534,7 @@
 }
 
 .skills-center > header button {
+  display: grid;
   width: 38px;
   height: 38px;
   border: 1px solid var(--line);
@@ -542,6 +543,12 @@
   background: white;
   font-size: 1.35rem;
   cursor: pointer;
+  place-items: center;
+}
+
+.skills-center > header button svg {
+  width: 17px;
+  height: 17px;
 }
 
 .skills-notice {
@@ -728,10 +735,25 @@
 }
 
 .install-example {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   width: 100%;
   margin-bottom: 9px;
   border-style: dashed;
   color: var(--accent);
+}
+
+.install-example svg,
+.skills-section-title button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.skills-section-title button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .local-plugin-install {
@@ -1510,29 +1532,23 @@
   vertical-align: 0.17em;
 }
 
-.vn-brand-ornament {
+.vn-brand-mark {
   display: grid;
-  width: 20px;
-  height: 46px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  color: #efb1d3;
-  grid-template-rows: 1fr auto 1fr;
+  border: 1px solid rgb(255 222 241 / 24%);
+  border-radius: 10px;
+  color: #f3bddb;
+  background: rgb(73 38 77 / 48%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(12px);
 }
 
-.vn-brand-ornament i {
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(transparent, rgb(239 177 211 / 72%));
-}
-
-.vn-brand-ornament i:last-child {
-  background: linear-gradient(rgb(239 177 211 / 72%), transparent);
-}
-
-.vn-brand-ornament b {
-  font-size: 0.62rem;
-  font-weight: 400;
-  line-height: 1;
+.vn-brand-mark img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
 }
 
 .vn-runtime {
@@ -1658,10 +1674,11 @@
 }
 
 .vn-system-menu > button {
+  position: relative;
   display: grid;
   width: 92px;
   min-height: 44px;
-  padding: 7px 10px;
+  padding: 7px 10px 7px 32px;
   border: 1px solid rgb(255 235 247 / 18%);
   border-radius: 4px 14px 4px 14px;
   color: rgb(255 248 252 / 78%);
@@ -1679,6 +1696,16 @@
     border-color 140ms ease,
     transform 140ms ease,
     background 140ms ease;
+}
+
+.vn-system-menu > button > svg {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: #efb1d3;
+  transform: translateY(-50%);
 }
 
 .vn-system-menu > button:hover,
@@ -1775,6 +1802,12 @@
   place-items: center;
 }
 
+.vn-history-panel header button svg,
+.vn-settings-panel header button svg {
+  width: 16px;
+  height: 16px;
+}
+
 .vn-history-list {
   min-height: 0;
   padding: 18px 20px 28px;
@@ -1864,218 +1897,6 @@
   color: rgb(255 246 252 / 45%);
   font-size: 0.58rem;
   line-height: 1.5;
-}
-
-.model-settings {
-  display: grid;
-  padding: 20px;
-  gap: 12px;
-}
-
-.character-kernel-card,
-.model-role-card {
-  padding: 14px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 3px 14px 3px 14px;
-  background: rgb(255 255 255 / 5%);
-}
-
-.character-kernel-card > header,
-.model-role-card > header,
-.model-settings-heading,
-.model-role-card > footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.character-kernel-card header > div,
-.model-settings-heading > div,
-.model-role-card header > div {
-  display: grid;
-  gap: 3px;
-}
-
-.character-kernel-card header small,
-.model-settings-heading small {
-  color: #eab1d1;
-  font: 0.5rem var(--mono);
-  letter-spacing: 0.14em;
-}
-
-.character-kernel-card header strong,
-.model-settings-heading strong {
-  font-family: "Yu Mincho", Georgia, serif;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.character-kernel-card header > span,
-.model-settings-heading > span {
-  color: rgb(255 246 252 / 44%);
-  font: 0.55rem var(--mono);
-}
-
-.kernel-metrics {
-  display: grid;
-  margin-top: 13px;
-  gap: 7px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.kernel-metrics > div {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 20px;
-  gap: 6px;
-  align-items: center;
-  color: rgb(255 246 252 / 52%);
-  font-size: 0.55rem;
-}
-
-.kernel-metrics i {
-  height: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 9%);
-}
-
-.kernel-metrics b {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #b45b96, #f0b7d5);
-  transform-origin: left;
-}
-
-.character-kernel-card > p {
-  margin: 12px 0 0;
-  color: rgb(255 246 252 / 48%);
-  font-size: 0.58rem;
-  line-height: 1.6;
-}
-
-.model-settings-heading {
-  margin-top: 7px;
-  padding-bottom: 5px;
-}
-
-.model-role-card {
-  display: grid;
-  gap: 10px;
-}
-
-.model-role-card header strong {
-  color: #fff7fc;
-  font-size: 0.72rem;
-}
-
-.model-role-card header small {
-  color: rgb(255 246 252 / 40%);
-  font-size: 0.54rem;
-  line-height: 1.45;
-}
-
-.model-role-card label:not(.model-enabled) {
-  display: grid;
-  gap: 5px;
-}
-
-.model-role-card label > span {
-  color: rgb(255 246 252 / 48%);
-  font-size: 0.56rem;
-}
-
-.model-enabled {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  color: rgb(255 246 252 / 58%);
-  font-size: 0.55rem;
-  white-space: nowrap;
-}
-
-.model-enabled input {
-  accent-color: #d979ad;
-}
-
-.model-role-card input:not([type="checkbox"]),
-.model-role-card select {
-  width: 100%;
-  min-width: 0;
-  padding: 8px 9px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 7px;
-  outline: none;
-  color: #fff7fc;
-  background: rgb(255 255 255 / 6%);
-  font-size: 0.66rem;
-}
-
-.model-role-card input:focus,
-.model-role-card select:focus {
-  border-color: rgb(234 177 209 / 50%);
-}
-
-.model-role-card option {
-  color: #2f2036;
-  background: white;
-}
-
-.model-role-grid {
-  display: grid;
-  gap: 9px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.model-role-card footer {
-  justify-content: flex-start;
-  padding-top: 2px;
-}
-
-.model-role-card footer button {
-  padding: 7px 10px;
-  border: 1px solid rgb(255 255 255 / 13%);
-  border-radius: 7px;
-  color: rgb(255 250 253 / 78%);
-  background: rgb(255 255 255 / 6%);
-  cursor: pointer;
-  font-size: 0.58rem;
-}
-
-.model-role-card footer button:first-child {
-  border-color: rgb(234 177 209 / 30%);
-  color: #ffe8f6;
-  background: rgb(180 91 150 / 22%);
-}
-
-.model-role-card footer button.danger {
-  margin-left: auto;
-  color: #f4b7c2;
-}
-
-.model-role-card footer button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.model-secret-note,
-.model-settings-notice {
-  margin: 0;
-  color: rgb(255 246 252 / 40%);
-  font-size: 0.55rem;
-  line-height: 1.55;
-}
-
-.model-settings-notice {
-  position: sticky;
-  bottom: -1px;
-  padding: 9px 10px;
-  border: 1px solid rgb(234 177 209 / 20%);
-  border-radius: 8px;
-  color: #ffe8f6;
-  background: rgb(48 27 56 / 96%);
 }
 
 .vn-notices {
@@ -2196,11 +2017,9 @@
   position: absolute;
   right: 4px;
   bottom: 2px;
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid #eda9ce;
-  border-bottom: 2px solid #eda9ce;
-  transform: rotate(45deg);
+  width: 14px;
+  height: 14px;
+  color: #eda9ce;
   animation: vn-continue 1.15s ease-in-out infinite;
 }
 
@@ -2222,6 +2041,13 @@
   cursor: pointer;
   font-size: 0.64rem;
   gap: 2px;
+}
+
+.vn-dialogue-actions button > svg {
+  width: 14px;
+  height: 14px;
+  justify-self: center;
+  color: #efb1d3;
 }
 
 .vn-dialogue-actions button small {
@@ -2288,22 +2114,31 @@
   cursor: default;
 }
 
-.vn-composer button span {
+.vn-composer button svg {
+  width: 15px;
+  height: 15px;
   color: rgb(255 255 255 / 62%);
-  font-family: var(--mono);
 }
 
 .vn-disclosure {
   position: absolute;
   z-index: 21;
+  display: grid;
+  gap: 1px;
   right: 6%;
-  bottom: 9px;
+  bottom: 6px;
   left: 6%;
   margin: 0;
   overflow: hidden;
-  color: rgb(255 245 251 / 26%);
-  font-size: 0.5rem;
+  color: rgb(255 245 251 / 52%);
+  font-size: 0.52rem;
+  line-height: 1.35;
   text-align: center;
+  text-shadow: 0 1px 3px rgb(24 10 22 / 56%);
+}
+
+.vn-disclosure span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2318,7 +2153,7 @@
 @keyframes vn-continue {
   50% {
     opacity: 0.34;
-    transform: translateY(3px) rotate(45deg);
+    transform: translateY(3px);
   }
 }
 

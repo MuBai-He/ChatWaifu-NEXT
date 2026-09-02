@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import "./model-settings.css";
+
 import {
   getCharacterState,
   getModelConfigurations,

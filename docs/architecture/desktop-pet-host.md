@@ -71,13 +71,21 @@ preference. Changing that preference inside focused settings updates persistence
 control center unobscured until the user leaves it.
 
 The overlay does not rely on WebView `:hover` or window focus to reveal its interaction rail. In the
-browser it records explicit pointer enter and leave transitions. In Tauri it additionally samples the
-global physical cursor position against the current physical overlay bounds every 80 ms, with at most
-one sample in flight and a three-error cutoff. This also works on negative-coordinate secondary
-displays. macOS accepts the first mouse action in an inactive overlay. When persisted click-through is
-enabled, entering the overlay temporarily captures cursor events so the newly revealed controls can
-be clicked; leaving or disposing the overlay restores click-through without changing the persisted
-preference. This is rectangular window hit testing, not per-pixel Live2D alpha hit testing.
+browser it records explicit pointer enter, move, and leave transitions. In Tauri it additionally
+samples the global physical cursor position against the current physical overlay bounds every 80 ms,
+with at most one sample in flight and a three-error cutoff. Physical coordinates are mapped into the
+current CSS viewport, including negative-coordinate and scaled secondary displays. This window-level
+presence alone reveals the bottom controls without taking mouse ownership.
+
+When transparent-region pass-through is enabled, React requests native cursor capture only while the
+sampled point intersects either the renderer's authored/visible Live2D mesh hit test or explicitly
+marked UI chrome such as subtitles, the composer, menus, and action buttons. Empty canvas space keeps
+native cursor events ignored even though the rail is visible. Entering a reserved bottom-control
+rectangle captures it on the same bounded sampler, so a previously unfocused button becomes clickable
+without first clicking the window. Active modal, avatar-drag, and push-to-talk guards temporarily
+capture the window until their gesture ends. This reuses renderer geometry and does not read the WebGL framebuffer or
+turn the canvas element's rectangle into a hit area. macOS still accepts the first mouse action in an
+inactive interactive region.
 
 The always-visible overlay disables WebView background throttling. This keeps streaming-text timers,
 audio progress, Live2D animation, and whole-line subtitle paging active while another application has
@@ -89,11 +97,11 @@ source of truth, persists UI/OS preferences atomically, and broadcasts a bounded
 `desktop-preferences-changed` event so an open overlay updates immediately. Browser preview uses an
 in-memory/local-storage fallback and does not claim OS integration.
 
-Settings navigation uses local inline SVG symbols rather than font glyphs or network icon assets.
-The desktop application icon is generated from the checked-in moon-and-spark source SVG. The macOS
-tray loads a separate monochrome PNG generated from its checked-in template SVG, declares it as a
-native template image, and intentionally sets no text title so AppKit can recolor it for either menu
-bar appearance.
+Functional controls use the shared typed Lucide SVG boundary rather than font glyphs or one-off path
+markup. Settings branding, the favicon, generated application assets, and the tray are derived from
+the checked-in Web crescent-and-ribbon mark. The macOS tray declares its compact PNG as a native
+template image and intentionally sets no text title so AppKit can recolor it for either menu-bar
+appearance.
 
 ## Media ownership and cancellation
 
@@ -110,6 +118,35 @@ specific restart or system-update recovery instead of presenting an inert disabl
 All existing generation, cancellation, late-output, and playback-ACK invariants stay in the Web and
 Runtime layers. Tauri does not reinterpret conversation events.
 
+## Windows installed product boundary
+
+ADR 0027 defines the Windows x64 release layout. The first installer is an NSIS current-user package;
+it embeds the Desktop frontend, maps the complete PyInstaller onedir Runtime to
+`$RESOURCE/runtime-sidecar/`, and maps the x64 AppContainer helper to
+`$RESOURCE/bin/chatwaifu-appcontainer-host.exe`. Release startup resolves these paths through
+Tauri's path API and fails explicitly when either component is absent. It never falls back to a
+source checkout, system Python, `uv`, or PATH lookup.
+
+Runtime receives Tauri-owned per-user config, local-data, and log roots before its Python modules are
+imported. Built-in code, characters, Skills, VAD/tokenizer data, and frozen libraries stay immutable
+under `$RESOURCE`; SQLite, provider settings and secrets, generated audio, installed plugin data,
+and future model caches remain outside the installation tree. Ordinary uninstall removes product
+resources but preserves these user roots. AppContainer profiles and ChatWaifu-owned ACL grants must
+be reconciled without deleting plugin data before an installed build can pass release acceptance.
+
+The redistributable base does not contain CUDA/PyTorch environments, local model weights, trained or
+cloned voices, or private Live2D assets. It remains usable through Demo and configured cloud
+providers and uses the safe avatar fallback when vendor assets are absent. A local operator may
+explicitly overlay ignored Live2D assets into a private test build, but that output cannot enter CI,
+tags, or a public release.
+
+The Apple Silicon owner-package path follows the same immutable Runtime versus per-user data
+boundary. Its release Host resolves `Contents/Resources/runtime-sidecar/chatwaifu-runtime` rather
+than the Windows `.exe` name. The build rejects local neural TTS/STT packages and common weight
+formats, but retains the base Runtime's small Silero VAD asset. It produces unsigned `.app` and
+`.dmg` artifacts for local testing, embeds any already-present ignored Live2D assets, and therefore
+does not satisfy signing, notarization, or public asset-license gates.
+
 The audio-element fallback may create a silent user-gesture probe before asynchronous TTS is ready.
 That probe is never allowed to hold the playback queue indefinitely: arrival of the first real,
 active-generation segment immediately promotes the probe element to real playback. A late probe
@@ -125,7 +162,7 @@ emits progress acknowledgements.
   of the renderer contract while avoiding virtual-GPU decode timeouts.
 - Click-through can always be disabled again from the tray.
 - Native cursor sampling falls back to ordinary Web pointer events after repeated read failures and
-  restores persisted click-through before stopping.
+  releases temporary interactive-region capture before stopping.
 - Inactive-window scheduling stays enabled for the overlay so streaming subtitles never require a
   focus or text-selection repaint.
 - Subtitle and online-state visibility persist independently, with visible defaults for old files.
@@ -139,8 +176,12 @@ emits progress acknowledgements.
 - The service stack also watches the owning Rust PID, so an abrupt development hot reload still
   tears down workers even when Tauri cannot deliver its normal exit callback.
 
-Frozen release sidecars, signed installers, automatic updates, autostart, and Store-compatible
-non-transparent profiles are intentionally excluded from this slice.
+The frozen Runtime and NSIS assembly are a separate packaging slice governed by ADR 0027. An
+unsigned owner-only candidate has passed basic install, Runtime health, forced-exit cleanup,
+uninstall, and user-root retention under Windows x64 emulation. Clean-account product UX, normal
+exit, update/reinstall, installed AppContainer execution and reconciliation, native x64/CUDA
+hardware, signed public delivery, automatic updates, autostart, and Store-compatible
+non-transparent profiles remain outside the validated desktop-host slice.
 
 ## Verification
 
@@ -154,7 +195,7 @@ non-transparent profiles are intentionally excluded from this slice.
   internal scrolling, functional HUD switch, absence of conversation controls in the settings
   window, and real-model transparent, head, authored-body, and leg hit points.
 - Rust tests cover host responsibility, bootstrap parsing, bounded restart state, backward-compatible
-  preference defaults, and temporary cursor capture while persisted click-through remains enabled.
+  preference defaults, and interactive-region capture while transparent click-through remains enabled.
 - Cargo check, Clippy, Rust tests, Web typecheck/lint/tests, and the no-bundle release build are gates.
 - Local macOS smoke must show the transparent overlay with the real local Live2D model over another
   application; browser-only proof is insufficient.

@@ -1,5 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    chatwaifu_desktop_host::run();
+    if let Some(exit_code) = chatwaifu_desktop_host_lib::runtime_supervisor_exit_code() {
+        std::process::exit(exit_code);
+    }
+    chatwaifu_desktop_host_lib::run();
 }

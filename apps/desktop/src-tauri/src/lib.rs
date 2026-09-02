@@ -18,7 +18,12 @@ use tauri::{
 };
 
 use runtime_health::RuntimeStatus;
-use sidecar::RuntimeHost;
+use sidecar::{RuntimeHost, WorkerPackInstallResult};
+
+pub use sidecar::runtime_supervisor_exit_code;
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub use sidecar::{windows_current_process_image_path, windows_physical_user_root_paths};
 
 pub const HOST_ROLE: &str = "os-capabilities-and-sidecar-management";
 pub const AVATAR_OVERLAY_LABEL: &str = "avatar-overlay";
@@ -66,18 +71,22 @@ impl Default for DesktopPreferences {
 #[derive(Default)]
 struct DesktopState {
     preferences: Mutex<DesktopPreferences>,
-    pointer_inside_overlay: Mutex<bool>,
+    interaction_region_active: Mutex<bool>,
     runtime: RuntimeHost,
 }
 
 #[tauri::command]
-fn show_control_center(app: AppHandle) -> Result<(), String> {
+async fn show_control_center(app: AppHandle) -> Result<(), String> {
+    show_control_center_window(&app)
+}
+
+fn show_control_center_window(app: &AppHandle) -> Result<(), String> {
     let window = match app.get_webview_window(CONTROL_CENTER_LABEL) {
         Some(window) => {
-            refresh_development_window(&app, &window)?;
+            refresh_development_window(app, &window)?;
             window
         }
-        None => WebviewWindowBuilder::new(&app, CONTROL_CENTER_LABEL, control_center_entry(&app))
+        None => WebviewWindowBuilder::new(app, CONTROL_CENTER_LABEL, control_center_entry(app))
             .initialization_script(CONTROL_CENTER_INIT_SCRIPT)
             .title("ChatWaifu NEXT · 桌宠设置")
             .always_on_top(true)
@@ -87,14 +96,14 @@ fn show_control_center(app: AppHandle) -> Result<(), String> {
             .build()
             .map_err(window_error)?,
     };
-    set_avatar_overlay_topmost(&app, false)?;
+    set_avatar_overlay_topmost(app, false)?;
     window.set_always_on_top(true).map_err(window_error)?;
     if let Err(error) = window.show().map_err(window_error) {
-        restore_avatar_overlay_topmost(&app);
+        restore_avatar_overlay_topmost(app);
         return Err(error);
     }
     if let Err(error) = window.set_focus().map_err(window_error) {
-        restore_avatar_overlay_topmost(&app);
+        restore_avatar_overlay_topmost(app);
         return Err(error);
     }
     Ok(())
@@ -136,29 +145,29 @@ fn get_desktop_preferences(state: State<'_, DesktopState>) -> Result<DesktopPref
 }
 
 #[tauri::command]
-fn set_avatar_overlay_always_on_top(
+async fn set_avatar_overlay_always_on_top(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_always_on_top(&app, &state, enabled)
 }
 
 #[tauri::command]
-fn set_avatar_overlay_click_through(
+async fn set_avatar_overlay_click_through(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_click_through(&app, &state, enabled)
 }
 
 #[tauri::command]
-fn set_avatar_overlay_visible(
+async fn set_avatar_overlay_visible(
     app: AppHandle,
-    state: State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
+    let state = app.state::<DesktopState>();
     set_overlay_visible(&app, &state, enabled)
 }
 
@@ -176,17 +185,17 @@ fn set_avatar_overlay_display(
 }
 
 #[tauri::command]
-fn set_avatar_overlay_pointer_inside(
+async fn set_avatar_overlay_interaction_region_active(
     app: AppHandle,
-    state: State<'_, DesktopState>,
-    inside: bool,
+    active: bool,
 ) -> Result<(), String> {
-    let mut pointer_inside = lock_pointer_inside(&state)?;
+    let state = app.state::<DesktopState>();
+    let mut interaction_active = lock_interaction_region_active(&state)?;
     let click_through = lock_preferences(&state)?.click_through;
     required_window(&app, AVATAR_OVERLAY_LABEL)?
-        .set_ignore_cursor_events(should_ignore_cursor_events(click_through, inside))
+        .set_ignore_cursor_events(should_ignore_cursor_events(click_through, active))
         .map_err(window_error)?;
-    *pointer_inside = inside;
+    *interaction_active = active;
     Ok(())
 }
 
@@ -206,12 +215,39 @@ fn restart_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, Stri
 }
 
 #[tauri::command]
+async fn install_worker_pack(
+    app: AppHandle,
+    archive_path: PathBuf,
+) -> Result<WorkerPackInstallResult, String> {
+    let worker_app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        worker_app
+            .state::<DesktopState>()
+            .runtime
+            .install_worker_pack(worker_app.clone(), archive_path)
+    })
+    .await
+    .map_err(|error| format!("Worker Pack 安装任务失败：{error}"))?
+}
+
+#[tauri::command]
 fn get_runtime_status(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
     state.runtime.status()
 }
 
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window(AVATAR_OVERLAY_LABEL) {
+                if let Err(error) = window.show() {
+                    eprintln!("desktop single-instance show avatar failed: {error}");
+                }
+                if let Err(error) = window.set_focus() {
+                    eprintln!("desktop single-instance focus avatar failed: {error}");
+                }
+            }
+        }))
         .manage(DesktopState::default())
         .setup(|app| {
             restore_preferences(app.handle())?;
@@ -231,10 +267,11 @@ pub fn run() {
             set_avatar_overlay_click_through,
             set_avatar_overlay_visible,
             set_avatar_overlay_display,
-            set_avatar_overlay_pointer_inside,
+            set_avatar_overlay_interaction_region_active,
             start_runtime,
             stop_runtime,
             restart_runtime,
+            install_worker_pack,
             get_runtime_status,
         ])
         .build(tauri::generate_context!())
@@ -253,7 +290,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let control_center =
         MenuItem::with_id(app, "control-center", "打开桌宠设置", true, None::<&str>)?;
     let click_through =
-        MenuItem::with_id(app, "click-through", "切换鼠标穿透", true, None::<&str>)?;
+        MenuItem::with_id(app, "click-through", "切换透明区域穿透", true, None::<&str>)?;
     let restart_runtime =
         MenuItem::with_id(app, "restart-runtime", "重启本地服务", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出 ChatWaifu", true, None::<&str>)?;
@@ -281,9 +318,12 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
                 }
             }
             "control-center" => {
-                if let Err(error) = show_control_center(app.clone()) {
-                    eprintln!("desktop tray control-center failed: {error}");
-                }
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = show_control_center(app).await {
+                        eprintln!("desktop tray control-center failed: {error}");
+                    }
+                });
             }
             "click-through" => {
                 let state = app.state::<DesktopState>();
@@ -347,6 +387,9 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
     if window.label() != AVATAR_OVERLAY_LABEL {
         return;
     }
+    if !avatar_window_event_persists_preferences(event) {
+        return;
+    }
 
     let state = window.state::<DesktopState>();
     let update = match event {
@@ -358,10 +401,7 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
             preferences.overlay_width = Some(size.width);
             preferences.overlay_height = Some(size.height);
         }),
-        WindowEvent::Destroyed => update_preferences(&state, |preferences| {
-            preferences.overlay_visible = false;
-        }),
-        _ => return,
+        _ => unreachable!("filtered avatar window event changed before persistence"),
     };
     match update {
         Ok(preferences) => {
@@ -371,6 +411,10 @@ fn handle_window_event(window: &Window, event: &WindowEvent) {
         }
         Err(error) => eprintln!("desktop preference update failed: {error}"),
     }
+}
+
+fn avatar_window_event_persists_preferences(event: &WindowEvent) -> bool {
+    matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_))
 }
 
 fn restore_preferences(app: &AppHandle) -> tauri::Result<()> {
@@ -453,20 +497,20 @@ fn set_click_through(
     state: &State<'_, DesktopState>,
     enabled: bool,
 ) -> Result<DesktopPreferences, String> {
-    let pointer_inside = lock_pointer_inside(state)?;
+    let interaction_active = lock_interaction_region_active(state)?;
     required_window(app, AVATAR_OVERLAY_LABEL)?
-        .set_ignore_cursor_events(should_ignore_cursor_events(enabled, *pointer_inside))
+        .set_ignore_cursor_events(should_ignore_cursor_events(enabled, *interaction_active))
         .map_err(window_error)?;
     let preferences = update_preferences(state, |preferences| {
         preferences.click_through = enabled;
     })?;
-    drop(pointer_inside);
+    drop(interaction_active);
     commit_preferences(app, &preferences)?;
     Ok(preferences)
 }
 
-fn should_ignore_cursor_events(click_through: bool, pointer_inside: bool) -> bool {
-    click_through && !pointer_inside
+fn should_ignore_cursor_events(click_through: bool, interaction_active: bool) -> bool {
+    click_through && !interaction_active
 }
 
 fn control_center_is_focused(app: &AppHandle) -> bool {
@@ -520,20 +564,17 @@ fn lock_preferences<'a>(
         .map_err(|_| "desktop preference lock was poisoned".to_owned())
 }
 
-fn lock_pointer_inside<'a>(
+fn lock_interaction_region_active<'a>(
     state: &'a State<'_, DesktopState>,
 ) -> Result<MutexGuard<'a, bool>, String> {
     state
-        .pointer_inside_overlay
+        .interaction_region_active
         .lock()
-        .map_err(|_| "desktop pointer-presence lock was poisoned".to_owned())
+        .map_err(|_| "desktop interaction-region lock was poisoned".to_owned())
 }
 
 fn preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_config_dir()
-        .map(|directory| directory.join("desktop-preferences.json"))
-        .map_err(|error| format!("desktop config directory unavailable: {error}"))
+    sidecar::desktop_config_dir(app).map(|directory| directory.join("desktop-preferences.json"))
 }
 
 fn load_preferences(app: &AppHandle) -> DesktopPreferences {
@@ -579,8 +620,13 @@ fn window_error(error: tauri::Error) -> String {
 mod tests {
     use super::{
         APP_ENTRY, CONTROL_CENTER_INIT_SCRIPT, CONTROL_CENTER_SURFACE, DesktopPreferences,
-        HOST_ROLE, NATIVE_SURFACE_QUERY, effective_overlay_topmost, should_ignore_cursor_events,
+        HOST_ROLE, NATIVE_SURFACE_QUERY, avatar_window_event_persists_preferences,
+        effective_overlay_topmost, set_avatar_overlay_always_on_top,
+        set_avatar_overlay_click_through, set_avatar_overlay_interaction_region_active,
+        set_avatar_overlay_visible, should_ignore_cursor_events, show_control_center,
     };
+    use std::future::Future;
+    use tauri::{PhysicalPosition, PhysicalSize, WindowEvent};
 
     #[test]
     fn host_role_does_not_claim_character_logic() {
@@ -601,6 +647,40 @@ mod tests {
     }
 
     #[test]
+    fn control_center_command_is_async_for_windows_webview_creation() {
+        fn assert_async_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle) -> Fut,
+            Fut: Future<Output = Result<(), String>>,
+        {
+        }
+
+        assert_async_command(show_control_center);
+    }
+
+    #[test]
+    fn native_window_mutation_commands_are_async_on_windows() {
+        fn assert_async_preference_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle, bool) -> Fut,
+            Fut: Future<Output = Result<DesktopPreferences, String>>,
+        {
+        }
+
+        fn assert_async_interaction_command<F, Fut>(_command: F)
+        where
+            F: Fn(tauri::AppHandle, bool) -> Fut,
+            Fut: Future<Output = Result<(), String>>,
+        {
+        }
+
+        assert_async_preference_command(set_avatar_overlay_always_on_top);
+        assert_async_preference_command(set_avatar_overlay_click_through);
+        assert_async_preference_command(set_avatar_overlay_visible);
+        assert_async_interaction_command(set_avatar_overlay_interaction_region_active);
+    }
+
+    #[test]
     fn desktop_preferences_default_to_an_interactive_visible_pet() {
         let preferences = DesktopPreferences::default();
         assert!(preferences.always_on_top);
@@ -617,7 +697,20 @@ mod tests {
     }
 
     #[test]
-    fn cursor_capture_temporarily_overrides_persisted_click_through() {
+    fn application_exit_does_not_persist_the_avatar_as_hidden() {
+        assert!(!avatar_window_event_persists_preferences(
+            &WindowEvent::Destroyed
+        ));
+        assert!(avatar_window_event_persists_preferences(
+            &WindowEvent::Moved(PhysicalPosition::new(40, 60))
+        ));
+        assert!(avatar_window_event_persists_preferences(
+            &WindowEvent::Resized(PhysicalSize::new(430, 650))
+        ));
+    }
+
+    #[test]
+    fn only_interactive_regions_override_transparent_click_through() {
         assert!(should_ignore_cursor_events(true, false));
         assert!(!should_ignore_cursor_events(true, true));
         assert!(!should_ignore_cursor_events(false, false));

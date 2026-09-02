@@ -14,6 +14,14 @@ export interface Live2DSource {
   semanticMapping?: Live2DSemanticMapping;
 }
 
+export interface AvatarAttribution {
+  modelAuthor: string | null;
+  sourceLabel: string;
+  sourceUrl?: string;
+  rightsNotice: string;
+  usageNotice: string;
+}
+
 export interface Live2DMotionTarget {
   group: string;
   index: number;
@@ -73,6 +81,7 @@ export interface AvatarManifest {
   avatarId: string;
   displayName: string;
   rendererKind: "fake" | "live2d";
+  attribution?: AvatarAttribution;
   capabilities: AvatarCapabilityManifest;
   hitAreas?: AvatarHitAreaDefinition[];
   live2d?: Live2DSource;

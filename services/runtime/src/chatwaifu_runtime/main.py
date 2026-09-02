@@ -17,6 +17,8 @@ from chatwaifu_runtime.config.settings import Settings, load_settings
 from chatwaifu_runtime.mcp_server import RuntimeMcpServer
 from chatwaifu_runtime.observability.logging import configure_logging
 
+DESKTOP_WEB_ORIGINS = ("http://tauri.localhost", "tauri://localhost")
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or load_settings()
@@ -62,7 +64,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="ChatWaifu NEXT Runtime", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[resolved_settings.runtime.web_origin],
+        allow_origins=list(
+            dict.fromkeys((resolved_settings.runtime.web_origin, *DESKTOP_WEB_ORIGINS))
+        ),
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=[

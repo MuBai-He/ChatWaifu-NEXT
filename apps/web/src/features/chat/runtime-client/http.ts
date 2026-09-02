@@ -32,17 +32,13 @@ export async function requestRuntime<Result>(
     signal: callerSignal,
     ...requestInit
   } = init ?? {};
+  const runtimeUrl = await waitForRuntimeUrl(callerSignal);
   const controller = new AbortController();
   let timedOut = false;
   const aborted = new Promise<never>((_resolve, reject) => {
     controller.signal.addEventListener(
       "abort",
-      () =>
-        reject(
-          controller.signal.reason instanceof Error
-            ? controller.signal.reason
-            : new DOMException("Runtime request aborted", "AbortError"),
-        ),
+      () => reject(abortReason(controller.signal)),
       { once: true },
     );
   });
@@ -57,7 +53,13 @@ export async function requestRuntime<Result>(
   }, timeoutMs);
   try {
     return await Promise.race([
-      performRuntimeRequest(path, parser, requestInit, controller.signal),
+      performRuntimeRequest(
+        runtimeUrl,
+        path,
+        parser,
+        requestInit,
+        controller.signal,
+      ),
       aborted,
     ]);
   } catch (error: unknown) {
@@ -70,17 +72,33 @@ export async function requestRuntime<Result>(
   }
 }
 
+async function waitForRuntimeUrl(
+  signal: AbortSignal | null | undefined,
+): Promise<string> {
+  if (signal?.aborted) throw abortReason(signal);
+  const resolution = resolveRuntimeUrl();
+  if (!signal) return resolution;
+
+  let abortListener: (() => void) | undefined;
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    abortListener = () => reject(abortReason(signal));
+    signal.addEventListener("abort", abortListener, { once: true });
+  });
+  try {
+    return await Promise.race([resolution, cancelled]);
+  } finally {
+    if (abortListener) signal.removeEventListener("abort", abortListener);
+  }
+}
+
 async function performRuntimeRequest<Result>(
+  runtimeUrl: string,
   path: string,
   parser: RuntimeResponseParser<Result>,
   init: RequestInit,
   signal: AbortSignal,
 ): Promise<Result> {
-  const runtimeUrl = await resolveRuntimeUrl();
-  if (signal.aborted)
-    throw signal.reason instanceof Error
-      ? signal.reason
-      : new DOMException("Runtime request aborted", "AbortError");
+  if (signal.aborted) throw abortReason(signal);
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
@@ -103,6 +121,20 @@ async function performRuntimeRequest<Result>(
   } catch (error: unknown) {
     throw new Error(`Runtime 返回了无效响应：${path}`, { cause: error });
   }
+}
+
+function abortReason(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason;
+  if (reason instanceof DOMException || reason instanceof Error) return reason;
+  if (reason && typeof reason === "object") {
+    const candidate = reason as { message?: unknown; name?: unknown };
+    if (
+      typeof candidate.message === "string" &&
+      typeof candidate.name === "string"
+    )
+      return new DOMException(candidate.message, candidate.name);
+  }
+  return new DOMException("Runtime request aborted", "AbortError");
 }
 
 async function readJson(response: Response): Promise<unknown> {
