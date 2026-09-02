@@ -807,4 +807,14 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        21,
+        """
+        ALTER TABLE memory_records ADD COLUMN origin_proposal_id TEXT;
+
+        CREATE UNIQUE INDEX memory_records_origin_proposal_idx
+            ON memory_records(origin_proposal_id)
+            WHERE origin_proposal_id IS NOT NULL;
+        """,
+    ),
 )

@@ -83,7 +83,17 @@ class MemoryRepository(Protocol):
 
     async def decide_proposal(
         self, proposal_id: UUID, status: str, decided_at: datetime
-    ) -> None: ...
+    ) -> bool: ...
+
+    async def accept_proposal_atomically(
+        self,
+        *,
+        proposal_id: UUID,
+        record: MemoryRecord,
+        sources: Sequence[MemorySource],
+        supersede_target: UUID | None = None,
+        decided_at: datetime,
+    ) -> bool: ...
 
     async def list_proposals(
         self, *, status: str | None = None, limit: int = 100

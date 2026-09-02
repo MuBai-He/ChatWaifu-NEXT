@@ -517,6 +517,7 @@ fn publish_ready(
             runtime_url: Some(bootstrap.runtime_url),
             pid: Some(bootstrap.pid),
             workers: bootstrap.workers,
+            token: bootstrap.token,
             restart_count,
             detail: None,
         },

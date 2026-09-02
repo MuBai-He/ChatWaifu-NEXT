@@ -278,9 +278,19 @@ class CharacterKernelService:
         relationship: RelationshipState,
         revision: int,
     ) -> None:
+        where_affect = (
+            "WHERE character_states.revision <= excluded.revision"
+            if revision == 0
+            else "WHERE character_states.revision < excluded.revision"
+        )
+        where_rel = (
+            "WHERE relationship_states.revision <= excluded.revision"
+            if revision == 0
+            else "WHERE relationship_states.revision < excluded.revision"
+        )
         async with self._database.transaction() as connection:
             await connection.execute(
-                """
+                f"""
                 INSERT INTO character_states(
                     character_id, user_scope, valence, arousal, energy, attention,
                     embarrassment, tension, revision, updated_at
@@ -290,6 +300,7 @@ class CharacterKernelService:
                     energy=excluded.energy, attention=excluded.attention,
                     embarrassment=excluded.embarrassment, tension=excluded.tension,
                     revision=excluded.revision, updated_at=excluded.updated_at
+                {where_affect}
                 """,
                 (
                     character_id,
@@ -305,7 +316,7 @@ class CharacterKernelService:
                 ),
             )
             await connection.execute(
-                """
+                f"""
                 INSERT INTO relationship_states(
                     character_id, user_scope, familiarity, trust, affinity,
                     comfort, recent_tension, interaction_count, stage,
@@ -318,6 +329,7 @@ class CharacterKernelService:
                     interaction_count=excluded.interaction_count,
                     stage=excluded.stage, preferred_address=excluded.preferred_address,
                     revision=excluded.revision, updated_at=excluded.updated_at
+                {where_rel}
                 """,
                 (
                     character_id,
@@ -382,11 +394,59 @@ class _Signal:
     headpat: bool = False
 
 
+_NEGATION_PREFIXES = (
+    "不",
+    "不是",
+    "并不",
+    "决不",
+    "绝不",
+    "没",
+    "没有",
+    "别",
+    "非",
+    "并非",
+    "莫",
+    "不用",
+    "not",
+    "no",
+    "never",
+    "n't",
+    "don't",
+    "dont",
+    "doesn't",
+    "doesnt",
+    "didn't",
+    "didnt",
+    "won't",
+    "wont",
+    "can't",
+    "cant",
+)
+
+
+def _is_negated_at(text: str, index: int) -> bool:
+    prefix = text[max(0, index - 10) : index].strip()
+    return any(prefix.endswith(neg) for neg in _NEGATION_PREFIXES)
+
+
+def _has_unnegated(text: str, markers: tuple[str, ...]) -> bool:
+    for marker in markers:
+        start = 0
+        while True:
+            idx = text.find(marker, start)
+            if idx == -1:
+                break
+            if not _is_negated_at(text, idx):
+                return True
+            start = idx + len(marker)
+    return False
+
+
 def _classify(text: str) -> _Signal:
     value = text.casefold()
 
     def has(markers: tuple[str, ...]) -> bool:
-        return any(marker in value for marker in markers)
+        return _has_unnegated(value, markers)
 
     return _Signal(
         positive=has(("谢谢", "开心", "高兴", "喜欢", "可爱", "thanks", "happy")),
@@ -399,10 +459,10 @@ def _classify(text: str) -> _Signal:
         sad=has(("难过", "伤心", "哭", "sad")),
         question="?" in value
         or "？" in value
-        or has(("为什么", "怎么", "什么", "who", "why", "how")),
-        sing=has(("唱歌", "唱一首", "sing")),
-        gaze=has(("看着我", "看我", "盯着", "stare")),
-        headpat=has(("摸摸头", "摸头", "headpat", "pat your head")),
+        or any(marker in value for marker in ("为什么", "怎么", "什么", "who", "why", "how")),
+        sing=any(marker in value for marker in ("唱歌", "唱一首", "sing")),
+        gaze=any(marker in value for marker in ("看着我", "看我", "盯着", "stare")),
+        headpat=any(marker in value for marker in ("摸摸头", "摸头", "headpat", "pat your head")),
     )
 
 

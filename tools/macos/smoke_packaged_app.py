@@ -135,16 +135,22 @@ def _terminate_host(process: subprocess.Popen[bytes]) -> None:
     try:
         process.wait(timeout=20)
     except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGTERM)
+        killpg = getattr(os, "killpg", None)
+        if callable(killpg):
+            killpg(process.pid, signal.SIGTERM)
+        else:
+            process.kill()
         process.wait(timeout=10)
 
 
-def _process_exists(process_id: int) -> bool:
+def _process_exists(process_id: int | None) -> bool:
+    if process_id is None:
+        return False
     deadline = time.monotonic() + 20
     while time.monotonic() < deadline:
         try:
             os.kill(process_id, 0)
-        except ProcessLookupError:
+        except (ProcessLookupError, OSError):
             return False
         time.sleep(0.1)
     return True

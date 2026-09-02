@@ -158,7 +158,9 @@ def test_recovery_snapshot_replays_from_an_active_generation(
 ) -> None:
     slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1_000})
     settings = runtime_settings.model_copy(update={"llm": slow_llm})
-    with TestClient(create_app(settings)) as client:
+    app = create_app(settings)
+    token = app.state.container.capability_token
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
         http = cast(RuntimeHttpClient, client)
         session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
         session_id = str(session["session_id"])
@@ -504,17 +506,10 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
         time.sleep(0.01)
 
     generation_events = [item for item in events if str(item.get("generation_id")) == generation_id]
-    assert any(item["event_type"] == "assistant.text_delta" for item in generation_events)
     completed = next(
         item for item in generation_events if item["event_type"] == "assistant.generation_completed"
     )
     completed_text = str(cast(dict[str, object], completed["payload"])["text"])
-    deltas = "".join(
-        str(cast(dict[str, object], item["payload"])["text"])
-        for item in generation_events
-        if item["event_type"] == "assistant.text_delta"
-    )
-    assert deltas == completed_text
     assert "ChatWaifu NEXT" in completed_text
     assert "你好，介绍一下你自己。" in completed_text
     avatar_events = [
@@ -682,7 +677,9 @@ def test_interrupt_cancels_generation_and_rejects_late_output(
 ) -> None:
     slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1000})
     settings = runtime_settings.model_copy(update={"llm": slow_llm})
-    with TestClient(create_app(settings)) as client:
+    app = create_app(settings)
+    token = app.state.container.capability_token
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
         http = cast(RuntimeHttpClient, client)
         session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
         session_id = str(session["session_id"])
@@ -837,8 +834,10 @@ def test_reset_is_scoped_across_sessions_characters_users_and_audio(
         encoding="utf-8",
     )
     settings = runtime_settings.model_copy(update={"characters_dir": characters_dir})
+    app = create_app(settings)
+    token = app.state.container.capability_token
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
         http = cast(RuntimeHttpClient, client)
         first = cast(
             dict[str, object],
@@ -1191,7 +1190,9 @@ def test_reset_event_is_live_and_keeps_the_session_cursor_monotonic(
 def test_startup_reconciles_crash_left_audio_quarantine_from_database_truth(
     runtime_settings: Settings,
 ) -> None:
-    with TestClient(create_app(runtime_settings)) as first_client:
+    first_app = create_app(runtime_settings)
+    first_token = first_app.state.container.capability_token
+    with TestClient(first_app, headers={"Authorization": f"Bearer {first_token}"}) as first_client:
         http = cast(RuntimeHttpClient, first_client)
         session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
         session_id = str(session["session_id"])
@@ -1214,7 +1215,10 @@ def test_startup_reconciles_crash_left_audio_quarantine_from_database_truth(
     orphan_staged = quarantine_batch / f"{orphan_asset_id}.wav"
     orphan_staged.write_bytes(b"orphaned reset audio")
 
-    with TestClient(create_app(runtime_settings)) as restarted:
+    restarted_app = create_app(runtime_settings)
+    restarted_token = restarted_app.state.container.capability_token
+    headers = {"Authorization": f"Bearer {restarted_token}"}
+    with TestClient(restarted_app, headers=headers) as restarted:
         assert restarted.get("/v1/runtime/health").status_code == 200
 
     assert referenced_path.is_file()
@@ -1225,7 +1229,9 @@ def test_startup_reconciles_crash_left_audio_quarantine_from_database_truth(
 def test_reset_cancels_an_active_generation(runtime_settings: Settings) -> None:
     slow_llm = runtime_settings.llm.model_copy(update={"demo_chunk_delay_ms": 1000})
     settings = runtime_settings.model_copy(update={"llm": slow_llm})
-    with TestClient(create_app(settings)) as client:
+    app = create_app(settings)
+    token = app.state.container.capability_token
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as client:
         http = cast(RuntimeHttpClient, client)
         session = cast(dict[str, object], http.post("/v1/sessions", json={}).json())
         session_id = str(session["session_id"])

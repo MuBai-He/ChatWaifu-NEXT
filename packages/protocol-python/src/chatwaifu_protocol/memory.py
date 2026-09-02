@@ -61,6 +61,7 @@ class MemoryRecordDraft(ProtocolModel):
 class MemoryRecord(MemoryRecordDraft):
     memory_id: UUID
     source_event_ids: list[UUID] = Field(min_length=1)
+    origin_proposal_id: UUID | None = None
     valid_from: AwareDatetime | None = None
     valid_to: AwareDatetime | None = None
     state: MemoryState = "active"

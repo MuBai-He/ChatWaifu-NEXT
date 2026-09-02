@@ -90,7 +90,7 @@ class ConversationRepository(Protocol):
         source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None: ...
+    ) -> bool: ...
 
     async def cancel_generation(
         self,
@@ -99,7 +99,7 @@ class ConversationRepository(Protocol):
         generation_id: UUID,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None: ...
+    ) -> bool: ...
 
     async def fail_generation(
         self,
@@ -109,4 +109,4 @@ class ConversationRepository(Protocol):
         error_code: str,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None: ...
+    ) -> bool: ...

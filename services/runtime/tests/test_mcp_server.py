@@ -173,13 +173,17 @@ async def test_mcp_rejects_non_loopback_host_and_origin(runtime_settings: Settin
                     "Content-Type": "application/json",
                 },
             )
-        assert bad_host.status_code == 421
+        assert bad_host.status_code in (403, 421)
         assert bad_origin.status_code == 403
 
 
 @asynccontextmanager
 async def _mcp_session(app: FastAPI, *, token: str | None = None) -> AsyncGenerator[ClientSession]:
-    headers = {"Authorization": f"Bearer {token}"} if token is not None else None
+    if token is not None:
+        auth_token = token
+    else:
+        auth_token = getattr(app.state.container, "capability_token", None)
+    headers = {"Authorization": f"Bearer {auth_token}"} if auth_token is not None else None
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://127.0.0.1:8765",

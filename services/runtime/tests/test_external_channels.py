@@ -88,7 +88,8 @@ async def test_external_turn_is_idempotent_text_only_and_cross_surface_visible(
         assert snapshot.delivery_status is ChannelDeliveryStatus.PENDING
         events = await container.event_store.read_stream(snapshot.session_id, limit=200)
         event_types = {str(item["event_type"]) for item in events}
-        assert "assistant.text_delta" in event_types
+        assert "assistant.generation_started" in event_types
+        assert "assistant.text_delta" not in event_types
         assert not any(event_type.startswith("assistant.audio") for event_type in event_types)
         assert "avatar.cue_emitted" not in event_types
 

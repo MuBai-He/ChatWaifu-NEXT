@@ -247,15 +247,19 @@ class MemoryService:
             raise RuntimeError(f"memory proposal is already {proposal.status}")
         now = datetime.now(UTC)
         if decision == "reject":
-            await self._repository.decide_proposal(proposal_id, "rejected", now)
-            decided = proposal.model_copy(update={"status": "rejected", "decided_at": now})
+            decided = await self._repository.decide_proposal(proposal_id, "rejected", now)
+            if not decided:
+                raise RuntimeError("memory proposal was already decided concurrently")
+            rejected_proposal = proposal.model_copy(
+                update={"status": "rejected", "decided_at": now}
+            )
             await self._emit(
                 session_id,
                 None,
                 "memory.proposed",
                 {"proposal_id": str(proposal_id), "decision": "rejected"},
             )
-            return decided
+            return rejected_proposal
         if proposal.candidate is None:
             raise RuntimeError("accepted memory proposal has no candidate")
         extracted = ExtractedMemoryCandidate(
@@ -265,8 +269,95 @@ class MemoryService:
         )
         if self._policy.decide_write(extracted, confirmed=True) is not MemoryWriteDecision.COMMIT:
             raise RuntimeError("memory proposal is not permitted by policy")
-        await self._commit_proposal(session_id, proposal)
-        await self._repository.decide_proposal(proposal_id, "accepted", now)
+
+        draft = proposal.candidate
+        evidence: list[MemoryEventEvidence] = []
+        for event_id in proposal.evidence_event_ids:
+            item = await self._repository.event_evidence(event_id)
+            if item is None:
+                raise ValueError(f"memory evidence event does not exist: {event_id}")
+            evidence.append(item)
+        record = MemoryRecord(
+            **draft.model_dump(),
+            memory_id=uuid4(),
+            source_event_ids=[item.event_id for item in evidence],
+            valid_from=draft.observed_at,
+            state="active",
+            supersedes=proposal.target_memory_id,
+            pinned=draft.kind == "core",
+            created_at=now,
+            updated_at=now,
+        )
+        sources = [
+            MemorySource(
+                source_id=uuid4(),
+                memory_id=record.memory_id,
+                source_event_id=item.event_id,
+                session_id=item.session_id,
+                turn_id=item.turn_id,
+                source_kind=(
+                    "assistant_spoken"
+                    if item.event_type == "assistant.spoken_text_committed"
+                    else "user_turn"
+                    if item.event_type == "user.turn_committed"
+                    else "memory_management"
+                ),
+                created_at=now,
+                channel_attribution=item.channel_attribution,
+            )
+            for item in evidence
+        ]
+        accepted_ok = await self._repository.accept_proposal_atomically(
+            proposal_id=proposal_id,
+            record=record,
+            sources=sources,
+            supersede_target=proposal.target_memory_id,
+            decided_at=now,
+        )
+        if not accepted_ok:
+            raise RuntimeError("memory proposal was already decided concurrently")
+
+        try:
+            await self._semantic_index.upsert(record)
+        except Exception as error:
+            logger.warning(
+                "memory semantic indexing failed",
+                extra={"memory_id": str(record.memory_id), "error": type(error).__name__},
+            )
+        try:
+            await self._temporal_graph.upsert(record)
+        except Exception as error:
+            logger.warning(
+                "memory temporal graph indexing failed",
+                extra={"memory_id": str(record.memory_id), "error": type(error).__name__},
+            )
+        if proposal.target_memory_id:
+            try:
+                await self._semantic_index.delete(proposal.target_memory_id)
+                await self._temporal_graph.delete(proposal.target_memory_id)
+            except Exception:
+                pass
+            await self._emit(
+                session_id,
+                evidence[0].turn_id if evidence else None,
+                "memory.superseded",
+                {
+                    "memory_id": str(proposal.target_memory_id),
+                    "superseded_by": str(record.memory_id),
+                },
+                causation_id=evidence[0].event_id if evidence else None,
+            )
+        await self._emit(
+            session_id,
+            evidence[0].turn_id if evidence else None,
+            "memory.committed",
+            {
+                "memory_id": str(record.memory_id),
+                "kind": record.kind,
+                "policy": "explicit",
+            },
+            causation_id=evidence[0].event_id if evidence else None,
+        )
         return proposal.model_copy(update={"status": "accepted", "decided_at": now})
 
     async def correct(self, session_id: UUID, memory_id: UUID, text: str) -> MemoryRecord:

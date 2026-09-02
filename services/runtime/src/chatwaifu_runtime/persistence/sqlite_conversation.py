@@ -265,8 +265,25 @@ class SQLiteConversationRepository(ConversationRepository):
         source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None:
+    ) -> bool:
         async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE generations SET state = ?, output_text = ?, completed_at = ?
+                WHERE generation_id = ? AND state = ?
+                """,
+                (
+                    GenerationState.COMPLETED.value,
+                    output,
+                    occurred_at.isoformat(),
+                    str(generation_id),
+                    GenerationState.RUNNING.value,
+                ),
+            )
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            if not updated:
+                return False
             await connection.execute(
                 """
                 INSERT INTO turns(
@@ -283,19 +300,8 @@ class SQLiteConversationRepository(ConversationRepository):
                     source_context.to_json() if source_context is not None else None,
                 ),
             )
-            await connection.execute(
-                """
-                UPDATE generations SET state = ?, output_text = ?, completed_at = ?
-                WHERE generation_id = ?
-                """,
-                (
-                    GenerationState.COMPLETED.value,
-                    output,
-                    occurred_at.isoformat(),
-                    str(generation_id),
-                ),
-            )
             await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            return True
 
     async def cancel_generation(
         self,
@@ -304,9 +310,9 @@ class SQLiteConversationRepository(ConversationRepository):
         generation_id: UUID,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None:
+    ) -> bool:
         async with self._database.transaction() as connection:
-            await connection.execute(
+            cursor = await connection.execute(
                 """
                 UPDATE generations SET state = ?, invalidated_at = ?
                 WHERE generation_id = ? AND state = ?
@@ -318,7 +324,11 @@ class SQLiteConversationRepository(ConversationRepository):
                     GenerationState.RUNNING.value,
                 ),
             )
-            await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            if updated:
+                await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            return updated
 
     async def fail_generation(
         self,
@@ -328,21 +338,26 @@ class SQLiteConversationRepository(ConversationRepository):
         error_code: str,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> None:
+    ) -> bool:
         async with self._database.transaction() as connection:
-            await connection.execute(
+            cursor = await connection.execute(
                 """
                 UPDATE generations SET state = ?, error_code = ?, completed_at = ?
-                WHERE generation_id = ?
+                WHERE generation_id = ? AND state = ?
                 """,
                 (
                     GenerationState.FAILED.value,
                     error_code,
                     occurred_at.isoformat(),
                     str(generation_id),
+                    GenerationState.RUNNING.value,
                 ),
             )
-            await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            if updated:
+                await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            return updated
 
     @staticmethod
     async def _insert_generation(

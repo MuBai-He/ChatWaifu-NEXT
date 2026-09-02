@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +19,7 @@ from chatwaifu_protocol.memory import (
 )
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
@@ -222,3 +224,66 @@ async def test_prompt_compiler_budgets_durable_memory_source_and_drops_oversized
     assert malicious_label not in source_context
     assert result.recalled_memory_texts == ("用户上午通过微信约好晚上继续聊 Python",)
     assert result.report.memory_tokens <= 300
+
+@pytest.mark.asyncio
+async def test_character_kernel_service_negation_handling(runtime_settings: Settings) -> None:
+    from chatwaifu_runtime.character_kernel.service import _classify
+
+    # Test classifier directly
+    pos = _classify("我喜欢你")
+    assert pos.positive and not pos.hostile
+
+    neg_pos = _classify("我不喜欢你")
+    assert not neg_pos.positive
+
+    neg_pos2 = _classify("我并不喜欢这个")
+    assert not neg_pos2.positive
+
+    neg_pos_en = _classify("I don't like this")
+    assert not neg_pos_en.positive
+
+    hostile = _classify("你是笨蛋")
+    assert hostile.hostile and not hostile.positive
+
+    neg_hostile = _classify("你不是笨蛋")
+    assert not neg_hostile.hostile
+
+    neg_hostile2 = _classify("you are not stupid")
+    assert not neg_hostile2.hostile
+
+
+@pytest.mark.asyncio
+async def test_character_kernel_service_revision_cas(runtime_settings: Settings) -> None:
+    from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        service = container.character_kernel
+        session = await container.sessions.create_session("default")
+        initial = await service.snapshot("default")
+        assert initial.revision == 0
+
+        # Turn 1: positive interaction increments revision
+        ctx = await service.observe_user_turn(
+            session_id=session.session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            character_id="default",
+            text="谢谢你，我很开心",
+        )
+        s1 = ctx.snapshot
+        assert s1.revision == 1
+        assert s1.affect.valence > initial.affect.valence
+
+        # Direct persist with older revision (revision 0) does not overwrite newer state
+        old_affect = s1.affect.model_copy(update={"valence": 0.1})
+        old_rel = s1.relationship.model_copy(update={"affinity": 0.1})
+        await service._persist("default", old_affect, old_rel, revision=0)
+
+        # Snapshot should still have revision 1 with higher valence
+        current = await service.snapshot("default")
+        assert current.revision == 1
+        assert current.affect.valence > 0.2  # did not get overwritten by old_affect (0.1)
+    finally:
+        await container.stop()

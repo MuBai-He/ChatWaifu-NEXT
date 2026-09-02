@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
 from chatwaifu_runtime.api.routes import router
 from chatwaifu_runtime.bootstrap.container import (
     RuntimeCleanupError,
@@ -17,7 +18,13 @@ from chatwaifu_runtime.config.settings import Settings, load_settings
 from chatwaifu_runtime.mcp_server import RuntimeMcpServer
 from chatwaifu_runtime.observability.logging import configure_logging
 
-DESKTOP_WEB_ORIGINS = ("http://tauri.localhost", "tauri://localhost")
+DESKTOP_WEB_ORIGINS = (
+    "http://tauri.localhost",
+    "tauri://localhost",
+    "https://tauri.localhost",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -62,10 +69,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         raise BaseExceptionGroup("application lifespan and cleanup failed", errors)
 
     app = FastAPI(title="ChatWaifu NEXT Runtime", version="0.1.0", lifespan=lifespan)
+    app.state.container = container
+    app.state.mcp_server = mcp_server
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(
-            dict.fromkeys((resolved_settings.runtime.web_origin, *DESKTOP_WEB_ORIGINS))
+            dict.fromkeys(
+                (
+                    resolved_settings.runtime.web_origin,
+                    *DESKTOP_WEB_ORIGINS,
+                    *resolved_settings.security.allowed_origins,
+                )
+            )
         ),
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -78,6 +93,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "MCP-Session-Id",
         ],
         expose_headers=["MCP-Protocol-Version", "MCP-Session-Id"],
+    )
+    app.add_middleware(
+        LocalClientGuardMiddleware,
+        settings=resolved_settings,
+        capability_token=container.capability_token,
+        ticket_store=container.ws_ticket_store,
     )
     app.include_router(router)
     # Keep this catch-all mount last so existing /v1 and documentation routes

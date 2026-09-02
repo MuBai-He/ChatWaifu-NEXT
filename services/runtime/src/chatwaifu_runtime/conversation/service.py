@@ -613,7 +613,9 @@ class ConversationService:
             ):
                 self._ensure_current(accepted)
                 output += delta
-                await self._emit_generic(accepted, "assistant.text_delta", {"text": delta})
+                await self._emit_generic(
+                    accepted, "assistant.text_delta", {"text": delta}, ephemeral=True
+                )
                 if segmenter is not None:
                     for segment in segmenter.feed(delta):
                         await deliver_segment(segment)
@@ -661,11 +663,11 @@ class ConversationService:
         *,
         emit_avatar: bool,
         source_context: ConversationSourceContext | None,
-    ) -> None:
+    ) -> bool:
         self._begin_completion(accepted)
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
-        await self._repository.complete_generation(
+        completed = await self._repository.complete_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             assistant_turn_id=assistant_turn_id,
@@ -674,13 +676,32 @@ class ConversationService:
             occurred_at=now,
             set_session_idle=self._is_current(accepted),
         )
-        if emit_avatar:
-            await self._emit_avatar(accepted, "state", "idle", priority=90)
-        await self._emit_generic(
-            accepted,
-            "assistant.generation_completed",
-            {"text": output, "assistant_turn_id": str(assistant_turn_id)},
-        )
+        if not completed:
+            logger.info(
+                "generation completion skipped because state is no longer running",
+                extra={
+                    "session_id": str(accepted.session_id),
+                    "generation_id": str(accepted.generation_id),
+                },
+            )
+            return False
+        try:
+            if emit_avatar:
+                await self._emit_avatar(accepted, "state", "idle", priority=90)
+            await self._emit_generic(
+                accepted,
+                "assistant.generation_completed",
+                {"text": output, "assistant_turn_id": str(assistant_turn_id)},
+            )
+        except Exception:
+            logger.exception(
+                "failed emitting completion events after generation committed",
+                extra={
+                    "session_id": str(accepted.session_id),
+                    "generation_id": str(accepted.generation_id),
+                },
+            )
+        return True
 
     async def _cancelled(
         self,
@@ -690,7 +711,7 @@ class ConversationService:
         set_session_idle: bool | None = None,
     ) -> None:
         now = datetime.now(UTC)
-        await self._repository.cancel_generation(
+        cancelled = await self._repository.cancel_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             occurred_at=now,
@@ -698,6 +719,15 @@ class ConversationService:
                 self._is_current(accepted) if set_session_idle is None else set_session_idle
             ),
         )
+        if not cancelled:
+            logger.info(
+                "generation cancellation skipped because state is no longer running",
+                extra={
+                    "session_id": str(accepted.session_id),
+                    "generation_id": str(accepted.generation_id),
+                },
+            )
+            return
         await self._emit_generic(accepted, "assistant.generation_cancelled", {"reason": reason})
         await self._emit_generic(accepted, "conversation.interrupted", {"reason": reason})
 
@@ -711,7 +741,7 @@ class ConversationService:
         set_session_idle: bool | None = None,
     ) -> None:
         now = datetime.now(UTC)
-        await self._repository.fail_generation(
+        failed = await self._repository.fail_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             error_code=error_code,
@@ -720,6 +750,15 @@ class ConversationService:
                 self._is_current(accepted) if set_session_idle is None else set_session_idle
             ),
         )
+        if not failed:
+            logger.info(
+                "generation failure skipped because state is no longer running",
+                extra={
+                    "session_id": str(accepted.session_id),
+                    "generation_id": str(accepted.generation_id),
+                },
+            )
+            return
         await self._publisher.emit(
             ErrorRaisedEvent(
                 event_id=uuid4(),
@@ -741,7 +780,12 @@ class ConversationService:
         )
 
     async def _emit_generic(
-        self, accepted: GenerationAccepted, event_type: str, payload: dict[str, object]
+        self,
+        accepted: GenerationAccepted,
+        event_type: str,
+        payload: dict[str, object],
+        *,
+        ephemeral: bool = False,
     ) -> None:
         event = GenericCoreEvent.model_validate(
             {
@@ -756,7 +800,10 @@ class ConversationService:
                 "payload": payload,
             }
         )
-        await self._publisher.emit(event)
+        if ephemeral:
+            await self._publisher.publish_ephemeral(event)
+        else:
+            await self._publisher.emit(event)
 
     async def _emit_avatar(
         self,

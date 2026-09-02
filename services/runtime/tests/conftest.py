@@ -24,5 +24,7 @@ def runtime_settings(tmp_path: Path) -> Settings:
 
 @pytest.fixture
 def client(runtime_settings: Settings) -> Iterator[TestClient]:
-    with TestClient(create_app(runtime_settings)) as test_client:
+    app = create_app(runtime_settings)
+    token = app.state.container.capability_token
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as test_client:
         yield test_client

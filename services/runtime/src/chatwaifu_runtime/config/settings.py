@@ -58,6 +58,9 @@ class SecurityConfig(BaseModel):
 
     admin_token: SecretStr | None = None
     windows_appcontainer_launcher: Path | None = None
+    allowed_hosts: list[str] = Field(default_factory=list)
+    allowed_origins: list[str] = Field(default_factory=list)
+    auth_enabled: bool = True
 
 
 class LlmConfig(BaseModel):

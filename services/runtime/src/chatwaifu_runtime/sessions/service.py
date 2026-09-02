@@ -99,22 +99,47 @@ class SessionService:
         )
         return tuple(SessionSnapshot.model_validate(dict(row)) for row in rows)
 
-    async def transition_session(self, session_id: UUID, target: SessionState) -> SessionSnapshot:
+    async def transition_session(
+        self,
+        session_id: UUID,
+        target: SessionState,
+        *,
+        expected_revision: int | None = None,
+    ) -> SessionSnapshot:
         current = await self.get_session(session_id)
         if current is None:
             raise KeyError(f"unknown session {session_id}")
+        if expected_revision is not None and current.revision != expected_revision:
+            raise InvalidSessionTransition(
+                f"session {session_id} revision mismatch "
+                f"(expected {expected_revision}, current {current.revision})"
+            )
         if target not in ALLOWED_TRANSITIONS[current.state]:
             raise InvalidSessionTransition(f"cannot transition {current.state} -> {target}")
         now = datetime.now(UTC)
         revision = current.revision + 1
         async with self._database.transaction() as connection:
-            await connection.execute(
+            cursor = await connection.execute(
                 """
                 UPDATE sessions SET state = ?, revision = ?, updated_at = ?
-                WHERE session_id = ?
+                WHERE session_id = ? AND revision = ? AND state = ?
                 """,
-                (target.value, revision, now.isoformat(), str(session_id)),
+                (
+                    target.value,
+                    revision,
+                    now.isoformat(),
+                    str(session_id),
+                    current.revision,
+                    current.state.value,
+                ),
             )
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            if not updated:
+                raise InvalidSessionTransition(
+                    f"session {session_id} state/revision changed concurrently "
+                    f"(expected revision {current.revision}, state {current.state})"
+                )
             event = await self._event_store.append_in_transaction(
                 connection,
                 GenericCoreEvent(

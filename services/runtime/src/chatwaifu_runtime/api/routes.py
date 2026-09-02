@@ -127,6 +127,13 @@ async def runtime_health(request: Request) -> RuntimeHealth:
     )
 
 
+@router.post("/runtime/ws-ticket")
+async def create_ws_ticket(request: Request) -> dict[str, object]:
+    container = _container(request)
+    ticket = await container.ws_ticket_store.create_ticket(ttl_seconds=30.0)
+    return {"ticket": ticket, "expires_in": 30}
+
+
 @router.post(
     "/worker-packs/integrity/verify",
     response_model=WorkerPackIntegrityResponse,

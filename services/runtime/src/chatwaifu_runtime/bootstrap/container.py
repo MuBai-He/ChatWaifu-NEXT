@@ -1,12 +1,14 @@
 """Composition root and ordered Runtime lifecycle."""
 
 import asyncio
+import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import cast
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
+from chatwaifu_runtime.api.guard import WebSocketTicketStore
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
@@ -71,6 +73,12 @@ class RuntimeLifecycleError(ExceptionGroup):
 class RuntimeContainer:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.capability_token = (
+            settings.security.admin_token.get_secret_value()
+            if settings.security.admin_token
+            else secrets.token_urlsafe(32)
+        )
+        self.ws_ticket_store = WebSocketTicketStore()
         self.database = Database(settings.database_path, settings.storage)
         self.event_hub = EventHub(settings.runtime.event_queue_size)
         self.event_store = EventStore(self.database)

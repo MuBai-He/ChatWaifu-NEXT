@@ -112,9 +112,10 @@ def main(arguments: list[str] | None = None) -> int:
 
         settings = load_settings()
         configure_logging(settings.log_level)
+        app = create_app(settings)
         server = uvicorn.Server(
             uvicorn.Config(
-                create_app(settings),
+                app,
                 host=settings.runtime.host,
                 port=runtime_port,
                 log_config=None,
@@ -139,7 +140,8 @@ def main(arguments: list[str] | None = None) -> int:
             raise RuntimeError("Packaged Runtime stopped before startup completed")
 
         runtime_url = f"http://127.0.0.1:{runtime_port}"
-        _write_bootstrap(runtime_url, workers=worker_packs.bootstrap_workers)
+        token = getattr(getattr(app.state, "container", None), "capability_token", None)
+        _write_bootstrap(runtime_url, workers=worker_packs.bootstrap_workers, token=token)
         while server_thread.is_alive() and not stopped.is_set():
             worker_failure = worker_packs.failed_worker()
             if worker_failure is not None:
@@ -354,13 +356,19 @@ def _loopback_listener() -> socket.socket:
     return listener
 
 
-def _write_bootstrap(runtime_url: str, *, workers: list[str] | None = None) -> None:
+def _write_bootstrap(
+    runtime_url: str,
+    *,
+    workers: list[str] | None = None,
+    token: str | None = None,
+) -> None:
     payload: dict[str, object] = {
         "schema_version": STACK_VERSION,
         "type": "runtime.ready",
         "runtime_url": runtime_url,
         "pid": os.getpid(),
         "workers": workers or [],
+        "token": token,
     }
     print(f"{BOOTSTRAP_PREFIX}{json.dumps(payload, separators=(',', ':'))}", flush=True)
 

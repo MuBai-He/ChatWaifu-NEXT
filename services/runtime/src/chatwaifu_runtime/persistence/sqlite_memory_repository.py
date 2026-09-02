@@ -140,8 +140,8 @@ class SQLiteMemoryRepository(MemoryRepository):
                     memory_id, namespace, kind, subject_id, predicate, value_json,
                     text, normalized_text, search_terms, observed_at, valid_from,
                     valid_to, confidence, importance, sensitivity, state,
-                    supersedes, pinned, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    supersedes, pinned, created_at, updated_at, origin_proposal_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(record.memory_id),
@@ -164,6 +164,7 @@ class SQLiteMemoryRepository(MemoryRepository):
                     int(record.pinned),
                     record.created_at.isoformat(),
                     record.updated_at.isoformat(),
+                    str(record.origin_proposal_id) if record.origin_proposal_id else None,
                 ),
             )
             for source in sources:
@@ -246,14 +247,107 @@ class SQLiteMemoryRepository(MemoryRepository):
         )
         return _proposal_from_row(dict(row)) if row is not None else None
 
-    async def decide_proposal(self, proposal_id: UUID, status: str, decided_at: datetime) -> None:
-        await self._execute_write(
-            """
-            UPDATE memory_proposals SET status = ?, decided_at = ?
-            WHERE proposal_id = ? AND status = 'pending'
-            """,
-            (status, decided_at.isoformat(), str(proposal_id)),
-        )
+    async def decide_proposal(self, proposal_id: UUID, status: str, decided_at: datetime) -> bool:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE memory_proposals SET status = ?, decided_at = ?
+                WHERE proposal_id = ? AND status = 'pending'
+                """,
+                (status, decided_at.isoformat(), str(proposal_id)),
+            )
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            return updated
+
+    async def accept_proposal_atomically(
+        self,
+        *,
+        proposal_id: UUID,
+        record: MemoryRecord,
+        sources: Sequence[MemorySource],
+        supersede_target: UUID | None = None,
+        decided_at: datetime,
+    ) -> bool:
+        if not sources:
+            raise ValueError("memory records require at least one source")
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE memory_proposals SET status = 'accepted', decided_at = ?
+                WHERE proposal_id = ? AND status = 'pending'
+                """,
+                (decided_at.isoformat(), str(proposal_id)),
+            )
+            updated = cursor.rowcount > 0
+            await cursor.close()
+            if not updated:
+                return False
+            if supersede_target is not None:
+                await connection.execute(
+                    """
+                    UPDATE memory_records SET state = 'superseded', updated_at = ?
+                    WHERE memory_id = ? AND state = 'active'
+                    """,
+                    (record.created_at.isoformat(), str(supersede_target)),
+                )
+            await connection.execute(
+                """
+                INSERT INTO memory_records(
+                    memory_id, namespace, kind, subject_id, predicate, value_json,
+                    text, normalized_text, search_terms, observed_at, valid_from,
+                    valid_to, confidence, importance, sensitivity, state,
+                    supersedes, pinned, created_at, updated_at, origin_proposal_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(record.memory_id),
+                    record.namespace,
+                    record.kind,
+                    record.subject_id,
+                    record.predicate,
+                    json.dumps(record.value, ensure_ascii=False),
+                    record.text,
+                    _normalize(record.text),
+                    _search_terms(record.text),
+                    record.observed_at.isoformat(),
+                    record.valid_from.isoformat() if record.valid_from else None,
+                    record.valid_to.isoformat() if record.valid_to else None,
+                    record.confidence,
+                    record.importance,
+                    record.sensitivity.value,
+                    record.state,
+                    str(record.supersedes) if record.supersedes else None,
+                    int(record.pinned),
+                    record.created_at.isoformat(),
+                    record.updated_at.isoformat(),
+                    str(record.origin_proposal_id or proposal_id),
+                ),
+            )
+            for source in sources:
+                await connection.execute(
+                    """
+                    INSERT INTO memory_sources(
+                        source_id, memory_id, source_event_id, session_id,
+                        turn_id, source_kind, created_at, channel_attribution_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(source.source_id),
+                        str(source.memory_id),
+                        str(source.source_event_id),
+                        str(source.session_id),
+                        str(source.turn_id) if source.turn_id else None,
+                        source.source_kind,
+                        source.created_at.isoformat(),
+                        (
+                            source.channel_attribution.model_dump_json()
+                            if source.channel_attribution is not None
+                            else None
+                        ),
+                    ),
+                )
+            return True
 
     async def list_proposals(
         self, *, status: str | None = None, limit: int = 100
@@ -438,6 +532,9 @@ def _record_from_row(row: dict[str, object]) -> MemoryRecord:
             "state": row["state"],
             "supersedes": row.get("supersedes"),
             "pinned": bool(row["pinned"]),
+            "origin_proposal_id": (
+                UUID(str(row["origin_proposal_id"])) if row.get("origin_proposal_id") else None
+            ),
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
         }
