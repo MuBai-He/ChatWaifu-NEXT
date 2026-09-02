@@ -528,3 +528,91 @@ async def test_windows_force_exit_recovers_wal_without_partial_domain_rows(
             assert counts[0] == counts[1] == counts[2]
         finally:
             await recovered.close()
+
+
+@pytest.mark.asyncio
+async def test_migration_20_to_21_non_empty_db_handles_null_origin_proposal_id(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "migration-20-21.db"
+    storage = StorageConfig(database_path=path)
+    legacy = Database(
+        path,
+        storage,
+        migrations=tuple(item for item in MIGRATIONS if item[0] <= 20),
+    )
+    await legacy.open()
+    await legacy.close()
+
+    now = datetime.now(UTC).isoformat()
+    record_id_1 = str(uuid4())
+    record_id_2 = str(uuid4())
+
+    with sqlite3.connect(path) as connection:
+        for record_id, text in [(record_id_1, "Fact 1"), (record_id_2, "Fact 2")]:
+            connection.execute(
+                """
+                INSERT INTO memory_records(
+                    memory_id, namespace, kind, subject_id, predicate, value_json,
+                    text, normalized_text, search_terms, observed_at, valid_from,
+                    confidence, importance, sensitivity, state, pinned,
+                    created_at, updated_at
+                ) VALUES (
+                    ?, 'character/default/user/local', 'semantic.fact', 'user',
+                    'fact', 'null', ?,
+                    ?, ?, ?, ?,
+                    0.9, 0.8, 'private', 'active', 0, ?, ?
+                )
+                """,
+                (record_id, text, text.lower(), text.lower(), now, now, now, now),
+            )
+
+    migrated = Database(path, storage)
+    await migrated.open()
+    try:
+        rows = await migrated.fetchall(
+            "SELECT memory_id, origin_proposal_id FROM memory_records ORDER BY memory_id"
+        )
+        assert len(rows) == 2
+        for row in rows:
+            assert row[1] is None
+
+        proposal_id_1 = str(uuid4())
+        record_id_3 = str(uuid4())
+        await migrated.execute(
+            """
+            INSERT INTO memory_records(
+                memory_id, namespace, kind, subject_id, predicate, value_json,
+                text, normalized_text, search_terms, observed_at, valid_from,
+                confidence, importance, sensitivity, state, pinned,
+                created_at, updated_at, origin_proposal_id
+            ) VALUES (
+                ?, 'character/default/user/local', 'semantic.fact', 'user',
+                'fact', 'null', 'Fact 3',
+                'fact 3', 'fact 3', ?, ?,
+                0.9, 0.8, 'private', 'active', 0, ?, ?, ?
+            )
+            """,
+            (record_id_3, now, now, now, now, proposal_id_1),
+        )
+
+        record_id_4 = str(uuid4())
+        with pytest.raises(sqlite3.IntegrityError):
+            await migrated.execute(
+                """
+                INSERT INTO memory_records(
+                    memory_id, namespace, kind, subject_id, predicate, value_json,
+                    text, normalized_text, search_terms, observed_at, valid_from,
+                    confidence, importance, sensitivity, state, pinned,
+                    created_at, updated_at, origin_proposal_id
+                ) VALUES (
+                    ?, 'character/default/user/local', 'semantic.fact', 'user',
+                    'fact', 'null', 'Fact 4',
+                    'fact 4', 'fact 4', ?, ?,
+                    0.9, 0.8, 'private', 'active', 0, ?, ?, ?
+                )
+                """,
+                (record_id_4, now, now, now, now, proposal_id_1),
+            )
+    finally:
+        await migrated.close()

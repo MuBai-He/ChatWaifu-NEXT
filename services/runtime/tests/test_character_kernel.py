@@ -225,6 +225,7 @@ async def test_prompt_compiler_budgets_durable_memory_source_and_drops_oversized
     assert result.recalled_memory_texts == ("用户上午通过微信约好晚上继续聊 Python",)
     assert result.report.memory_tokens <= 300
 
+
 @pytest.mark.asyncio
 async def test_character_kernel_service_negation_handling(runtime_settings: Settings) -> None:
     from chatwaifu_runtime.character_kernel.service import _classify

@@ -243,3 +243,121 @@ async def test_concurrent_session_transitions_cas_rejection(runtime_settings: Se
         assert isinstance(exceptions[0], InvalidSessionTransition)
     finally:
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> None:
+    db_path = tmp_path / "runtime.db"
+    database = Database(db_path, StorageConfig(database_path=db_path))
+    await database.open()
+    event_store = EventStore(database)
+    repo = SQLiteConversationRepository(database, event_store)
+
+    session_id = uuid4()
+    turn_id = uuid4()
+    gen_id = uuid4()
+    assistant_turn_id = uuid4()
+    now = datetime.now(UTC)
+
+    async with database.transaction() as conn:
+        await conn.execute(
+            """
+            INSERT INTO sessions (
+                session_id, character_id, state, conversation_state,
+                revision, next_sequence, created_at, updated_at
+            ) VALUES (?, 'default', 'active', 'idle', 0, 1, ?, ?)
+            """,
+            (str(session_id), now.isoformat(), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO turns(turn_id, session_id, role, created_at)
+            VALUES (?, ?, 'user', ?)
+            """,
+            (str(turn_id), str(session_id), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO generations (
+                generation_id, session_id, turn_id, state, backend_kind, started_at
+            ) VALUES (?, ?, ?, 'running', 'demo', ?)
+            """,
+            (str(gen_id), str(session_id), str(turn_id), now.isoformat()),
+        )
+
+    # 1. First complete succeeds
+    completed = await repo.complete_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        assistant_turn_id=assistant_turn_id,
+        output="First reply",
+        source_context=None,
+        occurred_at=now,
+        set_session_idle=True,
+    )
+    assert completed is True
+
+    # 2. Duplicate complete fails CAS
+    second_assistant_turn_id = uuid4()
+    second_completed = await repo.complete_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        assistant_turn_id=second_assistant_turn_id,
+        output="Conflicting second reply",
+        source_context=None,
+        occurred_at=now,
+        set_session_idle=True,
+    )
+    assert second_completed is False
+
+    # 3. Duplicate fail fails CAS
+    second_failed = await repo.fail_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        error_code="PROVIDER_ERROR",
+        occurred_at=now,
+        set_session_idle=True,
+    )
+    assert second_failed is False
+
+    # 4. Duplicate cancel fails CAS
+    second_cancelled = await repo.cancel_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        set_session_idle=True,
+    )
+    assert second_cancelled is False
+
+    # Assert invariant: only 1 assistant turn exists with first output
+    async with database.transaction() as conn:
+        cursor = await conn.execute(
+            """
+            SELECT turn_id, role, committed_text FROM turns
+            WHERE session_id = ? AND role = 'assistant'
+            """,
+            (str(session_id),),
+        )
+        turns = list(await cursor.fetchall())
+        assert len(turns) == 1
+        assert turns[0][0] == str(assistant_turn_id)
+        assert turns[0][2] == "First reply"
+        await cursor.close()
+
+        # Assert generation record remains strictly COMPLETED with first output
+        cursor = await conn.execute(
+            """
+            SELECT state, output_text, error_code, invalidated_at
+            FROM generations WHERE generation_id = ?
+            """,
+            (str(gen_id),),
+        )
+        gen = await cursor.fetchone()
+        assert gen is not None
+        assert gen[0] == GenerationState.COMPLETED.value
+        assert gen[1] == "First reply"
+        assert gen[2] is None
+        assert gen[3] is None
+        await cursor.close()
+
+    await database.close()

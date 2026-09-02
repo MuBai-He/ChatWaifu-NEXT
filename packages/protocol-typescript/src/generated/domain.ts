@@ -773,6 +773,7 @@ export type MemoryKind =
 export type MemoryId = string
 export type Namespace = string
 export type ObservedAt = string
+export type OriginProposalId = string | null
 export type Pinned = boolean
 export type Predicate = string | null
 export type PrivacyLevel14 = 'public' | 'local' | 'private' | 'sensitive'
@@ -1946,6 +1947,7 @@ export interface MemoryRecord {
   memory_id: MemoryId
   namespace: Namespace
   observed_at: ObservedAt
+  origin_proposal_id?: OriginProposalId
   pinned?: Pinned
   predicate?: Predicate
   sensitivity?: PrivacyLevel14

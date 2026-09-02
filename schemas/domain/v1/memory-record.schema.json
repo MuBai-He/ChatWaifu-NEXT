@@ -102,6 +102,19 @@
       "title": "Observed At",
       "type": "string"
     },
+    "origin_proposal_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Origin Proposal Id"
+    },
     "pinned": {
       "default": false,
       "title": "Pinned",

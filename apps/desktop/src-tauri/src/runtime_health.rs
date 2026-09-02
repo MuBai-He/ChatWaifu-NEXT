@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub const BOOTSTRAP_PREFIX: &str = "CHATWAIFU_BOOTSTRAP ";
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Deserialize, PartialEq)]
 pub struct RuntimeBootstrap {
     pub schema_version: String,
     #[serde(rename = "type")]
@@ -12,6 +12,19 @@ pub struct RuntimeBootstrap {
     pub workers: Vec<String>,
     #[serde(default)]
     pub token: Option<String>,
+}
+
+impl std::fmt::Debug for RuntimeBootstrap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RuntimeBootstrap")
+            .field("schema_version", &self.schema_version)
+            .field("type", &self.event_type)
+            .field("runtime_url", &self.runtime_url)
+            .field("pid", &self.pid)
+            .field("workers", &self.workers)
+            .field("token", &self.token.as_ref().map(|_| "[REDACTED]"))
+            .finish()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -24,15 +37,30 @@ pub enum RuntimeLifecycleState {
     CircuitOpen,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 pub struct RuntimeStatus {
     pub state: RuntimeLifecycleState,
     pub runtime_url: Option<String>,
     pub pid: Option<u32>,
     pub workers: Vec<String>,
+    #[serde(skip)]
     pub token: Option<String>,
     pub restart_count: u32,
     pub detail: Option<String>,
+}
+
+impl std::fmt::Debug for RuntimeStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RuntimeStatus")
+            .field("state", &self.state)
+            .field("runtime_url", &self.runtime_url)
+            .field("pid", &self.pid)
+            .field("workers", &self.workers)
+            .field("token", &self.token.as_ref().map(|_| "[REDACTED]"))
+            .field("restart_count", &self.restart_count)
+            .field("detail", &self.detail)
+            .finish()
+    }
 }
 
 impl Default for RuntimeStatus {
@@ -112,6 +140,10 @@ mod tests {
         assert_eq!(parsed.pid, 12345);
         assert_eq!(parsed.workers, vec!["stt"]);
         assert_eq!(parsed.token, Some("secret123".to_owned()));
+
+        let debug_repr = format!("{parsed:?}");
+        assert!(debug_repr.contains("[REDACTED]"));
+        assert!(!debug_repr.contains("secret123"));
     }
 
     #[test]
@@ -137,5 +169,26 @@ mod tests {
         assert_eq!(status.state, RuntimeLifecycleState::Stopped);
         assert_eq!(status.runtime_url, None);
         assert_eq!(status.token, None);
+    }
+
+    #[test]
+    fn status_redacts_debug_token_and_omits_it_from_json_serialization() {
+        let status = RuntimeStatus {
+            state: RuntimeLifecycleState::Ready,
+            runtime_url: Some("http://127.0.0.1:8765".to_owned()),
+            pid: Some(1234),
+            workers: vec!["stt".to_owned()],
+            token: Some("super_secret_token".to_owned()),
+            restart_count: 0,
+            detail: None,
+        };
+
+        let debug_str = format!("{status:?}");
+        assert!(debug_str.contains("[REDACTED]"));
+        assert!(!debug_str.contains("super_secret_token"));
+
+        let json_str = serde_json::to_string(&status).expect("status should serialize to json");
+        assert!(!json_str.contains("token"));
+        assert!(!json_str.contains("super_secret_token"));
     }
 }

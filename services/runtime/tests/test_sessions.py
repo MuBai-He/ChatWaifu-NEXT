@@ -18,6 +18,7 @@ async def test_invalid_transition_is_rejected(runtime_settings: Settings) -> Non
     finally:
         await container.stop()
 
+
 @pytest.mark.asyncio
 async def test_session_transition_expected_revision_cas(runtime_settings: Settings) -> None:
     container = RuntimeContainer(runtime_settings)
