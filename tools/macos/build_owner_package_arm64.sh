@@ -10,6 +10,10 @@ APP_BUNDLE="$REPOSITORY_ROOT/target/release/bundle/macos/ChatWaifu NEXT.app"
 DMG_DIRECTORY="$REPOSITORY_ROOT/target/release/bundle/dmg"
 OUTPUT_DIRECTORY="$REPOSITORY_ROOT/dist/macos/package"
 BUILD_MARKER="$(mktemp -t chatwaifu-macos-package.XXXXXX)"
+OWNER_LIVE2D_MANIFEST="$REPOSITORY_ROOT/apps/web/public/vendor/live2d/model/avatar.model3.json"
+OWNER_LIVE2D_ROOT="$REPOSITORY_ROOT/apps/web/public/vendor/live2d/model"
+DESKTOP_LIVE2D_ROOT="$REPOSITORY_ROOT/apps/web/dist/desktop/vendor/live2d/model"
+DMG_BACKGROUND="$REPOSITORY_ROOT/apps/desktop/src-tauri/assets/dmg-background.png"
 
 cleanup() {
   rm -f "$BUILD_MARKER"
@@ -22,6 +26,22 @@ if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
 fi
 
 cd "$REPOSITORY_ROOT"
+
+if [[ ! -f "$OWNER_LIVE2D_MANIFEST" ]]; then
+  echo "Owner package requires the local Ayachi Nene Live2D model: $OWNER_LIVE2D_MANIFEST" >&2
+  exit 1
+fi
+
+if [[ ! -s "$DMG_BACKGROUND" ]]; then
+  echo "Owner package requires the branded DMG background: $DMG_BACKGROUND" >&2
+  exit 1
+fi
+DMG_BACKGROUND_WIDTH="$(/usr/bin/sips -g pixelWidth "$DMG_BACKGROUND" | awk '/pixelWidth/ { print $2 }')"
+DMG_BACKGROUND_HEIGHT="$(/usr/bin/sips -g pixelHeight "$DMG_BACKGROUND" | awk '/pixelHeight/ { print $2 }')"
+if [[ "$DMG_BACKGROUND_WIDTH" != "720" || "$DMG_BACKGROUND_HEIGHT" != "480" ]]; then
+  echo "DMG background must be exactly 720x480; received ${DMG_BACKGROUND_WIDTH}x${DMG_BACKGROUND_HEIGHT}." >&2
+  exit 1
+fi
 
 UV_PROJECT_ENVIRONMENT="$PACKAGING_ENVIRONMENT" uv sync \
   --project "$REPOSITORY_ROOT" \
@@ -42,6 +62,21 @@ uv run python tools/run_pnpm.py \
   build:macos-package
 uv run python tools/verify_product_artifacts.py --product desktop
 
+for relative_asset in avatar.model3.json avatar.moc3 texture/texture_00.png; do
+  if [[ ! -s "$DESKTOP_LIVE2D_ROOT/$relative_asset" ]]; then
+    echo "Desktop product is missing required Live2D asset: $relative_asset" >&2
+    exit 1
+  fi
+done
+for byte_identical_asset in avatar.moc3 texture/texture_00.png; do
+  if ! cmp -s \
+    "$OWNER_LIVE2D_ROOT/$byte_identical_asset" \
+    "$DESKTOP_LIVE2D_ROOT/$byte_identical_asset"; then
+    echo "Desktop product changed required Live2D asset: $byte_identical_asset" >&2
+    exit 1
+  fi
+done
+
 if [[ ! -d "$APP_BUNDLE" ]]; then
   echo "Tauri did not produce the expected app bundle: $APP_BUNDLE" >&2
   exit 1
@@ -51,6 +86,17 @@ EMBEDDED_RUNTIME="$APP_BUNDLE/Contents/Resources/runtime-sidecar/chatwaifu-runti
 HOST_EXECUTABLE="$APP_BUNDLE/Contents/MacOS/chatwaifu-desktop-host"
 if [[ ! -x "$EMBEDDED_RUNTIME" || ! -x "$HOST_EXECUTABLE" ]]; then
   echo "The app bundle is missing an executable host or Runtime sidecar." >&2
+  exit 1
+fi
+
+EMBEDDED_OWNER_ASSET_NOTICE="$APP_BUNDLE/Contents/Resources/OWNER_ASSET_NOTICE.md"
+if ! grep -aFq "/vendor/live2d/model/avatar.model3.json" "$HOST_EXECUTABLE" || \
+  ! grep -aFq "/vendor/live2d/model/texture/texture_00.png" "$HOST_EXECUTABLE"; then
+  echo "Tauri Host did not embed the required Ayachi Nene Live2D frontend assets." >&2
+  exit 1
+fi
+if [[ ! -f "$EMBEDDED_OWNER_ASSET_NOTICE" ]] || ! grep -q "涂抹一画" "$EMBEDDED_OWNER_ASSET_NOTICE"; then
+  echo "Owner package is missing the required Live2D creator attribution notice." >&2
   exit 1
 fi
 if ! file "$EMBEDDED_RUNTIME" | grep -q "arm64"; then

@@ -1115,6 +1115,7 @@ fn windows_physical_known_folder(
     Ok(path)
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn user_roots_from_known_folders(
     local_app_data: &Path,
     roaming_app_data: &Path,

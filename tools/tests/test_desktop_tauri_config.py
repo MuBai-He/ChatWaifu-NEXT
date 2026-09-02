@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import struct
 import subprocess
 import tomllib
 from pathlib import Path
@@ -59,6 +60,7 @@ def test_macos_owner_package_embeds_runtime_without_local_model_packs() -> None:
     bundle = cast(dict[str, object], config["bundle"])
     resources = cast(dict[str, object], bundle["resources"])
     macos = cast(dict[str, object], bundle["macOS"])
+    dmg = cast(dict[str, object], macos["dmg"])
     build_script = (ROOT / "tools/macos/build_owner_package_arm64.sh").read_text(encoding="utf-8")
     runtime_spec = (ROOT / "packaging/runtime/chatwaifu-runtime.spec").read_text(encoding="utf-8")
 
@@ -67,12 +69,36 @@ def test_macos_owner_package_embeds_runtime_without_local_model_packs() -> None:
     )
     assert bundle["active"] is True
     assert bundle["targets"] == ["app", "dmg"]
-    assert resources == {"../../../dist/macos/runtime-sidecar/": "runtime-sidecar/"}
+    assert resources == {
+        "../../../dist/macos/runtime-sidecar/": "runtime-sidecar/",
+        "../../../OWNER_ASSET_NOTICE.md": "OWNER_ASSET_NOTICE.md",
+    }
     assert macos["minimumSystemVersion"] == "14.0"
+    assert dmg == {
+        "background": "assets/dmg-background.png",
+        "windowSize": {"width": 720, "height": 480},
+        "appPosition": {"x": 190, "y": 265},
+        "applicationFolderPosition": {"x": 530, "y": 265},
+    }
+    dmg_background = ROOT / "apps/desktop/src-tauri" / str(dmg["background"])
+    png_header = dmg_background.read_bytes()[:24]
+    assert png_header.startswith(b"\x89PNG\r\n\x1a\n")
+    assert struct.unpack(">II", png_header[16:24]) == (720, 480)
     assert "tools/build_runtime_sidecar.py --platform macos" in build_script
     assert "tools/smoke_runtime_sidecar.py" in build_script
     assert "tools/macos/smoke_packaged_app.py" in build_script
     assert "Contents/Resources/runtime-sidecar/chatwaifu-runtime" in build_script
+    assert "Contents/Resources/OWNER_ASSET_NOTICE.md" in build_script
+    assert "apps/web/public/vendor/live2d/model/avatar.model3.json" in build_script
+    assert "apps/web/dist/desktop/vendor/live2d/model" in build_script
+    assert "apps/desktop/src-tauri/assets/dmg-background.png" in build_script
+    assert '"$DMG_BACKGROUND_WIDTH" != "720"' in build_script
+    assert '"$DMG_BACKGROUND_HEIGHT" != "480"' in build_script
+    assert 'grep -aFq "/vendor/live2d/model/avatar.model3.json"' in build_script
+    assert "cmp -s" in build_script
+    owner_asset_notice = (ROOT / "OWNER_ASSET_NOTICE.md").read_text(encoding="utf-8")
+    assert "涂抹一画" in owner_asset_notice
+    assert "不构成开源许可" in owner_asset_notice
     assert "*.safetensors" in build_script
     assert "*.sqlite" in build_script
     for package_name in (

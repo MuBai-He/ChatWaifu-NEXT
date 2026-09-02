@@ -144,11 +144,11 @@ describe("ModelSettingsPanel", () => {
     fireEvent.click(testButton);
 
     await waitFor(() =>
-      expect(runtimeClient.testModelConfiguration).toHaveBeenCalledWith(
-        "chat",
-      ),
+      expect(runtimeClient.testModelConfiguration).toHaveBeenCalledWith("chat"),
     );
-    expect(await screen.findByText("聊天模型连接 ok，返回 12 字符")).toBeTruthy();
+    expect(
+      await screen.findByText("聊天模型连接 ok，返回 12 字符"),
+    ).toBeTruthy();
   });
 });
 

@@ -87,9 +87,7 @@ describe("desktop Runtime endpoint", () => {
   });
 
   it("removes a listener that reports ready before its registration promise settles", async () => {
-    let completeRegistration:
-      | ((unlisten: () => void) => void)
-      | undefined;
+    let completeRegistration: ((unlisten: () => void) => void) | undefined;
     nativeMocks.listen.mockImplementation(
       (
         _event: string,

@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 """Recover durable Runtime state into a new canonical SQLite database.
 
 This is an operator tool for a stopped Runtime.  It never opens the original

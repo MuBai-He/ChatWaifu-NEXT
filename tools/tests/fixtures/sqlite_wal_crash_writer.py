@@ -9,6 +9,8 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPOSITORY_ROOT))
+sys.path.insert(0, str(REPOSITORY_ROOT / "packages" / "protocol-python" / "src"))
+sys.path.insert(0, str(REPOSITORY_ROOT / "services" / "runtime" / "src"))
 
 from tools.windows import recover_runtime_database as recovery  # noqa: E402
 

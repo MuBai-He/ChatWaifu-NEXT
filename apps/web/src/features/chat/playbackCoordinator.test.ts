@@ -130,8 +130,7 @@ describe("PlaybackCoordinator", () => {
     const audios: FakeAudio[] = [];
     const instance = new PlaybackCoordinator({
       enabled: true,
-      isGenerationActive: (generationId) =>
-        generationId === activeGeneration,
+      isGenerationActive: (generationId) => generationId === activeGeneration,
       sendReceipt: vi.fn().mockResolvedValue(undefined),
       stopRemotePlayback: vi.fn(),
       onSubtitle: vi.fn(),

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   completeDesktopOnboarding,
@@ -8,10 +8,47 @@ import {
   shouldAutoOpenDesktopOnboarding,
 } from "./desktopOnboarding";
 
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+}
+
 describe("desktop onboarding persistence", () => {
+  let local: Storage;
+  let session: Storage;
+
   beforeEach(() => {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    local = memoryStorage();
+    session = memoryStorage();
+    vi.stubGlobal("localStorage", local);
+    vi.stubGlobal("sessionStorage", session);
+    Object.defineProperty(window, "localStorage", {
+      value: local,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      value: session,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("auto-opens once per desktop session until the guide is complete", () => {
