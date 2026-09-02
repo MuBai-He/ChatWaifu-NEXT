@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://mubai-he.github.io/ChatWaifu-NEXT-docs/">文档</a>
+  <a href="https://mubai-he.github.io/ChatWaifu-NEXT/">文档</a>
   · <a href="#快速体验">快速体验</a>
   · <a href="#二次开发">二次开发</a>
   · <a href="docs/implementation-status.yaml">实现状态</a>
@@ -112,7 +112,7 @@ make desktop
 ```
 
 更完整的 macOS、Windows、Live2D、模型和故障排查步骤放在
-[ChatWaifu NEXT 文档站](https://mubai-he.github.io/ChatWaifu-NEXT-docs/guide/getting-started)，README 只保留
+[ChatWaifu NEXT 文档站](https://mubai-he.github.io/ChatWaifu-NEXT/guide/getting-started)，README 只保留
 可验证的最短入口。
 
 ## 配置模型、语音与角色
@@ -207,7 +207,7 @@ Web / Desktop UI
    `make check-generated`。
 
 逐类扩展步骤、文件清单、测试门和二开发行检查表见
-[二次开发文档](https://mubai-he.github.io/ChatWaifu-NEXT-docs/guide/customization) 与
+[二次开发文档](https://mubai-he.github.io/ChatWaifu-NEXT/guide/customization) 与
 [Contributing](CONTRIBUTING.md)。现阶段 TTS 已有统一 Provider registry；LLM 的 OpenAI-compatible
 入口稳定，但非兼容协议和 STT Provider 尚未达到同样的单点自动注册程度。
 
@@ -266,7 +266,7 @@ make build-desktop-ui
 
 ## 文档与项目沿革
 
-- [安装与使用 Wiki](https://mubai-he.github.io/ChatWaifu-NEXT-docs/)
+- [安装与使用 Wiki](https://mubai-he.github.io/ChatWaifu-NEXT/)
 - [架构方案](docs/architecture/master-architecture.md)
 - [实现计划](docs/implementation-plan.md)
 - [实现状态](docs/implementation-status.yaml)
@@ -274,8 +274,7 @@ make build-desktop-ui
 - [外部消息渠道统一边界](docs/architecture/external-channels.md)
 - [Windows Worker Packs](docs/operations/windows-local-ai-worker-packs.md)
 
-文档规范源保留在本 private monorepo；`make publish-docs` 只把经过路径、密钥和私有资产审计的静态产物
-发布到 public Pages 镜像，不复制产品源码或本地资产。
+文档规范源保留在本仓库 `docs-site/`；GitHub Actions 在构建时会自动审计路径、密钥和静态产物并部署至 GitHub Pages。
 
 感谢上一代 [cjyaddone/ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 对语音角色交互方向的早期探索。
 NEXT 是一次架构重写，不与上一代配置、模型目录或启动脚本保持兼容。

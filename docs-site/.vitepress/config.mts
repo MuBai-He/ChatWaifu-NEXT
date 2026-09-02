@@ -4,7 +4,7 @@ export default defineConfig({
   lang: "zh-CN",
   title: "ChatWaifu NEXT",
   description: "在屏幕的一隅，写下属于你们的日常物语。",
-  base: "/ChatWaifu-NEXT-docs/",
+  base: "/ChatWaifu-NEXT/",
   cleanUrls: true,
   lastUpdated: true,
   head: [
@@ -15,12 +15,12 @@ export default defineConfig({
       {
         rel: "icon",
         type: "image/png",
-        href: "/ChatWaifu-NEXT-docs/brand/chatwaifu-mark-small.png",
+        href: "/ChatWaifu-NEXT/brand/chatwaifu-mark-small.png",
       },
     ],
   ],
   sitemap: {
-    hostname: "https://mubai-he.github.io/ChatWaifu-NEXT-docs/",
+    hostname: "https://mubai-he.github.io/ChatWaifu-NEXT/",
   },
   themeConfig: {
     logo: "/brand/chatwaifu-mark-small.png",

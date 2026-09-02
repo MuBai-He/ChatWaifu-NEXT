@@ -12,9 +12,8 @@ User-facing installation and extension documentation lives in `docs-site/`. Run
 `make dev-docs` while authoring and `make build-docs` before submitting changes.
 Keep the root README focused on the verified shortest path; put platform-specific
 walkthroughs, screenshots, and troubleshooting in the documentation site.
-The source in this repository is canonical. `make publish-docs` intentionally
-publishes only the audited static build to the separate public Pages repository;
-run it only when a public documentation update is intended.
+The source in this repository is canonical. GitHub Actions automatically audits and
+deploys documentation to GitHub Pages upon pushes to `main`.
 
 Do not commit model weights, proprietary Live2D Core files, credentials, user media,
 private character assets, or generated local data.
