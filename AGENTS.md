@@ -11,7 +11,7 @@ and observability matter more than minimizing file count.
 
 ## Before modifying code
 
-1. Read `CODEX_HANDOFF.md`, then the task-relevant architecture and implementation-plan sections.
+1. Read `docs/architecture/master-architecture.md`, `docs/implementation-plan.md`, then the task-relevant architecture sections.
 2. Inspect `docs/implementation-status.yaml` and accepted ADRs.
 3. Identify the affected domains and read only the relevant repository skill.
 4. Inspect existing contracts, producers, and consumers before adding new ones.

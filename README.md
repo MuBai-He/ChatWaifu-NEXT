@@ -267,9 +267,8 @@ make build-desktop-ui
 ## 文档与项目沿革
 
 - [安装与使用 Wiki](https://mubai-he.github.io/ChatWaifu-NEXT-docs/)
-- [架构方案](CHATWAIFU_NEXT_ARCHITECTURE.md)
-- [实现计划](CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md)
-- [交接与不变量](CODEX_HANDOFF.md)
+- [架构方案](docs/architecture/master-architecture.md)
+- [实现计划](docs/implementation-plan.md)
 - [实现状态](docs/implementation-status.yaml)
 - [Web/Desktop 发行模型](docs/architecture/product-release-profiles.md)
 - [外部消息渠道统一边界](docs/architecture/external-channels.md)

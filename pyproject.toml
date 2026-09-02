@@ -72,9 +72,6 @@ line-length = 100
 target-version = "py312"
 exclude = [
   ".local",
-  "CHATWAIFU_NEXT_ARCHITECTURE.md",
-  "CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md",
-  "CODEX_HANDOFF.md",
 ]
 
 [tool.ruff.lint]

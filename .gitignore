@@ -31,3 +31,4 @@ vendor/live2d/Core/
 vendor/live2d/model/
 apps/web/public/vendor/live2d/
 apps/desktop/src-tauri/gen/
+CODEX_HANDOFF.md

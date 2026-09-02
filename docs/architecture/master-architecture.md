@@ -5,7 +5,7 @@
 > 文档日期：2026-08-23  
 > 架构形态：本地优先、模块化单体核心、独立模型 Worker、独立插件进程、事件驱动  
 > 首选角色前端：React + TypeScript + Tauri 2 + Live2D Cubism SDK for Web  
-> 首选实时媒体层：Pipecat + SmallWebRTC + RTVI  
+> 首选实时媒体层：Pipecat + SmallWebRTC + RTVI
 
 ---
 
@@ -17,8 +17,8 @@
 
 配套文档：
 
-- `CHATWAIFU_NEXT_IMPLEMENTATION_PLAN.md`：分阶段实现顺序、任务清单、验收门槛。
-- `CODEX_HANDOFF.md`：Codex 执行规则、工作流、首批任务和禁止事项。
+- `docs/implementation-plan.md`：分阶段实现顺序、任务清单、验收门槛。
+- `docs/implementation-status.yaml`：阶段完成状态与验收记录。
 
 ---
 
@@ -470,6 +470,7 @@ from typing import Any, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field
 
+
 class EventEnvelope(BaseModel):
     event_id: UUID
     schema_version: str = "1.0"
@@ -487,12 +488,7 @@ class EventEnvelope(BaseModel):
     correlation_id: UUID | None = None
     causation_id: UUID | None = None
 
-    privacy: Literal[
-        "public",
-        "local",
-        "private",
-        "sensitive"
-    ] = "private"
+    privacy: Literal["public", "local", "private", "sensitive"] = "private"
 
     payload: dict[str, Any] = Field(default_factory=dict)
 ```
@@ -633,6 +629,7 @@ class AudioFrameHeader(BaseModel):
 class EventHub(Protocol):
     async def publish(self, event: EventEnvelope) -> None: ...
     def subscribe(self, subscription: Subscription) -> AsyncIterator[EventEnvelope]: ...
+
 
 class EventStore(Protocol):
     async def append(self, event: EventEnvelope) -> None: ...
@@ -778,6 +775,7 @@ Transport Input
 ```python
 from typing import AsyncIterator, Protocol
 
+
 class SpeechCapabilities(BaseModel):
     audio_input: bool = True
     text_input: bool = True
@@ -793,6 +791,7 @@ class SpeechCapabilities(BaseModel):
     reliable_transcript: bool = True
     local: bool = True
     interruptible: bool = True
+
 
 class ConversationBackend(Protocol):
     @property
@@ -1087,8 +1086,7 @@ async def delegate_reasoning(
     required_capabilities: list[str],
     context_refs: list[str],
     latency_class: str,
-) -> ReasoningJobHandle:
-    ...
+) -> ReasoningJobHandle: ...
 ```
 
 Backbrain 返回结构化内容，不直接拥有角色话筒：
@@ -1399,9 +1397,7 @@ LLM 只能提出 proposal：
 ```python
 class MemoryProposal(BaseModel):
     proposal_id: UUID
-    operation: Literal[
-        "add", "update", "supersede", "contradict", "forget", "ignore"
-    ]
+    operation: Literal["add", "update", "supersede", "contradict", "forget", "ignore"]
     candidate: MemoryRecordDraft | None
     target_memory_id: UUID | None
     evidence_event_ids: list[UUID]
@@ -1611,9 +1607,7 @@ Character Kernel 输出高层语义 Cue：
 class AvatarCue(BaseModel):
     cue_id: UUID
     generation_id: UUID | None
-    kind: Literal[
-        "state", "expression", "motion", "gaze", "speech", "override"
-    ]
+    kind: Literal["state", "expression", "motion", "gaze", "speech", "override"]
     name: str
     intensity: float = 1.0
     start_anchor: str = "immediate"
