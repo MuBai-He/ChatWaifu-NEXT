@@ -119,7 +119,10 @@ describe("RuntimeSocketClient replay", () => {
     const firstEndpoint = deferred<RuntimeConnection>();
     vi.mocked(resolveRuntimeConnection)
       .mockImplementationOnce(() => firstEndpoint.promise)
-      .mockResolvedValue({ baseUrl: "http://runtime.new", token: "test-token" });
+      .mockResolvedValue({
+        baseUrl: "http://runtime.new",
+        token: "test-token",
+      });
     const received: number[] = [];
     const onConnection = vi.fn();
     const client = new RuntimeSocketClient(
@@ -140,7 +143,10 @@ describe("RuntimeSocketClient replay", () => {
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
     const current = FakeWebSocket.instances[0];
     expect(current.url).toContain("after_sequence=5");
-    firstEndpoint.resolve({ baseUrl: "http://runtime.old", token: "test-token" });
+    firstEndpoint.resolve({
+      baseUrl: "http://runtime.old",
+      token: "test-token",
+    });
     await flushPromises();
 
     expect(FakeWebSocket.instances).toHaveLength(1);

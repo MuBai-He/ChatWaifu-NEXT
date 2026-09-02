@@ -76,7 +76,7 @@ describe("runtime HTTP client", () => {
           );
         }),
     );
-    const fetchMock = vi.fn().mockResolvedValue(
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -95,8 +95,9 @@ describe("runtime HTTP client", () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(request).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledOnce();
-    const passedHeaders = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
-    expect(passedHeaders.get("Authorization")).toBe("Bearer test-auth-token");
+    const init = fetchMock.mock.calls[0]?.[1];
+    const passedHeaders = init?.headers as Headers | undefined;
+    expect(passedHeaders?.get("Authorization")).toBe("Bearer test-auth-token");
   });
 
   it("lets the caller cancel while waiting for the desktop endpoint", async () => {

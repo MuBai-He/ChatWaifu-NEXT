@@ -26,6 +26,10 @@ USER_SCOPE = "local"
 type RelationshipStage = Literal["acquaintance", "familiar", "trusted", "close"]
 
 
+class _CasConflictError(Exception):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class TurnCharacterContext:
     snapshot: CharacterKernelSnapshot
@@ -45,14 +49,21 @@ class CharacterKernelService:
 
     async def snapshot(self, character_id: str) -> CharacterKernelSnapshot:
         character = self._require_character(character_id)
-        affect_row = await self._database.fetchone(
-            "SELECT * FROM character_states WHERE character_id = ? AND user_scope = ?",
-            (character_id, USER_SCOPE),
-        )
-        relationship_row = await self._database.fetchone(
-            "SELECT * FROM relationship_states WHERE character_id = ? AND user_scope = ?",
-            (character_id, USER_SCOPE),
-        )
+        async with self._database.transaction() as connection:
+            cursor_affect = await connection.execute(
+                "SELECT * FROM character_states WHERE character_id = ? AND user_scope = ?",
+                (character_id, USER_SCOPE),
+            )
+            affect_row = await cursor_affect.fetchone()
+            await cursor_affect.close()
+
+            cursor_rel = await connection.execute(
+                "SELECT * FROM relationship_states WHERE character_id = ? AND user_scope = ?",
+                (character_id, USER_SCOPE),
+            )
+            relationship_row = await cursor_rel.fetchone()
+            await cursor_rel.close()
+
         now = datetime.now(UTC)
         if affect_row is None or relationship_row is None:
             return await self._initialize(character, now)
@@ -293,58 +304,63 @@ class CharacterKernelService:
         expected_revision: int,
         new_revision: int,
     ) -> bool:
-        async with self._database.transaction() as connection:
-            cursor_affect = await connection.execute(
-                """
-                UPDATE character_states SET
-                    valence=?, arousal=?, energy=?, attention=?, embarrassment=?, tension=?,
-                    revision=?, updated_at=?
-                WHERE character_id = ? AND user_scope = ? AND revision = ?
-                """,
-                (
-                    affect.valence,
-                    affect.arousal,
-                    affect.energy,
-                    affect.attention,
-                    affect.embarrassment,
-                    affect.tension,
-                    new_revision,
-                    affect.updated_at.isoformat(),
-                    character_id,
-                    USER_SCOPE,
-                    expected_revision,
-                ),
-            )
-            updated_affect = cursor_affect.rowcount > 0
-            await cursor_affect.close()
+        try:
+            async with self._database.transaction() as connection:
+                cursor_affect = await connection.execute(
+                    """
+                    UPDATE character_states SET
+                        valence=?, arousal=?, energy=?, attention=?, embarrassment=?, tension=?,
+                        revision=?, updated_at=?
+                    WHERE character_id = ? AND user_scope = ? AND revision = ?
+                    """,
+                    (
+                        affect.valence,
+                        affect.arousal,
+                        affect.energy,
+                        affect.attention,
+                        affect.embarrassment,
+                        affect.tension,
+                        new_revision,
+                        affect.updated_at.isoformat(),
+                        character_id,
+                        USER_SCOPE,
+                        expected_revision,
+                    ),
+                )
+                updated_affect = cursor_affect.rowcount > 0
+                await cursor_affect.close()
 
-            cursor_rel = await connection.execute(
-                """
-                UPDATE relationship_states SET
-                    familiarity=?, trust=?, affinity=?, comfort=?, recent_tension=?,
-                    interaction_count=?, stage=?, preferred_address=?, revision=?, updated_at=?
-                WHERE character_id = ? AND user_scope = ? AND revision = ?
-                """,
-                (
-                    relationship.familiarity,
-                    relationship.trust,
-                    relationship.affinity,
-                    relationship.comfort,
-                    relationship.recent_tension,
-                    relationship.interaction_count,
-                    relationship.stage,
-                    relationship.preferred_address,
-                    new_revision,
-                    relationship.updated_at.isoformat(),
-                    character_id,
-                    USER_SCOPE,
-                    expected_revision,
-                ),
-            )
-            updated_rel = cursor_rel.rowcount > 0
-            await cursor_rel.close()
+                cursor_rel = await connection.execute(
+                    """
+                    UPDATE relationship_states SET
+                        familiarity=?, trust=?, affinity=?, comfort=?, recent_tension=?,
+                        interaction_count=?, stage=?, preferred_address=?, revision=?, updated_at=?
+                    WHERE character_id = ? AND user_scope = ? AND revision = ?
+                    """,
+                    (
+                        relationship.familiarity,
+                        relationship.trust,
+                        relationship.affinity,
+                        relationship.comfort,
+                        relationship.recent_tension,
+                        relationship.interaction_count,
+                        relationship.stage,
+                        relationship.preferred_address,
+                        new_revision,
+                        relationship.updated_at.isoformat(),
+                        character_id,
+                        USER_SCOPE,
+                        expected_revision,
+                    ),
+                )
+                updated_rel = cursor_rel.rowcount > 0
+                await cursor_rel.close()
 
-            return updated_affect and updated_rel
+                if not (updated_affect and updated_rel):
+                    raise _CasConflictError("Atomic CAS conflict across character aggregate tables")
+                return True
+        except _CasConflictError:
+            return False
 
     async def _persist(
         self,

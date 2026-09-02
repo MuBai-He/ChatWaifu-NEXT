@@ -704,6 +704,7 @@ class ConversationService:
             )
         persisted = await self._repository.complete_generation(
             session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
             generation_id=accepted.generation_id,
             assistant_turn_id=assistant_turn_id,
             output=output,
@@ -778,6 +779,7 @@ class ConversationService:
         )
         persisted_events = await self._repository.cancel_generation(
             session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
             generation_id=accepted.generation_id,
             occurred_at=now,
             set_session_idle=(
@@ -836,6 +838,7 @@ class ConversationService:
         )
         persisted_event = await self._repository.fail_generation(
             session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
             generation_id=accepted.generation_id,
             error_code=error_code,
             occurred_at=now,

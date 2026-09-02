@@ -261,6 +261,7 @@ class SQLiteConversationRepository(ConversationRepository):
         self,
         *,
         session_id: UUID,
+        turn_id: UUID,
         generation_id: UUID,
         assistant_turn_id: UUID,
         output: str,
@@ -274,13 +275,15 @@ class SQLiteConversationRepository(ConversationRepository):
             cursor = await connection.execute(
                 """
                 UPDATE generations SET state = ?, output_text = ?, completed_at = ?
-                WHERE generation_id = ? AND state = ?
+                WHERE generation_id = ? AND session_id = ? AND turn_id = ? AND state = ?
                 """,
                 (
                     GenerationState.COMPLETED.value,
                     output,
                     occurred_at.isoformat(),
                     str(generation_id),
+                    str(session_id),
+                    str(turn_id),
                     GenerationState.RUNNING.value,
                 ),
             )
@@ -318,6 +321,7 @@ class SQLiteConversationRepository(ConversationRepository):
         self,
         *,
         session_id: UUID,
+        turn_id: UUID,
         generation_id: UUID,
         occurred_at: datetime,
         set_session_idle: bool,
@@ -327,12 +331,14 @@ class SQLiteConversationRepository(ConversationRepository):
             cursor = await connection.execute(
                 """
                 UPDATE generations SET state = ?, invalidated_at = ?
-                WHERE generation_id = ? AND state = ?
+                WHERE generation_id = ? AND session_id = ? AND turn_id = ? AND state = ?
                 """,
                 (
                     GenerationState.CANCELLED.value,
                     occurred_at.isoformat(),
                     str(generation_id),
+                    str(session_id),
+                    str(turn_id),
                     GenerationState.RUNNING.value,
                 ),
             )
@@ -351,6 +357,7 @@ class SQLiteConversationRepository(ConversationRepository):
         self,
         *,
         session_id: UUID,
+        turn_id: UUID,
         generation_id: UUID,
         error_code: str,
         occurred_at: datetime,
@@ -361,13 +368,15 @@ class SQLiteConversationRepository(ConversationRepository):
             cursor = await connection.execute(
                 """
                 UPDATE generations SET state = ?, error_code = ?, completed_at = ?
-                WHERE generation_id = ? AND state = ?
+                WHERE generation_id = ? AND session_id = ? AND turn_id = ? AND state = ?
                 """,
                 (
                     GenerationState.FAILED.value,
                     error_code,
                     occurred_at.isoformat(),
                     str(generation_id),
+                    str(session_id),
+                    str(turn_id),
                     GenerationState.RUNNING.value,
                 ),
             )

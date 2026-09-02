@@ -1,4 +1,4 @@
-"""Bounded event hub and laned queuing behavior."""
+"""Bounded event hub and laned priority queuing behavior."""
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,9 +26,14 @@ def test_classify_event() -> None:
 
     assert classify_event("session.cancelled") == EventDeliveryClass.CONTROL
     assert classify_event("session.interrupted") == EventDeliveryClass.CONTROL
+    assert classify_event("conversation.interruption_requested") == EventDeliveryClass.CONTROL
+    assert classify_event("conversation.interrupted") == EventDeliveryClass.CONTROL
     assert classify_event("assistant.generation_cancelled") == EventDeliveryClass.CONTROL
     assert classify_event("assistant.generation_failed") == EventDeliveryClass.CONTROL
     assert classify_event("assistant.playback_stopped") == EventDeliveryClass.CONTROL
+    assert classify_event("skill.confirmation_requested") == EventDeliveryClass.CONTROL
+    assert classify_event("skill.confirmation_decided") == EventDeliveryClass.CONTROL
+    assert classify_event("skill.run_cancelled") == EventDeliveryClass.CONTROL
     assert classify_event("runtime_skill.permission_requested") == EventDeliveryClass.CONTROL
     assert classify_event("system.error_raised") == EventDeliveryClass.CONTROL
 
@@ -48,6 +53,29 @@ async def test_slow_subscriber_drops_oldest_domain_without_blocking_publish() ->
     assert subscription.dropped_events == 3
     assert await subscription.receive() == {"index": 3}
     assert await subscription.receive() == {"index": 4}
+    await hub.close()
+
+
+@pytest.mark.asyncio
+async def test_priority_dispatch_ordering() -> None:
+    hub = EventHub(default_queue_size=10)
+    subscription = hub.subscribe()
+
+    # Publish in arbitrary order: Domain, Telemetry, Control, Domain, Control
+    await hub.publish({"event_type": "user.turn_committed", "name": "domain_1"})
+    await hub.publish({"event_type": "assistant.text_delta", "name": "telemetry_1"})
+    await hub.publish({"event_type": "conversation.interruption_requested", "name": "control_1"})
+    await hub.publish({"event_type": "user.turn_committed", "name": "domain_2"})
+    await hub.publish({"event_type": "skill.confirmation_requested", "name": "control_2"})
+    await hub.publish({"event_type": "assistant.text_delta", "name": "telemetry_2"})
+
+    # Prioritized receive: Control (1, 2) -> Domain (1, 2) -> Telemetry (1, 2)
+    assert (await subscription.receive())["name"] == "control_1"
+    assert (await subscription.receive())["name"] == "control_2"
+    assert (await subscription.receive())["name"] == "domain_1"
+    assert (await subscription.receive())["name"] == "domain_2"
+    assert (await subscription.receive())["name"] == "telemetry_1"
+    assert (await subscription.receive())["name"] == "telemetry_2"
     await hub.close()
 
 
@@ -86,13 +114,13 @@ async def test_control_events_evict_telemetry_events_under_saturation() -> None:
     await hub.publish({"event_type": "session.cancelled", "id": 4})
 
     assert subscription.dropped_events == 1
-    # Should receive domain 1, telemetry 3 (first telemetry 2 was evicted), and control 4
+    # Control 4 is prioritized first, then domain 1, then surviving telemetry 3
     event1 = await subscription.receive()
     event2 = await subscription.receive()
     event3 = await subscription.receive()
-    assert event1["id"] == 1
-    assert event2["id"] == 3
-    assert event3["id"] == 4
+    assert event1["id"] == 4
+    assert event2["id"] == 1
+    assert event3["id"] == 3
     await hub.close()
 
 
@@ -172,7 +200,7 @@ async def test_ephemeral_events_bypass_event_store(tmp_path: Path) -> None:
     )
     await publisher.publish_ephemeral(ephemeral_event)
 
-    # Hub subscriber received both
+    # In priority dispatch: generation_completed (CONTROL) comes first, then text_delta (TELEMETRY)
     recv1 = await sub.receive()
     recv2 = await sub.receive()
     assert recv1["event_type"] == "assistant.generation_completed"

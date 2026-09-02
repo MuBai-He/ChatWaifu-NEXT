@@ -857,7 +857,10 @@ def test_plugin_mutation_invalidates_waiting_approval(
     assert len(cast(str, argument_preview["text"]).encode("utf-8")) <= 4 * 1024
     server = Path(str(installed["install_path"])) / "server.py"
     server.chmod(0o644)
-    server.write_text(server.read_text(encoding="utf-8") + "\n# changed after approval\n")
+    server.write_text(
+        server.read_text(encoding="utf-8") + "\n# changed after approval\n",
+        encoding="utf-8",
+    )
 
     decided = http.post(
         f"/v1/skill-confirmations/{waiting['confirmation_request_id']}",

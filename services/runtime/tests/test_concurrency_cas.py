@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 """Tests for State Machine CAS and Concurrency Invariants (Phase 12.5 Track B)."""
 
 import asyncio
@@ -8,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.character import AffectState, RelationshipState
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import (
     ErrorRaisedEvent,
@@ -17,7 +19,11 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.memory import MemoryProposal, MemoryRecord, MemoryRecordDraft, MemorySource
 from chatwaifu_protocol.session import GenerationState, SessionState
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.character_kernel.service import CharacterKernelService
+from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
+from chatwaifu_runtime.eventing.hub import EventHub
+from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
@@ -80,6 +86,7 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
     # 1. Complete generation succeeds
     completed = await repo.complete_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         assistant_turn_id=uuid4(),
         output="Hello world",
@@ -113,6 +120,7 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
     # 2. Subsequent fail_generation cannot overwrite completed state
     failed = await repo.fail_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         error_code="SOME_ERROR",
         occurred_at=now,
@@ -136,6 +144,7 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
     # 3. Subsequent cancel_generation cannot overwrite completed state
     cancelled = await repo.cancel_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         occurred_at=now,
         set_session_idle=True,
@@ -146,7 +155,10 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
     # Verify state in DB remains 'completed'
     async with database.transaction() as conn:
         cursor = await conn.execute(
-            "SELECT state, output_text, error_code FROM generations WHERE generation_id = ?",
+            """
+            SELECT state, output_text, error_code FROM generations
+            WHERE generation_id = ?
+            """,
             (str(gen_id),),
         )
         row = await cursor.fetchone()
@@ -154,6 +166,168 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
         assert row[0] == GenerationState.COMPLETED.value
         assert row[1] == "Hello world"
         assert row[2] is None
+        await cursor.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_generation_cas_mismatched_session_or_turn_rejected(tmp_path: Path) -> None:
+    db_path = tmp_path / "runtime.db"
+    database = Database(db_path, StorageConfig(database_path=db_path))
+    await database.open()
+    event_store = EventStore(database)
+    repo = SQLiteConversationRepository(database, event_store)
+
+    session_id = uuid4()
+    wrong_session_id = uuid4()
+    turn_id = uuid4()
+    wrong_turn_id = uuid4()
+    gen_id = uuid4()
+    now = datetime.now(UTC)
+
+    async with database.transaction() as conn:
+        await conn.execute(
+            """
+            INSERT INTO sessions (
+                session_id, character_id, state, conversation_state,
+                revision, next_sequence, created_at, updated_at
+            ) VALUES (?, 'default', 'active', 'idle', 0, 1, ?, ?)
+            """,
+            (str(session_id), now.isoformat(), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO turns(turn_id, session_id, role, created_at)
+            VALUES (?, ?, 'user', ?)
+            """,
+            (str(turn_id), str(session_id), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO generations (
+                generation_id, session_id, turn_id, state, backend_kind, started_at
+            ) VALUES (?, ?, ?, 'running', 'demo', ?)
+            """,
+            (str(gen_id), str(session_id), str(turn_id), now.isoformat()),
+        )
+
+    complete_ev = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_completed",
+        payload={"text": "Mismatched reply"},
+    )
+
+    # 1. Complete with wrong session_id rejected
+    rejected_sess = await repo.complete_generation(
+        session_id=wrong_session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        assistant_turn_id=uuid4(),
+        output="Mismatched reply",
+        source_context=None,
+        occurred_at=now,
+        set_session_idle=True,
+        complete_event=complete_ev,
+    )
+    assert rejected_sess is None
+
+    # 2. Complete with wrong turn_id rejected
+    rejected_turn = await repo.complete_generation(
+        session_id=session_id,
+        turn_id=wrong_turn_id,
+        generation_id=gen_id,
+        assistant_turn_id=uuid4(),
+        output="Mismatched reply",
+        source_context=None,
+        occurred_at=now,
+        set_session_idle=True,
+        complete_event=complete_ev,
+    )
+    assert rejected_turn is None
+
+    # 3. Fail with wrong turn_id rejected
+    fail_ev = ErrorRaisedEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        payload=ErrorRaisedPayload(
+            error=StructuredError(
+                code="ERR",
+                message="msg",
+                retryable=False,
+                component="conversation",
+            )
+        ),
+    )
+    rejected_fail = await repo.fail_generation(
+        session_id=session_id,
+        turn_id=wrong_turn_id,
+        generation_id=gen_id,
+        error_code="ERR",
+        occurred_at=now,
+        set_session_idle=True,
+        fail_event=fail_ev,
+    )
+    assert rejected_fail is None
+
+    # 4. Cancel with wrong turn_id rejected
+    cancel_ev = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_cancelled",
+        payload={"reason": "test"},
+    )
+    rejected_cancel = await repo.cancel_generation(
+        session_id=session_id,
+        turn_id=wrong_turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        set_session_idle=True,
+        cancel_events=(cancel_ev,),
+    )
+    assert rejected_cancel is None
+
+    # Verify generation remains running, and zero assistant turns or events were inserted
+    async with database.transaction() as conn:
+        cursor = await conn.execute(
+            "SELECT state FROM generations WHERE generation_id = ?",
+            (str(gen_id),),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row[0] == GenerationState.RUNNING.value
+        await cursor.close()
+
+        cursor = await conn.execute(
+            "SELECT COUNT(*) FROM turns WHERE session_id = ? AND role = 'assistant'",
+            (str(session_id),),
+        )
+        turns_count = await cursor.fetchone()
+        assert turns_count is not None and turns_count[0] == 0
+        await cursor.close()
+
+        cursor = await conn.execute(
+            "SELECT COUNT(*) FROM events WHERE session_id = ?",
+            (str(session_id),),
+        )
+        events_count = await cursor.fetchone()
+        assert events_count is not None and events_count[0] == 0
         await cursor.close()
 
     await database.close()
@@ -359,6 +533,7 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
     # 1. First complete succeeds
     completed = await repo.complete_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         assistant_turn_id=assistant_turn_id,
         output="First reply",
@@ -384,6 +559,7 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
     )
     second_completed = await repo.complete_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         assistant_turn_id=second_assistant_turn_id,
         output="Conflicting second reply",
@@ -414,6 +590,7 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
     )
     second_failed = await repo.fail_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         error_code="PROVIDER_ERROR",
         occurred_at=now,
@@ -436,6 +613,7 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
     )
     second_cancelled = await repo.cancel_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         occurred_at=now,
         set_session_idle=True,
@@ -560,6 +738,7 @@ async def test_concurrent_generation_cas_race(tmp_path: Path) -> None:
     # Concurrently execute complete, fail, and cancel
     t_complete = repo.complete_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         assistant_turn_id=assistant_turn_id,
         output="Winner",
@@ -570,6 +749,7 @@ async def test_concurrent_generation_cas_race(tmp_path: Path) -> None:
     )
     t_fail = repo.fail_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         error_code="RACE_ERROR",
         occurred_at=now,
@@ -578,6 +758,7 @@ async def test_concurrent_generation_cas_race(tmp_path: Path) -> None:
     )
     t_cancel = repo.cancel_generation(
         session_id=session_id,
+        turn_id=turn_id,
         generation_id=gen_id,
         occurred_at=now,
         set_session_idle=True,
@@ -604,6 +785,57 @@ async def test_concurrent_generation_cas_race(tmp_path: Path) -> None:
         )
         events_rows = list(await cursor.fetchall())
         assert len(events_rows) == 1
+        await cursor.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_character_kernel_partial_failure_rolls_back_atomically(
+    tmp_path: Path, runtime_settings: Settings
+) -> None:
+    db_path = tmp_path / "runtime.db"
+    database = Database(db_path, StorageConfig(database_path=db_path))
+    await database.open()
+    event_store = EventStore(database)
+    hub = EventHub()
+    publisher = EventPublisher(event_store, hub)
+    characters = CharacterService(runtime_settings.characters_dir)
+    characters.start()
+    service = CharacterKernelService(database, characters, publisher)
+
+    # Initialize character
+    await service.snapshot("default")
+    now = datetime.now(UTC)
+
+    # Corrupt only relationship revision to 5, leaving character_states at revision 0
+    async with database.transaction() as conn:
+        await conn.execute(
+            "UPDATE relationship_states SET revision = 5 WHERE character_id = 'default'"
+        )
+
+    # Attempt CAS expecting revision 0.
+    # character_states matches (rev 0), but relationship_states fails (rev 5 != 0).
+    new_affect = AffectState(valence=0.8, updated_at=now)
+    new_rel = RelationshipState(familiarity=0.8, updated_at=now)
+    cas_result = await service._persist_cas(
+        character_id="default",
+        affect=new_affect,
+        relationship=new_rel,
+        expected_revision=0,
+        new_revision=1,
+    )
+    assert cas_result is False
+
+    # Assert character_states was rolled back and NOT updated to revision 1 or valence 0.8
+    async with database.transaction() as conn:
+        cursor = await conn.execute(
+            "SELECT revision, valence FROM character_states WHERE character_id = 'default'"
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row[0] == 0
+        assert row[1] != 0.8
         await cursor.close()
 
     await database.close()
