@@ -76,6 +76,7 @@ jobs:
             CHATWAIFU_DATA_DIR="$RUNNER_TEMP/chatwaifu-e2e/data" \
             CHATWAIFU_RUNTIME__PORT=8765 \
             CHATWAIFU_RUNTIME__WEB_ORIGIN=http://127.0.0.1:4173 \
+            CHATWAIFU_SECURITY__ADMIN_TOKEN="chatwaifu-ci-test-token" \
             CHATWAIFU_LLM__PROVIDER=demo \
             CHATWAIFU_LLM__MODEL=chatwaifu-ci-demo \
             CHATWAIFU_LLM__API_KEY=null \
@@ -102,6 +103,7 @@ jobs:
       - name: Run Runtime-backed browser smoke
         env:
           CHATWAIFU_E2E_RUNTIME: "1"
+          VITE_RUNTIME_TOKEN: "chatwaifu-ci-test-token"
         run: make test-e2e PNPM=pnpm
       - name: Stop deterministic Runtime
         if: always()

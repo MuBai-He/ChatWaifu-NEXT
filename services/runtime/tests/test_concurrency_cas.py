@@ -1,12 +1,19 @@
 """Tests for State Machine CAS and Concurrency Invariants (Phase 12.5 Track B)."""
 
 import asyncio
+import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.errors import StructuredError
+from chatwaifu_protocol.events import (
+    ErrorRaisedEvent,
+    ErrorRaisedPayload,
+    GenericCoreEvent,
+)
 from chatwaifu_protocol.memory import MemoryProposal, MemoryRecord, MemoryRecordDraft, MemorySource
 from chatwaifu_protocol.session import GenerationState, SessionState
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -58,6 +65,18 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
             (str(gen_id), str(session_id), str(turn_id), now.isoformat()),
         )
 
+    complete_event = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_completed",
+        payload={"text": "Hello world"},
+    )
+
     # 1. Complete generation succeeds
     completed = await repo.complete_generation(
         session_id=session_id,
@@ -67,8 +86,29 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
         source_context=None,
         occurred_at=now,
         set_session_idle=True,
+        complete_event=complete_event,
     )
-    assert completed is True
+    assert completed is not None
+    _pre_evs, complete_ev = completed
+    assert complete_ev.event_type == "assistant.generation_completed"
+
+    fail_event = ErrorRaisedEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        payload=ErrorRaisedPayload(
+            error=StructuredError(
+                code="SOME_ERROR",
+                message="some error",
+                retryable=True,
+                component="conversation",
+            )
+        ),
+    )
 
     # 2. Subsequent fail_generation cannot overwrite completed state
     failed = await repo.fail_generation(
@@ -77,8 +117,21 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
         error_code="SOME_ERROR",
         occurred_at=now,
         set_session_idle=True,
+        fail_event=fail_event,
     )
-    assert failed is False
+    assert failed is None
+
+    cancel_event = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_cancelled",
+        payload={"reason": "test"},
+    )
 
     # 3. Subsequent cancel_generation cannot overwrite completed state
     cancelled = await repo.cancel_generation(
@@ -86,8 +139,9 @@ async def test_generation_terminal_transitions_cas(tmp_path: Path) -> None:
         generation_id=gen_id,
         occurred_at=now,
         set_session_idle=True,
+        cancel_events=(cancel_event,),
     )
-    assert cancelled is False
+    assert cancelled is None
 
     # Verify state in DB remains 'completed'
     async with database.transaction() as conn:
@@ -139,46 +193,42 @@ async def test_memory_proposal_atomic_acceptance_and_deduplication(tmp_path: Pat
         )
 
     draft = MemoryRecordDraft(
-        namespace="character/default/user/local",
-        kind="semantic.preference",
+        namespace="character",
+        kind="semantic.fact",
         subject_id="user",
-        predicate="like.blue",
-        value=True,
-        text="User likes blue",
-        confidence=0.95,
-        importance=0.8,
-        sensitivity=PrivacyLevel.PRIVATE,
+        predicate="likes",
+        value={"activity": "reading"},
+        text="用户喜欢阅读",
         observed_at=now,
+        confidence=0.9,
+        importance=0.7,
+        sensitivity=PrivacyLevel.LOCAL,
     )
     proposal = MemoryProposal(
         proposal_id=proposal_id,
         operation="add",
         candidate=draft,
+        target_memory_id=None,
         evidence_event_ids=[source_event_id],
-        confidence=0.95,
-        rationale="User statement",
+        confidence=0.9,
+        rationale="test",
         status="pending",
         created_at=now,
     )
     await repo.save_proposal(proposal)
 
+    # 1. First accept succeeds
     record = MemoryRecord(
+        **draft.model_dump(),
         memory_id=uuid4(),
-        namespace="character/default/user/local",
-        kind="semantic.preference",
-        subject_id="user",
-        predicate="like.blue",
-        value=True,
-        text="User likes blue",
-        observed_at=now,
         source_event_ids=[source_event_id],
-        confidence=0.95,
-        importance=0.8,
-        sensitivity=PrivacyLevel.PRIVATE,
+        origin_proposal_id=proposal_id,
+        valid_from=now,
         state="active",
+        supersedes=None,
+        pinned=False,
         created_at=now,
         updated_at=now,
-        origin_proposal_id=proposal_id,
     )
     source = MemorySource(
         source_id=uuid4(),
@@ -190,29 +240,38 @@ async def test_memory_proposal_atomic_acceptance_and_deduplication(tmp_path: Pat
         created_at=now,
     )
 
-    # First accept succeeds
-    accepted1 = await repo.accept_proposal_atomically(
+    accepted = await repo.accept_proposal_atomically(
         proposal_id=proposal_id,
+        decided_at=now,
         record=record,
         sources=[source],
-        decided_at=now,
     )
-    assert accepted1 is True
+    assert accepted is True
 
-    # Second accept attempt fails atomically
-    record2 = record.model_copy(update={"memory_id": uuid4()})
-    accepted2 = await repo.accept_proposal_atomically(
+    # 2. Duplicate accept returns False (idempotent / CAS rejection on proposal state)
+    second_record = MemoryRecord(
+        **draft.model_dump(),
+        memory_id=uuid4(),
+        source_event_ids=[source_event_id],
+        origin_proposal_id=proposal_id,
+        valid_from=now,
+        state="active",
+        supersedes=None,
+        pinned=False,
+        created_at=now,
+        updated_at=now,
+    )
+    second_accepted = await repo.accept_proposal_atomically(
         proposal_id=proposal_id,
-        record=record2,
-        sources=[source],
         decided_at=now,
+        record=second_record,
+        sources=[source],
     )
-    assert accepted2 is False
+    assert second_accepted is False
 
-    # Proposal state is accepted
-    prop = await repo.get_proposal(proposal_id)
-    assert prop is not None
-    assert prop.status == "accepted"
+    # 3. Direct insert with same origin_proposal_id fails unique constraint
+    with pytest.raises(sqlite3.IntegrityError):
+        await repo.create_record(second_record, sources=[source])
 
     await database.close()
 
@@ -225,12 +284,12 @@ async def test_concurrent_session_transitions_cas_rejection(runtime_settings: Se
         session = await container.sessions.create_session("default")
         assert session.revision == 0
 
-        # Concurrent transition with revision 0
+        # Concurrent transition with revision 0 (READY -> DEGRADED and READY -> CLOSING are valid)
         t1 = container.sessions.transition_session(
             session.session_id, SessionState.DEGRADED, expected_revision=0
         )
         t2 = container.sessions.transition_session(
-            session.session_id, SessionState.CLOSED, expected_revision=0
+            session.session_id, SessionState.CLOSING, expected_revision=0
         )
 
         results = await asyncio.gather(t1, t2, return_exceptions=True)
@@ -285,6 +344,18 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
             (str(gen_id), str(session_id), str(turn_id), now.isoformat()),
         )
 
+    complete_event_1 = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_completed",
+        payload={"text": "First reply"},
+    )
+
     # 1. First complete succeeds
     completed = await repo.complete_generation(
         session_id=session_id,
@@ -294,11 +365,23 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
         source_context=None,
         occurred_at=now,
         set_session_idle=True,
+        complete_event=complete_event_1,
     )
-    assert completed is True
+    assert completed is not None
 
     # 2. Duplicate complete fails CAS
     second_assistant_turn_id = uuid4()
+    complete_event_2 = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_completed",
+        payload={"text": "Conflicting second reply"},
+    )
     second_completed = await repo.complete_generation(
         session_id=session_id,
         generation_id=gen_id,
@@ -307,27 +390,58 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
         source_context=None,
         occurred_at=now,
         set_session_idle=True,
+        complete_event=complete_event_2,
     )
-    assert second_completed is False
+    assert second_completed is None
 
     # 3. Duplicate fail fails CAS
+    fail_event = ErrorRaisedEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        payload=ErrorRaisedPayload(
+            error=StructuredError(
+                code="PROVIDER_ERROR",
+                message="error",
+                retryable=True,
+                component="conversation",
+            )
+        ),
+    )
     second_failed = await repo.fail_generation(
         session_id=session_id,
         generation_id=gen_id,
         error_code="PROVIDER_ERROR",
         occurred_at=now,
         set_session_idle=True,
+        fail_event=fail_event,
     )
-    assert second_failed is False
+    assert second_failed is None
 
     # 4. Duplicate cancel fails CAS
+    cancel_event = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_cancelled",
+        payload={"reason": "test"},
+    )
     second_cancelled = await repo.cancel_generation(
         session_id=session_id,
         generation_id=gen_id,
         occurred_at=now,
         set_session_idle=True,
+        cancel_events=(cancel_event,),
     )
-    assert second_cancelled is False
+    assert second_cancelled is None
 
     # Assert invariant: only 1 assistant turn exists with first output
     async with database.transaction() as conn:
@@ -358,6 +472,138 @@ async def test_generation_cas_failure_has_no_side_effects(tmp_path: Path) -> Non
         assert gen[1] == "First reply"
         assert gen[2] is None
         assert gen[3] is None
+        await cursor.close()
+
+    await database.close()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_generation_cas_race(tmp_path: Path) -> None:
+    db_path = tmp_path / "runtime.db"
+    database = Database(db_path, StorageConfig(database_path=db_path))
+    await database.open()
+    event_store = EventStore(database)
+    repo = SQLiteConversationRepository(database, event_store)
+
+    session_id = uuid4()
+    turn_id = uuid4()
+    gen_id = uuid4()
+    assistant_turn_id = uuid4()
+    now = datetime.now(UTC)
+
+    async with database.transaction() as conn:
+        await conn.execute(
+            """
+            INSERT INTO sessions (
+                session_id, character_id, state, conversation_state,
+                revision, next_sequence, created_at, updated_at
+            ) VALUES (?, 'default', 'active', 'idle', 0, 1, ?, ?)
+            """,
+            (str(session_id), now.isoformat(), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO turns(turn_id, session_id, role, created_at)
+            VALUES (?, ?, 'user', ?)
+            """,
+            (str(turn_id), str(session_id), now.isoformat()),
+        )
+        await conn.execute(
+            """
+            INSERT INTO generations (
+                generation_id, session_id, turn_id, state, backend_kind, started_at
+            ) VALUES (?, ?, ?, 'running', 'demo', ?)
+            """,
+            (str(gen_id), str(session_id), str(turn_id), now.isoformat()),
+        )
+
+    complete_ev = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_completed",
+        payload={"text": "Winner"},
+    )
+    fail_ev = ErrorRaisedEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        payload=ErrorRaisedPayload(
+            error=StructuredError(
+                code="RACE_ERROR",
+                message="race failure",
+                retryable=False,
+                component="conversation",
+            )
+        ),
+    )
+    cancel_ev = GenericCoreEvent(
+        event_id=uuid4(),
+        session_id=session_id,
+        turn_id=turn_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        source="runtime.conversation",
+        privacy=PrivacyLevel.LOCAL,
+        event_type="assistant.generation_cancelled",
+        payload={"reason": "race cancel"},
+    )
+
+    # Concurrently execute complete, fail, and cancel
+    t_complete = repo.complete_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        assistant_turn_id=assistant_turn_id,
+        output="Winner",
+        source_context=None,
+        occurred_at=now,
+        set_session_idle=True,
+        complete_event=complete_ev,
+    )
+    t_fail = repo.fail_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        error_code="RACE_ERROR",
+        occurred_at=now,
+        set_session_idle=True,
+        fail_event=fail_ev,
+    )
+    t_cancel = repo.cancel_generation(
+        session_id=session_id,
+        generation_id=gen_id,
+        occurred_at=now,
+        set_session_idle=True,
+        cancel_events=(cancel_ev,),
+    )
+
+    results = await asyncio.gather(t_complete, t_fail, t_cancel, return_exceptions=True)
+
+    non_none_results = [r for r in results if r is not None and not isinstance(r, Exception)]
+    assert len(non_none_results) == 1, f"Expected exactly 1 winner, got {results}"
+
+    # Verify event store contains exactly 1 or tuple of terminal events (from the winner only)
+    async with database.transaction() as conn:
+        cursor = await conn.execute(
+            """
+            SELECT event_type FROM events
+            WHERE session_id = ? AND event_type IN (
+                'assistant.generation_completed',
+                'core.error_raised',
+                'assistant.generation_cancelled'
+            )
+            """,
+            (str(session_id),),
+        )
+        events_rows = list(await cursor.fetchall())
+        assert len(events_rows) == 1
         await cursor.close()
 
     await database.close()

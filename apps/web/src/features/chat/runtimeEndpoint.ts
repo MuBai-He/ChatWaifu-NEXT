@@ -3,9 +3,16 @@ export type DesktopRuntimeStatus = {
   runtime_url?: string | null;
   pid?: number | null;
   workers: string[];
+  token?: string | null;
   restart_count: number;
   detail?: string | null;
 };
+
+export interface RuntimeConnection {
+  baseUrl: string;
+  token?: string | null;
+  restartCount?: number;
+}
 
 const browserRuntimeUrl = "http://127.0.0.1:8765";
 const statusEvent = "desktop-runtime-status-changed";
@@ -15,29 +22,62 @@ const statusEvent = "desktop-runtime-status-changed";
 // leaves the desktop session permanently offline even when native startup later
 // reaches ready. The final 5s is only for delivery of the native ready event.
 export const DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS = 455_000;
-let cachedRuntimeUrl: string | null = null;
-let pendingResolution: Promise<string> | null = null;
+let cachedConnection: RuntimeConnection | null = null;
+let pendingConnectionResolution: Promise<RuntimeConnection> | null = null;
 
 export function isDesktopHost(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-export async function resolveRuntimeUrl(forceRefresh = false): Promise<string> {
-  if (!isDesktopHost()) return browserRuntimeUrl;
-  if (!forceRefresh && cachedRuntimeUrl) return cachedRuntimeUrl;
-  if (!forceRefresh && pendingResolution) return pendingResolution;
-  const resolution = resolveDesktopRuntimeUrl();
-  pendingResolution = resolution;
+function resolveBrowserToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const globalToken = (
+    window as unknown as { __CHATWAIFU_RUNTIME_TOKEN__?: string }
+  ).__CHATWAIFU_RUNTIME_TOKEN__;
+  if (globalToken) return globalToken;
   try {
-    cachedRuntimeUrl = await resolution;
-    return cachedRuntimeUrl;
+    const viteToken = (
+      import.meta as unknown as { env?: { VITE_RUNTIME_TOKEN?: string } }
+    ).env?.VITE_RUNTIME_TOKEN;
+    if (viteToken) return viteToken;
+  } catch {
+    // import.meta may be undefined in some environments
+  }
+  return null;
+}
+
+export async function resolveRuntimeConnection(
+  forceRefresh = false,
+): Promise<RuntimeConnection> {
+  if (!isDesktopHost()) {
+    return {
+      baseUrl: browserRuntimeUrl,
+      token: resolveBrowserToken(),
+      restartCount: 0,
+    };
+  }
+  if (!forceRefresh && cachedConnection) return cachedConnection;
+  if (!forceRefresh && pendingConnectionResolution)
+    return pendingConnectionResolution;
+  const resolution = resolveDesktopRuntimeConnection();
+  pendingConnectionResolution = resolution;
+  try {
+    cachedConnection = await resolution;
+    return cachedConnection;
   } finally {
-    if (pendingResolution === resolution) pendingResolution = null;
+    if (pendingConnectionResolution === resolution)
+      pendingConnectionResolution = null;
   }
 }
 
+export async function resolveRuntimeUrl(forceRefresh = false): Promise<string> {
+  const connection = await resolveRuntimeConnection(forceRefresh);
+  return connection.baseUrl;
+}
+
 export function runtimeAssetUrl(path: string): string {
-  return `${cachedRuntimeUrl ?? browserRuntimeUrl}${path}`;
+  const baseUrl = cachedConnection?.baseUrl ?? browserRuntimeUrl;
+  return `${baseUrl}${path}`;
 }
 
 export async function runtimeWebSocketUrl(
@@ -48,6 +88,42 @@ export async function runtimeWebSocketUrl(
   return url.toString().replace(/\/$/, "");
 }
 
+export async function runtimeFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const connection = await resolveRuntimeConnection();
+  const url =
+    path.startsWith("http://") || path.startsWith("https://")
+      ? path
+      : `${connection.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  const headers = new Headers(init?.headers);
+  if (connection.token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${connection.token}`);
+  }
+  return fetch(url, {
+    ...init,
+    headers,
+  });
+}
+
+export async function acquireWsTicket(
+  connection?: RuntimeConnection,
+): Promise<string | null> {
+  try {
+    const conn = connection ?? (await resolveRuntimeConnection());
+    const response = await runtimeFetch(
+      `${conn.baseUrl}/v1/runtime/ws-ticket`,
+      { method: "POST" },
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as { ticket?: string };
+    return typeof data.ticket === "string" ? data.ticket : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function readDesktopRuntimeStatus(): Promise<DesktopRuntimeStatus | null> {
   if (!isDesktopHost()) return null;
   const { invoke } = await import("@tauri-apps/api/core");
@@ -56,21 +132,21 @@ export async function readDesktopRuntimeStatus(): Promise<DesktopRuntimeStatus |
 
 export async function restartDesktopRuntime(): Promise<DesktopRuntimeStatus | null> {
   if (!isDesktopHost()) return null;
-  cachedRuntimeUrl = null;
+  cachedConnection = null;
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DesktopRuntimeStatus>("restart_runtime");
 }
 
-async function resolveDesktopRuntimeUrl(): Promise<string> {
+async function resolveDesktopRuntimeConnection(): Promise<RuntimeConnection> {
   const [{ invoke }, { listen }] = await Promise.all([
     import("@tauri-apps/api/core"),
     import("@tauri-apps/api/event"),
   ]);
   const current = await invoke<DesktopRuntimeStatus>("get_runtime_status");
-  const ready = endpointFrom(current);
+  const ready = connectionFrom(current);
   if (ready) return ready;
 
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<RuntimeConnection>((resolve, reject) => {
     let settled = false;
     let unlisten: (() => void) | undefined;
     const timer = window.setTimeout(() => {
@@ -86,9 +162,9 @@ async function resolveDesktopRuntimeUrl(): Promise<string> {
       complete();
     };
     void listen<DesktopRuntimeStatus>(statusEvent, (event) => {
-      const endpoint = endpointFrom(event.payload);
-      if (endpoint) {
-        finish(() => resolve(endpoint));
+      const conn = connectionFrom(event.payload);
+      if (conn) {
+        finish(() => resolve(conn));
       } else if (event.payload.state === "circuit_open") {
         finish(() =>
           reject(
@@ -110,8 +186,8 @@ async function resolveDesktopRuntimeUrl(): Promise<string> {
       })
       .then((status) => {
         if (!status) return;
-        const endpoint = endpointFrom(status);
-        if (endpoint) finish(() => resolve(endpoint));
+        const conn = connectionFrom(status);
+        if (conn) finish(() => resolve(conn));
       })
       .catch((error: unknown) =>
         finish(() =>
@@ -125,7 +201,9 @@ async function resolveDesktopRuntimeUrl(): Promise<string> {
   });
 }
 
-function endpointFrom(status: DesktopRuntimeStatus): string | null {
+function connectionFrom(
+  status: DesktopRuntimeStatus,
+): RuntimeConnection | null {
   if (status.state !== "ready" || !status.runtime_url) return null;
   const url = new URL(status.runtime_url);
   if (
@@ -133,5 +211,9 @@ function endpointFrom(status: DesktopRuntimeStatus): string | null {
     !["127.0.0.1", "localhost", "[::1]", "::1"].includes(url.hostname)
   )
     throw new Error("桌面宿主返回了不安全的 Runtime 地址。将在本地阻止连接。");
-  return url.toString().replace(/\/$/, "");
+  return {
+    baseUrl: url.toString().replace(/\/$/, ""),
+    token: status.token ?? null,
+    restartCount: status.restart_count,
+  };
 }

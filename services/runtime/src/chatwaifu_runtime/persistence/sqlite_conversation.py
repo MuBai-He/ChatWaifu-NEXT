@@ -8,6 +8,8 @@ from uuid import UUID
 import aiosqlite
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
+    AvatarCueEmittedEvent,
+    ErrorRaisedEvent,
     GenericCoreEvent,
     UserTurnCommittedEvent,
 )
@@ -265,7 +267,9 @@ class SQLiteConversationRepository(ConversationRepository):
         source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool:
+        complete_event: GenericCoreEvent,
+        pre_events: tuple[AvatarCueEmittedEvent | GenericCoreEvent, ...] = (),
+    ) -> tuple[tuple[AvatarCueEmittedEvent | GenericCoreEvent, ...], GenericCoreEvent] | None:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 """
@@ -283,7 +287,7 @@ class SQLiteConversationRepository(ConversationRepository):
             updated = cursor.rowcount > 0
             await cursor.close()
             if not updated:
-                return False
+                return None
             await connection.execute(
                 """
                 INSERT INTO turns(
@@ -301,7 +305,14 @@ class SQLiteConversationRepository(ConversationRepository):
                 ),
             )
             await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
-            return True
+            persisted_pre_events: list[AvatarCueEmittedEvent | GenericCoreEvent] = []
+            for event in pre_events:
+                persisted = await self._event_store.append_in_transaction(connection, event)
+                persisted_pre_events.append(persisted)
+            persisted_event = await self._event_store.append_in_transaction(
+                connection, complete_event
+            )
+            return tuple(persisted_pre_events), persisted_event
 
     async def cancel_generation(
         self,
@@ -310,7 +321,8 @@ class SQLiteConversationRepository(ConversationRepository):
         generation_id: UUID,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool:
+        cancel_events: tuple[GenericCoreEvent, ...] = (),
+    ) -> tuple[GenericCoreEvent, ...] | None:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 """
@@ -326,9 +338,14 @@ class SQLiteConversationRepository(ConversationRepository):
             )
             updated = cursor.rowcount > 0
             await cursor.close()
-            if updated:
-                await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
-            return updated
+            if not updated:
+                return None
+            await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            persisted_events: list[GenericCoreEvent] = []
+            for event in cancel_events:
+                persisted = await self._event_store.append_in_transaction(connection, event)
+                persisted_events.append(persisted)
+            return tuple(persisted_events)
 
     async def fail_generation(
         self,
@@ -338,7 +355,8 @@ class SQLiteConversationRepository(ConversationRepository):
         error_code: str,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool:
+        fail_event: ErrorRaisedEvent,
+    ) -> ErrorRaisedEvent | None:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 """
@@ -355,9 +373,11 @@ class SQLiteConversationRepository(ConversationRepository):
             )
             updated = cursor.rowcount > 0
             await cursor.close()
-            if updated:
-                await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
-            return updated
+            if not updated:
+                return None
+            await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
+            persisted_event = await self._event_store.append_in_transaction(connection, fail_event)
+            return persisted_event
 
     @staticmethod
     async def _insert_generation(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -101,43 +102,50 @@ class CharacterKernelService:
         text: str,
     ) -> TurnCharacterContext:
         character = self._require_character(character_id)
-        previous = await self.snapshot(character_id)
-        now = datetime.now(UTC)
         signal = _classify(text)
-        affect = _reduce_affect(previous.affect, signal, now)
-        relationship = _reduce_relationship(previous.relationship, signal, character, now)
-        revision = previous.revision + 1
-        await self._persist(character_id, affect, relationship, revision)
-        snapshot = CharacterKernelSnapshot(
-            character_id=character_id,
-            user_scope=USER_SCOPE,
-            revision=revision,
-            affect=affect,
-            relationship=relationship,
-        )
-        plan = _plan_response(text, signal, snapshot, character)
-        await self._emit(
-            "character.state_changed",
-            session_id,
-            turn_id,
-            generation_id,
-            {"revision": revision, "affect": affect.model_dump(mode="json")},
-        )
-        await self._emit(
-            "relationship.state_changed",
-            session_id,
-            turn_id,
-            generation_id,
-            {"revision": revision, "relationship": relationship.model_dump(mode="json")},
-        )
-        await self._emit(
-            "character.response_planned",
-            session_id,
-            turn_id,
-            generation_id,
-            {"plan": plan.model_dump(mode="json")},
-        )
-        return TurnCharacterContext(snapshot=snapshot, plan=plan)
+
+        for _ in range(5):
+            previous = await self.snapshot(character_id)
+            now = datetime.now(UTC)
+            affect = _reduce_affect(previous.affect, signal, now)
+            relationship = _reduce_relationship(previous.relationship, signal, character, now)
+            revision = previous.revision + 1
+            if await self._persist_cas(
+                character_id, affect, relationship, previous.revision, revision
+            ):
+                snapshot = CharacterKernelSnapshot(
+                    character_id=character_id,
+                    user_scope=USER_SCOPE,
+                    revision=revision,
+                    affect=affect,
+                    relationship=relationship,
+                )
+                plan = _plan_response(text, signal, snapshot, character)
+                await self._emit(
+                    "character.state_changed",
+                    session_id,
+                    turn_id,
+                    generation_id,
+                    {"revision": revision, "affect": affect.model_dump(mode="json")},
+                )
+                await self._emit(
+                    "relationship.state_changed",
+                    session_id,
+                    turn_id,
+                    generation_id,
+                    {"revision": revision, "relationship": relationship.model_dump(mode="json")},
+                )
+                await self._emit(
+                    "character.response_planned",
+                    session_id,
+                    turn_id,
+                    generation_id,
+                    {"plan": plan.model_dump(mode="json")},
+                )
+                return TurnCharacterContext(snapshot=snapshot, plan=plan)
+            await asyncio.sleep(0.005)
+
+        raise RuntimeError(f"character kernel state conflict for {character_id} after 5 retries")
 
     async def observe_interaction(
         self,
@@ -147,54 +155,60 @@ class CharacterKernelService:
         kind: Literal["avatar_touch"],
         region: str,
     ) -> CharacterKernelSnapshot:
-        previous = await self.snapshot(character_id)
-        now = datetime.now(UTC)
-        affect = previous.affect.model_copy(
-            update={
-                "valence": _clamp(previous.affect.valence + 0.015, -1, 1),
-                "attention": _clamp(previous.affect.attention + 0.04),
-                "embarrassment": _clamp(previous.affect.embarrassment + 0.025),
-                "updated_at": now,
-            }
-        )
-        relationship = previous.relationship.model_copy(
-            update={
-                "familiarity": _clamp(previous.relationship.familiarity + 0.004),
-                "comfort": _clamp(previous.relationship.comfort + 0.003),
-                "updated_at": now,
-            }
-        )
-        revision = previous.revision + 1
-        await self._persist(character_id, affect, relationship, revision)
-        snapshot = CharacterKernelSnapshot(
-            character_id=character_id,
-            user_scope=USER_SCOPE,
-            revision=revision,
-            affect=affect,
-            relationship=relationship,
-        )
-        await self._emit(
-            "avatar.interaction_received",
-            session_id,
-            None,
-            None,
-            {"kind": kind, "region": region, "revision": revision},
-        )
-        await self._emit(
-            "character.state_changed",
-            session_id,
-            None,
-            None,
-            {"revision": revision, "affect": affect.model_dump(mode="json")},
-        )
-        await self._emit(
-            "relationship.state_changed",
-            session_id,
-            None,
-            None,
-            {"revision": revision, "relationship": relationship.model_dump(mode="json")},
-        )
-        return snapshot
+        for _ in range(5):
+            previous = await self.snapshot(character_id)
+            now = datetime.now(UTC)
+            affect = previous.affect.model_copy(
+                update={
+                    "valence": _clamp(previous.affect.valence + 0.015, -1, 1),
+                    "attention": _clamp(previous.affect.attention + 0.04),
+                    "embarrassment": _clamp(previous.affect.embarrassment + 0.025),
+                    "updated_at": now,
+                }
+            )
+            relationship = previous.relationship.model_copy(
+                update={
+                    "familiarity": _clamp(previous.relationship.familiarity + 0.004),
+                    "comfort": _clamp(previous.relationship.comfort + 0.003),
+                    "updated_at": now,
+                }
+            )
+            revision = previous.revision + 1
+            if await self._persist_cas(
+                character_id, affect, relationship, previous.revision, revision
+            ):
+                snapshot = CharacterKernelSnapshot(
+                    character_id=character_id,
+                    user_scope=USER_SCOPE,
+                    revision=revision,
+                    affect=affect,
+                    relationship=relationship,
+                )
+                await self._emit(
+                    "avatar.interaction_received",
+                    session_id,
+                    None,
+                    None,
+                    {"kind": kind, "region": region, "revision": revision},
+                )
+                await self._emit(
+                    "character.state_changed",
+                    session_id,
+                    None,
+                    None,
+                    {"revision": revision, "affect": affect.model_dump(mode="json")},
+                )
+                await self._emit(
+                    "relationship.state_changed",
+                    session_id,
+                    None,
+                    None,
+                    {"revision": revision, "relationship": relationship.model_dump(mode="json")},
+                )
+                return snapshot
+            await asyncio.sleep(0.005)
+
+        raise RuntimeError(f"character kernel state conflict for {character_id} after 5 retries")
 
     async def plan_proactive_turn(
         self,
@@ -270,6 +284,67 @@ class CharacterKernelService:
             affect=affect,
             relationship=relationship,
         )
+
+    async def _persist_cas(
+        self,
+        character_id: str,
+        affect: AffectState,
+        relationship: RelationshipState,
+        expected_revision: int,
+        new_revision: int,
+    ) -> bool:
+        async with self._database.transaction() as connection:
+            cursor_affect = await connection.execute(
+                """
+                UPDATE character_states SET
+                    valence=?, arousal=?, energy=?, attention=?, embarrassment=?, tension=?,
+                    revision=?, updated_at=?
+                WHERE character_id = ? AND user_scope = ? AND revision = ?
+                """,
+                (
+                    affect.valence,
+                    affect.arousal,
+                    affect.energy,
+                    affect.attention,
+                    affect.embarrassment,
+                    affect.tension,
+                    new_revision,
+                    affect.updated_at.isoformat(),
+                    character_id,
+                    USER_SCOPE,
+                    expected_revision,
+                ),
+            )
+            updated_affect = cursor_affect.rowcount > 0
+            await cursor_affect.close()
+
+            cursor_rel = await connection.execute(
+                """
+                UPDATE relationship_states SET
+                    familiarity=?, trust=?, affinity=?, comfort=?, recent_tension=?,
+                    interaction_count=?, stage=?, preferred_address=?, revision=?, updated_at=?
+                WHERE character_id = ? AND user_scope = ? AND revision = ?
+                """,
+                (
+                    relationship.familiarity,
+                    relationship.trust,
+                    relationship.affinity,
+                    relationship.comfort,
+                    relationship.recent_tension,
+                    relationship.interaction_count,
+                    relationship.stage,
+                    relationship.preferred_address,
+                    new_revision,
+                    relationship.updated_at.isoformat(),
+                    character_id,
+                    USER_SCOPE,
+                    expected_revision,
+                ),
+            )
+            updated_rel = cursor_rel.rowcount > 0
+            await cursor_rel.close()
+
+            return updated_affect and updated_rel
 
     async def _persist(
         self,
@@ -460,9 +535,9 @@ def _classify(text: str) -> _Signal:
         question="?" in value
         or "？" in value
         or any(marker in value for marker in ("为什么", "怎么", "什么", "who", "why", "how")),
-        sing=any(marker in value for marker in ("唱歌", "唱一首", "sing")),
-        gaze=any(marker in value for marker in ("看着我", "看我", "盯着", "stare")),
-        headpat=any(marker in value for marker in ("摸摸头", "摸头", "headpat", "pat your head")),
+        sing=has(("唱歌", "唱一首", "sing")),
+        gaze=has(("看着我", "看我", "盯着", "stare")),
+        headpat=has(("摸摸头", "摸头", "headpat", "pat your head")),
     )
 
 

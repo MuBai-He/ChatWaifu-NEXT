@@ -1,16 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { requestRuntime } from "./http";
-import { resolveRuntimeUrl } from "../runtimeEndpoint";
+import {
+  resolveRuntimeConnection,
+  type RuntimeConnection,
+} from "../runtimeEndpoint";
 
 vi.mock("../runtimeEndpoint", () => ({
-  resolveRuntimeUrl: vi.fn().mockResolvedValue("http://runtime.test"),
+  resolveRuntimeConnection: vi.fn().mockResolvedValue({
+    baseUrl: "http://runtime.test",
+    token: "test-auth-token",
+  }),
 }));
 
 describe("runtime HTTP client", () => {
   beforeEach(() => {
-    vi.mocked(resolveRuntimeUrl).mockReset();
-    vi.mocked(resolveRuntimeUrl).mockResolvedValue("http://runtime.test");
+    vi.mocked(resolveRuntimeConnection).mockReset();
+    vi.mocked(resolveRuntimeConnection).mockResolvedValue({
+      baseUrl: "http://runtime.test",
+      token: "test-auth-token",
+    });
   });
 
   afterEach(() => {
@@ -52,12 +61,19 @@ describe("runtime HTTP client", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
   });
 
-  it("starts the request timeout only after a slow desktop endpoint resolves", async () => {
+  it("injects Authorization header and starts timeout only after slow desktop endpoint resolves", async () => {
     vi.useFakeTimers();
-    vi.mocked(resolveRuntimeUrl).mockImplementation(
+    vi.mocked(resolveRuntimeConnection).mockImplementation(
       () =>
-        new Promise<string>((resolve) => {
-          window.setTimeout(() => resolve("http://runtime.test"), 100);
+        new Promise<RuntimeConnection>((resolve) => {
+          window.setTimeout(
+            () =>
+              resolve({
+                baseUrl: "http://runtime.test",
+                token: "test-auth-token",
+              }),
+            100,
+          );
         }),
     );
     const fetchMock = vi.fn().mockResolvedValue(
@@ -79,11 +95,13 @@ describe("runtime HTTP client", () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(request).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledOnce();
+    const passedHeaders = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
+    expect(passedHeaders.get("Authorization")).toBe("Bearer test-auth-token");
   });
 
   it("lets the caller cancel while waiting for the desktop endpoint", async () => {
-    vi.mocked(resolveRuntimeUrl).mockImplementation(
-      () => new Promise<string>(() => undefined),
+    vi.mocked(resolveRuntimeConnection).mockImplementation(
+      () => new Promise<RuntimeConnection>(() => undefined),
     );
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

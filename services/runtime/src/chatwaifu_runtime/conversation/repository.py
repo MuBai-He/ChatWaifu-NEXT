@@ -9,6 +9,8 @@ from uuid import UUID
 
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
+    AvatarCueEmittedEvent,
+    ErrorRaisedEvent,
     GenericCoreEvent,
     UserTurnCommittedEvent,
 )
@@ -90,7 +92,9 @@ class ConversationRepository(Protocol):
         source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool: ...
+        complete_event: GenericCoreEvent,
+        pre_events: tuple[AvatarCueEmittedEvent | GenericCoreEvent, ...] = (),
+    ) -> tuple[tuple[AvatarCueEmittedEvent | GenericCoreEvent, ...], GenericCoreEvent] | None: ...
 
     async def cancel_generation(
         self,
@@ -99,7 +103,8 @@ class ConversationRepository(Protocol):
         generation_id: UUID,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool: ...
+        cancel_events: tuple[GenericCoreEvent, ...] = (),
+    ) -> tuple[GenericCoreEvent, ...] | None: ...
 
     async def fail_generation(
         self,
@@ -109,4 +114,5 @@ class ConversationRepository(Protocol):
         error_code: str,
         occurred_at: datetime,
         set_session_idle: bool,
-    ) -> bool: ...
+        fail_event: ErrorRaisedEvent,
+    ) -> ErrorRaisedEvent | None: ...

@@ -1,5 +1,5 @@
 import type { PlaybackAckReceipt } from "./runtimeClient";
-import { resolveRuntimeUrl } from "./runtimeEndpoint";
+import { runtimeFetch } from "./runtimeEndpoint";
 
 export type VoiceConnectionState =
   | "unsupported"
@@ -265,9 +265,8 @@ export class BrowserVoiceClient {
     if (!this.isDesired(epoch)) return;
     const local = peer.localDescription;
     if (!local) throw new Error("浏览器没有生成 WebRTC offer。");
-    const runtimeUrl = await resolveRuntimeUrl(reconnecting);
-    const response = await fetch(
-      `${runtimeUrl}/v1/sessions/${this.sessionId}/webrtc/offer`,
+    const response = await runtimeFetch(
+      `/v1/sessions/${this.sessionId}/webrtc/offer`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -527,9 +526,7 @@ export class BrowserVoiceClient {
       this.audioContext = null;
     }
     if (notifyRuntime && peer && this.sessionId) {
-      const runtimeUrl = await resolveRuntimeUrl().catch(() => null);
-      if (!runtimeUrl) return;
-      await fetch(`${runtimeUrl}/v1/sessions/${this.sessionId}/webrtc`, {
+      await runtimeFetch(`/v1/sessions/${this.sessionId}/webrtc`, {
         method: "DELETE",
       }).catch(() => undefined);
     }

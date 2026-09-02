@@ -3,6 +3,7 @@
 import asyncio
 import hmac
 import json
+import re
 import secrets
 import time
 import urllib.parse
@@ -20,6 +21,9 @@ DESKTOP_ORIGINS: Final[frozenset[str]] = frozenset(
 )
 EXEMPT_HTTP_PATHS: Final[frozenset[str]] = frozenset(
     {"/v1/runtime/health", "/docs", "/openapi.json", "/redoc"}
+)
+CHANNEL_EXEMPT_RE: Final[re.Pattern[str]] = re.compile(
+    r"^/v1/channel-connections/[^/]+/(messages(/[^/]+(/interrupt)?)?|deliveries/[^/]+/(claim|ack))$"
 )
 
 
@@ -110,20 +114,26 @@ class LocalClientGuardMiddleware:
         return False
 
     def _is_origin_allowed(self, origin_header: str | None) -> bool:
-        if not origin_header or origin_header.strip() in ("", "null"):
+        if origin_header is None:
             # Permitted for native desktop host, curl, test client, non-browser IPC
             return True
-        raw = origin_header.strip().lower()
-        if raw in self._allowed_origins:
+        raw = origin_header.strip()
+        if not raw:
+            return True
+        if raw.lower() == "null":
+            # Untrusted / sandboxed browser origin - reject
+            return False
+        raw_lower = raw.lower()
+        if raw_lower in self._allowed_origins:
             return True
         try:
-            parsed = urllib.parse.urlparse(raw)
+            parsed = urllib.parse.urlparse(raw_lower)
             if parsed.scheme in ("http", "https", "tauri"):
                 host = parsed.hostname
                 if host and (
-                    host.lower() in self._allowed_hosts
-                    or host.lower() in LOOPBACK_HOSTS
-                    or host.lower() == "tauri.localhost"
+                    host in self._allowed_hosts
+                    or host in LOOPBACK_HOSTS
+                    or host == "tauri.localhost"
                 ):
                     return True
         except Exception:
@@ -198,13 +208,13 @@ class LocalClientGuardMiddleware:
             query_string = scope.get("query_string", b"").decode("latin-1", errors="ignore")
             query_params = urllib.parse.parse_qs(query_string)
             ticket = query_params.get("ticket", [None])[0]
-            token = query_params.get("token", [None])[0] or self._extract_bearer_token(auth_header)
+            bearer_token = self._extract_bearer_token(auth_header)
 
             authenticated = False
             if ticket:
                 authenticated = await self.ticket_store.consume_ticket(ticket)
-            elif token:
-                authenticated = self._is_token_valid(token)
+            elif bearer_token:
+                authenticated = self._is_token_valid(bearer_token)
 
             if not authenticated:
                 await send(
@@ -220,13 +230,17 @@ class LocalClientGuardMiddleware:
 
         if scope["type"] == "http":
             path = scope.get("path", "")
-            if path in EXEMPT_HTTP_PATHS or path.startswith("/v1/audio/"):
+            method = scope.get("method", "GET")
+
+            if path in EXEMPT_HTTP_PATHS:
                 await self.app(scope, receive, send)
                 return
 
-            if path.startswith("/v1/channel-connections/") and (
-                "/messages" in path or "/deliveries" in path
-            ):
+            if method == "GET" and path.startswith("/v1/audio/") and path.endswith(".wav"):
+                await self.app(scope, receive, send)
+                return
+
+            if CHANNEL_EXEMPT_RE.match(path):
                 await self.app(scope, receive, send)
                 return
 

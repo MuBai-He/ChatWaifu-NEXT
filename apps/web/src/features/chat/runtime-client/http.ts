@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { resolveRuntimeUrl } from "../runtimeEndpoint";
+import {
+  resolveRuntimeConnection,
+  type RuntimeConnection,
+} from "../runtimeEndpoint";
 
 export type RuntimeResponseParser<Result> = {
   parse(input: unknown): Result;
@@ -32,7 +35,7 @@ export async function requestRuntime<Result>(
     signal: callerSignal,
     ...requestInit
   } = init ?? {};
-  const runtimeUrl = await waitForRuntimeUrl(callerSignal);
+  const connection = await waitForRuntimeConnection(callerSignal);
   const controller = new AbortController();
   let timedOut = false;
   const aborted = new Promise<never>((_resolve, reject) => {
@@ -54,7 +57,7 @@ export async function requestRuntime<Result>(
   try {
     return await Promise.race([
       performRuntimeRequest(
-        runtimeUrl,
+        connection,
         path,
         parser,
         requestInit,
@@ -72,11 +75,11 @@ export async function requestRuntime<Result>(
   }
 }
 
-async function waitForRuntimeUrl(
+async function waitForRuntimeConnection(
   signal: AbortSignal | null | undefined,
-): Promise<string> {
+): Promise<RuntimeConnection> {
   if (signal?.aborted) throw abortReason(signal);
-  const resolution = resolveRuntimeUrl();
+  const resolution = resolveRuntimeConnection();
   if (!signal) return resolution;
 
   let abortListener: (() => void) | undefined;
@@ -92,7 +95,7 @@ async function waitForRuntimeUrl(
 }
 
 async function performRuntimeRequest<Result>(
-  runtimeUrl: string,
+  connection: RuntimeConnection,
   path: string,
   parser: RuntimeResponseParser<Result>,
   init: RequestInit,
@@ -102,7 +105,10 @@ async function performRuntimeRequest<Result>(
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
-  const response = await fetch(`${runtimeUrl}${path}`, {
+  if (connection.token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${connection.token}`);
+  }
+  const response = await fetch(`${connection.baseUrl}${path}`, {
     ...init,
     signal,
     headers,

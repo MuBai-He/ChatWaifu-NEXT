@@ -43,7 +43,6 @@ pub struct RuntimeStatus {
     pub runtime_url: Option<String>,
     pub pid: Option<u32>,
     pub workers: Vec<String>,
-    #[serde(skip)]
     pub token: Option<String>,
     pub restart_count: u32,
     pub detail: Option<String>,
@@ -172,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn status_redacts_debug_token_and_omits_it_from_json_serialization() {
+    fn status_redacts_debug_token_and_serializes_token_to_json() {
         let status = RuntimeStatus {
             state: RuntimeLifecycleState::Ready,
             runtime_url: Some("http://127.0.0.1:8765".to_owned()),
@@ -188,7 +187,6 @@ mod tests {
         assert!(!debug_str.contains("super_secret_token"));
 
         let json_str = serde_json::to_string(&status).expect("status should serialize to json");
-        assert!(!json_str.contains("token"));
-        assert!(!json_str.contains("super_secret_token"));
+        assert!(json_str.contains("super_secret_token"));
     }
 }

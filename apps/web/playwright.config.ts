@@ -25,5 +25,11 @@ export default defineConfig({
     url: "http://127.0.0.1:4173/avatar-lab",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      VITE_RUNTIME_TOKEN:
+        process.env.VITE_RUNTIME_TOKEN ||
+        process.env.CHATWAIFU_SECURITY__ADMIN_TOKEN ||
+        "",
+    },
   },
 });

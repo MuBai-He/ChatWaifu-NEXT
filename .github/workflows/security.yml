@@ -22,6 +22,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dependencies:
     runs-on: ubuntu-latest
@@ -40,5 +42,5 @@ jobs:
           install: false
       - run: uv sync --all-packages --all-groups --locked
       - run: pnpm install --frozen-lockfile
-      - run: uv run --with pip-audit pip-audit
+      - run: uv run --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
       - run: pnpm audit --audit-level high

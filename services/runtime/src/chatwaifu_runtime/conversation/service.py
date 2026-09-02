@@ -667,7 +667,42 @@ class ConversationService:
         self._begin_completion(accepted)
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
-        completed = await self._repository.complete_generation(
+        complete_event = GenericCoreEvent(
+            event_id=uuid4(),
+            session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
+            generation_id=accepted.generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            event_type="assistant.generation_completed",
+            payload={"text": output, "assistant_turn_id": str(assistant_turn_id)},
+        )
+        pre_events: list[AvatarCueEmittedEvent] = []
+        if emit_avatar:
+            pre_events.append(
+                AvatarCueEmittedEvent.model_validate(
+                    {
+                        "event_id": uuid4(),
+                        "session_id": accepted.session_id,
+                        "turn_id": accepted.turn_id,
+                        "generation_id": accepted.generation_id,
+                        "occurred_at": now,
+                        "source": "runtime.conversation",
+                        "privacy": PrivacyLevel.LOCAL,
+                        "payload": {
+                            "cue": AvatarCue(
+                                cue_id=uuid4(),
+                                generation_id=accepted.generation_id,
+                                kind="state",
+                                name="idle",
+                                priority=90,
+                            )
+                        },
+                    }
+                )
+            )
+        persisted = await self._repository.complete_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             assistant_turn_id=assistant_turn_id,
@@ -675,8 +710,10 @@ class ConversationService:
             source_context=source_context,
             occurred_at=now,
             set_session_idle=self._is_current(accepted),
+            complete_event=complete_event,
+            pre_events=tuple(pre_events),
         )
-        if not completed:
+        if persisted is None:
             logger.info(
                 "generation completion skipped because state is no longer running",
                 extra={
@@ -685,17 +722,23 @@ class ConversationService:
                 },
             )
             return False
+        persisted_pre_events, persisted_complete = persisted
+        for pre_ev in persisted_pre_events:
+            try:
+                await self._publisher.publish_persisted(pre_ev)
+            except Exception:
+                logger.exception(
+                    "failed publishing pre-completion avatar event",
+                    extra={
+                        "session_id": str(accepted.session_id),
+                        "generation_id": str(accepted.generation_id),
+                    },
+                )
         try:
-            if emit_avatar:
-                await self._emit_avatar(accepted, "state", "idle", priority=90)
-            await self._emit_generic(
-                accepted,
-                "assistant.generation_completed",
-                {"text": output, "assistant_turn_id": str(assistant_turn_id)},
-            )
+            await self._publisher.publish_persisted(persisted_complete)
         except Exception:
             logger.exception(
-                "failed emitting completion events after generation committed",
+                "failed publishing completion event to event hub",
                 extra={
                     "session_id": str(accepted.session_id),
                     "generation_id": str(accepted.generation_id),
@@ -711,15 +754,38 @@ class ConversationService:
         set_session_idle: bool | None = None,
     ) -> None:
         now = datetime.now(UTC)
-        cancelled = await self._repository.cancel_generation(
+        cancel_event = GenericCoreEvent(
+            event_id=uuid4(),
+            session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
+            generation_id=accepted.generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            event_type="assistant.generation_cancelled",
+            payload={"reason": reason},
+        )
+        interrupted_event = GenericCoreEvent(
+            event_id=uuid4(),
+            session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
+            generation_id=accepted.generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            event_type="conversation.interrupted",
+            payload={"reason": reason},
+        )
+        persisted_events = await self._repository.cancel_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             occurred_at=now,
             set_session_idle=(
                 self._is_current(accepted) if set_session_idle is None else set_session_idle
             ),
+            cancel_events=(cancel_event, interrupted_event),
         )
-        if not cancelled:
+        if not persisted_events:
             logger.info(
                 "generation cancellation skipped because state is no longer running",
                 extra={
@@ -728,8 +794,18 @@ class ConversationService:
                 },
             )
             return
-        await self._emit_generic(accepted, "assistant.generation_cancelled", {"reason": reason})
-        await self._emit_generic(accepted, "conversation.interrupted", {"reason": reason})
+        for event in persisted_events:
+            try:
+                await self._publisher.publish_persisted(event)
+            except Exception:
+                logger.exception(
+                    "failed publishing cancellation event",
+                    extra={
+                        "session_id": str(accepted.session_id),
+                        "generation_id": str(accepted.generation_id),
+                        "event_type": event.event_type,
+                    },
+                )
 
     async def _failed(
         self,
@@ -741,7 +817,24 @@ class ConversationService:
         set_session_idle: bool | None = None,
     ) -> None:
         now = datetime.now(UTC)
-        failed = await self._repository.fail_generation(
+        fail_event = ErrorRaisedEvent(
+            event_id=uuid4(),
+            session_id=accepted.session_id,
+            turn_id=accepted.turn_id,
+            generation_id=accepted.generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            payload=ErrorRaisedPayload(
+                error=StructuredError(
+                    code=error_code,
+                    message=str(error),
+                    retryable=retryable,
+                    component="conversation",
+                )
+            ),
+        )
+        persisted_event = await self._repository.fail_generation(
             session_id=accepted.session_id,
             generation_id=accepted.generation_id,
             error_code=error_code,
@@ -749,8 +842,9 @@ class ConversationService:
             set_session_idle=(
                 self._is_current(accepted) if set_session_idle is None else set_session_idle
             ),
+            fail_event=fail_event,
         )
-        if not failed:
+        if persisted_event is None:
             logger.info(
                 "generation failure skipped because state is no longer running",
                 extra={
@@ -759,25 +853,16 @@ class ConversationService:
                 },
             )
             return
-        await self._publisher.emit(
-            ErrorRaisedEvent(
-                event_id=uuid4(),
-                session_id=accepted.session_id,
-                turn_id=accepted.turn_id,
-                generation_id=accepted.generation_id,
-                occurred_at=now,
-                source="runtime.conversation",
-                privacy=PrivacyLevel.LOCAL,
-                payload=ErrorRaisedPayload(
-                    error=StructuredError(
-                        code=error_code,
-                        message=str(error),
-                        retryable=retryable,
-                        component="conversation",
-                    )
-                ),
+        try:
+            await self._publisher.publish_persisted(persisted_event)
+        except Exception:
+            logger.exception(
+                "failed publishing failure event",
+                extra={
+                    "session_id": str(accepted.session_id),
+                    "generation_id": str(accepted.generation_id),
+                },
             )
-        )
 
     async def _emit_generic(
         self,

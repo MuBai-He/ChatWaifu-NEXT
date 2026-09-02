@@ -2,7 +2,12 @@ import type { DomainEvent } from "@chatwaifu/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getSessionEvents } from "./runtime-client/sessionsClient";
-import { runtimeWebSocketUrl } from "./runtimeEndpoint";
+import {
+  acquireWsTicket,
+  resolveRuntimeConnection,
+  runtimeWebSocketUrl,
+  type RuntimeConnection,
+} from "./runtimeEndpoint";
 import {
   RUNTIME_CONNECTION_NOTIFICATION,
   RuntimeSocketClient,
@@ -11,6 +16,11 @@ import {
 
 vi.mock("./runtimeEndpoint", () => ({
   runtimeWebSocketUrl: vi.fn().mockResolvedValue("ws://runtime.test"),
+  resolveRuntimeConnection: vi.fn().mockResolvedValue({
+    baseUrl: "http://runtime.test",
+    token: "test-token",
+  }),
+  acquireWsTicket: vi.fn().mockResolvedValue("test-ticket-xyz"),
 }));
 vi.mock("./runtime-client/sessionsClient", () => ({
   getSessionEvents: vi.fn(),
@@ -51,6 +61,13 @@ describe("RuntimeSocketClient replay", () => {
     vi.mocked(getSessionEvents).mockReset();
     vi.mocked(runtimeWebSocketUrl).mockReset();
     vi.mocked(runtimeWebSocketUrl).mockResolvedValue("ws://runtime.test");
+    vi.mocked(acquireWsTicket).mockReset();
+    vi.mocked(acquireWsTicket).mockResolvedValue("test-ticket-xyz");
+    vi.mocked(resolveRuntimeConnection).mockReset();
+    vi.mocked(resolveRuntimeConnection).mockResolvedValue({
+      baseUrl: "http://runtime.test",
+      token: "test-token",
+    });
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.useFakeTimers();
   });
@@ -81,6 +98,7 @@ describe("RuntimeSocketClient replay", () => {
     const first = FakeWebSocket.instances[0];
     expect(first.url).toContain(`session_id=${SESSION_ID}`);
     expect(first.url).toContain("after_sequence=2");
+    expect(first.url).toContain("ticket=test-ticket-xyz");
 
     first.emit(event(4));
     await vi.waitFor(() => expect(received).toEqual([3, 4]));
@@ -93,14 +111,15 @@ describe("RuntimeSocketClient replay", () => {
     await vi.runAllTimersAsync();
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(2));
     expect(FakeWebSocket.instances[1].url).toContain("after_sequence=4");
+    expect(FakeWebSocket.instances[1].url).toContain("ticket=test-ticket-xyz");
     client.stop();
   });
 
   it("ignores endpoint resolutions and socket callbacks from an older connection epoch", async () => {
-    const firstEndpoint = deferred<string>();
-    vi.mocked(runtimeWebSocketUrl)
+    const firstEndpoint = deferred<RuntimeConnection>();
+    vi.mocked(resolveRuntimeConnection)
       .mockImplementationOnce(() => firstEndpoint.promise)
-      .mockResolvedValue("ws://runtime.new");
+      .mockResolvedValue({ baseUrl: "http://runtime.new", token: "test-token" });
     const received: number[] = [];
     const onConnection = vi.fn();
     const client = new RuntimeSocketClient(
@@ -121,7 +140,7 @@ describe("RuntimeSocketClient replay", () => {
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
     const current = FakeWebSocket.instances[0];
     expect(current.url).toContain("after_sequence=5");
-    firstEndpoint.resolve("ws://runtime.old");
+    firstEndpoint.resolve({ baseUrl: "http://runtime.old", token: "test-token" });
     await flushPromises();
 
     expect(FakeWebSocket.instances).toHaveLength(1);

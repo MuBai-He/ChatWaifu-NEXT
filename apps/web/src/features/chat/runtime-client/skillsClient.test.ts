@@ -5,6 +5,10 @@ import { getSkillConfirmations } from "./skillsClient";
 
 vi.mock("../runtimeEndpoint", () => ({
   resolveRuntimeUrl: vi.fn().mockResolvedValue("http://runtime.test"),
+  resolveRuntimeConnection: vi.fn().mockResolvedValue({
+    baseUrl: "http://runtime.test",
+    token: null,
+  }),
 }));
 
 describe("Runtime Skills client", () => {

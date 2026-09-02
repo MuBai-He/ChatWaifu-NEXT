@@ -5,7 +5,11 @@ import {
   type TtsStreamMessage,
 } from "./runtime-client/contracts";
 import { getSessionEvents } from "./runtime-client/sessionsClient";
-import { runtimeWebSocketUrl } from "./runtimeEndpoint";
+import {
+  acquireWsTicket,
+  resolveRuntimeConnection,
+  runtimeWebSocketUrl,
+} from "./runtimeEndpoint";
 
 export const RUNTIME_EVENT_NOTIFICATION = "chatwaifu:runtime-event";
 export const RUNTIME_CONNECTION_NOTIFICATION = "chatwaifu:runtime-connection";
@@ -88,10 +92,15 @@ export class RuntimeSocketClient {
     const sessionId = this.sessionId;
     if (!sessionId || !this.isCurrent(epoch, sessionId)) return;
     try {
+      const conn = await resolveRuntimeConnection(refreshEndpoint);
+      if (!this.isCurrent(epoch, sessionId)) return;
       const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
+      const ticket = await acquireWsTicket(conn);
+      if (!this.isCurrent(epoch, sessionId)) return;
+      const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(
-        `${baseUrl}/v1/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${this.lastSequence}`,
+        `${baseUrl}/v1/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${this.lastSequence}${ticketParam}`,
       );
       if (!this.isCurrent(epoch, sessionId)) {
         socket.close();
@@ -142,10 +151,15 @@ export class RuntimeSocketClient {
     if (!sessionId || !this.audioEnabled || !this.isCurrent(epoch, sessionId))
       return;
     try {
+      const conn = await resolveRuntimeConnection(refreshEndpoint);
+      if (!this.isCurrent(epoch, sessionId)) return;
       const baseUrl = await runtimeWebSocketUrl(refreshEndpoint);
       if (!this.isCurrent(epoch, sessionId)) return;
+      const ticket = await acquireWsTicket(conn);
+      if (!this.isCurrent(epoch, sessionId)) return;
+      const ticketParam = ticket ? `&ticket=${encodeURIComponent(ticket)}` : "";
       const socket = new WebSocket(
-        `${baseUrl}/v1/audio/stream?session_id=${encodeURIComponent(sessionId)}`,
+        `${baseUrl}/v1/audio/stream?session_id=${encodeURIComponent(sessionId)}${ticketParam}`,
       );
       if (!this.isCurrent(epoch, sessionId)) {
         socket.close();
@@ -161,11 +175,14 @@ export class RuntimeSocketClient {
         this.audioSocket = null;
         this.scheduleAudioReconnect(epoch, sessionId);
       };
-    } catch (error: unknown) {
+      socket.onerror = () => {
+        if (this.isAudioSocketCurrent(socket, epoch, sessionId)) {
+          this.audioSocket = null;
+          this.scheduleAudioReconnect(epoch, sessionId);
+        }
+      };
+    } catch {
       if (!this.isCurrent(epoch, sessionId)) return;
-      this.callbacks.onProtocolError(
-        messageText(error, "Runtime 音频连接失败。"),
-      );
       this.scheduleAudioReconnect(epoch, sessionId);
     }
   }
@@ -176,24 +193,14 @@ export class RuntimeSocketClient {
     epoch: number,
     socket: WebSocket,
   ): Promise<void> {
-    if (!this.isEventSocketCurrent(socket, epoch, sessionId)) return;
-    let parsed: DomainEvent;
-    try {
-      parsed = parseEventEnvelope(parseJson(data));
-    } catch {
-      const raw = safelyParseJson(data);
-      const eventType =
-        typeof raw === "object" &&
-        raw !== null &&
-        "event_type" in raw &&
-        typeof raw.event_type === "string"
-          ? raw.event_type
-          : "unknown";
+    const payload = safelyParseJson(data);
+    if (payload === null) {
       this.callbacks.onProtocolError(
-        `收到无法识别的 Runtime 事件（${eventType}），已安全忽略。`,
+        "收到无法解析的 Runtime 事件，已安全忽略。",
       );
       return;
     }
+    const parsed = parseEventEnvelope(payload);
     const sequence = eventSequence(parsed);
     if (sequence !== null) {
       if (sequence <= this.lastSequence) return;
