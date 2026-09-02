@@ -839,3 +839,69 @@ async def test_character_kernel_partial_failure_rolls_back_atomically(
         await cursor.close()
 
     await database.close()
+
+
+@pytest.mark.asyncio
+async def test_character_kernel_snapshot_reconciles_split_revisions(
+    tmp_path: Path, runtime_settings: Settings
+) -> None:
+    db_path = tmp_path / "runtime.db"
+    database = Database(db_path, StorageConfig(database_path=db_path))
+    await database.open()
+    event_store = EventStore(database)
+    hub = EventHub()
+    publisher = EventPublisher(event_store, hub)
+    characters = CharacterService(runtime_settings.characters_dir)
+    characters.start()
+    service = CharacterKernelService(database, characters, publisher)
+
+    # Initialize character
+    await service.snapshot("default")
+    now = datetime.now(UTC)
+
+    # Corrupt state to simulate historical split: affect revision = 8, relationship revision = 7
+    async with database.transaction() as conn:
+        await conn.execute(
+            "UPDATE character_states SET revision = 8 WHERE character_id = 'default'"
+        )
+        await conn.execute(
+            "UPDATE relationship_states SET revision = 7 WHERE character_id = 'default'"
+        )
+
+    # snapshot() should detect split and reconcile both to max revision (8)
+    snapshot = await service.snapshot("default")
+    assert snapshot.revision == 8
+
+    # Verify both tables now hold revision 8
+    async with database.transaction() as conn:
+        c1 = await conn.execute(
+            "SELECT revision FROM character_states WHERE character_id = 'default'"
+        )
+        row1 = await c1.fetchone()
+        await c1.close()
+        assert row1 is not None and row1[0] == 8
+
+        c2 = await conn.execute(
+            "SELECT revision FROM relationship_states WHERE character_id = 'default'"
+        )
+        row2 = await c2.fetchone()
+        await c2.close()
+        assert row2 is not None and row2[0] == 8
+
+    # Subsequent CAS expecting revision 8 should succeed
+    new_affect = AffectState(valence=0.9, updated_at=now)
+    new_rel = RelationshipState(familiarity=0.9, updated_at=now)
+    cas_result = await service._persist_cas(
+        character_id="default",
+        affect=new_affect,
+        relationship=new_rel,
+        expected_revision=8,
+        new_revision=9,
+    )
+    assert cas_result is True
+
+    updated_snapshot = await service.snapshot("default")
+    assert updated_snapshot.revision == 9
+    assert updated_snapshot.affect.valence == pytest.approx(0.9, abs=1e-3)
+
+    await database.close()

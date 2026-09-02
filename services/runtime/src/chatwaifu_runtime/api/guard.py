@@ -7,11 +7,22 @@ import re
 import secrets
 import time
 import urllib.parse
-from typing import Final
+from dataclasses import dataclass
+from typing import Final, Literal
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from chatwaifu_runtime.config.settings import Settings
+
+type TicketPurpose = Literal["events", "audio"]
+
+
+@dataclass(frozen=True, slots=True)
+class WebSocketTicketClaims:
+    expiry: float
+    purpose: TicketPurpose
+    origin: str | None = None
+
 
 LOOPBACK_HOSTS: Final[frozenset[str]] = frozenset(
     {"127.0.0.1", "localhost", "::1", "[::1]", "testclient", "testserver"}
@@ -28,36 +39,58 @@ CHANNEL_EXEMPT_RE: Final[re.Pattern[str]] = re.compile(
 
 
 class WebSocketTicketStore:
-    """In-memory thread-safe store for short-lived single-use WebSocket tickets."""
+    """In-memory thread-safe store for short-lived single-use WebSocket tickets with claims."""
 
     def __init__(self) -> None:
-        self._tickets: dict[str, float] = {}
+        self._tickets: dict[str, WebSocketTicketClaims] = {}
         self._lock = asyncio.Lock()
 
-    async def create_ticket(self, ttl_seconds: float = 30.0) -> str:
+    async def create_ticket(
+        self,
+        purpose: TicketPurpose = "events",
+        origin: str | None = None,
+        ttl_seconds: float = 30.0,
+    ) -> str:
         async with self._lock:
             now = time.monotonic()
             self._evict_expired(now)
             ticket = secrets.token_urlsafe(32)
-            self._tickets[ticket] = now + ttl_seconds
+            normalized_origin = origin.strip().lower() if origin and origin.strip() else None
+            self._tickets[ticket] = WebSocketTicketClaims(
+                expiry=now + ttl_seconds,
+                purpose=purpose,
+                origin=normalized_origin,
+            )
             return ticket
 
-    async def consume_ticket(self, ticket: str | None) -> bool:
+    async def consume_ticket(
+        self,
+        ticket: str | None,
+        expected_purpose: TicketPurpose | None = None,
+        origin: str | None = None,
+    ) -> bool:
         if not ticket:
             return False
         async with self._lock:
             now = time.monotonic()
             self._evict_expired(now)
-            expiry = self._tickets.pop(ticket, None)
-            if expiry is not None and expiry >= now:
-                return True
-            return False
+            claims = self._tickets.pop(ticket, None)
+            if claims is None or claims.expiry < now:
+                return False
+            if expected_purpose is not None and claims.purpose != expected_purpose:
+                return False
+            if claims.origin is not None:
+                if not origin:
+                    return False
+                if claims.origin != origin.strip().lower():
+                    return False
+            return True
 
     def clear(self) -> None:
         self._tickets.clear()
 
     def _evict_expired(self, now: float) -> None:
-        expired = [t for t, exp in self._tickets.items() if exp < now]
+        expired = [t for t, claims in self._tickets.items() if claims.expiry < now]
         for t in expired:
             self._tickets.pop(t, None)
 
@@ -205,6 +238,13 @@ class LocalClientGuardMiddleware:
             return
 
         if scope["type"] == "websocket":
+            path = scope.get("path", "")
+            expected_purpose: TicketPurpose | None = None
+            if path.endswith("/events"):
+                expected_purpose = "events"
+            elif path.endswith("/audio/stream"):
+                expected_purpose = "audio"
+
             query_string = scope.get("query_string", b"").decode("latin-1", errors="ignore")
             query_params = urllib.parse.parse_qs(query_string)
             ticket = query_params.get("ticket", [None])[0]
@@ -212,7 +252,11 @@ class LocalClientGuardMiddleware:
 
             authenticated = False
             if ticket:
-                authenticated = await self.ticket_store.consume_ticket(ticket)
+                authenticated = await self.ticket_store.consume_ticket(
+                    ticket,
+                    expected_purpose=expected_purpose,
+                    origin=origin_header,
+                )
             elif bearer_token:
                 authenticated = self._is_token_valid(bearer_token)
 

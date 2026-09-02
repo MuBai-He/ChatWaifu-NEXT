@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  acquireWsTicket,
   DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS,
   resolveRuntimeUrl,
   type DesktopRuntimeStatus,
+  type RuntimeConnection,
 } from "./runtimeEndpoint";
 
 const nativeMocks = vi.hoisted(() => ({
@@ -117,5 +119,66 @@ describe("desktop Runtime endpoint", () => {
     completeRegistration?.(nativeMocks.unlisten);
     await vi.waitFor(() => expect(nativeMocks.unlisten).toHaveBeenCalledOnce());
     expect(nativeMocks.invoke).not.toHaveBeenCalledWith("start_runtime");
+  });
+});
+
+describe("acquireWsTicket", () => {
+  it("requests ticket with purpose=events by default", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ ticket: "ticket-123", purpose: "events" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    const connection: RuntimeConnection = {
+      baseUrl: "http://127.0.0.1:8765",
+      token: "test-token",
+    };
+    const ticket = await acquireWsTicket(connection);
+    expect(ticket).toBe("ticket-123");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=events",
+      expect.objectContaining({ method: "POST" }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("requests ticket with explicit purpose=audio", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ ticket: "audio-ticket-456", purpose: "audio" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    const connection: RuntimeConnection = {
+      baseUrl: "http://127.0.0.1:8765",
+      token: "test-token",
+    };
+    const ticket = await acquireWsTicket("audio", connection);
+    expect(ticket).toBe("audio-ticket-456");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=audio",
+      expect.objectContaining({ method: "POST" }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("returns null if response is not ok", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    const connection: RuntimeConnection = {
+      baseUrl: "http://127.0.0.1:8765",
+      token: "test-token",
+    };
+    const ticket = await acquireWsTicket("events", connection);
+    expect(ticket).toBeNull();
+    fetchSpy.mockRestore();
   });
 });

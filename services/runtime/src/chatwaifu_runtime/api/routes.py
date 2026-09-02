@@ -5,7 +5,7 @@ import base64
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import NoReturn, cast
+from typing import Literal, NoReturn, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_model_worker import WorkerPackError, discover_installed_packs
@@ -127,11 +127,49 @@ async def runtime_health(request: Request) -> RuntimeHealth:
     )
 
 
-@router.post("/runtime/ws-ticket")
-async def create_ws_ticket(request: Request) -> dict[str, object]:
+async def _handle_create_ws_ticket(
+    request: Request,
+    purpose: Literal["events", "audio"] = Query(default="events"),
+) -> dict[str, object]:
+    resolved_purpose: Literal["events", "audio"] = purpose
+    if request.method == "POST":
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            try:
+                raw_body: object = await request.json()
+                if isinstance(raw_body, dict):
+                    body_dict = cast(dict[str, object], raw_body)
+                    raw_purpose = body_dict.get("purpose")
+                    if raw_purpose == "audio":
+                        resolved_purpose = "audio"
+                    elif raw_purpose == "events":
+                        resolved_purpose = "events"
+            except Exception:
+                pass
     container = _container(request)
-    ticket = await container.ws_ticket_store.create_ticket(ttl_seconds=30.0)
-    return {"ticket": ticket, "expires_in": 30}
+    origin = request.headers.get("origin")
+    ticket = await container.ws_ticket_store.create_ticket(
+        purpose=resolved_purpose,
+        origin=origin,
+        ttl_seconds=30.0,
+    )
+    return {"ticket": ticket, "expires_in": 30, "purpose": resolved_purpose}
+
+
+@router.post("/runtime/ws-ticket", operation_id="create_ws_ticket_post")
+async def create_ws_ticket_post(
+    request: Request,
+    purpose: Literal["events", "audio"] = Query(default="events"),
+) -> dict[str, object]:
+    return await _handle_create_ws_ticket(request, purpose)
+
+
+@router.get("/runtime/ws-ticket", operation_id="create_ws_ticket_get")
+async def create_ws_ticket_get(
+    request: Request,
+    purpose: Literal["events", "audio"] = Query(default="events"),
+) -> dict[str, object]:
+    return await _handle_create_ws_ticket(request, purpose)
 
 
 @router.post(

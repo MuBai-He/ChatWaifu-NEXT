@@ -1,6 +1,6 @@
 schema_version: "1.0"
-updated_at: "2026-09-02"
-current_phase: 12
+updated_at: "2026-09-03"
+current_phase: 12.5.1
 next_phase: 13
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
@@ -430,6 +430,26 @@ phases:
       - A fingerprinted SQLite semantic projection is rebuilt on embedding-route changes while WAL plus FTS5 remains truth
       - Host-only OpenAI-compatible URLs default to /v1 while explicit and nested API base paths remain unchanged
       - Shared-event extraction requires completed playback acknowledgement and assistant spoken-text evidence
+  - id: 12.5
+    name: runtime-hardening-core
+    status: completed_validated_on_remote_ci
+    evidence:
+      - LocalClientGuard enforces host/origin perimeter, short-lived single-use WebSocket tickets, and Bearer authorization across all sensitive endpoints
+      - Generation completion, failure, and cancellation are governed by a unified atomic SQLite CAS on (generation_id, session_id, turn_id, state='running')
+      - Generation CAS, Assistant Turn insertion, Session Idle transition, and Terminal Events share a single transaction to prevent orphan turns or split state
+      - Character Kernel snapshot reads and persists Affect and Relationship states atomically under a shared revision CAS, rolling back on revision divergence
+      - Memory adoption executes under a session-bound atomic CAS with deduplication and rollback protection
+      - EventHub implements a 3-lane priority queue (Control=0, Domain=1, Telemetry=2) with monotonic FIFO ordering within each lane, ensuring control/interruption signals bypass domain backpressure
+      - Ephemeral text delta protocol isolates streaming tokens from persisted conversation turns
+      - All 5 GitHub Actions CI workflows (Security CI, Web E2E & Boundaries, Web Product CI, Python multi-OS matrix, Desktop Product CI) pass remotely
+  - id: 12.5.1
+    name: runtime-security-and-concurrency-polish
+    status: completed_and_tested
+    evidence:
+      - Runtime Capability token generation is strictly separated from admin_token, ensuring an ephemeral 32-byte process-scoped capability token even when admin_token is statically configured
+      - WebSocket tickets enforce purpose claims (events vs audio) and origin binding, preventing cross-purpose ticket reuse or unauthorized cross-origin connections
+      - Character Kernel snapshot automatically detects and self-heals historical revision splits across character_states and relationship_states, smoothly reconciling legacy databases
+      - Web client acquires purposive WebSocket tickets for events and audio streams with fallback
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
@@ -456,8 +476,6 @@ phases:
       - Wire, lifecycle, failure-isolation, crash-recovery, cancellation, source-provenance, and complete getupdates-to-delivery tests pass; a real scanned WeChat owner round trip and installed Windows/Linux credential-store acceptance remain pending
 
 entry_blockers:
-  - Windows and Linux CI results have not run on a remote repository
-  - macOS Tauri compile smoke is configured but has not run remotely
   - Live2D release packaging and a custom character require an explicit asset-license review
   - The current GPT-SoVITS Roxy test model is not the target Ningning voice and has no committed distribution license metadata
   - The game-extracted Nene Qwen3-TTS training dataset and resulting checkpoints are local research artifacts and are not distributable product assets

@@ -108,12 +108,21 @@ export async function runtimeFetch(
 }
 
 export async function acquireWsTicket(
+  purposeOrConnection?: "events" | "audio" | RuntimeConnection,
   connection?: RuntimeConnection,
 ): Promise<string | null> {
+  const purpose: "events" | "audio" =
+    purposeOrConnection === "audio" || purposeOrConnection === "events"
+      ? purposeOrConnection
+      : "events";
+  const connTarget =
+    typeof purposeOrConnection === "object" && purposeOrConnection !== null
+      ? purposeOrConnection
+      : connection;
   try {
-    const conn = connection ?? (await resolveRuntimeConnection());
+    const conn = connTarget ?? (await resolveRuntimeConnection());
     const response = await runtimeFetch(
-      `${conn.baseUrl}/v1/runtime/ws-ticket`,
+      `${conn.baseUrl}/v1/runtime/ws-ticket?purpose=${encodeURIComponent(purpose)}`,
       { method: "POST" },
     );
     if (!response.ok) return null;
