@@ -962,7 +962,6 @@ const channelDeliverySnapshotSchema = z
     }
   });
 
-
 const channelDeliveryPartKindSchema = z.enum(["text", "image"]);
 
 const channelDeliveryPartStatusSchema = z.enum([
@@ -1439,29 +1438,36 @@ export function parseChannelDeliverySnapshot(
   return channelDeliverySnapshotSchema.parse(input) as ChannelDeliverySnapshot;
 }
 
-
 export function parseChannelDeliveryPartSnapshot(
   input: unknown,
 ): ChannelDeliveryPartSnapshot {
-  return channelDeliveryPartSnapshotSchema.parse(input) as ChannelDeliveryPartSnapshot;
+  return channelDeliveryPartSnapshotSchema.parse(
+    input,
+  ) as ChannelDeliveryPartSnapshot;
 }
 
 export function parseChannelDeliveryPartClaimRequest(
   input: unknown,
 ): ChannelDeliveryPartClaimRequest {
-  return channelDeliveryPartClaimRequestSchema.parse(input) as ChannelDeliveryPartClaimRequest;
+  return channelDeliveryPartClaimRequestSchema.parse(
+    input,
+  ) as ChannelDeliveryPartClaimRequest;
 }
 
 export function parseChannelDeliveryPartAcknowledgement(
   input: unknown,
 ): ChannelDeliveryPartAcknowledgement {
-  return channelDeliveryPartAcknowledgementSchema.parse(input) as ChannelDeliveryPartAcknowledgement;
+  return channelDeliveryPartAcknowledgementSchema.parse(
+    input,
+  ) as ChannelDeliveryPartAcknowledgement;
 }
 
 export function parseChannelDeliveryPlanSnapshot(
   input: unknown,
 ): ChannelDeliveryPlanSnapshot {
-  return channelDeliveryPlanSnapshotSchema.parse(input) as ChannelDeliveryPlanSnapshot;
+  return channelDeliveryPlanSnapshotSchema.parse(
+    input,
+  ) as ChannelDeliveryPlanSnapshot;
 }
 
 export function parseChannelTurnCancelRequest(

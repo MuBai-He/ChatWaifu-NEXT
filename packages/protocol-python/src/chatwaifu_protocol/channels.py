@@ -546,7 +546,9 @@ class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
     delivered_part_count: int = Field(default=0, ge=0)
     next_pending_ordinal: int | None = Field(default=None, ge=0)
     cancel_requested_at: AwareDatetime | None = None
-    parts: list[ChannelDeliveryPartSnapshot] = Field(default_factory=list[ChannelDeliveryPartSnapshot])
+    parts: list[ChannelDeliveryPartSnapshot] = Field(
+        default_factory=list[ChannelDeliveryPartSnapshot]
+    )
     created_at: AwareDatetime
     updated_at: AwareDatetime
     delivered_at: AwareDatetime | None = None
