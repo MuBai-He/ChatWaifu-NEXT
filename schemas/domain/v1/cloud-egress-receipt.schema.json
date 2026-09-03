@@ -1,0 +1,85 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/cloud-egress-receipt.schema.json",
+  "properties": {
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved By"
+    },
+    "byte_count": {
+      "minimum": 0,
+      "title": "Byte Count",
+      "type": "integer"
+    },
+    "component_kinds": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Component Kinds",
+      "type": "array"
+    },
+    "estimated_tokens": {
+      "minimum": 0,
+      "title": "Estimated Tokens",
+      "type": "integer"
+    },
+    "memory_record_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Memory Record Ids",
+      "type": "array"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "patch_id": {
+      "format": "uuid",
+      "title": "Patch Id",
+      "type": "string"
+    },
+    "policy_decision": {
+      "minLength": 1,
+      "title": "Policy Decision",
+      "type": "string"
+    },
+    "provider_backend_id": {
+      "minLength": 1,
+      "title": "Provider Backend Id",
+      "type": "string"
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scope"
+    }
+  },
+  "required": [
+    "provider_backend_id",
+    "patch_id",
+    "byte_count",
+    "estimated_tokens",
+    "policy_decision",
+    "occurred_at"
+  ],
+  "title": "CloudEgressReceipt",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,0 +1,34 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/cloud-egress-blocked.schema.json",
+  "properties": {
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "policy_decision": {
+      "minLength": 1,
+      "title": "Policy Decision",
+      "type": "string"
+    },
+    "provider_backend_id": {
+      "minLength": 1,
+      "title": "Provider Backend Id",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider_backend_id",
+    "policy_decision",
+    "reason",
+    "occurred_at"
+  ],
+  "title": "CloudEgressBlocked",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

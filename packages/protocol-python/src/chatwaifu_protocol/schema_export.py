@@ -34,7 +34,7 @@ from chatwaifu_protocol.character import (
 from chatwaifu_protocol.commands import CommandModel
 from chatwaifu_protocol.conversation import ConversationInterruption
 from chatwaifu_protocol.errors import StructuredError
-from chatwaifu_protocol.events import EventModel
+from chatwaifu_protocol.events import EgressBlockedPayload, EgressReceiptPayload, EventModel
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
 from chatwaifu_protocol.memory import (
     MemoryChannelAttribution,
@@ -64,6 +64,8 @@ class ProtocolCatalog(ProtocolModel):
 
     event: EventModel
     command: CommandModel
+    cloud_egress_receipt: EgressReceiptPayload
+    cloud_egress_blocked: EgressBlockedPayload
     conversation_interruption: ConversationInterruption
     audio_frame: AudioFrameHeader
     video_frame: VideoFrameHeader
@@ -136,6 +138,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "channel-turn-cancel-request": ChannelTurnCancelRequest,
     "channel-turn-receipt": ChannelTurnReceipt,
     "channel-turn-snapshot": ChannelTurnSnapshot,
+    "cloud-egress-receipt": EgressReceiptPayload,
+    "cloud-egress-blocked": EgressBlockedPayload,
     "command-envelope": TypeAdapter(CommandModel),
     "conversation-interruption": ConversationInterruption,
     "event-envelope": TypeAdapter(EventModel),

@@ -2997,6 +2997,393 @@
       "title": "ConversationState",
       "type": "string"
     },
+    "EgressBlockedEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "cloud.egress_blocked",
+          "default": "cloud.egress_blocked",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EgressBlockedPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "EgressBlockedEvent",
+      "type": "object"
+    },
+    "EgressBlockedPayload": {
+      "properties": {
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "policy_decision": {
+          "minLength": 1,
+          "title": "Policy Decision",
+          "type": "string"
+        },
+        "provider_backend_id": {
+          "minLength": 1,
+          "title": "Provider Backend Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider_backend_id",
+        "policy_decision",
+        "reason",
+        "occurred_at"
+      ],
+      "title": "EgressBlockedPayload",
+      "type": "object"
+    },
+    "EgressReceiptEvent": {
+      "properties": {
+        "causation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Causation Id"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "cloud.egress_receipt",
+          "default": "cloud.egress_receipt",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EgressReceiptPayload"
+        },
+        "privacy": {
+          "$ref": "#/$defs/PrivacyLevel",
+          "default": "private"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "skill_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Run Id"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "source",
+        "payload"
+      ],
+      "title": "EgressReceiptEvent",
+      "type": "object"
+    },
+    "EgressReceiptPayload": {
+      "properties": {
+        "approved_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved By"
+        },
+        "byte_count": {
+          "minimum": 0,
+          "title": "Byte Count",
+          "type": "integer"
+        },
+        "component_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Component Kinds",
+          "type": "array"
+        },
+        "estimated_tokens": {
+          "minimum": 0,
+          "title": "Estimated Tokens",
+          "type": "integer"
+        },
+        "memory_record_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Memory Record Ids",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "patch_id": {
+          "format": "uuid",
+          "title": "Patch Id",
+          "type": "string"
+        },
+        "policy_decision": {
+          "minLength": 1,
+          "title": "Policy Decision",
+          "type": "string"
+        },
+        "provider_backend_id": {
+          "minLength": 1,
+          "title": "Provider Backend Id",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        }
+      },
+      "required": [
+        "provider_backend_id",
+        "patch_id",
+        "byte_count",
+        "estimated_tokens",
+        "policy_decision",
+        "occurred_at"
+      ],
+      "title": "EgressReceiptPayload",
+      "type": "object"
+    },
     "ErrorRaisedEvent": {
       "properties": {
         "causation_id": {
@@ -3185,6 +3572,12 @@
         },
         {
           "$ref": "#/$defs/ErrorRaisedEvent"
+        },
+        {
+          "$ref": "#/$defs/EgressReceiptEvent"
+        },
+        {
+          "$ref": "#/$defs/EgressBlockedEvent"
         },
         {
           "$ref": "#/$defs/GenericCoreEvent"
@@ -7795,6 +8188,12 @@
     "character_kernel": {
       "$ref": "#/$defs/CharacterKernelSnapshot"
     },
+    "cloud_egress_blocked": {
+      "$ref": "#/$defs/EgressBlockedPayload"
+    },
+    "cloud_egress_receipt": {
+      "$ref": "#/$defs/EgressReceiptPayload"
+    },
     "command": {
       "anyOf": [
         {
@@ -7900,6 +8299,8 @@
   "required": [
     "event",
     "command",
+    "cloud_egress_receipt",
+    "cloud_egress_blocked",
     "conversation_interruption",
     "audio_frame",
     "video_frame",
