@@ -46,7 +46,6 @@ class RuntimeRealtimeTurnAdmission(RealtimeTurnAdmissionPort):
 
     def __init__(self, conversation: ConversationService) -> None:
         self._conversation = conversation
-        self._active_identities: dict[UUID, VoiceTurnIdentity] = {}
 
     async def begin_utterance(self, session_id: UUID) -> VoiceTurnIdentity:
         identity = VoiceTurnIdentity(
@@ -56,7 +55,6 @@ class RuntimeRealtimeTurnAdmission(RealtimeTurnAdmissionPort):
             turn_id=uuid4(),
             generation_id=uuid4(),
         )
-        self._active_identities[identity.generation_id] = identity
         await self._conversation.begin_realtime_generation(
             session_id=identity.session_id,
             turn_id=identity.turn_id,
@@ -90,7 +88,6 @@ class RuntimeRealtimeTurnAdmission(RealtimeTurnAdmissionPort):
         identity: VoiceTurnIdentity,
         reason: str,
     ) -> None:
-        self._active_identities.pop(identity.generation_id, None)
         await self._conversation.cancel_realtime_generation(
             session_id=identity.session_id,
             turn_id=identity.turn_id,

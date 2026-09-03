@@ -283,17 +283,33 @@ class SQLiteConversationRepository(ConversationRepository):
         *,
         session_id: UUID,
         turn_id: UUID,
+        generation_id: UUID,
         text: str,
         occurred_at: datetime,
         user_event: UserTurnCommittedEvent,
     ) -> UserTurnCommittedEvent | None:
         async with self._database.transaction() as connection:
+            # Defense in depth: the generation must provably own this
+            # session/turn pair, so a misrouted caller cannot commit text to a
+            # turn that belongs to a different generation.
             cursor = await connection.execute(
                 """
                 UPDATE turns SET committed_text = ?, committed_at = ?
                 WHERE turn_id = ? AND session_id = ? AND committed_text IS NULL
+                AND EXISTS (
+                    SELECT 1 FROM generations
+                    WHERE generation_id = ? AND session_id = ? AND turn_id = ?
+                )
                 """,
-                (text, occurred_at.isoformat(), str(turn_id), str(session_id)),
+                (
+                    text,
+                    occurred_at.isoformat(),
+                    str(turn_id),
+                    str(session_id),
+                    str(generation_id),
+                    str(session_id),
+                    str(turn_id),
+                ),
             )
             if cursor.rowcount == 0:
                 return None

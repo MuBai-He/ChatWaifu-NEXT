@@ -170,6 +170,7 @@ class RealtimeTranscriptCandidate:
     text: str
     source: str = "provider"
     provider_item_id: str | None = None
+    provider_response_id: str | None = None
     revision: int = 0
     confidence: float | None = None
     utterance_id: UUID | None = None

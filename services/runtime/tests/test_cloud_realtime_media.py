@@ -138,12 +138,13 @@ async def test_fake_provider_script_execution() -> None:
         assert fake_session.commit_calls == 1
 
         # 4. Provider script execution
-        # (a) Emit user transcript final
+        # (a) Emit user transcript final. The adapter must attach the Runtime
+        # generation identity; identity-less provider events are dropped.
         await bridge.coordinator.dispatch_event(
             UserTranscriptEvent(
                 candidate=RealtimeTranscriptCandidate(
                     session_id=session_id,
-                    generation_id=None,
+                    generation_id=gen_id,
                     role="user",
                     phase="final",
                     text="こんにちは、寧々ちゃん",

@@ -172,22 +172,14 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
         )
 
     async def provider_error(self, session_id: UUID, error: StructuredError) -> None:
+        # The error channel is strictly observational: generation-scoped
+        # failures arrive as explicit response_failed calls from the
+        # coordinator, and lifecycle paths terminate generations explicitly.
+        # Never infer a failure target from the currently active generation
+        # here, or a late error for an old generation would kill the new one.
         _LOGGER.error(
             "Cloud realtime provider error: session=%s, code=%s, msg=%s",
             session_id,
             error.code,
             error.message,
         )
-        if error.code == "unmapped_realtime_event":
-            # Dropped identity-less events are observable via the error channel
-            # but must not fail the active generation as collateral damage.
-            return
-        active_gen = self._conversation.active_generation_id(session_id)
-        active_turn = self._conversation.active_turn_id(session_id)
-        if active_gen is not None and active_turn is not None:
-            await self._conversation.fail_realtime_generation(
-                session_id=session_id,
-                turn_id=active_turn,
-                generation_id=active_gen,
-                error=error,
-            )

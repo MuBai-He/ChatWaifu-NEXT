@@ -19,6 +19,7 @@ MAX_SEEN_EVENT_KEYS = 5000
 MAX_TOMBSTONES = 500
 MAX_BINDINGS = 200
 MAX_RESPONSES = 200
+MAX_ITEMS = 500
 
 
 @dataclass(slots=True)
@@ -53,6 +54,7 @@ class RealtimeSessionMirror:
         max_tombstones: int = MAX_TOMBSTONES,
         max_bindings: int = MAX_BINDINGS,
         max_responses: int = MAX_RESPONSES,
+        max_items: int = MAX_ITEMS,
     ) -> None:
         self.session_id: UUID = session_id
         self.backend_id: str = backend_id
@@ -62,6 +64,7 @@ class RealtimeSessionMirror:
         self._max_tombstones = max_tombstones
         self._max_bindings = max_bindings
         self._max_responses = max_responses
+        self._max_items = max_items
 
         self._active_generation_id: UUID | None = None
         self._active_turn_id: UUID | None = None
@@ -70,6 +73,7 @@ class RealtimeSessionMirror:
 
         self._bindings: OrderedDict[UUID, GenerationBinding] = OrderedDict()
         self._response_to_generation: OrderedDict[str, UUID] = OrderedDict()
+        self._item_to_generation: OrderedDict[str, UUID] = OrderedDict()
         self._tombstones: OrderedDict[UUID, None] = OrderedDict()
         self._seen_event_keys: OrderedDict[str, None] = OrderedDict()
 
@@ -153,31 +157,68 @@ class RealtimeSessionMirror:
         return binding
 
     def _purge_response_mappings(self, generation_id: UUID) -> None:
-        """Remove provider-response mappings pointing at an evicted generation.
+        """Remove provider-response/item mappings pointing at an evicted generation.
 
-        Prevents a stale response id from resolving to a binding that no longer
+        Prevents a stale provider id from resolving to a binding that no longer
         exists after capacity eviction.
         """
-        stale = [
+        stale_responses = [
             response_id
             for response_id, mapped_gen_id in self._response_to_generation.items()
             if mapped_gen_id == generation_id
         ]
-        for response_id in stale:
+        for response_id in stale_responses:
             del self._response_to_generation[response_id]
+        stale_items = [
+            item_id
+            for item_id, mapped_gen_id in self._item_to_generation.items()
+            if mapped_gen_id == generation_id
+        ]
+        for item_id in stale_items:
+            del self._item_to_generation[item_id]
+
+    def bind_provider_item(
+        self,
+        provider_item_id: str,
+        generation_id: UUID,
+    ) -> GenerationBinding | None:
+        """Associate a provider input/transcript item id with a registered generation.
+
+        Item ids live in a different provider namespace than response ids and
+        are recorded only against an explicitly registered binding, typically
+        learned from a candidate that already carries Runtime identity.
+        """
+        binding = self._bindings.get(generation_id)
+        if binding is None:
+            return None
+        self._item_to_generation[provider_item_id] = generation_id
+        if len(self._item_to_generation) > self._max_items:
+            self._item_to_generation.popitem(last=False)
+        return binding
+
+    def current_generation_id(self) -> UUID | None:
+        """Return the active generation for Runtime-internal media-plane use only.
+
+        Provider events must never use this: they resolve strictly through
+        :meth:`resolve_generation_id` and are dropped when identity-less.
+        """
+        return self._active_generation_id
 
     def resolve_generation_id(
         self,
         *,
         generation_id: UUID | None = None,
         provider_response_id: str | None = None,
+        provider_item_id: str | None = None,
     ) -> UUID | None:
-        """Resolve the runtime generation id from either a direct id or provider response id.
+        """Strictly resolve a Runtime generation id from provider-supplied identity.
 
-        An explicitly supplied identity is only honored when it is backed by a
-        registered binding; unknown explicit identities resolve to None and must
-        never fall back to the active or last generation. The active/last
-        shortcut applies solely to identity-less (implicit current) lookups.
+        Every explicitly supplied identity is honored only when backed by a
+        registered binding; unknown explicit identities resolve to None.
+        Identity-less lookups (all arguments None) also resolve to None:
+        provider events must carry Runtime identity or a registered provider
+        mapping instead of guessing the active or last generation. Use
+        :meth:`current_generation_id` for Runtime-internal queries.
         """
         if generation_id is not None:
             return generation_id if generation_id in self._bindings else None
@@ -186,9 +227,17 @@ class RealtimeSessionMirror:
             if resolved is not None and resolved in self._bindings:
                 return resolved
             return None
-        if self._active_generation_id is not None:
-            return self._active_generation_id
-        return self._last_generation_id
+        if provider_item_id is not None:
+            resolved_item = self._item_to_generation.get(provider_item_id)
+            if resolved_item is not None and resolved_item in self._bindings:
+                return resolved_item
+            # Legacy alias: some providers reuse the response id as the item
+            # id. Consult the response map before giving up.
+            resolved_legacy = self._response_to_generation.get(provider_item_id)
+            if resolved_legacy is not None and resolved_legacy in self._bindings:
+                return resolved_legacy
+            return None
+        return None
 
     def get_turn_id(self, generation_id: UUID | None = None) -> UUID | None:
         if generation_id is not None:

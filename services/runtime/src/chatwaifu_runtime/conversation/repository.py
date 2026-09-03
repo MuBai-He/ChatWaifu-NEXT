@@ -138,6 +138,7 @@ class ConversationRepository(Protocol):
         *,
         session_id: UUID,
         turn_id: UUID,
+        generation_id: UUID,
         text: str,
         occurred_at: datetime,
         user_event: UserTurnCommittedEvent,

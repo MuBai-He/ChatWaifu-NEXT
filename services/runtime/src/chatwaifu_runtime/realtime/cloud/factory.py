@@ -17,6 +17,8 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
+from chatwaifu_runtime.character_kernel.service import USER_SCOPE
+from chatwaifu_runtime.memory.service import character_memory_namespace
 from chatwaifu_runtime.realtime.admission import RealtimeTurnAdmissionPort
 from chatwaifu_runtime.realtime.cloud.context import CloudEgressGateway, RealtimeSessionIntent
 from chatwaifu_runtime.realtime.cloud.contracts import (
@@ -127,9 +129,15 @@ class RuntimeCloudRealtimeFactory:
                 exc_info=True,
             )
 
+        # Initial sessions carry only this character's pinned scope memories.
+        # Broader recall happens after the first user turn via
+        # MemoryService.retrieve_context plus an audited update_context call,
+        # so unrelated characters or sessions never enter the initial patch.
         memories = None
         try:
-            memories = await self._memory.list(include_tombstoned=False)
+            scope_namespace = character_memory_namespace(character_id, USER_SCOPE)
+            scoped = await self._memory.list(include_tombstoned=False, namespace=scope_namespace)
+            memories = [record for record in scoped if record.pinned]
         except Exception:
             _LOGGER.debug(
                 "Could not obtain memory records for session %s",

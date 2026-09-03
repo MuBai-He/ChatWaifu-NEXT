@@ -18,18 +18,29 @@ E. Completion, cancel, failure, and runtime stop all reuse the admission-time
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
+from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.events import UserTurnCommittedEvent, UserTurnCommittedPayload
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.conversation.models import GenerationAccepted
 from chatwaifu_runtime.conversation.service import _ActiveGeneration
 from chatwaifu_runtime.realtime.cloud.contracts import (
+    OutputAudioEvent,
+    ProviderErrorEvent,
+    RealtimeOutputAudioFrame,
+    RealtimeProviderError,
     RealtimeSessionOpenRequest,
     RealtimeTranscriptCandidate,
+    RealtimeUsage,
+    ResponseCompletedEvent,
+    ResponseStartedEvent,
+    UsageRecordedEvent,
     UserTranscriptEvent,
 )
 from chatwaifu_runtime.realtime.cloud.coordinator import (
@@ -77,18 +88,34 @@ def _build_coordinator(
     return coordinator, sink, mirror
 
 
+def _user_candidate(
+    session_id: UUID,
+    generation_id: UUID | None,
+    text: str,
+    *,
+    phase: str = "final",
+    utterance_id: UUID | None = None,
+    provider_item_id: str | None = None,
+    provider_response_id: str | None = None,
+) -> RealtimeTranscriptCandidate:
+    return RealtimeTranscriptCandidate(
+        session_id=session_id,
+        generation_id=generation_id,
+        role="user",
+        phase=phase,  # type: ignore[arg-type]
+        text=text,
+        source="provider",
+        utterance_id=utterance_id,
+        provider_item_id=provider_item_id,
+        provider_response_id=provider_response_id,
+    )
+
+
 def _user_final(
     session_id: UUID, generation_id: UUID | None, text: str, **kwargs: object
 ) -> UserTranscriptEvent:
     return UserTranscriptEvent(
-        candidate=RealtimeTranscriptCandidate(
-            session_id=session_id,
-            generation_id=generation_id,
-            role="user",
-            phase="final",
-            text=text,
-            source="provider",
-        ),
+        candidate=_user_candidate(session_id, generation_id, text),
         **kwargs,  # type: ignore[arg-type]
     )
 
@@ -99,7 +126,7 @@ async def test_a1_unknown_generation_user_final_is_dropped_with_unmapped_error()
     session_id = uuid4()
     coordinator, sink, mirror = _build_coordinator(session_id)
     turn_a, gen_a = uuid4(), uuid4()
-    coordinator.admit_turn(turn_a, gen_a)
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
 
     unknown_gen = uuid4()
     assert not mirror.has_binding(unknown_gen)
@@ -190,11 +217,11 @@ async def test_b_identical_text_across_generations_both_commit() -> None:
     coordinator, sink, _ = _build_coordinator(session_id)
 
     turn_a, gen_a = uuid4(), uuid4()
-    coordinator.admit_turn(turn_a, gen_a)
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
     await coordinator.dispatch_event(_user_final(session_id, gen_a, "嗯"))
 
     turn_b, gen_b = uuid4(), uuid4()
-    coordinator.admit_turn(turn_b, gen_b)
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
     await coordinator.dispatch_event(_user_final(session_id, gen_b, "嗯"))
 
     assert len(sink.transcript_finals) == 2
@@ -211,7 +238,7 @@ async def test_c_duplicate_provider_event_processed_once() -> None:
     # Stable provider event id path.
     coordinator, sink, _ = _build_coordinator(session_id)
     turn_a, gen_a = uuid4(), uuid4()
-    coordinator.admit_turn(turn_a, gen_a)
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
     replay = _user_final(session_id, gen_a, "请重复这句话", event_id="provider-evt-1")
     await coordinator.dispatch_event(replay)
     await coordinator.dispatch_event(replay)
@@ -219,7 +246,7 @@ async def test_c_duplicate_provider_event_processed_once() -> None:
 
     # Content-key fallback path (no provider event id, same generation).
     coordinator2, sink2, _ = _build_coordinator(session_id)
-    coordinator2.admit_turn(uuid4(), gen_a)
+    coordinator2.admit_turn(uuid4(), gen_a, uuid4())
     await coordinator2.dispatch_event(_user_final(session_id, gen_a, "请重复这句话"))
     await coordinator2.dispatch_event(_user_final(session_id, gen_a, "请重复这句话"))
     assert len(sink2.transcript_finals) == 1
@@ -382,6 +409,320 @@ async def test_e_terminal_path_fails_closed_without_audio_stream_id(tmp_path: Pa
             )
             mock_complete.assert_not_called()
             mock_cancelled.assert_not_called()
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_late_provider_error_for_old_generation_spares_new_generation() -> None:
+    """Late ProviderErrorEvent for a finished generation must not kill the new one."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+    await coordinator.dispatch_event(
+        ResponseCompletedEvent(
+            session_id=session_id, generation_id=gen_a, provider_response_id="resp_a"
+        )
+    )
+    assert mirror.is_tombstoned(gen_a)
+
+    turn_b, gen_b = uuid4(), uuid4()
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
+
+    await coordinator.dispatch_event(
+        ProviderErrorEvent(
+            error=RealtimeProviderError(
+                session_id=session_id,
+                backend_id="fake_cloud_realtime",
+                code="rate_limit_exceeded",
+                message="Quota exhausted",
+                generation_id=gen_a,
+                retryable=True,
+            )
+        )
+    )
+
+    assert sink.responses_failed == []
+    assert mirror.active_generation_id == gen_b
+    assert not mirror.is_tombstoned(gen_b)
+    assert len(sink.provider_errors) == 1
+    assert sink.provider_errors[0][1].code == "unmapped_realtime_event"
+
+
+@pytest.mark.asyncio
+async def test_same_provider_error_code_across_generations_not_deduped() -> None:
+    """Identical provider errors for different generations are handled independently."""
+    session_id = uuid4()
+    coordinator, sink, _ = _build_coordinator(session_id)
+
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+    await coordinator.dispatch_event(
+        ProviderErrorEvent(
+            error=RealtimeProviderError(
+                session_id=session_id,
+                backend_id="fake_cloud_realtime",
+                code="rate_limit_exceeded",
+                message="Quota exhausted",
+                generation_id=gen_a,
+            )
+        )
+    )
+
+    turn_b, gen_b = uuid4(), uuid4()
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
+    await coordinator.dispatch_event(
+        ProviderErrorEvent(
+            error=RealtimeProviderError(
+                session_id=session_id,
+                backend_id="fake_cloud_realtime",
+                code="rate_limit_exceeded",
+                message="Quota exhausted",
+                generation_id=gen_b,
+            )
+        )
+    )
+
+    assert len(sink.responses_failed) == 2
+    assert sink.responses_failed[0][:3] == (session_id, turn_a, gen_a)
+    assert sink.responses_failed[1][:3] == (session_id, turn_b, gen_b)
+    assert sink.provider_errors == []
+
+
+@pytest.mark.asyncio
+async def test_session_level_provider_error_degrades_without_failing_generation() -> None:
+    """Session-level errors are recorded and degrade the session, not the generation."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    await coordinator.dispatch_event(
+        ProviderErrorEvent(
+            error=RealtimeProviderError(
+                session_id=session_id,
+                backend_id="fake_cloud_realtime",
+                code="rate_limit_exceeded",
+                message="Quota exhausted",
+                retryable=True,
+            )
+        )
+    )
+
+    assert len(sink.provider_errors) == 1
+    assert sink.provider_errors[0][1].code == "provider_error.rate_limit_exceeded"
+    assert len(sink.session_degradations) == 1
+    assert sink.responses_failed == []
+    assert mirror.active_generation_id == gen_a
+
+
+@pytest.mark.asyncio
+async def test_identity_less_user_final_never_lands_on_active_generation() -> None:
+    """A gen-less late user final is dropped even when a newer generation is active."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+    await coordinator.dispatch_event(
+        ResponseCompletedEvent(
+            session_id=session_id, generation_id=gen_a, provider_response_id="resp_a"
+        )
+    )
+    turn_b, gen_b = uuid4(), uuid4()
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
+
+    await coordinator.dispatch_event(
+        UserTranscriptEvent(candidate=_user_candidate(session_id, None, "迟到的A"))
+    )
+
+    assert sink.transcript_finals == []
+    assert len(sink.provider_errors) == 1
+    assert sink.provider_errors[0][1].code == "unmapped_realtime_event"
+    assert mirror.active_generation_id == gen_b
+
+
+@pytest.mark.asyncio
+async def test_identity_less_user_final_commits_nothing_container(tmp_path: Path) -> None:
+    """Container: gen-less user final leaves the active turn uncommitted."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity_b = bridge.current_identity
+        assert identity_b is not None
+
+        await bridge.coordinator.dispatch_event(
+            UserTranscriptEvent(candidate=_user_candidate(session.session_id, None, "迟到的A"))
+        )
+
+        turn_row = await container.database.fetchone(
+            "SELECT committed_text FROM turns WHERE turn_id = ?",
+            (str(identity_b.turn_id),),
+        )
+        assert turn_row is not None
+        assert turn_row["committed_text"] is None
+        assert await container.conversation.list_messages(session.session_id) == []
+        assert (
+            container.conversation.active_generation_id(session.session_id)
+            == identity_b.generation_id
+        )
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_identity_less_usage_never_lands_on_last_generation() -> None:
+    """Gen-less usage after completion is dropped instead of attributed to last gen."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+    await coordinator.dispatch_event(
+        ResponseCompletedEvent(
+            session_id=session_id, generation_id=gen_a, provider_response_id="resp_a"
+        )
+    )
+    assert mirror.active_generation_id is None
+
+    await coordinator.dispatch_event(
+        UsageRecordedEvent(
+            usage=RealtimeUsage(session_id=session_id, backend_id="fake", total_tokens=10)
+        )
+    )
+    assert sink.usages_recorded == []
+    assert sink.provider_errors == []
+
+    await coordinator.dispatch_event(
+        UsageRecordedEvent(
+            usage=RealtimeUsage(
+                session_id=session_id,
+                backend_id="fake",
+                generation_id=uuid4(),
+                total_tokens=10,
+            )
+        )
+    )
+    assert sink.usages_recorded == []
+    assert len(sink.provider_errors) == 1
+    assert sink.provider_errors[0][1].code == "unmapped_realtime_event"
+
+
+@pytest.mark.asyncio
+async def test_foreign_session_events_rejected() -> None:
+    """Events carrying another session id are dropped with a session_mismatch."""
+    session_id = uuid4()
+    foreign_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    await coordinator.dispatch_event(
+        UserTranscriptEvent(candidate=_user_candidate(foreign_id, gen_a, "跨会话文本"))
+    )
+    await coordinator.dispatch_event(
+        ResponseStartedEvent(
+            session_id=foreign_id, generation_id=gen_a, provider_response_id="resp_x"
+        )
+    )
+    await coordinator.dispatch_event(
+        OutputAudioEvent(
+            frame=RealtimeOutputAudioFrame(
+                session_id=foreign_id,
+                generation_id=gen_a,
+                sequence=0,
+                pts_ms=0,
+                sample_rate=24_000,
+                channels=1,
+                audio=b"\x01\x02",
+            )
+        )
+    )
+
+    assert sink.transcript_finals == []
+    assert sink.responses_started == []
+    mismatch = [e for _, e in sink.provider_errors if e.code == "session_mismatch"]
+    assert len(mismatch) == 2
+    assert mirror.active_generation_id == gen_a
+
+
+@pytest.mark.asyncio
+async def test_provider_utterance_mismatch_rejected() -> None:
+    """A provider-echoed utterance id may only confirm the admitted identity."""
+    session_id = uuid4()
+    coordinator, sink, _ = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    admitted_utterance = uuid4()
+    coordinator.admit_turn(turn_a, gen_a, admitted_utterance)
+
+    await coordinator.dispatch_event(
+        UserTranscriptEvent(
+            candidate=_user_candidate(session_id, gen_a, "伪造的utterance", utterance_id=uuid4())
+        )
+    )
+    assert sink.transcript_finals == []
+    assert len(sink.provider_errors) == 1
+    assert sink.provider_errors[0][1].code == "lineage_mismatch"
+
+    await coordinator.dispatch_event(
+        UserTranscriptEvent(
+            candidate=_user_candidate(
+                session_id, gen_a, "确认的utterance", utterance_id=admitted_utterance
+            )
+        )
+    )
+    assert len(sink.transcript_finals) == 1
+
+
+@pytest.mark.asyncio
+async def test_repository_rejects_generation_turn_mismatch(tmp_path: Path) -> None:
+    """Repository triple check: a foreign generation cannot commit another turn."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.realtime_admission is not None
+        identity_a = await container.realtime_admission.begin_utterance(session.session_id)
+        identity_b = await container.realtime_admission.begin_utterance(session.session_id)
+        repo = container.conversation_repository
+
+        mismatched = await repo.commit_realtime_user_transcript(
+            session_id=session.session_id,
+            turn_id=identity_a.turn_id,
+            generation_id=identity_b.generation_id,
+            text="错配提交",
+            occurred_at=datetime.now(UTC),
+            user_event=UserTurnCommittedEvent(
+                event_id=uuid4(),
+                session_id=session.session_id,
+                turn_id=identity_a.turn_id,
+                generation_id=identity_b.generation_id,
+                occurred_at=datetime.now(UTC),
+                source="test",
+                privacy=PrivacyLevel.LOCAL,
+                payload=UserTurnCommittedPayload(text="错配提交"),
+            ),
+        )
+        assert mismatched is None
+        turn_row = await container.database.fetchone(
+            "SELECT committed_text FROM turns WHERE turn_id = ?",
+            (str(identity_a.turn_id),),
+        )
+        assert turn_row is not None
+        assert turn_row["committed_text"] is None
+        user_events = await container.database.fetchall(
+            "SELECT event_id FROM events "
+            "WHERE session_id = ? AND event_type = 'user.turn_committed'",
+            (str(session.session_id),),
+        )
+        assert user_events == []
     finally:
         await container.stop()
 

@@ -237,6 +237,7 @@ class ConversationService:
         persisted_user = await self._repository.commit_realtime_user_transcript(
             session_id=session_id,
             turn_id=turn_id,
+            generation_id=generation_id,
             text=text,
             occurred_at=now,
             user_event=user_event,
