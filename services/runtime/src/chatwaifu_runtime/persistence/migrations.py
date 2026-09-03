@@ -817,4 +817,126 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             WHERE origin_proposal_id IS NOT NULL;
         """,
     ),
+    (
+        22,
+        """
+        ALTER TABLE channel_deliveries
+            ADD COLUMN plan_version INTEGER NOT NULL DEFAULT 1 CHECK(plan_version >= 1);
+        ALTER TABLE channel_deliveries ADD COLUMN cancel_requested_at TEXT;
+
+        CREATE TABLE channel_delivery_parts (
+            part_id TEXT PRIMARY KEY,
+            delivery_id TEXT NOT NULL
+                REFERENCES channel_deliveries(delivery_id) ON DELETE CASCADE,
+            ordinal INTEGER NOT NULL CHECK(ordinal >= 0),
+            kind TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            required INTEGER NOT NULL DEFAULT 1 CHECK(required IN (0, 1)),
+            status TEXT NOT NULL
+                CHECK(
+                    status IN ('pending', 'sending', 'delivered', 'failed', 'cancelled', 'skipped')
+                ),
+            delay_after_ms INTEGER NOT NULL DEFAULT 0 CHECK(delay_after_ms >= 0),
+            not_before_at TEXT,
+            attempt INTEGER NOT NULL DEFAULT 0 CHECK(attempt >= 0),
+            lease_id TEXT,
+            lease_expires_at TEXT,
+            provider_client_id TEXT NOT NULL UNIQUE,
+            provider_message_id TEXT,
+            last_error_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            delivered_at TEXT,
+            CHECK(json_valid(payload_json)),
+            CHECK(status != 'sending' OR (lease_id IS NOT NULL AND lease_expires_at IS NOT NULL)),
+            CHECK(status != 'delivered' OR delivered_at IS NOT NULL),
+            UNIQUE(delivery_id, ordinal)
+        );
+
+        CREATE INDEX channel_delivery_parts_delivery_idx
+            ON channel_delivery_parts(delivery_id, ordinal ASC);
+        CREATE INDEX channel_delivery_parts_claim_idx
+            ON channel_delivery_parts(delivery_id, status, ordinal ASC, not_before_at ASC);
+        CREATE INDEX channel_delivery_parts_lease_idx
+            ON channel_delivery_parts(status, lease_expires_at)
+            WHERE status = 'sending';
+
+        WITH delivery_source AS (
+            SELECT
+                d.delivery_id,
+                d.status,
+                d.attempt,
+                d.lease_id,
+                d.lease_expires_at,
+                d.provider_message_id,
+                d.last_error_json,
+                d.created_at,
+                d.updated_at,
+                d.delivered_at,
+                COALESCE(NULLIF(t.reply_text, ''), '(empty reply)') AS text,
+                lower(hex(randomblob(16))) AS raw_hex
+            FROM channel_deliveries AS d
+            LEFT JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+        )
+        INSERT INTO channel_delivery_parts (
+            part_id,
+            delivery_id,
+            ordinal,
+            kind,
+            payload_json,
+            required,
+            status,
+            delay_after_ms,
+            not_before_at,
+            attempt,
+            lease_id,
+            lease_expires_at,
+            provider_client_id,
+            provider_message_id,
+            last_error_json,
+            created_at,
+            updated_at,
+            delivered_at
+        )
+        SELECT
+            substr(raw_hex, 1, 8) || '-' ||
+            substr(raw_hex, 9, 4) || '-' ||
+            substr(raw_hex, 13, 4) || '-' ||
+            substr(raw_hex, 17, 4) || '-' ||
+            substr(raw_hex, 21, 12),
+            delivery_id,
+            0,
+            'text',
+            json_object('kind', 'text', 'text', text),
+            1,
+            CASE
+                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL)
+                    THEN 'pending'
+                WHEN status = 'delivered' AND delivered_at IS NULL
+                    THEN 'pending'
+                ELSE status
+            END,
+            0,
+            NULL,
+            attempt,
+            CASE
+                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL) THEN NULL
+                ELSE lease_id
+            END,
+            CASE
+                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL) THEN NULL
+                ELSE lease_expires_at
+            END,
+            'chatwaifu-' || replace(delivery_id, '-', '') || '-000',
+            provider_message_id,
+            last_error_json,
+            created_at,
+            updated_at,
+            CASE
+                WHEN status = 'delivered' AND delivered_at IS NULL THEN NULL
+                ELSE delivered_at
+            END
+        FROM delivery_source;
+        """,
+    ),
 )

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import aiosqlite
 from chatwaifu_protocol.channels import (
@@ -14,19 +15,34 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryClaimRequest,
+    ChannelDeliveryPartAcknowledgement,
+    ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartDraft,
+    ChannelDeliveryPartKind,
+    ChannelDeliveryPartPayload,
+    ChannelDeliveryPartsCancelRequest,
+    ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
+from pydantic import TypeAdapter
 
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
+    ChannelDeliveryPartRecord,
+    ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.persistence.database import Database
+
+_PART_PAYLOAD_ADAPTER: TypeAdapter[ChannelDeliveryPartPayload] = TypeAdapter(
+    ChannelDeliveryPartPayload
+)
 
 
 class SQLiteExternalChannelRepository(ExternalChannelRepository):
@@ -404,7 +420,37 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
+        parts: Sequence[ChannelDeliveryPartDraft] | None = None,
     ) -> ChannelTurnRecord:
+        draft_parts: Sequence[ChannelDeliveryPartDraft]
+        if parts is None:
+            safe_text = reply_text if reply_text else "(empty reply)"
+            draft_parts = (
+                ChannelDeliveryPartDraft(
+                    ordinal=0,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(
+                        kind=ChannelDeliveryPartKind.TEXT,
+                        text=safe_text,
+                    ),
+                    required=True,
+                    delay_after_ms=0,
+                    not_before_at=None,
+                ),
+            )
+        else:
+            if not parts:
+                raise ValueError("delivery parts cannot be empty")
+            for idx, draft in enumerate(parts):
+                if draft.ordinal != idx:
+                    raise ValueError(
+                        f"delivery plan part ordinals must be strictly continuous "
+                        f"starting from 0 (expected {idx}, got {draft.ordinal})"
+                    )
+                if draft.kind != draft.payload.kind:
+                    raise ValueError("part kind does not match payload kind")
+            draft_parts = parts
+
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 "SELECT delivery_id, status FROM channel_turns WHERE channel_turn_id = ?",
@@ -420,9 +466,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     """
                     INSERT INTO channel_deliveries(
                         delivery_id, channel_turn_id, connection_id, status,
-                        attempt, created_at, updated_at
+                        attempt, created_at, updated_at, plan_version, cancel_requested_at
                     )
-                    SELECT ?, channel_turn_id, connection_id, 'pending', 1, ?, ?
+                    SELECT ?, channel_turn_id, connection_id, 'pending', 1, ?, ?, 1, NULL
                     FROM channel_turns WHERE channel_turn_id = ?
                     """,
                     (
@@ -433,6 +479,37 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     ),
                 )
                 resolved_delivery = delivery_id
+                for draft in draft_parts:
+                    part_id = uuid4()
+                    provider_client_id = f"chatwaifu-{resolved_delivery.hex}-{draft.ordinal:03d}"
+                    await connection.execute(
+                        """
+                        INSERT INTO channel_delivery_parts(
+                            part_id, delivery_id, ordinal, kind, payload_json, required,
+                            status, delay_after_ms, not_before_at, attempt, lease_id,
+                            lease_expires_at, provider_client_id, provider_message_id,
+                            last_error_json, created_at, updated_at, delivered_at
+                        ) VALUES (
+                            ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 0, NULL, NULL,
+                            ?, NULL, NULL, ?, ?, NULL
+                        )
+                        """,
+                        (
+                            str(part_id),
+                            str(resolved_delivery),
+                            draft.ordinal,
+                            draft.kind.value,
+                            draft.payload.model_dump_json(),
+                            1 if draft.required else 0,
+                            draft.delay_after_ms,
+                            draft.not_before_at.isoformat()
+                            if draft.not_before_at is not None
+                            else None,
+                            provider_client_id,
+                            completed_at.isoformat(),
+                            completed_at.isoformat(),
+                        ),
+                    )
             else:
                 resolved_delivery = UUID(str(existing_delivery))
             await connection.execute(
@@ -451,6 +528,660 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 ),
             )
         return await self._required_turn(channel_turn_id)
+
+    async def create_delivery_plan(
+        self,
+        channel_turn_id: UUID,
+        *,
+        delivery_id: UUID,
+        parts: Sequence[ChannelDeliveryPartDraft],
+        created_at: datetime,
+    ) -> ChannelDeliveryPlanRecord:
+        if not parts:
+            raise ValueError("delivery plan parts cannot be empty")
+        for idx, draft in enumerate(parts):
+            if draft.ordinal != idx:
+                raise ValueError(
+                    f"delivery plan part ordinals must be strictly continuous "
+                    f"starting from 0 (expected {idx}, got {draft.ordinal})"
+                )
+            if draft.kind != draft.payload.kind:
+                raise ValueError("part kind does not match payload kind")
+
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT connection_id, delivery_id FROM channel_turns WHERE channel_turn_id = ?",
+                (str(channel_turn_id),),
+            )
+            turn_row = await cursor.fetchone()
+            await cursor.close()
+            if turn_row is None:
+                raise KeyError(f"unknown channel turn {channel_turn_id}")
+            connection_id = str(turn_row["connection_id"])
+
+            cursor = await connection.execute(
+                "SELECT delivery_id FROM channel_deliveries WHERE delivery_id = ?",
+                (str(delivery_id),),
+            )
+            existing_delivery = await cursor.fetchone()
+            await cursor.close()
+            if existing_delivery is not None:
+                raise ValueError(f"delivery {delivery_id} already exists")
+
+            await connection.execute(
+                """
+                INSERT INTO channel_deliveries(
+                    delivery_id, channel_turn_id, connection_id, status,
+                    attempt, created_at, updated_at, plan_version, cancel_requested_at
+                ) VALUES (?, ?, ?, 'pending', 1, ?, ?, 1, NULL)
+                """,
+                (
+                    str(delivery_id),
+                    str(channel_turn_id),
+                    connection_id,
+                    created_at.isoformat(),
+                    created_at.isoformat(),
+                ),
+            )
+
+            for draft in parts:
+                part_id = uuid4()
+                provider_client_id = f"chatwaifu-{delivery_id.hex}-{draft.ordinal:03d}"
+                await connection.execute(
+                    """
+                    INSERT INTO channel_delivery_parts(
+                        part_id, delivery_id, ordinal, kind, payload_json, required,
+                        status, delay_after_ms, not_before_at, attempt, lease_id,
+                        lease_expires_at, provider_client_id, provider_message_id,
+                        last_error_json, created_at, updated_at, delivered_at
+                    ) VALUES (
+                            ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 0, NULL, NULL,
+                            ?, NULL, NULL, ?, ?, NULL
+                        )
+                    """,
+                    (
+                        str(part_id),
+                        str(delivery_id),
+                        draft.ordinal,
+                        draft.kind.value,
+                        draft.payload.model_dump_json(),
+                        1 if draft.required else 0,
+                        draft.delay_after_ms,
+                        draft.not_before_at.isoformat()
+                        if draft.not_before_at is not None
+                        else None,
+                        provider_client_id,
+                        created_at.isoformat(),
+                        created_at.isoformat(),
+                    ),
+                )
+
+            await connection.execute(
+                """
+                UPDATE channel_turns
+                SET delivery_id = ?, updated_at = ?
+                WHERE channel_turn_id = ?
+                """,
+                (str(delivery_id), created_at.isoformat(), str(channel_turn_id)),
+            )
+
+            plan = await self._get_delivery_plan_tx(connection, delivery_id)
+            if plan is None:
+                raise RuntimeError("delivery plan disappeared after creation")
+            return plan
+
+    async def get_delivery_plan(self, delivery_id: UUID) -> ChannelDeliveryPlanRecord | None:
+        async with self._database.transaction() as connection:
+            return await self._get_delivery_plan_tx(connection, delivery_id)
+
+    async def get_delivery_plan_by_turn(
+        self, channel_turn_id: UUID
+    ) -> ChannelDeliveryPlanRecord | None:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT delivery_id FROM channel_turns WHERE channel_turn_id = ?",
+                (str(channel_turn_id),),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
+            if row is None or row["delivery_id"] is None:
+                return None
+            return await self._get_delivery_plan_tx(connection, UUID(str(row["delivery_id"])))
+
+    async def list_delivery_parts(self, delivery_id: UUID) -> tuple[ChannelDeliveryPartRecord, ...]:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                    SELECT * FROM channel_delivery_parts
+                    WHERE delivery_id = ? ORDER BY ordinal ASC
+                    """,
+                (str(delivery_id),),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+            return tuple(_delivery_part_record(row) for row in rows)
+
+    async def claim_next_delivery_part(
+        self,
+        claim: ChannelDeliveryPartClaimRequest,
+        *,
+        claimed_at: datetime,
+    ) -> ChannelDeliveryPartRecord | None:
+        lease_expires_at = claimed_at + timedelta(seconds=claim.lease_seconds)
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT * FROM channel_deliveries WHERE delivery_id = ?",
+                (str(claim.delivery_id),),
+            )
+            delivery_row = await cursor.fetchone()
+            await cursor.close()
+            if delivery_row is None:
+                raise KeyError(f"unknown channel delivery {claim.delivery_id}")
+
+            delivery_status = ChannelDeliveryStatus(str(delivery_row["status"]))
+            cancel_requested = delivery_row["cancel_requested_at"] is not None
+
+            if (
+                delivery_status
+                in {
+                    ChannelDeliveryStatus.DELIVERED,
+                    ChannelDeliveryStatus.FAILED,
+                    ChannelDeliveryStatus.CANCELLED,
+                }
+                or cancel_requested
+            ):
+                return None
+
+            cursor = await connection.execute(
+                """
+                    SELECT * FROM channel_delivery_parts
+                    WHERE delivery_id = ? ORDER BY ordinal ASC
+                    """,
+                (str(claim.delivery_id),),
+            )
+            part_rows = await cursor.fetchall()
+            await cursor.close()
+
+            # Mutual exclusion: only one active lease per delivery plan
+            for prow in part_rows:
+                pstatus = ChannelDeliveryPartStatus(str(prow["status"]))
+                if pstatus is ChannelDeliveryPartStatus.SENDING:
+                    pexpiry = _datetime(prow["lease_expires_at"])
+                    please_id = (
+                        UUID(str(prow["lease_id"])) if prow["lease_id"] is not None else None
+                    )
+                    if pexpiry is not None and pexpiry > claimed_at and please_id != claim.lease_id:
+                        return None
+
+            target_part: object | None = None
+            for prow in part_rows:
+                pstatus = ChannelDeliveryPartStatus(str(prow["status"]))
+                if pstatus in {
+                    ChannelDeliveryPartStatus.DELIVERED,
+                    ChannelDeliveryPartStatus.SKIPPED,
+                }:
+                    continue
+                if pstatus in {
+                    ChannelDeliveryPartStatus.FAILED,
+                    ChannelDeliveryPartStatus.CANCELLED,
+                }:
+                    return None
+                target_part = prow
+                break
+
+            if target_part is None:
+                return None
+
+            target_part_id = UUID(str(target_part["part_id"]))  # type: ignore[index]
+            if claim.part_id is not None and claim.part_id != target_part_id:
+                return None
+
+            not_before_at = _datetime(target_part["not_before_at"])  # type: ignore[index]
+            if not_before_at is not None and not_before_at > claimed_at:
+                return None
+
+            target_status = ChannelDeliveryPartStatus(str(target_part["status"]))  # type: ignore[index]
+            target_lease_id = (
+                UUID(str(target_part["lease_id"])) if target_part["lease_id"] is not None else None  # type: ignore[index]
+            )
+            target_expiry = _datetime(target_part["lease_expires_at"])  # type: ignore[index]
+
+            same_lease = target_lease_id == claim.lease_id
+            if target_status is ChannelDeliveryPartStatus.SENDING and not same_lease:
+                if target_expiry is not None and target_expiry > claimed_at:
+                    return None
+
+            attempt = int(target_part["attempt"])  # type: ignore[index]
+            if target_status is ChannelDeliveryPartStatus.PENDING or not same_lease:
+                attempt += 1
+
+            cursor = await connection.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'sending',
+                    attempt = ?,
+                    lease_id = ?,
+                    lease_expires_at = ?,
+                    updated_at = ?
+                WHERE part_id = ?
+                  AND delivery_id = ?
+                  AND status IN ('pending', 'sending')
+                """,
+                (
+                    attempt,
+                    str(claim.lease_id),
+                    lease_expires_at.isoformat(),
+                    claimed_at.isoformat(),
+                    str(target_part_id),
+                    str(claim.delivery_id),
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+
+            await connection.execute(
+                """
+                UPDATE channel_deliveries
+                SET status = 'sending',
+                    lease_id = ?,
+                    lease_expires_at = ?,
+                    updated_at = ?
+                WHERE delivery_id = ? AND status = 'pending'
+                """,
+                (
+                    str(claim.lease_id),
+                    lease_expires_at.isoformat(),
+                    claimed_at.isoformat(),
+                    str(claim.delivery_id),
+                ),
+            )
+
+            cursor = await connection.execute(
+                "SELECT * FROM channel_delivery_parts WHERE part_id = ?",
+                (str(target_part_id),),
+            )
+            updated_row = await cursor.fetchone()
+            await cursor.close()
+            if updated_row is None:
+                raise RuntimeError("delivery part disappeared after claim")
+            return _delivery_part_record(updated_row)
+
+    async def acknowledge_delivery_part(
+        self,
+        acknowledgement: ChannelDeliveryPartAcknowledgement,
+        *,
+        updated_at: datetime,
+    ) -> tuple[ChannelDeliveryPlanRecord, ChannelDeliveryPartRecord]:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT * FROM channel_delivery_parts WHERE part_id = ? AND delivery_id = ?",
+                (str(acknowledgement.part_id), str(acknowledgement.delivery_id)),
+            )
+            current_part = await cursor.fetchone()
+            await cursor.close()
+            if current_part is None:
+                raise KeyError(
+                    f"unknown channel delivery part {acknowledgement.part_id} "
+                    f"for delivery {acknowledgement.delivery_id}"
+                )
+
+            cursor = await connection.execute(
+                "SELECT * FROM channel_deliveries WHERE delivery_id = ?",
+                (str(acknowledgement.delivery_id),),
+            )
+            parent_delivery = await cursor.fetchone()
+            await cursor.close()
+            if parent_delivery is None:
+                raise KeyError(f"unknown channel delivery {acknowledgement.delivery_id}")
+
+            current_status = ChannelDeliveryPartStatus(str(current_part["status"]))
+            current_lease_id = (
+                UUID(str(current_part["lease_id"]))
+                if current_part["lease_id"] is not None
+                else None
+            )
+
+            if current_status is ChannelDeliveryPartStatus.DELIVERED:
+                if acknowledgement.status is not ChannelDeliveryPartStatus.DELIVERED:
+                    raise ValueError("a delivered channel delivery part cannot be downgraded")
+                plan = await self._get_delivery_plan_tx(connection, acknowledgement.delivery_id)
+                if plan is None:
+                    raise RuntimeError("delivery plan disappeared")
+                return (plan, _delivery_part_record(current_part))
+
+            if current_status is not ChannelDeliveryPartStatus.SENDING:
+                raise ValueError("channel delivery part is not owned by an active sending lease")
+
+            if current_lease_id != acknowledgement.lease_id:
+                raise ValueError("delivery part acknowledgement lease_id mismatch")
+
+            current_expiry = _datetime(current_part["lease_expires_at"])
+            if current_expiry is not None and current_expiry < updated_at:
+                raise ValueError("delivery part acknowledgement lease expired")
+
+            delivered_at_val: str | None = None
+            if acknowledgement.status is ChannelDeliveryPartStatus.DELIVERED:
+                delivered_at_val = acknowledgement.acknowledged_at.isoformat()
+
+            await connection.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = ?,
+                    provider_message_id = COALESCE(?, provider_message_id),
+                    last_error_json = ?,
+                    updated_at = ?,
+                    delivered_at = ?
+                WHERE part_id = ? AND delivery_id = ?
+                """,
+                (
+                    acknowledgement.status.value,
+                    acknowledgement.provider_message_id,
+                    _error_json(acknowledgement.error),
+                    updated_at.isoformat(),
+                    delivered_at_val,
+                    str(acknowledgement.part_id),
+                    str(acknowledgement.delivery_id),
+                ),
+            )
+
+            cursor = await connection.execute(
+                """
+                    SELECT * FROM channel_delivery_parts
+                    WHERE delivery_id = ? ORDER BY ordinal ASC
+                    """,
+                (str(acknowledgement.delivery_id),),
+            )
+            all_parts = await cursor.fetchall()
+            await cursor.close()
+
+            has_failed_required = False
+            all_required_delivered = True
+            any_active = False
+            latest_delivered_at: datetime | None = None
+            last_provider_msg_id: str | None = None
+            last_failed_error: str | None = None
+
+            for p in all_parts:
+                p_status = ChannelDeliveryPartStatus(str(p["status"]))
+                p_req = bool(p["required"])
+                if p_status in {
+                    ChannelDeliveryPartStatus.SENDING,
+                    ChannelDeliveryPartStatus.PENDING,
+                }:
+                    any_active = True
+                if p_req:
+                    if p_status is ChannelDeliveryPartStatus.FAILED:
+                        has_failed_required = True
+                        last_failed_error = (
+                            str(p["last_error_json"]) if p["last_error_json"] is not None else None
+                        )
+                    if p_status is not ChannelDeliveryPartStatus.DELIVERED:
+                        all_required_delivered = False
+                if p_status is ChannelDeliveryPartStatus.DELIVERED:
+                    p_del = _datetime(p["delivered_at"])
+                    if p_del is not None and (
+                        latest_delivered_at is None or p_del > latest_delivered_at
+                    ):
+                        latest_delivered_at = p_del
+                    if p["provider_message_id"] is not None:
+                        last_provider_msg_id = str(p["provider_message_id"])
+
+            cancel_requested = parent_delivery["cancel_requested_at"] is not None
+
+            new_parent_status: ChannelDeliveryStatus
+            if has_failed_required:
+                new_parent_status = ChannelDeliveryStatus.FAILED
+            elif all_required_delivered:
+                new_parent_status = ChannelDeliveryStatus.DELIVERED
+            elif cancel_requested and not any_active:
+                new_parent_status = ChannelDeliveryStatus.CANCELLED
+            else:
+                new_parent_status = ChannelDeliveryStatus.SENDING
+
+            await connection.execute(
+                """
+                UPDATE channel_deliveries
+                SET status = ?,
+                    provider_message_id = COALESCE(?, provider_message_id),
+                    last_error_json = COALESCE(?, last_error_json),
+                    updated_at = ?,
+                    delivered_at = ?
+                WHERE delivery_id = ?
+                """,
+                (
+                    new_parent_status.value,
+                    last_provider_msg_id,
+                    last_failed_error,
+                    updated_at.isoformat(),
+                    (
+                        latest_delivered_at.isoformat()
+                        if new_parent_status is ChannelDeliveryStatus.DELIVERED
+                        and latest_delivered_at is not None
+                        else None
+                    ),
+                    str(acknowledgement.delivery_id),
+                ),
+            )
+
+            plan = await self._get_delivery_plan_tx(connection, acknowledgement.delivery_id)
+            if plan is None:
+                raise RuntimeError("delivery plan disappeared after acknowledgement")
+            part_record = next(p for p in plan.parts if p.part_id == acknowledgement.part_id)
+            return (plan, part_record)
+
+    async def cancel_remaining_delivery_parts(
+        self,
+        delivery_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> ChannelDeliveryPlanRecord:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT * FROM channel_deliveries WHERE delivery_id = ?",
+                (str(delivery_id),),
+            )
+            parent = await cursor.fetchone()
+            await cursor.close()
+            if parent is None:
+                raise KeyError(f"unknown channel delivery {delivery_id}")
+
+            parent_status = ChannelDeliveryStatus(str(parent["status"]))
+            if parent_status in {ChannelDeliveryStatus.DELIVERED, ChannelDeliveryStatus.FAILED}:
+                plan = await self._get_delivery_plan_tx(connection, delivery_id)
+                if plan is None:
+                    raise RuntimeError("delivery plan disappeared")
+                return plan
+
+            await connection.execute(
+                """
+                UPDATE channel_deliveries
+                SET cancel_requested_at = COALESCE(cancel_requested_at, ?),
+                    updated_at = ?
+                WHERE delivery_id = ?
+                """,
+                (
+                    cancel_request.requested_at.isoformat(),
+                    cancel_request.requested_at.isoformat(),
+                    str(delivery_id),
+                ),
+            )
+
+            cancel_error = StructuredError(
+                code="delivery_cancelled",
+                message=cancel_request.reason,
+                retryable=False,
+                component="external_channels",
+            )
+            await connection.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'cancelled',
+                    last_error_json = ?,
+                    updated_at = ?
+                WHERE delivery_id = ? AND status = 'pending'
+                """,
+                (
+                    _error_json(cancel_error),
+                    cancel_request.requested_at.isoformat(),
+                    str(delivery_id),
+                ),
+            )
+
+            cursor = await connection.execute(
+                """
+                SELECT COUNT(*) AS active_count
+                FROM channel_delivery_parts
+                WHERE delivery_id = ? AND status = 'sending'
+                """,
+                (str(delivery_id),),
+            )
+            active_row = await cursor.fetchone()
+            await cursor.close()
+            active_count = int(active_row["active_count"]) if active_row is not None else 0
+
+            if active_count == 0:
+                await connection.execute(
+                    """
+                    UPDATE channel_deliveries
+                    SET status = 'cancelled',
+                        updated_at = ?
+                    WHERE delivery_id = ?
+                    """,
+                    (cancel_request.requested_at.isoformat(), str(delivery_id)),
+                )
+
+            plan = await self._get_delivery_plan_tx(connection, delivery_id)
+            if plan is None:
+                raise RuntimeError("delivery plan disappeared after cancel")
+            return plan
+
+    async def recover_expired_delivery_part_leases(
+        self,
+        *,
+        as_of: datetime,
+    ) -> int:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT p.part_id, p.delivery_id, d.cancel_requested_at
+                FROM channel_delivery_parts AS p
+                JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
+                WHERE p.status = 'sending'
+                  AND p.lease_expires_at IS NOT NULL
+                  AND p.lease_expires_at <= ?
+                """,
+                (as_of.isoformat(),),
+            )
+            expired_rows = tuple(await cursor.fetchall())
+            await cursor.close()
+
+            if not expired_rows:
+                return 0
+
+            affected_deliveries: set[str] = set()
+            for row in expired_rows:
+                part_id = str(row["part_id"])
+                delivery_id = str(row["delivery_id"])
+                cancel_requested = row["cancel_requested_at"] is not None
+                affected_deliveries.add(delivery_id)
+
+                new_status = "cancelled" if cancel_requested else "pending"
+                await connection.execute(
+                    """
+                    UPDATE channel_delivery_parts
+                    SET status = ?,
+                        lease_id = NULL,
+                        lease_expires_at = NULL,
+                        updated_at = ?
+                    WHERE part_id = ?
+                    """,
+                    (new_status, as_of.isoformat(), part_id),
+                )
+
+            for delivery_id in affected_deliveries:
+                cursor = await connection.execute(
+                    """
+                    SELECT * FROM channel_delivery_parts
+                    WHERE delivery_id = ? ORDER BY ordinal ASC
+                    """,
+                    (delivery_id,),
+                )
+                all_parts = await cursor.fetchall()
+                await cursor.close()
+
+                cursor = await connection.execute(
+                    "SELECT cancel_requested_at FROM channel_deliveries WHERE delivery_id = ?",
+                    (delivery_id,),
+                )
+                parent_row = await cursor.fetchone()
+                await cursor.close()
+                cancel_requested = (
+                    parent_row is not None and parent_row["cancel_requested_at"] is not None
+                )
+
+                any_active = any(str(p["status"]) in ("pending", "sending") for p in all_parts)
+                has_sending = any(str(p["status"]) == "sending" for p in all_parts)
+                all_delivered = all(
+                    str(p["status"]) == "delivered" for p in all_parts if bool(p["required"])
+                )
+                has_failed = any(
+                    str(p["status"]) == "failed" for p in all_parts if bool(p["required"])
+                )
+
+                if has_failed:
+                    parent_status = "failed"
+                elif all_delivered:
+                    parent_status = "delivered"
+                elif cancel_requested and not any_active:
+                    parent_status = "cancelled"
+                elif has_sending:
+                    parent_status = "sending"
+                else:
+                    parent_status = "pending"
+
+                await connection.execute(
+                    """
+                    UPDATE channel_deliveries
+                    SET status = ?,
+                        updated_at = ?
+                    WHERE delivery_id = ?
+                    """,
+                    (parent_status, as_of.isoformat(), delivery_id),
+                )
+
+            return len(expired_rows)
+
+    async def _get_delivery_plan_tx(
+        self,
+        connection: aiosqlite.Connection,
+        delivery_id: UUID,
+    ) -> ChannelDeliveryPlanRecord | None:
+        cursor = await connection.execute(
+            "SELECT * FROM channel_deliveries WHERE delivery_id = ?",
+            (str(delivery_id),),
+        )
+        delivery_row = await cursor.fetchone()
+        await cursor.close()
+        if delivery_row is None:
+            return None
+
+        cursor = await connection.execute(
+            """
+                    SELECT * FROM channel_delivery_parts
+                    WHERE delivery_id = ? ORDER BY ordinal ASC
+                    """,
+            (str(delivery_id),),
+        )
+        part_rows = await cursor.fetchall()
+        await cursor.close()
+
+        parts = tuple(_delivery_part_record(p) for p in part_rows)
+        delivered_count = sum(1 for p in parts if p.status is ChannelDeliveryPartStatus.DELIVERED)
+        delivery = _delivery_record(
+            delivery_row,
+            part_count=len(parts),
+            delivered_part_count=delivered_count,
+        )
+        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts)
 
     async def set_turn_terminal(
         self,
@@ -535,6 +1266,29 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     str(acknowledgement.delivery_id),
                 ),
             )
+            await connection.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = ?,
+                    provider_message_id = ?,
+                    last_error_json = ?,
+                    updated_at = ?,
+                    delivered_at = ?
+                WHERE delivery_id = ? AND ordinal = 0
+                """,
+                (
+                    acknowledgement.status.value,
+                    acknowledgement.provider_message_id,
+                    _error_json(acknowledgement.error),
+                    updated_at.isoformat(),
+                    (
+                        acknowledgement.acknowledged_at.isoformat()
+                        if acknowledgement.status is ChannelDeliveryStatus.DELIVERED
+                        else None
+                    ),
+                    str(acknowledgement.delivery_id),
+                ),
+            )
             cursor = await connection.execute(
                 "SELECT * FROM channel_deliveries WHERE delivery_id = ?",
                 (str(acknowledgement.delivery_id),),
@@ -595,6 +1349,24 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 SET status = 'sending', attempt = ?, lease_id = ?, lease_expires_at = ?,
                     provider_message_id = NULL, last_error_json = NULL, updated_at = ?
                 WHERE delivery_id = ?
+                """,
+                (
+                    attempt,
+                    str(claim.lease_id),
+                    lease_expires_at.isoformat(),
+                    claimed_at.isoformat(),
+                    str(claim.delivery_id),
+                ),
+            )
+            await connection.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'sending',
+                    attempt = ?,
+                    lease_id = ?,
+                    lease_expires_at = ?,
+                    updated_at = ?
+                WHERE delivery_id = ? AND ordinal = 0 AND status IN ('pending', 'sending')
                 """,
                 (
                     attempt,
@@ -784,8 +1556,58 @@ def _turn_record(row: object) -> ChannelTurnRecord:
     )
 
 
-def _delivery_record(row: object) -> ChannelDeliveryRecord:
-    item = row
+def _delivery_part_record(row: object) -> ChannelDeliveryPartRecord:
+    item = cast(aiosqlite.Row, row)
+    payload_raw = json.loads(str(item["payload_json"]))  # type: ignore[index]
+    payload = _PART_PAYLOAD_ADAPTER.validate_python(payload_raw)
+    return ChannelDeliveryPartRecord(
+        part_id=UUID(str(item["part_id"])),  # type: ignore[index]
+        delivery_id=UUID(str(item["delivery_id"])),  # type: ignore[index]
+        ordinal=int(item["ordinal"]),  # type: ignore[index]
+        kind=ChannelDeliveryPartKind(str(item["kind"])),  # type: ignore[index]
+        payload=payload,
+        required=bool(item["required"]),  # type: ignore[index]
+        status=ChannelDeliveryPartStatus(str(item["status"])),  # type: ignore[index]
+        delay_after_ms=int(item["delay_after_ms"]),  # type: ignore[index]
+        not_before_at=_datetime(item["not_before_at"]),  # type: ignore[index]
+        attempt=int(item["attempt"]),  # type: ignore[index]
+        lease_id=UUID(str(item["lease_id"])) if item["lease_id"] is not None else None,  # type: ignore[index]
+        lease_expires_at=_datetime(item["lease_expires_at"]),  # type: ignore[index]
+        provider_client_id=str(item["provider_client_id"]),  # type: ignore[index]
+        provider_message_id=str(item["provider_message_id"])
+        if item["provider_message_id"] is not None
+        else None,  # type: ignore[index]
+        last_error=_error_from_json(item["last_error_json"]),  # type: ignore[index]
+        created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
+        updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
+        delivered_at=_datetime(item["delivered_at"]),  # type: ignore[index]
+    )
+
+
+def _delivery_record(
+    row: object,
+    *,
+    part_count: int | None = None,
+    delivered_part_count: int | None = None,
+) -> ChannelDeliveryRecord:
+    item = cast(aiosqlite.Row, row)
+    plan_version = 1
+    cancel_requested_at = None
+    try:
+        if "plan_version" in item.keys() and item["plan_version"] is not None:  # type: ignore[attr-defined]
+            plan_version = int(item["plan_version"])  # type: ignore[index]
+        if "cancel_requested_at" in item.keys():  # type: ignore[attr-defined]
+            cancel_requested_at = _datetime(item["cancel_requested_at"])  # type: ignore[index]
+    except (AttributeError, KeyError):
+        pass
+
+    resolved_part_count = part_count if part_count is not None else 1
+    resolved_delivered_part_count = (
+        delivered_part_count
+        if delivered_part_count is not None
+        else (1 if str(item["status"]) == "delivered" else 0)  # type: ignore[index]
+    )
+
     return ChannelDeliveryRecord(
         delivery_id=UUID(str(item["delivery_id"])),  # type: ignore[index]
         channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
@@ -805,6 +1627,10 @@ def _delivery_record(row: object) -> ChannelDeliveryRecord:
         created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
         updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
         delivered_at=_datetime(item["delivered_at"]),  # type: ignore[index]
+        plan_version=plan_version,
+        part_count=resolved_part_count,
+        delivered_part_count=resolved_delivered_part_count,
+        cancel_requested_at=cancel_requested_at,
     )
 
 

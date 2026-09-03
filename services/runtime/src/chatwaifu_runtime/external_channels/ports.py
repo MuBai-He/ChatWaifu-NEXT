@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -11,6 +12,10 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryClaimRequest,
+    ChannelDeliveryPartAcknowledgement,
+    ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartDraft,
+    ChannelDeliveryPartsCancelRequest,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
@@ -18,6 +23,8 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
+    ChannelDeliveryPartRecord,
+    ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
     ChannelTurnRecord,
 )
@@ -96,7 +103,53 @@ class ExternalChannelRepository(Protocol):
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
+        parts: Sequence[ChannelDeliveryPartDraft] | None = None,
     ) -> ChannelTurnRecord: ...
+
+    async def create_delivery_plan(
+        self,
+        channel_turn_id: UUID,
+        *,
+        delivery_id: UUID,
+        parts: Sequence[ChannelDeliveryPartDraft],
+        created_at: datetime,
+    ) -> ChannelDeliveryPlanRecord: ...
+
+    async def get_delivery_plan(self, delivery_id: UUID) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def get_delivery_plan_by_turn(
+        self, channel_turn_id: UUID
+    ) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def list_delivery_parts(
+        self, delivery_id: UUID
+    ) -> tuple[ChannelDeliveryPartRecord, ...]: ...
+
+    async def claim_next_delivery_part(
+        self,
+        claim: ChannelDeliveryPartClaimRequest,
+        *,
+        claimed_at: datetime,
+    ) -> ChannelDeliveryPartRecord | None: ...
+
+    async def acknowledge_delivery_part(
+        self,
+        acknowledgement: ChannelDeliveryPartAcknowledgement,
+        *,
+        updated_at: datetime,
+    ) -> tuple[ChannelDeliveryPlanRecord, ChannelDeliveryPartRecord]: ...
+
+    async def cancel_remaining_delivery_parts(
+        self,
+        delivery_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> ChannelDeliveryPlanRecord: ...
+
+    async def recover_expired_delivery_part_leases(
+        self,
+        *,
+        as_of: datetime,
+    ) -> int: ...
 
     async def set_turn_terminal(
         self,
