@@ -38,6 +38,7 @@ from chatwaifu_runtime.realtime.cloud.fake import (
     FakeCloudRealtimeBackend,
     FakeCloudRealtimeSession,
 )
+from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
 from chatwaifu_runtime.realtime.cloud.mirror import (
     GenerationBinding,
     RealtimeSessionMirror,
@@ -47,6 +48,7 @@ __all__ = [
     "AssistantTranscriptEvent",
     "CloudRealtimeBackend",
     "CloudRealtimeCoordinator",
+    "CloudRealtimeMediaBridge",
     "CloudRealtimeSession",
     "FakeCloudRealtimeBackend",
     "FakeCloudRealtimeSession",

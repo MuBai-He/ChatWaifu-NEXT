@@ -182,6 +182,13 @@ class CloudRealtimeCoordinator:
     def session(self) -> CloudRealtimeSession:
         return self._session
 
+    @property
+    def media_sink(self) -> RealtimeMediaSink | None:
+        return self._media_sink
+
+    def set_media_sink(self, media_sink: RealtimeMediaSink | None) -> None:
+        self._media_sink = media_sink
+
     def start(self) -> None:
         """Start background event pump task."""
         if self._is_running:
@@ -272,6 +279,17 @@ class CloudRealtimeCoordinator:
                     return
 
                 if self._media_sink is not None:
+                    if frame.generation_id != gen_id:
+                        frame = RealtimeOutputAudioFrame(
+                            session_id=frame.session_id,
+                            generation_id=gen_id,
+                            sequence=frame.sequence,
+                            pts_ms=frame.pts_ms,
+                            sample_rate=frame.sample_rate,
+                            channels=frame.channels,
+                            audio=frame.audio,
+                            is_final=frame.is_final,
+                        )
                     await self._media_sink.handle_audio_frame(frame)
 
             case AssistantTranscriptEvent():

@@ -1,7 +1,7 @@
 """SmallWebRTC signaling and per-connection Pipecat pipeline adapter."""
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -29,6 +29,7 @@ from chatwaifu_runtime.config.settings import RealtimeConfig, SttConfig
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
 from chatwaifu_runtime.realtime.contracts import SttBackend
 from chatwaifu_runtime.realtime.pipecat.processor import VoiceDomainBridgeProcessor
 
@@ -63,6 +64,7 @@ class PipecatMediaAdapter:
         companion_settings: CompanionSettingsService,
         activity: ActivityTracker,
         resource_activity: Callable[[], None],
+        cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None,
     ) -> None:
         self._config = config
         self._stt_language = (
@@ -76,6 +78,7 @@ class PipecatMediaAdapter:
         self._companion_settings = companion_settings
         self._activity = activity
         self._resource_activity = resource_activity
+        self._cloud_bridge_factory = cloud_bridge_factory
         self._handler = SmallWebRTCRequestHandler(connection_mode=ConnectionMode.MULTIPLE)
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._sessions: dict[str, UUID] = {}
@@ -174,26 +177,36 @@ class PipecatMediaAdapter:
                 ),
             )
         )
-        bridge = VoiceDomainBridgeProcessor(
-            session_id=session_id,
-            sample_rate=self._config.input_sample_rate,
-            channels=1,
-            pre_roll_ms=self._config.pre_roll_ms,
-            max_utterance_seconds=self._config.max_utterance_seconds,
-            echo_enabled=self._config.echo_enabled,
-            publisher=self._publisher,
-            event_hub=self._event_hub,
-            conversation=self._conversation,
-            audio_assets=self._audio_assets,
-            stt=self._stt,
-            stt_language=self._stt_language,
-            companion_settings=self._companion_settings,
-            activity=self._activity,
-            resource_activity=self._resource_activity,
-            activation_mode=activation_mode,
-        )
+        if self._config.connection_mode == "cloud_realtime":
+            if self._cloud_bridge_factory is None:
+                raise RuntimeError(
+                    "Cloud realtime connection mode enabled but no cloud_bridge_factory provided"
+                )
+            cloud_bridge = await self._cloud_bridge_factory(session_id)
+            pipeline = Pipeline([transport.input(), vad, cloud_bridge, transport.output()])
+        else:
+            bridge = VoiceDomainBridgeProcessor(
+                session_id=session_id,
+                sample_rate=self._config.input_sample_rate,
+                channels=1,
+                pre_roll_ms=self._config.pre_roll_ms,
+                max_utterance_seconds=self._config.max_utterance_seconds,
+                echo_enabled=self._config.echo_enabled,
+                publisher=self._publisher,
+                event_hub=self._event_hub,
+                conversation=self._conversation,
+                audio_assets=self._audio_assets,
+                stt=self._stt,
+                stt_language=self._stt_language,
+                companion_settings=self._companion_settings,
+                activity=self._activity,
+                resource_activity=self._resource_activity,
+                activation_mode=activation_mode,
+            )
+            pipeline = Pipeline([transport.input(), vad, bridge, transport.output()])
+
         worker = PipelineWorker(
-            Pipeline([transport.input(), vad, bridge, transport.output()]),
+            pipeline,
             params=PipelineParams(
                 audio_in_sample_rate=self._config.input_sample_rate,
                 audio_out_sample_rate=self._config.output_sample_rate,

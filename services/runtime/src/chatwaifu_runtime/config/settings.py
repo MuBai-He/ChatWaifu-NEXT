@@ -135,6 +135,7 @@ class RealtimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     enabled: bool = True
+    connection_mode: Literal["cascade", "cloud_realtime"] = "cascade"
     input_sample_rate: int = Field(default=16_000, ge=8_000, le=48_000)
     output_sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     vad_confidence: float = Field(default=0.7, ge=0, le=1)
