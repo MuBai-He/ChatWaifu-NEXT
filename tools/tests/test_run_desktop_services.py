@@ -69,9 +69,40 @@ def test_runtime_environment_uses_safe_fallback_without_local_workers() -> None:
     assert environment["CHATWAIFU_TTS__DEFAULT_PROVIDER"] == "fake"
     assert json.loads(environment["CHATWAIFU_TTS__WORKERS"]) == {}
     assert "CHATWAIFU_STT__WORKER_TOKEN" not in environment
+    assert "CHATWAIFU_SECURITY__CAPABILITY_TOKEN" not in environment
 
 
-def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None:
+def test_runtime_environment_injects_capability_token_when_present() -> None:
+    environment = desktop_services._runtime_environment(
+        {},
+        runtime_port=41001,
+        stt_port=None,
+        stt_token=None,
+        tts_profiles={},
+        ports={"runtime": 41001},
+        tokens={"runtime": "test-runtime-capability-token"},
+    )
+    assert environment["CHATWAIFU_SECURITY__CAPABILITY_TOKEN"] == "test-runtime-capability-token"
+
+
+def test_bootstrap_line_is_machine_readable_with_token(capsys: Any) -> None:
+    desktop_services._write_bootstrap(
+        "http://127.0.0.1:41001",
+        1234,
+        {"runtime": 41001, "stt": 41002, "qwen3_tts_mlx": 41003},
+        token="desktop-token-xyz",
+    )
+
+    line = capsys.readouterr().out.strip()
+    assert line.startswith(desktop_services.BOOTSTRAP_PREFIX)
+    payload = json.loads(line.removeprefix(desktop_services.BOOTSTRAP_PREFIX))
+    assert payload["type"] == "runtime.ready"
+    assert payload["runtime_url"] == "http://127.0.0.1:41001"
+    assert payload["workers"] == ["qwen3_tts_mlx", "stt"]
+    assert payload["token"] == "desktop-token-xyz"
+
+
+def test_bootstrap_line_is_machine_readable_without_token(capsys: Any) -> None:
     desktop_services._write_bootstrap(
         "http://127.0.0.1:41001",
         1234,
@@ -84,7 +115,7 @@ def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None
     assert payload["type"] == "runtime.ready"
     assert payload["runtime_url"] == "http://127.0.0.1:41001"
     assert payload["workers"] == ["qwen3_tts_mlx", "stt"]
-    assert "token" not in line.casefold()
+    assert payload["token"] is None
 
 
 def test_dev_service_lifecycle_stops_owned_runtime(

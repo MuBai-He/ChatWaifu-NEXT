@@ -36,6 +36,15 @@ def test_unauthenticated_request_rejected(guard_settings: Settings) -> None:
         assert response.status_code == 401
         assert response.json()["detail"] == "Unauthorized: invalid or missing token"
 
+        # When an allowed origin is provided, CORS headers must be attached even on 401
+        cors_response = client.get(
+            "/v1/characters",
+            headers={"Origin": "http://127.0.0.1:5173"},
+        )
+        assert cors_response.status_code == 401
+        assert cors_response.headers.get("access-control-allow-origin") == "http://127.0.0.1:5173"
+        assert cors_response.headers.get("vary") == "Origin"
+
 
 def test_invalid_token_rejected(guard_settings: Settings) -> None:
     app = create_app(guard_settings)
@@ -439,6 +448,32 @@ def test_admin_events_ticket_with_admin_token(tmp_path: Path) -> None:
         # admin_events ticket can connect to /v1/events without session_id
         with client.websocket_connect(f"/v1/events?ticket={admin_ticket}") as ws:
             ws.send_json({"type": "ping"})
+
+
+def test_explicit_capability_token_used_when_configured(tmp_path: Path) -> None:
+    settings = Settings.model_validate(
+        {
+            "config_dir": tmp_path / "config",
+            "data_dir": tmp_path,
+            "storage": StorageConfig(database_path=tmp_path / "runtime.db"),
+            "llm": {"provider": "demo", "demo_chunk_delay_ms": 0},
+            "tts": {"provider": "fake"},
+            "security": {
+                "auth_enabled": True,
+                "capability_token": "explicit-preset-capability-token-32b",
+                "allowed_hosts": ["custom.local"],
+                "allowed_origins": ["http://custom.local:3000"],
+            },
+        }
+    )
+    app = create_app(settings)
+    assert app.state.container.capability_token == "explicit-preset-capability-token-32b"
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/characters",
+            headers={"Authorization": "Bearer explicit-preset-capability-token-32b"},
+        )
+        assert response.status_code == 200
 
 
 def test_vulnerable_nltk_apis_not_referenced() -> None:

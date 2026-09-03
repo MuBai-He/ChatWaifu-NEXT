@@ -69,6 +69,7 @@ def _smoke_runtime(executable: Path, root: Path, timeout: float) -> str:
     _pump(cast(TextIO, process.stderr), "stderr", lines)
     observed: list[str] = []
     runtime_url = ""
+    runtime_token: str | None = None
     deadline = time.monotonic() + timeout
     try:
         while time.monotonic() < deadline and process.poll() is None:
@@ -80,6 +81,7 @@ def _smoke_runtime(executable: Path, root: Path, timeout: float) -> str:
             if source == "stdout" and line.startswith(BOOTSTRAP_PREFIX):
                 payload = cast(dict[str, object], json.loads(line.removeprefix(BOOTSTRAP_PREFIX)))
                 runtime_url = str(payload["runtime_url"])
+                runtime_token = cast(str | None, payload.get("token"))
                 break
         if not runtime_url:
             raise RuntimeError(
@@ -88,11 +90,17 @@ def _smoke_runtime(executable: Path, root: Path, timeout: float) -> str:
         health = cast(dict[str, object], _get_json(f"{runtime_url}/v1/runtime/health"))
         if health.get("status") != "ok":
             raise RuntimeError(f"Frozen Runtime health is not ok: {health}")
-        characters = cast(dict[str, object], _get_json(f"{runtime_url}/v1/characters"))
+        characters = cast(
+            dict[str, object],
+            _get_json(f"{runtime_url}/v1/characters", token=runtime_token),
+        )
         character_items = cast(list[dict[str, object]], characters.get("items", []))
         if not character_items:
             raise RuntimeError(f"Frozen Runtime has no packaged characters: {characters}")
-        skills = cast(dict[str, object], _get_json(f"{runtime_url}/v1/skills"))
+        skills = cast(
+            dict[str, object],
+            _get_json(f"{runtime_url}/v1/skills", token=runtime_token),
+        )
         items = cast(list[dict[str, object]], skills.get("items", []))
         if not any(item.get("skill_id") == "runtime.status" for item in items):
             raise RuntimeError(f"Frozen Runtime has no built-in runtime.status skill: {skills}")
@@ -271,8 +279,11 @@ def _pump(stream: TextIO, source: str, destination: queue.Queue[tuple[str, str]]
     threading.Thread(target=read, name=f"sidecar-smoke-{source}", daemon=True).start()
 
 
-def _get_json(url: str) -> dict[str, object] | list[object]:
-    with urllib.request.urlopen(url, timeout=10) as response:
+def _get_json(url: str, token: str | None = None) -> dict[str, object] | list[object]:
+    request = urllib.request.Request(url)
+    if token:
+        request.add_header("Authorization", f"Bearer {token}")
+    with urllib.request.urlopen(request, timeout=10) as response:
         return cast(dict[str, object] | list[object], json.load(response))
 
 

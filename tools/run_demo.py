@@ -127,9 +127,11 @@ def main() -> int:
             "CHATWAIFU_STT_WORKER_PRELOAD": "true",
         }
     )
+    runtime_token = secrets.token_urlsafe(32)
     runtime_environment = environment.copy()
     runtime_environment.update(
         {
+            "CHATWAIFU_SECURITY__CAPABILITY_TOKEN": runtime_token,
             "CHATWAIFU_STT__PROVIDER": "faster_whisper_worker",
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
@@ -221,6 +223,8 @@ def main() -> int:
         processes.append(runtime)
         _wait_for_url(RUNTIME_HEALTH, runtime, "Runtime")
 
+        web_environment = environment.copy()
+        web_environment["VITE_RUNTIME_TOKEN"] = runtime_token
         web = subprocess.Popen(
             [
                 str(pnpm),
@@ -233,7 +237,7 @@ def main() -> int:
                 "5173",
             ],
             cwd=ROOT,
-            env=environment,
+            env=web_environment,
             start_new_session=os.name == "posix",
         )
         processes.append(web)

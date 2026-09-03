@@ -29,7 +29,13 @@ LOOPBACK_HOSTS: Final[frozenset[str]] = frozenset(
     {"127.0.0.1", "localhost", "::1", "[::1]", "testclient", "testserver"}
 )
 DESKTOP_ORIGINS: Final[frozenset[str]] = frozenset(
-    {"tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"}
+    {
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    }
 )
 EXEMPT_HTTP_PATHS: Final[frozenset[str]] = frozenset(
     {"/v1/runtime/health", "/docs", "/openapi.json", "/redoc"}
@@ -206,6 +212,15 @@ class LocalClientGuardMiddleware:
             return True
         return False
 
+    def _cors_headers(self, origin_header: str | None) -> list[tuple[bytes, bytes]]:
+        if not origin_header or not self._is_origin_allowed(origin_header):
+            return []
+        origin_val = origin_header.strip().encode("latin-1")
+        return [
+            (b"access-control-allow-origin", origin_val),
+            (b"vary", b"Origin"),
+        ]
+
     @staticmethod
     def _extract_bearer_token(auth_header: str | None) -> str | None:
         if not auth_header:
@@ -336,7 +351,10 @@ class LocalClientGuardMiddleware:
                     send,
                     401,
                     {"detail": "Unauthorized: invalid or missing token"},
-                    headers=[(b"www-authenticate", b"Bearer")],
+                    headers=[
+                        (b"www-authenticate", b"Bearer"),
+                        *self._cors_headers(origin_header),
+                    ],
                 )
                 return
 
