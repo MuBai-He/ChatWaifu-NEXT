@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 """Realtime media boundary tests that do not require a microphone."""
 
 import asyncio
