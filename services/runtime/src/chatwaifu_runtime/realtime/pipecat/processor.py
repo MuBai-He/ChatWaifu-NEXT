@@ -163,6 +163,8 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         )
         self._identity: VoiceTurnIdentity | None = None
         self._active_output_generation: UUID | None = None
+        self._invalidated_generations: set[UUID] = set()
+        self._invalidated_generations_order: deque[UUID] = deque()
         self._subscription: EventSubscription | None = None
         self._event_task: asyncio.Task[None] | None = None
         self._stt_task: asyncio.Task[None] | None = None
@@ -436,6 +438,15 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
             )
         )
 
+    def _invalidate_generation(self, generation_id: UUID) -> None:
+        if generation_id in self._invalidated_generations:
+            return
+        self._invalidated_generations.add(generation_id)
+        self._invalidated_generations_order.append(generation_id)
+        if len(self._invalidated_generations_order) > 256:
+            oldest = self._invalidated_generations_order.popleft()
+            self._invalidated_generations.discard(oldest)
+
     async def _forward_runtime_audio(self) -> None:
         subscription = self._subscription
         if subscription is None:
@@ -445,6 +456,8 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
             event_type = str(event.get("event_type"))
             generation_id = _optional_uuid(event.get("generation_id"))
             if event_type == "assistant.generation_started":
+                if generation_id is None or generation_id in self._invalidated_generations:
+                    continue
                 if (
                     self._active_output_generation is not None
                     and generation_id != self._active_output_generation
@@ -452,7 +465,11 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                     await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
                 self._active_output_generation = generation_id
             elif event_type == "assistant.audio_chunk_queued":
-                if generation_id is None or generation_id != self._active_output_generation:
+                if (
+                    generation_id is None
+                    or generation_id in self._invalidated_generations
+                    or generation_id != self._active_output_generation
+                ):
                     continue
                 raw_payload = event.get("payload")
                 if not isinstance(raw_payload, dict):
@@ -467,7 +484,10 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                 if path is None:
                     continue
                 audio, sample_rate, channels = await asyncio.to_thread(_read_pcm_wave, path)
-                if generation_id != self._active_output_generation:
+                if (
+                    generation_id in self._invalidated_generations
+                    or generation_id != self._active_output_generation
+                ):
                     continue
                 marker = build_playback_marker(payload, generation_id, "started")
                 if marker is None:
@@ -498,7 +518,17 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
                 "assistant.generation_cancelled",
                 "conversation.interrupted",
             }:
-                if generation_id is None or generation_id == self._active_output_generation:
+                if generation_id is not None:
+                    self._invalidate_generation(generation_id)
+                should_interrupt = (
+                    event_type == "conversation.interrupted"
+                    or generation_id is None
+                    or self._active_output_generation is None
+                    or generation_id == self._active_output_generation
+                )
+                if should_interrupt:
+                    if self._active_output_generation is not None:
+                        self._invalidate_generation(self._active_output_generation)
                     self._active_output_generation = None
                     await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
 

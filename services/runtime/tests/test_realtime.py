@@ -1,17 +1,24 @@
+# pyright: reportPrivateUsage=false
 """Realtime media boundary tests that do not require a microphone."""
 
+import asyncio
 import json
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import httpx2
 import pytest
+from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.realtime.contracts import SttRequest, VoiceTurnIdentity
 from chatwaifu_runtime.realtime.pipecat.processor import (
     UtteranceBuffer,
+    VoiceDomainBridgeProcessor,
     build_playback_marker,
 )
 from chatwaifu_runtime.realtime.stt import FasterWhisperWorkerSttBackend
 from fastapi.testclient import TestClient
+from pipecat.frames.frames import Frame, InterruptionFrame, OutputAudioRawFrame
+from pipecat.processors.frame_processor import FrameDirection
 
 
 def test_utterance_buffer_keeps_preroll_and_bounds_recording() -> None:
@@ -175,3 +182,86 @@ async def test_stt_worker_adapter_rejects_a_stale_generation_result() -> None:
             )
     finally:
         await backend.close()
+
+
+@pytest.mark.asyncio
+async def test_pipecat_processor_cancellation_tombstone_prevents_late_resurrection() -> None:
+    session_id = uuid4()
+    generation_id = uuid4()
+    hub = EventHub()
+    audio_assets = MagicMock()
+
+    processor = VoiceDomainBridgeProcessor(
+        session_id=session_id,
+        sample_rate=16000,
+        channels=1,
+        pre_roll_ms=100,
+        max_utterance_seconds=10,
+        echo_enabled=False,
+        publisher=MagicMock(),
+        event_hub=hub,
+        conversation=MagicMock(),
+        audio_assets=audio_assets,
+        stt=MagicMock(),
+        stt_language=None,
+        companion_settings=MagicMock(),
+        activity=MagicMock(),
+        resource_activity=MagicMock(),
+        activation_mode="always_on",
+    )
+    pushed_frames: list[Frame] = []
+
+    async def mock_push_frame(
+        frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM
+    ) -> None:
+        pushed_frames.append(frame)
+
+    processor.push_frame = mock_push_frame  # type: ignore[assignment]
+    processor._subscription = hub.subscribe(
+        lambda event: str(event.get("session_id")) == str(session_id),
+        queue_size=64,
+    )
+    task = asyncio.create_task(processor._forward_runtime_audio())
+
+    try:
+        # Publish generation_started, audio_chunk_queued, conversation.interrupted.
+        # EventHub laned priority dispatch yields conversation.interrupted (priority 0)
+        # ahead of generation_started (priority 1) and audio_chunk_queued (priority 1).
+        await hub.publish(
+            {
+                "session_id": session_id,
+                "event_type": "assistant.generation_started",
+                "generation_id": generation_id,
+                "payload": {},
+            }
+        )
+        await hub.publish(
+            {
+                "session_id": session_id,
+                "event_type": "assistant.audio_chunk_queued",
+                "generation_id": generation_id,
+                "payload": {"asset_id": str(uuid4()), "index": 0, "streamed_live": False},
+            }
+        )
+        await hub.publish(
+            {
+                "session_id": session_id,
+                "event_type": "conversation.interrupted",
+                "generation_id": generation_id,
+                "payload": {},
+            }
+        )
+
+        await asyncio.sleep(0.05)
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    assert generation_id in processor._invalidated_generations
+    assert processor._active_output_generation is None
+    audio_assets.resolve.assert_not_called()
+    assert any(isinstance(f, InterruptionFrame) for f in pushed_frames)
+    assert not any(isinstance(f, OutputAudioRawFrame) for f in pushed_frames)

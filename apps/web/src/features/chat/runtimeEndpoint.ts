@@ -80,12 +80,39 @@ export function runtimeAssetUrl(path: string): string {
   return `${baseUrl}${path}`;
 }
 
+export function runtimeWebSocketUrlFromConnection(
+  connection: RuntimeConnection,
+): string {
+  const url = new URL(connection.baseUrl);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString().replace(/\/$/, "");
+}
+
 export async function runtimeWebSocketUrl(
   forceRefresh = false,
 ): Promise<string> {
-  const url = new URL(await resolveRuntimeUrl(forceRefresh));
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  return url.toString().replace(/\/$/, "");
+  const connection = await resolveRuntimeConnection(forceRefresh);
+  return runtimeWebSocketUrlFromConnection(connection);
+}
+
+export async function runtimeFetchWithConnection(
+  connection: RuntimeConnection,
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const target = new URL(path, connection.baseUrl);
+  const base = new URL(connection.baseUrl);
+  if (target.origin !== base.origin) {
+    throw new Error("Refusing to send Runtime credentials cross-origin");
+  }
+  const headers = new Headers(init?.headers);
+  if (connection.token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${connection.token}`);
+  }
+  return fetch(target.toString(), {
+    ...init,
+    headers,
+  });
 }
 
 export async function runtimeFetch(
@@ -93,44 +120,44 @@ export async function runtimeFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const connection = await resolveRuntimeConnection();
-  const url =
-    path.startsWith("http://") || path.startsWith("https://")
-      ? path
-      : `${connection.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
-  const headers = new Headers(init?.headers);
-  if (connection.token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${connection.token}`);
-  }
-  return fetch(url, {
-    ...init,
-    headers,
-  });
+  return runtimeFetchWithConnection(connection, path, init);
 }
 
 export async function acquireWsTicket(
-  purposeOrConnection?: "events" | "audio" | RuntimeConnection,
+  purposeOrConnection?: "events" | "audio" | "admin_events" | RuntimeConnection,
   connection?: RuntimeConnection,
-): Promise<string | null> {
-  const purpose: "events" | "audio" =
-    purposeOrConnection === "audio" || purposeOrConnection === "events"
-      ? purposeOrConnection
-      : "events";
-  const connTarget =
-    typeof purposeOrConnection === "object" && purposeOrConnection !== null
-      ? purposeOrConnection
-      : connection;
-  try {
-    const conn = connTarget ?? (await resolveRuntimeConnection());
-    const response = await runtimeFetch(
-      `${conn.baseUrl}/v1/runtime/ws-ticket?purpose=${encodeURIComponent(purpose)}`,
-      { method: "POST" },
-    );
-    if (!response.ok) return null;
-    const data = (await response.json()) as { ticket?: string };
-    return typeof data.ticket === "string" ? data.ticket : null;
-  } catch {
-    return null;
+  sessionId?: string | null,
+): Promise<string> {
+  let purpose: "events" | "audio" | "admin_events" = "events";
+  let connTarget: RuntimeConnection | undefined = connection;
+
+  if (typeof purposeOrConnection === "object" && purposeOrConnection !== null) {
+    connTarget = purposeOrConnection;
+  } else if (typeof purposeOrConnection === "string") {
+    purpose = purposeOrConnection;
   }
+
+  const conn = connTarget ?? (await resolveRuntimeConnection());
+  const params = new URLSearchParams({ purpose });
+  if (sessionId) {
+    params.set("session_id", sessionId);
+  }
+
+  const response = await runtimeFetchWithConnection(
+    conn,
+    `/v1/runtime/ws-ticket?${params.toString()}`,
+    { method: "POST" },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `获取 Runtime WebSocket Ticket 失败 (${response.status})。`,
+    );
+  }
+  const data = (await response.json()) as { ticket?: string };
+  if (typeof data.ticket !== "string" || !data.ticket) {
+    throw new Error("Runtime 返回了无效的 WebSocket Ticket。");
+  }
+  return data.ticket;
 }
 
 export async function readDesktopRuntimeStatus(): Promise<DesktopRuntimeStatus | null> {

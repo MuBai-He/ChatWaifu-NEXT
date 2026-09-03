@@ -22,6 +22,7 @@ export type RuntimeViewAction =
   | { type: "bootstrap"; messages: ChatMessage[] }
   | { type: "runtime_event"; event: DomainEvent }
   | { type: "text_revealed"; generationId: string; text: string }
+  | { type: "text_replaced"; generationId: string; text: string }
   | { type: "text_completed"; generationId: string }
   | {
       type: "voice_status";
@@ -44,6 +45,16 @@ export function runtimeEventReducer(
       messages: state.messages.map((message) =>
         message.generationId === action.generationId
           ? { ...message, text: message.text + action.text }
+          : message,
+      ),
+    };
+  }
+  if (action.type === "text_replaced") {
+    return {
+      ...state,
+      messages: state.messages.map((message) =>
+        message.generationId === action.generationId
+          ? { ...message, text: action.text }
           : message,
       ),
     };

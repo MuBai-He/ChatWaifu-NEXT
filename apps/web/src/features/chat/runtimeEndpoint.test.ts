@@ -4,6 +4,8 @@ import {
   acquireWsTicket,
   DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS,
   resolveRuntimeUrl,
+  runtimeFetchWithConnection,
+  runtimeWebSocketUrlFromConnection,
   type DesktopRuntimeStatus,
   type RuntimeConnection,
 } from "./runtimeEndpoint";
@@ -123,7 +125,7 @@ describe("desktop Runtime endpoint", () => {
 });
 
 describe("acquireWsTicket", () => {
-  it("requests ticket with purpose=events by default", async () => {
+  it("requests ticket with purpose=events and optional session_id", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({ ticket: "ticket-123", purpose: "events" }),
@@ -137,10 +139,14 @@ describe("acquireWsTicket", () => {
       baseUrl: "http://127.0.0.1:8765",
       token: "test-token",
     };
-    const ticket = await acquireWsTicket(connection);
+    const ticket = await acquireWsTicket(
+      "events",
+      connection,
+      "session-uuid-1",
+    );
     expect(ticket).toBe("ticket-123");
     expect(fetchSpy).toHaveBeenCalledWith(
-      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=events",
+      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=events&session_id=session-uuid-1",
       expect.objectContaining({ method: "POST" }),
     );
     fetchSpy.mockRestore();
@@ -160,16 +166,16 @@ describe("acquireWsTicket", () => {
       baseUrl: "http://127.0.0.1:8765",
       token: "test-token",
     };
-    const ticket = await acquireWsTicket("audio", connection);
+    const ticket = await acquireWsTicket("audio", connection, "session-uuid-1");
     expect(ticket).toBe("audio-ticket-456");
     expect(fetchSpy).toHaveBeenCalledWith(
-      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=audio",
+      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=audio&session_id=session-uuid-1",
       expect.objectContaining({ method: "POST" }),
     );
     fetchSpy.mockRestore();
   });
 
-  it("returns null if response is not ok", async () => {
+  it("throws fail-fast error if response is not ok", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
@@ -177,8 +183,54 @@ describe("acquireWsTicket", () => {
       baseUrl: "http://127.0.0.1:8765",
       token: "test-token",
     };
-    const ticket = await acquireWsTicket("events", connection);
-    expect(ticket).toBeNull();
+    await expect(acquireWsTicket("events", connection)).rejects.toThrow(
+      "获取 Runtime WebSocket Ticket 失败 (401)",
+    );
     fetchSpy.mockRestore();
+  });
+});
+
+describe("runtimeFetchWithConnection", () => {
+  it("attaches Bearer token to requests on the same origin", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    const connection: RuntimeConnection = {
+      baseUrl: "http://127.0.0.1:8765",
+      token: "secret-token-xyz",
+    };
+    await runtimeFetchWithConnection(connection, "/v1/health");
+    const expectedHeaders = new Headers();
+    expectedHeaders.set("Authorization", "Bearer secret-token-xyz");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://127.0.0.1:8765/v1/health",
+      expect.objectContaining({
+        headers: expectedHeaders,
+      }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it("refuses to send Runtime credentials cross-origin", async () => {
+    const connection: RuntimeConnection = {
+      baseUrl: "http://127.0.0.1:8765",
+      token: "secret-token-xyz",
+    };
+    await expect(
+      runtimeFetchWithConnection(connection, "https://attacker.com/steal"),
+    ).rejects.toThrow("Refusing to send Runtime credentials cross-origin");
+  });
+});
+
+describe("runtimeWebSocketUrlFromConnection", () => {
+  it("derives ws and wss urls correctly", () => {
+    expect(
+      runtimeWebSocketUrlFromConnection({ baseUrl: "http://127.0.0.1:8765" }),
+    ).toBe("ws://127.0.0.1:8765");
+    expect(
+      runtimeWebSocketUrlFromConnection({
+        baseUrl: "https://remote.test:8443/",
+      }),
+    ).toBe("wss://remote.test:8443");
   });
 });

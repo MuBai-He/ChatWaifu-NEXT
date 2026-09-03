@@ -73,4 +73,84 @@ describe("StreamingTextProjector", () => {
 
     expect(visible).toBe(text);
   });
+  it("completes with final terminal text matching delta stream", () => {
+    vi.useFakeTimers();
+    let visible = "";
+    let completedWith: string | undefined;
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        visible += text;
+      },
+      onComplete: (_generationId, finalText) => {
+        completedWith = finalText;
+      },
+    });
+
+    const fullText = "宁宁的第一句话和第二句话。";
+    projector.start("generation-1");
+    projector.push("generation-1", "宁宁的第一句话");
+    projector.push("generation-1", "和第二句话。");
+    projector.complete("generation-1", fullText);
+    vi.runAllTimers();
+
+    expect(visible).toBe(fullText);
+    expect(completedWith).toBe(fullText);
+  });
+
+  it("recovers missing suffix when a delta is dropped before completion", () => {
+    vi.useFakeTimers();
+    let visible = "";
+    let completedWith: string | undefined;
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        visible += text;
+      },
+      onComplete: (_generationId, finalText) => {
+        completedWith = finalText;
+      },
+    });
+
+    const fullText = "宁宁的前半句与丢失的后半句。";
+    projector.start("generation-1");
+    projector.push("generation-1", "宁宁的前半句");
+    // Missing delta: '与丢失的后半句。' was not received over websocket
+    projector.complete("generation-1", fullText);
+    vi.runAllTimers();
+
+    expect(visible).toBe(fullText);
+    expect(completedWith).toBe(fullText);
+  });
+  it("never produces duplicate appended prefix when completion arrives before any delta", () => {
+    vi.useFakeTimers();
+    let messageText = "";
+    const snapshots: string[] = [];
+
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        messageText += text;
+        snapshots.push(messageText);
+      },
+      onComplete: (_generationId, finalText) => {
+        if (typeof finalText === "string" && finalText.length > 0) {
+          messageText = finalText;
+        }
+        snapshots.push(messageText);
+      },
+    });
+
+    const fullText = "绫地宁宁的完整终态文本";
+    projector.start("generation-1");
+    projector.complete("generation-1", fullText);
+
+    while (vi.getTimerCount() > 0) {
+      vi.advanceTimersByTime(24);
+    }
+
+    expect(snapshots.length).toBeGreaterThan(0);
+    for (const text of snapshots) {
+      expect(text).toBe(fullText.slice(0, text.length));
+      expect(text.startsWith(fullText + fullText.slice(0, 2))).toBe(false);
+    }
+    expect(messageText).toBe(fullText);
+  });
 });

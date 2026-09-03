@@ -14,7 +14,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from chatwaifu_runtime.config.settings import Settings
 
-type TicketPurpose = Literal["events", "audio"]
+type TicketPurpose = Literal["events", "audio", "admin_events"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +22,7 @@ class WebSocketTicketClaims:
     expiry: float
     purpose: TicketPurpose
     origin: str | None = None
+    session_id: str | None = None
 
 
 LOOPBACK_HOSTS: Final[frozenset[str]] = frozenset(
@@ -49,6 +50,7 @@ class WebSocketTicketStore:
         self,
         purpose: TicketPurpose = "events",
         origin: str | None = None,
+        session_id: str | None = None,
         ttl_seconds: float = 30.0,
     ) -> str:
         async with self._lock:
@@ -56,10 +58,14 @@ class WebSocketTicketStore:
             self._evict_expired(now)
             ticket = secrets.token_urlsafe(32)
             normalized_origin = origin.strip().lower() if origin and origin.strip() else None
+            normalized_session_id = (
+                session_id.strip() if session_id and session_id.strip() else None
+            )
             self._tickets[ticket] = WebSocketTicketClaims(
                 expiry=now + ttl_seconds,
                 purpose=purpose,
                 origin=normalized_origin,
+                session_id=normalized_session_id,
             )
             return ticket
 
@@ -68,23 +74,39 @@ class WebSocketTicketStore:
         ticket: str | None,
         expected_purpose: TicketPurpose | None = None,
         origin: str | None = None,
-    ) -> bool:
+        session_id: str | None = None,
+    ) -> WebSocketTicketClaims | None:
         if not ticket:
-            return False
+            return None
         async with self._lock:
             now = time.monotonic()
             self._evict_expired(now)
             claims = self._tickets.pop(ticket, None)
             if claims is None or claims.expiry < now:
-                return False
-            if expected_purpose is not None and claims.purpose != expected_purpose:
-                return False
+                return None
+            if expected_purpose is not None:
+                if claims.purpose == "admin_events":
+                    if expected_purpose not in ("events", "admin_events"):
+                        return None
+                elif claims.purpose != expected_purpose:
+                    return None
             if claims.origin is not None:
                 if not origin:
-                    return False
+                    return None
                 if claims.origin != origin.strip().lower():
-                    return False
-            return True
+                    return None
+            normalized_session_id = (
+                session_id.strip() if session_id and session_id.strip() else None
+            )
+            if claims.purpose in ("events", "audio"):
+                if not claims.session_id:
+                    return None
+                if not normalized_session_id or claims.session_id != normalized_session_id:
+                    return None
+            elif claims.session_id is not None:
+                if claims.session_id != normalized_session_id:
+                    return None
+            return claims
 
     def clear(self) -> None:
         self._tickets.clear()
@@ -246,17 +268,37 @@ class LocalClientGuardMiddleware:
                 expected_purpose = "audio"
 
             query_string = scope.get("query_string", b"").decode("latin-1", errors="ignore")
-            query_params = urllib.parse.parse_qs(query_string)
-            ticket = query_params.get("ticket", [None])[0]
+            query_pairs = urllib.parse.parse_qsl(query_string, keep_blank_values=True)
+            param_counts: dict[str, int] = {}
+            for key, _ in query_pairs:
+                param_counts[key] = param_counts.get(key, 0) + 1
+            duplicate_params = [key for key, count in param_counts.items() if count > 1]
+            if duplicate_params:
+                await send(
+                    {
+                        "type": "websocket.close",
+                        "code": 1008,
+                        "reason": f"duplicate query parameter: {duplicate_params[0]}",
+                    }
+                )
+                return
+
+            query_params = dict(query_pairs)
+            ticket = query_params.get("ticket")
+            ws_session_id = query_params.get("session_id")
             bearer_token = self._extract_bearer_token(auth_header)
 
             authenticated = False
             if ticket:
-                authenticated = await self.ticket_store.consume_ticket(
+                claims = await self.ticket_store.consume_ticket(
                     ticket,
                     expected_purpose=expected_purpose,
                     origin=origin_header,
+                    session_id=ws_session_id,
                 )
+                if claims is not None:
+                    scope.setdefault("state", {})["chatwaifu_ws_ticket"] = claims
+                    authenticated = True
             elif bearer_token:
                 authenticated = self._is_token_valid(bearer_token)
 

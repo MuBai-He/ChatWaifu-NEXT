@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import hmac
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
+from chatwaifu_runtime.api.guard import WebSocketTicketClaims
 from chatwaifu_runtime.api.models import (
     CharacterInteractionRequest,
     CreateSessionRequest,
@@ -129,9 +131,11 @@ async def runtime_health(request: Request) -> RuntimeHealth:
 
 async def _handle_create_ws_ticket(
     request: Request,
-    purpose: Literal["events", "audio"] = Query(default="events"),
+    purpose: Literal["events", "audio", "admin_events"] = Query(default="events"),
+    session_id: str | None = Query(default=None),
 ) -> dict[str, object]:
-    resolved_purpose: Literal["events", "audio"] = purpose
+    resolved_purpose: Literal["events", "audio", "admin_events"] = purpose
+    resolved_session_id = session_id
     if request.method == "POST":
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
@@ -140,36 +144,67 @@ async def _handle_create_ws_ticket(
                 if isinstance(raw_body, dict):
                     body_dict = cast(dict[str, object], raw_body)
                     raw_purpose = body_dict.get("purpose")
-                    if raw_purpose == "audio":
-                        resolved_purpose = "audio"
-                    elif raw_purpose == "events":
-                        resolved_purpose = "events"
+                    if raw_purpose in ("audio", "events", "admin_events"):
+                        resolved_purpose = raw_purpose  # type: ignore[assignment]
+                    raw_session_id = body_dict.get("session_id")
+                    if isinstance(raw_session_id, str):
+                        resolved_session_id = raw_session_id
             except Exception:
                 pass
     container = _container(request)
+    if resolved_purpose == "admin_events":
+        admin_token = container.settings.security.admin_token
+        auth_header = request.headers.get("authorization", "")
+        bearer = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else None
+        if (
+            not admin_token
+            or not bearer
+            or not hmac.compare_digest(bearer, admin_token.get_secret_value())
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: admin_events purpose requires admin token",
+            )
+    elif resolved_purpose in ("events", "audio"):
+        if not resolved_session_id or not resolved_session_id.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"session_id is required for {resolved_purpose} ticket",
+            )
+
     origin = request.headers.get("origin")
     ticket = await container.ws_ticket_store.create_ticket(
         purpose=resolved_purpose,
         origin=origin,
+        session_id=resolved_session_id,
         ttl_seconds=30.0,
     )
-    return {"ticket": ticket, "expires_in": 30, "purpose": resolved_purpose}
+    res: dict[str, object] = {
+        "ticket": ticket,
+        "expires_in": 30,
+        "purpose": resolved_purpose,
+    }
+    if resolved_session_id:
+        res["session_id"] = resolved_session_id
+    return res
 
 
 @router.post("/runtime/ws-ticket", operation_id="create_ws_ticket_post")
 async def create_ws_ticket_post(
     request: Request,
-    purpose: Literal["events", "audio"] = Query(default="events"),
+    purpose: Literal["events", "audio", "admin_events"] = Query(default="events"),
+    session_id: str | None = Query(default=None),
 ) -> dict[str, object]:
-    return await _handle_create_ws_ticket(request, purpose)
+    return await _handle_create_ws_ticket(request, purpose, session_id)
 
 
 @router.get("/runtime/ws-ticket", operation_id="create_ws_ticket_get")
 async def create_ws_ticket_get(
     request: Request,
-    purpose: Literal["events", "audio"] = Query(default="events"),
+    purpose: Literal["events", "audio", "admin_events"] = Query(default="events"),
+    session_id: str | None = Query(default=None),
 ) -> dict[str, object]:
-    return await _handle_create_ws_ticket(request, purpose)
+    return await _handle_create_ws_ticket(request, purpose, session_id)
 
 
 @router.post(
@@ -1371,7 +1406,18 @@ def _mcp_configuration(
 @router.websocket("/events")
 async def runtime_events(websocket: WebSocket) -> None:
     container: RuntimeContainer = websocket.app.state.container
-    requested_session = websocket.query_params.get("session_id")
+    claims: WebSocketTicketClaims | None = getattr(
+        websocket.state, "chatwaifu_ws_ticket", None
+    ) or websocket.scope.get("state", {}).get("chatwaifu_ws_ticket")
+
+    query_session = websocket.query_params.get("session_id")
+    if claims is not None and claims.session_id is not None:
+        if query_session is not None and query_session != claims.session_id:
+            await websocket.close(code=1008, reason="session_id mismatch with ticket")
+            return
+        requested_session = claims.session_id
+    else:
+        requested_session = query_session
     requested_after = websocket.query_params.get("after_sequence", "0")
     try:
         after_sequence = int(requested_after)
@@ -1471,7 +1517,18 @@ async def runtime_events(websocket: WebSocket) -> None:
 @router.websocket("/audio/stream")
 async def runtime_audio_stream(websocket: WebSocket) -> None:
     container: RuntimeContainer = websocket.app.state.container
-    requested_session = websocket.query_params.get("session_id")
+    claims: WebSocketTicketClaims | None = getattr(
+        websocket.state, "chatwaifu_ws_ticket", None
+    ) or websocket.scope.get("state", {}).get("chatwaifu_ws_ticket")
+
+    query_session = websocket.query_params.get("session_id")
+    if claims is not None and claims.session_id is not None:
+        if query_session is not None and query_session != claims.session_id:
+            await websocket.close(code=1008, reason="session_id mismatch with ticket")
+            return
+        requested_session = claims.session_id
+    else:
+        requested_session = query_session
     if requested_session is None:
         await websocket.close(code=1008, reason="session_id is required")
         return
