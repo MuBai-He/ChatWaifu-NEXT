@@ -58,6 +58,15 @@ from chatwaifu_runtime.realtime.contracts import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_FORWARDED_RUNTIME_EVENT_TYPES: frozenset[str] = frozenset(
+    {
+        "assistant.generation_started",
+        "assistant.audio_chunk_queued",
+        "assistant.generation_cancelled",
+        "conversation.interrupted",
+    }
+)
+
 
 @dataclass(slots=True)
 class UtteranceBuffer:
@@ -207,7 +216,10 @@ class VoiceDomainBridgeProcessor(FrameProcessor):
         if self._event_task is not None:
             return
         self._subscription = self._event_hub.subscribe(
-            lambda event: str(event.get("session_id")) == str(self._session_id),
+            lambda event: (
+                str(event.get("session_id")) == str(self._session_id)
+                and str(event.get("event_type")) in _FORWARDED_RUNTIME_EVENT_TYPES
+            ),
             queue_size=64,
         )
         self._event_task = self.create_task(

@@ -265,3 +265,70 @@ async def test_pipecat_processor_cancellation_tombstone_prevents_late_resurrecti
     audio_assets.resolve.assert_not_called()
     assert any(isinstance(f, InterruptionFrame) for f in pushed_frames)
     assert not any(isinstance(f, OutputAudioRawFrame) for f in pushed_frames)
+
+
+@pytest.mark.asyncio
+async def test_voice_domain_bridge_processor_forwarder_filters_unrelated_events() -> None:
+    session_id = uuid4()
+    other_session_id = uuid4()
+    hub = EventHub()
+
+    processor = VoiceDomainBridgeProcessor(
+        session_id=session_id,
+        sample_rate=16000,
+        channels=1,
+        pre_roll_ms=100,
+        max_utterance_seconds=10,
+        echo_enabled=False,
+        publisher=MagicMock(),
+        event_hub=hub,
+        conversation=MagicMock(),
+        audio_assets=MagicMock(),
+        stt=MagicMock(),
+        stt_language=None,
+        companion_settings=MagicMock(),
+        activity=MagicMock(),
+        resource_activity=MagicMock(),
+        activation_mode="always_on",
+    )
+
+    task_manager = MagicMock()
+
+    def fake_create_task(
+        coro: object,
+        name: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> asyncio.Task[object]:
+        from collections.abc import Coroutine
+        from typing import cast
+        return asyncio.create_task(cast(Coroutine[object, object, object], coro))
+
+    async def fake_cancel_task(task: asyncio.Task[object], *args: object, **kwargs: object) -> None:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    task_manager.create_task = fake_create_task
+    task_manager.cancel_task = fake_cancel_task
+    processor._task_manager = task_manager
+
+    processor._start_event_forwarder()
+    subscription = processor._subscription
+    assert subscription is not None
+
+    filter_fn = subscription.event_filter
+    assert filter_fn is not None
+    assert not filter_fn({"session_id": session_id, "event_type": "assistant.text_delta"})
+    assert not filter_fn({"session_id": session_id, "event_type": "conversation.started"})
+    assert not filter_fn(
+        {"session_id": other_session_id, "event_type": "assistant.generation_started"}
+    )
+    assert filter_fn({"session_id": session_id, "event_type": "assistant.generation_started"})
+    assert filter_fn({"session_id": session_id, "event_type": "assistant.audio_chunk_queued"})
+    assert filter_fn({"session_id": session_id, "event_type": "assistant.generation_cancelled"})
+    assert filter_fn({"session_id": session_id, "event_type": "conversation.interrupted"})
+
+    await processor.cleanup()
