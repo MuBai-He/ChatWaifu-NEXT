@@ -370,16 +370,16 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
             backend_id=backend_id,
         )
         self._auto_ready: bool = auto_ready
-        self.open_session_calls: list[AnyOpenRequest] = []
+        self.open_session_calls: list[AuthorizedRealtimeSessionOpenRequest] = []
         self.sessions: list[FakeCloudRealtimeSession] = []
         self.close_calls: int = 0
         self._custom_session_factory: (
-            Callable[[AnyOpenRequest], FakeCloudRealtimeSession] | None
+            Callable[[AuthorizedRealtimeSessionOpenRequest], FakeCloudRealtimeSession] | None
         ) = None
 
     def set_session_factory(
         self,
-        factory: Callable[[AnyOpenRequest], FakeCloudRealtimeSession] | None,
+        factory: Callable[[AuthorizedRealtimeSessionOpenRequest], FakeCloudRealtimeSession] | None,
     ) -> None:
         self._custom_session_factory = factory
 
@@ -388,7 +388,7 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
 
     async def open_session(
         self,
-        request: AnyOpenRequest,
+        request: AuthorizedRealtimeSessionOpenRequest,
     ) -> CloudRealtimeSession:
         self.open_session_calls.append(request)
         if self._custom_session_factory is not None:
@@ -402,8 +402,24 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
         self.sessions.append(session)
         return session
 
+    async def open_unauthorized_test_session(
+        self,
+        request: RealtimeSessionOpenRequest,
+    ) -> FakeCloudRealtimeSession:
+        """Explicit test helper to open a fake session without an authorized request."""
+        session = FakeCloudRealtimeSession(
+            request,
+            backend_id=self.backend_id,
+            auto_ready=self._auto_ready,
+        )
+        self.sessions.append(session)
+        return session
+
     async def close(self) -> None:
         self.close_calls += 1
         for session in self.sessions:
-            await session.close()
+            try:
+                await session.close()
+            except Exception:
+                pass
         self.sessions.clear()

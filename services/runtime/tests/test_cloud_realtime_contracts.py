@@ -4,8 +4,10 @@ import asyncio
 from uuid import uuid4
 
 import pytest
+from chatwaifu_runtime.realtime.cloud.context import RealtimeContextPatchBuilder
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
+    AuthorizedRealtimeSessionOpenRequest,
     CloudRealtimeBackend,
     CloudRealtimeSession,
     InputAudioCommittedEvent,
@@ -16,8 +18,8 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeContextPatch,
     RealtimeInputAudioFrame,
     RealtimeProviderEvent,
+    RealtimeSessionIntent,
     RealtimeSessionLineage,
-    RealtimeSessionOpenRequest,
     RealtimeUsage,
     ResponseCancelledEvent,
     ResponseCompletedEvent,
@@ -81,14 +83,12 @@ async def test_fake_backend_lifecycle() -> None:
     assert caps.backend_id == "test_fake"
 
     session_id = uuid4()
-    turn_id = uuid4()
     gen_id = uuid4()
 
-    req = RealtimeSessionOpenRequest(
-        session_id=session_id,
-        character_id="ayachi_nene",
-        turn_id=turn_id,
-        generation_id=gen_id,
+    req = AuthorizedRealtimeSessionOpenRequest(
+        intent=RealtimeSessionIntent(session_id=session_id, character_id="ayachi_nene"),
+        context_patch=RealtimeContextPatchBuilder().build_patch(),
+        authorization_id=uuid4(),
     )
 
     session: CloudRealtimeSession = await backend.open_session(req)
@@ -132,7 +132,8 @@ async def test_fake_backend_lifecycle() -> None:
         estimated_tokens=0,
     )
     await session.update_context(patch)
-    assert len(session.context_updates) == 1
+    assert len(session.context_updates) == 2
+    assert session.context_updates[-1] == patch
     assert session.lineage.revision == 1
 
     # Interrupt
@@ -167,10 +168,10 @@ async def test_fake_session_scripted_injection_and_events_iterator() -> None:
 
     backend = FakeCloudRealtimeBackend(auto_ready=False)
     session_raw = await backend.open_session(
-        RealtimeSessionOpenRequest(
-            session_id=session_id,
-            character_id="ayachi_nene",
-            generation_id=gen_id,
+        AuthorizedRealtimeSessionOpenRequest(
+            intent=RealtimeSessionIntent(session_id=session_id, character_id="ayachi_nene"),
+            context_patch=RealtimeContextPatchBuilder().build_patch(),
+            authorization_id=uuid4(),
         )
     )
     assert isinstance(session_raw, FakeCloudRealtimeSession)
@@ -221,9 +222,10 @@ async def test_fake_session_scripted_injection_and_events_iterator() -> None:
 async def test_fake_session_tool_call_unsupported() -> None:
     backend = FakeCloudRealtimeBackend()
     session = await backend.open_session(
-        RealtimeSessionOpenRequest(
-            session_id=uuid4(),
-            character_id="ayachi_nene",
+        AuthorizedRealtimeSessionOpenRequest(
+            intent=RealtimeSessionIntent(session_id=uuid4(), character_id="ayachi_nene"),
+            context_patch=RealtimeContextPatchBuilder().build_patch(),
+            authorization_id=uuid4(),
         )
     )
     with pytest.raises(NotImplementedError) as exc_info:
@@ -236,9 +238,10 @@ async def test_fake_session_provider_error_injection() -> None:
     backend = FakeCloudRealtimeBackend()
     session_id = uuid4()
     session_raw = await backend.open_session(
-        RealtimeSessionOpenRequest(
-            session_id=session_id,
-            character_id="ayachi_nene",
+        AuthorizedRealtimeSessionOpenRequest(
+            intent=RealtimeSessionIntent(session_id=session_id, character_id="ayachi_nene"),
+            context_patch=RealtimeContextPatchBuilder().build_patch(),
+            authorization_id=uuid4(),
         )
     )
     assert isinstance(session_raw, FakeCloudRealtimeSession)
@@ -261,9 +264,10 @@ async def test_fake_session_hook_triggers_deterministically() -> None:
     session_id = uuid4()
     backend = FakeCloudRealtimeBackend()
     session_raw = await backend.open_session(
-        RealtimeSessionOpenRequest(
-            session_id=session_id,
-            character_id="ayachi_nene",
+        AuthorizedRealtimeSessionOpenRequest(
+            intent=RealtimeSessionIntent(session_id=session_id, character_id="ayachi_nene"),
+            context_patch=RealtimeContextPatchBuilder().build_patch(),
+            authorization_id=uuid4(),
         )
     )
     assert isinstance(session_raw, FakeCloudRealtimeSession)

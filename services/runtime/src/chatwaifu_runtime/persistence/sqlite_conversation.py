@@ -281,15 +281,17 @@ class SQLiteConversationRepository(ConversationRepository):
         text: str,
         occurred_at: datetime,
         user_event: UserTurnCommittedEvent,
-    ) -> UserTurnCommittedEvent:
+    ) -> UserTurnCommittedEvent | None:
         async with self._database.transaction() as connection:
-            await connection.execute(
+            cursor = await connection.execute(
                 """
                 UPDATE turns SET committed_text = ?, committed_at = ?
-                WHERE turn_id = ? AND session_id = ?
+                WHERE turn_id = ? AND session_id = ? AND committed_text IS NULL
                 """,
                 (text, occurred_at.isoformat(), str(turn_id), str(session_id)),
             )
+            if cursor.rowcount == 0:
+                return None
             persisted_user = await self._event_store.append_in_transaction(connection, user_event)
         return persisted_user
 

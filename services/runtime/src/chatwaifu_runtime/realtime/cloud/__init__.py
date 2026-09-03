@@ -11,7 +11,6 @@ from chatwaifu_runtime.realtime.cloud.context import (
     EgressReceiptPayload,
     PolicyDeniedError,
     RealtimeContextPatchBuilder,
-    update_session_context,
 )
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
@@ -113,5 +112,4 @@ __all__ = [
     "UsageRecordedEvent",
     "UserTranscriptEvent",
     "extract_realtime_skills",
-    "update_session_context",
 ]

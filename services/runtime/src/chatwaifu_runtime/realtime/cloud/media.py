@@ -313,7 +313,10 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         if self._send_task is not None:
             await self.cancel_task(self._send_task)
             self._send_task = None
-        await self._coordinator.stop()
+        try:
+            await asyncio.shield(self._coordinator.stop())
+        except Exception:
+            _LOGGER.warning("Error stopping coordinator during teardown", exc_info=True)
 
     async def cleanup(self) -> None:
         await self._teardown()

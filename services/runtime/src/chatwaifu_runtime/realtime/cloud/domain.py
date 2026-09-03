@@ -109,6 +109,21 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             reason=reason,
         )
 
+    async def response_failed(
+        self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str
+    ) -> None:
+        await self._conversation.fail_realtime_generation(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            error=StructuredError(
+                code="realtime_generation_failed",
+                message=reason,
+                retryable=False,
+                component="realtime.cloud",
+            ),
+        )
+
     async def usage_recorded(
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, usage: RealtimeUsage
     ) -> None:
@@ -139,6 +154,11 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             "Cloud realtime session closed: session=%s, reason=%s",
             session_id,
             reason,
+        )
+        await self._conversation.terminate_active_generation(
+            session_id,
+            reason=f"session_closed: {reason}",
+            terminal="cancelled",
         )
 
     async def input_audio_committed(self, session_id: UUID, turn_id: UUID | None) -> None:

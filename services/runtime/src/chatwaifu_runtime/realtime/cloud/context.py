@@ -462,9 +462,10 @@ class CloudEgressGateway:
             payload=receipt,
         )
 
+        persisted_receipt = None
         if self._event_store is not None:
             try:
-                await self._event_store.append(cast(EventModel, receipt_event))
+                persisted_receipt = await self._event_store.append(cast(EventModel, receipt_event))
             except Exception as exc:
                 _LOGGER.error("Failed to durably persist egress receipt; failing closed: %s", exc)
                 raise RuntimeError(f"Egress audit persistence failed: {exc}") from exc
@@ -475,6 +476,12 @@ class CloudEgressGateway:
                 await self._event_hub.publish(payload)
             except Exception as exc:
                 _LOGGER.warning("Failed to publish egress receipt to EventHub: %s", exc)
+            else:
+                if self._event_store is not None and persisted_receipt is not None:
+                    try:
+                        await self._event_store.mark_published(persisted_receipt.event_id)
+                    except Exception as exc:
+                        _LOGGER.warning("Failed to mark egress receipt published: %s", exc)
 
         # 5. Open provider session with authorized request
         auth_request = AuthorizedRealtimeSessionOpenRequest(
@@ -586,9 +593,10 @@ class CloudEgressGateway:
             payload=receipt,
         )
 
+        persisted_receipt = None
         if self._event_store is not None:
             try:
-                await self._event_store.append(cast(EventModel, receipt_event))
+                persisted_receipt = await self._event_store.append(cast(EventModel, receipt_event))
             except Exception as exc:
                 _LOGGER.error("Failed to durably persist receipt; failing closed: %s", exc)
                 raise RuntimeError(f"Egress audit persistence failed: {exc}") from exc
@@ -599,6 +607,12 @@ class CloudEgressGateway:
                 await self._event_hub.publish(payload)
             except Exception as exc:
                 _LOGGER.warning("Failed to publish egress receipt to EventHub: %s", exc)
+            else:
+                if self._event_store is not None and persisted_receipt is not None:
+                    try:
+                        await self._event_store.mark_published(persisted_receipt.event_id)
+                    except Exception as exc:
+                        _LOGGER.warning("Failed to mark egress receipt published: %s", exc)
 
         try:
             await session.update_context(patch)
@@ -650,36 +664,25 @@ class CloudEgressGateway:
                 source="cloud_egress_policy",
                 payload=blocked_payload,
             )
+            persisted_blocked = None
             try:
-                await self._event_store.append(cast(EventModel, blocked_event))
+                persisted_blocked = await self._event_store.append(cast(EventModel, blocked_event))
             except Exception as exc:
                 _LOGGER.warning("Failed to persist egress blocked event: %s", exc)
+
+            if self._event_hub is not None:
+                try:
+                    payload = cast(dict[str, object], blocked_event.model_dump(mode="json"))
+                    await self._event_hub.publish(payload)
+                except Exception as exc:
+                    _LOGGER.warning("Failed to publish egress blocked event to EventHub: %s", exc)
+                else:
+                    if persisted_blocked is not None:
+                        try:
+                            await self._event_store.mark_published(persisted_blocked.event_id)
+                        except Exception as exc:
+                            _LOGGER.warning("Failed to mark blocked event published: %s", exc)
 
 
 # Alias for backward compatibility
 CloudEgressPolicy = CloudEgressGateway
-
-
-async def update_session_context(
-    session: CloudRealtimeSession,
-    patch: RealtimeContextPatch,
-    coordinator: CloudRealtimeCoordinator | None = None,
-) -> None:
-    """Legacy context update helper for direct test calls."""
-    try:
-        await session.update_context(patch)
-    except Exception as exc:
-        _LOGGER.warning(
-            "Provider context update failed on session %s: %s",
-            session.lineage.session_id,
-            exc,
-        )
-        error = StructuredError(
-            code="provider_context_update_failed",
-            message=f"Failed to update cloud realtime context: {exc}",
-            component="cloud_realtime",
-            retryable=True,
-        )
-        if coordinator is not None:
-            await coordinator.domain_sink.provider_error(session.lineage.session_id, error)
-        raise

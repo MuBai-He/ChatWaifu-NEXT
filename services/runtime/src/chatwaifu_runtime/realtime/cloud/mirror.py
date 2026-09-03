@@ -8,11 +8,17 @@ stale frames or out-of-order completions from corrupting domain state.
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
 from chatwaifu_runtime.realtime.cloud.contracts import RealtimeSessionLineage
+
+MAX_SEEN_EVENT_KEYS = 5000
+MAX_TOMBSTONES = 500
+MAX_BINDINGS = 200
+MAX_RESPONSES = 200
 
 
 @dataclass(slots=True)
@@ -42,17 +48,29 @@ class RealtimeSessionMirror:
         *,
         backend_id: str,
         provider_session_id: str = "",
+        max_seen_event_keys: int = MAX_SEEN_EVENT_KEYS,
+        max_tombstones: int = MAX_TOMBSTONES,
+        max_bindings: int = MAX_BINDINGS,
+        max_responses: int = MAX_RESPONSES,
     ) -> None:
         self.session_id: UUID = session_id
         self.backend_id: str = backend_id
         self.provider_session_id: str = provider_session_id
 
+        self._max_seen_event_keys = max_seen_event_keys
+        self._max_tombstones = max_tombstones
+        self._max_bindings = max_bindings
+        self._max_responses = max_responses
+
         self._active_generation_id: UUID | None = None
         self._active_turn_id: UUID | None = None
-        self._bindings: dict[UUID, GenerationBinding] = {}
-        self._response_to_generation: dict[str, UUID] = {}
-        self._tombstones: set[UUID] = set()
-        self._seen_event_keys: set[str] = set()
+        self._last_generation_id: UUID | None = None
+        self._last_turn_id: UUID | None = None
+
+        self._bindings: OrderedDict[UUID, GenerationBinding] = OrderedDict()
+        self._response_to_generation: OrderedDict[str, UUID] = OrderedDict()
+        self._tombstones: OrderedDict[UUID, None] = OrderedDict()
+        self._seen_event_keys: OrderedDict[str, None] = OrderedDict()
 
     @property
     def active_generation_id(self) -> UUID | None:
@@ -61,6 +79,14 @@ class RealtimeSessionMirror:
     @property
     def active_turn_id(self) -> UUID | None:
         return self._active_turn_id
+
+    @property
+    def last_generation_id(self) -> UUID | None:
+        return self._last_generation_id
+
+    @property
+    def last_turn_id(self) -> UUID | None:
+        return self._last_turn_id
 
     def set_provider_session_id(self, provider_session_id: str) -> None:
         self.provider_session_id = provider_session_id
@@ -79,10 +105,18 @@ class RealtimeSessionMirror:
             provider_response_id=provider_response_id,
         )
         self._bindings[generation_id] = binding
+        if len(self._bindings) > self._max_bindings:
+            self._bindings.popitem(last=False)
+
         self._active_generation_id = generation_id
         self._active_turn_id = turn_id
+        self._last_generation_id = generation_id
+        self._last_turn_id = turn_id
+
         if provider_response_id:
             self._response_to_generation[provider_response_id] = generation_id
+            if len(self._response_to_generation) > self._max_responses:
+                self._response_to_generation.popitem(last=False)
         return binding
 
     def bind_provider_response(
@@ -91,7 +125,7 @@ class RealtimeSessionMirror:
         generation_id: UUID | None = None,
     ) -> GenerationBinding | None:
         """Associate an opaque provider response id with a runtime generation."""
-        target_gen_id = generation_id or self._active_generation_id
+        target_gen_id = generation_id or self._active_generation_id or self._last_generation_id
         if target_gen_id is None:
             return None
 
@@ -101,6 +135,8 @@ class RealtimeSessionMirror:
 
         binding.provider_response_id = provider_response_id
         self._response_to_generation[provider_response_id] = target_gen_id
+        if len(self._response_to_generation) > self._max_responses:
+            self._response_to_generation.popitem(last=False)
         return binding
 
     def resolve_generation_id(
@@ -113,12 +149,21 @@ class RealtimeSessionMirror:
         if generation_id is not None:
             return generation_id
         if provider_response_id is not None:
-            return self._response_to_generation.get(provider_response_id)
-        return self._active_generation_id
+            resolved = self._response_to_generation.get(provider_response_id)
+            if resolved is not None:
+                return resolved
+        if self._active_generation_id is not None:
+            return self._active_generation_id
+        return self._last_generation_id
 
-    def get_turn_id(self, generation_id: UUID) -> UUID | None:
-        binding = self._bindings.get(generation_id)
-        return binding.turn_id if binding else self._active_turn_id
+    def get_turn_id(self, generation_id: UUID | None = None) -> UUID | None:
+        if generation_id is not None:
+            binding = self._bindings.get(generation_id)
+            if binding is not None:
+                return binding.turn_id
+        if self._active_turn_id is not None:
+            return self._active_turn_id
+        return self._last_turn_id
 
     def append_text(self, generation_id: UUID, delta: str) -> None:
         self.append_delta_text(generation_id, delta)
@@ -162,7 +207,10 @@ class RealtimeSessionMirror:
 
     def cancel_generation(self, generation_id: UUID) -> None:
         """Tombstone a generation, invalidating all subsequent late frames."""
-        self._tombstones.add(generation_id)
+        self._tombstones[generation_id] = None
+        if len(self._tombstones) > self._max_tombstones:
+            self._tombstones.popitem(last=False)
+
         binding = self._bindings.get(generation_id)
         if binding is not None:
             binding.is_cancelled = True
@@ -172,7 +220,10 @@ class RealtimeSessionMirror:
 
     def complete_generation(self, generation_id: UUID) -> None:
         """Mark generation completed and fence it against late deltas."""
-        self._tombstones.add(generation_id)
+        self._tombstones[generation_id] = None
+        if len(self._tombstones) > self._max_tombstones:
+            self._tombstones.popitem(last=False)
+
         binding = self._bindings.get(generation_id)
         if binding is not None:
             binding.is_completed = True
@@ -183,16 +234,19 @@ class RealtimeSessionMirror:
     def is_duplicate(self, event_key: str) -> bool:
         """Check if an event key has already been processed, recording it if not."""
         if event_key in self._seen_event_keys:
+            self._seen_event_keys.move_to_end(event_key)
             return True
-        self._seen_event_keys.add(event_key)
+        self._seen_event_keys[event_key] = None
+        if len(self._seen_event_keys) > self._max_seen_event_keys:
+            self._seen_event_keys.popitem(last=False)
         return False
 
     def build_lineage(self, generation_id: UUID | None = None) -> RealtimeSessionLineage:
-        gen_id = generation_id or self._active_generation_id
+        gen_id = generation_id or self._active_generation_id or self._last_generation_id
         binding = self._bindings.get(gen_id) if gen_id else None
         return RealtimeSessionLineage(
             session_id=self.session_id,
-            turn_id=binding.turn_id if binding else self._active_turn_id,
+            turn_id=binding.turn_id if binding else (self._active_turn_id or self._last_turn_id),
             generation_id=gen_id,
             backend_id=self.backend_id,
             provider_session_id=self.provider_session_id,

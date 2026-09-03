@@ -352,7 +352,7 @@ class CloudRealtimeBackend(Protocol):
 
     async def open_session(
         self,
-        request: AuthorizedRealtimeSessionOpenRequest | RealtimeSessionOpenRequest,
+        request: AuthorizedRealtimeSessionOpenRequest,
     ) -> CloudRealtimeSession: ...
 
     async def close(self) -> None: ...

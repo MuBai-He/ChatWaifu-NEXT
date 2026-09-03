@@ -71,6 +71,10 @@ class RealtimeDomainSink(Protocol):
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str
     ) -> None: ...
 
+    async def response_failed(
+        self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str
+    ) -> None: ...
+
     async def usage_recorded(
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, usage: RealtimeUsage
     ) -> None: ...
@@ -113,6 +117,9 @@ class InMemoryDomainSink(RealtimeDomainSink):
         default_factory=lambda: list[tuple[UUID, UUID, UUID, str]]()
     )
     responses_cancelled: list[tuple[UUID, UUID, UUID, str]] = field(
+        default_factory=lambda: list[tuple[UUID, UUID, UUID, str]]()
+    )
+    responses_failed: list[tuple[UUID, UUID, UUID, str]] = field(
         default_factory=lambda: list[tuple[UUID, UUID, UUID, str]]()
     )
     usages_recorded: list[tuple[UUID, UUID, UUID, RealtimeUsage]] = field(
@@ -167,6 +174,11 @@ class InMemoryDomainSink(RealtimeDomainSink):
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str
     ) -> None:
         self.responses_cancelled.append((session_id, turn_id, generation_id, reason))
+
+    async def response_failed(
+        self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str
+    ) -> None:
+        self.responses_failed.append((session_id, turn_id, generation_id, reason))
 
     async def usage_recorded(
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, usage: RealtimeUsage
@@ -258,8 +270,37 @@ class CloudRealtimeCoordinator:
             name=f"cloud-realtime-pump-{str(self.session_id)[:8]}",
         )
 
+    async def terminate_active_generation(
+        self,
+        reason: str = "terminated",
+        terminal: Literal["cancelled", "failed"] = "cancelled",
+        error: StructuredError | None = None,
+    ) -> None:
+        """Idempotently terminate active generation in mirror and domain sink."""
+        active_gen = self._mirror.active_generation_id
+        if active_gen is not None:
+            turn_id = self._mirror.get_turn_id(active_gen)
+            was_tombstoned = self._mirror.is_tombstoned(active_gen)
+            self._mirror.cancel_generation(active_gen)
+            if not was_tombstoned and turn_id is not None:
+                if terminal == "failed":
+                    await self._domain_sink.response_failed(
+                        self.session_id,
+                        turn_id,
+                        active_gen,
+                        error.message if error else reason,
+                    )
+                else:
+                    await self._domain_sink.response_cancelled(
+                        self.session_id,
+                        turn_id,
+                        active_gen,
+                        reason,
+                    )
+
     async def stop(self) -> None:
         """Stop background event pump and close underlying session."""
+        await self.terminate_active_generation(reason="coordinator_stopped", terminal="cancelled")
         self._is_running = False
         if self._pump_task is not None:
             self._pump_task.cancel()
@@ -268,7 +309,11 @@ class CloudRealtimeCoordinator:
             except asyncio.CancelledError:
                 pass
             self._pump_task = None
-        await self._session.close()
+        try:
+            await self._session.close()
+        except Exception:
+            _LOGGER.warning("Error closing session in coordinator.stop()", exc_info=True)
+        await self._domain_sink.session_closed(self.session_id, "coordinator_stopped")
 
     async def cancel_generation(self, generation_id: UUID, reason: str = "cancelled") -> None:
         """Cancel a generation, invalidating it in the mirror and interrupting the provider."""
@@ -289,20 +334,17 @@ class CloudRealtimeCoordinator:
         except Exception as e:
             _LOGGER.exception("Error pumping realtime events for %s: %s", self.session_id, e)
             self._is_running = False
-            active_gen = self._mirror.active_generation_id
-            if active_gen is not None:
-                turn_id = self._mirror.get_turn_id(active_gen)
-                self._mirror.cancel_generation(active_gen)
-                if turn_id is not None:
-                    await self._domain_sink.response_cancelled(
-                        self.session_id, turn_id, active_gen, f"pump_failed: {e}"
-                    )
             structured_error = StructuredError(
                 code="realtime_pump_failed",
                 message=f"Event pump failed: {e}",
                 retryable=False,
                 component="realtime.cloud",
                 details={"session_id": str(self.session_id), "error": str(e)},
+            )
+            await self.terminate_active_generation(
+                reason=f"pump_failed: {e}",
+                terminal="cancelled",
+                error=structured_error,
             )
             await self._domain_sink.provider_error(self.session_id, structured_error)
             await self._domain_sink.session_closed(self.session_id, "pump_failed")
@@ -330,6 +372,10 @@ class CloudRealtimeCoordinator:
 
             case SessionClosedEvent():
                 self._is_running = False
+                await self.terminate_active_generation(
+                    reason=f"session_closed: {event.reason}",
+                    terminal="cancelled",
+                )
                 await self._domain_sink.session_closed(self.session_id, event.reason)
 
             case InputAudioCommittedEvent():
@@ -461,8 +507,12 @@ class CloudRealtimeCoordinator:
 
             case UserTranscriptEvent():
                 candidate = event.candidate
-                turn_id = self._mirror.active_turn_id
-                gen_id = candidate.generation_id or self._mirror.active_generation_id
+                gen_id = self._mirror.resolve_generation_id(
+                    generation_id=candidate.generation_id,
+                )
+                turn_id = (
+                    self._mirror.get_turn_id(gen_id) if gen_id else self._mirror.active_turn_id
+                )
                 if turn_id is None or gen_id is None:
                     await self._domain_sink.provider_error(
                         self.session_id,

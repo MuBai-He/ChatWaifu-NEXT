@@ -221,13 +221,6 @@ class ConversationService:
         text: str,
         confidence: float | None = None,
     ) -> None:
-        active = self._active.get(session_id)
-        if active is None or active.generation_id != generation_id:
-            logger.debug(
-                "ignoring user transcript for non-current generation",
-                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
-            )
-            return
         now = datetime.now(UTC)
         user_event = UserTurnCommittedEvent(
             event_id=uuid4(),
@@ -248,6 +241,12 @@ class ConversationService:
             occurred_at=now,
             user_event=user_event,
         )
+        if persisted_user is None:
+            logger.debug(
+                "user transcript commit skipped (already committed or turn not found)",
+                extra={"session_id": str(session_id), "turn_id": str(turn_id)},
+            )
+            return
         try:
             await self._publisher.publish_persisted(persisted_user)
         except Exception:
@@ -364,6 +363,53 @@ class ConversationService:
         if current and current.generation_id == accepted.generation_id:
             self._active.pop(accepted.session_id, None)
 
+    async def terminate_active_generation(
+        self,
+        session_id: UUID,
+        *,
+        generation_id: UUID | None = None,
+        turn_id: UUID | None = None,
+        reason: str = "terminated",
+        terminal: Literal["cancelled", "failed"] = "cancelled",
+        error: Exception | StructuredError | None = None,
+    ) -> None:
+        active = self._active.get(session_id)
+        if active is not None and active.completing:
+            logger.debug(
+                "ignoring termination for completing generation",
+                extra={"session_id": str(session_id), "generation_id": str(active.generation_id)},
+            )
+            return
+
+        target_gen_id = generation_id or (active.generation_id if active else None)
+        target_turn_id = turn_id or (active.turn_id if active else None)
+        if target_gen_id is None or target_turn_id is None:
+            return
+
+        if active is not None and (generation_id is None or active.generation_id == target_gen_id):
+            if active.task is not None and not active.task.done():
+                active.task.cancel(reason)
+            self._active.pop(session_id, None)
+
+        audio_stream_id = (active.audio_stream_id if active else None) or uuid4()
+        accepted = GenerationAccepted(
+            session_id=session_id,
+            turn_id=target_turn_id,
+            generation_id=target_gen_id,
+            audio_stream_id=audio_stream_id,
+            state=GenerationState.RUNNING,
+        )
+        if terminal == "cancelled":
+            await self._cancelled(accepted, reason=reason, set_session_idle=True)
+        else:
+            err = error or StructuredError(
+                code="generation_failed",
+                message=reason,
+                retryable=False,
+                component="conversation",
+            )
+            await self._failed(accepted, error=err, set_session_idle=True)
+
     async def cancel_realtime_generation(
         self,
         *,
@@ -372,22 +418,13 @@ class ConversationService:
         generation_id: UUID,
         reason: str = "cancelled",
     ) -> None:
-        active = self._active.get(session_id)
-        if active is None or active.generation_id != generation_id:
-            logger.debug(
-                "ignoring cancellation for non-current generation",
-                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
-            )
-            return
-        accepted = GenerationAccepted(
-            session_id=session_id,
-            turn_id=turn_id,
+        await self.terminate_active_generation(
+            session_id,
             generation_id=generation_id,
-            audio_stream_id=active.audio_stream_id or uuid4(),
-            state=GenerationState.RUNNING,
+            turn_id=turn_id,
+            reason=reason,
+            terminal="cancelled",
         )
-        await self._cancelled(accepted, reason=reason)
-        self._active.pop(session_id, None)
 
     async def fail_realtime_generation(
         self,
@@ -397,22 +434,14 @@ class ConversationService:
         generation_id: UUID,
         error: Exception | StructuredError,
     ) -> None:
-        active = self._active.get(session_id)
-        if active is None or active.generation_id != generation_id:
-            logger.debug(
-                "ignoring failure for non-current generation",
-                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
-            )
-            return
-        accepted = GenerationAccepted(
-            session_id=session_id,
-            turn_id=turn_id,
+        await self.terminate_active_generation(
+            session_id,
             generation_id=generation_id,
-            audio_stream_id=active.audio_stream_id or uuid4(),
-            state=GenerationState.RUNNING,
+            turn_id=turn_id,
+            reason=str(error),
+            terminal="failed",
+            error=error,
         )
-        await self._failed(accepted, error=error)
-        self._active.pop(session_id, None)
 
     async def submit_proactive(
         self, session_id: UUID, *, reason: str = "idle_check_in"
@@ -696,12 +725,21 @@ class ConversationService:
             )
 
     async def stop(self) -> None:
-        active = tuple(self._active.values())
+        active = tuple(self._active.items())
         tasks: list[asyncio.Task[None]] = []
-        for generation in active:
-            if not generation.completing and generation.task is not None:
-                generation.task.cancel("runtime_stopping")
-                tasks.append(generation.task)
+        for session_id, generation in active:
+            if not generation.completing:
+                if generation.task is not None:
+                    generation.task.cancel("runtime_stopping")
+                    tasks.append(generation.task)
+                else:
+                    await self.terminate_active_generation(
+                        session_id,
+                        generation_id=generation.generation_id,
+                        turn_id=generation.turn_id,
+                        reason="runtime_stopped",
+                        terminal="cancelled",
+                    )
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         self._active.clear()

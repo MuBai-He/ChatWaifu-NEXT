@@ -24,6 +24,7 @@ Validates the full vertical integration:
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -52,6 +53,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeUsage,
     ResponseCompletedEvent,
     ResponseStartedEvent,
+    SessionClosedEvent,
     SessionDegradedEvent,
     UserTranscriptEvent,
 )
@@ -68,6 +70,8 @@ from chatwaifu_runtime.realtime.cloud.fake import (
 )
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
 from pipecat.frames.frames import (
+    CancelFrame,
+    EndFrame,
     StartFrame,
     VADUserStartedSpeakingFrame,
     VADUserStoppedSpeakingFrame,
@@ -705,4 +709,368 @@ async def test_16_user_partial_transcript_emits_valid_protocol_event(tmp_path: P
         assert coordinator.is_running
     finally:
         subscription.close()
+        await container.stop()
+
+
+@pytest.mark.parametrize(
+    "trigger_type",
+    ["cancel_frame", "end_frame", "disconnect", "session_closed", "close_error"],
+)
+async def test_17_termination_guarantees_clean_sqlite_state(
+    tmp_path: Path, trigger_type: str
+) -> None:
+    """17. Guarantees generation CAS to CANCELLED, session to IDLE, and 1 terminal event."""
+    from unittest.mock import AsyncMock
+
+    settings = create_cloud_settings(tmp_path / f"trig_{trigger_type}")
+    container = RuntimeContainer(settings)
+    await container.start()
+
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+
+        # Start speaking -> RUNNING generation created in SQLite
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+        gen_id = identity.generation_id
+        session_id = session.session_id
+
+        # Verify generation is running in DB
+        gen_record = await container.conversation_repository.generation_result(gen_id)
+        assert gen_record is not None
+        assert gen_record.state == "running"
+
+        # Apply trigger
+        if trigger_type == "cancel_frame":
+            await bridge.process_frame(CancelFrame(), FrameDirection.DOWNSTREAM)
+        elif trigger_type == "end_frame":
+            await bridge.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
+        elif trigger_type == "disconnect":
+            await bridge.cleanup()
+        elif trigger_type == "session_closed":
+            await bridge.coordinator.dispatch_event(
+                SessionClosedEvent(session_id=session_id, backend_id="fake", reason="normal_close")
+            )
+        elif trigger_type == "close_error":
+            # Session close raises exception, must not break active generation termination
+            bridge.coordinator.session.close = AsyncMock(side_effect=RuntimeError("close boom"))
+            await bridge.process_frame(CancelFrame(), FrameDirection.DOWNSTREAM)
+
+        # 1. generations.state != running (is cancelled)
+        gen_record_after = await container.conversation_repository.generation_result(gen_id)
+        assert gen_record_after is not None
+        assert gen_record_after.state == "cancelled"
+
+        # 2. sessions.conversation_state == idle
+        sess_row = await container.database.fetchone(
+            "SELECT conversation_state FROM sessions WHERE session_id = ?",
+            (str(session_id),),
+        )
+        assert sess_row is not None
+        assert sess_row["conversation_state"] == "idle"
+
+        # 3. Exactly 1 assistant.generation_cancelled terminal event
+        cancel_events = await container.database.fetchall(
+            "SELECT event_id, envelope_json FROM events "
+            "WHERE session_id = ? AND event_type = 'assistant.generation_cancelled'",
+            (str(session_id),),
+        )
+        assert len(cancel_events) == 1
+        cancel_envelope = json.loads(str(cancel_events[0]["envelope_json"]))
+        assert cancel_envelope.get("generation_id") == str(gen_id)
+    finally:
+        await container.stop()
+
+
+async def test_17b_runtime_shutdown_terminates_active_generation(tmp_path: Path) -> None:
+    """17b. Container.stop() cancels running cloud generation and sets session idle in SQLite."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+
+    session = await container.sessions.create_session("default")
+    assert container.cloud_realtime_factory is not None
+    bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+    await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+
+    # Start speaking
+    await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+    identity = bridge.current_identity
+    assert identity is not None
+    gen_id = identity.generation_id
+    session_id = session.session_id
+
+    # Stop runtime container (simulating server shutdown)
+    await container.stop()
+
+    # Reconnect directly to verify SQLite state on disk
+    from chatwaifu_runtime.persistence.database import Database
+
+    db = Database(settings.database_path, settings.storage)
+    await db.open()
+    try:
+        gen_row = await db.fetchone(
+            "SELECT state FROM generations WHERE generation_id = ?",
+            (str(gen_id),),
+        )
+        assert gen_row is not None
+        assert gen_row["state"] == "cancelled"
+
+        sess_row = await db.fetchone(
+            "SELECT conversation_state FROM sessions WHERE session_id = ?",
+            (str(session_id),),
+        )
+        assert sess_row is not None
+        assert sess_row["conversation_state"] == "idle"
+
+        cancel_events = await db.fetchall(
+            "SELECT event_id, envelope_json FROM events "
+            "WHERE session_id = ? AND event_type = 'assistant.generation_cancelled'",
+            (str(session_id),),
+        )
+        assert len(cancel_events) == 1
+        cancel_envelope = json.loads(str(cancel_events[0]["envelope_json"]))
+        assert cancel_envelope.get("generation_id") == str(gen_id)
+    finally:
+        await db.close()
+
+
+def test_18_no_bypass_outside_egress_gateway() -> None:
+    """18. Architecture check: open_session/update_context not called outside Gateway."""
+    import ast
+
+    src_dir = Path(__file__).resolve().parent.parent / "src" / "chatwaifu_runtime"
+    assert src_dir.is_dir()
+
+    violating_open: list[str] = []
+    violating_update: list[str] = []
+
+    for py_file in src_dir.rglob("*.py"):
+        rel_path = str(py_file.relative_to(src_dir))
+        # context.py is where CloudEgressGateway lives
+        if rel_path in ("realtime/cloud/context.py",):
+            continue
+
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                if node.func.attr == "open_session":
+                    # Calling open_session directly on backend is prohibited outside Gateway
+                    # Only self._egress_gateway.open_session in factory is permitted
+                    is_gateway_call = (
+                        isinstance(node.func.value, ast.Attribute)
+                        and node.func.value.attr == "_egress_gateway"
+                    )
+                    if not is_gateway_call:
+                        violating_open.append(f"{rel_path}:{node.lineno}")
+                elif node.func.attr == "update_context":
+                    violating_update.append(f"{rel_path}:{node.lineno}")
+
+    assert not violating_open, f"Unauthorized open_session calls outside Gateway: {violating_open}"
+    assert not violating_update, (
+        f"Unauthorized update_context calls outside Gateway: {violating_update}"
+    )
+
+
+async def test_19_egress_receipt_outbox_marked_published(tmp_path: Path) -> None:
+    """19. Successful egress marks outbox published; event_hub failure retains pending outbox."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        # Bridge creation triggers gateway.open_session which succeeds
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        assert bridge is not None
+
+        # Verify egress receipts in outbox are marked published
+        published_rows = await container.database.fetchall(
+            """
+            SELECT o.event_id, o.published_at
+            FROM outbox o
+            JOIN events e ON o.event_id = e.event_id
+            WHERE e.event_type = 'cloud.egress_receipt'
+            """
+        )
+        assert len(published_rows) >= 1
+        for row in published_rows:
+            assert row["published_at"] is not None
+
+        # Test failure: event_hub.publish raises exception -> receipt kept in pending outbox
+        failing_hub = AsyncMock()
+        failing_hub.publish.side_effect = RuntimeError("network broadcast failed")
+        gateway = CloudEgressGateway(
+            policy_mode="allow",
+            event_store=container.event_store,
+            event_hub=failing_hub,
+        )
+        fake_backend = FakeCloudRealtimeBackend()
+        intent = RealtimeSessionIntent(session_id=session.session_id, character_id="nene")
+        # Gateway open_session still succeeds with provider, but fails to mark published
+        sess = await gateway.open_session(fake_backend, intent)
+        assert sess is not None
+
+        pending_rows = await container.database.fetchall(
+            """
+            SELECT o.event_id, o.published_at
+            FROM outbox o
+            JOIN events e ON o.event_id = e.event_id
+            WHERE e.event_type = 'cloud.egress_receipt' AND o.published_at IS NULL
+            """
+        )
+        assert len(pending_rows) == 1
+    finally:
+        await container.stop()
+
+
+def test_20_mirror_bounds_collection_sizes() -> None:
+    """20. Mirror enforces max bounds on seen event keys, tombstones, bindings, and responses."""
+    mirror = RealtimeSessionMirror(
+        session_id=uuid4(),
+        backend_id="fake",
+        max_seen_event_keys=5,
+        max_tombstones=3,
+        max_bindings=3,
+        max_responses=3,
+    )
+    # 1. Seen event keys
+    for i in range(10):
+        mirror.is_duplicate(f"key_{i}")
+    assert len(mirror._seen_event_keys) == 5
+    # key_0 was evicted, so checking it again returns False (not duplicate)
+    assert not mirror.is_duplicate("key_0")
+
+    # 2. Tombstones
+    gen_ids = [uuid4() for _ in range(6)]
+    for gid in gen_ids:
+        mirror.cancel_generation(gid)
+    assert len(mirror._tombstones) == 3
+    assert mirror.is_tombstoned(gen_ids[-1])
+    assert mirror.is_tombstoned(gen_ids[-2])
+    assert mirror.is_tombstoned(gen_ids[-3])
+    assert not mirror.is_tombstoned(gen_ids[0])
+
+    # 3. Bindings
+    bindings = [uuid4() for _ in range(6)]
+    for gid in bindings:
+        mirror.register_generation(gid, uuid4())
+    assert len(mirror._bindings) == 3
+
+    # 4. Response mappings
+    for i in range(6):
+        mirror.bind_provider_response(f"resp_{i}", generation_id=bindings[-1])
+    assert len(mirror._response_to_generation) == 3
+
+
+async def test_21_late_user_final_transcript_commits_after_assistant_completed(
+    tmp_path: Path,
+) -> None:
+    """21. Late user final transcript after assistant completion commits idempotently to SQLite."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+
+        # 1. User starts speaking (VAD start)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+        gen_id = identity.generation_id
+        turn_id = identity.turn_id
+        coordinator = bridge.coordinator
+
+        # 2. Assistant finishes FIRST
+        await coordinator.dispatch_event(
+            ResponseStartedEvent(
+                session_id=session.session_id,
+                generation_id=gen_id,
+                provider_response_id="resp_fast",
+            )
+        )
+        await coordinator.dispatch_event(
+            AssistantTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session.session_id,
+                    generation_id=gen_id,
+                    role="assistant",
+                    text="はい、聞こえていますよ！",
+                    phase="final",
+                    provider_item_id="resp_fast",
+                )
+            )
+        )
+        await coordinator.dispatch_event(
+            ResponseCompletedEvent(
+                session_id=session.session_id,
+                generation_id=gen_id,
+                provider_response_id="resp_fast",
+                final_text="はい、聞こえていますよ！",
+            )
+        )
+
+        # Generation is now completed, active generation cleared
+        assert container.conversation._active.get(session.session_id) is None
+        assert coordinator.mirror.active_generation_id is None
+
+        # 3. LATE user final transcript arrives
+        await coordinator.dispatch_event(
+            UserTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session.session_id,
+                    generation_id=gen_id,
+                    role="user",
+                    text="こんにちは、寧々さん！",
+                    phase="final",
+                )
+            )
+        )
+
+        # Check SQLite turn record has committed text
+        turn_row = await container.database.fetchone(
+            "SELECT committed_text FROM turns WHERE turn_id = ?",
+            (str(turn_id),),
+        )
+        assert turn_row is not None
+        assert turn_row["committed_text"] == "こんにちは、寧々さん！"
+
+        # Check messages list in conversation
+        msgs = await container.conversation.list_messages(session.session_id)
+        assert len(msgs) == 2
+        assert msgs[0]["role"] == "user"
+        assert msgs[0]["committed_text"] == "こんにちは、寧々さん！"
+        assert msgs[1]["role"] == "assistant"
+        assert msgs[1]["committed_text"] == "はい、聞こえていますよ！"
+
+        # 4. Duplicate late transcript is idempotent (no duplicate event)
+        await coordinator.dispatch_event(
+            UserTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session.session_id,
+                    generation_id=gen_id,
+                    role="user",
+                    text="こんにちは、寧々さん！",
+                    phase="final",
+                )
+            )
+        )
+        user_events = await container.database.fetchall(
+            "SELECT event_id, envelope_json FROM events "
+            "WHERE session_id = ? AND event_type = 'user.turn_committed'",
+            (str(session.session_id),),
+        )
+        assert len(user_events) == 1
+        user_envelope = json.loads(str(user_events[0]["envelope_json"]))
+        assert user_envelope.get("turn_id") == str(turn_id)
+    finally:
         await container.stop()

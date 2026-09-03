@@ -40,7 +40,6 @@ from chatwaifu_runtime.realtime.cloud.context import (
     EgressGrant,
     PolicyDeniedError,
     RealtimeContextPatchBuilder,
-    update_session_context,
 )
 from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeContextPatch,
@@ -378,10 +377,14 @@ async def test_scenario_8_provider_context_update_failure_produces_structured_er
         domain_sink=sink,
     )
 
-    patch = RealtimeContextPatchBuilder().build_patch(safety_contract="test safety")
-
+    gateway = CloudEgressPolicy(policy_mode="allow")
     with pytest.raises(RuntimeError):
-        await update_session_context(session, patch, coordinator=coordinator)
+        await gateway.update_context(
+            session=session,
+            backend_id="fake",
+            safety_contract="test safety",
+            coordinator=coordinator,
+        )
 
     assert len(sink.provider_errors) == 1
     err = sink.provider_errors[0][1]
