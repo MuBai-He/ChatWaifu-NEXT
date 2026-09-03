@@ -18,6 +18,8 @@ from chatwaifu_protocol.events import (
     ErrorRaisedEvent,
     ErrorRaisedPayload,
     GenericCoreEvent,
+    UserTranscriptPartialEvent,
+    UserTranscriptPayload,
     UserTurnCommittedEvent,
     UserTurnCommittedPayload,
 )
@@ -292,12 +294,33 @@ class ConversationService:
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"] = "assistant",
+        provider: str = "cloud_realtime",
     ) -> None:
-        event_type = "assistant.text_delta" if role == "assistant" else "user.transcript_delta"
+        if role == "user":
+            if not text:
+                return
+            user_event = UserTranscriptPartialEvent(
+                event_id=uuid4(),
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                occurred_at=datetime.now(UTC),
+                source="runtime.conversation",
+                privacy=PrivacyLevel.LOCAL,
+                payload=UserTranscriptPayload(
+                    utterance_id=turn_id,
+                    text=text,
+                    provider=provider,
+                    is_final=False,
+                ),
+            )
+            await self._publisher.publish_ephemeral(user_event)
+            return
+
         event = GenericCoreEvent.model_validate(
             {
                 "event_id": uuid4(),
-                "event_type": event_type,
+                "event_type": "assistant.text_delta",
                 "session_id": session_id,
                 "turn_id": turn_id,
                 "generation_id": generation_id,

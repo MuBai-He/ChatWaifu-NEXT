@@ -35,9 +35,11 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
         conversation: ConversationService,
         *,
         event_hub: EventHub | None = None,
+        backend_id: str = "cloud_realtime",
     ) -> None:
         self._conversation = conversation
         self._event_hub = event_hub
+        self._backend_id = backend_id
 
     async def response_started(self, session_id: UUID, turn_id: UUID, generation_id: UUID) -> None:
         _LOGGER.debug(
@@ -61,6 +63,7 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             generation_id=generation_id,
             text=text,
             role=role,
+            provider=self._backend_id,
         )
 
     async def transcript_final(

@@ -156,6 +156,7 @@ class RuntimeCloudRealtimeFactory:
         domain_sink = RuntimeRealtimeDomainSink(
             self._conversation,
             event_hub=self._event_hub,
+            backend_id=self._backend.backend_id,
         )
 
         return CloudRealtimeMediaBridge.create(

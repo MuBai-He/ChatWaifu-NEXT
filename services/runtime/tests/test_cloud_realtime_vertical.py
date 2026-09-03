@@ -643,3 +643,66 @@ def test_15_zero_mirror_register_generation_in_test_suite() -> None:
 
     source = inspect.getsource(tm)
     assert "mirror.register_generation" not in source
+
+
+async def test_16_user_partial_transcript_emits_valid_protocol_event(tmp_path: Path) -> None:
+    """16. User partial transcript emits valid user.transcript_partial without crash."""
+    import asyncio
+
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+
+    subscription = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "user.transcript_partial"
+    )
+
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+
+        # 1. User starts speaking (VAD start)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+        gen_id = identity.generation_id
+        turn_id = identity.turn_id
+
+        coordinator = bridge.coordinator
+        assert coordinator.is_running
+
+        # 2. Provider emits User partial transcript delta
+        await coordinator.dispatch_event(
+            UserTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session.session_id,
+                    generation_id=gen_id,
+                    role="user",
+                    text="先輩、",
+                    phase="delta",
+                )
+            )
+        )
+
+        # Verify EventHub received valid user.transcript_partial event
+        event = await asyncio.wait_for(subscription.receive(), timeout=2.0)
+        assert event["event_type"] == "user.transcript_partial"
+        assert event["session_id"] == str(session.session_id)
+        assert event["turn_id"] == str(turn_id)
+        assert event["generation_id"] == str(gen_id)
+        payload = event["payload"]
+        assert isinstance(payload, dict)
+        assert payload["text"] == "先輩、"
+        assert payload["is_final"] is False
+        assert payload["provider"] == "fake_cloud_realtime"
+
+        # Verify Generation is still RUNNING and Pump is still is_running
+        active_gen = container.conversation._active.get(session.session_id)
+        assert active_gen is not None
+        assert active_gen.generation_id == gen_id
+        assert coordinator.is_running
+    finally:
+        subscription.close()
+        await container.stop()
