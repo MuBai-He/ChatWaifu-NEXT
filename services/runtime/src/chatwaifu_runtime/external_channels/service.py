@@ -199,6 +199,14 @@ class ExternalChannelService:
     def providers(self) -> tuple[ChannelProviderRegistration, ...]:
         return tuple(self._providers.values())
 
+    @property
+    def delivery_plan_factory(self) -> DeliveryPlanFactory:
+        return self._delivery_plan_factory
+
+    @delivery_plan_factory.setter
+    def delivery_plan_factory(self, factory: DeliveryPlanFactory) -> None:
+        self._delivery_plan_factory = factory
+
     async def list_connections(self) -> tuple[ChannelConnectionSnapshot, ...]:
         records = await self._repository.list_connections()
         return tuple(self._connection_snapshot(item) for item in records)
