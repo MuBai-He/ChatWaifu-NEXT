@@ -216,6 +216,22 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             await cursor.close()
             if inflight is not None:
                 raise ValueError("cannot delete a channel connection with an active turn")
+
+            cursor = await connection.execute(
+                """
+                SELECT 1
+                FROM channel_deliveries AS d
+                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+                WHERE t.connection_id = ? AND d.status IN ('pending', 'sending')
+                LIMIT 1
+                """,
+                (str(connection_id),),
+            )
+            active_delivery = await cursor.fetchone()
+            await cursor.close()
+            if active_delivery is not None:
+                raise ValueError("cannot delete a channel connection with an active delivery plan")
+
             result = await connection.execute(
                 """
                 UPDATE channel_connections
@@ -1138,6 +1154,11 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         *,
         updated_at: datetime,
     ) -> DeliveryTransitionResult:
+        if acknowledgement.status not in {
+            ChannelDeliveryPartStatus.DELIVERED,
+            ChannelDeliveryPartStatus.FAILED,
+        }:
+            raise ValueError("only delivered or failed part acknowledgements are supported")
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 "SELECT * FROM channel_delivery_parts WHERE part_id = ? AND delivery_id = ?",
@@ -1445,6 +1466,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         self,
         delivery_id: UUID,
         cancel_request: ChannelDeliveryPartsCancelRequest,
+        *,
+        cancel_sending_lease_id: UUID | None = None,
     ) -> DeliveryTransitionResult:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
@@ -1462,6 +1485,11 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 ChannelDeliveryStatus.FAILED,
                 ChannelDeliveryStatus.CANCELLED,
             }:
+                if (
+                    parent_status is ChannelDeliveryStatus.DELIVERED
+                    and cancel_sending_lease_id is not None
+                ):
+                    raise ValueError("a delivered channel reply cannot be downgraded")
                 plan = await self._get_delivery_plan_tx(connection, delivery_id)
                 if plan is None:
                     raise RuntimeError("delivery plan disappeared")
@@ -1471,6 +1499,24 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     applied=False,
                     persisted_events=(),
                 )
+
+            if cancel_sending_lease_id is not None:
+                cursor = await connection.execute(
+                    """
+                    SELECT part_id, lease_id
+                    FROM channel_delivery_parts
+                    WHERE delivery_id = ? AND status = 'sending'
+                    """,
+                    (str(delivery_id),),
+                )
+                sending_parts = await cursor.fetchall()
+                await cursor.close()
+                if not sending_parts:
+                    raise ValueError("channel delivery is not owned by an active sending lease")
+                for sp in sending_parts:
+                    sp_lease_id = UUID(str(sp["lease_id"])) if sp["lease_id"] is not None else None
+                    if sp_lease_id != cancel_sending_lease_id:
+                        raise ValueError("delivery acknowledgement lease_id mismatch")
 
             await connection.execute(
                 """
@@ -1492,20 +1538,42 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 retryable=False,
                 component="external_channels",
             )
-            await connection.execute(
-                """
-                UPDATE channel_delivery_parts
-                SET status = 'cancelled',
-                    last_error_json = ?,
-                    updated_at = ?
-                WHERE delivery_id = ? AND status = 'pending'
-                """,
-                (
-                    _error_json(cancel_error),
-                    cancel_request.requested_at.isoformat(),
-                    str(delivery_id),
-                ),
-            )
+            if cancel_sending_lease_id is not None:
+                await connection.execute(
+                    """
+                    UPDATE channel_delivery_parts
+                    SET status = 'cancelled',
+                        lease_id = NULL,
+                        lease_expires_at = NULL,
+                        last_error_json = ?,
+                        updated_at = ?
+                    WHERE delivery_id = ? AND (
+                        status = 'pending'
+                        OR (status = 'sending' AND lease_id = ?)
+                    )
+                    """,
+                    (
+                        _error_json(cancel_error),
+                        cancel_request.requested_at.isoformat(),
+                        str(delivery_id),
+                        str(cancel_sending_lease_id),
+                    ),
+                )
+            else:
+                await connection.execute(
+                    """
+                    UPDATE channel_delivery_parts
+                    SET status = 'cancelled',
+                        last_error_json = ?,
+                        updated_at = ?
+                    WHERE delivery_id = ? AND status = 'pending'
+                    """,
+                    (
+                        _error_json(cancel_error),
+                        cancel_request.requested_at.isoformat(),
+                        str(delivery_id),
+                    ),
+                )
 
             plan = await self._derive_delivery_plan_state_tx(
                 connection, delivery_id, cancel_request.requested_at
@@ -1568,6 +1636,87 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 applied=True,
                 persisted_events=tuple(persisted_events),
             )
+
+    async def cancel_active_delivery_plans_for_connection(
+        self,
+        connection_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> int:
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT d.delivery_id
+                FROM channel_deliveries AS d
+                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+                WHERE t.connection_id = ? AND d.status IN ('pending', 'sending')
+                """,
+                (str(connection_id),),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+            if not rows:
+                return 0
+
+            cancel_error = StructuredError(
+                code="delivery_cancelled",
+                message=cancel_request.reason,
+                retryable=False,
+                component="external_channels",
+            )
+            cancelled_count = 0
+            for row in rows:
+                delivery_id = UUID(str(row["delivery_id"]))
+                await connection.execute(
+                    """
+                    UPDATE channel_deliveries
+                    SET cancel_requested_at = COALESCE(cancel_requested_at, ?),
+                        updated_at = ?
+                    WHERE delivery_id = ?
+                    """,
+                    (
+                        cancel_request.requested_at.isoformat(),
+                        cancel_request.requested_at.isoformat(),
+                        str(delivery_id),
+                    ),
+                )
+                await connection.execute(
+                    """
+                    UPDATE channel_delivery_parts
+                    SET status = 'cancelled',
+                        last_error_json = ?,
+                        updated_at = ?
+                    WHERE delivery_id = ? AND status IN ('pending', 'sending')
+                    """,
+                    (
+                        _error_json(cancel_error),
+                        cancel_request.requested_at.isoformat(),
+                        str(delivery_id),
+                    ),
+                )
+                await self._derive_delivery_plan_state_tx(
+                    connection, delivery_id, cancel_request.requested_at
+                )
+                cancelled_count += 1
+
+            cursor = await connection.execute(
+                """
+                SELECT 1
+                FROM channel_delivery_parts AS p
+                JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
+                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+                WHERE t.connection_id = ? AND p.status IN ('pending', 'sending')
+                LIMIT 1
+                """,
+                (str(connection_id),),
+            )
+            active_child = await cursor.fetchone()
+            await cursor.close()
+            if active_child is not None:
+                raise RuntimeError(
+                    f"failed to cancel all active delivery parts for connection {connection_id}"
+                )
+
+            return cancelled_count
 
     async def list_active_delivery_plans_for_binding(
         self,
@@ -1649,20 +1798,38 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if connection_id is not None:
                 cursor = await connection.execute(
                     """
-                    SELECT MIN(next_time) AS next_wakeup FROM (
-                        SELECT MIN(p.lease_expires_at) AS next_time
+                    WITH sending_plans AS (
+                        SELECT p.delivery_id, MIN(p.lease_expires_at) AS wakeup
                         FROM channel_delivery_parts AS p
                         JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
                         JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
                         WHERE p.status = 'sending' AND p.lease_expires_at IS NOT NULL
                           AND t.connection_id = ?
-                        UNION ALL
-                        SELECT MIN(p.not_before_at) AS next_time
+                        GROUP BY p.delivery_id
+                    ),
+                    pending_first_parts AS (
+                        SELECT p.delivery_id, p.not_before_at AS wakeup
                         FROM channel_delivery_parts AS p
                         JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
                         JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
                         WHERE p.status = 'pending' AND p.not_before_at IS NOT NULL
                           AND t.connection_id = ?
+                          AND p.delivery_id NOT IN (
+                              SELECT p_s.delivery_id
+                              FROM channel_delivery_parts AS p_s
+                              WHERE p_s.status = 'sending'
+                          )
+                          AND p.ordinal = (
+                              SELECT MIN(p2.ordinal)
+                              FROM channel_delivery_parts AS p2
+                              WHERE p2.delivery_id = p.delivery_id
+                                AND p2.status = 'pending'
+                          )
+                    )
+                    SELECT MIN(wakeup) AS next_wakeup FROM (
+                        SELECT wakeup FROM sending_plans
+                        UNION ALL
+                        SELECT wakeup FROM pending_first_parts
                     )
                     """,
                     (str(connection_id), str(connection_id)),
@@ -1670,14 +1837,32 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             else:
                 cursor = await connection.execute(
                     """
-                    SELECT MIN(next_time) AS next_wakeup FROM (
-                        SELECT MIN(p.lease_expires_at) AS next_time
+                    WITH sending_plans AS (
+                        SELECT p.delivery_id, MIN(p.lease_expires_at) AS wakeup
                         FROM channel_delivery_parts AS p
                         WHERE p.status = 'sending' AND p.lease_expires_at IS NOT NULL
-                        UNION ALL
-                        SELECT MIN(p.not_before_at) AS next_time
+                        GROUP BY p.delivery_id
+                    ),
+                    pending_first_parts AS (
+                        SELECT p.delivery_id, p.not_before_at AS wakeup
                         FROM channel_delivery_parts AS p
                         WHERE p.status = 'pending' AND p.not_before_at IS NOT NULL
+                          AND p.delivery_id NOT IN (
+                              SELECT p_s.delivery_id
+                              FROM channel_delivery_parts AS p_s
+                              WHERE p_s.status = 'sending'
+                          )
+                          AND p.ordinal = (
+                              SELECT MIN(p2.ordinal)
+                              FROM channel_delivery_parts AS p2
+                              WHERE p2.delivery_id = p.delivery_id
+                                AND p2.status = 'pending'
+                          )
+                    )
+                    SELECT MIN(wakeup) AS next_wakeup FROM (
+                        SELECT wakeup FROM sending_plans
+                        UNION ALL
+                        SELECT wakeup FROM pending_first_parts
                     )
                     """
                 )
@@ -1806,6 +1991,22 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     f"unknown channel delivery part for delivery {acknowledgement.delivery_id}"
                 )
             part_id = UUID(str(part_row["part_id"]))
+
+        if acknowledgement.status is ChannelDeliveryStatus.CANCELLED:
+            cancel_req = ChannelDeliveryPartsCancelRequest(
+                reason=(
+                    acknowledgement.error.message
+                    if acknowledgement.error
+                    else "legacy_delivery_cancelled"
+                ),
+                requested_at=acknowledgement.acknowledged_at,
+            )
+            result = await self.cancel_remaining_delivery_parts(
+                acknowledgement.delivery_id,
+                cancel_req,
+                cancel_sending_lease_id=acknowledgement.lease_id,
+            )
+            return result.plan.delivery
 
         part_status = (
             ChannelDeliveryPartStatus.DELIVERED

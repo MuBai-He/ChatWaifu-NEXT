@@ -661,6 +661,27 @@ class ExternalChannelService:
         if not plan.parts:
             raise ChannelConflictError("delivery plan has no parts")
 
+        if acknowledgement.status is ChannelDeliveryStatus.CANCELLED:
+            cancel_req = ChannelDeliveryPartsCancelRequest(
+                reason=(
+                    acknowledgement.error.message
+                    if acknowledgement.error
+                    else "legacy_delivery_cancelled"
+                ),
+                requested_at=acknowledgement.acknowledged_at,
+            )
+            await self.cancel_remaining_delivery_parts(
+                connection_id,
+                delivery_id,
+                cancel_req,
+                access_token=access_token,
+                cancel_sending_lease_id=acknowledgement.lease_id,
+            )
+            updated_plan = await self._repository.get_delivery_plan(delivery_id)
+            if updated_plan is None:
+                raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+            return _delivery_snapshot(updated_plan.delivery)
+
         part = plan.parts[0]
         part_status = (
             ChannelDeliveryPartStatus.DELIVERED
@@ -832,6 +853,7 @@ class ExternalChannelService:
         cancel_request: ChannelDeliveryPartsCancelRequest,
         *,
         access_token: str,
+        cancel_sending_lease_id: UUID | None = None,
     ) -> ChannelDeliveryPlanSnapshot:
         await self._authenticate(connection_id, access_token)
         plan = await self._repository.get_delivery_plan(delivery_id)
@@ -842,6 +864,7 @@ class ExternalChannelService:
             result = await self._repository.cancel_remaining_delivery_parts(
                 delivery_id,
                 cancel_request,
+                cancel_sending_lease_id=cancel_sending_lease_id,
             )
         except (KeyError, ValueError) as error:
             raise ChannelConflictError(str(error)) from error

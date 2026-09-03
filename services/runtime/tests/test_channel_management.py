@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -13,7 +14,11 @@ from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
     ChannelAuthorizationStartRequest,
     ChannelAuthorizationStatus,
+    ChannelChatType,
     ChannelConnectionConfiguration,
+    ChannelDeliveryPartStatus,
+    ChannelDeliveryStatus,
+    ChannelInboundTextMessage,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
@@ -24,6 +29,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationState,
     WeixinCredentials,
     WeixinInboundText,
+    WeixinPendingContext,
     WeixinUpdates,
 )
 from chatwaifu_runtime.external_channels.credentials import (
@@ -36,7 +42,8 @@ from chatwaifu_runtime.external_channels.management import (
     ChannelProviderUnavailableError,
     _PendingEnrollment,
 )
-from chatwaifu_runtime.external_channels.service import ChannelNotFoundError
+from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
+from chatwaifu_runtime.external_channels.service import ChannelConflictError, ChannelNotFoundError
 
 
 class _FakeWeixin:
@@ -572,5 +579,297 @@ async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_con
             await asyncio.sleep(0.1)
         assert serialized is not None
         assert WeixinCredentials.from_json(serialized).pending_contexts == {}
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_weixin_pending_contexts_concurrent_rmw_with_barrier(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement P0-1: Pending contexts mutation concurrency with barrier.
+    Context A already exists.
+    Poller concurrently adds B.
+    Scheduler concurrently removes A.
+    The final store must strictly contain {B}; it cannot be empty, and cannot resurrect A.
+    """
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        base_creds = _credentials(access_token)
+        context_a = WeixinPendingContext(context_token="tok-A", recipient_user_id="user-1")
+        context_b = WeixinPendingContext(context_token="tok-B", recipient_user_id="user-1")
+
+        # Initial state: Keyring contains only Context A
+        initial_creds = replace(base_creds, pending_contexts={"msg-A": context_a})
+        await store.set(f"weixin_ilink:{connection_id}", initial_creds.to_json())
+
+        original_set = store.set
+
+        async def slow_set(ref: str, value: str) -> None:
+            # Yield to event loop to expose any race condition if locks were missing
+            await asyncio.sleep(0.01)
+            await original_set(ref, value)
+
+        monkeypatch.setattr(store, "set", slow_set)
+
+        barrier = asyncio.Barrier(2)
+
+        async def poller_add_b() -> None:
+            await barrier.wait()
+            await management._remember_context(connection_id, "msg-B", context_b)
+
+        async def scheduler_remove_a() -> None:
+            await barrier.wait()
+            await management._forget_context(connection_id, "msg-A")
+
+        await asyncio.gather(poller_add_b(), scheduler_remove_a())
+
+        final_raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert final_raw is not None
+        final_creds = WeixinCredentials.from_json(final_raw)
+        # Final store must strictly contain only B!
+        assert "msg-B" in final_creds.pending_contexts
+        assert "msg-A" not in final_creds.pending_contexts
+        assert len(final_creds.pending_contexts) == 1
+        assert final_creds.pending_contexts["msg-B"].context_token == "tok-B"
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_native_adapter_cross_batch_preserves_pending_contexts(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement P0-1: Cross-batch get_updates tests.
+    Batch 1 adds message-1, cursor advances.
+    Batch 2 adds message-2, cursor advances.
+    Both pending contexts must be preserved and not overwritten.
+    """
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    connection_id = uuid4()
+    access_token = "g" * 43
+    created = await container.external_channels.create_connection(
+        _configuration(connection_id), access_token=access_token
+    )
+    await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+
+    batch1_cursor_advanced = asyncio.Event()
+    batch2_cursor_advanced = asyncio.Event()
+    original_set_cursor = container.external_channel_repository.set_adapter_cursor
+
+    async def observed_set_cursor(
+        target_connection_id: UUID,
+        *,
+        cursor: str,
+        updated_at: datetime,
+    ) -> None:
+        await original_set_cursor(
+            target_connection_id,
+            cursor=cursor,
+            updated_at=updated_at,
+        )
+        if cursor == "cursor-batch-1":
+            batch1_cursor_advanced.set()
+        elif cursor == "cursor-batch-2":
+            batch2_cursor_advanced.set()
+
+    monkeypatch.setattr(
+        container.external_channel_repository,
+        "set_adapter_cursor",
+        observed_set_cursor,
+    )
+    await management.connection_configuration_changed(created.snapshot)
+
+    # Batch 1
+    await transport.updates.put(
+        WeixinUpdates(
+            cursor="cursor-batch-1",
+            messages=(
+                WeixinInboundText(
+                    external_message_id="msg-batch-1",
+                    sender_user_id="owner-1",
+                    recipient_bot_id="bot-1",
+                    text="消息 1",
+                    context_token="context-token-1",
+                    received_at=datetime.now(UTC),
+                ),
+            ),
+        )
+    )
+    await asyncio.wait_for(batch1_cursor_advanced.wait(), timeout=5)
+
+    # Batch 2
+    await transport.updates.put(
+        WeixinUpdates(
+            cursor="cursor-batch-2",
+            messages=(
+                WeixinInboundText(
+                    external_message_id="msg-batch-2",
+                    sender_user_id="owner-1",
+                    recipient_bot_id="bot-1",
+                    text="消息 2",
+                    context_token="context-token-2",
+                    received_at=datetime.now(UTC),
+                ),
+            ),
+        )
+    )
+    await asyncio.wait_for(batch2_cursor_advanced.wait(), timeout=5)
+
+    # Wait for both sent messages
+    for _ in range(50):
+        if len(transport.sent_messages) >= 2:
+            break
+        await asyncio.sleep(0.1)
+    assert len(transport.sent_messages) == 2
+
+    # After both deliveries complete and terminal handlers run, pending_contexts becomes empty
+    for _ in range(50):
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        if raw is not None and WeixinCredentials.from_json(raw).pending_contexts == {}:
+            break
+        await asyncio.sleep(0.1)
+    raw = await store.get(f"weixin_ilink:{connection_id}")
+    assert raw is not None
+    assert WeixinCredentials.from_json(raw).pending_contexts == {}
+    await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_remove_connection_cancels_active_delivery_plans_and_rejects_raw_delete(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement P1-1:
+    - Direct soft-delete on connection with active delivery plan raises
+      ValueError / ChannelConflictError.
+    - remove_connection() cancels all active delivery plans (both parent and child parts),
+      cleans up credentials, and soft-deletes the connection.
+    """
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+
+        # Ingest a message to create an active delivery plan
+        receipt = await container.external_channels.ingest(
+            ChannelInboundTextMessage(
+                connection_id=connection_id,
+                account_key="bot-1",
+                external_message_id="msg-del-test",
+                conversation_key="owner-1",
+                sender_key="owner-1",
+                principal_scope=created.snapshot.configuration.principal_scope,
+                chat_type=ChannelChatType.DIRECT,
+                text="测试删除活跃计划",
+                received_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+        snap = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap.delivery_id is not None
+        delivery_id = snap.delivery_id
+
+        # Verify delivery plan is active (pending)
+        plan = await container.external_channel_repository.get_delivery_plan(delivery_id)
+        assert plan is not None
+        assert plan.status in {ChannelDeliveryStatus.PENDING, ChannelDeliveryStatus.SENDING}
+
+        # 1. Direct raw delete must be rejected because of active delivery plan!
+        with pytest.raises(ChannelConflictError) as exc_info:
+            await container.external_channels.delete_connection(connection_id)
+        assert "cannot delete a channel connection with an active delivery plan" in str(
+            exc_info.value
+        )
+
+        # 2. remove_connection must cancel the plan and succeed
+        await management.remove_connection(connection_id)
+
+        # Verify delivery plan and parts are CANCELLED
+        updated_plan = await container.external_channel_repository.get_delivery_plan(delivery_id)
+        assert updated_plan is not None
+        assert updated_plan.status is ChannelDeliveryStatus.CANCELLED
+        assert all(p.status is ChannelDeliveryPartStatus.CANCELLED for p in updated_plan.parts)
+
+        # Verify credentials removed
+        assert await store.get(f"weixin_ilink:{connection_id}") is None
+
+        # Verify connection is soft-deleted
+        with pytest.raises(ChannelNotFoundError):
+            await container.external_channels.get_connection(connection_id)
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_run_connection_calls_notify_start_before_scheduler_start(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement P1-2: notify_start must be invoked before scheduler starts."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+
+        events: list[str] = []
+        original_notify_start = transport.notify_start
+
+        async def observed_notify_start(credentials: WeixinCredentials) -> None:
+            events.append("notify_start")
+            await original_notify_start(credentials)
+
+        transport.notify_start = observed_notify_start  # type: ignore
+
+        original_scheduler_start = ChannelDeliveryScheduler.start
+
+        async def observed_scheduler_start(sched_self: ChannelDeliveryScheduler) -> None:
+            events.append("scheduler_start")
+            await original_scheduler_start(sched_self)
+
+        monkeypatch.setattr(ChannelDeliveryScheduler, "start", observed_scheduler_start)
+
+        await management.connection_configuration_changed(created.snapshot)
+        for _ in range(50):
+            if "scheduler_start" in events:
+                break
+            await asyncio.sleep(0.05)
+
+        assert events == ["notify_start", "scheduler_start"]
     finally:
         await container.stop()

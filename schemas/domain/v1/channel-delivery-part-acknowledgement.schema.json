@@ -140,8 +140,7 @@
     "status": {
       "enum": [
         "delivered",
-        "failed",
-        "cancelled"
+        "failed"
       ],
       "title": "Status",
       "type": "string"

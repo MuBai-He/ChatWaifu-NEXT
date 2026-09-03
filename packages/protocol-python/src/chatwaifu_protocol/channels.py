@@ -568,7 +568,6 @@ class ChannelDeliveryPartAcknowledgement(ChannelVersionedModel):
     status: Literal[
         ChannelDeliveryPartStatus.DELIVERED,
         ChannelDeliveryPartStatus.FAILED,
-        ChannelDeliveryPartStatus.CANCELLED,
     ]
     provider_message_id: str | None = Field(default=None, min_length=1, max_length=512)
     error: StructuredError | None = None

@@ -1,4 +1,3 @@
-# pyright: reportPrivateUsage=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportReturnType=false, reportArgumentType=false, reportIndexIssue=false, reportGeneralTypeIssues=false, reportOptionalMemberAccess=false, reportPossiblyUnboundVariable=false
 """Comprehensive tests for ChannelDeliveryScheduler, Crash Recovery, Retry,
 
 Legacy APIs, Transactional Event Rollback, Early Cursor Advance,
@@ -64,11 +63,14 @@ from chatwaifu_runtime.external_channels.scheduler import (
 from chatwaifu_runtime.external_channels.service import (
     ChannelDeliveryMultipartConflictError,
 )
+from chatwaifu_runtime.main import create_app
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
+from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 
 
 class _ThreePartsPlanFactory:
@@ -1262,5 +1264,492 @@ async def test_repeated_ack_does_not_duplicate_domain_events(runtime_settings: S
         collector_task.cancel()
         await asyncio.gather(collector_task, return_exceptions=True)
         container.event_hub.unsubscribe(sub)
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_part_acknowledgement_rejects_cancelled_status_and_preserves_state(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement P0-2: Part ACK must reject CANCELLED status at protocol/API schema level (422)
+    and at repository level, preserving parent and child state without permanently
+    blocking the plan.
+    """
+    app = create_app(runtime_settings)
+    container = app.state.container
+    await container.start()
+    try:
+        connection_id = uuid4()
+        created = await container.external_channels.create_connection(_configuration(connection_id))
+        access_token = created.access_token
+
+        receipt = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="part-ack-cancel-msg"),
+            access_token=access_token,
+        )
+        snap = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap.delivery_id is not None
+        delivery_id = snap.delivery_id
+
+        # Claim part 0 so it enters SENDING status
+        lease_id = uuid4()
+        part0 = await container.external_channels.claim_next_delivery_part(
+            connection_id,
+            delivery_id,
+            ChannelDeliveryPartClaimRequest(
+                delivery_id=delivery_id,
+                part_id=None,
+                lease_id=lease_id,
+                lease_seconds=60,
+            ),
+            access_token=access_token,
+        )
+        assert part0 is not None
+        assert part0.status is ChannelDeliveryPartStatus.SENDING
+
+        # 1. Pydantic schema validation rejects CANCELLED status
+        with pytest.raises(ValidationError):
+            ChannelDeliveryPartAcknowledgement(
+                delivery_id=delivery_id,
+                part_id=part0.part_id,
+                lease_id=lease_id,
+                status="cancelled",  # type: ignore[arg-type]
+                acknowledged_at=datetime.now(UTC),
+            )
+
+        # 2. HTTP endpoint rejects CANCELLED status with HTTP 422
+        headers = {"Authorization": f"Bearer {access_token}"}
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            resp = await client.post(
+                f"/v1/channel-connections/{connection_id}/deliveries/{delivery_id}/parts/ack",
+                headers=headers,
+                json={
+                    "delivery_id": str(delivery_id),
+                    "part_id": str(part0.part_id),
+                    "lease_id": str(lease_id),
+                    "status": "cancelled",
+                    "acknowledged_at": datetime.now(UTC).isoformat(),
+                },
+            )
+            assert resp.status_code == 422
+
+        # 3. Verify state remains SENDING and is NOT corrupted
+        plan = await container.external_channels.get_delivery_plan(
+            connection_id, delivery_id, access_token=access_token
+        )
+        assert plan.status is ChannelDeliveryStatus.SENDING
+        assert plan.parts[0].status is ChannelDeliveryPartStatus.SENDING
+
+        # 4. Repository level directly rejects invalid status
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class _BypassedAck:
+            delivery_id: UUID
+            part_id: UUID
+            lease_id: UUID
+            status: Any
+            provider_message_id: str | None = None
+            error: Any = None
+            acknowledged_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+        bypassed = _BypassedAck(
+            delivery_id=delivery_id,
+            part_id=part0.part_id,
+            lease_id=lease_id,
+            status=ChannelDeliveryPartStatus.CANCELLED,
+        )
+        with pytest.raises(
+            ValueError, match="only delivered or failed part acknowledgements are supported"
+        ):
+            await container.external_channel_repository.acknowledge_delivery_part(
+                bypassed,  # type: ignore[arg-type]
+                updated_at=datetime.now(UTC),
+            )
+
+        # Re-verify state in repository remains SENDING
+        db_plan = await container.external_channel_repository.get_delivery_plan(delivery_id)
+        assert db_plan is not None
+        assert db_plan.status is ChannelDeliveryStatus.SENDING
+        assert db_plan.parts[0].status is ChannelDeliveryPartStatus.SENDING
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_legacy_whole_delivery_cancelled_delegates_to_cancel_without_error(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement P0-2: Legacy whole-delivery ACK with CANCELLED status must delegate
+    to cancel_remaining_delivery_parts, succeed without requiring an error payload,
+    and cleanly transition both parent plan and child parts to CANCELLED.
+    """
+    app = create_app(runtime_settings)
+    container = app.state.container
+    await container.start()
+    try:
+        connection_id = uuid4()
+        created = await container.external_channels.create_connection(_configuration(connection_id))
+        access_token = created.access_token
+
+        # Ingest turn 1
+        receipt1 = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="legacy-cancel-turn-1"),
+            access_token=access_token,
+        )
+        snap1 = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt1.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap1.delivery_id is not None
+        del1_id = snap1.delivery_id
+
+        # Claim legacy delivery
+        lease1 = uuid4()
+        claimed = await container.external_channels.claim_delivery(
+            connection_id,
+            del1_id,
+            ChannelDeliveryClaimRequest(
+                channel_turn_id=snap1.channel_turn_id,
+                delivery_id=del1_id,
+                lease_id=lease1,
+                lease_seconds=30,
+            ),
+            access_token=access_token,
+        )
+        assert claimed.status is ChannelDeliveryStatus.SENDING
+
+        # Legacy ACK with CANCELLED and error=None (no error provided)
+        acked1 = await container.external_channels.acknowledge_delivery(
+            connection_id,
+            del1_id,
+            ChannelDeliveryAcknowledgement(
+                channel_turn_id=snap1.channel_turn_id,
+                delivery_id=del1_id,
+                lease_id=lease1,
+                status=ChannelDeliveryStatus.CANCELLED,
+                provider_message_id=None,
+                error=None,
+                acknowledged_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+        assert acked1.status is ChannelDeliveryStatus.CANCELLED
+
+        # Verify plan and part 0 in repository are cancelled
+        plan1 = await container.external_channels.get_delivery_plan(
+            connection_id, del1_id, access_token=access_token
+        )
+        assert plan1.status is ChannelDeliveryStatus.CANCELLED
+        assert plan1.parts[0].status is ChannelDeliveryPartStatus.CANCELLED
+
+        # Test through HTTP route as well
+        receipt2 = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="legacy-cancel-turn-2"),
+            access_token=access_token,
+        )
+        snap2 = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt2.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap2.delivery_id is not None
+        del2_id = snap2.delivery_id
+        lease2 = uuid4()
+        await container.external_channels.claim_delivery(
+            connection_id,
+            del2_id,
+            ChannelDeliveryClaimRequest(
+                channel_turn_id=snap2.channel_turn_id,
+                delivery_id=del2_id,
+                lease_id=lease2,
+                lease_seconds=30,
+            ),
+            access_token=access_token,
+        )
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            resp = await client.post(
+                f"/v1/channel-connections/{connection_id}/deliveries/{del2_id}/ack",
+                headers=headers,
+                json={
+                    "channel_turn_id": str(snap2.channel_turn_id),
+                    "delivery_id": str(del2_id),
+                    "lease_id": str(lease2),
+                    "status": "cancelled",
+                    "provider_message_id": None,
+                    "error": None,
+                    "acknowledged_at": datetime.now(UTC).isoformat(),
+                },
+            )
+            assert resp.status_code == 200
+            resp_body = resp.json()
+            assert resp_body["status"] == "cancelled"
+
+        plan2 = await container.external_channels.get_delivery_plan(
+            connection_id, del2_id, access_token=access_token
+        )
+        assert plan2.status is ChannelDeliveryStatus.CANCELLED
+        assert plan2.parts[0].status is ChannelDeliveryPartStatus.CANCELLED
+
+        # Turn 3: Test wrong lease_id rejection
+        receipt3 = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="legacy-cancel-turn-3"),
+            access_token=access_token,
+        )
+        snap3 = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt3.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap3.delivery_id is not None
+        del3_id = snap3.delivery_id
+        lease3 = uuid4()
+        await container.external_channels.claim_delivery(
+            connection_id,
+            del3_id,
+            ChannelDeliveryClaimRequest(
+                channel_turn_id=snap3.channel_turn_id,
+                delivery_id=del3_id,
+                lease_id=lease3,
+                lease_seconds=30,
+            ),
+            access_token=access_token,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            resp_wrong_lease = await client.post(
+                f"/v1/channel-connections/{connection_id}/deliveries/{del3_id}/ack",
+                headers=headers,
+                json={
+                    "channel_turn_id": str(snap3.channel_turn_id),
+                    "delivery_id": str(del3_id),
+                    "lease_id": str(uuid4()),  # WRONG lease id!
+                    "status": "cancelled",
+                    "provider_message_id": None,
+                    "error": None,
+                    "acknowledged_at": datetime.now(UTC).isoformat(),
+                },
+            )
+            assert resp_wrong_lease.status_code == 409
+
+        # Turn 4: Test already delivered reply cannot be downgraded/cancelled
+        receipt4 = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="legacy-cancel-turn-4"),
+            access_token=access_token,
+        )
+        snap4 = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt4.channel_turn_id,
+            access_token=access_token,
+            wait_seconds=5,
+        )
+        assert snap4.delivery_id is not None
+        del4_id = snap4.delivery_id
+        lease4 = uuid4()
+        await container.external_channels.claim_delivery(
+            connection_id,
+            del4_id,
+            ChannelDeliveryClaimRequest(
+                channel_turn_id=snap4.channel_turn_id,
+                delivery_id=del4_id,
+                lease_id=lease4,
+                lease_seconds=30,
+            ),
+            access_token=access_token,
+        )
+        await container.external_channels.acknowledge_delivery(
+            connection_id,
+            del4_id,
+            ChannelDeliveryAcknowledgement(
+                channel_turn_id=snap4.channel_turn_id,
+                delivery_id=del4_id,
+                lease_id=lease4,
+                status=ChannelDeliveryStatus.DELIVERED,
+                provider_message_id="msg-4-delivered",
+                error=None,
+                acknowledged_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            resp_downgrade = await client.post(
+                f"/v1/channel-connections/{connection_id}/deliveries/{del4_id}/ack",
+                headers=headers,
+                json={
+                    "channel_turn_id": str(snap4.channel_turn_id),
+                    "delivery_id": str(del4_id),
+                    "lease_id": str(lease4),
+                    "status": "cancelled",
+                    "provider_message_id": None,
+                    "error": None,
+                    "acknowledged_at": datetime.now(UTC).isoformat(),
+                },
+            )
+            assert resp_downgrade.status_code == 409
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_next_delivery_wakeup_at_avoids_busy_loop_on_blocked_subsequent_parts(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement P1-3: next_delivery_wakeup_at must only consider the active sending part's
+    lease expiry or the lowest-ordinal pending part, and never wake up on blocked subsequent parts.
+    """
+    container = RuntimeContainer(runtime_settings)
+    container.external_channels.delivery_plan_factory = _ThreePartsPlanFactory()
+    await container.start()
+    try:
+        connection_id = uuid4()
+        created = await container.external_channels.create_connection(_configuration(connection_id))
+        receipt = await container.external_channels.ingest(
+            _message(connection_id, external_message_id="wakeup-busyloop-msg"),
+            access_token=created.access_token,
+        )
+        snap = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt.channel_turn_id,
+            access_token=created.access_token,
+            wait_seconds=5,
+        )
+        assert snap.delivery_id is not None
+        delivery_id = snap.delivery_id
+        plan = await container.external_channel_repository.get_delivery_plan(delivery_id)
+        assert plan is not None
+        assert len(plan.parts) == 3
+
+        now = datetime.now(UTC)
+        part0_lease_id = uuid4()
+        part0_lease_expires = now + timedelta(seconds=60)
+        part1_not_before = now - timedelta(seconds=10)  # in the past!
+        part2_not_before = now - timedelta(seconds=5)  # in the past!
+
+        # Case A: Part 0 is SENDING with unexpired lease (+60s).
+        # Part 1 and 2 are PENDING with past not_before_at.
+        async with container.database.transaction() as conn:
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'sending',
+                    lease_id = ?,
+                    lease_expires_at = ?
+                WHERE part_id = ?
+                """,
+                (str(part0_lease_id), part0_lease_expires.isoformat(), str(plan.parts[0].part_id)),
+            )
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part1_not_before.isoformat(), str(plan.parts[1].part_id)),
+            )
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part2_not_before.isoformat(), str(plan.parts[2].part_id)),
+            )
+
+        wakeup_a = await container.external_channel_repository.next_delivery_wakeup_at(
+            connection_id=connection_id
+        )
+        assert wakeup_a is not None
+        # MUST match Part 0's lease expiration (~now + 60s), NOT Part 1/2's past timestamps!
+        assert wakeup_a >= now + timedelta(seconds=50)
+
+        # Case B: No parts sending. Part 0 is PENDING (+30s).
+        # Part 1 is PENDING (+5s). Part 2 is PENDING (+2s).
+        part0_not_before = now + timedelta(seconds=30)
+        part1_future_not_before = now + timedelta(seconds=5)
+        part2_future_not_before = now + timedelta(seconds=2)
+        async with container.database.transaction() as conn:
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'pending',
+                    lease_id = NULL,
+                    lease_expires_at = NULL,
+                    not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part0_not_before.isoformat(), str(plan.parts[0].part_id)),
+            )
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part1_future_not_before.isoformat(), str(plan.parts[1].part_id)),
+            )
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part2_future_not_before.isoformat(), str(plan.parts[2].part_id)),
+            )
+
+        wakeup_b = await container.external_channel_repository.next_delivery_wakeup_at(
+            connection_id=connection_id
+        )
+        assert wakeup_b is not None
+        # Part 1 and 2 are blocked by Part 0 (lowest ordinal 0).
+        # Wakeup MUST be Part 0's not_before_at (+30s)!
+        assert wakeup_b >= now + timedelta(seconds=25)
+
+        # Case C: Part 0 is DELIVERED. Part 1 is PENDING (+15s). Part 2 is PENDING (+5s).
+        part1_target_not_before = now + timedelta(seconds=15)
+        async with container.database.transaction() as conn:
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET status = 'delivered',
+                    delivered_at = ?
+                WHERE part_id = ?
+                """,
+                (now.isoformat(), str(plan.parts[0].part_id)),
+            )
+            await conn.execute(
+                """
+                UPDATE channel_delivery_parts
+                SET not_before_at = ?
+                WHERE part_id = ?
+                """,
+                (part1_target_not_before.isoformat(), str(plan.parts[1].part_id)),
+            )
+
+        wakeup_c = await container.external_channel_repository.next_delivery_wakeup_at(
+            connection_id=connection_id
+        )
+        assert wakeup_c is not None
+        # Now Part 1 is lowest pending ordinal (1).
+        # Wakeup MUST be Part 1's not_before_at (+15s), not Part 2's (+5s)!
+        assert wakeup_c >= now + timedelta(seconds=10)
     finally:
         await container.stop()

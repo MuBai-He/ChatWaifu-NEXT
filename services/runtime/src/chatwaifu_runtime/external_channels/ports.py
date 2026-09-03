@@ -155,7 +155,15 @@ class ExternalChannelRepository(Protocol):
         self,
         delivery_id: UUID,
         cancel_request: ChannelDeliveryPartsCancelRequest,
+        *,
+        cancel_sending_lease_id: UUID | None = None,
     ) -> DeliveryTransitionResult: ...
+
+    async def cancel_active_delivery_plans_for_connection(
+        self,
+        connection_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> int: ...
 
     async def find_active_delivery_plan_for_binding(
         self,

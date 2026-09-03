@@ -22,6 +22,7 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionSnapshot,
     ChannelConnectionStatus,
     ChannelDeliveryPartKind,
+    ChannelDeliveryPartsCancelRequest,
     ChannelInboundTextMessage,
 )
 from chatwaifu_protocol.errors import StructuredError
@@ -234,7 +235,15 @@ class ChannelManagementService:
         self._schedulers: dict[UUID, ChannelDeliveryScheduler] = {}
         self._auth_lock = asyncio.Lock()
         self._task_lock = asyncio.Lock()
+        self._credential_mutation_locks: dict[UUID, asyncio.Lock] = {}
         self._stopping = False
+
+    def _get_credential_lock(self, connection_id: UUID) -> asyncio.Lock:
+        lock = self._credential_mutation_locks.get(connection_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._credential_mutation_locks[connection_id] = lock
+        return lock
 
     def get_scheduler(self, connection_id: UUID) -> ChannelDeliveryScheduler | None:
         return self._schedulers.get(connection_id)
@@ -469,6 +478,13 @@ class ChannelManagementService:
                     )
                 except Exception:
                     pass
+        await self._repository.cancel_active_delivery_plans_for_connection(
+            connection_id,
+            ChannelDeliveryPartsCancelRequest(
+                reason="connection_removed",
+                requested_at=datetime.now(UTC),
+            ),
+        )
         snapshot = await self._external_channels.get_connection(connection_id)
         if snapshot.configuration.provider_id != WEIXIN_ILINK_PROVIDER_ID:
             await self._external_channels.delete_connection(connection_id)
@@ -488,6 +504,7 @@ class ChannelManagementService:
             raise ChannelManagementUnavailableError(
                 "The secure credential could not be removed; the connection remains disabled."
             ) from error
+        self._credential_mutation_locks.pop(connection_id, None)
         await self._external_channels.delete_connection(connection_id)
 
     async def connection_configuration_changed(self, snapshot: ChannelConnectionSnapshot) -> None:
@@ -853,6 +870,9 @@ class ChannelManagementService:
                 task.cancel()
         if task is not None:
             await _gather_cancelled([task])
+        active_sched = self._schedulers.pop(connection_id, None)
+        if active_sched is not None:
+            await active_sched.stop()
 
     async def _run_connection(self, connection_id: UUID) -> None:
         try:
@@ -887,7 +907,6 @@ class ChannelManagementService:
             on_plan_terminal=lambda plan: self._handle_plan_terminal(connection_id, plan),
         )
         self._schedulers[connection_id] = scheduler
-        await scheduler.start()
         try:
             try:
                 await self._weixin.notify_start(credentials)
@@ -901,11 +920,20 @@ class ChannelManagementService:
                     status=ChannelConnectionStatus.DEGRADED,
                     retryable=True,
                 )
+            await scheduler.start()
             while not self._stopping:
                 cursor = await self._repository.get_adapter_cursor(connection_id)
                 try:
+                    credentials = await self._load_credentials(connection_id)
+                    if credentials is None:
+                        await self._set_connection_error(
+                            connection_id,
+                            "channel_credentials_missing",
+                            "The secure WeChat credentials are missing.",
+                        )
+                        return
                     updates = await self._weixin.get_updates(credentials, cursor)
-                    await self._process_updates(connection_id, credentials, updates)
+                    await self._process_updates(connection_id, updates)
                     # The checkpoint advances only after every normalized message
                     # in this batch reached durable admission.
                     await self._repository.set_adapter_cursor(
@@ -956,7 +984,9 @@ class ChannelManagementService:
             if active_sched is not None:
                 await active_sched.stop()
             try:
-                await self._weixin.notify_stop(credentials)
+                creds = await self._load_credentials(connection_id)
+                if creds is not None:
+                    await self._weixin.notify_stop(creds)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -968,18 +998,19 @@ class ChannelManagementService:
     async def _process_updates(
         self,
         connection_id: UUID,
-        credentials: WeixinCredentials,
         updates: WeixinUpdates,
     ) -> None:
         connection = await self._external_channels.get_connection(connection_id)
+        credentials = await self._load_credentials(connection_id)
+        if credentials is None:
+            return
         for message in updates.messages:
             if message.sender_user_id != credentials.user_id:
                 # Gateway policy would also reject this. Reject here before
                 # saving any provider-private reply context.
                 continue
-            credentials = await self._remember_context(
+            await self._remember_context(
                 connection_id,
-                credentials,
                 message.external_message_id,
                 WeixinPendingContext(
                     context_token=message.context_token,
@@ -1008,9 +1039,7 @@ class ChannelManagementService:
                     "failed to ingest inbound WeChat message %s",
                     message.external_message_id,
                 )
-                credentials = await self._forget_context(
-                    connection_id, credentials, message.external_message_id
-                )
+                await self._forget_context(connection_id, message.external_message_id)
                 continue
             scheduler = self.get_scheduler(connection_id)
             if scheduler is not None:
@@ -1024,9 +1053,7 @@ class ChannelManagementService:
         turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
         if turn is None:
             return
-        credentials = await self._load_credentials(connection_id)
-        if credentials is not None:
-            await self._forget_context(connection_id, credentials, turn.external_message_id)
+        await self._forget_context(connection_id, turn.external_message_id)
 
     async def _load_credentials(self, connection_id: UUID) -> WeixinCredentials | None:
         serialized = await self._credentials.get(_credential_reference(connection_id))
@@ -1040,31 +1067,35 @@ class ChannelManagementService:
     async def _remember_context(
         self,
         connection_id: UUID,
-        credentials: WeixinCredentials,
         external_message_id: str,
         context: WeixinPendingContext,
-    ) -> WeixinCredentials:
-        pending = dict(credentials.pending_contexts)
-        if external_message_id not in pending and len(pending) >= 16:
-            raise RuntimeError("too many pending WeChat reply contexts")
-        pending[external_message_id] = context
-        updated = replace(credentials, pending_contexts=pending)
-        await self._credentials.set(_credential_reference(connection_id), updated.to_json())
-        return updated
+    ) -> None:
+        async with self._get_credential_lock(connection_id):
+            credentials = await self._load_credentials(connection_id)
+            if credentials is None:
+                raise ChannelCredentialStoreError("cannot record context for missing credentials")
+            pending = dict(credentials.pending_contexts)
+            if external_message_id not in pending and len(pending) >= 16:
+                raise RuntimeError("too many pending WeChat reply contexts")
+            pending[external_message_id] = context
+            updated = replace(credentials, pending_contexts=pending)
+            await self._credentials.set(_credential_reference(connection_id), updated.to_json())
 
     async def _forget_context(
         self,
         connection_id: UUID,
-        credentials: WeixinCredentials,
         external_message_id: str,
-    ) -> WeixinCredentials:
-        if external_message_id not in credentials.pending_contexts:
-            return credentials
-        pending = dict(credentials.pending_contexts)
-        pending.pop(external_message_id, None)
-        updated = replace(credentials, pending_contexts=pending)
-        await self._credentials.set(_credential_reference(connection_id), updated.to_json())
-        return updated
+    ) -> None:
+        async with self._get_credential_lock(connection_id):
+            credentials = await self._load_credentials(connection_id)
+            if credentials is None:
+                return
+            if external_message_id not in credentials.pending_contexts:
+                return
+            pending = dict(credentials.pending_contexts)
+            pending.pop(external_message_id, None)
+            updated = replace(credentials, pending_contexts=pending)
+            await self._credentials.set(_credential_reference(connection_id), updated.to_json())
 
     async def _set_connection_error(
         self,
