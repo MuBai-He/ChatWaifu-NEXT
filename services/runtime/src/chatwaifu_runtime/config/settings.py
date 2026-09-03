@@ -50,7 +50,7 @@ class StorageConfig(BaseModel):
 class PrivacyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    cloud_egress: str = "ask"
+    cloud_egress: Literal["allow", "ask", "deny"] = "ask"
 
 
 class SecurityConfig(BaseModel):

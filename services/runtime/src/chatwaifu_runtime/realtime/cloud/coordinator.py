@@ -183,6 +183,10 @@ class CloudRealtimeCoordinator:
         return self._session
 
     @property
+    def domain_sink(self) -> RealtimeDomainSink:
+        return self._domain_sink
+
+    @property
     def media_sink(self) -> RealtimeMediaSink | None:
         return self._media_sink
 

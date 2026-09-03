@@ -1,5 +1,17 @@
 """Cloud Realtime subsystem: provider-neutral speech-to-speech foundation."""
 
+from chatwaifu_runtime.realtime.cloud.context import (
+    CloudEgressPolicy,
+    ConsentRequiredError,
+    EgressBlockedEvent,
+    EgressBlockedPayload,
+    EgressGrant,
+    EgressReceiptEvent,
+    EgressReceiptPayload,
+    PolicyDeniedError,
+    RealtimeContextPatchBuilder,
+    update_session_context,
+)
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
     CloudRealtimeBackend,
@@ -46,10 +58,17 @@ from chatwaifu_runtime.realtime.cloud.mirror import (
 
 __all__ = [
     "AssistantTranscriptEvent",
+    "CloudEgressPolicy",
     "CloudRealtimeBackend",
     "CloudRealtimeCoordinator",
     "CloudRealtimeMediaBridge",
     "CloudRealtimeSession",
+    "ConsentRequiredError",
+    "EgressBlockedEvent",
+    "EgressBlockedPayload",
+    "EgressGrant",
+    "EgressReceiptEvent",
+    "EgressReceiptPayload",
     "FakeCloudRealtimeBackend",
     "FakeCloudRealtimeSession",
     "GenerationBinding",
@@ -57,10 +76,12 @@ __all__ = [
     "InMemoryMediaSink",
     "InputAudioCommittedEvent",
     "OutputAudioEvent",
+    "PolicyDeniedError",
     "ProviderErrorEvent",
     "RealtimeCapabilities",
     "RealtimeContextComponent",
     "RealtimeContextPatch",
+    "RealtimeContextPatchBuilder",
     "RealtimeDomainSink",
     "RealtimeInputAudioFrame",
     "RealtimeMediaSink",
@@ -80,4 +101,5 @@ __all__ = [
     "SessionReadyEvent",
     "UsageRecordedEvent",
     "UserTranscriptEvent",
+    "update_session_context",
 ]
