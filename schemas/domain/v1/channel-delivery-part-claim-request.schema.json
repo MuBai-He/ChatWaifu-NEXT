@@ -1,0 +1,48 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-delivery-part-claim-request.schema.json",
+  "properties": {
+    "delivery_id": {
+      "format": "uuid",
+      "title": "Delivery Id",
+      "type": "string"
+    },
+    "lease_id": {
+      "format": "uuid",
+      "title": "Lease Id",
+      "type": "string"
+    },
+    "lease_seconds": {
+      "default": 60,
+      "maximum": 300,
+      "minimum": 5,
+      "title": "Lease Seconds",
+      "type": "integer"
+    },
+    "part_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Part Id"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "delivery_id",
+    "lease_id"
+  ],
+  "title": "ChannelDeliveryPartClaimRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

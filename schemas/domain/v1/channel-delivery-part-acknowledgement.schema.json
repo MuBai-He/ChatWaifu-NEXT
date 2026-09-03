@@ -1,16 +1,5 @@
 {
   "$defs": {
-    "ChannelDeliveryStatus": {
-      "enum": [
-        "pending",
-        "sending",
-        "delivered",
-        "failed",
-        "cancelled"
-      ],
-      "title": "ChannelDeliveryStatus",
-      "type": "string"
-    },
     "JsonObject": {
       "additionalProperties": {
         "$ref": "#/$defs/JsonValue"
@@ -95,67 +84,19 @@
       "type": "object"
     }
   },
-  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-delivery-snapshot.schema.json",
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-delivery-part-acknowledgement.schema.json",
   "properties": {
-    "attempt": {
-      "default": 1,
-      "minimum": 1,
-      "title": "Attempt",
-      "type": "integer"
-    },
-    "cancel_requested_at": {
-      "anyOf": [
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Cancel Requested At"
-    },
-    "channel_turn_id": {
-      "format": "uuid",
-      "title": "Channel Turn Id",
-      "type": "string"
-    },
-    "connection_id": {
-      "format": "uuid",
-      "title": "Connection Id",
-      "type": "string"
-    },
-    "created_at": {
+    "acknowledged_at": {
       "format": "date-time",
-      "title": "Created At",
+      "title": "Acknowledged At",
       "type": "string"
-    },
-    "delivered_at": {
-      "anyOf": [
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Delivered At"
-    },
-    "delivered_part_count": {
-      "default": 0,
-      "minimum": 0,
-      "title": "Delivered Part Count",
-      "type": "integer"
     },
     "delivery_id": {
       "format": "uuid",
       "title": "Delivery Id",
       "type": "string"
     },
-    "last_error": {
+    "error": {
       "anyOf": [
         {
           "$ref": "#/$defs/StructuredError"
@@ -166,43 +107,15 @@
       ],
       "default": null
     },
-    "lease_expires_at": {
-      "anyOf": [
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Lease Expires At"
-    },
     "lease_id": {
-      "anyOf": [
-        {
-          "format": "uuid",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Lease Id"
+      "format": "uuid",
+      "title": "Lease Id",
+      "type": "string"
     },
-    "part_count": {
-      "default": 1,
-      "minimum": 1,
-      "title": "Part Count",
-      "type": "integer"
-    },
-    "plan_version": {
-      "default": 1,
-      "minimum": 1,
-      "title": "Plan Version",
-      "type": "integer"
+    "part_id": {
+      "format": "uuid",
+      "title": "Part Id",
+      "type": "string"
     },
     "provider_message_id": {
       "anyOf": [
@@ -225,23 +138,23 @@
       "type": "string"
     },
     "status": {
-      "$ref": "#/$defs/ChannelDeliveryStatus"
-    },
-    "updated_at": {
-      "format": "date-time",
-      "title": "Updated At",
+      "enum": [
+        "delivered",
+        "failed",
+        "cancelled"
+      ],
+      "title": "Status",
       "type": "string"
     }
   },
   "required": [
     "delivery_id",
-    "channel_turn_id",
-    "connection_id",
+    "part_id",
+    "lease_id",
     "status",
-    "created_at",
-    "updated_at"
+    "acknowledged_at"
   ],
-  "title": "ChannelDeliverySnapshot",
+  "title": "ChannelDeliveryPartAcknowledgement",
   "type": "object",
   "x-schema-version": "1.0"
 }

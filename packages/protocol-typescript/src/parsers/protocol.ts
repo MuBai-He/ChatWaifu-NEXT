@@ -11,6 +11,10 @@ import type {
   ChannelConnectionSnapshot,
   ChannelDeliveryAcknowledgement,
   ChannelDeliveryClaimRequest,
+  ChannelDeliveryPartAcknowledgement,
+  ChannelDeliveryPartClaimRequest,
+  ChannelDeliveryPartSnapshot,
+  ChannelDeliveryPlanSnapshot,
   ChannelDeliverySnapshot,
   ChannelErrorResponse,
   ChannelGatewayStatusSnapshot,
@@ -345,6 +349,14 @@ const genericCoreEventTypes = [
   "companion.proactive_triggered",
   "companion.proactive_deferred",
   "channel.delivery_acknowledged",
+  "channel.delivery_plan_created",
+  "channel.delivery_part_claimed",
+  "channel.delivery_part_acknowledged",
+  "channel.delivery_part_delivered",
+  "channel.delivery_part_failed",
+  "channel.delivery_plan_completed",
+  "channel.delivery_plan_cancel_requested",
+  "channel.delivery_plan_cancelled",
   "resource.models_slept",
   "resource.models_woke",
 ] as const;
@@ -928,6 +940,10 @@ const channelDeliverySnapshotSchema = z
     lease_expires_at: awareDateTime.nullish(),
     provider_message_id: z.string().min(1).max(512).nullish(),
     last_error: structuredErrorSchema.nullish(),
+    plan_version: z.number().int().min(1).default(1),
+    part_count: z.number().int().min(1).default(1),
+    delivered_part_count: z.number().int().nonnegative().default(0),
+    cancel_requested_at: awareDateTime.nullish(),
     created_at: awareDateTime,
     updated_at: awareDateTime,
     delivered_at: awareDateTime.nullish(),
@@ -945,6 +961,122 @@ const channelDeliverySnapshotSchema = z
       });
     }
   });
+
+
+const channelDeliveryPartKindSchema = z.enum(["text", "image"]);
+
+const channelDeliveryPartStatusSchema = z.enum([
+  "pending",
+  "sending",
+  "delivered",
+  "failed",
+  "cancelled",
+  "skipped",
+]);
+
+const channelTextDeliveryPartPayloadSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    kind: z.literal("text").default("text"),
+    text: z.string().min(1).max(20_000),
+  })
+  .passthrough();
+
+const channelDeliveryPartPayloadSchema = channelTextDeliveryPartPayloadSchema;
+
+const channelDeliveryPartSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    part_id: uuid,
+    delivery_id: uuid,
+    ordinal: z.number().int().nonnegative(),
+    kind: channelDeliveryPartKindSchema.default("text"),
+    payload: channelDeliveryPartPayloadSchema,
+    required: z.boolean().default(true),
+    status: channelDeliveryPartStatusSchema,
+    delay_after_ms: z.number().int().min(0).max(60_000).default(0),
+    not_before_at: awareDateTime.nullish(),
+    attempt: z.number().int().nonnegative().default(0),
+    lease_id: uuid.nullish(),
+    lease_expires_at: awareDateTime.nullish(),
+    provider_client_id: z.string().min(1).max(512),
+    provider_message_id: z.string().min(1).max(512).nullish(),
+    last_error: structuredErrorSchema.nullish(),
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+    delivered_at: awareDateTime.nullish(),
+  })
+  .passthrough()
+  .superRefine((snapshot, context) => {
+    if (
+      snapshot.status === "sending" &&
+      (!snapshot.lease_id || !snapshot.lease_expires_at)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "sending delivery part snapshots require an active lease",
+        path: ["lease_id"],
+      });
+    }
+  });
+
+const channelDeliveryPartClaimRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    part_id: uuid.nullish(),
+    lease_id: uuid,
+    lease_seconds: z.number().int().min(5).max(300).default(60),
+  })
+  .passthrough();
+
+const channelDeliveryPartAcknowledgementSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    part_id: uuid,
+    lease_id: uuid,
+    status: z.enum(["delivered", "failed", "cancelled"]),
+    provider_message_id: z.string().min(1).max(512).nullish(),
+    error: structuredErrorSchema.nullish(),
+    acknowledged_at: awareDateTime,
+  })
+  .passthrough()
+  .superRefine((acknowledgement, context) => {
+    if (acknowledgement.status === "delivered" && acknowledgement.error) {
+      context.addIssue({
+        code: "custom",
+        message: "delivered acknowledgements cannot include an error",
+        path: ["error"],
+      });
+    }
+    if (acknowledgement.status === "failed" && !acknowledgement.error) {
+      context.addIssue({
+        code: "custom",
+        message: "failed acknowledgements require an error",
+        path: ["error"],
+      });
+    }
+  });
+
+const channelDeliveryPlanSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    delivery_id: uuid,
+    channel_turn_id: uuid,
+    connection_id: uuid,
+    status: channelDeliveryStatusSchema,
+    plan_version: z.number().int().min(1).default(1),
+    part_count: z.number().int().min(1),
+    delivered_part_count: z.number().int().nonnegative().default(0),
+    next_pending_ordinal: z.number().int().nonnegative().nullish(),
+    cancel_requested_at: awareDateTime.nullish(),
+    parts: z.array(channelDeliveryPartSnapshotSchema).default([]),
+    created_at: awareDateTime,
+    updated_at: awareDateTime,
+    delivered_at: awareDateTime.nullish(),
+  })
+  .passthrough();
 
 const channelTurnCancelRequestSchema = z
   .object({
@@ -1305,6 +1437,31 @@ export function parseChannelDeliverySnapshot(
   input: unknown,
 ): ChannelDeliverySnapshot {
   return channelDeliverySnapshotSchema.parse(input) as ChannelDeliverySnapshot;
+}
+
+
+export function parseChannelDeliveryPartSnapshot(
+  input: unknown,
+): ChannelDeliveryPartSnapshot {
+  return channelDeliveryPartSnapshotSchema.parse(input) as ChannelDeliveryPartSnapshot;
+}
+
+export function parseChannelDeliveryPartClaimRequest(
+  input: unknown,
+): ChannelDeliveryPartClaimRequest {
+  return channelDeliveryPartClaimRequestSchema.parse(input) as ChannelDeliveryPartClaimRequest;
+}
+
+export function parseChannelDeliveryPartAcknowledgement(
+  input: unknown,
+): ChannelDeliveryPartAcknowledgement {
+  return channelDeliveryPartAcknowledgementSchema.parse(input) as ChannelDeliveryPartAcknowledgement;
+}
+
+export function parseChannelDeliveryPlanSnapshot(
+  input: unknown,
+): ChannelDeliveryPlanSnapshot {
+  return channelDeliveryPlanSnapshotSchema.parse(input) as ChannelDeliveryPlanSnapshot;
 }
 
 export function parseChannelTurnCancelRequest(

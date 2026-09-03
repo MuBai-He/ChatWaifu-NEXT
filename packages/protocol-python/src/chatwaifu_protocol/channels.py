@@ -456,6 +456,10 @@ class ChannelDeliverySnapshot(ChannelVersionedModel):
     lease_expires_at: AwareDatetime | None = None
     provider_message_id: str | None = Field(default=None, min_length=1, max_length=512)
     last_error: StructuredError | None = None
+    plan_version: int = Field(default=1, ge=1)
+    part_count: int = Field(default=1, ge=1)
+    delivered_part_count: int = Field(default=0, ge=0)
+    cancel_requested_at: AwareDatetime | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
     delivered_at: AwareDatetime | None = None
@@ -467,6 +471,119 @@ class ChannelDeliverySnapshot(ChannelVersionedModel):
         ):
             raise ValueError("sending delivery snapshots require an active lease")
         return self
+
+
+class ChannelDeliveryPartKind(StrEnum):
+    TEXT = "text"
+    IMAGE = "image"
+
+
+class ChannelDeliveryPartStatus(StrEnum):
+    PENDING = "pending"
+    SENDING = "sending"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    SKIPPED = "skipped"
+
+
+class ChannelTextDeliveryPartPayload(ChannelVersionedModel):
+    kind: Literal[ChannelDeliveryPartKind.TEXT] = ChannelDeliveryPartKind.TEXT
+    text: str = Field(min_length=1, max_length=20_000)
+
+
+ChannelDeliveryPartPayload = Annotated[
+    ChannelTextDeliveryPartPayload,
+    Field(discriminator="kind"),
+]
+
+
+class ChannelDeliveryPartSnapshot(ChannelVersionedModel):
+    part_id: UUID
+    delivery_id: UUID
+    ordinal: int = Field(ge=0)
+    kind: ChannelDeliveryPartKind = ChannelDeliveryPartKind.TEXT
+    payload: ChannelDeliveryPartPayload
+    required: bool = True
+    status: ChannelDeliveryPartStatus
+    delay_after_ms: int = Field(default=0, ge=0, le=60_000)
+    not_before_at: AwareDatetime | None = None
+    attempt: int = Field(default=0, ge=0)
+    lease_id: UUID | None = None
+    lease_expires_at: AwareDatetime | None = None
+    provider_client_id: str = Field(min_length=1, max_length=512)
+    provider_message_id: str | None = Field(default=None, min_length=1, max_length=512)
+    last_error: StructuredError | None = None
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    delivered_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def require_sending_lease(self) -> ChannelDeliveryPartSnapshot:
+        if self.status == ChannelDeliveryPartStatus.SENDING and (
+            self.lease_id is None or self.lease_expires_at is None
+        ):
+            raise ValueError("sending delivery part snapshots require an active lease")
+        return self
+
+
+class ChannelDeliveryPartDraft(ChannelVersionedModel):
+    ordinal: int = Field(ge=0)
+    kind: ChannelDeliveryPartKind = ChannelDeliveryPartKind.TEXT
+    payload: ChannelDeliveryPartPayload
+    required: bool = True
+    delay_after_ms: int = Field(default=0, ge=0, le=60_000)
+    not_before_at: AwareDatetime | None = None
+
+
+class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
+    delivery_id: UUID
+    channel_turn_id: UUID
+    connection_id: UUID
+    status: ChannelDeliveryStatus
+    plan_version: int = Field(default=1, ge=1)
+    part_count: int = Field(ge=1)
+    delivered_part_count: int = Field(default=0, ge=0)
+    next_pending_ordinal: int | None = Field(default=None, ge=0)
+    cancel_requested_at: AwareDatetime | None = None
+    parts: list[ChannelDeliveryPartSnapshot] = Field(default_factory=list[ChannelDeliveryPartSnapshot])
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    delivered_at: AwareDatetime | None = None
+
+
+class ChannelDeliveryPartClaimRequest(ChannelVersionedModel):
+    delivery_id: UUID
+    part_id: UUID | None = None
+    lease_id: UUID
+    lease_seconds: int = Field(default=60, ge=5, le=300)
+
+
+class ChannelDeliveryPartAcknowledgement(ChannelVersionedModel):
+    delivery_id: UUID
+    part_id: UUID
+    lease_id: UUID
+    status: Literal[
+        ChannelDeliveryPartStatus.DELIVERED,
+        ChannelDeliveryPartStatus.FAILED,
+        ChannelDeliveryPartStatus.CANCELLED,
+    ]
+    provider_message_id: str | None = Field(default=None, min_length=1, max_length=512)
+    error: StructuredError | None = None
+    acknowledged_at: AwareDatetime
+
+    @model_validator(mode="after")
+    def validate_delivery_outcome(self) -> ChannelDeliveryPartAcknowledgement:
+        if self.status == ChannelDeliveryPartStatus.DELIVERED and self.error is not None:
+            raise ValueError("delivered acknowledgements cannot include an error")
+        if self.status == ChannelDeliveryPartStatus.FAILED and self.error is None:
+            raise ValueError("failed acknowledgements require an error")
+        return self
+
+
+class ChannelDeliveryPartsCancelRequest(ChannelVersionedModel):
+    reason: str = Field(min_length=1, max_length=1_000)
+    requested_at: AwareDatetime
 
 
 class ChannelTurnCancelRequest(ChannelVersionedModel):
