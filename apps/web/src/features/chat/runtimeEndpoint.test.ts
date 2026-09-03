@@ -166,10 +166,10 @@ describe("acquireWsTicket", () => {
       baseUrl: "http://127.0.0.1:8765",
       token: "test-token",
     };
-    const ticket = await acquireWsTicket("audio", connection);
+    const ticket = await acquireWsTicket("audio", connection, "session-uuid-1");
     expect(ticket).toBe("audio-ticket-456");
     expect(fetchSpy).toHaveBeenCalledWith(
-      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=audio",
+      "http://127.0.0.1:8765/v1/runtime/ws-ticket?purpose=audio&session_id=session-uuid-1",
       expect.objectContaining({ method: "POST" }),
     );
     fetchSpy.mockRestore();

@@ -447,11 +447,12 @@ phases:
     status: completed_and_tested
     evidence:
       - Runtime Capability token generation is strictly separated from admin_token, ensuring an ephemeral 32-byte process-scoped capability token even when admin_token is statically configured
-      - WebSocket tickets enforce purpose claims (events vs audio vs admin_events), origin binding, and session_id claim binding, preventing cross-purpose, cross-origin, or cross-session ticket reuse
-      - Character Kernel snapshot automatically detects and self-heals historical revision splits across character_states and relationship_states, smoothly reconciling legacy databases
+      - WebSocket tickets enforce purpose claims (events vs audio vs admin_events), strict session_id claim binding for both events and audio, and origin binding; Guard rejects duplicate query parameters using parse_qsl() and propagates verified claims via ASGI scope state to eliminate parser differential vulnerabilities
+      - Pipecat voice processor implements an invalidated generation tombstone (bounded to 256 IDs) ensuring late-arriving generation_started or audio_chunk_queued events never resurrect cancelled audio after preemptive interruption
+      - Character Kernel snapshot detects legacy revision fence splits across character_states and relationship_states and performs best-effort revision alignment with explicit audit warnings, allowing CAS progress without claiming lossless self-healing
       - EventHub decouples eviction retention (CRITICAL/DOMAIN/EPHEMERAL) from dispatch preemption (PREEMPTIVE/ORDERED), ensuring generation_completed serves as an ordered terminal barrier that never overtakes prior text deltas
       - Web client enforces single immutable RuntimeConnection resolution, same-origin credential protection via runtimeFetchWithConnection, and fail-fast ticket acquisition
-      - Web StreamingTextProjector and runtimeEventReducer calibrate terminal text with payload.text upon generation completion, repairing dropped deltas without duplicate append
+      - Web client delegates terminal text calibration strictly to StreamingTextProjector.complete(finalText) while Reducer only clears voice activity, eliminating duplicate appended text stutter during premature completion
       - Security CI documents accurate NLTK CVE-2026-81726 pathsec bypass risks and is backed by static AST inspection tests against banned model-artifact APIs
   - id: 15
     name: proactive-behavior-and-ambient

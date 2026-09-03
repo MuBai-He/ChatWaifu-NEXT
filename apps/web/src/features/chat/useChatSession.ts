@@ -263,8 +263,14 @@ export function useChatSession({
             applyCue(event.payload.cue);
           }
           break;
-        case "assistant.generation_completed":
-          if (!generationId || generationId !== activeGeneration.current) break;
+        case "assistant.generation_completed": {
+          if (!generationId) break;
+          if (!activeGeneration.current) {
+            activeGeneration.current = generationId;
+            getTextProjector().start(generationId);
+          } else if (generationId !== activeGeneration.current) {
+            break;
+          }
           getTextProjector().complete(
             generationId,
             payloadText(event.payload.text),
@@ -274,6 +280,7 @@ export function useChatSession({
             .catch(() => undefined);
           setAvatarState("idle");
           break;
+        }
         case "assistant.generation_cancelled":
         case "conversation.interrupted":
           if (generationId) {

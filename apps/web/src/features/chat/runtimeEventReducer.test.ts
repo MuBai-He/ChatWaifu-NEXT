@@ -116,9 +116,10 @@ describe("runtimeEventReducer", () => {
     expect(replaced.messages[0].pending).toBe(true);
   });
 
-  it("calibrates empty message on assistant.generation_completed", () => {
+  it("resets voice activity on assistant.generation_completed without modifying message text directly", () => {
     const state = {
       ...initialRuntimeViewState,
+      voiceActivity: "thinking" as const,
       messages: [
         {
           id: "generation-a",
@@ -148,6 +149,7 @@ describe("runtimeEventReducer", () => {
       } as unknown as DomainEvent,
     });
 
-    expect(completed.messages[0].text).toBe("兜底校准文本");
+    expect(completed.voiceActivity).toBe("idle");
+    expect(completed.messages[0].text).toBe("");
   });
 });

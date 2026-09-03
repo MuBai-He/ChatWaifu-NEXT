@@ -73,8 +73,9 @@ class CharacterKernelService:
                 if aff_rev != rel_rev:
                     target_revision = max(aff_rev, rel_rev)
                     logger.warning(
-                        "Character kernel revision split detected for %s "
-                        "(affect=%d, relationship=%d); reconciling both to revision=%d",
+                        "Character kernel legacy revision fence split detected for %s "
+                        "(affect_revision=%d, relationship_revision=%d); performing best-effort "
+                        "reconciliation to target_revision=%d (unverified legacy state alignment)",
                         character_id,
                         aff_rev,
                         rel_rev,

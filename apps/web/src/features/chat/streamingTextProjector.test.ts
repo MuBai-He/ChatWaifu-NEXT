@@ -120,4 +120,37 @@ describe("StreamingTextProjector", () => {
     expect(visible).toBe(fullText);
     expect(completedWith).toBe(fullText);
   });
+  it("never produces duplicate appended prefix when completion arrives before any delta", () => {
+    vi.useFakeTimers();
+    let messageText = "";
+    const snapshots: string[] = [];
+
+    const projector = new StreamingTextProjector({
+      onReveal: (_generationId, text) => {
+        messageText += text;
+        snapshots.push(messageText);
+      },
+      onComplete: (_generationId, finalText) => {
+        if (typeof finalText === "string" && finalText.length > 0) {
+          messageText = finalText;
+        }
+        snapshots.push(messageText);
+      },
+    });
+
+    const fullText = "绫地宁宁的完整终态文本";
+    projector.start("generation-1");
+    projector.complete("generation-1", fullText);
+
+    while (vi.getTimerCount() > 0) {
+      vi.advanceTimersByTime(24);
+    }
+
+    expect(snapshots.length).toBeGreaterThan(0);
+    for (const text of snapshots) {
+      expect(text).toBe(fullText.slice(0, text.length));
+      expect(text.startsWith(fullText + fullText.slice(0, 2))).toBe(false);
+    }
+    expect(messageText).toBe(fullText);
+  });
 });

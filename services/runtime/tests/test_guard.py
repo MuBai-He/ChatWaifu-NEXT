@@ -178,7 +178,7 @@ async def test_ticket_store_expiration() -> None:
     ticket = await store.create_ticket(ttl_seconds=0.01)
     await asyncio.sleep(0.02)
     consumed = await store.consume_ticket(ticket)
-    assert consumed is False
+    assert consumed is None
 
 
 def test_mcp_endpoint_protected(guard_settings: Settings) -> None:
@@ -299,9 +299,16 @@ def test_ws_ticket_purpose_isolation_and_origin_binding(guard_settings: Settings
             ):
                 pass
 
-        # 5. Issue ticket for audio via GET
-        audio_resp = client.get(
+        # 5. Audio ticket requires session_id
+        audio_resp_no_session = client.get(
             "/v1/runtime/ws-ticket?purpose=audio",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert audio_resp_no_session.status_code == 400
+
+        # Issue ticket for audio with session_id via GET
+        audio_resp = client.get(
+            f"/v1/runtime/ws-ticket?purpose=audio&session_id={session_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert audio_resp.status_code == 200
@@ -316,7 +323,7 @@ def test_ws_ticket_purpose_isolation_and_origin_binding(guard_settings: Settings
 
         # Re-issue audio ticket and connect to /v1/audio/stream succeeds
         audio_resp2 = client.post(
-            "/v1/runtime/ws-ticket?purpose=audio",
+            f"/v1/runtime/ws-ticket?purpose=audio&session_id={session_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         audio_ticket2 = audio_resp2.json()["ticket"]
@@ -324,6 +331,63 @@ def test_ws_ticket_purpose_isolation_and_origin_binding(guard_settings: Settings
             f"/v1/audio/stream?session_id={session_id}&ticket={audio_ticket2}"
         ):
             pass
+
+        # Audio ticket cannot connect to different session_id on /v1/audio/stream
+        audio_resp_mismatch = client.post(
+            f"/v1/runtime/ws-ticket?purpose=audio&session_id={session_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        audio_ticket_mismatch = audio_resp_mismatch.json()["ticket"]
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/v1/audio/stream?session_id=different-session&ticket={audio_ticket_mismatch}"
+            ):
+                pass
+
+        # Duplicate query parameters are rejected immediately (parser differential defense)
+        dup_ticket_resp = client.post(
+            f"/v1/runtime/ws-ticket?purpose=events&session_id={session_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        dup_ticket = dup_ticket_resp.json()["ticket"]
+        # Duplicate session_id: A then B
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/v1/events?session_id={session_id}&session_id=different-session&ticket={dup_ticket}"
+            ):
+                pass
+
+        # Re-issue ticket for second test
+        dup_ticket_resp2 = client.post(
+            f"/v1/runtime/ws-ticket?purpose=events&session_id={session_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        dup_ticket2 = dup_ticket_resp2.json()["ticket"]
+        # Duplicate session_id: B then A
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/v1/events?session_id=different-session&session_id={session_id}&ticket={dup_ticket2}"
+            ):
+                pass
+
+        # Duplicate ticket parameter
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/v1/events?session_id={session_id}&ticket={dup_ticket2}&ticket=another-ticket"
+            ):
+                pass
+
+        # Audio stream duplicate session_id
+        audio_dup_resp = client.post(
+            f"/v1/runtime/ws-ticket?purpose=audio&session_id={session_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        audio_dup_ticket = audio_dup_resp.json()["ticket"]
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/v1/audio/stream?session_id={session_id}&session_id=different-session&ticket={audio_dup_ticket}"
+            ):
+                pass
 
         # 6. Ticket with bound origin rejected when origin differs
         bound_resp = client.post(

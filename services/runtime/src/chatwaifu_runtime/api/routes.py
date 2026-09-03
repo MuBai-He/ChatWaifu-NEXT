@@ -39,6 +39,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 
 from chatwaifu_runtime import __version__
+from chatwaifu_runtime.api.guard import WebSocketTicketClaims
 from chatwaifu_runtime.api.models import (
     CharacterInteractionRequest,
     CreateSessionRequest,
@@ -164,11 +165,11 @@ async def _handle_create_ws_ticket(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden: admin_events purpose requires admin token",
             )
-    elif resolved_purpose == "events":
+    elif resolved_purpose in ("events", "audio"):
         if not resolved_session_id or not resolved_session_id.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="session_id is required for events ticket",
+                detail=f"session_id is required for {resolved_purpose} ticket",
             )
 
     origin = request.headers.get("origin")
@@ -1405,7 +1406,18 @@ def _mcp_configuration(
 @router.websocket("/events")
 async def runtime_events(websocket: WebSocket) -> None:
     container: RuntimeContainer = websocket.app.state.container
-    requested_session = websocket.query_params.get("session_id")
+    claims: WebSocketTicketClaims | None = getattr(
+        websocket.state, "chatwaifu_ws_ticket", None
+    ) or websocket.scope.get("state", {}).get("chatwaifu_ws_ticket")
+
+    query_session = websocket.query_params.get("session_id")
+    if claims is not None and claims.session_id is not None:
+        if query_session is not None and query_session != claims.session_id:
+            await websocket.close(code=1008, reason="session_id mismatch with ticket")
+            return
+        requested_session = claims.session_id
+    else:
+        requested_session = query_session
     requested_after = websocket.query_params.get("after_sequence", "0")
     try:
         after_sequence = int(requested_after)
@@ -1505,7 +1517,18 @@ async def runtime_events(websocket: WebSocket) -> None:
 @router.websocket("/audio/stream")
 async def runtime_audio_stream(websocket: WebSocket) -> None:
     container: RuntimeContainer = websocket.app.state.container
-    requested_session = websocket.query_params.get("session_id")
+    claims: WebSocketTicketClaims | None = getattr(
+        websocket.state, "chatwaifu_ws_ticket", None
+    ) or websocket.scope.get("state", {}).get("chatwaifu_ws_ticket")
+
+    query_session = websocket.query_params.get("session_id")
+    if claims is not None and claims.session_id is not None:
+        if query_session is not None and query_session != claims.session_id:
+            await websocket.close(code=1008, reason="session_id mismatch with ticket")
+            return
+        requested_session = claims.session_id
+    else:
+        requested_session = query_session
     if requested_session is None:
         await websocket.close(code=1008, reason="session_id is required")
         return

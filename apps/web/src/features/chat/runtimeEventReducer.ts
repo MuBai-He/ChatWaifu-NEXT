@@ -140,24 +140,12 @@ export function runtimeEventReducer(
           },
         ],
       };
-    case "assistant.generation_completed": {
-      const fullText = payloadText(event.payload.text);
+    case "assistant.generation_completed":
       return {
         ...state,
         voiceActivity: "idle",
         voiceTranscript: null,
-        ...(fullText
-          ? {
-              messages: state.messages.map((message) =>
-                message.generationId === event.generation_id &&
-                message.text === ""
-                  ? { ...message, text: fullText }
-                  : message,
-              ),
-            }
-          : {}),
       };
-    }
     case "assistant.generation_cancelled":
     case "conversation.interrupted":
       return {
