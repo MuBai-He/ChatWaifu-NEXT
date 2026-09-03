@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
+    AuthorizedRealtimeSessionOpenRequest,
     CloudRealtimeBackend,
     CloudRealtimeSession,
     InputAudioCommittedEvent,
@@ -39,25 +40,38 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     UserTranscriptEvent,
 )
 
+type AnyOpenRequest = AuthorizedRealtimeSessionOpenRequest | RealtimeSessionOpenRequest
+
 
 class FakeCloudRealtimeSession(CloudRealtimeSession):
     """Deterministic, scriptable fake implementation of CloudRealtimeSession."""
 
     def __init__(
         self,
-        request: RealtimeSessionOpenRequest,
+        request: AnyOpenRequest,
         *,
         backend_id: str = "fake_cloud_realtime",
         auto_ready: bool = True,
     ) -> None:
-        self.session_id: UUID = request.session_id
-        self.character_id: str = request.character_id
+        if isinstance(request, AuthorizedRealtimeSessionOpenRequest):
+            self.session_id: UUID = request.intent.session_id
+            self.character_id: str = request.intent.character_id
+            turn_id = None
+            generation_id = None
+            initial_context = request.context_patch
+        else:
+            self.session_id = request.session_id
+            self.character_id = request.character_id
+            turn_id = request.turn_id
+            generation_id = request.generation_id
+            initial_context = None
+
         self.backend_id: str = backend_id
         self.provider_session_id: str = f"fake_sess_{uuid4().hex[:12]}"
         self.lineage: RealtimeSessionLineage = RealtimeSessionLineage(
-            session_id=request.session_id,
-            turn_id=request.turn_id,
-            generation_id=request.generation_id,
+            session_id=self.session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
             backend_id=backend_id,
             provider_session_id=self.provider_session_id,
             created_at=datetime.now(UTC),
@@ -68,8 +82,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         self.sent_audio_frames: list[RealtimeInputAudioFrame] = []
         self.commit_calls: int = 0
         self.context_updates: list[RealtimeContextPatch] = []
-        if request.initial_context is not None:
-            self.context_updates.append(request.initial_context)
+        if initial_context is not None:
+            self.context_updates.append(initial_context)
         self.interrupt_calls: list[tuple[UUID, str]] = []
         self.tool_results: list[tuple[str, str]] = []
 
@@ -284,6 +298,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         self,
         generation_id: UUID,
         *,
+        final_text: str | None = None,
         provider_response_id: str | None = None,
         usage: RealtimeUsage | None = None,
         event_id: str | None = None,
@@ -297,6 +312,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                 generation_id=generation_id,
                 provider_response_id=resp_id,
                 usage=usage,
+                final_text=final_text,
                 event_id=event_id,
             )
         )
@@ -354,16 +370,16 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
             backend_id=backend_id,
         )
         self._auto_ready: bool = auto_ready
-        self.open_session_calls: list[RealtimeSessionOpenRequest] = []
+        self.open_session_calls: list[AnyOpenRequest] = []
         self.sessions: list[FakeCloudRealtimeSession] = []
         self.close_calls: int = 0
         self._custom_session_factory: (
-            Callable[[RealtimeSessionOpenRequest], FakeCloudRealtimeSession] | None
+            Callable[[AnyOpenRequest], FakeCloudRealtimeSession] | None
         ) = None
 
     def set_session_factory(
         self,
-        factory: Callable[[RealtimeSessionOpenRequest], FakeCloudRealtimeSession] | None,
+        factory: Callable[[AnyOpenRequest], FakeCloudRealtimeSession] | None,
     ) -> None:
         self._custom_session_factory = factory
 
@@ -372,7 +388,7 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
 
     async def open_session(
         self,
-        request: RealtimeSessionOpenRequest,
+        request: AnyOpenRequest,
     ) -> CloudRealtimeSession:
         self.open_session_calls.append(request)
         if self._custom_session_factory is not None:

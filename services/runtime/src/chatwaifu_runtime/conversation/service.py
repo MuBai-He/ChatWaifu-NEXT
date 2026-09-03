@@ -68,7 +68,9 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class _ActiveGeneration:
     generation_id: UUID
-    task: asyncio.Task[None]
+    task: asyncio.Task[None] | None = None
+    turn_id: UUID | None = None
+    audio_stream_id: UUID | None = None
     completing: bool = False
 
 
@@ -107,7 +109,7 @@ class ConversationService:
 
     @property
     def active_count(self) -> int:
-        return sum(not item.task.done() for item in self._active.values())
+        return sum(item.task is None or not item.task.done() for item in self._active.values())
 
     async def submit_text(
         self,
@@ -143,6 +145,251 @@ class ConversationService:
             generation_id=generation_id,
             options=ConversationTurnOptions(origin="voice"),
         )
+
+    async def begin_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        audio_stream_id: UUID,
+        backend_kind: str = "cloud_realtime",
+    ) -> GenerationAccepted:
+        async with self._start_lock:
+            existing = self._active.get(session_id)
+            if existing is not None:
+                if existing.task is not None and not existing.task.done():
+                    existing.task.cancel("superseded_by_new_generation")
+                self._active.pop(session_id, None)
+            session = await self._sessions.get_session(session_id)
+            if session is None:
+                raise KeyError(f"unknown session {session_id}")
+            if session.state is not SessionState.READY:
+                raise RuntimeError(f"session is not ready: {session.state}")
+            accepted = GenerationAccepted(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                audio_stream_id=audio_stream_id,
+                state=GenerationState.RUNNING,
+            )
+            now = datetime.now(UTC)
+            generation_event = AssistantGenerationStartedEvent(
+                event_id=uuid4(),
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                occurred_at=now,
+                source="runtime.conversation",
+                privacy=PrivacyLevel.LOCAL,
+                payload=AssistantGenerationStartedPayload(
+                    backend_kind=backend_kind,
+                ),
+            )
+            persisted_generation = await self._repository.begin_realtime_generation(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                audio_stream_id=audio_stream_id,
+                backend_kind=backend_kind,
+                occurred_at=now,
+                generation_event=generation_event,
+            )
+            self._active[session_id] = _ActiveGeneration(
+                generation_id=generation_id,
+                task=None,
+                turn_id=turn_id,
+                audio_stream_id=audio_stream_id,
+            )
+            try:
+                await self._publisher.publish_persisted(persisted_generation)
+            except Exception:
+                logger.exception(
+                    "failed publishing realtime generation start event",
+                    extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+                )
+            return accepted
+
+    async def commit_realtime_user_transcript(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        confidence: float | None = None,
+    ) -> None:
+        active = self._active.get(session_id)
+        if active is None or active.generation_id != generation_id:
+            logger.debug(
+                "ignoring user transcript for non-current generation",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return
+        now = datetime.now(UTC)
+        user_event = UserTurnCommittedEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            occurred_at=now,
+            source="runtime.conversation",
+            privacy=PrivacyLevel.LOCAL,
+            payload=UserTurnCommittedPayload(
+                text=text,
+            ),
+        )
+        persisted_user = await self._repository.commit_realtime_user_transcript(
+            session_id=session_id,
+            turn_id=turn_id,
+            text=text,
+            occurred_at=now,
+            user_event=user_event,
+        )
+        try:
+            await self._publisher.publish_persisted(persisted_user)
+        except Exception:
+            logger.exception(
+                "failed publishing realtime user turn committed event",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+        session = await self._sessions.get_session(session_id)
+        character_id = session.character_id if session else "default"
+        try:
+            await self._character_kernel.observe_user_turn(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                character_id=character_id,
+                text=text,
+            )
+        except Exception:
+            logger.exception(
+                "failed observing user turn in character kernel",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+        try:
+            await self._memory.enqueue_user_turn(
+                UserTurnMemoryObservation(
+                    session_id=session_id,
+                    turn_id=turn_id,
+                    source_event_id=user_event.event_id,
+                    character_id=character_id,
+                    text=text,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "failed enqueuing user turn in memory",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+
+    async def publish_realtime_transcript_delta(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        role: Literal["user", "assistant"] = "assistant",
+    ) -> None:
+        event_type = "assistant.text_delta" if role == "assistant" else "user.transcript_delta"
+        event = GenericCoreEvent.model_validate(
+            {
+                "event_id": uuid4(),
+                "event_type": event_type,
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "generation_id": generation_id,
+                "occurred_at": datetime.now(UTC),
+                "source": "runtime.conversation",
+                "privacy": PrivacyLevel.LOCAL,
+                "payload": {"text_delta": text},
+            }
+        )
+        await self._publisher.publish_ephemeral(event)
+
+    async def complete_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+    ) -> None:
+        active = self._active.get(session_id)
+        if active is None or active.generation_id != generation_id:
+            logger.debug(
+                "ignoring completion for non-current generation",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return
+        accepted = GenerationAccepted(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            audio_stream_id=active.audio_stream_id or uuid4(),
+            state=GenerationState.RUNNING,
+        )
+        await self._complete(
+            accepted,
+            output=text,
+            emit_avatar=False,
+            source_context=None,
+        )
+        current = self._active.get(accepted.session_id)
+        if current and current.generation_id == accepted.generation_id:
+            self._active.pop(accepted.session_id, None)
+
+    async def cancel_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        reason: str = "cancelled",
+    ) -> None:
+        active = self._active.get(session_id)
+        if active is None or active.generation_id != generation_id:
+            logger.debug(
+                "ignoring cancellation for non-current generation",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return
+        accepted = GenerationAccepted(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            audio_stream_id=active.audio_stream_id or uuid4(),
+            state=GenerationState.RUNNING,
+        )
+        await self._cancelled(accepted, reason=reason)
+        self._active.pop(session_id, None)
+
+    async def fail_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        error: Exception | StructuredError,
+    ) -> None:
+        active = self._active.get(session_id)
+        if active is None or active.generation_id != generation_id:
+            logger.debug(
+                "ignoring failure for non-current generation",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return
+        accepted = GenerationAccepted(
+            session_id=session_id,
+            turn_id=turn_id,
+            generation_id=generation_id,
+            audio_stream_id=active.audio_stream_id or uuid4(),
+            state=GenerationState.RUNNING,
+        )
+        await self._failed(accepted, error=error)
+        self._active.pop(session_id, None)
 
     async def submit_proactive(
         self, session_id: UUID, *, reason: str = "idle_check_in"
@@ -271,7 +518,11 @@ class ConversationService:
                     ),
                     name=f"generation-{accepted.generation_id}",
                 )
-                self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
+                self._active[session_id] = _ActiveGeneration(
+                    generation_id=accepted.generation_id,
+                    turn_id=accepted.turn_id,
+                    task=task,
+                )
             except asyncio.CancelledError:
                 await self._cancelled(
                     accepted,
@@ -292,28 +543,48 @@ class ConversationService:
 
     async def cancel(self, session_id: UUID, reason: str = "user_interruption") -> bool:
         active = self._active.get(session_id)
-        if active is None or active.task.done():
+        if active is None or (active.task is not None and active.task.done()):
             return False
         if active.completing:
             # Completion is the generation's publication barrier. Once its
             # terminal sequence starts, interruption waits for that sequence
             # instead of appending cancellation facts after the completed event.
-            await asyncio.shield(active.task)
+            if active.task is not None:
+                await asyncio.shield(active.task)
             return False
-        active.task.cancel(reason)
-        try:
-            await active.task
-        except asyncio.CancelledError:
-            current = asyncio.current_task()
-            if current is not None and current.cancelling():
-                raise
+        if active.task is not None:
+            active.task.cancel(reason)
+            try:
+                await active.task
+            except asyncio.CancelledError:
+                current = asyncio.current_task()
+                if current is not None and current.cancelling():
+                    raise
+        else:
+            if active.turn_id is None:
+                return False
+            accepted = GenerationAccepted(
+                session_id=session_id,
+                turn_id=active.turn_id,
+                generation_id=active.generation_id,
+                audio_stream_id=active.audio_stream_id or uuid4(),
+                state=GenerationState.RUNNING,
+            )
+            await self._cancelled(accepted, reason=reason)
+            self._active.pop(session_id, None)
         return True
 
     def active_generation_id(self, session_id: UUID) -> UUID | None:
         active = self._active.get(session_id)
-        if active is None or active.task.done():
+        if active is None or (active.task is not None and active.task.done()):
             return None
         return active.generation_id
+
+    def active_turn_id(self, session_id: UUID) -> UUID | None:
+        active = self._active.get(session_id)
+        if active is None or (active.task is not None and active.task.done()):
+            return None
+        return active.turn_id
 
     async def reset(self, session_id: UUID) -> SessionDataReset:
         """Reset the current session and its character/user experience scope.
@@ -403,11 +674,13 @@ class ConversationService:
 
     async def stop(self) -> None:
         active = tuple(self._active.values())
+        tasks: list[asyncio.Task[None]] = []
         for generation in active:
-            if not generation.completing:
+            if not generation.completing and generation.task is not None:
                 generation.task.cancel("runtime_stopping")
-        if active:
-            await asyncio.gather(*(item.task for item in active), return_exceptions=True)
+                tasks.append(generation.task)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         self._active.clear()
 
     async def list_messages(self, session_id: UUID, limit: int = 100) -> list[dict[str, object]]:
@@ -661,8 +934,8 @@ class ConversationService:
         accepted: GenerationAccepted,
         output: str,
         *,
-        emit_avatar: bool,
-        source_context: ConversationSourceContext | None,
+        emit_avatar: bool = False,
+        source_context: ConversationSourceContext | None = None,
     ) -> bool:
         self._begin_completion(accepted)
         now = datetime.now(UTC)
@@ -812,13 +1085,22 @@ class ConversationService:
     async def _failed(
         self,
         accepted: GenerationAccepted,
-        error: Exception,
+        error: Exception | StructuredError,
         *,
         error_code: str = "provider_error",
         retryable: bool = True,
         set_session_idle: bool | None = None,
     ) -> None:
         now = datetime.now(UTC)
+        if isinstance(error, StructuredError):
+            structured = error
+        else:
+            structured = StructuredError(
+                code=error_code,
+                message=str(error),
+                retryable=retryable,
+                component="conversation",
+            )
         fail_event = ErrorRaisedEvent(
             event_id=uuid4(),
             session_id=accepted.session_id,
@@ -827,14 +1109,7 @@ class ConversationService:
             occurred_at=now,
             source="runtime.conversation",
             privacy=PrivacyLevel.LOCAL,
-            payload=ErrorRaisedPayload(
-                error=StructuredError(
-                    code=error_code,
-                    message=str(error),
-                    retryable=retryable,
-                    component="conversation",
-                )
-            ),
+            payload=ErrorRaisedPayload(error=structured),
         )
         persisted_event = await self._repository.fail_generation(
             session_id=accepted.session_id,

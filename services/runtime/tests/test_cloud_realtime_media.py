@@ -22,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 from chatwaifu_runtime.config.settings import RealtimeConfig, SttConfig
+from chatwaifu_runtime.realtime.admission import InMemoryTurnAdmission
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
     OutputAudioEvent,
@@ -72,14 +73,11 @@ async def test_fake_provider_script_execution() -> None:
     -> assistant transcript delta/final -> 2 output PCM chunks -> response completed.
     """
     session_id = uuid4()
-    turn_id = uuid4()
-    gen_id = uuid4()
+    admission = InMemoryTurnAdmission()
 
     request = RealtimeSessionOpenRequest(
         session_id=session_id,
         character_id="ayachi_nene",
-        turn_id=turn_id,
-        generation_id=gen_id,
     )
     fake_session = FakeCloudRealtimeSession(request, auto_ready=True)
     domain_sink = InMemoryDomainSink()
@@ -87,6 +85,7 @@ async def test_fake_provider_script_execution() -> None:
         session_id=session_id,
         backend_id=fake_session.backend_id,
         session=fake_session,
+        admission=admission,
         domain_sink=domain_sink,
         sample_rate=16_000,
         channels=1,
@@ -99,7 +98,12 @@ async def test_fake_provider_script_execution() -> None:
         # 1. Start pipeline
         await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
 
-        # 2. Feed 3 input PCM frames (16kHz, 16-bit mono -> 320 bytes = 10ms per frame)
+        # 2. User starts speaking -> admitted
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        assert bridge.current_identity is not None
+        gen_id = bridge.current_identity.generation_id
+
+        # Feed 3 input PCM frames (16kHz, 16-bit mono -> 320 bytes = 10ms per frame)
         pcm_chunk_1 = b"\x01\x00" * 160
         pcm_chunk_2 = b"\x02\x00" * 160
         pcm_chunk_3 = b"\x03\x00" * 160
@@ -134,7 +138,6 @@ async def test_fake_provider_script_execution() -> None:
         assert fake_session.commit_calls == 1
 
         # 4. Provider script execution
-        bridge.coordinator.mirror.register_generation(gen_id, turn_id)
         # (a) Emit user transcript final
         await bridge.coordinator.dispatch_event(
             UserTranscriptEvent(
@@ -245,14 +248,11 @@ async def test_barge_in_invalidation_and_late_audio_drop() -> None:
     Runtime Generation invalidation -> Provider interrupt -> InterruptionFrame -> late drop.
     """
     session_id = uuid4()
-    turn_id = uuid4()
-    gen_id = uuid4()
+    admission = InMemoryTurnAdmission()
 
     request = RealtimeSessionOpenRequest(
         session_id=session_id,
         character_id="ayachi_nene",
-        turn_id=turn_id,
-        generation_id=gen_id,
     )
     fake_session = FakeCloudRealtimeSession(request, auto_ready=True)
     domain_sink = InMemoryDomainSink()
@@ -260,6 +260,7 @@ async def test_barge_in_invalidation_and_late_audio_drop() -> None:
         session_id=session_id,
         backend_id=fake_session.backend_id,
         session=fake_session,
+        admission=admission,
         domain_sink=domain_sink,
     )
     collector = FrameCollector()
@@ -268,8 +269,11 @@ async def test_barge_in_invalidation_and_late_audio_drop() -> None:
     try:
         await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
 
-        # Register active generation
-        bridge.coordinator.mirror.register_generation(gen_id, turn_id)
+        # User starts speaking -> admitted
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        assert bridge.current_identity is not None
+        gen_id = bridge.current_identity.generation_id
+        assert bridge.current_identity.turn_id is not None
 
         # Response starts
         await bridge.coordinator.dispatch_event(
@@ -454,7 +458,7 @@ async def test_domain_sink_never_receives_raw_pcm() -> None:
 def test_pipecat_media_adapter_connection_mode_configuration() -> None:
     """PipecatMediaAdapter respects connection_mode: cascade by default, cloud_realtime."""
     cascade_config = RealtimeConfig(connection_mode="cascade")
-    cloud_config = RealtimeConfig(connection_mode="cloud_realtime")
+    cloud_config = RealtimeConfig(connection_mode="cloud_realtime", cloud_backend="fake")
     stt_config = SttConfig()
 
     mock_publisher = MagicMock()

@@ -1,6 +1,7 @@
 """Cloud Realtime subsystem: provider-neutral speech-to-speech foundation."""
 
 from chatwaifu_runtime.realtime.cloud.context import (
+    CloudEgressGateway,
     CloudEgressPolicy,
     ConsentRequiredError,
     EgressBlockedEvent,
@@ -28,6 +29,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeProviderEvent,
     RealtimeSessionLineage,
     RealtimeSessionOpenRequest,
+    RealtimeSkillCapability,
     RealtimeTranscriptCandidate,
     RealtimeUsage,
     ResponseCancelledEvent,
@@ -46,6 +48,11 @@ from chatwaifu_runtime.realtime.cloud.coordinator import (
     RealtimeDomainSink,
     RealtimeMediaSink,
 )
+from chatwaifu_runtime.realtime.cloud.domain import RuntimeRealtimeDomainSink
+from chatwaifu_runtime.realtime.cloud.factory import (
+    RuntimeCloudRealtimeFactory,
+    extract_realtime_skills,
+)
 from chatwaifu_runtime.realtime.cloud.fake import (
     FakeCloudRealtimeBackend,
     FakeCloudRealtimeSession,
@@ -58,6 +65,7 @@ from chatwaifu_runtime.realtime.cloud.mirror import (
 
 __all__ = [
     "AssistantTranscriptEvent",
+    "CloudEgressGateway",
     "CloudEgressPolicy",
     "CloudRealtimeBackend",
     "CloudRealtimeCoordinator",
@@ -91,15 +99,19 @@ __all__ = [
     "RealtimeSessionLineage",
     "RealtimeSessionMirror",
     "RealtimeSessionOpenRequest",
+    "RealtimeSkillCapability",
     "RealtimeTranscriptCandidate",
     "RealtimeUsage",
     "ResponseCancelledEvent",
     "ResponseCompletedEvent",
     "ResponseStartedEvent",
+    "RuntimeCloudRealtimeFactory",
+    "RuntimeRealtimeDomainSink",
     "SessionClosedEvent",
     "SessionDegradedEvent",
     "SessionReadyEvent",
     "UsageRecordedEvent",
     "UserTranscriptEvent",
+    "extract_realtime_skills",
     "update_session_context",
 ]

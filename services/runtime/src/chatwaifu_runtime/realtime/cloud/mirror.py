@@ -22,10 +22,15 @@ class GenerationBinding:
     generation_id: UUID
     turn_id: UUID
     provider_response_id: str | None = None
-    accumulated_text: list[str] = field(default_factory=lambda: list[str]())
+    accumulated_delta_text: list[str] = field(default_factory=lambda: list[str]())
+    authoritative_final_text: str | None = None
     is_completed: bool = False
     is_cancelled: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def accumulated_text(self) -> list[str]:
+        return self.accumulated_delta_text
 
 
 class RealtimeSessionMirror:
@@ -116,15 +121,36 @@ class RealtimeSessionMirror:
         return binding.turn_id if binding else self._active_turn_id
 
     def append_text(self, generation_id: UUID, delta: str) -> None:
+        self.append_delta_text(generation_id, delta)
+
+    def append_delta_text(self, generation_id: UUID, delta: str) -> None:
         binding = self._bindings.get(generation_id)
         if binding is not None:
-            binding.accumulated_text.append(delta)
+            binding.accumulated_delta_text.append(delta)
+
+    def set_authoritative_final_text(self, generation_id: UUID, text: str) -> None:
+        binding = self._bindings.get(generation_id)
+        if binding is not None:
+            binding.authoritative_final_text = text
 
     def get_accumulated_text(self, generation_id: UUID) -> str:
         binding = self._bindings.get(generation_id)
         if binding is None:
             return ""
-        return "".join(binding.accumulated_text)
+        return "".join(binding.accumulated_delta_text)
+
+    def get_completed_text(self, generation_id: UUID, event_final_text: str | None = None) -> str:
+        """Determine completed text using priority:
+        event.final_text > authoritative_final > accumulated_delta.
+        """
+        if event_final_text is not None:
+            return event_final_text
+        binding = self._bindings.get(generation_id)
+        if binding is None:
+            return ""
+        if binding.authoritative_final_text is not None:
+            return binding.authoritative_final_text
+        return "".join(binding.accumulated_delta_text)
 
     def is_active(self, generation_id: UUID) -> bool:
         """Return True only if the generation is currently active and not tombstoned."""

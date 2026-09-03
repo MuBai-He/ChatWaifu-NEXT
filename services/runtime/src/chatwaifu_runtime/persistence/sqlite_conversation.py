@@ -223,6 +223,76 @@ class SQLiteConversationRepository(ConversationRepository):
             )
         return persisted_user, persisted_generation
 
+    async def begin_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        audio_stream_id: UUID,
+        backend_kind: str,
+        occurred_at: datetime,
+        generation_event: AssistantGenerationStartedEvent,
+    ) -> AssistantGenerationStartedEvent:
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                INSERT INTO turns(
+                    turn_id, session_id, role, committed_text, committed_at, created_at,
+                    source_context_json
+                ) VALUES (?, ?, 'user', NULL, NULL, ?, NULL)
+                """,
+                (str(turn_id), str(session_id), occurred_at.isoformat()),
+            )
+            await connection.execute(
+                """
+                INSERT INTO generations(
+                    generation_id, session_id, turn_id, state, backend_kind,
+                    audio_stream_id, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(generation_id),
+                    str(session_id),
+                    str(turn_id),
+                    GenerationState.RUNNING.value,
+                    backend_kind,
+                    str(audio_stream_id),
+                    occurred_at.isoformat(),
+                ),
+            )
+            await connection.execute(
+                """
+                UPDATE sessions SET conversation_state = 'generating', updated_at = ?
+                WHERE session_id = ?
+                """,
+                (occurred_at.isoformat(), str(session_id)),
+            )
+            persisted_generation = await self._event_store.append_in_transaction(
+                connection, generation_event
+            )
+        return persisted_generation
+
+    async def commit_realtime_user_transcript(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        text: str,
+        occurred_at: datetime,
+        user_event: UserTurnCommittedEvent,
+    ) -> UserTurnCommittedEvent:
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                UPDATE turns SET committed_text = ?, committed_at = ?
+                WHERE turn_id = ? AND session_id = ?
+                """,
+                (text, occurred_at.isoformat(), str(turn_id), str(session_id)),
+            )
+            persisted_user = await self._event_store.append_in_transaction(connection, user_event)
+        return persisted_user
+
     async def commit_proactive_generation(
         self,
         *,

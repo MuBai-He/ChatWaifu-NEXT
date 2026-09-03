@@ -45,6 +45,7 @@ class RealtimeContextComponent:
     byte_count: int
     estimated_tokens: int
     priority: int = 0  # Lower number = higher priority for retention
+    source_record_ids: tuple[UUID, ...] = field(default_factory=tuple)
     metadata: dict[str, str | int | float | bool] = field(
         default_factory=dict[str, str | int | float | bool]
     )
@@ -63,6 +64,45 @@ class RealtimeContextPatch:
 
 
 @dataclass(frozen=True, slots=True)
+class RealtimeSessionIntent:
+    """High-level intent to establish a cloud realtime session without prebuilt context."""
+
+    session_id: UUID
+    character_id: str
+    voice_id: str | None = None
+    model: str | None = None
+    sample_rate: int = 24_000
+    channels: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizedRealtimeSessionOpenRequest:
+    """Internal policy-authorized request with an egress-audited context patch."""
+
+    intent: RealtimeSessionIntent
+    context_patch: RealtimeContextPatch
+    authorization_id: UUID
+
+    @property
+    def session_id(self) -> UUID:
+        return self.intent.session_id
+
+    @property
+    def character_id(self) -> str:
+        return self.intent.character_id
+
+
+@dataclass(frozen=True, slots=True)
+class RealtimeSkillCapability:
+    """Typed capability allowlist for skills exposed to cloud realtime models."""
+
+    skill_id: str
+    display_name: str
+    description: str
+    allowed_argument_names: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True, slots=True)
 class RealtimeSessionOpenRequest:
     """Runtime-owned request to initiate a provider realtime session."""
 
@@ -70,7 +110,6 @@ class RealtimeSessionOpenRequest:
     character_id: str
     turn_id: UUID | None = None
     generation_id: UUID | None = None
-    initial_context: RealtimeContextPatch | None = None
     voice_id: str | None = None
     model: str | None = None
     sample_rate: int = 24_000
@@ -236,6 +275,7 @@ class ResponseCompletedEvent:
     generation_id: UUID
     provider_response_id: str
     usage: RealtimeUsage | None = None
+    final_text: str | None = None
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     event_id: str | None = None
 
@@ -312,7 +352,7 @@ class CloudRealtimeBackend(Protocol):
 
     async def open_session(
         self,
-        request: RealtimeSessionOpenRequest,
+        request: AuthorizedRealtimeSessionOpenRequest | RealtimeSessionOpenRequest,
     ) -> CloudRealtimeSession: ...
 
     async def close(self) -> None: ...

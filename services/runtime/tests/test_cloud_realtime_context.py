@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -46,6 +45,7 @@ from chatwaifu_runtime.realtime.cloud.context import (
 from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeContextPatch,
     RealtimeSessionOpenRequest,
+    RealtimeSkillCapability,
 )
 from chatwaifu_runtime.realtime.cloud.coordinator import (
     CloudRealtimeCoordinator,
@@ -239,9 +239,17 @@ def test_scenario_4_patch_builder_budget_pruning_priority_retention() -> None:
     profile = make_test_profile()
     snapshot = make_test_snapshot()
     memories = make_test_memories()
-    skills: list[dict[str, Any]] = [
-        {"name": "weather.get_current", "description": "Fetches current weather for a city"},
-        {"name": "alarm.set", "description": "Sets a morning wakeup alarm for user"},
+    skills = [
+        RealtimeSkillCapability(
+            skill_id="weather.get_current",
+            display_name="Weather",
+            description="Fetches current weather for a city",
+        ),
+        RealtimeSkillCapability(
+            skill_id="alarm.set",
+            display_name="Alarm",
+            description="Sets a morning wakeup alarm for user",
+        ),
     ]
 
     patch = builder.build_patch(
@@ -311,13 +319,12 @@ async def test_scenario_7_egress_receipt_excludes_plaintext_and_secrets() -> Non
     profile = make_test_profile()
     snapshot = make_test_snapshot()
     memories = make_test_memories()
-    skills: list[dict[str, Any]] = [
-        {
-            "name": "calendar.sync",
-            "description": "Sync calendar",
-            "api_key": "super-secret-key-123",
-            "bearer_token": "bearer-token-abc",
-        }
+    skills = [
+        RealtimeSkillCapability(
+            skill_id="calendar.sync",
+            display_name="Calendar",
+            description="Sync calendar",
+        ),
     ]
 
     req = RealtimeSessionOpenRequest(
@@ -480,3 +487,14 @@ async def test_scenario_11_event_store_audit_persistence(tmp_path: Path) -> None
     assert "policy_decision" in payload_json
 
     await database.close()
+
+
+def test_skills_reject_raw_dicts() -> None:
+    """Verify build_patch raises TypeError when skills contain raw dicts
+    instead of RealtimeSkillCapability.
+    """
+    builder = RealtimeContextPatchBuilder()
+    with pytest.raises(TypeError, match="Expected RealtimeSkillCapability instance"):
+        builder.build_patch(
+            skills=[{"name": "test", "description": "bad"}]  # type: ignore[list-item]
+        )

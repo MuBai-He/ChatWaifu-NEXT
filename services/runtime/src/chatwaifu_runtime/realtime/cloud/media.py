@@ -28,6 +28,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
+from chatwaifu_runtime.realtime.admission import RealtimeTurnAdmissionPort
 from chatwaifu_runtime.realtime.cloud.contracts import (
     CloudRealtimeSession,
     RealtimeInputAudioFrame,
@@ -40,6 +41,7 @@ from chatwaifu_runtime.realtime.cloud.coordinator import (
     RealtimeMediaSink,
 )
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
+from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         *,
         session_id: UUID,
         coordinator: CloudRealtimeCoordinator,
+        admission: RealtimeTurnAdmissionPort | None = None,
         sample_rate: int = 16_000,
         channels: int = 1,
         input_queue_capacity: int = 100,
@@ -67,6 +70,8 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         super().__init__(name=f"cloud-realtime-bridge-{str(session_id)[:8]}")
         self.session_id: UUID = session_id
         self._coordinator: CloudRealtimeCoordinator = coordinator
+        self._admission: RealtimeTurnAdmissionPort | None = admission
+        self._current_identity: VoiceTurnIdentity | None = None
         self._sample_rate: int = sample_rate
         self._channels: int = channels
         self._input_queue_capacity: int = input_queue_capacity
@@ -91,6 +96,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         session_id: UUID,
         backend_id: str,
         session: CloudRealtimeSession,
+        admission: RealtimeTurnAdmissionPort | None = None,
         domain_sink: RealtimeDomainSink | None = None,
         sample_rate: int = 16_000,
         channels: int = 1,
@@ -111,6 +117,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         return cls(
             session_id=session_id,
             coordinator=coordinator,
+            admission=admission,
             sample_rate=sample_rate,
             channels=channels,
             input_queue_capacity=input_queue_capacity,
@@ -119,6 +126,10 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
     @property
     def coordinator(self) -> CloudRealtimeCoordinator:
         return self._coordinator
+
+    @property
+    def current_identity(self) -> VoiceTurnIdentity | None:
+        return self._current_identity
 
     @property
     def dropped_input_frames(self) -> int:
@@ -230,6 +241,20 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             )
             await self._coordinator.cancel_generation(active_gen_id, reason="user_barge_in")
             await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+
+        if self._admission is not None:
+            identity = await self._admission.begin_utterance(self.session_id)
+            self._current_identity = identity
+            self._coordinator.admit_turn(
+                turn_id=identity.turn_id,
+                generation_id=identity.generation_id,
+            )
+            _LOGGER.debug(
+                "Realtime turn admitted via admission port for session %s: gen=%s, turn=%s",
+                self.session_id,
+                identity.generation_id,
+                identity.turn_id,
+            )
 
     async def _handle_user_speaking_stopped(self) -> None:
         try:

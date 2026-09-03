@@ -52,6 +52,11 @@ class SessionHarness:
     media_sink: InMemoryMediaSink
     coordinator: CloudRealtimeCoordinator
 
+    def admit(self, turn_id: UUID | None = None, gen_id: UUID | None = None) -> None:
+        t_id = turn_id or self.turn_id
+        g_id = gen_id or self.gen_id
+        self.coordinator.admit_turn(t_id, g_id)
+
 
 def build_harness() -> SessionHarness:
     session_id = uuid4()
@@ -89,7 +94,7 @@ def build_harness() -> SessionHarness:
 async def test_scenario_1_provider_response_id_mapped_to_generation_id() -> None:
     """1. Provider response id is properly mapped to Runtime generation id and turn id."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
     provider_resp_id = "provider_resp_999"
 
     # Emit response started with provider_response_id
@@ -129,7 +134,7 @@ async def test_scenario_1_provider_response_id_mapped_to_generation_id() -> None
 async def test_scenario_2_event_deduplication() -> None:
     """2. Duplicate events with same event_id are processed only once."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
     event = ResponseStartedEvent(
         session_id=h.session_id,
         generation_id=h.gen_id,
@@ -146,7 +151,7 @@ async def test_scenario_2_event_deduplication() -> None:
 async def test_scenario_3_cancelled_generation_drops_late_audio() -> None:
     """3. Cancelled generation drops all late audio frames."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
 
     # Frame 1 while active
     await h.coordinator.dispatch_event(
@@ -189,7 +194,7 @@ async def test_scenario_3_cancelled_generation_drops_late_audio() -> None:
 async def test_scenario_4_cancelled_generation_drops_late_transcript_final() -> None:
     """4. Cancelled generation drops late assistant transcript final and does not commit turn."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
     await h.coordinator.cancel_generation(h.gen_id, reason="user_interrupt")
 
     # Late transcript final arrives after cancellation
@@ -213,7 +218,7 @@ async def test_scenario_4_cancelled_generation_drops_late_transcript_final() -> 
 async def test_scenario_5_completed_generation_drops_late_deltas() -> None:
     """5. Completed generation drops late deltas, accumulated text remains intact."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
 
     # Delta 1
     await h.coordinator.dispatch_event(
@@ -291,7 +296,7 @@ async def test_scenario_6_provider_error_normalized_to_structured_error() -> Non
 async def test_scenario_7_no_raw_provider_payload_in_domain_sink() -> None:
     """7. Domain sink and persisted representations do not contain raw provider JSON."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
 
     # Dispatch sequence
     await h.coordinator.dispatch_event(
@@ -367,7 +372,7 @@ async def test_scenario_8_multi_session_isolation() -> None:
     )
 
     gen1 = uuid4()
-    coord1.mirror.register_generation(gen1, uuid4())
+    coord1.admit_turn(uuid4(), gen1)
 
     await coord1.dispatch_event(
         ResponseStartedEvent(
@@ -378,7 +383,7 @@ async def test_scenario_8_multi_session_isolation() -> None:
     )
 
     gen2 = uuid4()
-    coord2.mirror.register_generation(gen2, uuid4())
+    coord2.admit_turn(uuid4(), gen2)
     await coord2.dispatch_event(
         ResponseStartedEvent(
             session_id=sess2_id,
@@ -400,7 +405,7 @@ async def test_scenario_9_multi_generation_isolation() -> None:
     gen2_id = uuid4()
 
     # Gen 1 starts, writes delta, completes
-    h.mirror.register_generation(gen1_id, uuid4())
+    h.coordinator.admit_turn(uuid4(), gen1_id)
     await h.coordinator.dispatch_event(
         AssistantTranscriptEvent(
             candidate=RealtimeTranscriptCandidate(
@@ -422,7 +427,7 @@ async def test_scenario_9_multi_generation_isolation() -> None:
     )
 
     # Gen 2 starts
-    h.mirror.register_generation(gen2_id, uuid4())
+    h.coordinator.admit_turn(uuid4(), gen2_id)
     await h.coordinator.dispatch_event(
         AssistantTranscriptEvent(
             candidate=RealtimeTranscriptCandidate(
@@ -459,7 +464,7 @@ async def test_scenario_9_multi_generation_isolation() -> None:
 async def test_scenario_10_completion_barrier_causal_order() -> None:
     """10. Completion acts as an ordered barrier preserving causal event flow."""
     h = build_harness()
-    h.mirror.register_generation(h.gen_id, h.turn_id)
+    h.admit()
 
     events = [
         ResponseStartedEvent(

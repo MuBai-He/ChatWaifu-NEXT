@@ -3,8 +3,8 @@
 Implements Phase 13.3:
 1. RealtimeContextPatchBuilder: Builds budgeted, privacy-filtered context patches from
    Runtime authority snapshots (persona, relationship, affect, active skills, memories).
-2. CloudEgressPolicy: Enforces allow/ask/deny policies, requiring explicit consent grants
-   for 'ask' mode, ensuring 0 backend calls on rejection.
+2. CloudEgressGateway: Enforces allow/ask/deny policies with scoped EgressGrants,
+   guaranteeing fail-closed durable auditing to EventStore before any network calls.
 3. EgressReceipt: Structured audit receipts persisted without memory plaintext or API keys.
 4. Error normalization for provider context updates.
 """
@@ -12,45 +12,41 @@ Implements Phase 13.3:
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import Any, Literal, cast
+from datetime import UTC, datetime, timedelta
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
-from chatwaifu_protocol.base import PrivacyLevel, ProtocolModel
+from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.character import CharacterKernelSnapshot
 from chatwaifu_protocol.errors import StructuredError
-from chatwaifu_protocol.events import EventEnvelope, EventModel
+from chatwaifu_protocol.events import (
+    EgressBlockedEvent,
+    EgressBlockedPayload,
+    EgressReceiptEvent,
+    EgressReceiptPayload,
+    EventModel,
+)
 from chatwaifu_protocol.memory import MemoryRecord
-from pydantic import AwareDatetime, ConfigDict, Field
 
 from chatwaifu_runtime.characters.service import CharacterProfile
+from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.realtime.cloud.contracts import (
+    AuthorizedRealtimeSessionOpenRequest,
     CloudRealtimeBackend,
     CloudRealtimeSession,
     RealtimeContextComponent,
     RealtimeContextPatch,
+    RealtimeSessionIntent,
     RealtimeSessionOpenRequest,
+    RealtimeSkillCapability,
 )
 from chatwaifu_runtime.realtime.cloud.coordinator import CloudRealtimeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-# Keys stripped from skill definitions to guarantee zero secret leakage
-_SECRET_KEY_SUBSTRINGS = (
-    "key",
-    "secret",
-    "token",
-    "password",
-    "credential",
-    "auth",
-    "cert",
-    "private",
-)
 
 _EXCLUDED_MEMORY_SENSITIVITIES = (
     PrivacyLevel.SENSITIVE,
@@ -79,54 +75,21 @@ class ConsentRequiredError(Exception):
         self.message = message
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class EgressGrant:
     """An explicit, scoped consent grant for cloud egress."""
 
     session_id: UUID
+    backend_id: str = "fake_cloud_realtime"
+    purpose: Literal["cloud_realtime"] = "cloud_realtime"
+    allowed_component_kinds: frozenset[str] = frozenset(
+        {"safety", "persona", "relationship", "affect", "memory", "skills"}
+    )
+    expires_at: datetime = field(default_factory=lambda: datetime.now(UTC) + timedelta(hours=1))
+    remaining_uses: int = 100
     approved_by: str = "user"
     scope: str = "session"
-    granted_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-
-
-class EgressReceiptPayload(ProtocolModel):
-    """Audit payload for cloud context egress, strictly omitting secrets and raw memory."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    provider_backend_id: str
-    patch_id: UUID
-    component_kinds: list[str]
-    memory_record_ids: list[UUID] = Field(default_factory=lambda: list[UUID]())
-    byte_count: int
-    estimated_tokens: int
-    policy_decision: str
-    approved_by: str | None = None
-    scope: str | None = None
-    occurred_at: AwareDatetime = Field(default_factory=lambda: datetime.now(UTC))
-
-
-class EgressReceiptEvent(EventEnvelope[Literal["cloud.egress_receipt"], EgressReceiptPayload]):
-    """Domain event persisted in EventStore for egress auditing."""
-
-    event_type: Literal["cloud.egress_receipt"] = "cloud.egress_receipt"
-
-
-class EgressBlockedPayload(ProtocolModel):
-    """Audit payload for blocked cloud egress attempts."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    provider_backend_id: str
-    policy_decision: str
-    reason: str
-    occurred_at: AwareDatetime = Field(default_factory=lambda: datetime.now(UTC))
-
-
-class EgressBlockedEvent(EventEnvelope[Literal["cloud.egress_blocked"], EgressBlockedPayload]):
-    """Domain event persisted in EventStore for blocked egress auditing."""
-
-    event_type: Literal["cloud.egress_blocked"] = "cloud.egress_blocked"
+    grant_id: UUID = field(default_factory=uuid4)
 
 
 class RealtimeContextPatchBuilder:
@@ -148,7 +111,7 @@ class RealtimeContextPatchBuilder:
         character_profile: CharacterProfile | None = None,
         kernel_snapshot: CharacterKernelSnapshot | None = None,
         memories: Sequence[MemoryRecord] | None = None,
-        skills: Sequence[dict[str, Any]] | None = None,
+        skills: Sequence[RealtimeSkillCapability] | None = None,
     ) -> RealtimeContextPatch:
         """Constructs an immutable RealtimeContextPatch, pruning components if budget exceeded.
 
@@ -157,7 +120,7 @@ class RealtimeContextPatchBuilder:
         1: Persona summary
         2: Relationship summary
         3: Affect summary
-        4: Active skill capabilities (stripped of secrets)
+        4: Active skill capabilities (strictly typed allowlist DTO)
         5: Selected memory excerpts (filtered for sensitivity and tombstoning)
         """
         candidates: list[RealtimeContextComponent] = []
@@ -212,21 +175,19 @@ class RealtimeContextPatchBuilder:
             ]
             candidates.append(self._build_component("affect", "\n".join(aff_lines), priority=3))
 
-        # 4. Active skills summary (stripped of credentials/tokens)
+        # 4. Active skills summary (strictly typed allowlist, no raw dicts or secrets)
         if skills:
+            for s in skills:
+                if not isinstance(s, RealtimeSkillCapability):  # pyright: ignore[reportUnnecessaryIsInstance]
+                    raise TypeError(
+                        f"Expected RealtimeSkillCapability instance, got {type(s).__name__}"
+                    )
             sanitized_skills: list[str] = []
-            for s in sorted(skills, key=lambda x: str(x.get("name", ""))):
-                name = str(s.get("name", "unnamed"))
-                desc = str(s.get("description", ""))
-                # Sanitize parameters/metadata to ensure zero secrets
-                safe_params = {
-                    k: v
-                    for k, v in s.items()
-                    if not any(sub in k.lower() for sub in _SECRET_KEY_SUBSTRINGS)
-                    and k not in ("name", "description")
-                }
+            for s in sorted(skills, key=lambda x: str(x.skill_id)):
+                arg_list = ", ".join(s.allowed_argument_names)
                 sanitized_skills.append(
-                    f"- Skill '{name}': {desc} ({json.dumps(safe_params, sort_keys=True)})"
+                    f"- Skill '{s.skill_id}' ({s.display_name}): {s.description} "
+                    f"(allowed_arguments: [{arg_list}])"
                 )
             if sanitized_skills:
                 candidates.append(
@@ -241,10 +202,8 @@ class RealtimeContextPatchBuilder:
         if memories:
             valid_memories: list[MemoryRecord] = []
             for m in sorted(memories, key=lambda x: str(x.memory_id)):
-                # Exclude tombstoned or inactive memories
                 if m.state != "active":
                     continue
-                # Exclude restricted, sensitive, or local-only memories from cloud egress
                 if m.sensitivity in _EXCLUDED_MEMORY_SENSITIVITIES:
                     continue
                 valid_memories.append(m)
@@ -256,51 +215,25 @@ class RealtimeContextPatchBuilder:
                         "memory",
                         "Relevant Context:\n" + "\n".join(memory_lines),
                         priority=5,
+                        source_record_ids=tuple(m.memory_id for m in valid_memories),
                         metadata={"record_count": len(valid_memories)},
                     )
                 )
 
-        # Budget enforcement: prune whole components in descending priority order (5 down to 1)
-        active_components = list(candidates)
-        while active_components:
-            total_bytes = sum(c.byte_count for c in active_components)
-            total_tokens = sum(c.estimated_tokens for c in active_components)
+        # Prune according to budget
+        retained = self._prune_to_budget(candidates)
 
-            if total_bytes <= self.max_bytes and total_tokens <= self.max_tokens:
-                break
-
-            # Find the highest priority integer (> 0) to drop
-            droppable = [c for c in active_components if c.priority > 0]
-            if not droppable:
-                # Only priority 0 (safety) remains; stop pruning
-                break
-
-            highest_prio_comp = max(droppable, key=lambda c: c.priority)
-            active_components.remove(highest_prio_comp)
-            _LOGGER.debug(
-                "Pruned context component '%s' (priority %d) to meet budget",
-                highest_prio_comp.kind,
-                highest_prio_comp.priority,
-            )
-
-        # Sort components by priority ascending (0, 1, 2, 3, 4, 5)
-        active_components.sort(key=lambda c: c.priority)
-
-        # Compute deterministic content hash across sorted components
-        hash_payload = "\n---\n".join(
-            f"[{c.kind}|{c.priority}]\n{c.text}" for c in active_components
-        )
-        content_hash = hashlib.sha256(hash_payload.encode("utf-8")).hexdigest()
-
-        final_bytes = sum(c.byte_count for c in active_components)
-        final_tokens = sum(c.estimated_tokens for c in active_components)
+        total_bytes = sum(c.byte_count for c in retained)
+        estimated_tokens = sum(c.estimated_tokens for c in retained)
+        patch_id = uuid4()
+        content_hash = self._compute_content_hash(retained)
 
         return RealtimeContextPatch(
-            patch_id=uuid4(),
-            components=tuple(active_components),
+            patch_id=patch_id,
+            components=tuple(retained),
             content_hash=content_hash,
-            total_bytes=final_bytes,
-            estimated_tokens=final_tokens,
+            total_bytes=total_bytes,
+            estimated_tokens=estimated_tokens,
             created_at=datetime.now(UTC),
         )
 
@@ -308,145 +241,97 @@ class RealtimeContextPatchBuilder:
         self,
         kind: str,
         text: str,
+        *,
         priority: int,
+        source_record_ids: tuple[UUID, ...] = (),
         metadata: dict[str, str | int | float | bool] | None = None,
     ) -> RealtimeContextComponent:
-        text_bytes = len(text.encode("utf-8"))
-        estimated_tokens = max(1, text_bytes // 3)
+        raw_bytes = text.encode("utf-8")
+        byte_count = len(raw_bytes)
+        estimated_tokens = max(1, byte_count // 3)
         return RealtimeContextComponent(
             kind=kind,
             text=text,
-            byte_count=text_bytes,
+            byte_count=byte_count,
             estimated_tokens=estimated_tokens,
             priority=priority,
+            source_record_ids=source_record_ids,
             metadata=metadata or {},
         )
 
+    def _prune_to_budget(
+        self, candidates: list[RealtimeContextComponent]
+    ) -> list[RealtimeContextComponent]:
+        retained = list(candidates)
 
-class CloudEgressPolicy:
-    """Enforces privacy boundary and records audit receipts for cloud realtime connections."""
+        def exceeds_budget(comps: list[RealtimeContextComponent]) -> bool:
+            t_bytes = sum(c.byte_count for c in comps)
+            t_tokens = sum(c.estimated_tokens for c in comps)
+            return t_bytes > self.max_bytes or t_tokens > self.max_tokens
+
+        if not exceeds_budget(retained):
+            return retained
+
+        # Drop lowest priority components first, retaining priority 0 (safety)
+        retained.sort(key=lambda c: c.priority)
+        while exceeds_budget(retained) and len(retained) > 1:
+            retained.pop()
+
+        return retained
+
+    def _compute_content_hash(self, components: list[RealtimeContextComponent]) -> str:
+        hasher = hashlib.sha256()
+        for c in components:
+            hasher.update(c.kind.encode("utf-8"))
+            hasher.update(c.text.encode("utf-8"))
+        return hasher.hexdigest()
+
+
+class CloudEgressGateway:
+    """Authoritative gate for cloud realtime context egress and provider session initiation."""
 
     def __init__(
         self,
-        policy_mode: Literal["allow", "ask", "deny"] = "ask",
         *,
+        policy_mode: Literal["allow", "ask", "deny"] = "ask",
         event_store: EventStore | None = None,
+        event_hub: EventHub | None = None,
         patch_builder: RealtimeContextPatchBuilder | None = None,
     ) -> None:
         self.policy_mode: Literal["allow", "ask", "deny"] = policy_mode
         self._event_store = event_store
+        self._event_hub = event_hub
         self._patch_builder = patch_builder or RealtimeContextPatchBuilder()
         self._grants: dict[UUID, EgressGrant] = {}
         self.audit_receipts: list[EgressReceiptPayload] = []
 
-    def grant(self, grant: EgressGrant) -> None:
-        """Register an explicit consent grant for a session."""
+    def grant_consent(self, grant: EgressGrant) -> None:
+        """Record an explicit consent grant for a session."""
         self._grants[grant.session_id] = grant
 
-    def revoke(self, session_id: UUID) -> None:
-        """Revoke a consent grant for a session."""
-        self._grants.pop(session_id, None)
+    def grant(self, grant: EgressGrant) -> None:
+        """Alias for grant_consent."""
+        self.grant_consent(grant)
 
-    def has_grant(self, session_id: UUID) -> bool:
-        """Check if an active consent grant exists for the session."""
-        return session_id in self._grants
+    def revoke_consent(self, session_id: UUID) -> None:
+        """Revoke any existing consent grant for a session."""
+        self._grants.pop(session_id, None)
 
     async def evaluate_and_open_session(
         self,
         backend: CloudRealtimeBackend,
-        request: RealtimeSessionOpenRequest,
+        intent_or_request: RealtimeSessionIntent | RealtimeSessionOpenRequest,
         *,
+        safety_contract: str | None = None,
         character_profile: CharacterProfile | None = None,
         kernel_snapshot: CharacterKernelSnapshot | None = None,
         memories: Sequence[MemoryRecord] | None = None,
-        skills: Sequence[dict[str, Any]] | None = None,
-        safety_contract: str | None = None,
+        skills: Sequence[RealtimeSkillCapability] | None = None,
     ) -> CloudRealtimeSession:
-        """Evaluates policy and opens a cloud session if allowed.
-
-        Guarantees:
-        - If 'deny': 0 calls to backend.open_session, raises PolicyDeniedError.
-        - If 'ask' and not granted: 0 calls to backend.open_session, raises ConsentRequiredError.
-        - If allowed or granted: compiles ContextPatch, emits audit receipt, opens session.
-        """
-        backend_id = backend.backend_id
-        session_id = request.session_id
-
-        # 1. Deny mode
-        if self.policy_mode == "deny":
-            receipt = EgressReceiptPayload(
-                provider_backend_id=backend_id,
-                patch_id=uuid4(),
-                component_kinds=[],
-                byte_count=0,
-                estimated_tokens=0,
-                policy_decision="deny",
-            )
-            self.audit_receipts.append(receipt)
-            if self._event_store is not None:
-                blocked_payload = EgressBlockedPayload(
-                    provider_backend_id=backend_id,
-                    policy_decision="deny",
-                    reason="Cloud egress denied by policy ('deny')",
-                )
-                blocked_event = EgressBlockedEvent(
-                    event_id=uuid4(),
-                    session_id=session_id,
-                    occurred_at=datetime.now(UTC),
-                    source="cloud_egress_policy",
-                    payload=blocked_payload,
-                )
-                try:
-                    await self._event_store.append(cast(EventModel, blocked_event))
-                except Exception as exc:
-                    _LOGGER.warning("Failed to persist egress blocked event: %s", exc)
-
-            raise PolicyDeniedError("Cloud egress denied by policy ('deny')")
-
-        # 2. Ask mode
-        approved_by: str | None = None
-        scope: str | None = None
-        if self.policy_mode == "ask":
-            grant = self._grants.get(session_id)
-            if grant is None:
-                receipt = EgressReceiptPayload(
-                    provider_backend_id=backend_id,
-                    patch_id=uuid4(),
-                    component_kinds=[],
-                    byte_count=0,
-                    estimated_tokens=0,
-                    policy_decision="consent_required",
-                )
-                self.audit_receipts.append(receipt)
-                if self._event_store is not None:
-                    blocked_payload = EgressBlockedPayload(
-                        provider_backend_id=backend_id,
-                        policy_decision="consent_required",
-                        reason="Explicit user consent required for cloud egress ('ask')",
-                    )
-                    blocked_event = EgressBlockedEvent(
-                        event_id=uuid4(),
-                        session_id=session_id,
-                        occurred_at=datetime.now(UTC),
-                        source="cloud_egress_policy",
-                        payload=blocked_payload,
-                    )
-                    try:
-                        await self._event_store.append(cast(EventModel, blocked_event))
-                    except Exception as exc:
-                        _LOGGER.warning("Failed to persist egress blocked event: %s", exc)
-
-                raise ConsentRequiredError(
-                    "Explicit user consent required for cloud egress ('ask')"
-                )
-            decision = "ask_approved"
-            approved_by = grant.approved_by
-            scope = grant.scope
-        else:
-            decision = "allow"
-
-        # 3. Authorized ('allow' or 'ask_approved'): Build Context Patch
-        patch = request.initial_context or self._patch_builder.build_patch(
+        """Alias for open_session."""
+        return await self.open_session(
+            backend,
+            intent_or_request,
             safety_contract=safety_contract,
             character_profile=character_profile,
             kernel_snapshot=kernel_snapshot,
@@ -454,54 +339,325 @@ class CloudEgressPolicy:
             skills=skills,
         )
 
-        # Extract memory IDs (IDs only, never raw plaintext)
-        memory_ids: list[UUID] = []
-        if memories:
-            memory_ids = [
-                m.memory_id
-                for m in memories
-                if m.state == "active" and m.sensitivity not in _EXCLUDED_MEMORY_SENSITIVITIES
-            ]
+    async def open_session(
+        self,
+        backend: CloudRealtimeBackend,
+        intent_or_request: RealtimeSessionIntent | RealtimeSessionOpenRequest,
+        *,
+        safety_contract: str | None = None,
+        character_profile: CharacterProfile | None = None,
+        kernel_snapshot: CharacterKernelSnapshot | None = None,
+        memories: Sequence[MemoryRecord] | None = None,
+        skills: Sequence[RealtimeSkillCapability] | None = None,
+    ) -> CloudRealtimeSession:
+        """Enforce policy, build context patch, write durable audit, and open provider session.
 
+        Fail-closed invariant: If audit persistence fails, zero provider calls are made.
+        """
+        if isinstance(intent_or_request, RealtimeSessionIntent):
+            intent = intent_or_request
+        else:
+            intent = RealtimeSessionIntent(
+                session_id=intent_or_request.session_id,
+                character_id=intent_or_request.character_id,
+                voice_id=intent_or_request.voice_id,
+                model=intent_or_request.model,
+                sample_rate=intent_or_request.sample_rate,
+                channels=intent_or_request.channels,
+            )
+
+        session_id = intent.session_id
+        backend_id = backend.backend_id
+
+        # 1. Deny mode -> strictly 0 backend calls
+        if self.policy_mode == "deny":
+            await self._record_blocked(
+                session_id=session_id,
+                backend_id=backend_id,
+                decision="deny",
+                reason="Cloud egress denied by policy ('deny')",
+            )
+            raise PolicyDeniedError("Cloud egress denied by policy ('deny')")
+
+        # 2. Ask mode -> verify scoped grant before proceeding
+        approved_by: str | None = None
+        scope: str | None = None
+        grant: EgressGrant | None = None
+        if self.policy_mode == "ask":
+            grant = self._grants.get(session_id)
+            if (
+                grant is None
+                or grant.backend_id != backend_id
+                or grant.purpose != "cloud_realtime"
+                or grant.expires_at <= datetime.now(UTC)
+                or grant.remaining_uses <= 0
+            ):
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason="Explicit user consent required for cloud egress ('ask')",
+                )
+                raise ConsentRequiredError(
+                    "Explicit user consent required for cloud egress ('ask')"
+                )
+            decision = "ask_approved"
+            approved_by = grant.approved_by
+            scope = f"uses_remaining:{grant.remaining_uses}"
+        else:
+            decision = "allow"
+
+        # 3. Build context patch through builder (no bypass allowed)
+        patch = self._patch_builder.build_patch(
+            safety_contract=safety_contract,
+            character_profile=character_profile,
+            kernel_snapshot=kernel_snapshot,
+            memories=memories,
+            skills=skills,
+        )
+
+        # In ask mode, check that all components are within allowed_component_kinds
+        if grant is not None:
+            component_kinds = {c.kind for c in patch.components}
+            if not component_kinds.issubset(grant.allowed_component_kinds):
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason=(
+                        f"Patch component kinds {component_kinds} "
+                        f"exceed grant allowed {grant.allowed_component_kinds}"
+                    ),
+                )
+                raise ConsentRequiredError(
+                    "Context patch components exceed granted component kinds"
+                )
+            grant.remaining_uses -= 1
+
+        # Extract only memory IDs present in the final retained patch
+        retained_memory_ids = [
+            mid for c in patch.components if c.kind == "memory" for mid in c.source_record_ids
+        ]
+
+        # 4. Durable audit write FIRST (Fail closed)
         receipt = EgressReceiptPayload(
             provider_backend_id=backend_id,
             patch_id=patch.patch_id,
             component_kinds=[c.kind for c in patch.components],
-            memory_record_ids=memory_ids,
+            memory_record_ids=retained_memory_ids,
             byte_count=patch.total_bytes,
             estimated_tokens=patch.estimated_tokens,
             policy_decision=decision,
             approved_by=approved_by,
             scope=scope,
+            occurred_at=datetime.now(UTC),
         )
         self.audit_receipts.append(receipt)
 
+        receipt_event = EgressReceiptEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            occurred_at=datetime.now(UTC),
+            source="cloud_egress_policy",
+            payload=receipt,
+        )
+
         if self._event_store is not None:
-            receipt_event = EgressReceiptEvent(
+            try:
+                await self._event_store.append(cast(EventModel, receipt_event))
+            except Exception as exc:
+                _LOGGER.error("Failed to durably persist egress receipt; failing closed: %s", exc)
+                raise RuntimeError(f"Egress audit persistence failed: {exc}") from exc
+
+        if self._event_hub is not None:
+            try:
+                payload = cast(dict[str, object], receipt_event.model_dump(mode="json"))
+                await self._event_hub.publish(payload)
+            except Exception as exc:
+                _LOGGER.warning("Failed to publish egress receipt to EventHub: %s", exc)
+
+        # 5. Open provider session with authorized request
+        auth_request = AuthorizedRealtimeSessionOpenRequest(
+            intent=intent,
+            context_patch=patch,
+            authorization_id=receipt_event.event_id,
+        )
+        return await backend.open_session(auth_request)
+
+    async def update_context(
+        self,
+        session: CloudRealtimeSession,
+        backend_id: str,
+        *,
+        safety_contract: str | None = None,
+        character_profile: CharacterProfile | None = None,
+        kernel_snapshot: CharacterKernelSnapshot | None = None,
+        memories: Sequence[MemoryRecord] | None = None,
+        skills: Sequence[RealtimeSkillCapability] | None = None,
+        coordinator: CloudRealtimeCoordinator | None = None,
+    ) -> None:
+        """Enforce policy, build context patch, write durable audit, and update active session."""
+        session_id = session.lineage.session_id
+
+        if self.policy_mode == "deny":
+            await self._record_blocked(
+                session_id=session_id,
+                backend_id=backend_id,
+                decision="deny",
+                reason="Cloud context update denied by policy ('deny')",
+            )
+            raise PolicyDeniedError("Cloud context update denied by policy ('deny')")
+
+        approved_by: str | None = None
+        scope: str | None = None
+        grant: EgressGrant | None = None
+        if self.policy_mode == "ask":
+            grant = self._grants.get(session_id)
+            if (
+                grant is None
+                or grant.backend_id != backend_id
+                or grant.purpose != "cloud_realtime"
+                or grant.expires_at <= datetime.now(UTC)
+                or grant.remaining_uses <= 0
+            ):
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason="Explicit user consent required for cloud context update ('ask')",
+                )
+                raise ConsentRequiredError(
+                    "Explicit user consent required for cloud context update ('ask')"
+                )
+            decision = "ask_approved"
+            approved_by = grant.approved_by
+            scope = f"uses_remaining:{grant.remaining_uses}"
+        else:
+            decision = "allow"
+
+        patch = self._patch_builder.build_patch(
+            safety_contract=safety_contract,
+            character_profile=character_profile,
+            kernel_snapshot=kernel_snapshot,
+            memories=memories,
+            skills=skills,
+        )
+
+        if grant is not None:
+            component_kinds = {c.kind for c in patch.components}
+            if not component_kinds.issubset(grant.allowed_component_kinds):
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason=(
+                        f"Patch component kinds {component_kinds} "
+                        f"exceed grant allowed {grant.allowed_component_kinds}"
+                    ),
+                )
+                raise ConsentRequiredError(
+                    "Context patch components exceed granted component kinds"
+                )
+            grant.remaining_uses -= 1
+
+        retained_memory_ids = [
+            mid for c in patch.components if c.kind == "memory" for mid in c.source_record_ids
+        ]
+
+        receipt = EgressReceiptPayload(
+            provider_backend_id=backend_id,
+            patch_id=patch.patch_id,
+            component_kinds=[c.kind for c in patch.components],
+            memory_record_ids=retained_memory_ids,
+            byte_count=patch.total_bytes,
+            estimated_tokens=patch.estimated_tokens,
+            policy_decision=decision,
+            approved_by=approved_by,
+            scope=scope,
+            occurred_at=datetime.now(UTC),
+        )
+        self.audit_receipts.append(receipt)
+
+        receipt_event = EgressReceiptEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            occurred_at=datetime.now(UTC),
+            source="cloud_egress_policy",
+            payload=receipt,
+        )
+
+        if self._event_store is not None:
+            try:
+                await self._event_store.append(cast(EventModel, receipt_event))
+            except Exception as exc:
+                _LOGGER.error("Failed to durably persist receipt; failing closed: %s", exc)
+                raise RuntimeError(f"Egress audit persistence failed: {exc}") from exc
+
+        if self._event_hub is not None:
+            try:
+                payload = cast(dict[str, object], receipt_event.model_dump(mode="json"))
+                await self._event_hub.publish(payload)
+            except Exception as exc:
+                _LOGGER.warning("Failed to publish egress receipt to EventHub: %s", exc)
+
+        try:
+            await session.update_context(patch)
+        except Exception as exc:
+            _LOGGER.warning(
+                "Provider context update failed on session %s: %s",
+                session_id,
+                exc,
+            )
+            error = StructuredError(
+                code="provider_context_update_failed",
+                message=f"Failed to update cloud realtime context: {exc}",
+                component="cloud_realtime",
+                retryable=True,
+            )
+            if coordinator is not None:
+                await coordinator.domain_sink.provider_error(session_id, error)
+            raise
+
+    async def _record_blocked(
+        self,
+        *,
+        session_id: UUID,
+        backend_id: str,
+        decision: str,
+        reason: str,
+    ) -> None:
+        receipt = EgressReceiptPayload(
+            provider_backend_id=backend_id,
+            patch_id=uuid4(),
+            component_kinds=[],
+            byte_count=0,
+            estimated_tokens=0,
+            policy_decision=decision,
+            occurred_at=datetime.now(UTC),
+        )
+        self.audit_receipts.append(receipt)
+        if self._event_store is not None:
+            blocked_payload = EgressBlockedPayload(
+                provider_backend_id=backend_id,
+                policy_decision=decision,
+                reason=reason,
+                occurred_at=datetime.now(UTC),
+            )
+            blocked_event = EgressBlockedEvent(
                 event_id=uuid4(),
                 session_id=session_id,
                 occurred_at=datetime.now(UTC),
                 source="cloud_egress_policy",
-                payload=receipt,
+                payload=blocked_payload,
             )
             try:
-                await self._event_store.append(cast(EventModel, receipt_event))
+                await self._event_store.append(cast(EventModel, blocked_event))
             except Exception as exc:
-                _LOGGER.warning("Failed to persist egress receipt event: %s", exc)
+                _LOGGER.warning("Failed to persist egress blocked event: %s", exc)
 
-        # 4. Open provider session with compiled patch
-        request_with_patch = RealtimeSessionOpenRequest(
-            session_id=request.session_id,
-            character_id=request.character_id,
-            turn_id=request.turn_id,
-            generation_id=request.generation_id,
-            initial_context=patch,
-            voice_id=request.voice_id,
-            model=request.model,
-            sample_rate=request.sample_rate,
-            channels=request.channels,
-        )
-        return await backend.open_session(request_with_patch)
+
+# Alias for backward compatibility
+CloudEgressPolicy = CloudEgressGateway
 
 
 async def update_session_context(
@@ -509,7 +665,7 @@ async def update_session_context(
     patch: RealtimeContextPatch,
     coordinator: CloudRealtimeCoordinator | None = None,
 ) -> None:
-    """Pushes an updated context patch to an active session, normalizing failures."""
+    """Legacy context update helper for direct test calls."""
     try:
         await session.update_context(patch)
     except Exception as exc:
