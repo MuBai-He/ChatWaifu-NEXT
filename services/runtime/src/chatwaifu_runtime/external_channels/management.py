@@ -21,16 +21,13 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionConfiguration,
     ChannelConnectionSnapshot,
     ChannelConnectionStatus,
-    ChannelDeliveryPartAcknowledgement,
-    ChannelDeliveryPartClaimRequest,
     ChannelDeliveryPartKind,
-    ChannelDeliveryPartStatus,
-    ChannelDeliveryStatus,
     ChannelInboundTextMessage,
-    ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
 
+from chatwaifu_runtime.eventing.hub import EventHub
+from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkError
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationPoll,
@@ -44,7 +41,17 @@ from chatwaifu_runtime.external_channels.credentials import (
     ChannelCredentialStore,
     ChannelCredentialStoreError,
 )
+from chatwaifu_runtime.external_channels.models import (
+    ChannelDeliveryPartRecord,
+    ChannelDeliveryPlanRecord,
+)
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.external_channels.scheduler import (
+    ChannelDeliveryScheduler,
+    DeliveryPartExecutionResult,
+    DeliveryPartExecutor,
+    DeliveryPartOutcome,
+)
 from chatwaifu_runtime.external_channels.service import (
     ChannelBusyError,
     ChannelDeliveryBusyError,
@@ -177,6 +184,110 @@ class _PendingEnrollment:
         )
 
 
+class WeixinDeliveryPartExecutor(DeliveryPartExecutor):
+    def __init__(
+        self,
+        management: ChannelManagementService,
+        connection_id: UUID,
+    ) -> None:
+        self._management = management
+        self._connection_id = connection_id
+
+    async def execute_part(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+    ) -> DeliveryPartExecutionResult:
+        if part.kind is not ChannelDeliveryPartKind.TEXT:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "unsupported_delivery_part_kind",
+                    f"Delivery part kind {part.kind} is not supported by WeChat adapter.",
+                    retryable=False,
+                ),
+            )
+        try:
+            credentials = await self._management._load_credentials(self._connection_id)
+        except Exception as exc:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
+                error=_structured_error(
+                    "channel_credentials_load_failed",
+                    str(exc),
+                    retryable=True,
+                ),
+            )
+        if credentials is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_credentials_missing",
+                    "The secure WeChat credentials are missing.",
+                    retryable=False,
+                ),
+            )
+        turn = await self._management._repository.get_turn(plan.delivery.channel_turn_id)
+        if turn is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_turn_missing",
+                    "The channel turn was not found.",
+                    retryable=False,
+                ),
+            )
+        context = credentials.pending_contexts.get(turn.external_message_id)
+        if context is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_context_missing",
+                    "WeChat reply context disappeared before delivery.",
+                    retryable=False,
+                ),
+            )
+        client_id = part.provider_client_id
+        text = part.payload.text
+        try:
+            provider_message_id = await self._management._weixin.send_text(
+                credentials,
+                recipient_user_id=context.recipient_user_id,
+                context_token=context.context_token,
+                client_id=client_id,
+                text=text,
+            )
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.DELIVERED,
+                provider_message_id=provider_message_id,
+            )
+        except asyncio.CancelledError:
+            raise
+        except WeixinILinkError as error:
+            outcome = (
+                DeliveryPartOutcome.RETRYABLE_ERROR
+                if error.retryable
+                else DeliveryPartOutcome.FATAL_ERROR
+            )
+            return DeliveryPartExecutionResult(
+                outcome=outcome,
+                error=_structured_error(
+                    error.code,
+                    error.message,
+                    retryable=error.retryable,
+                ),
+            )
+        except Exception as exc:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
+                error=_structured_error(
+                    "weixin.send_failed",
+                    str(exc) or "WeChat did not accept the reply part.",
+                    retryable=True,
+                ),
+            )
+
+
 class ChannelManagementService:
     """Own QR authorization and native provider tasks around the generic Gateway.
 
@@ -191,16 +302,25 @@ class ChannelManagementService:
         repository: ExternalChannelRepository,
         credentials: ChannelCredentialStore,
         weixin: WeixinILinkTransport,
+        *,
+        event_hub: EventHub | None = None,
+        event_publisher: EventPublisher | None = None,
     ) -> None:
         self._external_channels = external_channels
         self._repository = repository
         self._credentials = credentials
         self._weixin = weixin
+        self._event_hub = event_hub or getattr(external_channels, "event_hub", None)
+        self._event_publisher = event_publisher or getattr(external_channels, "publisher", None)
         self._auth_sessions: dict[UUID, _AuthorizationSession] = {}
         self._connection_tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._schedulers: dict[UUID, ChannelDeliveryScheduler] = {}
         self._auth_lock = asyncio.Lock()
         self._task_lock = asyncio.Lock()
         self._stopping = False
+
+    def get_scheduler(self, connection_id: UUID) -> ChannelDeliveryScheduler | None:
+        return self._schedulers.get(connection_id)
 
     async def start(self) -> None:
         self._stopping = False
@@ -242,6 +362,10 @@ class ChannelManagementService:
             connection_tasks = list(self._connection_tasks.values())
             for task in connection_tasks:
                 task.cancel()
+        schedulers = list(self._schedulers.values())
+        for sched in schedulers:
+            await sched.stop()
+        self._schedulers.clear()
         await _gather_cancelled(auth_tasks + connection_tasks)
         async with self._task_lock:
             self._connection_tasks.clear()
@@ -415,6 +539,19 @@ class ChannelManagementService:
 
     async def remove_connection(self, connection_id: UUID) -> None:
         await self._stop_connection_task(connection_id)
+        credentials = await self._load_credentials(connection_id)
+        if credentials is not None:
+            inflight_turns = await self._repository.list_inflight_turns(connection_id)
+            for turn in inflight_turns:
+                try:
+                    await self._external_channels.interrupt(
+                        connection_id,
+                        turn.channel_turn_id,
+                        access_token=credentials.gateway_access_token,
+                        reason="channel_adapter_stopped",
+                    )
+                except Exception:
+                    pass
         snapshot = await self._external_channels.get_connection(connection_id)
         if snapshot.configuration.provider_id != WEIXIN_ILINK_PROVIDER_ID:
             await self._external_channels.delete_connection(connection_id)
@@ -818,6 +955,22 @@ class ChannelManagementService:
             )
             return
         retries = 0
+        executor = WeixinDeliveryPartExecutor(self, connection_id)
+        publisher = (
+            self._event_publisher
+            if self._event_publisher is not None
+            else getattr(self._external_channels, "_publisher", None)
+        )
+        scheduler = ChannelDeliveryScheduler(
+            repository=self._repository,
+            publisher=publisher,
+            executor=executor,
+            event_hub=self._event_hub,
+            connection_id=connection_id,
+            on_plan_terminal=lambda plan: self._handle_plan_terminal(connection_id, plan),
+        )
+        self._schedulers[connection_id] = scheduler
+        await scheduler.start()
         try:
             try:
                 await self._weixin.notify_start(credentials)
@@ -837,7 +990,7 @@ class ChannelManagementService:
                     updates = await self._weixin.get_updates(credentials, cursor)
                     await self._process_updates(connection_id, credentials, updates)
                     # The checkpoint advances only after every normalized message
-                    # in this batch reached durable admission and delivery state.
+                    # in this batch reached durable admission.
                     await self._repository.set_adapter_cursor(
                         connection_id,
                         cursor=updates.cursor,
@@ -882,6 +1035,9 @@ class ChannelManagementService:
                 else:
                     await asyncio.sleep(0)
         finally:
+            active_sched = self._schedulers.pop(connection_id, None)
+            if active_sched is not None:
+                await active_sched.stop()
             try:
                 await self._weixin.notify_stop(credentials)
             except asyncio.CancelledError:
@@ -924,174 +1080,36 @@ class ChannelManagementService:
                 text=message.text,
                 received_at=message.received_at,
             )
-            receipt = None
             try:
-                receipt = await self._external_channels.ingest(
+                await self._external_channels.ingest(
                     inbound, access_token=credentials.gateway_access_token
                 )
-                while True:
-                    snapshot = await self._external_channels.wait_for_turn(
-                        connection_id,
-                        receipt.channel_turn_id,
-                        access_token=credentials.gateway_access_token,
-                        wait_seconds=30,
-                    )
-                    if snapshot.status not in {
-                        ChannelTurnStatus.ACCEPTED,
-                        ChannelTurnStatus.PROCESSING,
-                        ChannelTurnStatus.CANCELLING,
-                    }:
-                        break
-            except asyncio.CancelledError:
-                if receipt is not None:
-                    cleanup = asyncio.create_task(
-                        self._external_channels.interrupt(
-                            connection_id,
-                            receipt.channel_turn_id,
-                            access_token=credentials.gateway_access_token,
-                            reason="channel_adapter_stopped",
-                        )
-                    )
-                    try:
-                        await asyncio.shield(cleanup)
-                    except asyncio.CancelledError:
-                        await cleanup
-                    except ExternalChannelError:
-                        logger.warning(
-                            "failed to interrupt WeChat turn %s during adapter shutdown",
-                            receipt.channel_turn_id,
-                        )
+            except (ChannelBusyError, ChannelDeliveryBusyError):
                 raise
-            if snapshot.status is not ChannelTurnStatus.COMPLETED:
+            except ExternalChannelError:
+                logger.warning(
+                    "failed to ingest inbound WeChat message %s",
+                    message.external_message_id,
+                )
                 credentials = await self._forget_context(
                     connection_id, credentials, message.external_message_id
                 )
                 continue
-            if snapshot.delivery_id is None or snapshot.reply_text is None:
-                raise RuntimeError("completed channel turn has no deliverable reply")
-            if snapshot.delivery_status is ChannelDeliveryStatus.DELIVERED:
-                credentials = await self._forget_context(
-                    connection_id, credentials, message.external_message_id
-                )
-                continue
-            context = credentials.pending_contexts.get(message.external_message_id)
-            if context is None:
-                raise RuntimeError("WeChat reply context disappeared before delivery")
-            while True:
-                lease_id = uuid4()
-                claim = ChannelDeliveryPartClaimRequest(
-                    delivery_id=snapshot.delivery_id,
-                    part_id=None,
-                    lease_id=lease_id,
-                    lease_seconds=60,
-                )
-                part = await self._external_channels.claim_next_delivery_part(
-                    connection_id,
-                    snapshot.delivery_id,
-                    claim,
-                    access_token=credentials.gateway_access_token,
-                )
-                if part is None:
-                    plan = await self._external_channels.get_delivery_plan(
-                        connection_id,
-                        snapshot.delivery_id,
-                        access_token=credentials.gateway_access_token,
-                    )
-                    if plan.status in {
-                        ChannelDeliveryStatus.DELIVERED,
-                        ChannelDeliveryStatus.FAILED,
-                        ChannelDeliveryStatus.CANCELLED,
-                    }:
-                        credentials = await self._forget_context(
-                            connection_id, credentials, message.external_message_id
-                        )
-                    break
+            scheduler = self.get_scheduler(connection_id)
+            if scheduler is not None:
+                scheduler.wake()
 
-                if part.status is not ChannelDeliveryPartStatus.SENDING:
-                    break
-
-                if part.kind is not ChannelDeliveryPartKind.TEXT:
-                    acknowledgement = ChannelDeliveryPartAcknowledgement(
-                        delivery_id=snapshot.delivery_id,
-                        part_id=part.part_id,
-                        lease_id=lease_id,
-                        status=ChannelDeliveryPartStatus.FAILED,
-                        error=_structured_error(
-                            "unsupported_delivery_part_kind",
-                            f"Delivery part kind {part.kind} is not supported by WeChat adapter.",
-                            retryable=False,
-                        ),
-                        acknowledged_at=datetime.now(UTC),
-                    )
-                    await self._external_channels.acknowledge_delivery_part(
-                        connection_id,
-                        snapshot.delivery_id,
-                        acknowledgement,
-                        access_token=credentials.gateway_access_token,
-                    )
-                    break
-
-                client_id = part.provider_client_id
-                try:
-                    provider_message_id = await self._weixin.send_text(
-                        credentials,
-                        recipient_user_id=context.recipient_user_id,
-                        context_token=context.context_token,
-                        client_id=client_id,
-                        text=part.payload.text,
-                    )
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    acknowledgement = ChannelDeliveryPartAcknowledgement(
-                        delivery_id=snapshot.delivery_id,
-                        part_id=part.part_id,
-                        lease_id=lease_id,
-                        status=ChannelDeliveryPartStatus.FAILED,
-                        error=_structured_error(
-                            "weixin.send_failed",
-                            "WeChat did not accept the reply part.",
-                            retryable=True,
-                        ),
-                        acknowledged_at=datetime.now(UTC),
-                    )
-                    await self._external_channels.acknowledge_delivery_part(
-                        connection_id,
-                        snapshot.delivery_id,
-                        acknowledgement,
-                        access_token=credentials.gateway_access_token,
-                    )
-                    raise
-
-                acknowledgement = ChannelDeliveryPartAcknowledgement(
-                    delivery_id=snapshot.delivery_id,
-                    part_id=part.part_id,
-                    lease_id=lease_id,
-                    status=ChannelDeliveryPartStatus.DELIVERED,
-                    provider_message_id=provider_message_id,
-                    acknowledged_at=datetime.now(UTC),
-                )
-                await self._external_channels.acknowledge_delivery_part(
-                    connection_id,
-                    snapshot.delivery_id,
-                    acknowledgement,
-                    access_token=credentials.gateway_access_token,
-                )
-
-                plan = await self._external_channels.get_delivery_plan(
-                    connection_id,
-                    snapshot.delivery_id,
-                    access_token=credentials.gateway_access_token,
-                )
-                if plan.status in {
-                    ChannelDeliveryStatus.DELIVERED,
-                    ChannelDeliveryStatus.FAILED,
-                    ChannelDeliveryStatus.CANCELLED,
-                }:
-                    credentials = await self._forget_context(
-                        connection_id, credentials, message.external_message_id
-                    )
-                    break
+    async def _handle_plan_terminal(
+        self,
+        connection_id: UUID,
+        plan: ChannelDeliveryPlanRecord,
+    ) -> None:
+        turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
+        if turn is None:
+            return
+        credentials = await self._load_credentials(connection_id)
+        if credentials is not None:
+            await self._forget_context(connection_id, credentials, turn.external_message_id)
 
     async def _load_credentials(self, connection_id: UUID) -> WeixinCredentials | None:
         serialized = await self._credentials.get(_credential_reference(connection_id))

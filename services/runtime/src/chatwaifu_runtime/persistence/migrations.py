@@ -861,6 +861,19 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON channel_delivery_parts(status, lease_expires_at)
             WHERE status = 'sending';
 
+        -- Reconcile legacy parents before backfill
+        UPDATE channel_deliveries
+        SET status = 'pending', lease_id = NULL, lease_expires_at = NULL
+        WHERE status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL);
+
+        UPDATE channel_deliveries
+        SET delivered_at = updated_at
+        WHERE status = 'delivered' AND delivered_at IS NULL;
+
+        UPDATE channel_deliveries
+        SET lease_id = NULL, lease_expires_at = NULL
+        WHERE status IN ('pending', 'delivered', 'failed', 'cancelled');
+
         WITH delivery_source AS (
             SELECT
                 d.delivery_id,
@@ -872,7 +885,7 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
                 d.last_error_json,
                 d.created_at,
                 d.updated_at,
-                d.delivered_at,
+                COALESCE(d.delivered_at, d.updated_at) AS delivered_at,
                 COALESCE(NULLIF(t.reply_text, ''), '(empty reply)') AS text,
                 lower(hex(randomblob(16))) AS raw_hex
             FROM channel_deliveries AS d
@@ -907,35 +920,20 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             delivery_id,
             0,
             'text',
-            json_object('kind', 'text', 'text', text),
+            json_object('schema_version', '1.0', 'kind', 'text', 'text', text),
             1,
-            CASE
-                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL)
-                    THEN 'pending'
-                WHEN status = 'delivered' AND delivered_at IS NULL
-                    THEN 'pending'
-                ELSE status
-            END,
+            status,
             0,
             NULL,
             attempt,
-            CASE
-                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL) THEN NULL
-                ELSE lease_id
-            END,
-            CASE
-                WHEN status = 'sending' AND (lease_id IS NULL OR lease_expires_at IS NULL) THEN NULL
-                ELSE lease_expires_at
-            END,
+            CASE WHEN status = 'sending' THEN lease_id ELSE NULL END,
+            CASE WHEN status = 'sending' THEN lease_expires_at ELSE NULL END,
             'chatwaifu-' || replace(delivery_id, '-', '') || '-000',
             provider_message_id,
             last_error_json,
             created_at,
             updated_at,
-            CASE
-                WHEN status = 'delivered' AND delivered_at IS NULL THEN NULL
-                ELSE delivered_at
-            END
+            CASE WHEN status = 'delivered' THEN delivered_at ELSE NULL END
         FROM delivery_source;
         """,
     ),

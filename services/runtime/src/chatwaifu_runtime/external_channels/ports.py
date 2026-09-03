@@ -23,10 +23,13 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
+    ChannelDeliveryPartDeferRequest,
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
     ChannelTurnRecord,
+    CompleteTurnResult,
+    DeliveryTransitionResult,
 )
 
 
@@ -86,7 +89,9 @@ class ExternalChannelRepository(Protocol):
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None: ...
 
-    async def list_inflight_turns(self) -> tuple[ChannelTurnRecord, ...]: ...
+    async def list_inflight_turns(
+        self, connection_id: UUID | None = None
+    ) -> tuple[ChannelTurnRecord, ...]: ...
 
     async def has_inflight_turn(self, binding_id: UUID) -> bool: ...
 
@@ -104,7 +109,7 @@ class ExternalChannelRepository(Protocol):
         delivery_id: UUID,
         completed_at: datetime,
         parts: Sequence[ChannelDeliveryPartDraft] | None = None,
-    ) -> ChannelTurnRecord: ...
+    ) -> CompleteTurnResult | ChannelTurnRecord: ...
 
     async def create_delivery_plan(
         self,
@@ -113,7 +118,7 @@ class ExternalChannelRepository(Protocol):
         delivery_id: UUID,
         parts: Sequence[ChannelDeliveryPartDraft],
         created_at: datetime,
-    ) -> ChannelDeliveryPlanRecord: ...
+    ) -> DeliveryTransitionResult | ChannelDeliveryPlanRecord: ...
 
     async def get_delivery_plan(self, delivery_id: UUID) -> ChannelDeliveryPlanRecord | None: ...
 
@@ -130,20 +135,49 @@ class ExternalChannelRepository(Protocol):
         claim: ChannelDeliveryPartClaimRequest,
         *,
         claimed_at: datetime,
-    ) -> ChannelDeliveryPartRecord | None: ...
+    ) -> DeliveryTransitionResult | None: ...
 
     async def acknowledge_delivery_part(
         self,
         acknowledgement: ChannelDeliveryPartAcknowledgement,
         *,
         updated_at: datetime,
-    ) -> tuple[ChannelDeliveryPlanRecord, ChannelDeliveryPartRecord]: ...
+    ) -> DeliveryTransitionResult: ...
+
+    async def defer_delivery_part(
+        self,
+        defer_request: ChannelDeliveryPartDeferRequest,
+        *,
+        updated_at: datetime,
+    ) -> DeliveryTransitionResult: ...
 
     async def cancel_remaining_delivery_parts(
         self,
         delivery_id: UUID,
         cancel_request: ChannelDeliveryPartsCancelRequest,
-    ) -> ChannelDeliveryPlanRecord: ...
+    ) -> DeliveryTransitionResult: ...
+
+    async def find_active_delivery_plan_for_binding(
+        self,
+        binding_id: UUID,
+    ) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def list_active_delivery_plans_for_binding(
+        self,
+        binding_id: UUID,
+    ) -> tuple[ChannelDeliveryPlanRecord, ...]: ...
+
+    async def list_nonterminal_delivery_plans(
+        self,
+        connection_id: UUID | None = None,
+        *,
+        limit: int = 50,
+    ) -> tuple[ChannelDeliveryPlanRecord, ...]: ...
+
+    async def next_delivery_wakeup_at(
+        self,
+        connection_id: UUID | None = None,
+    ) -> datetime | None: ...
 
     async def recover_expired_delivery_part_leases(
         self,

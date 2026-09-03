@@ -195,13 +195,13 @@ async def test_multipart_service_flow_and_events(
     container = RuntimeContainer(runtime_settings)
     container.external_channels.delivery_plan_factory = _ThreePartsPlanFactory()
     emitted_events: list[Any] = []
-    original_emit = container.event_publisher.emit
+    original_publish = container.event_publisher.publish_persisted
 
     async def _capture_event(event: Any) -> Any:
         emitted_events.append(event)
-        return await original_emit(event)
+        return await original_publish(event)
 
-    monkeypatch.setattr(container.event_publisher, "emit", _capture_event)
+    monkeypatch.setattr(container.event_publisher, "publish_persisted", _capture_event)
     await container.start()
     try:
         connection_id = uuid4()
@@ -276,7 +276,7 @@ async def test_multipart_service_flow_and_events(
         )
         assert plan.delivered_part_count == 1
         assert plan.next_pending_ordinal == 1
-        assert plan.status is ChannelDeliveryStatus.SENDING
+        assert plan.status is ChannelDeliveryStatus.PENDING
 
         # Claim and deliver part 1
         lease_1 = uuid4()
@@ -359,13 +359,13 @@ async def test_multipart_tail_cancellation_service_level(
     container = RuntimeContainer(runtime_settings)
     container.external_channels.delivery_plan_factory = _ThreePartsPlanFactory()
     emitted_events: list[Any] = []
-    original_emit = container.event_publisher.emit
+    original_publish = container.event_publisher.publish_persisted
 
     async def _capture_event(event: Any) -> Any:
         emitted_events.append(event)
-        return await original_emit(event)
+        return await original_publish(event)
 
-    monkeypatch.setattr(container.event_publisher, "emit", _capture_event)
+    monkeypatch.setattr(container.event_publisher, "publish_persisted", _capture_event)
     await container.start()
     try:
         connection_id = uuid4()
@@ -515,6 +515,13 @@ async def test_weixin_management_loop_multipart_sequential_delivery(
     try:
         await asyncio.wait_for(cursor_advanced.wait(), timeout=10)
 
+        # With decoupled architecture, cursor advances immediately upon durable admission.
+        # Wait for background scheduler to deliver all 3 parts.
+        for _ in range(50):
+            if len(transport.sent_messages) >= 3:
+                break
+            await asyncio.sleep(0.1)
+
         # All 3 parts must have been sent in sequential order
         assert len(transport.sent_messages) == 3
         part_0_sent = transport.sent_messages[0]
@@ -539,7 +546,14 @@ async def test_weixin_management_loop_multipart_sequential_delivery(
         assert part_2_sent["client_id"].endswith("-002")
 
         # After all parts delivered, context cleared and cursor advanced
-        serialized = await store.get(f"weixin_ilink:{connection_id}")
+        for _ in range(50):
+            serialized = await store.get(f"weixin_ilink:{connection_id}")
+            if (
+                serialized is not None
+                and WeixinCredentials.from_json(serialized).pending_contexts == {}
+            ):
+                break
+            await asyncio.sleep(0.1)
         assert serialized is not None
         assert WeixinCredentials.from_json(serialized).pending_contexts == {}
         assert (
@@ -566,16 +580,26 @@ async def test_weixin_management_loop_unsupported_part_kind_fails_closed(
     )
     container.channel_management = management
 
-    original_claim = container.external_channels.claim_next_delivery_part
+    from dataclasses import replace
+
+    from chatwaifu_runtime.external_channels.models import DeliveryTransitionResult
+
+    original_claim = container.external_channel_repository.claim_next_delivery_part
 
     async def _claim_with_unsupported_kind(*args: Any, **kwargs: Any) -> Any:
-        claimed = await original_claim(*args, **kwargs)
-        if claimed is not None:
-            return claimed.model_copy(update={"kind": ChannelDeliveryPartKind.IMAGE})
-        return None
+        res = await original_claim(*args, **kwargs)
+        if res is not None and res.part is not None:
+            fake_part = replace(res.part, kind=ChannelDeliveryPartKind.IMAGE)
+            return DeliveryTransitionResult(
+                plan=res.plan,
+                part=fake_part,
+                applied=res.applied,
+                persisted_events=res.persisted_events,
+            )
+        return res
 
     monkeypatch.setattr(
-        container.external_channels,
+        container.external_channel_repository,
         "claim_next_delivery_part",
         _claim_with_unsupported_kind,
     )

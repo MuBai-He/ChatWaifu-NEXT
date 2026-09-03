@@ -321,6 +321,7 @@ async def test_migration_22_non_empty_database_backfill(tmp_path: Path) -> None:
         assert part_1["kind"] == "text"
         p1_payload = json.loads(str(part_1["payload_json"]))
         assert p1_payload["text"] == "reply 1"
+        assert p1_payload.get("schema_version") == "1.0"
         assert part_1["status"] == "delivered"
         assert part_1["provider_message_id"] == "prov-msg-1"
         assert part_1["provider_client_id"] == f"chatwaifu-{del_1_id.replace('-', '')}-000"

@@ -455,13 +455,26 @@ async def test_adapter_stop_interrupts_admitted_turn_before_remove_and_cursor_ad
     )
     try:
         await asyncio.wait_for(entered_wait.wait(), timeout=2)
-        assert await container.external_channel_repository.get_adapter_cursor(connection_id) == ""
+        for _ in range(20):
+            if (
+                await container.external_channel_repository.get_adapter_cursor(connection_id)
+                == "cursor-after"
+            ):
+                break
+            await asyncio.sleep(0.05)
+        assert (
+            await container.external_channel_repository.get_adapter_cursor(connection_id)
+            == "cursor-after"
+        )
 
         await management.remove_connection(connection_id)
 
         assert interrupted.is_set()
         assert await store.get(f"weixin_ilink:{connection_id}") is None
-        assert await container.external_channel_repository.get_adapter_cursor(connection_id) == ""
+        assert (
+            await container.external_channel_repository.get_adapter_cursor(connection_id)
+            == "cursor-after"
+        )
         with pytest.raises(ChannelNotFoundError):
             await container.external_channels.get_connection(connection_id)
     finally:
@@ -524,6 +537,7 @@ async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_con
     )
     try:
         await asyncio.wait_for(cursor_advanced.wait(), timeout=5)
+        await asyncio.wait_for(transport.sent.wait(), timeout=5)
 
         assert len(transport.sent_messages) == 1
         sent = transport.sent_messages[0]
@@ -547,7 +561,14 @@ async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_con
             await container.external_channel_repository.get_adapter_cursor(connection_id)
             == "cursor-after"
         )
-        serialized = await store.get(f"weixin_ilink:{connection_id}")
+        for _ in range(50):
+            serialized = await store.get(f"weixin_ilink:{connection_id}")
+            if (
+                serialized is not None
+                and WeixinCredentials.from_json(serialized).pending_contexts == {}
+            ):
+                break
+            await asyncio.sleep(0.1)
         assert serialized is not None
         assert WeixinCredentials.from_json(serialized).pending_contexts == {}
     finally:

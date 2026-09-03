@@ -17,6 +17,7 @@ from chatwaifu_protocol.channels import (
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
+from chatwaifu_protocol.events import GenericCoreEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,3 +173,50 @@ class ChannelDeliveryPlanRecord:
     @property
     def delivered_at(self) -> datetime | None:
         return self.delivery.delivered_at
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelDeliveryPartDeferRequest:
+    delivery_id: UUID
+    part_id: UUID
+    lease_id: UUID
+    not_before_at: datetime
+    error: StructuredError | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryTransitionResult:
+    plan: ChannelDeliveryPlanRecord
+    part: ChannelDeliveryPartRecord | None
+    applied: bool
+    persisted_events: tuple[GenericCoreEvent, ...] = ()
+
+    def __iter__(self):
+        return iter((self.plan, self.part))
+
+    def __getitem__(self, index: int) -> object:
+        return (self.plan, self.part)[index]
+
+    def __getattr__(self, name: str) -> object:
+        if self.part is not None and hasattr(self.part, name):
+            return getattr(self.part, name)
+        if hasattr(self.plan, name):
+            return getattr(self.plan, name)
+        raise AttributeError(f"'DeliveryTransitionResult' object has no attribute '{name}'")
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteTurnResult:
+    turn: ChannelTurnRecord
+    persisted_events: tuple[GenericCoreEvent, ...] = ()
+
+    def __iter__(self):
+        return iter((self.turn, self.persisted_events))
+
+    def __getitem__(self, index: int) -> object:
+        return (self.turn, self.persisted_events)[index]
+
+    def __getattr__(self, name: str) -> object:
+        if hasattr(self.turn, name):
+            return getattr(self.turn, name)
+        raise AttributeError(f"'CompleteTurnResult' object has no attribute '{name}'")

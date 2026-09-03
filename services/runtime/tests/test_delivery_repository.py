@@ -425,7 +425,7 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             updated_at=now,
         )
-        assert plan1.status == ChannelDeliveryStatus.SENDING
+        assert plan1.status == ChannelDeliveryStatus.PENDING
         assert plan1.delivered_part_count == 1
 
         # Deliver Part 1
@@ -449,7 +449,7 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             updated_at=now,
         )
-        assert plan2.status == ChannelDeliveryStatus.SENDING
+        assert plan2.status == ChannelDeliveryStatus.PENDING
         assert plan2.delivered_part_count == 2
 
         # Deliver Part 2
