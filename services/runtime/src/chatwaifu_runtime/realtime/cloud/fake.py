@@ -184,6 +184,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         phase: Literal["delta", "final"] = "final",
         confidence: float = 0.95,
         generation_id: UUID | None = None,
+        event_id: str | None = None,
     ) -> None:
         self.inject_event(
             UserTranscriptEvent(
@@ -195,7 +196,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     text=text,
                     source="provider",
                     confidence=confidence,
-                )
+                ),
+                event_id=event_id,
             )
         )
 
@@ -204,6 +206,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         generation_id: UUID,
         *,
         provider_response_id: str | None = None,
+        event_id: str | None = None,
     ) -> str:
         resp_id = provider_response_id or f"resp_{uuid4().hex[:8]}"
         self.lineage = RealtimeSessionLineage(
@@ -222,6 +225,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                 session_id=self.session_id,
                 generation_id=generation_id,
                 provider_response_id=resp_id,
+                event_id=event_id,
             )
         )
         return resp_id
@@ -232,6 +236,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         generation_id: UUID,
         *,
         phase: Literal["delta", "final"] = "delta",
+        event_id: str | None = None,
     ) -> None:
         self.inject_event(
             AssistantTranscriptEvent(
@@ -242,7 +247,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     phase=phase,
                     text=text,
                     source="provider",
-                )
+                ),
+                event_id=event_id,
             )
         )
 
@@ -256,6 +262,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         sample_rate: int = 24_000,
         channels: int = 1,
         is_final: bool = False,
+        event_id: str | None = None,
     ) -> None:
         self.inject_event(
             OutputAudioEvent(
@@ -268,7 +275,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     channels=channels,
                     audio=audio,
                     is_final=is_final,
-                )
+                ),
+                event_id=event_id,
             )
         )
 
@@ -278,6 +286,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         *,
         provider_response_id: str | None = None,
         usage: RealtimeUsage | None = None,
+        event_id: str | None = None,
     ) -> None:
         resp_id = (
             provider_response_id or self.lineage.provider_response_id or f"resp_{uuid4().hex[:8]}"
@@ -288,6 +297,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                 generation_id=generation_id,
                 provider_response_id=resp_id,
                 usage=usage,
+                event_id=event_id,
             )
         )
 
@@ -299,6 +309,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         generation_id: UUID | None = None,
         retryable: bool = False,
         details: dict[str, str] | None = None,
+        event_id: str | None = None,
     ) -> None:
         self.inject_event(
             ProviderErrorEvent(
@@ -310,7 +321,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     message=message,
                     retryable=retryable,
                     details=details or {},
-                )
+                ),
+                event_id=event_id,
             )
         )
 

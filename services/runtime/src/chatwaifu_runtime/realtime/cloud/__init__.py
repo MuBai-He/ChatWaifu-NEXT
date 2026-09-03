@@ -24,30 +24,49 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     SessionClosedEvent,
     SessionDegradedEvent,
     SessionReadyEvent,
+    UsageRecordedEvent,
     UserTranscriptEvent,
+)
+from chatwaifu_runtime.realtime.cloud.coordinator import (
+    CloudRealtimeCoordinator,
+    InMemoryDomainSink,
+    InMemoryMediaSink,
+    RealtimeDomainSink,
+    RealtimeMediaSink,
 )
 from chatwaifu_runtime.realtime.cloud.fake import (
     FakeCloudRealtimeBackend,
     FakeCloudRealtimeSession,
 )
+from chatwaifu_runtime.realtime.cloud.mirror import (
+    GenerationBinding,
+    RealtimeSessionMirror,
+)
 
 __all__ = [
     "AssistantTranscriptEvent",
     "CloudRealtimeBackend",
+    "CloudRealtimeCoordinator",
     "CloudRealtimeSession",
     "FakeCloudRealtimeBackend",
     "FakeCloudRealtimeSession",
+    "GenerationBinding",
+    "InMemoryDomainSink",
+    "InMemoryMediaSink",
     "InputAudioCommittedEvent",
     "OutputAudioEvent",
     "ProviderErrorEvent",
     "RealtimeCapabilities",
     "RealtimeContextComponent",
     "RealtimeContextPatch",
+    "RealtimeDomainSink",
     "RealtimeInputAudioFrame",
+    "RealtimeMediaSink",
     "RealtimeOutputAudioFrame",
     "RealtimeProviderError",
     "RealtimeProviderEvent",
     "RealtimeSessionLineage",
+    "RealtimeSessionMirror",
     "RealtimeSessionOpenRequest",
     "RealtimeTranscriptCandidate",
     "RealtimeUsage",
@@ -57,5 +76,6 @@ __all__ = [
     "SessionClosedEvent",
     "SessionDegradedEvent",
     "SessionReadyEvent",
+    "UsageRecordedEvent",
     "UserTranscriptEvent",
 ]

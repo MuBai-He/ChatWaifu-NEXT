@@ -140,8 +140,8 @@ class RealtimeUsage:
     """Resource consumption report for a cloud realtime generation/session."""
 
     session_id: UUID
-    generation_id: UUID | None
     backend_id: str
+    generation_id: UUID | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     input_audio_seconds: float = 0.0
@@ -154,10 +154,10 @@ class RealtimeProviderError:
     """Normalized provider-side error."""
 
     session_id: UUID
-    generation_id: UUID | None
     backend_id: str
     code: str
     message: str
+    generation_id: UUID | None = None
     retryable: bool = False
     details: dict[str, str] = field(default_factory=dict[str, str])
 
@@ -171,6 +171,7 @@ class SessionReadyEvent:
     provider_session_id: str
     backend_id: str
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +180,7 @@ class SessionClosedEvent:
     backend_id: str
     reason: str
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +189,7 @@ class SessionDegradedEvent:
     backend_id: str
     reason: str
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -194,12 +197,14 @@ class InputAudioCommittedEvent:
     session_id: UUID
     turn_id: UUID | None = None
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class UserTranscriptEvent:
     candidate: RealtimeTranscriptCandidate
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,18 +213,21 @@ class ResponseStartedEvent:
     generation_id: UUID
     provider_response_id: str
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class OutputAudioEvent:
     frame: RealtimeOutputAudioFrame
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class AssistantTranscriptEvent:
     candidate: RealtimeTranscriptCandidate
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +237,7 @@ class ResponseCompletedEvent:
     provider_response_id: str
     usage: RealtimeUsage | None = None
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,18 +247,21 @@ class ResponseCancelledEvent:
     provider_response_id: str | None = None
     reason: str = "cancelled"
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class UsageRecordedEvent:
     usage: RealtimeUsage
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class ProviderErrorEvent:
     error: RealtimeProviderError
     occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
 
 
 type RealtimeProviderEvent = (

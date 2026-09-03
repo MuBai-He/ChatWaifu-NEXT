@@ -16,6 +16,7 @@ reaches local STT (faster-whisper), feeds Character Kernel and LLM, generates sp
 Emerging cloud multimodal models (such as OpenAI Realtime and Gemini Live) offer unified speech-to-speech
 streaming with low voice-to-voice latency. However, treating a cloud realtime provider as the conversational
 runtime would break ChatWaifu invariants:
+
 1. The cloud provider has no concept of ChatWaifu persistent character canon, affect dynamics, relationship
    progression, or structured episodic memory.
 2. Direct client-to-cloud connections (from Web or Tauri) would leak provider credentials and bypass
@@ -32,17 +33,20 @@ cloud provider is strictly an external speech-to-speech adapter rather than an o
 ## Decision
 
 ### 1. Runtime remains the sole domain authority
+
 `session_id`, `turn_id`, `generation_id`, and `skill_run_id` are minted and owned exclusively by ChatWaifu
 Runtime. Opaque provider session and response identifiers are tracked in an internal `RealtimeSessionLineage`
 and session mirror mapping, and are never promoted to domain primary keys.
 
 ### 2. Provider isolation and zero SDK leakage
+
 Neither Character Kernel, Memory System, Conversation Store, EventHub, nor frontend clients may import
 provider SDKs or parse proprietary provider JSON events. All communication with cloud backends passes
 through a typed, provider-neutral protocol layer (`CloudRealtimeBackend` and `CloudRealtimeSession`).
 Raw provider events are normalized at the adapter/mirror boundary before entering domain sinks.
 
 ### 3. Separation of media plane and persistent domain facts
+
 High-frequency audio frames (PCM) flow strictly through the Pipecat media plane and bounded in-memory queues.
 Raw PCM is never written to SQLite `events`, `outbox`, or audit tables.
 Transcript deltas are treated as ephemeral telemetry forwarded over EventHub for real-time UI display.
@@ -50,7 +54,9 @@ Only final transcripts, terminal generation outcomes (`completed`, `cancelled`, 
 and egress audit receipts are eligible for persistent storage.
 
 ### 4. Cancellation precedence and generation tombstones
+
 When a user barges in or the runtime cancels an ongoing turn:
+
 1. The active `generation_id` is immediately recorded in the local invalidation registry (tombstone).
 2. An `interrupt` signal is dispatched to the provider session.
 3. Media buffers downstream are purged to halt playback immediately.
@@ -59,7 +65,9 @@ When a user barges in or the runtime cancels an ongoing turn:
    resurrect a superseded generation.
 
 ### 5. Explicit cloud egress policy and audit receipts
+
 Cloud egress is governed by `privacy.cloud_egress` (`allow`, `ask`, `deny`):
+
 - `deny`: Cloud backends are completely blocked; backend `open_session` calls must be strictly 0, and no
   audio or context may leave the machine.
 - `ask`: A cloud session cannot be opened without explicit user consent. In the absence of an active
@@ -70,13 +78,16 @@ Cloud egress is governed by `privacy.cloud_egress` (`allow`, `ask`, `deny`):
   record hashes, byte/token count, and policy decision, without duplicating sensitive plaintext.
 
 ### 6. Phased rollout: Fake first, single provider next, multi-provider later
+
 To ensure testability and prevent half-baked implementations:
+
 - Phase 13.0–13.3 builds the contract, deterministic `FakeCloudRealtimeBackend`, session mirror, Pipecat media
   bridge, context builder, and egress policy.
 - Phase 13.4+ will integrate a single real provider adapter behind this interface.
 - Automatic routing and multi-provider failover are explicitly deferred to later phases.
 
 ### 7. Voice identity differentiation
+
 Cloud realtime native voices are tagged as external provider voices and clearly distinguished from
 character neural TTS (Qwen3-TTS / GPT-SoVITS). Character visual novel presentation and Live2D lipsync
 continue to consume normalized playback streams regardless of the underlying voice source.
