@@ -850,7 +850,7 @@ def test_18_no_bypass_outside_egress_gateway() -> None:
     violating_update: list[str] = []
 
     for py_file in src_dir.rglob("*.py"):
-        rel_path = str(py_file.relative_to(src_dir))
+        rel_path = py_file.relative_to(src_dir).as_posix()
         # context.py is where CloudEgressGateway lives
         if rel_path in ("realtime/cloud/context.py",):
             continue
