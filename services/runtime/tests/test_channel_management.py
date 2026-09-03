@@ -561,6 +561,7 @@ async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_con
             await container.external_channel_repository.get_adapter_cursor(connection_id)
             == "cursor-after"
         )
+        serialized: str | None = None
         for _ in range(50):
             serialized = await store.get(f"weixin_ilink:{connection_id}")
             if (

@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportReturnType=false, reportArgumentType=false, reportIndexIssue=false, reportGeneralTypeIssues=false, reportOptionalMemberAccess=false, reportPossiblyUnboundVariable=false
 """Comprehensive tests for ChannelDeliveryScheduler, Crash Recovery, Retry,
 
 Legacy APIs, Transactional Event Rollback, Early Cursor Advance,
@@ -48,7 +49,6 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
 from chatwaifu_runtime.external_channels.credentials import InMemoryChannelCredentialStore
 from chatwaifu_runtime.external_channels.management import (
     ChannelManagementService,
-    _credential_reference,
 )
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
@@ -352,8 +352,7 @@ async def _create_plan_with_parts(
         completed_at=now,
         parts=draft_parts,
     )
-    completed_turn = res.turn if hasattr(res, "turn") else res
-    return completed_turn, delivery_id
+    return res.turn, delivery_id
 
 
 @pytest.mark.asyncio
@@ -417,6 +416,7 @@ async def test_real_reboot_recovery_unexpired_lease_to_automatic_delivery(tmp_pa
             assert len(executor.executed_parts) == 0
 
             # Wait for lease to expire and scheduler to step
+            plan: ChannelDeliveryPlanRecord | None = None
             for _ in range(30):
                 plan = await repo.get_delivery_plan(delivery_id)
                 if plan and plan.status is ChannelDeliveryStatus.DELIVERED:
@@ -569,6 +569,7 @@ async def test_scheduler_retryable_error_backoff_and_max_attempts(tmp_path: Path
 
         await scheduler.start()
         try:
+            plan: ChannelDeliveryPlanRecord | None = None
             for _ in range(50):
                 plan = await repo.get_delivery_plan(delivery_id)
                 if plan and plan.status is ChannelDeliveryStatus.FAILED:
@@ -841,7 +842,6 @@ async def test_event_failure_transactional_rollback(tmp_path: Path) -> None:
             await repo.cancel_remaining_delivery_parts(
                 delivery_id,
                 ChannelDeliveryPartsCancelRequest(
-                    delivery_id=delivery_id,
                     reason="fail cancel",
                     requested_at=now,
                 ),
@@ -898,7 +898,7 @@ async def test_early_cursor_advance_before_delivery_completion(
                 )
             },
         )
-        await store.set(_credential_reference(connection_id), credentials.to_json())
+        await store.set(f"weixin_ilink:{connection_id}", credentials.to_json())
 
         # Block send_text to hold delivery in progress
         original_send = transport.send_text

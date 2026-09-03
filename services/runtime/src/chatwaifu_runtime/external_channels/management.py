@@ -198,94 +198,11 @@ class WeixinDeliveryPartExecutor(DeliveryPartExecutor):
         plan: ChannelDeliveryPlanRecord,
         part: ChannelDeliveryPartRecord,
     ) -> DeliveryPartExecutionResult:
-        if part.kind is not ChannelDeliveryPartKind.TEXT:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.FATAL_ERROR,
-                error=_structured_error(
-                    "unsupported_delivery_part_kind",
-                    f"Delivery part kind {part.kind} is not supported by WeChat adapter.",
-                    retryable=False,
-                ),
-            )
-        try:
-            credentials = await self._management._load_credentials(self._connection_id)
-        except Exception as exc:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
-                error=_structured_error(
-                    "channel_credentials_load_failed",
-                    str(exc),
-                    retryable=True,
-                ),
-            )
-        if credentials is None:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.FATAL_ERROR,
-                error=_structured_error(
-                    "channel_credentials_missing",
-                    "The secure WeChat credentials are missing.",
-                    retryable=False,
-                ),
-            )
-        turn = await self._management._repository.get_turn(plan.delivery.channel_turn_id)
-        if turn is None:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.FATAL_ERROR,
-                error=_structured_error(
-                    "channel_turn_missing",
-                    "The channel turn was not found.",
-                    retryable=False,
-                ),
-            )
-        context = credentials.pending_contexts.get(turn.external_message_id)
-        if context is None:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.FATAL_ERROR,
-                error=_structured_error(
-                    "channel_context_missing",
-                    "WeChat reply context disappeared before delivery.",
-                    retryable=False,
-                ),
-            )
-        client_id = part.provider_client_id
-        text = part.payload.text
-        try:
-            provider_message_id = await self._management._weixin.send_text(
-                credentials,
-                recipient_user_id=context.recipient_user_id,
-                context_token=context.context_token,
-                client_id=client_id,
-                text=text,
-            )
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.DELIVERED,
-                provider_message_id=provider_message_id,
-            )
-        except asyncio.CancelledError:
-            raise
-        except WeixinILinkError as error:
-            outcome = (
-                DeliveryPartOutcome.RETRYABLE_ERROR
-                if error.retryable
-                else DeliveryPartOutcome.FATAL_ERROR
-            )
-            return DeliveryPartExecutionResult(
-                outcome=outcome,
-                error=_structured_error(
-                    error.code,
-                    error.message,
-                    retryable=error.retryable,
-                ),
-            )
-        except Exception as exc:
-            return DeliveryPartExecutionResult(
-                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
-                error=_structured_error(
-                    "weixin.send_failed",
-                    str(exc) or "WeChat did not accept the reply part.",
-                    retryable=True,
-                ),
-            )
+        return await self._management.execute_weixin_delivery_part(
+            self._connection_id,
+            plan,
+            part,
+        )
 
 
 class ChannelManagementService:
@@ -959,7 +876,7 @@ class ChannelManagementService:
         publisher = (
             self._event_publisher
             if self._event_publisher is not None
-            else getattr(self._external_channels, "_publisher", None)
+            else getattr(self._external_channels, "publisher", None)
         )
         scheduler = ChannelDeliveryScheduler(
             repository=self._repository,
@@ -1234,6 +1151,101 @@ class ChannelManagementService:
         ]
         for auth_session_id in stale:
             self._auth_sessions.pop(auth_session_id, None)
+
+    async def execute_weixin_delivery_part(
+        self,
+        connection_id: UUID,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+    ) -> DeliveryPartExecutionResult:
+        if part.kind is not ChannelDeliveryPartKind.TEXT:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "unsupported_delivery_part_kind",
+                    f"Delivery part kind {part.kind} is not supported by WeChat adapter.",
+                    retryable=False,
+                ),
+            )
+        try:
+            credentials = await self._load_credentials(connection_id)
+        except Exception as exc:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
+                error=_structured_error(
+                    "channel_credentials_load_failed",
+                    str(exc),
+                    retryable=True,
+                ),
+            )
+        if credentials is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_credentials_missing",
+                    "The secure WeChat credentials are missing.",
+                    retryable=False,
+                ),
+            )
+        turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
+        if turn is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_turn_missing",
+                    "The channel turn was not found.",
+                    retryable=False,
+                ),
+            )
+        context = credentials.pending_contexts.get(turn.external_message_id)
+        if context is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_context_missing",
+                    "WeChat reply context disappeared before delivery.",
+                    retryable=False,
+                ),
+            )
+        client_id = part.provider_client_id
+        text = part.payload.text
+        try:
+            provider_message_id = await self._weixin.send_text(
+                credentials,
+                recipient_user_id=context.recipient_user_id,
+                context_token=context.context_token,
+                client_id=client_id,
+                text=text,
+            )
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.DELIVERED,
+                provider_message_id=provider_message_id,
+            )
+        except asyncio.CancelledError:
+            raise
+        except WeixinILinkError as error:
+            outcome = (
+                DeliveryPartOutcome.RETRYABLE_ERROR
+                if error.retryable
+                else DeliveryPartOutcome.FATAL_ERROR
+            )
+            return DeliveryPartExecutionResult(
+                outcome=outcome,
+                error=_structured_error(
+                    error.code,
+                    error.message,
+                    retryable=error.retryable,
+                ),
+            )
+        except Exception as exc:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
+                error=_structured_error(
+                    "weixin.send_failed",
+                    str(exc) or "WeChat did not accept the reply part.",
+                    retryable=True,
+                ),
+            )
 
 
 _ACTIVE_AUTH_STATUSES = {

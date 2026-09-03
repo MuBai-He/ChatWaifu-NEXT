@@ -8,7 +8,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import Protocol
+from typing import Protocol, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.channels import (
@@ -134,7 +134,10 @@ class ChannelDeliveryScheduler:
                 event_payload = await subscription.receive()
                 if self._stopping:
                     break
-                payload = event_payload.get("payload", {})
+                raw_payload = event_payload.get("payload")
+                payload: dict[str, object] = (
+                    cast(dict[str, object], raw_payload) if isinstance(raw_payload, dict) else {}
+                )
                 if self._connection_id is None or payload.get("connection_id") == str(
                     self._connection_id
                 ):

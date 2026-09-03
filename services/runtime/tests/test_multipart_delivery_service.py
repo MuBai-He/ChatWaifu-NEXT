@@ -546,6 +546,7 @@ async def test_weixin_management_loop_multipart_sequential_delivery(
         assert part_2_sent["client_id"].endswith("-002")
 
         # After all parts delivered, context cleared and cursor advanced
+        serialized: str | None = None
         for _ in range(50):
             serialized = await store.get(f"weixin_ilink:{connection_id}")
             if (

@@ -23,3 +23,7 @@ class EventPublisher:
     async def publish_ephemeral(self, event: EventModel) -> None:
         """Publish an ephemeral telemetry event to EventHub without persisting to SQLite."""
         await self._event_hub.publish(event.model_dump(mode="json"))
+
+    @property
+    def event_hub(self) -> EventHub:
+        return self._event_hub

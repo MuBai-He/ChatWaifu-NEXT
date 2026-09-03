@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportReturnType=false, reportArgumentType=false, reportIndexIssue=false, reportGeneralTypeIssues=false, reportOptionalMemberAccess=false
 """Repository state machine tests for durable multipart delivery (Phase 17.1A)."""
 
 import asyncio

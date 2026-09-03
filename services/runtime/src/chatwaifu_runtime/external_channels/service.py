@@ -62,6 +62,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
     ChannelTurnRecord,
+    CompleteTurnResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.sessions.service import SessionService
@@ -205,7 +206,7 @@ class ExternalChannelService:
 
     @property
     def event_hub(self) -> EventHub:
-        return self._publisher._event_hub
+        return self._publisher.event_hub
 
     async def start(self) -> None:
         self._stopping = False
@@ -495,7 +496,6 @@ class ExternalChannelService:
                     cancel_res = await self._repository.cancel_remaining_delivery_parts(
                         active_plan.delivery_id,
                         ChannelDeliveryPartsCancelRequest(
-                            delivery_id=active_plan.delivery_id,
                             reason="superseded_by_new_inbound_message",
                             requested_at=now,
                         ),
@@ -1116,15 +1116,16 @@ class ExternalChannelService:
                     completed_at=now,
                     parts=parts,
                 )
+                turn_record = (
+                    turn_result.turn if isinstance(turn_result, CompleteTurnResult) else turn_result
+                )
                 persisted_events = getattr(turn_result, "persisted_events", ())
                 if persisted_events:
                     for event in persisted_events:
                         await self._publisher.publish_persisted(event)
                 else:
-                    await self._emit_delivery_plan_created_event(
-                        getattr(turn_result, "turn", turn_result), delivery_id, parts
-                    )
-                return getattr(turn_result, "turn", turn_result)
+                    await self._emit_delivery_plan_created_event(turn_record, delivery_id, parts)
+                return turn_record
             if generation.state is GenerationState.CANCELLED:
                 return await self._repository.set_turn_terminal(
                     turn.channel_turn_id,
