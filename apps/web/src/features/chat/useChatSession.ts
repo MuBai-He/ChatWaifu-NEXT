@@ -264,13 +264,7 @@ export function useChatSession({
           }
           break;
         case "assistant.generation_completed": {
-          if (!generationId) break;
-          if (!activeGeneration.current) {
-            activeGeneration.current = generationId;
-            getTextProjector().start(generationId);
-          } else if (generationId !== activeGeneration.current) {
-            break;
-          }
+          if (!generationId || generationId !== activeGeneration.current) break;
           getTextProjector().complete(
             generationId,
             payloadText(event.payload.text),
