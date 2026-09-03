@@ -132,6 +132,14 @@ def main() -> int:
             "Runtime",
             timeout_seconds=RUNTIME_STARTUP_TIMEOUT_SECONDS,
         )
+        if "runtime" in tokens:
+            _wait_for_url(
+                f"{runtime_url}/v1/characters",
+                runtime,
+                "Authenticated Runtime",
+                timeout_seconds=min(10, RUNTIME_STARTUP_TIMEOUT_SECONDS),
+                headers={"Authorization": f"Bearer {tokens['runtime']}"},
+            )
         _write_bootstrap(runtime_url, runtime.pid, ports, token=tokens.get("runtime"))
 
         while all(process.poll() is None for process in processes):

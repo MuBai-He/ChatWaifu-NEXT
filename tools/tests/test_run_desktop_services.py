@@ -163,6 +163,71 @@ def test_dev_service_lifecycle_stops_owned_runtime(
     assert events == ["runtime.stop"]
 
 
+def test_dev_service_lifecycle_probes_authenticated_endpoint_before_bootstrap(
+    monkeypatch: Any,
+) -> None:
+    calls: list[tuple[str, dict[str, str] | None]] = []
+
+    class _Process:
+        pid = 4321
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+    def no_profiles(**_kwargs: object) -> dict[str, dict[str, object]]:
+        return {}
+
+    def no_stt(**_kwargs: object) -> None:
+        return None
+
+    def runtime_port(*_args: object, **_kwargs: object) -> dict[str, int]:
+        return {"runtime": 41001}
+
+    def ignore(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    def spawn(*_args: object, **_kwargs: object) -> _Process:
+        return _Process()
+
+    def record_wait(
+        url: str,
+        _proc: object,
+        _label: str,
+        timeout_seconds: float = 20,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        calls.append((url, headers))
+
+    bootstrap_received: list[dict[str, object]] = []
+
+    def record_bootstrap(
+        url: str, pid: int, ports: dict[str, int], token: str | None = None
+    ) -> None:
+        bootstrap_received.append({"url": url, "pid": pid, "ports": ports, "token": token})
+
+    monkeypatch.setattr(desktop_services, "_load_available_tts_profiles", no_profiles)
+    monkeypatch.setattr(desktop_services, "_resolve_stt_worker_python", no_stt)
+    monkeypatch.setattr(desktop_services, "_allocate_ports", runtime_port)
+    monkeypatch.setattr(desktop_services, "_start_parent_watchdog", ignore)
+    monkeypatch.setattr(desktop_services.signal, "signal", ignore)
+    monkeypatch.setattr(desktop_services.subprocess, "Popen", spawn)
+    monkeypatch.setattr(desktop_services, "_wait_for_url", record_wait)
+    monkeypatch.setattr(desktop_services, "_write_bootstrap", record_bootstrap)
+    monkeypatch.setattr(desktop_services, "_stop_processes", ignore)
+
+    assert desktop_services.main() == 0
+
+    assert len(calls) == 2
+    assert calls[0][0] == "http://127.0.0.1:41001/v1/runtime/health"
+    assert calls[0][1] is None
+    assert calls[1][0] == "http://127.0.0.1:41001/v1/characters"
+    assert calls[1][1] is not None
+    token = bootstrap_received[0]["token"]
+    assert token is not None
+    assert calls[1][1]["Authorization"] == f"Bearer {token}"
+
+
 def test_parent_watchdog_requires_a_real_supervisor_pid(monkeypatch: Any) -> None:
     started: list[tuple[object, ...]] = []
 

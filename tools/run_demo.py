@@ -277,6 +277,7 @@ def _wait_for_url(
     headers: dict[str, str] | None = None,
 ) -> None:
     deadline = time.monotonic() + timeout_seconds
+    last_error: Exception | None = None
     while time.monotonic() < deadline:
         return_code = process.poll()
         if return_code is not None:
@@ -284,11 +285,12 @@ def _wait_for_url(
         try:
             request = urllib.request.Request(url, headers=headers or {})
             with urllib.request.urlopen(request, timeout=0.5) as response:
-                if 200 <= response.status < 500:
+                if 200 <= response.status < 400:
                     return
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError) as error:
+            last_error = error
             time.sleep(0.1)
-    raise TimeoutError(f"{label} did not become ready at {url}")
+    raise TimeoutError(f"{label} did not become ready at {url} (last error: {last_error})")
 
 
 def _find_free_loopback_port() -> int:

@@ -8,6 +8,7 @@ from chatwaifu_runtime.api.guard import WebSocketTicketStore
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.main import create_app
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -474,6 +475,20 @@ def test_explicit_capability_token_used_when_configured(tmp_path: Path) -> None:
             headers={"Authorization": "Bearer explicit-preset-capability-token-32b"},
         )
         assert response.status_code == 200
+
+
+def test_capability_token_rejects_too_short(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError):
+        Settings.model_validate(
+            {
+                "config_dir": tmp_path / "config",
+                "data_dir": tmp_path,
+                "storage": StorageConfig(database_path=tmp_path / "runtime.db"),
+                "security": {
+                    "capability_token": "short-token",
+                },
+            }
+        )
 
 
 def test_vulnerable_nltk_apis_not_referenced() -> None:
