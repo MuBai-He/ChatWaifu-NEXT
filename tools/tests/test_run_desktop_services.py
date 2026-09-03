@@ -69,9 +69,40 @@ def test_runtime_environment_uses_safe_fallback_without_local_workers() -> None:
     assert environment["CHATWAIFU_TTS__DEFAULT_PROVIDER"] == "fake"
     assert json.loads(environment["CHATWAIFU_TTS__WORKERS"]) == {}
     assert "CHATWAIFU_STT__WORKER_TOKEN" not in environment
+    assert "CHATWAIFU_SECURITY__CAPABILITY_TOKEN" not in environment
 
 
-def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None:
+def test_runtime_environment_injects_capability_token_when_present() -> None:
+    environment = desktop_services._runtime_environment(
+        {},
+        runtime_port=41001,
+        stt_port=None,
+        stt_token=None,
+        tts_profiles={},
+        ports={"runtime": 41001},
+        tokens={"runtime": "test-runtime-capability-token"},
+    )
+    assert environment["CHATWAIFU_SECURITY__CAPABILITY_TOKEN"] == "test-runtime-capability-token"
+
+
+def test_bootstrap_line_is_machine_readable_with_token(capsys: Any) -> None:
+    desktop_services._write_bootstrap(
+        "http://127.0.0.1:41001",
+        1234,
+        {"runtime": 41001, "stt": 41002, "qwen3_tts_mlx": 41003},
+        token="desktop-token-xyz",
+    )
+
+    line = capsys.readouterr().out.strip()
+    assert line.startswith(desktop_services.BOOTSTRAP_PREFIX)
+    payload = json.loads(line.removeprefix(desktop_services.BOOTSTRAP_PREFIX))
+    assert payload["type"] == "runtime.ready"
+    assert payload["runtime_url"] == "http://127.0.0.1:41001"
+    assert payload["workers"] == ["qwen3_tts_mlx", "stt"]
+    assert payload["token"] == "desktop-token-xyz"
+
+
+def test_bootstrap_line_is_machine_readable_without_token(capsys: Any) -> None:
     desktop_services._write_bootstrap(
         "http://127.0.0.1:41001",
         1234,
@@ -84,7 +115,7 @@ def test_bootstrap_line_is_machine_readable_and_secret_free(capsys: Any) -> None
     assert payload["type"] == "runtime.ready"
     assert payload["runtime_url"] == "http://127.0.0.1:41001"
     assert payload["workers"] == ["qwen3_tts_mlx", "stt"]
-    assert "token" not in line.casefold()
+    assert payload["token"] is None
 
 
 def test_dev_service_lifecycle_stops_owned_runtime(
@@ -130,6 +161,71 @@ def test_dev_service_lifecycle_stops_owned_runtime(
 
     assert desktop_services.main() == 0
     assert events == ["runtime.stop"]
+
+
+def test_dev_service_lifecycle_probes_authenticated_endpoint_before_bootstrap(
+    monkeypatch: Any,
+) -> None:
+    calls: list[tuple[str, dict[str, str] | None]] = []
+
+    class _Process:
+        pid = 4321
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+    def no_profiles(**_kwargs: object) -> dict[str, dict[str, object]]:
+        return {}
+
+    def no_stt(**_kwargs: object) -> None:
+        return None
+
+    def runtime_port(*_args: object, **_kwargs: object) -> dict[str, int]:
+        return {"runtime": 41001}
+
+    def ignore(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    def spawn(*_args: object, **_kwargs: object) -> _Process:
+        return _Process()
+
+    def record_wait(
+        url: str,
+        _proc: object,
+        _label: str,
+        timeout_seconds: float = 20,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        calls.append((url, headers))
+
+    bootstrap_received: list[dict[str, object]] = []
+
+    def record_bootstrap(
+        url: str, pid: int, ports: dict[str, int], token: str | None = None
+    ) -> None:
+        bootstrap_received.append({"url": url, "pid": pid, "ports": ports, "token": token})
+
+    monkeypatch.setattr(desktop_services, "_load_available_tts_profiles", no_profiles)
+    monkeypatch.setattr(desktop_services, "_resolve_stt_worker_python", no_stt)
+    monkeypatch.setattr(desktop_services, "_allocate_ports", runtime_port)
+    monkeypatch.setattr(desktop_services, "_start_parent_watchdog", ignore)
+    monkeypatch.setattr(desktop_services.signal, "signal", ignore)
+    monkeypatch.setattr(desktop_services.subprocess, "Popen", spawn)
+    monkeypatch.setattr(desktop_services, "_wait_for_url", record_wait)
+    monkeypatch.setattr(desktop_services, "_write_bootstrap", record_bootstrap)
+    monkeypatch.setattr(desktop_services, "_stop_processes", ignore)
+
+    assert desktop_services.main() == 0
+
+    assert len(calls) == 2
+    assert calls[0][0] == "http://127.0.0.1:41001/v1/runtime/health"
+    assert calls[0][1] is None
+    assert calls[1][0] == "http://127.0.0.1:41001/v1/characters"
+    assert calls[1][1] is not None
+    token = bootstrap_received[0]["token"]
+    assert token is not None
+    assert calls[1][1]["Authorization"] == f"Bearer {token}"
 
 
 def test_parent_watchdog_requires_a_real_supervisor_pid(monkeypatch: Any) -> None:

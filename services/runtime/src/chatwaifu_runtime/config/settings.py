@@ -57,6 +57,7 @@ class SecurityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     admin_token: SecretStr | None = None
+    capability_token: SecretStr | None = Field(default=None, min_length=32)
     windows_appcontainer_launcher: Path | None = None
     allowed_hosts: list[str] = Field(default_factory=list)
     allowed_origins: list[str] = Field(default_factory=list)

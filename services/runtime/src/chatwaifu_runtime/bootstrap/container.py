@@ -73,7 +73,12 @@ class RuntimeLifecycleError(ExceptionGroup):
 class RuntimeContainer:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.capability_token = secrets.token_urlsafe(32)
+        self.capability_token = (
+            settings.security.capability_token.get_secret_value()
+            if settings.security.capability_token
+            and settings.security.capability_token.get_secret_value().strip()
+            else secrets.token_urlsafe(32)
+        )
         self.ws_ticket_store = WebSocketTicketStore()
         self.database = Database(settings.database_path, settings.storage)
         self.event_hub = EventHub(settings.runtime.event_queue_size)

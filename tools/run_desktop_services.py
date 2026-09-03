@@ -46,7 +46,7 @@ def main() -> int:
     tts_profiles = _load_available_tts_profiles(optional=optional_local_workers)
     stt_python = _resolve_stt_worker_python(optional=optional_local_workers)
     ports = _allocate_ports(tuple(tts_profiles), include_stt=stt_python is not None)
-    tokens = {name: secrets.token_urlsafe(32) for name in ports if name != "runtime"}
+    tokens = {name: secrets.token_urlsafe(32) for name in ports}
     processes: list[subprocess.Popen[bytes]] = []
     signal.signal(signal.SIGTERM, _raise_termination)
     hangup = getattr(signal, "SIGHUP", None)
@@ -132,7 +132,15 @@ def main() -> int:
             "Runtime",
             timeout_seconds=RUNTIME_STARTUP_TIMEOUT_SECONDS,
         )
-        _write_bootstrap(runtime_url, runtime.pid, ports)
+        if "runtime" in tokens:
+            _wait_for_url(
+                f"{runtime_url}/v1/characters",
+                runtime,
+                "Authenticated Runtime",
+                timeout_seconds=min(10, RUNTIME_STARTUP_TIMEOUT_SECONDS),
+                headers={"Authorization": f"Bearer {tokens['runtime']}"},
+            )
+        _write_bootstrap(runtime_url, runtime.pid, ports, token=tokens.get("runtime"))
 
         while all(process.poll() is None for process in processes):
             time.sleep(0.25)
@@ -205,6 +213,8 @@ def _runtime_environment(
     tokens: dict[str, str],
 ) -> dict[str, str]:
     environment = base.copy()
+    if "runtime" in tokens:
+        environment["CHATWAIFU_SECURITY__CAPABILITY_TOKEN"] = tokens["runtime"]
     environment.update(
         {
             "CHATWAIFU_RUNTIME__PORT": str(runtime_port),
@@ -247,13 +257,19 @@ def _runtime_environment(
     return environment
 
 
-def _write_bootstrap(runtime_url: str, pid: int, ports: dict[str, int]) -> None:
-    payload = {
+def _write_bootstrap(
+    runtime_url: str,
+    pid: int,
+    ports: dict[str, int],
+    token: str | None = None,
+) -> None:
+    payload: dict[str, object] = {
         "schema_version": STACK_VERSION,
         "type": "runtime.ready",
         "runtime_url": runtime_url,
         "pid": pid,
         "workers": sorted(name for name in ports if name != "runtime"),
+        "token": token,
     }
     print(f"{BOOTSTRAP_PREFIX}{json.dumps(payload, separators=(',', ':'))}", flush=True)
 

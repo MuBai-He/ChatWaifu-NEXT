@@ -127,9 +127,11 @@ def main() -> int:
             "CHATWAIFU_STT_WORKER_PRELOAD": "true",
         }
     )
+    runtime_token = secrets.token_urlsafe(32)
     runtime_environment = environment.copy()
     runtime_environment.update(
         {
+            "CHATWAIFU_SECURITY__CAPABILITY_TOKEN": runtime_token,
             "CHATWAIFU_STT__PROVIDER": "faster_whisper_worker",
             "CHATWAIFU_STT__WORKER_URL": f"http://127.0.0.1:{stt_port}",
             "CHATWAIFU_STT__WORKER_TOKEN": stt_token,
@@ -221,6 +223,8 @@ def main() -> int:
         processes.append(runtime)
         _wait_for_url(RUNTIME_HEALTH, runtime, "Runtime")
 
+        web_environment = environment.copy()
+        web_environment["VITE_RUNTIME_TOKEN"] = runtime_token
         web = subprocess.Popen(
             [
                 str(pnpm),
@@ -233,7 +237,7 @@ def main() -> int:
                 "5173",
             ],
             cwd=ROOT,
-            env=environment,
+            env=web_environment,
             start_new_session=os.name == "posix",
         )
         processes.append(web)
@@ -273,6 +277,7 @@ def _wait_for_url(
     headers: dict[str, str] | None = None,
 ) -> None:
     deadline = time.monotonic() + timeout_seconds
+    last_error: Exception | None = None
     while time.monotonic() < deadline:
         return_code = process.poll()
         if return_code is not None:
@@ -280,11 +285,12 @@ def _wait_for_url(
         try:
             request = urllib.request.Request(url, headers=headers or {})
             with urllib.request.urlopen(request, timeout=0.5) as response:
-                if 200 <= response.status < 500:
+                if 200 <= response.status < 400:
                     return
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError) as error:
+            last_error = error
             time.sleep(0.1)
-    raise TimeoutError(f"{label} did not become ready at {url}")
+    raise TimeoutError(f"{label} did not become ready at {url} (last error: {last_error})")
 
 
 def _find_free_loopback_port() -> int:
