@@ -294,9 +294,18 @@ class ConversationService:
         text: str,
         role: Literal["user", "assistant"] = "assistant",
         provider: str = "cloud_realtime",
+        utterance_id: UUID | None = None,
     ) -> None:
         if role == "user":
             if not text:
+                return
+            if utterance_id is None:
+                # Fail closed: never fabricate utterance identity from turn_id
+                # or generation_id. The coordinator must supply the admitted one.
+                logger.warning(
+                    "dropping user transcript delta without utterance_id",
+                    extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+                )
                 return
             user_event = UserTranscriptPartialEvent(
                 event_id=uuid4(),
@@ -307,7 +316,7 @@ class ConversationService:
                 source="runtime.conversation",
                 privacy=PrivacyLevel.LOCAL,
                 payload=UserTranscriptPayload(
-                    utterance_id=turn_id,
+                    utterance_id=utterance_id,
                     text=text,
                     provider=provider,
                     is_final=False,
@@ -331,6 +340,32 @@ class ConversationService:
         )
         await self._publisher.publish_ephemeral(event)
 
+    async def _realtime_terminal_audio_stream_id(
+        self, session_id: UUID, generation_id: UUID
+    ) -> UUID | None:
+        """Recover the admission-time audio stream id for terminal transitions.
+
+        Terminal Started/completion/cancel/fail events must reference the same
+        stream allocated at admission. Never mints a fresh id: returns None so
+        callers fail closed when neither the active map nor the persisted
+        generation record carries one.
+        """
+        active = self._active.get(session_id)
+        if active is not None and active.generation_id == generation_id:
+            if active.audio_stream_id is not None:
+                return active.audio_stream_id
+        try:
+            record = await self._repository.generation_result(generation_id)
+        except Exception:
+            logger.exception(
+                "failed recovering audio_stream_id for terminal transition",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return None
+        if record is not None:
+            return record.audio_stream_id
+        return None
+
     async def complete_realtime_generation(
         self,
         *,
@@ -346,11 +381,18 @@ class ConversationService:
                 extra={"session_id": str(session_id), "generation_id": str(generation_id)},
             )
             return
+        audio_stream_id = await self._realtime_terminal_audio_stream_id(session_id, generation_id)
+        if audio_stream_id is None:
+            logger.error(
+                "refusing realtime completion without admission audio_stream_id",
+                extra={"session_id": str(session_id), "generation_id": str(generation_id)},
+            )
+            return
         accepted = GenerationAccepted(
             session_id=session_id,
             turn_id=turn_id,
             generation_id=generation_id,
-            audio_stream_id=active.audio_stream_id or uuid4(),
+            audio_stream_id=audio_stream_id,
             state=GenerationState.RUNNING,
         )
         await self._complete(
@@ -386,12 +428,19 @@ class ConversationService:
         if target_gen_id is None or target_turn_id is None:
             return
 
+        audio_stream_id = await self._realtime_terminal_audio_stream_id(session_id, target_gen_id)
+        if audio_stream_id is None:
+            logger.error(
+                "refusing realtime termination without admission audio_stream_id",
+                extra={"session_id": str(session_id), "generation_id": str(target_gen_id)},
+            )
+            return
+
         if active is not None and (generation_id is None or active.generation_id == target_gen_id):
             if active.task is not None and not active.task.done():
                 active.task.cancel(reason)
             self._active.pop(session_id, None)
 
-        audio_stream_id = (active.audio_stream_id if active else None) or uuid4()
         accepted = GenerationAccepted(
             session_id=session_id,
             turn_id=target_turn_id,
@@ -615,11 +664,23 @@ class ConversationService:
         else:
             if active.turn_id is None:
                 return False
+            audio_stream_id = await self._realtime_terminal_audio_stream_id(
+                session_id, active.generation_id
+            )
+            if audio_stream_id is None:
+                logger.error(
+                    "refusing cancel without admission audio_stream_id",
+                    extra={
+                        "session_id": str(session_id),
+                        "generation_id": str(active.generation_id),
+                    },
+                )
+                return False
             accepted = GenerationAccepted(
                 session_id=session_id,
                 turn_id=active.turn_id,
                 generation_id=active.generation_id,
-                audio_stream_id=active.audio_stream_id or uuid4(),
+                audio_stream_id=audio_stream_id,
                 state=GenerationState.RUNNING,
             )
             await self._cancelled(accepted, reason=reason)

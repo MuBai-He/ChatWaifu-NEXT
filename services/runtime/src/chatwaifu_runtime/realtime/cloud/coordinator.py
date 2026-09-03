@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.errors import StructuredError
 
 from chatwaifu_runtime.realtime.cloud.contracts import (
@@ -52,6 +53,7 @@ class RealtimeDomainSink(Protocol):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"] = "assistant",
+        utterance_id: UUID | None = None,
     ) -> None: ...
 
     async def transcript_final(
@@ -61,6 +63,7 @@ class RealtimeDomainSink(Protocol):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"],
+        utterance_id: UUID | None = None,
     ) -> None: ...
 
     async def response_completed(
@@ -113,6 +116,17 @@ class InMemoryDomainSink(RealtimeDomainSink):
     transcript_finals: list[tuple[UUID, UUID, UUID, str, Literal["user", "assistant"]]] = field(
         default_factory=lambda: list[tuple[UUID, UUID, UUID, str, Literal["user", "assistant"]]]()
     )
+    type UtteredDelta = tuple[UUID, UUID, UUID, str, Literal["user", "assistant"], UUID | None]
+    transcript_delta_utterances: list[UtteredDelta] = field(
+        default_factory=lambda: list[
+            tuple[UUID, UUID, UUID, str, Literal["user", "assistant"], UUID | None]
+        ]()
+    )
+    transcript_final_utterances: list[UtteredDelta] = field(
+        default_factory=lambda: list[
+            tuple[UUID, UUID, UUID, str, Literal["user", "assistant"], UUID | None]
+        ]()
+    )
     responses_completed: list[tuple[UUID, UUID, UUID, str]] = field(
         default_factory=lambda: list[tuple[UUID, UUID, UUID, str]]()
     )
@@ -151,9 +165,13 @@ class InMemoryDomainSink(RealtimeDomainSink):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"] = "assistant",
+        utterance_id: UUID | None = None,
     ) -> None:
         self.transcript_deltas.append((session_id, turn_id, generation_id, text))
         self.transcript_deltas_with_role.append((session_id, turn_id, generation_id, text, role))
+        self.transcript_delta_utterances.append(
+            (session_id, turn_id, generation_id, text, role, utterance_id)
+        )
 
     async def transcript_final(
         self,
@@ -162,8 +180,12 @@ class InMemoryDomainSink(RealtimeDomainSink):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"],
+        utterance_id: UUID | None = None,
     ) -> None:
         self.transcript_finals.append((session_id, turn_id, generation_id, text, role))
+        self.transcript_final_utterances.append(
+            (session_id, turn_id, generation_id, text, role, utterance_id)
+        )
 
     async def response_completed(
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, text: str
@@ -256,9 +278,11 @@ class CloudRealtimeCoordinator:
     def set_media_sink(self, media_sink: RealtimeMediaSink | None) -> None:
         self._media_sink = media_sink
 
-    def admit_turn(self, turn_id: UUID, generation_id: UUID) -> None:
+    def admit_turn(
+        self, turn_id: UUID, generation_id: UUID, utterance_id: UUID | None = None
+    ) -> None:
         """Register turn and generation in mirror when admitted by runtime."""
-        self._mirror.register_generation(generation_id, turn_id)
+        self._mirror.register_generation(generation_id, turn_id, utterance_id=utterance_id)
 
     def start(self) -> None:
         """Start background event pump task."""
@@ -314,6 +338,24 @@ class CloudRealtimeCoordinator:
         except Exception:
             _LOGGER.warning("Error closing session in coordinator.stop()", exc_info=True)
         await self._domain_sink.session_closed(self.session_id, "coordinator_stopped")
+
+    async def _emit_unmapped_event(
+        self, *, event_name: str, details: dict[str, str] | None = None
+    ) -> None:
+        """Report a dropped identity-less event as a structured unmapped error."""
+        merged: JsonObject = {"event": event_name}
+        if details:
+            merged.update(details)
+        await self._domain_sink.provider_error(
+            self.session_id,
+            StructuredError(
+                code="unmapped_realtime_event",
+                message=f"Cannot resolve generation_id for {event_name}",
+                retryable=False,
+                component="realtime.cloud",
+                details=merged,
+            ),
+        )
 
     async def cancel_generation(self, generation_id: UUID, reason: str = "cancelled") -> None:
         """Cancel a generation, invalidating it in the mirror and interrupting the provider."""
@@ -497,42 +539,69 @@ class CloudRealtimeCoordinator:
                 if candidate.phase == "delta":
                     self._mirror.append_text(gen_id, candidate.text)
                     await self._domain_sink.transcript_delta(
-                        self.session_id, turn_id, gen_id, candidate.text, role="assistant"
+                        self.session_id,
+                        turn_id,
+                        gen_id,
+                        candidate.text,
+                        role="assistant",
+                        utterance_id=candidate.utterance_id,
                     )
                 elif candidate.phase == "final":
                     self._mirror.set_authoritative_final_text(gen_id, candidate.text)
                     await self._domain_sink.transcript_final(
-                        self.session_id, turn_id, gen_id, candidate.text, "assistant"
+                        self.session_id,
+                        turn_id,
+                        gen_id,
+                        candidate.text,
+                        "assistant",
+                        utterance_id=candidate.utterance_id,
                     )
 
             case UserTranscriptEvent():
                 candidate = event.candidate
+                # Strict binding check: an explicit but unregistered
+                # generation id must never fall back to the active/last turn.
                 gen_id = self._mirror.resolve_generation_id(
                     generation_id=candidate.generation_id,
                 )
-                turn_id = (
-                    self._mirror.get_turn_id(gen_id) if gen_id else self._mirror.active_turn_id
-                )
-                if turn_id is None or gen_id is None:
-                    await self._domain_sink.provider_error(
-                        self.session_id,
-                        StructuredError(
-                            code="unmapped_realtime_event",
-                            message="Cannot resolve active turn/gen for UserTranscriptEvent",
-                            retryable=False,
-                            component="realtime.cloud",
-                            details={"event": "UserTranscriptEvent"},
-                        ),
+                if gen_id is None:
+                    await self._emit_unmapped_event(
+                        event_name="UserTranscriptEvent",
+                        details={
+                            "generation_id": str(candidate.generation_id),
+                            "provider_item_id": str(candidate.provider_item_id),
+                        },
                     )
                     return
+                turn_id = self._mirror.get_turn_id(gen_id)
+                if turn_id is None:
+                    await self._emit_unmapped_event(
+                        event_name="UserTranscriptEvent",
+                        details={"generation_id": str(gen_id)},
+                    )
+                    return
+                # Prefer the provider-echoed utterance; otherwise reuse the
+                # utterance admitted for this generation. Never derive one
+                # from turn_id or generation_id.
+                utterance_id = candidate.utterance_id or self._mirror.get_utterance_id(gen_id)
 
                 if candidate.phase == "delta":
                     await self._domain_sink.transcript_delta(
-                        self.session_id, turn_id, gen_id, candidate.text, role="user"
+                        self.session_id,
+                        turn_id,
+                        gen_id,
+                        candidate.text,
+                        role="user",
+                        utterance_id=utterance_id,
                     )
                 elif candidate.phase == "final":
                     await self._domain_sink.transcript_final(
-                        self.session_id, turn_id, gen_id, candidate.text, "user"
+                        self.session_id,
+                        turn_id,
+                        gen_id,
+                        candidate.text,
+                        "user",
+                        utterance_id=utterance_id,
                     )
 
             case ResponseCompletedEvent():
@@ -590,21 +659,43 @@ class CloudRealtimeCoordinator:
                     generation_id=event.generation_id,
                     provider_response_id=event.provider_response_id,
                 )
-                if gen_id is not None:
-                    was_tombstoned = self._mirror.is_tombstoned(gen_id)
-                    turn_id = self._mirror.get_turn_id(gen_id)
-                    self._mirror.cancel_generation(gen_id)
-                    if not was_tombstoned and turn_id is not None:
-                        await self._domain_sink.response_cancelled(
-                            self.session_id, turn_id, gen_id, event.reason
-                        )
+                if gen_id is None:
+                    await self._emit_unmapped_event(
+                        event_name="ResponseCancelledEvent",
+                        details={
+                            "generation_id": str(event.generation_id),
+                            "provider_response_id": str(event.provider_response_id),
+                        },
+                    )
+                    return
+                was_tombstoned = self._mirror.is_tombstoned(gen_id)
+                turn_id = self._mirror.get_turn_id(gen_id)
+                self._mirror.cancel_generation(gen_id)
+                if not was_tombstoned and turn_id is not None:
+                    await self._domain_sink.response_cancelled(
+                        self.session_id, turn_id, gen_id, event.reason
+                    )
 
             case UsageRecordedEvent():
-                gen_id = self._mirror.active_generation_id
+                gen_id = self._mirror.resolve_generation_id(
+                    generation_id=event.usage.generation_id,
+                )
                 if gen_id is None:
+                    # Session-level usage without an active generation is
+                    # dropped silently; an explicit but unknown generation is
+                    # reported so misrouted usage cannot collide silently.
+                    if event.usage.generation_id is not None:
+                        await self._emit_unmapped_event(
+                            event_name="UsageRecordedEvent",
+                            details={"generation_id": str(event.usage.generation_id)},
+                        )
                     return
                 turn_id = self._mirror.get_turn_id(gen_id)
                 if turn_id is None:
+                    await self._emit_unmapped_event(
+                        event_name="UsageRecordedEvent",
+                        details={"generation_id": str(gen_id)},
+                    )
                     return
                 await self._domain_sink.usage_recorded(
                     self.session_id, turn_id, gen_id, event.usage
@@ -638,7 +729,10 @@ class CloudRealtimeCoordinator:
                 return f"commit:{event.session_id}:{event.turn_id}"
             case UserTranscriptEvent():
                 c = event.candidate
-                return f"usr_tx:{c.session_id}:{c.phase}:{c.revision}:{c.text}"
+                return (
+                    f"usr_tx:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                    f"{c.phase}:{c.revision}:{c.text}"
+                )
             case ResponseStartedEvent():
                 return f"resp_start:{event.generation_id}:{event.provider_response_id}"
             case OutputAudioEvent():
@@ -646,14 +740,20 @@ class CloudRealtimeCoordinator:
                 return f"audio:{f.session_id}:{f.generation_id}:{f.sequence}"
             case AssistantTranscriptEvent():
                 c = event.candidate
-                return f"ast_tx:{c.generation_id}:{c.phase}:{c.revision}:{c.text}"
+                return (
+                    f"ast_tx:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                    f"{c.phase}:{c.revision}:{c.text}"
+                )
             case ResponseCompletedEvent():
                 return f"resp_comp:{event.generation_id}:{event.provider_response_id}"
             case ResponseCancelledEvent():
                 return f"resp_canc:{event.session_id}:{event.generation_id}:{event.reason}"
             case UsageRecordedEvent():
                 u = event.usage
-                return f"usage:{u.total_tokens}:{u.input_tokens}:{u.output_tokens}"
+                return (
+                    f"usage:{u.session_id}:{u.generation_id}:"
+                    f"{u.total_tokens}:{u.input_tokens}:{u.output_tokens}"
+                )
             case ProviderErrorEvent():
                 e = event.error
                 return f"error:{e.code}:{e.message}"

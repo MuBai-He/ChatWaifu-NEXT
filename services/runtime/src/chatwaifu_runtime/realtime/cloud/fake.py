@@ -199,6 +199,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         confidence: float = 0.95,
         generation_id: UUID | None = None,
         event_id: str | None = None,
+        utterance_id: UUID | None = None,
+        provider_item_id: str | None = None,
     ) -> None:
         self.inject_event(
             UserTranscriptEvent(
@@ -210,6 +212,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     text=text,
                     source="provider",
                     confidence=confidence,
+                    utterance_id=utterance_id,
+                    provider_item_id=provider_item_id,
                 ),
                 event_id=event_id,
             )
@@ -251,6 +255,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         *,
         phase: Literal["delta", "final"] = "delta",
         event_id: str | None = None,
+        utterance_id: UUID | None = None,
+        provider_item_id: str | None = None,
     ) -> None:
         self.inject_event(
             AssistantTranscriptEvent(
@@ -261,6 +267,8 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     phase=phase,
                     text=text,
                     source="provider",
+                    utterance_id=utterance_id,
+                    provider_item_id=provider_item_id,
                 ),
                 event_id=event_id,
             )

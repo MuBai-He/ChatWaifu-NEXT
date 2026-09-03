@@ -172,6 +172,7 @@ class RealtimeTranscriptCandidate:
     provider_item_id: str | None = None
     revision: int = 0
     confidence: float | None = None
+    utterance_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

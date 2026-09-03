@@ -56,6 +56,7 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"] = "assistant",
+        utterance_id: UUID | None = None,
     ) -> None:
         await self._conversation.publish_realtime_transcript_delta(
             session_id=session_id,
@@ -64,6 +65,7 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             text=text,
             role=role,
             provider=self._backend_id,
+            utterance_id=utterance_id,
         )
 
     async def transcript_final(
@@ -73,6 +75,7 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
         generation_id: UUID,
         text: str,
         role: Literal["user", "assistant"],
+        utterance_id: UUID | None = None,
     ) -> None:
         if role == "user":
             await self._conversation.commit_realtime_user_transcript(
@@ -175,6 +178,10 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             error.code,
             error.message,
         )
+        if error.code == "unmapped_realtime_event":
+            # Dropped identity-less events are observable via the error channel
+            # but must not fail the active generation as collateral damage.
+            return
         active_gen = self._conversation.active_generation_id(session_id)
         active_turn = self._conversation.active_turn_id(session_id)
         if active_gen is not None and active_turn is not None:

@@ -248,6 +248,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             self._coordinator.admit_turn(
                 turn_id=identity.turn_id,
                 generation_id=identity.generation_id,
+                utterance_id=identity.utterance_id,
             )
             _LOGGER.debug(
                 "Realtime turn admitted via admission port for session %s: gen=%s, turn=%s",

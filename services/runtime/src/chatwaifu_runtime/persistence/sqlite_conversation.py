@@ -174,13 +174,15 @@ class SQLiteConversationRepository(ConversationRepository):
     async def generation_result(self, generation_id: UUID) -> ConversationGenerationRecord | None:
         row = await self._database.fetchone(
             """
-            SELECT generation_id, session_id, turn_id, state, output_text, error_code
+            SELECT generation_id, session_id, turn_id, state, output_text, error_code,
+                   audio_stream_id
             FROM generations WHERE generation_id = ?
             """,
             (str(generation_id),),
         )
         if row is None:
             return None
+        raw_audio_stream_id = row["audio_stream_id"] if "audio_stream_id" in row.keys() else None
         return ConversationGenerationRecord(
             generation_id=UUID(str(row["generation_id"])),
             session_id=UUID(str(row["session_id"])),
@@ -188,6 +190,9 @@ class SQLiteConversationRepository(ConversationRepository):
             state=GenerationState(str(row["state"])),
             output_text=str(row["output_text"]) if row["output_text"] is not None else None,
             error_code=str(row["error_code"]) if row["error_code"] is not None else None,
+            audio_stream_id=UUID(str(raw_audio_stream_id))
+            if raw_audio_stream_id is not None
+            else None,
         )
 
     async def commit_user_generation(

@@ -28,6 +28,7 @@ class GenerationBinding:
     generation_id: UUID
     turn_id: UUID
     provider_response_id: str | None = None
+    utterance_id: UUID | None = None
     accumulated_delta_text: list[str] = field(default_factory=lambda: list[str]())
     authoritative_final_text: str | None = None
     is_completed: bool = False
@@ -91,22 +92,34 @@ class RealtimeSessionMirror:
     def set_provider_session_id(self, provider_session_id: str) -> None:
         self.provider_session_id = provider_session_id
 
+    def has_binding(self, generation_id: UUID) -> bool:
+        """Return True only if the generation was explicitly registered."""
+        return generation_id in self._bindings
+
+    def get_utterance_id(self, generation_id: UUID) -> UUID | None:
+        """Return the admitted utterance id without any active/last fallback."""
+        binding = self._bindings.get(generation_id)
+        return binding.utterance_id if binding is not None else None
+
     def register_generation(
         self,
         generation_id: UUID,
         turn_id: UUID,
         *,
         provider_response_id: str | None = None,
+        utterance_id: UUID | None = None,
     ) -> GenerationBinding:
         """Register a new runtime generation as active."""
         binding = GenerationBinding(
             generation_id=generation_id,
             turn_id=turn_id,
             provider_response_id=provider_response_id,
+            utterance_id=utterance_id,
         )
         self._bindings[generation_id] = binding
         if len(self._bindings) > self._max_bindings:
-            self._bindings.popitem(last=False)
+            evicted_gen_id, _ = self._bindings.popitem(last=False)
+            self._purge_response_mappings(evicted_gen_id)
 
         self._active_generation_id = generation_id
         self._active_turn_id = turn_id
@@ -139,19 +152,40 @@ class RealtimeSessionMirror:
             self._response_to_generation.popitem(last=False)
         return binding
 
+    def _purge_response_mappings(self, generation_id: UUID) -> None:
+        """Remove provider-response mappings pointing at an evicted generation.
+
+        Prevents a stale response id from resolving to a binding that no longer
+        exists after capacity eviction.
+        """
+        stale = [
+            response_id
+            for response_id, mapped_gen_id in self._response_to_generation.items()
+            if mapped_gen_id == generation_id
+        ]
+        for response_id in stale:
+            del self._response_to_generation[response_id]
+
     def resolve_generation_id(
         self,
         *,
         generation_id: UUID | None = None,
         provider_response_id: str | None = None,
     ) -> UUID | None:
-        """Resolve the runtime generation id from either a direct id or provider response id."""
+        """Resolve the runtime generation id from either a direct id or provider response id.
+
+        An explicitly supplied identity is only honored when it is backed by a
+        registered binding; unknown explicit identities resolve to None and must
+        never fall back to the active or last generation. The active/last
+        shortcut applies solely to identity-less (implicit current) lookups.
+        """
         if generation_id is not None:
-            return generation_id
+            return generation_id if generation_id in self._bindings else None
         if provider_response_id is not None:
             resolved = self._response_to_generation.get(provider_response_id)
-            if resolved is not None:
+            if resolved is not None and resolved in self._bindings:
                 return resolved
+            return None
         if self._active_generation_id is not None:
             return self._active_generation_id
         return self._last_generation_id
@@ -159,8 +193,7 @@ class RealtimeSessionMirror:
     def get_turn_id(self, generation_id: UUID | None = None) -> UUID | None:
         if generation_id is not None:
             binding = self._bindings.get(generation_id)
-            if binding is not None:
-                return binding.turn_id
+            return binding.turn_id if binding is not None else None
         if self._active_turn_id is not None:
             return self._active_turn_id
         return self._last_turn_id

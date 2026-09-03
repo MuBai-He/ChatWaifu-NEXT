@@ -38,6 +38,7 @@ class ConversationGenerationRecord:
     state: GenerationState
     output_text: str | None
     error_code: str | None
+    audio_stream_id: UUID | None = None
 
 
 class ConversationRepository(Protocol):
