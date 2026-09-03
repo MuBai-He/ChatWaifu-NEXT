@@ -302,6 +302,7 @@ async def test_voice_domain_bridge_processor_forwarder_filters_unrelated_events(
     ) -> asyncio.Task[object]:
         from collections.abc import Coroutine
         from typing import cast
+
         return asyncio.create_task(cast(Coroutine[object, object, object], coro))
 
     async def fake_cancel_task(task: asyncio.Task[object], *args: object, **kwargs: object) -> None:
