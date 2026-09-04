@@ -189,13 +189,17 @@ export type SchemaVersion3 = '1.0'
 export type SchemaVersion4 = '1.0'
 export type VerificationCode = string
 export type Attempt = number
+export type CancelRequestedAt = string | null
 export type ChannelTurnId = string
 export type ConnectionId1 = string
 export type CreatedAt2 = string
 export type DeliveredAt = string | null
+export type DeliveredPartCount = number
 export type DeliveryId = string
 export type LeaseExpiresAt = string | null
 export type LeaseId = string | null
+export type PartCount = number
+export type PlanVersion = number
 export type ProviderMessageId = string | null
 export type SchemaVersion5 = '1.0'
 export type ChannelDeliveryStatus = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled'
@@ -212,14 +216,60 @@ export type DeliveryId2 = string
 export type LeaseId2 = string
 export type LeaseSeconds = number
 export type SchemaVersion7 = '1.0'
-export type ChannelTurnId3 = string | null
+export type Attempt1 = number
+export type CreatedAt3 = string
+export type DelayAfterMs = number
+export type DeliveredAt1 = string | null
+export type DeliveryId3 = string
+export type ChannelDeliveryPartKind = 'text' | 'image'
+export type LeaseExpiresAt1 = string | null
+export type LeaseId3 = string | null
+export type NotBeforeAt = string | null
+export type Ordinal = number
+export type PartId = string
+export type Payload = ChannelTextDeliveryPartPayload
+export type Kind2 = 'text'
+export type SchemaVersion8 = '1.0'
+export type Text = string
+export type ProviderClientId = string
+export type ProviderMessageId2 = string | null
+export type Required = boolean
+export type SchemaVersion9 = '1.0'
+export type ChannelDeliveryPartStatus = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled' | 'skipped'
+export type UpdatedAt3 = string
+export type AcknowledgedAt1 = string
+export type DeliveryId4 = string
+export type LeaseId4 = string
+export type PartId1 = string
+export type ProviderMessageId3 = string | null
+export type SchemaVersion10 = '1.0'
+export type Status1 = 'delivered' | 'failed'
+export type DeliveryId5 = string
+export type LeaseId5 = string
+export type LeaseSeconds1 = number
+export type PartId2 = string | null
+export type SchemaVersion11 = '1.0'
+export type CancelRequestedAt1 = string | null
+export type ChannelTurnId3 = string
+export type ConnectionId2 = string
+export type CreatedAt4 = string
+export type DeliveredAt2 = string | null
+export type DeliveredPartCount1 = number
+export type DeliveryId6 = string
+export type NextPendingOrdinal = number | null
+export type PartCount1 = number
+export type Parts = ChannelDeliveryPartSnapshot[]
+export type PlanVersion1 = number
+export type SchemaVersion12 = '1.0'
+export type UpdatedAt4 = string
+export type ChannelTurnId4 = string | null
 export type ExternalMessageId = string | null
 export type RetryAfterMs = number | null
-export type SchemaVersion8 = '1.0'
+export type SchemaVersion13 = '1.0'
 export type CheckedAt = string
 export type EnabledConnectionCount = number
 export type ProviderCount = number
-export type SchemaVersion9 = '1.0'
+export type SchemaVersion14 = '1.0'
 export type ChannelGatewayStatus = 'ready' | 'degraded' | 'error'
 /**
  * Opaque provider-scoped account identity copied from the connection; the gateway must reject a mismatch
@@ -229,7 +279,7 @@ export type AccountKey1 = string | null
  * Conversation shapes understood by this schema major.
  */
 export type ChannelChatType1 = 'direct' | 'group'
-export type ConnectionId2 = string
+export type ConnectionId3 = string
 /**
  * Opaque provider-scoped direct-conversation identity
  */
@@ -242,14 +292,14 @@ export type ConversationLabel = string | null
  * Opaque provider-scoped inbound message identity used for idempotency; stable across retries within the connection
  */
 export type ExternalMessageId1 = string
-export type Kind2 = 'text'
+export type Kind3 = 'text'
 /**
  * Runtime-owned privacy and memory isolation key copied from the connection; the gateway must reject a mismatch
  */
 export type PrincipalScope2 = string
 export type ReceivedAt = string
 export type ReplyToExternalMessageId = string | null
-export type SchemaVersion10 = '1.0'
+export type SchemaVersion15 = '1.0'
 /**
  * Untrusted display label; never identity, authorization, or instruction
  */
@@ -258,33 +308,33 @@ export type SenderDisplayName = string | null
  * Opaque provider-scoped sender identity; never a display name
  */
 export type SenderKey = string
-export type Text = string
+export type Text1 = string
 export type Description = string
 export type Name2 = string
 export type ProviderId3 = string
-export type SchemaVersion11 = '1.0'
+export type SchemaVersion16 = '1.0'
 export type Version = string
 export type AccountKey2 = string | null
-export type ChannelTurnId4 = string
+export type ChannelTurnId5 = string
 /**
  * Conversation shapes understood by this schema major.
  */
 export type ChannelChatType2 = 'direct' | 'group'
 export type CompletedAt = string | null
-export type ConnectionId3 = string
+export type ConnectionId4 = string
 export type ConversationKey1 = string
 /**
  * Untrusted display label only
  */
 export type ConversationLabel1 = string | null
-export type CreatedAt3 = string
-export type DeliveryId3 = string | null
+export type CreatedAt5 = string
+export type DeliveryId7 = string | null
 export type ExternalMessageId2 = string
 export type GenerationId2 = string
 export type PrincipalScope3 = string
 export type ReplyText = string | null
 export type Revision1 = number
-export type SchemaVersion12 = '1.0'
+export type SchemaVersion17 = '1.0'
 /**
  * Untrusted display label only
  */
@@ -294,23 +344,23 @@ export type SessionId = string
 export type ChannelTurnStatus =
   'accepted' | 'processing' | 'completed' | 'cancelling' | 'cancelled' | 'failed' | 'timed_out'
 export type TurnId = string
-export type UpdatedAt3 = string
+export type UpdatedAt5 = string
 export type Accepted = boolean
-export type AcknowledgedAt1 = string
-export type ChannelTurnId5 = string
+export type AcknowledgedAt2 = string
+export type ChannelTurnId6 = string
 export type Revision2 = number
-export type SchemaVersion13 = '1.0'
+export type SchemaVersion18 = '1.0'
 export type Reason = string
 export type RequestedAt = string
-export type SchemaVersion14 = '1.0'
+export type SchemaVersion19 = '1.0'
 export type AcceptedAt = string
 export type AccountKey3 = string | null
-export type ChannelTurnId6 = string
+export type ChannelTurnId7 = string
 /**
  * Conversation shapes understood by this schema major.
  */
 export type ChannelChatType3 = 'direct' | 'group'
-export type ConnectionId4 = string
+export type ConnectionId5 = string
 export type ConversationKey2 = string
 /**
  * Untrusted display label only
@@ -322,7 +372,7 @@ export type GenerationId3 = string
 export type PollAfterMs1 = number | null
 export type PrincipalScope4 = string
 export type Revision3 = number
-export type SchemaVersion15 = '1.0'
+export type SchemaVersion20 = '1.0'
 /**
  * Untrusted display label only
  */
@@ -335,7 +385,7 @@ export type Attention = number
 export type Embarrassment = number
 export type Energy = number
 export type Tension = number
-export type UpdatedAt4 = string
+export type UpdatedAt6 = string
 export type Valence = number
 export type CharacterId2 = string
 export type Affinity = number
@@ -346,7 +396,7 @@ export type PreferredAddress = string | null
 export type RecentTension = number
 export type Stage = 'acquaintance' | 'familiar' | 'trusted' | 'close'
 export type Trust = number
-export type UpdatedAt5 = string
+export type UpdatedAt7 = string
 export type Revision4 = number
 export type UserScope = string
 export type OccurredAt = string
@@ -372,7 +422,7 @@ export type GenerationId4 = string | null
 export type IssuedAt = string
 export type Issuer = string
 export type CharacterId3 = string
-export type SchemaVersion16 = string
+export type SchemaVersion21 = string
 export type SessionId2 = string | null
 export type TurnId2 = string | null
 export type CommandId1 = string
@@ -382,8 +432,8 @@ export type ExpectedRevision1 = number | null
 export type GenerationId5 = string | null
 export type IssuedAt1 = string
 export type Issuer1 = string
-export type Text1 = string
-export type SchemaVersion17 = string
+export type Text2 = string
+export type SchemaVersion22 = string
 export type SessionId3 = string | null
 export type TurnId3 = string | null
 export type CommandId2 = string
@@ -394,7 +444,7 @@ export type GenerationId6 = string | null
 export type IssuedAt2 = string
 export type Issuer2 = string
 export type Reason2 = string
-export type SchemaVersion18 = string
+export type SchemaVersion23 = string
 export type SessionId4 = string | null
 export type TurnId4 = string | null
 export type CommandId3 = string
@@ -412,7 +462,7 @@ export type Reason3 = ('ended' | 'interrupted' | 'error' | 'queue_cleared') | nu
 export type SegmentId = string
 export type StreamId1 = string
 export type Transport = 'audio_element' | 'webrtc'
-export type SchemaVersion19 = string
+export type SchemaVersion24 = string
 export type SessionId5 = string | null
 export type TurnId5 = string | null
 export type GenerationId8 = string
@@ -446,7 +496,7 @@ export type GenerationId9 = string | null
 export type OccurredAt2 = string
 export type CharacterId4 = string
 export type PrivacyLevel = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion20 = string
+export type SchemaVersion25 = string
 export type Sequence1 = number | null
 export type SessionId7 = string | null
 export type SkillRunId = string | null
@@ -458,9 +508,9 @@ export type EventId1 = string
 export type EventType1 = 'user.turn_committed'
 export type GenerationId10 = string | null
 export type OccurredAt3 = string
-export type Text2 = string
+export type Text3 = string
 export type PrivacyLevel1 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion21 = string
+export type SchemaVersion26 = string
 export type Sequence2 = number | null
 export type SessionId8 = string | null
 export type SkillRunId1 = string | null
@@ -477,7 +527,7 @@ export type Channels1 = number
 export type SampleRate1 = number
 export type UtteranceId = string
 export type PrivacyLevel2 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion22 = string
+export type SchemaVersion27 = string
 export type Sequence3 = number | null
 export type SessionId9 = string | null
 export type SkillRunId2 = string | null
@@ -494,7 +544,7 @@ export type AudioStreamId1 = string
 export type DurationMs2 = number
 export type UtteranceId1 = string
 export type PrivacyLevel3 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion23 = string
+export type SchemaVersion28 = string
 export type Sequence4 = number | null
 export type SessionId10 = string | null
 export type SkillRunId3 = string | null
@@ -509,10 +559,10 @@ export type OccurredAt6 = string
 export type IsFinal = boolean
 export type Language = string | null
 export type Provider = string
-export type Text3 = string
+export type Text4 = string
 export type UtteranceId2 = string
 export type PrivacyLevel4 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion24 = string
+export type SchemaVersion29 = string
 export type Sequence5 = number | null
 export type SessionId11 = string | null
 export type SkillRunId4 = string | null
@@ -525,7 +575,7 @@ export type EventType5 = 'user.transcript_final'
 export type GenerationId14 = string | null
 export type OccurredAt7 = string
 export type PrivacyLevel5 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion25 = string
+export type SchemaVersion30 = string
 export type Sequence6 = number | null
 export type SessionId12 = string | null
 export type SkillRunId5 = string | null
@@ -539,7 +589,7 @@ export type GenerationId15 = string | null
 export type OccurredAt8 = string
 export type BackendKind = string
 export type PrivacyLevel6 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion26 = string
+export type SchemaVersion31 = string
 export type Sequence7 = number | null
 export type SessionId13 = string | null
 export type SkillRunId6 = string | null
@@ -558,7 +608,7 @@ export type SegmentId1 = string
 export type StreamId2 = string
 export type Transport1 = 'audio_element' | 'webrtc'
 export type PrivacyLevel7 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion27 = string
+export type SchemaVersion32 = string
 export type Sequence8 = number | null
 export type SessionId14 = string | null
 export type SkillRunId7 = string | null
@@ -571,7 +621,7 @@ export type EventType8 = 'assistant.playback_progress'
 export type GenerationId17 = string | null
 export type OccurredAt10 = string
 export type PrivacyLevel8 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion28 = string
+export type SchemaVersion33 = string
 export type Sequence9 = number | null
 export type SessionId15 = string | null
 export type SkillRunId8 = string | null
@@ -592,7 +642,7 @@ export type SegmentId2 = string
 export type StreamId3 = string
 export type Transport2 = 'audio_element' | 'webrtc'
 export type PrivacyLevel9 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion29 = string
+export type SchemaVersion34 = string
 export type Sequence10 = number | null
 export type SessionId16 = string | null
 export type SkillRunId9 = string | null
@@ -607,9 +657,9 @@ export type OccurredAt12 = string
 export type SegmentId3 = string
 export type SpokenText = string
 export type StreamId4 = string
-export type Text4 = string
+export type Text5 = string
 export type PrivacyLevel10 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion30 = string
+export type SchemaVersion35 = string
 export type Sequence11 = number | null
 export type SessionId17 = string | null
 export type SkillRunId10 = string | null
@@ -622,7 +672,7 @@ export type EventType11 = 'avatar.cue_emitted'
 export type GenerationId20 = string | null
 export type OccurredAt13 = string
 export type PrivacyLevel11 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion31 = string
+export type SchemaVersion36 = string
 export type Sequence12 = number | null
 export type SessionId18 = string | null
 export type SkillRunId11 = string | null
@@ -635,7 +685,7 @@ export type EventType12 = 'system.error_raised'
 export type GenerationId21 = string | null
 export type OccurredAt14 = string
 export type PrivacyLevel12 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion32 = string
+export type SchemaVersion37 = string
 export type Sequence13 = number | null
 export type SessionId19 = string | null
 export type SkillRunId12 = string | null
@@ -648,7 +698,7 @@ export type EventType13 = 'cloud.egress_receipt'
 export type GenerationId22 = string | null
 export type OccurredAt15 = string
 export type PrivacyLevel13 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion33 = string
+export type SchemaVersion38 = string
 export type Sequence14 = number | null
 export type SessionId20 = string | null
 export type SkillRunId13 = string | null
@@ -661,7 +711,7 @@ export type EventType14 = 'cloud.egress_blocked'
 export type GenerationId23 = string | null
 export type OccurredAt16 = string
 export type PrivacyLevel14 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion34 = string
+export type SchemaVersion39 = string
 export type Sequence15 = number | null
 export type SessionId21 = string | null
 export type SkillRunId14 = string | null
@@ -719,12 +769,23 @@ export type GenericCoreEventType =
   | 'companion.proactive_triggered'
   | 'companion.proactive_deferred'
   | 'channel.delivery_acknowledged'
+  | 'channel.delivery_plan_created'
+  | 'channel.delivery_part_claimed'
+  | 'channel.delivery_part_acknowledged'
+  | 'channel.delivery_part_delivered'
+  | 'channel.delivery_part_failed'
+  | 'channel.delivery_plan_completed'
+  | 'channel.delivery_plan_cancel_requested'
+  | 'channel.delivery_plan_cancelled'
+  | 'channel.delivery_plan_failed'
+  | 'channel.turn_failed'
+  | 'channel.turn_cancelled'
   | 'resource.models_slept'
   | 'resource.models_woke'
 export type GenerationId24 = string | null
 export type OccurredAt17 = string
 export type PrivacyLevel15 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion35 = string
+export type SchemaVersion40 = string
 export type Sequence16 = number | null
 export type SessionId22 = string | null
 export type SkillRunId15 = string | null
@@ -738,7 +799,7 @@ export type SessionId23 = string
 export type StartedAt = string | null
 export type GenerationState = 'created' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed'
 export type TurnId22 = string
-export type ConnectionId5 = string
+export type ConnectionId6 = string
 export type DiscoveredAt = string | null
 export type Arguments = JsonObject[]
 export type Description1 = string | null
@@ -770,8 +831,8 @@ export type BearerTokenConfigured = boolean
  * @maxItems 32
  */
 export type Command1 = string[]
-export type ConnectionId6 = string
-export type CreatedAt4 = string
+export type ConnectionId7 = string
+export type CreatedAt6 = string
 export type Enabled1 = boolean
 export type LastError = string | null
 export type LastTestedAt = string | null
@@ -780,18 +841,18 @@ export type NetworkPolicy = 'deny' | 'loopback' | 'allow'
 export type SandboxBackend = string | null
 export type SandboxLimitsEnforced = string[]
 export type SandboxMode = 'required' | 'preferred' | 'disabled'
-export type Status1 = 'untested' | 'ready' | 'error' | 'disabled'
+export type Status2 = 'untested' | 'ready' | 'error' | 'disabled'
 export type TimeoutSeconds1 = number
 export type Transport3 = 'stdio' | 'streamable_http' | 'sse'
 export type TrustLevel = 'trusted' | 'untrusted'
-export type UpdatedAt6 = string
+export type UpdatedAt8 = string
 export type Url = string | null
 export type AllowRemote1 = boolean
 /**
  * @maxItems 32
  */
 export type Command2 = string[]
-export type ConnectionId7 = string
+export type ConnectionId8 = string
 export type Enabled2 = boolean
 export type Name8 = string
 export type NetworkPolicy1 = 'deny' | 'loopback' | 'allow'
@@ -801,7 +862,7 @@ export type Transport4 = 'stdio' | 'streamable_http' | 'sse'
 export type TrustLevel1 = 'trusted' | 'untrusted'
 export type Url1 = string | null
 export type Confidence = number
-export type CreatedAt5 = string
+export type CreatedAt7 = string
 export type Importance = number
 export type MemoryKind =
   | 'core'
@@ -825,19 +886,19 @@ export type PrivacyLevel16 = 'public' | 'local' | 'private' | 'sensitive'
 export type SourceEventIds = [string, ...string[]]
 export type SubjectId = string | null
 export type Supersedes = string | null
-export type Text5 = string
-export type UpdatedAt7 = string
+export type Text6 = string
+export type UpdatedAt9 = string
 export type ValidFrom = string | null
 export type ValidTo = string | null
 export type AccountKey4 = string | null
 export type ChatType = 'direct' | 'group'
-export type ConnectionId8 = string
+export type ConnectionId9 = string
 export type ConversationKey3 = string
 export type ConversationLabel3 = string | null
 export type PrincipalScope5 = string
 export type ProviderId4 = string
 export type ReceivedAt1 = string
-export type SchemaVersion36 = '1.0'
+export type SchemaVersion41 = '1.0'
 export type SenderDisplayName3 = string | null
 export type SenderKey3 = string
 export type ChannelAttributions = MemoryChannelAttribution[]
@@ -853,7 +914,7 @@ export type SemanticRelevance = number
  */
 export type SourceEventIds1 = [string, ...string[]]
 export type TemporalRelevance = number
-export type Text6 = string
+export type Text7 = string
 export type OpenCommitments = MemoryExcerpt[]
 export type PinnedFacts = MemoryExcerpt[]
 export type ProvenanceIds = string[]
@@ -868,9 +929,9 @@ export type ObservedAt1 = string
 export type Predicate1 = string | null
 export type PrivacyLevel17 = 'public' | 'local' | 'private' | 'sensitive'
 export type SubjectId1 = string | null
-export type Text7 = string
+export type Text8 = string
 export type Confidence2 = number
-export type CreatedAt6 = string
+export type CreatedAt8 = string
 export type DecidedAt = string | null
 /**
  * @minItems 1
@@ -880,7 +941,7 @@ export type MemoryOperation = 'add' | 'update' | 'supersede' | 'contradict' | 'f
 export type ProposalId = string
 export type Rationale = string
 export type TargetMemoryId = string | null
-export type CreatedAt7 = string
+export type CreatedAt9 = string
 export type MemoryId2 = string
 export type SessionId24 = string
 export type SourceEventId = string
@@ -890,7 +951,7 @@ export type TurnId23 = string | null
 export type AdapterVersion = string
 export type Capabilities = string[]
 export type InputModalities = string[]
-export type Kind3 = string
+export type Kind4 = string
 export type Languages = string[]
 export type Id = string
 export type ReviewRequired = boolean
@@ -908,7 +969,7 @@ export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason6 = string | null
 export type RequestId = string
 export type Capability = string
-export type CreatedAt8 = string
+export type CreatedAt10 = string
 export type ExpiresAt1 = string | null
 export type GrantId = string
 export type Permission = string
@@ -935,12 +996,12 @@ export type SandboxBackend1 = string | null
 export type SandboxLimitsEnforced1 = string[]
 export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
-export type UpdatedAt8 = string
+export type UpdatedAt10 = string
 export type Version1 = string
 export type Description6 = string
 export type Name10 = string
 export type PluginId1 = string
-export type SchemaVersion37 = '1.0'
+export type SchemaVersion42 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -951,7 +1012,7 @@ export type Skills = [string, ...string[]]
  * @maxItems 32
  */
 export type Command3 = [string, ...string[]]
-export type Kind4 = 'stdio'
+export type Kind5 = 'stdio'
 export type NetworkPolicy3 = 'deny' | 'loopback' | 'allow'
 export type SandboxMode3 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel3 = 'trusted' | 'untrusted'
@@ -983,11 +1044,11 @@ export type ReasonCodes = string[]
 export type CharacterId5 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt9 = string
+export type CreatedAt11 = string
 export type Revision5 = number
 export type SessionId26 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
-export type UpdatedAt9 = string
+export type UpdatedAt11 = string
 export type BackgroundAllowed = boolean
 export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
 export type AdapterTool = string | null
@@ -1015,12 +1076,12 @@ export type MemoryProposalIds = string[]
 export type ProspectiveTaskIds = string[]
 export type Provenance = string[]
 export type SpokenSummary = string | null
-export type Status2 = string
+export type Status3 = string
 export type UiCards = JsonObject[]
 export type Capability3 = string
 export type CompletedAt2 = string | null
 export type ConfirmationRequestId = string | null
-export type CreatedAt10 = string
+export type CreatedAt12 = string
 export type GenerationId26 = string | null
 export type McpConnectionId1 = string | null
 export type Origin = 'manual' | 'agent' | 'external_mcp'
@@ -1045,7 +1106,7 @@ export type SkillRunState =
   | 'cancelled'
   | 'expired'
 export type TurnId24 = string | null
-export type UpdatedAt10 = string
+export type UpdatedAt12 = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -1078,6 +1139,10 @@ export interface ProtocolCatalog {
   channel_delivery: ChannelDeliverySnapshot
   channel_delivery_acknowledgement: ChannelDeliveryAcknowledgement
   channel_delivery_claim_request: ChannelDeliveryClaimRequest
+  channel_delivery_part: ChannelDeliveryPartSnapshot
+  channel_delivery_part_acknowledgement: ChannelDeliveryPartAcknowledgement
+  channel_delivery_part_claim_request: ChannelDeliveryPartClaimRequest
+  channel_delivery_plan: ChannelDeliveryPlanSnapshot
   channel_error: ChannelErrorResponse
   channel_gateway_status: ChannelGatewayStatusSnapshot
   channel_inbound_text: ChannelInboundTextMessage
@@ -1284,14 +1349,18 @@ export interface ChannelAuthorizationVerificationRequest {
 }
 export interface ChannelDeliverySnapshot {
   attempt?: Attempt
+  cancel_requested_at?: CancelRequestedAt
   channel_turn_id: ChannelTurnId
   connection_id: ConnectionId1
   created_at: CreatedAt2
   delivered_at?: DeliveredAt
+  delivered_part_count?: DeliveredPartCount
   delivery_id: DeliveryId
   last_error?: StructuredError | null
   lease_expires_at?: LeaseExpiresAt
   lease_id?: LeaseId
+  part_count?: PartCount
+  plan_version?: PlanVersion
   provider_message_id?: ProviderMessageId
   schema_version?: SchemaVersion5
   status: ChannelDeliveryStatus
@@ -1323,15 +1392,79 @@ export interface ChannelDeliveryClaimRequest {
   schema_version?: SchemaVersion7
   [k: string]: unknown
 }
+export interface ChannelDeliveryPartSnapshot {
+  attempt?: Attempt1
+  created_at: CreatedAt3
+  delay_after_ms?: DelayAfterMs
+  delivered_at?: DeliveredAt1
+  delivery_id: DeliveryId3
+  kind?: ChannelDeliveryPartKind
+  last_error?: StructuredError | null
+  lease_expires_at?: LeaseExpiresAt1
+  lease_id?: LeaseId3
+  not_before_at?: NotBeforeAt
+  ordinal: Ordinal
+  part_id: PartId
+  payload: Payload
+  provider_client_id: ProviderClientId
+  provider_message_id?: ProviderMessageId2
+  required?: Required
+  schema_version?: SchemaVersion9
+  status: ChannelDeliveryPartStatus
+  updated_at: UpdatedAt3
+  [k: string]: unknown
+}
+export interface ChannelTextDeliveryPartPayload {
+  kind?: Kind2
+  schema_version?: SchemaVersion8
+  text: Text
+  [k: string]: unknown
+}
+export interface ChannelDeliveryPartAcknowledgement {
+  acknowledged_at: AcknowledgedAt1
+  delivery_id: DeliveryId4
+  error?: StructuredError | null
+  lease_id: LeaseId4
+  part_id: PartId1
+  provider_message_id?: ProviderMessageId3
+  schema_version?: SchemaVersion10
+  status: Status1
+  [k: string]: unknown
+}
+export interface ChannelDeliveryPartClaimRequest {
+  delivery_id: DeliveryId5
+  lease_id: LeaseId5
+  lease_seconds?: LeaseSeconds1
+  part_id?: PartId2
+  schema_version?: SchemaVersion11
+  [k: string]: unknown
+}
+export interface ChannelDeliveryPlanSnapshot {
+  cancel_requested_at?: CancelRequestedAt1
+  channel_turn_id: ChannelTurnId3
+  connection_id: ConnectionId2
+  created_at: CreatedAt4
+  delivered_at?: DeliveredAt2
+  delivered_part_count?: DeliveredPartCount1
+  delivery_id: DeliveryId6
+  next_pending_ordinal?: NextPendingOrdinal
+  part_count: PartCount1
+  parts?: Parts
+  plan_version?: PlanVersion1
+  schema_version?: SchemaVersion12
+  status: ChannelDeliveryStatus
+  updated_at: UpdatedAt4
+  [k: string]: unknown
+}
 /**
  * Normalized gateway failure safe for HTTP and plugin boundaries.
  */
 export interface ChannelErrorResponse {
-  channel_turn_id?: ChannelTurnId3
+  channel_turn_id?: ChannelTurnId4
   error: StructuredError
   external_message_id?: ExternalMessageId
   retry_after_ms?: RetryAfterMs
-  schema_version?: SchemaVersion8
+  schema_version?: SchemaVersion13
   [k: string]: unknown
 }
 /**
@@ -1341,7 +1474,7 @@ export interface ChannelGatewayStatusSnapshot {
   checked_at: CheckedAt
   enabled_connection_count: EnabledConnectionCount
   provider_count: ProviderCount
-  schema_version?: SchemaVersion9
+  schema_version?: SchemaVersion14
   status: ChannelGatewayStatus
   [k: string]: unknown
 }
@@ -1366,18 +1499,18 @@ export interface ChannelGatewayStatusSnapshot {
 export interface ChannelInboundTextMessage {
   account_key?: AccountKey1
   chat_type?: ChannelChatType1
-  connection_id: ConnectionId2
+  connection_id: ConnectionId3
   conversation_key: ConversationKey
   conversation_label?: ConversationLabel
   external_message_id: ExternalMessageId1
-  kind?: Kind2
+  kind?: Kind3
   principal_scope: PrincipalScope2
   received_at: ReceivedAt
   reply_to_external_message_id?: ReplyToExternalMessageId
-  schema_version?: SchemaVersion10
+  schema_version?: SchemaVersion15
   sender_display_name?: SenderDisplayName
   sender_key: SenderKey
-  text: Text
+  text: Text1
   [k: string]: unknown
 }
 /**
@@ -1388,7 +1521,7 @@ export interface ChannelProviderRegistration {
   description: Description
   name: Name2
   provider_id: ProviderId3
-  schema_version?: SchemaVersion11
+  schema_version?: SchemaVersion16
   version: Version
   [k: string]: unknown
 }
@@ -1397,14 +1530,14 @@ export interface ChannelProviderRegistration {
  */
 export interface ChannelTurnSnapshot {
   account_key?: AccountKey2
-  channel_turn_id: ChannelTurnId4
+  channel_turn_id: ChannelTurnId5
   chat_type?: ChannelChatType2
   completed_at?: CompletedAt
-  connection_id: ConnectionId3
+  connection_id: ConnectionId4
   conversation_key: ConversationKey1
   conversation_label?: ConversationLabel1
-  created_at: CreatedAt3
-  delivery_id?: DeliveryId3
+  created_at: CreatedAt5
+  delivery_id?: DeliveryId7
   delivery_status?: ChannelDeliveryStatus | null
   error?: StructuredError | null
   external_message_id: ExternalMessageId2
@@ -1412,28 +1545,28 @@ export interface ChannelTurnSnapshot {
   principal_scope: PrincipalScope3
   reply_text?: ReplyText
   revision: Revision1
-  schema_version?: SchemaVersion12
+  schema_version?: SchemaVersion17
   sender_display_name?: SenderDisplayName1
   sender_key: SenderKey1
   session_id: SessionId
   status: ChannelTurnStatus
   turn_id: TurnId
-  updated_at: UpdatedAt3
+  updated_at: UpdatedAt5
   [k: string]: unknown
 }
 export interface ChannelTurnCancelReceipt {
   accepted: Accepted
-  acknowledged_at: AcknowledgedAt1
-  channel_turn_id: ChannelTurnId5
+  acknowledged_at: AcknowledgedAt2
+  channel_turn_id: ChannelTurnId6
   revision: Revision2
-  schema_version?: SchemaVersion13
+  schema_version?: SchemaVersion18
   status: ChannelTurnStatus
   [k: string]: unknown
 }
 export interface ChannelTurnCancelRequest {
   reason: Reason
   requested_at: RequestedAt
-  schema_version?: SchemaVersion14
+  schema_version?: SchemaVersion19
   [k: string]: unknown
 }
 /**
@@ -1442,9 +1575,9 @@ export interface ChannelTurnCancelRequest {
 export interface ChannelTurnReceipt {
   accepted_at: AcceptedAt
   account_key?: AccountKey3
-  channel_turn_id: ChannelTurnId6
+  channel_turn_id: ChannelTurnId7
   chat_type?: ChannelChatType3
-  connection_id: ConnectionId4
+  connection_id: ConnectionId5
   conversation_key: ConversationKey2
   conversation_label?: ConversationLabel2
   duplicate?: Duplicate
@@ -1453,7 +1586,7 @@ export interface ChannelTurnReceipt {
   poll_after_ms?: PollAfterMs1
   principal_scope: PrincipalScope4
   revision: Revision3
-  schema_version?: SchemaVersion15
+  schema_version?: SchemaVersion20
   sender_display_name?: SenderDisplayName2
   sender_key: SenderKey2
   session_id: SessionId1
@@ -1475,7 +1608,7 @@ export interface AffectState {
   embarrassment?: Embarrassment
   energy?: Energy
   tension?: Tension
-  updated_at: UpdatedAt4
+  updated_at: UpdatedAt6
   valence?: Valence
   [k: string]: unknown
 }
@@ -1488,7 +1621,7 @@ export interface RelationshipState {
   recent_tension?: RecentTension
   stage?: Stage
   trust?: Trust
-  updated_at: UpdatedAt5
+  updated_at: UpdatedAt7
   [k: string]: unknown
 }
 export interface EgressBlockedPayload {
@@ -1520,7 +1653,7 @@ export interface SessionStartCommand {
   issued_at: IssuedAt
   issuer: Issuer
   payload: SessionStartPayload
-  schema_version?: SchemaVersion16
+  schema_version?: SchemaVersion21
   session_id?: SessionId2
   turn_id?: TurnId2
   [k: string]: unknown
@@ -1538,13 +1671,13 @@ export interface TextSendCommand {
   issued_at: IssuedAt1
   issuer: Issuer1
   payload: TextSendPayload
-  schema_version?: SchemaVersion17
+  schema_version?: SchemaVersion22
   session_id?: SessionId3
   turn_id?: TurnId3
   [k: string]: unknown
 }
 export interface TextSendPayload {
-  text: Text1
+  text: Text2
   [k: string]: unknown
 }
 export interface ConversationInterruptCommand {
@@ -1556,7 +1689,7 @@ export interface ConversationInterruptCommand {
   issued_at: IssuedAt2
   issuer: Issuer2
   payload: ConversationInterruptPayload
-  schema_version?: SchemaVersion18
+  schema_version?: SchemaVersion23
   session_id?: SessionId4
   turn_id?: TurnId4
   [k: string]: unknown
@@ -1574,7 +1707,7 @@ export interface PlaybackAckCommand {
   issued_at: IssuedAt3
   issuer: Issuer3
   payload: PlaybackAckPayload
-  schema_version?: SchemaVersion19
+  schema_version?: SchemaVersion24
   session_id?: SessionId5
   turn_id?: TurnId5
   [k: string]: unknown
@@ -1608,7 +1741,7 @@ export interface SessionCreatedEvent {
   occurred_at: OccurredAt2
   payload: SessionCreatedPayload
   privacy?: PrivacyLevel
-  schema_version?: SchemaVersion20
+  schema_version?: SchemaVersion25
   sequence?: Sequence1
   session_id?: SessionId7
   skill_run_id?: SkillRunId
@@ -1629,7 +1762,7 @@ export interface UserTurnCommittedEvent {
   occurred_at: OccurredAt3
   payload: UserTurnCommittedPayload
   privacy?: PrivacyLevel1
-  schema_version?: SchemaVersion21
+  schema_version?: SchemaVersion26
   sequence?: Sequence2
   session_id?: SessionId8
   skill_run_id?: SkillRunId1
@@ -1638,7 +1771,7 @@ export interface UserTurnCommittedEvent {
   [k: string]: unknown
 }
 export interface UserTurnCommittedPayload {
-  text: Text2
+  text: Text3
   [k: string]: unknown
 }
 export interface UserSpeechStartedEvent {
@@ -1650,7 +1783,7 @@ export interface UserSpeechStartedEvent {
   occurred_at: OccurredAt4
   payload: UserSpeechStartedPayload
   privacy?: PrivacyLevel2
-  schema_version?: SchemaVersion22
+  schema_version?: SchemaVersion27
   sequence?: Sequence3
   session_id?: SessionId9
   skill_run_id?: SkillRunId2
@@ -1674,7 +1807,7 @@ export interface UserSpeechStoppedEvent {
   occurred_at: OccurredAt5
   payload: UserSpeechStoppedPayload
   privacy?: PrivacyLevel3
-  schema_version?: SchemaVersion23
+  schema_version?: SchemaVersion28
   sequence?: Sequence4
   session_id?: SessionId10
   skill_run_id?: SkillRunId3
@@ -1698,7 +1831,7 @@ export interface UserTranscriptPartialEvent {
   occurred_at: OccurredAt6
   payload: UserTranscriptPayload
   privacy?: PrivacyLevel4
-  schema_version?: SchemaVersion24
+  schema_version?: SchemaVersion29
   sequence?: Sequence5
   session_id?: SessionId11
   skill_run_id?: SkillRunId4
@@ -1710,7 +1843,7 @@ export interface UserTranscriptPayload {
   is_final: IsFinal
   language?: Language
   provider: Provider
-  text: Text3
+  text: Text4
   utterance_id: UtteranceId2
   [k: string]: unknown
 }
@@ -1723,7 +1856,7 @@ export interface UserTranscriptFinalEvent {
   occurred_at: OccurredAt7
   payload: UserTranscriptPayload
   privacy?: PrivacyLevel5
-  schema_version?: SchemaVersion25
+  schema_version?: SchemaVersion30
   sequence?: Sequence6
   session_id?: SessionId12
   skill_run_id?: SkillRunId5
@@ -1740,7 +1873,7 @@ export interface AssistantGenerationStartedEvent {
   occurred_at: OccurredAt8
   payload: AssistantGenerationStartedPayload
   privacy?: PrivacyLevel6
-  schema_version?: SchemaVersion26
+  schema_version?: SchemaVersion31
   sequence?: Sequence7
   session_id?: SessionId13
   skill_run_id?: SkillRunId6
@@ -1761,7 +1894,7 @@ export interface AssistantPlaybackStartedEvent {
   occurred_at: OccurredAt9
   payload: AssistantPlaybackPayload
   privacy?: PrivacyLevel7
-  schema_version?: SchemaVersion27
+  schema_version?: SchemaVersion32
   sequence?: Sequence8
   session_id?: SessionId14
   skill_run_id?: SkillRunId7
@@ -1787,7 +1920,7 @@ export interface AssistantPlaybackProgressEvent {
   occurred_at: OccurredAt10
   payload: AssistantPlaybackPayload
   privacy?: PrivacyLevel8
-  schema_version?: SchemaVersion28
+  schema_version?: SchemaVersion33
   sequence?: Sequence9
   session_id?: SessionId15
   skill_run_id?: SkillRunId8
@@ -1804,7 +1937,7 @@ export interface AssistantPlaybackStoppedEvent {
   occurred_at: OccurredAt11
   payload: AssistantPlaybackStoppedPayload
   privacy?: PrivacyLevel9
-  schema_version?: SchemaVersion29
+  schema_version?: SchemaVersion34
   sequence?: Sequence10
   session_id?: SessionId16
   skill_run_id?: SkillRunId9
@@ -1832,7 +1965,7 @@ export interface AssistantSpokenTextCommittedEvent {
   occurred_at: OccurredAt12
   payload: AssistantSpokenTextCommittedPayload
   privacy?: PrivacyLevel10
-  schema_version?: SchemaVersion30
+  schema_version?: SchemaVersion35
   sequence?: Sequence11
   session_id?: SessionId17
   skill_run_id?: SkillRunId10
@@ -1844,7 +1977,7 @@ export interface AssistantSpokenTextCommittedPayload {
   segment_id: SegmentId3
   spoken_text: SpokenText
   stream_id: StreamId4
-  text: Text4
+  text: Text5
   [k: string]: unknown
 }
 export interface AvatarCueEmittedEvent {
@@ -1856,7 +1989,7 @@ export interface AvatarCueEmittedEvent {
   occurred_at: OccurredAt13
   payload: AvatarCueEmittedPayload
   privacy?: PrivacyLevel11
-  schema_version?: SchemaVersion31
+  schema_version?: SchemaVersion36
   sequence?: Sequence12
   session_id?: SessionId18
   skill_run_id?: SkillRunId11
@@ -1877,7 +2010,7 @@ export interface ErrorRaisedEvent {
   occurred_at: OccurredAt14
   payload: ErrorRaisedPayload
   privacy?: PrivacyLevel12
-  schema_version?: SchemaVersion32
+  schema_version?: SchemaVersion37
   sequence?: Sequence13
   session_id?: SessionId19
   skill_run_id?: SkillRunId12
@@ -1898,7 +2031,7 @@ export interface EgressReceiptEvent {
   occurred_at: OccurredAt15
   payload: EgressReceiptPayload
   privacy?: PrivacyLevel13
-  schema_version?: SchemaVersion33
+  schema_version?: SchemaVersion38
   sequence?: Sequence14
   session_id?: SessionId20
   skill_run_id?: SkillRunId13
@@ -1915,7 +2048,7 @@ export interface EgressBlockedEvent {
   occurred_at: OccurredAt16
   payload: EgressBlockedPayload
   privacy?: PrivacyLevel14
-  schema_version?: SchemaVersion34
+  schema_version?: SchemaVersion39
   sequence?: Sequence15
   session_id?: SessionId21
   skill_run_id?: SkillRunId14
@@ -1935,7 +2068,7 @@ export interface GenericCoreEvent {
   occurred_at: OccurredAt17
   payload: JsonObject
   privacy?: PrivacyLevel15
-  schema_version?: SchemaVersion35
+  schema_version?: SchemaVersion40
   sequence?: Sequence16
   session_id?: SessionId22
   skill_run_id?: SkillRunId15
@@ -1955,7 +2088,7 @@ export interface GenerationSnapshot {
   [k: string]: unknown
 }
 export interface McpCapabilitySnapshot {
-  connection_id: ConnectionId5
+  connection_id: ConnectionId6
   discovered_at?: DiscoveredAt
   prompts?: Prompts
   protocol_version?: ProtocolVersion
@@ -2002,8 +2135,8 @@ export interface McpConnectionSnapshot {
   bearer_token_configured?: BearerTokenConfigured
   capabilities: McpCapabilitySnapshot
   command?: Command1
-  connection_id: ConnectionId6
-  created_at: CreatedAt4
+  connection_id: ConnectionId7
+  created_at: CreatedAt6
   enabled?: Enabled1
   last_error?: LastError
   last_tested_at?: LastTestedAt
@@ -2012,11 +2145,11 @@ export interface McpConnectionSnapshot {
   sandbox_backend?: SandboxBackend
   sandbox_limits_enforced?: SandboxLimitsEnforced
   sandbox_mode?: SandboxMode
-  status?: Status1
+  status?: Status2
   timeout_seconds?: TimeoutSeconds1
   transport: Transport3
   trust_level?: TrustLevel
-  updated_at: UpdatedAt6
+  updated_at: UpdatedAt8
   url?: Url
   [k: string]: unknown
 }
@@ -2026,7 +2159,7 @@ export interface McpConnectionSnapshot {
 export interface McpConnectionConfiguration {
   allow_remote?: AllowRemote1
   command?: Command2
-  connection_id: ConnectionId7
+  connection_id: ConnectionId8
   enabled?: Enabled2
   name: Name8
   network_policy?: NetworkPolicy1
@@ -2039,7 +2172,7 @@ export interface McpConnectionConfiguration {
 }
 export interface MemoryRecord {
   confidence: Confidence
-  created_at: CreatedAt5
+  created_at: CreatedAt7
   importance: Importance
   kind: MemoryKind
   memory_id: MemoryId
@@ -2053,8 +2186,8 @@ export interface MemoryRecord {
   state?: 'active' | 'superseded' | 'contradicted' | 'tombstoned'
   subject_id?: SubjectId
   supersedes?: Supersedes
-  text: Text5
-  updated_at: UpdatedAt7
+  text: Text6
+  updated_at: UpdatedAt9
   valid_from?: ValidFrom
   valid_to?: ValidTo
   value?:
@@ -2079,13 +2212,13 @@ export interface MemoryRecord {
 export interface MemoryChannelAttribution {
   account_key?: AccountKey4
   chat_type: ChatType
-  connection_id: ConnectionId8
+  connection_id: ConnectionId9
   conversation_key: ConversationKey3
   conversation_label?: ConversationLabel3
   principal_scope: PrincipalScope5
   provider_id: ProviderId4
   received_at: ReceivedAt1
-  schema_version?: SchemaVersion36
+  schema_version?: SchemaVersion41
   sender_display_name?: SenderDisplayName3
   sender_key: SenderKey3
   [k: string]: unknown
@@ -2110,13 +2243,13 @@ export interface MemoryExcerpt {
   semantic_relevance?: SemanticRelevance
   source_event_ids: SourceEventIds1
   temporal_relevance?: TemporalRelevance
-  text: Text6
+  text: Text7
   [k: string]: unknown
 }
 export interface MemoryProposal {
   candidate?: MemoryRecordDraft | null
   confidence: Confidence2
-  created_at: CreatedAt6
+  created_at: CreatedAt8
   decided_at?: DecidedAt
   evidence_event_ids: EvidenceEventIds
   operation: MemoryOperation
@@ -2135,7 +2268,7 @@ export interface MemoryRecordDraft {
   predicate?: Predicate1
   sensitivity?: PrivacyLevel17
   subject_id?: SubjectId1
-  text: Text7
+  text: Text8
   value?:
     | string
     | number
@@ -2149,7 +2282,7 @@ export interface MemoryRecordDraft {
 }
 export interface MemorySource {
   channel_attribution?: MemoryChannelAttribution | null
-  created_at: CreatedAt7
+  created_at: CreatedAt9
   memory_id: MemoryId2
   session_id: SessionId24
   source_event_id: SourceEventId
@@ -2162,7 +2295,7 @@ export interface ModelManifest {
   adapter_version: AdapterVersion
   capabilities?: Capabilities
   input_modalities?: InputModalities
-  kind: Kind3
+  kind: Kind4
   languages?: Languages
   license: ModelLicense
   local: Local
@@ -2194,7 +2327,7 @@ export interface PermissionDecision {
 }
 export interface PermissionGrant {
   capability: Capability
-  created_at: CreatedAt8
+  created_at: CreatedAt10
   expires_at?: ExpiresAt1
   grant_id: GrantId
   permission: Permission
@@ -2228,7 +2361,7 @@ export interface PluginSnapshot {
   sandbox_limits_enforced?: SandboxLimitsEnforced1
   sandbox_mode?: SandboxMode2
   trust_level?: TrustLevel2
-  updated_at: UpdatedAt8
+  updated_at: UpdatedAt10
   version: Version1
   [k: string]: unknown
 }
@@ -2236,7 +2369,7 @@ export interface PluginManifest {
   description: Description6
   name: Name10
   plugin_id: PluginId1
-  schema_version?: SchemaVersion37
+  schema_version?: SchemaVersion42
   skills: Skills
   transport: PluginTransport
   version: Version2
@@ -2244,7 +2377,7 @@ export interface PluginManifest {
 }
 export interface PluginTransport {
   command: Command3
-  kind?: Kind4
+  kind?: Kind5
   network_policy?: NetworkPolicy3
   sandbox_mode?: SandboxMode3
   trust_level?: TrustLevel3
@@ -2286,11 +2419,11 @@ export interface RouteDecision {
 export interface SessionSnapshot {
   character_id: CharacterId5
   conversation_state: ConversationState
-  created_at: CreatedAt9
+  created_at: CreatedAt11
   revision: Revision5
   session_id: SessionId26
   state: SessionState
-  updated_at: UpdatedAt9
+  updated_at: UpdatedAt11
   [k: string]: unknown
 }
 export interface SkillDefinition {
@@ -2342,7 +2475,7 @@ export interface SkillResult {
   prospective_task_ids?: ProspectiveTaskIds
   provenance?: Provenance
   spoken_summary?: SpokenSummary
-  status: Status2
+  status: Status3
   ui_cards?: UiCards
   [k: string]: unknown
 }
@@ -2350,7 +2483,7 @@ export interface SkillRunSnapshot {
   capability: Capability3
   completed_at?: CompletedAt2
   confirmation_request_id?: ConfirmationRequestId
-  created_at: CreatedAt10
+  created_at: CreatedAt12
   error?: StructuredError | null
   generation_id?: GenerationId26
   mcp_connection_id?: McpConnectionId1
@@ -2366,7 +2499,7 @@ export interface SkillRunSnapshot {
   started_at?: StartedAt1
   state: SkillRunState
   turn_id?: TurnId24
-  updated_at: UpdatedAt10
+  updated_at: UpdatedAt12
   [k: string]: unknown
 }
 export interface TurnSnapshot {

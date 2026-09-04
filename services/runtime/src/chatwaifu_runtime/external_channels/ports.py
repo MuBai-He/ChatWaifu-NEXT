@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -11,6 +12,10 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryClaimRequest,
+    ChannelDeliveryPartAcknowledgement,
+    ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartDraft,
+    ChannelDeliveryPartsCancelRequest,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
@@ -18,8 +23,14 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
+    ChannelDeliveryPartDeferRequest,
+    ChannelDeliveryPartRecord,
+    ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
     ChannelTurnRecord,
+    CompleteTurnResult,
+    DeliveryTransitionResult,
+    LeaseRecoveryResult,
 )
 
 
@@ -79,7 +90,9 @@ class ExternalChannelRepository(Protocol):
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None: ...
 
-    async def list_inflight_turns(self) -> tuple[ChannelTurnRecord, ...]: ...
+    async def list_inflight_turns(
+        self, connection_id: UUID | None = None
+    ) -> tuple[ChannelTurnRecord, ...]: ...
 
     async def has_inflight_turn(self, binding_id: UUID) -> bool: ...
 
@@ -96,7 +109,90 @@ class ExternalChannelRepository(Protocol):
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
-    ) -> ChannelTurnRecord: ...
+        parts: Sequence[ChannelDeliveryPartDraft] | None = None,
+    ) -> CompleteTurnResult | ChannelTurnRecord: ...
+
+    async def create_delivery_plan(
+        self,
+        channel_turn_id: UUID,
+        *,
+        delivery_id: UUID,
+        parts: Sequence[ChannelDeliveryPartDraft],
+        created_at: datetime,
+    ) -> DeliveryTransitionResult | ChannelDeliveryPlanRecord: ...
+
+    async def get_delivery_plan(self, delivery_id: UUID) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def get_delivery_plan_by_turn(
+        self, channel_turn_id: UUID
+    ) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def list_delivery_parts(
+        self, delivery_id: UUID
+    ) -> tuple[ChannelDeliveryPartRecord, ...]: ...
+
+    async def claim_next_delivery_part(
+        self,
+        claim: ChannelDeliveryPartClaimRequest,
+        *,
+        claimed_at: datetime,
+    ) -> DeliveryTransitionResult | None: ...
+
+    async def acknowledge_delivery_part(
+        self,
+        acknowledgement: ChannelDeliveryPartAcknowledgement,
+        *,
+        updated_at: datetime,
+    ) -> DeliveryTransitionResult: ...
+
+    async def defer_delivery_part(
+        self,
+        defer_request: ChannelDeliveryPartDeferRequest,
+        *,
+        updated_at: datetime,
+    ) -> DeliveryTransitionResult: ...
+
+    async def cancel_remaining_delivery_parts(
+        self,
+        delivery_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+        *,
+        cancel_sending_lease_id: UUID | None = None,
+    ) -> DeliveryTransitionResult: ...
+
+    async def cancel_active_delivery_plans_for_connection(
+        self,
+        connection_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> int: ...
+
+    async def find_active_delivery_plan_for_binding(
+        self,
+        binding_id: UUID,
+    ) -> ChannelDeliveryPlanRecord | None: ...
+
+    async def list_active_delivery_plans_for_binding(
+        self,
+        binding_id: UUID,
+    ) -> tuple[ChannelDeliveryPlanRecord, ...]: ...
+
+    async def list_nonterminal_delivery_plans(
+        self,
+        connection_id: UUID | None = None,
+        *,
+        limit: int = 50,
+    ) -> tuple[ChannelDeliveryPlanRecord, ...]: ...
+
+    async def next_delivery_wakeup_at(
+        self,
+        connection_id: UUID | None = None,
+    ) -> datetime | None: ...
+
+    async def recover_expired_delivery_part_leases(
+        self,
+        *,
+        as_of: datetime,
+    ) -> LeaseRecoveryResult: ...
 
     async def set_turn_terminal(
         self,

@@ -204,6 +204,7 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 430, height: 650 });
+  await page.mouse.move(-100, -100);
   await page.goto("/desktop-pet");
 
   const shell = page.locator(".desktop-pet-shell");
@@ -213,7 +214,7 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   // The physical pointer is shared by the headless browser process and can be
   // left over the new page by the preceding settings test. Establish the
   // outside state explicitly before checking the reveal transition.
-  await page.mouse.move(500, 700);
+  await page.mouse.move(-100, -100);
   await expect(shell).toHaveAttribute("data-pointer-inside", "false");
   await expect(actions).toHaveCSS("opacity", "0");
   await expect(actions).toHaveCSS("pointer-events", "none");
