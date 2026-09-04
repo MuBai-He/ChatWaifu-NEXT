@@ -3,17 +3,17 @@ layout: home
 
 hero:
   name: ChatWaifu NEXT
-  text: 在屏幕的一隅，写下属于你们的日常物语
-  tagline: 当微光洒在桌面、指尖划过键盘，熟悉的声音便在耳边轻轻响起。那些随口说起的琐碎、未曾言说的心情，都化作了她眼眸里的笑意与长久的倾听。
+  text: 一个会听、会记事、能住在桌面上的角色。
+  tagline: 2022 年的 ChatWaifu 是几个脚本拼起来的小玩具。NEXT 把它重做了一遍：说话能打断，记住的东西能查能删，浏览器和桌宠用同一个后端，角色想换就换。
   image:
     src: /brand/chatwaifu-mark.png
     alt: 丝带环绕月牙与星芒组成的 ChatWaifu NEXT 标志
   actions:
     - theme: brand
-      text: 先跑起来
+      text: 先跑起来（不需要模型）
       link: /guide/getting-started
     - theme: alt
-      text: 安装桌宠
+      text: 装成 Windows 桌宠
       link: /guide/windows
     - theme: alt
       text: 换成我的角色
@@ -22,69 +22,123 @@ hero:
 
 <HomePreview />
 
-<section class="cw-chapters" aria-label="ChatWaifu NEXT 的三种体验">
-  <article class="cw-chapter">
+<section class="cw-chapters" aria-label="她能做什么" data-reveal>
+  <article class="cw-chapter" style="--i: 0">
     <span class="cw-chapter__number">01</span>
-    <div>
-      <h2>开口就能聊</h2>
-      <p>按下麦克风开始说话；说完会自动收尾，想插话时也能随时打断。声音、字幕、口型和动作按同一段对白往前走。</p>
+    <div class="cw-chapter__body">
+      <h2>说到一半可以打断她</h2>
+      <p>按住麦克风说话，停下来她就接。她说到一半你想插嘴，直接开口就行，她会停下来听。声音、字幕、口型和动作跟着同一句台词走，不会出现字幕到了、声音还在上一句的情况。</p>
+    </div>
+    <div class="cw-demo cw-demo--wave" aria-hidden="true">
+      <span class="cw-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="cw-demo__label"><b class="cw-dot"></b>说话中，随时可以打断</span>
     </div>
   </article>
-  <article class="cw-chapter">
+  <article class="cw-chapter" style="--i: 1">
     <span class="cw-chapter__number">02</span>
-    <div>
-      <h2>下次见面，她还记得</h2>
-      <p>你提过的小事、最近在忙什么、彼此熟悉到了哪一步，都可以慢慢留下来。记错了，也能查看来源、改掉或删掉。</p>
+    <div class="cw-chapter__body">
+      <h2>上次说的事她还记得</h2>
+      <p>不是把聊天记录整包塞回去。你随口提的事会被挑出来、过一遍审核再存进本地数据库，每一条都能看到是哪天哪句话来的。记错了就改，不想留就删，她下次不会再提。</p>
+    </div>
+    <div class="cw-demo cw-demo--memory" aria-hidden="true">
+      <div class="cw-memcard">
+        <span class="cw-memcard__tag">记忆 · 近况</span>
+        <p>最近在赶毕业论文，晚上经常熬夜</p>
+        <div class="cw-memcard__meta">
+          <span>来源：9 月 2 日 23:14 的对话</span>
+          <span class="cw-memcard__actions"><b>改</b><b>删</b></span>
+        </div>
+      </div>
     </div>
   </article>
-  <article class="cw-chapter">
+  <article class="cw-chapter" style="--i: 2">
     <span class="cw-chapter__number">03</span>
-    <div>
-      <h2>在网页里，也在桌面上</h2>
-      <p>想专心聊天就打开 Galgame 界面，想安静陪伴就启动桌宠。两边共用同一套会话、记忆、关系和声音设置。</p>
+    <div class="cw-chapter__body">
+      <h2>浏览器里聊，桌面上陪</h2>
+      <p>想认真聊就开网页版，界面像 Galgame。不想被打扰就开桌宠，她安静地待在屏幕角落。两边不是同一个页面套两层皮，是各自编译的两个产物，但会话、记忆、关系和声音设置是同一份。</p>
+    </div>
+    <div class="cw-demo cw-demo--windows" aria-hidden="true">
+      <div class="cw-win cw-win--web"><span>Web</span><i></i><i></i><i></i></div>
+      <div class="cw-win cw-win--desk"><span>桌宠</span><i></i></div>
+      <span class="cw-win__link"></span>
     </div>
   </article>
 </section>
 
-<p class="cw-kicker">从 ChatWaifu 到 NEXT</p>
+<section class="cw-history" data-reveal>
+  <p class="cw-kicker" style="--i: 0">2022 → 现在</p>
+  <h2 style="--i: 1">从 ChatWaifu 到 NEXT</h2>
+  <p class="cw-history__lead" style="--i: 2">最早的 <a href="https://github.com/cjyaddone/ChatWaifu" target="_blank" rel="noreferrer">ChatWaifu</a> 是把 ChatGPT、VITS 声线和 Live2D 硬凑进一个窗口的实验。效果出乎意料地好，但代码确实只是几个脚本。NEXT 没有换方向，只是这次打算把它当成一个能维护好几年的项目来做。</p>
+  <ul class="cw-then-now" style="--i: 3">
+    <li><span class="cw-then-now__then">只能等她把话说完</span><span class="cw-then-now__arrow">→</span><span class="cw-then-now__now">想插嘴随时开口</span></li>
+    <li><span class="cw-then-now__then">关掉窗口，聊过的全忘了</span><span class="cw-then-now__arrow">→</span><span class="cw-then-now__now">记在你自己的电脑里，能查、能改、能删</span></li>
+    <li><span class="cw-then-now__then">换角色要翻代码改</span><span class="cw-then-now__arrow">→</span><span class="cw-then-now__now">人格、声音、模型、Avatar 各有各的文件</span></li>
+    <li><span class="cw-then-now__then">一个窗口，开着就得盯着</span><span class="cw-then-now__arrow">→</span><span class="cw-then-now__now">网页里聊，桌宠留在桌面</span></li>
+  </ul>
+</section>
 
-## 把当年的想法，认真做完
+<section class="cw-status" data-reveal>
+  <h2 style="--i: 0">老实说，现在做到哪了</h2>
+  <p class="cw-status__lead" style="--i: 1">这是一个能用的 Demo，还不是正式发行版。哪些行、哪些还不行，先写在这里，省得你装完才发现。</p>
+  <div class="cw-status__cols">
+    <div class="cw-status__col cw-status__col--ok" style="--i: 2">
+      <h3>能用</h3>
+      <ul>
+        <li>浏览器里语音对话，可以打断</li>
+        <li>Live2D 表情、口型、动作</li>
+        <li>本地记忆，可查可改可删</li>
+        <li>Windows x64 安装候选，过了基础安装 smoke</li>
+      </ul>
+    </div>
+    <div class="cw-status__col cw-status__col--todo" style="--i: 3">
+      <h3>还差</h3>
+      <ul>
+        <li>安装包代码签名</li>
+        <li>Worker Pack 在真机 x64 / CUDA 上的安装态推理</li>
+        <li>公开发布前的许可与资产复核</li>
+      </ul>
+    </div>
+    <div class="cw-status__col cw-status__col--none" style="--i: 4">
+      <h3>仓库里没有</h3>
+      <ul>
+        <li>宁宁的 Live2D 模型</li>
+        <li>训练好的声线和 checkpoint</li>
+        <li>模型权重</li>
+        <li>Cubism Core</li>
+      </ul>
+      <p>这些归各自的权利人，得自己准备。细节在 <a href="./guide/licensing">许可边界</a>。</p>
+    </div>
+  </div>
+</section>
 
-[早期 ChatWaifu](https://github.com/cjyaddone/ChatWaifu) 让聊天模型、角色语音、语音识别和 Live2D
-第一次在同一个窗口里见面。NEXT 仍然想做同一件事：让角色真正陪你聊下去。只是这一次，语音、记忆、
-桌宠和二次开发都被整理成了一套可以长期维护的项目。
+<section class="cw-start" data-reveal>
+  <h2 style="--i: 0">你想从哪开始？</h2>
+  <div class="cw-paths">
+    <a class="cw-path" href="./guide/web-development" style="--i: 1">
+      <span class="cw-path__goal">先在浏览器里看一眼界面</span>
+      <span class="cw-path__to">macOS 与 Web 开发 <i>→</i></span>
+    </a>
+    <a class="cw-path" href="./guide/windows" style="--i: 2">
+      <span class="cw-path__goal">构建 Windows x64 桌宠安装候选</span>
+      <span class="cw-path__to">Windows x64 <i>→</i></span>
+    </a>
+    <a class="cw-path" href="./guide/worker-packs" style="--i: 3">
+      <span class="cw-path__goal">装本地 Qwen3-TTS 或 faster-whisper</span>
+      <span class="cw-path__to">本地 AI Worker Packs <i>→</i></span>
+    </a>
+    <a class="cw-path" href="./guide/configuration" style="--i: 4">
+      <span class="cw-path__goal">接上聊天模型、Embedding 或百炼声音</span>
+      <span class="cw-path__to">模型与 TTS 配置 <i>→</i></span>
+    </a>
+    <a class="cw-path" href="./guide/customization" style="--i: 5">
+      <span class="cw-path__goal">换角色、声音、Avatar、记忆规则或 Skill</span>
+      <span class="cw-path__to">二次开发指南 <i>→</i></span>
+    </a>
+    <a class="cw-path" href="./guide/troubleshooting" style="--i: 6">
+      <span class="cw-path__goal">启动失败、白屏、端口冲突或没声音</span>
+      <span class="cw-path__to">故障排查 <i>→</i></span>
+    </a>
+  </div>
+</section>
 
-<div class="cw-notes">
-  <article class="cw-note">
-    <span>对话</span>
-    <strong>先把相处的感觉做好</strong>
-    <p>当前 Demo 从宁宁主题出发，先看对白节奏、声音、表情和动作能不能自然地接在一起。</p>
-  </article>
-  <article class="cw-note">
-    <span>记忆</span>
-    <strong>她的记忆留在你的机器上</strong>
-    <p>聊天记录、关系和长期记忆默认由本地 Runtime 保管；云模型负责回答，不接管角色本身。</p>
-  </article>
-  <article class="cw-note">
-    <span>二开</span>
-    <strong>换角色，不必推倒重来</strong>
-    <p>人格、声音、模型和 Avatar 都有各自入口。想做自己的角色时，只换真正需要换的部分。</p>
-  </article>
-</div>
-
-::: warning 当前发行状态
-现在是基础可用 Demo，还不是完成签名与公开许可审查的正式发行版。源码仓库不包含宁宁 Live2D、
-训练声线、模型权重或 Cubism Core。Windows 安装候选已通过基础 x64 安装 smoke；原生 x64/CUDA
-笔记本上的 Worker Pack 构建与安装态真实推理仍待完成。
-:::
-
-## 你想从哪里开始？
-
-| 目标                                   | 去这里                                      |
-| -------------------------------------- | ------------------------------------------- |
-| 先在浏览器里看一眼界面                 | [macOS 与 Web 开发](/guide/web-development) |
-| 构建 Windows x64 桌宠安装候选          | [Windows x64](/guide/windows)               |
-| 安装本地 Qwen3-TTS 或 faster-whisper   | [本地 AI Worker Packs](/guide/worker-packs) |
-| 接上聊天模型、Embedding 或百炼声音     | [模型与 TTS 配置](/guide/configuration)     |
-| 换角色、声音、Avatar、记忆规则或 Skill | [二次开发指南](/guide/customization)        |
-| 排查启动失败、白屏、端口冲突或没有声音 | [故障排查](/guide/troubleshooting)          |
+<HomeReveal />
