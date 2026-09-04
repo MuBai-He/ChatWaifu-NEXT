@@ -303,6 +303,40 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
         .passthrough(),
     })
     .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("cloud.egress_receipt"),
+      payload: z
+        .object({
+          provider_backend_id: z.string().min(1),
+          patch_id: uuid,
+          component_kinds: z.array(z.string()).default([]),
+          memory_record_ids: z.array(uuid).default([]),
+          byte_count: z.number().int().nonnegative(),
+          estimated_tokens: z.number().int().nonnegative(),
+          policy_decision: z.string().min(1),
+          approved_by: z.string().nullish(),
+          scope: z.string().nullish(),
+          occurred_at: awareDateTime,
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("cloud.egress_blocked"),
+      payload: z
+        .object({
+          provider_backend_id: z.string().min(1),
+          policy_decision: z.string().min(1),
+          reason: z.string().min(1),
+          occurred_at: awareDateTime,
+        })
+        .passthrough(),
+    })
+    .passthrough(),
 ]);
 
 const genericCoreEventTypes = [
@@ -1618,57 +1652,3 @@ export {
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 };
-
-export const protocolModelSchemas = {
-  AudioFrameHeader: audioFrameHeaderSchema,
-  AvatarCue: avatarCueSchema,
-  AvatarCapabilityManifest: avatarCapabilityManifestSchema,
-  AvatarInteractionEvent: avatarInteractionEventSchema,
-  SessionSnapshot: sessionSnapshotSchema,
-  CharacterKernelSnapshot: characterKernelSnapshotSchema,
-  ChannelProviderRegistration: channelProviderRegistrationSchema,
-  ChannelAuthorizationStartRequest: channelAuthorizationStartRequestSchema,
-  ChannelAuthorizationVerificationRequest:
-    channelAuthorizationVerificationRequestSchema,
-  ChannelAuthorizationSnapshot: channelAuthorizationSnapshotSchema,
-  ChannelConnectionConfiguration: channelConnectionConfigurationSchema,
-  ChannelConnectionSnapshot: channelConnectionSnapshotSchema,
-  ChannelGatewayStatusSnapshot: channelGatewayStatusSnapshotSchema,
-  ChannelInboundTextMessage: channelInboundTextMessageSchema,
-  ChannelTurnReceipt: channelTurnReceiptSchema,
-  ChannelTurnSnapshot: channelTurnSnapshotSchema,
-  ChannelDeliveryAcknowledgement: channelDeliveryAcknowledgementSchema,
-  ChannelDeliveryClaimRequest: channelDeliveryClaimRequestSchema,
-  ChannelDeliverySnapshot: channelDeliverySnapshotSchema,
-  ChannelDeliveryPartSnapshot: channelDeliveryPartSnapshotSchema,
-  ChannelDeliveryPartClaimRequest: channelDeliveryPartClaimRequestSchema,
-  ChannelDeliveryPartAcknowledgement: channelDeliveryPartAcknowledgementSchema,
-  ChannelDeliveryPlanSnapshot: channelDeliveryPlanSnapshotSchema,
-  ChannelTurnCancelRequest: channelTurnCancelRequestSchema,
-  ChannelTurnCancelReceipt: channelTurnCancelReceiptSchema,
-  ChannelErrorResponse: channelErrorResponseSchema,
-  ChannelTextDeliveryPartPayload: channelTextDeliveryPartPayloadSchema,
-  SkillCapability: skillCapabilitySchema,
-  SkillDefinition: skillDefinitionSchema,
-  SkillResult: skillResultSchema,
-  SkillRunSnapshot: skillRunSnapshotSchema,
-  PluginSnapshot: pluginSnapshotSchema,
-  McpCapabilitySnapshot: mcpCapabilitySnapshotSchema,
-  McpConnectionSnapshot: mcpConnectionSnapshotSchema,
-  McpToolDescriptor: mcpToolSchema,
-  McpResourceDescriptor: mcpResourceSchema,
-  McpResourceTemplateDescriptor: mcpResourceTemplateSchema,
-  McpPromptDescriptor: mcpPromptSchema,
-  MemoryRecord: memoryRecordSchema,
-  MemoryProposal: memoryProposalSchema,
-  MemorySource: memorySourceSchema,
-  MemoryChannelAttribution: memoryChannelAttributionSchema,
-  StructuredError: structuredErrorSchema,
-} as const;
-
-export const protocolEnumSchemas = {
-  ChannelTurnStatus: channelTurnStatusSchema,
-  ChannelDeliveryStatus: channelDeliveryStatusSchema,
-  ChannelDeliveryPartKind: channelDeliveryPartKindSchema,
-  ChannelDeliveryPartStatus: channelDeliveryPartStatusSchema,
-} as const;

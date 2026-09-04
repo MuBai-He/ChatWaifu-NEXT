@@ -2,12 +2,60 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  parseChannelDeliveryAcknowledgement,
-  parseChannelDeliveryPartAcknowledgement,
-  protocolEnumSchemas,
-  protocolModelSchemas,
+import { z } from "zod";
+import type {
+  ChannelDeliveryAcknowledgement,
+  ChannelDeliveryPartAcknowledgement,
+  ChannelDeliveryStatus,
+  ChannelTurnStatus,
+  SkillCapability,
 } from "../src/index";
+import * as protocol from "../src/index";
+import {
+  channelDeliveryAcknowledgementSchema,
+  channelDeliveryPartAcknowledgementSchema,
+  channelDeliveryStatusSchema,
+  channelTurnStatusSchema,
+  collectJsonSchemaEnumPaths,
+  collectZodEnumPaths,
+  publicParserCatalogMapping,
+  skillCapabilitySchema,
+  standaloneEnumSchemas,
+  type JsonSchemaDef,
+} from "../src/testing/enumParityRegistry";
+
+// Compile-time type-level equivalence assertions
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
+type Expect<T extends true> = T;
+
+// Verify at compile time that Zod output types strictly match Generated TypeScript types
+export type _AssertWholeDeliveryAckStatus = Expect<
+  Equal<
+    z.output<typeof channelDeliveryAcknowledgementSchema>["status"],
+    ChannelDeliveryAcknowledgement["status"]
+  >
+>;
+export type _AssertPartDeliveryAckStatus = Expect<
+  Equal<
+    z.output<typeof channelDeliveryPartAcknowledgementSchema>["status"],
+    ChannelDeliveryPartAcknowledgement["status"]
+  >
+>;
+export type _AssertChannelTurnStatus = Expect<
+  Equal<z.output<typeof channelTurnStatusSchema>, ChannelTurnStatus>
+>;
+export type _AssertChannelDeliveryStatus = Expect<
+  Equal<z.output<typeof channelDeliveryStatusSchema>, ChannelDeliveryStatus>
+>;
+export type _AssertSkillCapabilityAdapterOp = Expect<
+  Equal<
+    z.output<typeof skillCapabilitySchema>["adapter_operation"],
+    NonNullable<SkillCapability["adapter_operation"]>
+  >
+>;
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -18,181 +66,120 @@ const catalogPath = path.join(
   "schemas/domain/v1/protocol-catalog.schema.json",
 );
 const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
-
-type JsonSchemaNode = {
-  enum?: unknown[];
-  const?: unknown;
-  $ref?: string;
-  anyOf?: JsonSchemaNode[];
-  allOf?: JsonSchemaNode[];
-  type?: string;
-  items?: JsonSchemaNode;
-};
-
-function resolveJsonSchemaEnum(
-  schema: JsonSchemaNode | null | undefined,
-  visited = new Set<unknown>(),
-): string[] | null {
-  if (!schema || visited.has(schema)) return null;
-  visited.add(schema);
-
-  if (Array.isArray(schema.enum)) {
-    return schema.enum.filter((v: unknown) => typeof v === "string");
-  }
-  if (typeof schema.const === "string") {
-    return [schema.const];
-  }
-  if (typeof schema.$ref === "string" && schema.$ref.startsWith("#/$defs/")) {
-    const target = catalog.$defs[schema.$ref.slice(8)];
-    return resolveJsonSchemaEnum(target, visited);
-  }
-  if (Array.isArray(schema.anyOf)) {
-    for (const sub of schema.anyOf) {
-      const res = resolveJsonSchemaEnum(sub, visited);
-      if (res && res.length > 0) return res;
-    }
-  }
-  if (Array.isArray(schema.allOf)) {
-    for (const sub of schema.allOf) {
-      const res = resolveJsonSchemaEnum(sub, visited);
-      if (res && res.length > 0) return res;
-    }
-  }
-  if (schema.type === "array" && schema.items) {
-    const res = resolveJsonSchemaEnum(schema.items, visited);
-    if (res && res.length > 0) return res;
-  }
-  return null;
-}
-
-type ZodInspectable = {
-  options?: unknown[];
-  element?: ZodInspectable;
-  _def?: {
-    type?: string;
-    entries?: Record<string, unknown>;
-    values?: unknown[];
-    value?: unknown;
-    element?: ZodInspectable;
-    innerType?: ZodInspectable;
-    schema?: ZodInspectable;
-  };
-};
-
-function extractZodEnumValues(schema: unknown): string[] | null {
-  let curr: ZodInspectable | undefined = schema as ZodInspectable | undefined;
-  while (curr) {
-    if (Array.isArray(curr.options)) {
-      return [...curr.options];
-    }
-    if (curr._def) {
-      if (curr._def.type === "enum") {
-        return curr.options
-          ? [...curr.options]
-          : Object.keys(curr._def.entries || {});
-      }
-      if (curr._def.type === "literal") {
-        return Array.isArray(curr._def.values)
-          ? [...curr._def.values]
-          : curr._def.value !== undefined
-            ? [curr._def.value]
-            : null;
-      }
-      if (curr._def.type === "array") {
-        const itemEnum = extractZodEnumValues(
-          curr._def.element ?? curr.element,
-        );
-        if (itemEnum) return itemEnum;
-      }
-      if (curr._def.innerType) {
-        curr = curr._def.innerType;
-        continue;
-      }
-      if (curr._def.schema) {
-        curr = curr._def.schema;
-        continue;
-      }
-    }
-    break;
-  }
-  return null;
-}
+const defs: Record<string, JsonSchemaDef> = catalog.$defs || {};
 
 describe("Universal Cross-Layer Enum Contract Gate", () => {
+  it("enforces that all exported public parseXxx functions have a registered root schema", () => {
+    const exportedParsers = Object.keys(protocol).filter((k) =>
+      k.startsWith("parse"),
+    );
+    const registeredParsers = Object.keys(publicParserCatalogMapping);
+
+    expect(new Set(exportedParsers)).toEqual(new Set(registeredParsers));
+    expect(registeredParsers.length).toBeGreaterThanOrEqual(35);
+  });
+
   it("enforces exact parity for standalone protocol enums", () => {
-    for (const [enumName, zodEnum] of Object.entries(protocolEnumSchemas)) {
-      const jsonDef = catalog.$defs[enumName];
+    for (const [enumName, zodEnum] of Object.entries(standaloneEnumSchemas)) {
+      const jsonDef = defs[enumName];
       expect(
         jsonDef,
         `Catalog definition missing for enum: ${enumName}`,
       ).toBeDefined();
 
-      const jsonValues = resolveJsonSchemaEnum(jsonDef);
-      expect(
-        jsonValues,
-        `No enum values found in catalog for enum: ${enumName}`,
-      ).not.toBeNull();
-
-      const zodValues = extractZodEnumValues(zodEnum);
-      expect(
-        zodValues,
-        `No enum values extracted from Zod schema: ${enumName}`,
-      ).not.toBeNull();
+      const jsonPaths = collectJsonSchemaEnumPaths(jsonDef, enumName, defs);
+      const zodPaths = collectZodEnumPaths(zodEnum, enumName);
 
       expect(
-        [...(zodValues ?? [])].sort(),
-        `Enum parity mismatch for ${enumName}`,
-      ).toEqual([...(jsonValues ?? [])].sort());
+        Object.keys(zodPaths).sort(),
+        `Standalone enum path mismatch for ${enumName}`,
+      ).toEqual(Object.keys(jsonPaths).sort());
+
+      expect(zodPaths[enumName]).toEqual(jsonPaths[enumName]);
     }
   });
 
-  it("enforces exact parity for all model property enums", () => {
-    let checkedPropertyCount = 0;
+  it("enforces exact recursive enum path and value parity across all registered domain models", () => {
+    let checkedPathCount = 0;
 
-    for (const [modelName, zodSchema] of Object.entries(protocolModelSchemas)) {
-      const jsonDef = catalog.$defs[modelName];
+    for (const [, desc] of Object.entries(publicParserCatalogMapping)) {
+      const { modelName, schema } = desc;
+      if (modelName === "CommandModel" || modelName === "EventModel") {
+        // Envelopes are polymorphic unions checked in their dedicated tests below
+        continue;
+      }
       expect(
-        jsonDef,
+        defs[modelName],
         `Catalog definition missing for model: ${modelName}`,
       ).toBeDefined();
 
-      const shape = (
-        zodSchema as unknown as { shape?: Record<string, unknown> }
-      ).shape;
+      const jsonPaths = collectJsonSchemaEnumPaths(
+        defs[modelName],
+        modelName,
+        defs,
+      );
+      const zodPaths = collectZodEnumPaths(schema, modelName);
+
+      const jsonKeys = Object.keys(jsonPaths).sort();
+      const zodKeys = Object.keys(zodPaths).sort();
+
       expect(
-        shape,
-        `Shape missing for Zod model schema: ${modelName}`,
-      ).toBeDefined();
+        zodKeys,
+        `Recursive enum path mismatch in model: ${modelName}`,
+      ).toEqual(jsonKeys);
 
-      for (const [propName, propDef] of Object.entries(
-        jsonDef.properties || {},
-      )) {
-        const jsonEnum = resolveJsonSchemaEnum(propDef);
-        const zodField = shape[propName];
-        const zodEnum = zodField ? extractZodEnumValues(zodField) : null;
-
-        if (jsonEnum && jsonEnum.length > 0) {
-          expect(
-            zodEnum,
-            `Zod schema for ${modelName}.${propName} is missing enum validation (expected: ${JSON.stringify(jsonEnum)})`,
-          ).not.toBeNull();
-
-          expect(
-            [...(zodEnum ?? [])].sort(),
-            `Enum value mismatch for ${modelName}.${propName}`,
-          ).toEqual([...(jsonEnum ?? [])].sort());
-
-          checkedPropertyCount++;
-        } else if (zodEnum && zodEnum.length > 0) {
-          expect(
-            jsonEnum,
-            `JSON Schema for ${modelName}.${propName} lacks enum definition (Zod has: ${JSON.stringify(zodEnum)})`,
-          ).not.toBeNull();
-        }
+      for (const key of jsonKeys) {
+        expect(
+          zodPaths[key],
+          `Enum values mismatch at path: ${key} in model: ${modelName}`,
+        ).toEqual(jsonPaths[key]);
+        checkedPathCount++;
       }
     }
 
-    expect(checkedPropertyCount).toBeGreaterThan(20);
+    // Proves that all recursive paths are deeply collected and checked
+    expect(checkedPathCount).toBeGreaterThanOrEqual(90);
+  });
+
+  it("enforces enum parity for polymorphic EventEnvelope and CommandEnvelope", () => {
+    // EventEnvelope: verify event_type and privacy parity
+    const eventJsonPaths = collectJsonSchemaEnumPaths(
+      defs["EventModel"],
+      "EventModel",
+      defs,
+    );
+    const eventZodPaths = collectZodEnumPaths(
+      publicParserCatalogMapping["parseEventEnvelope"].schema,
+      "EventModel",
+    );
+
+    expect(eventZodPaths["EventModel.event_type"]).toEqual(
+      eventJsonPaths["EventModel.event_type"],
+    );
+    expect(eventZodPaths["EventModel.privacy"]).toEqual(
+      eventJsonPaths["EventModel.privacy"],
+    );
+
+    // CommandEnvelope: verify command_type, playback ack phase and reason parity
+    const commandJsonPaths = collectJsonSchemaEnumPaths(
+      catalog.properties.command,
+      "CommandModel",
+      defs,
+    );
+    const commandZodPaths = collectZodEnumPaths(
+      publicParserCatalogMapping["parseCommandEnvelope"].schema,
+      "CommandModel",
+    );
+
+    expect(commandZodPaths["CommandModel.command_type"]).toEqual(
+      commandJsonPaths["CommandModel.command_type"],
+    );
+    expect(commandZodPaths["CommandModel.payload.phase"]).toEqual(
+      commandJsonPaths["CommandModel.payload.phase"],
+    );
+    expect(commandZodPaths["CommandModel.payload.transport"]).toEqual(
+      commandJsonPaths["CommandModel.payload.transport"],
+    );
   });
 
   it("explicitly verifies ACK status contracts across legacy whole-delivery and multipart", () => {
@@ -214,7 +201,7 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     // Legacy whole-delivery ACK allows delivered | failed | cancelled
     for (const status of ["delivered", "failed", "cancelled"] as const) {
       expect(() =>
-        parseChannelDeliveryAcknowledgement({
+        protocol.parseChannelDeliveryAcknowledgement({
           ...legacyAck,
           status,
           error: status === "failed" ? structuredError : undefined,
@@ -230,7 +217,7 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
 
     for (const status of ["delivered", "failed"] as const) {
       expect(() =>
-        parseChannelDeliveryPartAcknowledgement({
+        protocol.parseChannelDeliveryPartAcknowledgement({
           ...partAck,
           status,
           error: status === "failed" ? structuredError : undefined,
@@ -239,19 +226,99 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     }
 
     expect(() =>
-      parseChannelDeliveryPartAcknowledgement({
+      protocol.parseChannelDeliveryPartAcknowledgement({
         ...partAck,
         status: "cancelled",
       }),
     ).toThrow();
   });
+});
 
-  it("fails fast when an enum discrepancy is detected (self-verification)", () => {
-    const fakeJsonEnum = ["delivered", "failed", "cancelled"];
-    const fakeZodEnumWithoutCancelled = ["delivered", "failed"];
+describe("Collector and Gate Failure Mode Verification (Real Negative Tests)", () => {
+  it("collects the union of all branches in multi-branch anyOf / oneOf without stopping at the first", () => {
+    const syntheticSchema: JsonSchemaDef = {
+      anyOf: [
+        { const: "first_branch" },
+        { const: "second_branch" },
+        { enum: ["third_branch", "fourth_branch"] },
+      ],
+    };
+
+    const extracted = collectJsonSchemaEnumPaths(
+      syntheticSchema,
+      "SyntheticField",
+      {},
+    );
+    expect(extracted["SyntheticField"]).toEqual([
+      "first_branch",
+      "fourth_branch",
+      "second_branch",
+      "third_branch",
+    ]);
+  });
+
+  it("extracts nested object and array enum paths recursively", () => {
+    const nestedSchema: JsonSchemaDef = {
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            properties: {
+              status: {
+                enum: ["active", "suspended"],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const extracted = collectJsonSchemaEnumPaths(nestedSchema, "Root", {});
+    expect(extracted).toEqual({
+      "Root.items[].status": ["active", "suspended"],
+    });
+  });
+
+  it("extracts and merges enum paths across Zod unions accurately", () => {
+    const zodUnion = z.union([
+      z.object({ tag: z.literal("A"), mode: z.enum(["fast", "safe"]) }),
+      z.object({ tag: z.literal("B"), mode: z.enum(["safe", "experimental"]) }),
+    ]);
+
+    const extracted = collectZodEnumPaths(zodUnion, "UnionRoot");
+    expect(extracted["UnionRoot.tag"]).toEqual(["A", "B"]);
+    expect(extracted["UnionRoot.mode"]).toEqual([
+      "experimental",
+      "fast",
+      "safe",
+    ]);
+  });
+
+  it("fails coverage validation when a public parser is omitted from the registry", () => {
+    const mockExportedParsers = [
+      ...Object.keys(publicParserCatalogMapping),
+      "parseNewlyAddedModelWithoutRegistration",
+    ];
 
     expect(() => {
-      expect(fakeZodEnumWithoutCancelled.sort()).toEqual(fakeJsonEnum.sort());
+      expect(new Set(mockExportedParsers)).toEqual(
+        new Set(Object.keys(publicParserCatalogMapping)),
+      );
+    }).toThrow();
+  });
+
+  it("fails parity validation when an enum path has missing or extraneous values", () => {
+    const mockJsonPaths = {
+      "Model.status": ["delivered", "failed", "cancelled"],
+    };
+    const mockZodPathsMissingCancelled = {
+      "Model.status": ["delivered", "failed"],
+    };
+
+    expect(() => {
+      expect(mockZodPathsMissingCancelled["Model.status"]).toEqual(
+        mockJsonPaths["Model.status"],
+      );
     }).toThrow();
   });
 });
