@@ -87,6 +87,71 @@ class ChannelDeliveryStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class ChannelPresentationProfile(StrEnum):
+    """Presentation profile for channel outbound deliveries."""
+
+    INSTANT_MESSAGE = "instant_message"
+    SINGLE_TEXT = "single_text"
+
+
+class ChannelPresentationPolicy(ChannelVersionedModel):
+    """Provider-neutral cadence and bubble planning rules for channel outbound deliveries."""
+
+    profile: ChannelPresentationProfile = ChannelPresentationProfile.INSTANT_MESSAGE
+    max_parts: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum delivery parts (bubbles) planned for ordinary casual turns",
+    )
+    preferred_chars_per_part: int = Field(
+        default=60,
+        ge=10,
+        le=500,
+        description="Preferred character count per bubble when segmenting sentences",
+    )
+    soft_max_chars_per_part: int = Field(
+        default=120,
+        ge=20,
+        le=1000,
+        description="Soft upper character bound before splitting weaker sentence boundaries",
+    )
+    cadence_enabled: bool = Field(
+        default=True,
+        description="Whether inter-part delivery delay is computed and scheduled",
+    )
+    min_delay_ms: int = Field(
+        default=800,
+        ge=0,
+        le=10_000,
+        description="Lower clamp bound for inter-part delay in milliseconds",
+    )
+    max_delay_ms: int = Field(
+        default=3000,
+        ge=0,
+        le=30_000,
+        description="Upper clamp bound for inter-part delay in milliseconds",
+    )
+    total_cadence_delay_ceiling_ms: int = Field(
+        default=6000,
+        ge=0,
+        le=60_000,
+        description="Maximum cumulative delay across all parts of a single delivery plan",
+    )
+    typing_enabled: bool = Field(
+        default=False,
+        description="Whether typing indicators are emitted (reserved for Phase 17.1B-2)",
+    )
+    bypass_long_form: bool = Field(
+        default=True,
+        description=(
+            "Whether technical, code, or structured responses "
+            "bypass bubble splitting into a single part"
+        ),
+    )
+    version: int = Field(default=1, ge=1, description="Policy version")
+
+
 def _empty_authorization_methods() -> list[ChannelAuthorizationMethod]:
     return []
 
@@ -177,6 +242,10 @@ class ChannelConnectionConfiguration(ChannelVersionedModel):
             "Recent authenticated adapter activity window used by local health presentation; "
             "it is not a generation or provider-delivery deadline"
         ),
+    )
+    presentation_policy: ChannelPresentationPolicy | None = Field(
+        default=None,
+        description="Optional presentation and cadence policy override for this connection",
     )
 
 

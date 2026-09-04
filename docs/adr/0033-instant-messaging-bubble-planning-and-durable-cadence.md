@@ -9,6 +9,7 @@
 In external messaging channels (such as WeChat via native iLink), emitting assistant responses as a monolithic text block harms conversational naturalness. Human instant messaging relies on short, paced sentence bubbles.
 
 However, naive in-memory splitting or sleeping inside the adapter polling loop introduces critical flaws:
+
 1. Breaking conversational canon: Splitting the assistant response into separate turns would corrupt conversation history, token budgets, memory extraction, and Desktop/Web synchronization.
 2. In-flight sleep vulnerabilities: Arbitrary sleeps in the polling/delivery loop block transport responsiveness, risk duplicate sends on crash, and cannot survive process restarts.
 3. Information loss: Unprincipled splitting can truncate technical explanations, break URLs, split markdown code blocks, separate surrogate pairs / emoji graphemes, or mangle numeric decimals.
@@ -27,6 +28,7 @@ Bubble splitting is strictly an outbound presentation concern owned by the Exter
 ### 2. Provider-Neutral ChannelPresentationPolicy
 
 Presentation policy is defined in versioned protocol contracts independently of specific provider transports:
+
 - `profile`: `instant_message` | `single_text`
 - `max_parts`: Maximum bubble count for casual chat (default 3, bounds 1~10)
 - `preferred_chars_per_part`: Ideal bubble length (default 60 chars)
@@ -42,6 +44,7 @@ Presentation policy is defined in versioned protocol contracts independently of 
 ### 3. Lossless BubbleSplitter
 
 The bubble splitter divides canonical text into 1~3 natural parts while enforcing strict non-negotiable invariants:
+
 - **Lossless Reconstruction**: Concatenating all parts NFC-normalized reproduces the canonical reply without dropped characters.
 - **Atomic Span Protection**: Splits never cut across:
   - Fenced code blocks (```) and inline code (`)
@@ -55,6 +58,7 @@ The bubble splitter divides canonical text into 1~3 natural parts while enforcin
 ### 4. Durable Cadence State Transitions
 
 Cadence between bubbles is scheduled durably using the existing `ChannelDeliveryScheduler` and database state machine:
+
 - The delivery plan creates Part 0 with `not_before_at = None` (immediately claimable) and `delay_after_ms = D0`.
 - Subsequent Part $k+1$ is initially created with `not_before_at = None`.
 - When Part $k$ is acknowledged as `DELIVERED`, the SQLite transaction updates Part $k$ and simultaneously computes:
@@ -65,6 +69,7 @@ Cadence between bubbles is scheduled durably using the existing `ChannelDelivery
 ### 5. Tail Cancellation
 
 When a new inbound message arrives on a conversation binding:
+
 - Any active nonterminal delivery plan has `cancel_remaining_delivery_parts` invoked.
 - Already delivered bubbles remain `delivered`.
 - Any pending bubble is marked `cancelled`.

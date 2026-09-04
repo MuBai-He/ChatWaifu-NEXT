@@ -82,6 +82,18 @@
           "title": "Name",
           "type": "string"
         },
+        "presentation_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelPresentationPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional presentation and cadence policy override for this connection"
+        },
         "principal_scope": {
           "description": "Runtime-owned stable isolation key for persona relationship and memory state; it is not a provider identity and must match the configured connection",
           "maxLength": 256,
@@ -204,6 +216,105 @@
         "text"
       ],
       "title": "ChannelMessageKind",
+      "type": "string"
+    },
+    "ChannelPresentationPolicy": {
+      "description": "Provider-neutral cadence and bubble planning rules for channel outbound deliveries.",
+      "properties": {
+        "bypass_long_form": {
+          "default": true,
+          "description": "Whether technical, code, or structured responses bypass bubble splitting into a single part",
+          "title": "Bypass Long Form",
+          "type": "boolean"
+        },
+        "cadence_enabled": {
+          "default": true,
+          "description": "Whether inter-part delivery delay is computed and scheduled",
+          "title": "Cadence Enabled",
+          "type": "boolean"
+        },
+        "max_delay_ms": {
+          "default": 3000,
+          "description": "Upper clamp bound for inter-part delay in milliseconds",
+          "maximum": 30000,
+          "minimum": 0,
+          "title": "Max Delay Ms",
+          "type": "integer"
+        },
+        "max_parts": {
+          "default": 3,
+          "description": "Maximum delivery parts (bubbles) planned for ordinary casual turns",
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Parts",
+          "type": "integer"
+        },
+        "min_delay_ms": {
+          "default": 800,
+          "description": "Lower clamp bound for inter-part delay in milliseconds",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Min Delay Ms",
+          "type": "integer"
+        },
+        "preferred_chars_per_part": {
+          "default": 60,
+          "description": "Preferred character count per bubble when segmenting sentences",
+          "maximum": 500,
+          "minimum": 10,
+          "title": "Preferred Chars Per Part",
+          "type": "integer"
+        },
+        "profile": {
+          "$ref": "#/$defs/ChannelPresentationProfile",
+          "default": "instant_message"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "soft_max_chars_per_part": {
+          "default": 120,
+          "description": "Soft upper character bound before splitting weaker sentence boundaries",
+          "maximum": 1000,
+          "minimum": 20,
+          "title": "Soft Max Chars Per Part",
+          "type": "integer"
+        },
+        "total_cadence_delay_ceiling_ms": {
+          "default": 6000,
+          "description": "Maximum cumulative delay across all parts of a single delivery plan",
+          "maximum": 60000,
+          "minimum": 0,
+          "title": "Total Cadence Delay Ceiling Ms",
+          "type": "integer"
+        },
+        "typing_enabled": {
+          "default": false,
+          "description": "Whether typing indicators are emitted (reserved for Phase 17.1B-2)",
+          "title": "Typing Enabled",
+          "type": "boolean"
+        },
+        "version": {
+          "default": 1,
+          "description": "Policy version",
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "title": "ChannelPresentationPolicy",
+      "type": "object"
+    },
+    "ChannelPresentationProfile": {
+      "description": "Presentation profile for channel outbound deliveries.",
+      "enum": [
+        "instant_message",
+        "single_text"
+      ],
+      "title": "ChannelPresentationProfile",
       "type": "string"
     },
     "ChannelProviderCapabilities": {

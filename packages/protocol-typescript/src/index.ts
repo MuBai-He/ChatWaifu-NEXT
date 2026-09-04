@@ -22,6 +22,7 @@ export {
   parseChannelErrorResponse,
   parseChannelGatewayStatusSnapshot,
   parseChannelInboundTextMessage,
+  parseChannelPresentationPolicy,
   parseChannelProviderRegistration,
   parseChannelTurnCancelReceipt,
   parseChannelTurnCancelRequest,
