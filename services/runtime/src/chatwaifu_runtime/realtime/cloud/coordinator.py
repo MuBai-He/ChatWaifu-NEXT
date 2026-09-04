@@ -400,13 +400,14 @@ class CloudRealtimeCoordinator:
     ) -> UUID | None:
         """Resolve only when every supplied provider identity agrees.
 
-        Each provided identity must independently point at a registered
-        binding; conflicting identities are dropped with a lineage_mismatch
-        instead of letting priority order silently reroute the event. A
-        brand-new item id is learned only when an explicit Runtime generation
-        anchors it. Never guesses the active or last generation.
+        Two phases: first purely read and validate every identity against
+        registered bindings, then — only after a single anchor is settled —
+        commit any brand-new provider mappings. A rejected conflict therefore
+        leaves no residual mapping behind for future events to resolve
+        through. Never guesses the active or last generation.
         """
-        resolved: dict[str, UUID] = {}
+        # Phase 1: read-only validation, no mapping writes.
+        anchor: UUID | None = None
         if generation_id is not None:
             if not self._mirror.has_binding(generation_id):
                 await self._emit_unmapped_event(
@@ -414,70 +415,84 @@ class CloudRealtimeCoordinator:
                     details={"generation_id": str(generation_id)},
                 )
                 return None
-            resolved["generation_id"] = generation_id
+            anchor = generation_id
+
+        response_mapped: UUID | None = None
         if provider_response_id is not None:
-            mapped_response = self._mirror.lookup_response_generation(provider_response_id)
-            if mapped_response is None:
-                anchor = resolved.get("generation_id")
-                if anchor is None:
-                    await self._emit_unmapped_event(
-                        event_name=event_name,
-                        details={"provider_response_id": str(provider_response_id)},
-                    )
-                    return None
-                # First sighting anchored by Runtime identity: learn it, unless
-                # the id is already owned elsewhere (immutable bindings).
-                if self._mirror.bind_provider_response(provider_response_id, anchor) is None:
-                    await self._emit_diagnostic(
-                        code="lineage_mismatch",
-                        message="Provider response id already bound elsewhere",
-                        details={
-                            "event": event_name,
-                            "provider_response_id": str(provider_response_id),
-                        },
-                    )
-                    return None
-                mapped_response = anchor
-            resolved["provider_response_id"] = mapped_response
+            response_mapped = self._mirror.lookup_response_generation(provider_response_id)
+
+        item_mapped: UUID | None = None
+        item_alias_mapped: UUID | None = None
         if provider_item_id is not None:
-            mapped_item = self._mirror.lookup_item_generation(provider_item_id)
-            if mapped_item is None:
-                mapped_item = self._mirror.lookup_response_generation(provider_item_id)
-            if mapped_item is None:
-                anchor = resolved.get("generation_id")
-                if anchor is None:
-                    await self._emit_unmapped_event(
-                        event_name=event_name,
-                        details={"provider_item_id": str(provider_item_id)},
-                    )
-                    return None
-                if self._mirror.bind_provider_item(provider_item_id, anchor) is None:
-                    await self._emit_diagnostic(
-                        code="lineage_mismatch",
-                        message="Provider item id already bound elsewhere",
-                        details={
-                            "event": event_name,
-                            "provider_item_id": str(provider_item_id),
-                        },
-                    )
-                    return None
-                mapped_item = anchor
-            resolved["provider_item_id"] = mapped_item
-        if not resolved:
-            await self._emit_unmapped_event(event_name=event_name, details={})
-            return None
-        distinct = set(resolved.values())
+            item_mapped = self._mirror.lookup_item_generation(provider_item_id)
+            if item_mapped is None:
+                item_alias_mapped = self._mirror.lookup_response_generation(provider_item_id)
+
+        known: dict[str, UUID] = {}
+        if anchor is not None:
+            known["generation_id"] = anchor
+        if response_mapped is not None:
+            known["provider_response_id"] = response_mapped
+        effective_item = item_mapped if item_mapped is not None else item_alias_mapped
+        if effective_item is not None:
+            known["provider_item_id"] = effective_item
+
+        provided_but_unknown = (
+            (provider_response_id is not None and response_mapped is None and anchor is None)
+            or (provider_item_id is not None and effective_item is None and anchor is None)
+            or (generation_id is None and not known)
+        )
+        if not known or provided_but_unknown:
+            # An unbound provider id can only be learned with an explicit
+            # Runtime generation anchoring it (handled in phase 2); without
+            # any anchor the event is unmapped.
+            if anchor is None:
+                await self._emit_unmapped_event(
+                    event_name=event_name,
+                    details={
+                        "generation_id": str(generation_id),
+                        "provider_item_id": str(provider_item_id),
+                        "provider_response_id": str(provider_response_id),
+                    },
+                )
+                return None
+        distinct = set(known.values())
         if len(distinct) > 1:
             await self._emit_diagnostic(
                 code="lineage_mismatch",
                 message="Conflicting provider identities for one event",
                 details={
                     "event": event_name,
-                    **{name: str(gen) for name, gen in resolved.items()},
+                    **{name: str(gen) for name, gen in known.items()},
                 },
             )
             return None
-        return next(iter(distinct))
+
+        # Phase 2: single settled anchor — commit brand-new mappings only.
+        settled = anchor if anchor is not None else next(iter(distinct))
+        if provider_response_id is not None and response_mapped is None:
+            if self._mirror.bind_provider_response(provider_response_id, settled) is None:
+                await self._emit_diagnostic(
+                    code="lineage_mismatch",
+                    message="Provider response id already bound elsewhere",
+                    details={
+                        "event": event_name,
+                        "provider_response_id": str(provider_response_id),
+                    },
+                )
+                return None
+        if provider_item_id is not None and effective_item is None:
+            if self._mirror.bind_provider_item(provider_item_id, settled) is None:
+                await self._emit_diagnostic(
+                    code="lineage_mismatch",
+                    message="Provider item id already bound elsewhere",
+                    details={
+                        "event": event_name,
+                        "provider_item_id": str(provider_item_id),
+                    },
+                )
+                return None
+        return settled
 
     async def _resolve_candidate_generation(
         self,

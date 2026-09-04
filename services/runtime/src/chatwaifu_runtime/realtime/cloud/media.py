@@ -86,6 +86,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._started: bool = False
         self._is_torn_down: bool = False
         self._media_failure_reported: bool = False
+        self._fatal_media_failure: bool = False
 
         # Register self as media sink in coordinator
         self._coordinator.set_media_sink(self)
@@ -185,6 +186,12 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
 
     def _handle_input_audio(self, frame: InputAudioRawFrame) -> None:
         self._ensure_started()
+        if self._fatal_media_failure:
+            _LOGGER.debug(
+                "Dropping input audio for session %s: bridge is fatally failed",
+                self.session_id,
+            )
+            return
         self._input_sequence += 1
 
         bytes_per_sample = 2
@@ -233,6 +240,13 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         3. Transport output queue cleared (InterruptionFrame)
         4. Late audio frames discarded by tombstone fence.
         """
+        if self._fatal_media_failure:
+            _LOGGER.warning(
+                "Refusing VAD admission for session %s: bridge is fatally failed "
+                "and must be rebuilt",
+                self.session_id,
+            )
+            return
         active_gen_id = self._coordinator.mirror.active_generation_id
         if active_gen_id is not None:
             _LOGGER.info(
@@ -258,13 +272,32 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 identity.turn_id,
             )
 
-    async def _fail_active_media_operation(self, code: str, error: Exception) -> None:
+    def _drain_input_queue(self) -> None:
+        """Drop all queued but unsent input frames after a fatal failure."""
+        drained = 0
+        while True:
+            try:
+                self._input_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            self._input_queue.task_done()
+            drained += 1
+        if drained:
+            _LOGGER.debug(
+                "Drained %d queued input frames for failed session %s",
+                drained,
+                self.session_id,
+            )
+
+    async def _fail_active_media_operation(self, code: str, error: Exception) -> bool:
         """Route a media-plane failure into a terminal generation transition.
 
-        Runs the full failure sequence once; later failures only log, so a
-        dead session cannot spam terminal events per queued frame. The cloud
-        session is closed so no completion will ever arrive for the failed
-        generation.
+        The first failure seals the bridge: the active generation fails, the
+        unsent queue is drained, the cloud session closes, and the sender loop
+        must exit (returns True). Later failures only log (returns False), so
+        a dead session cannot spam terminal events per queued frame. After a
+        fatal failure the bridge refuses new admissions and input audio until
+        the outer pipeline destroys and rebuilds it.
         """
         if self._media_failure_reported:
             _LOGGER.debug(
@@ -272,8 +305,9 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 code,
                 self.session_id,
             )
-            return
+            return True
         self._media_failure_reported = True
+        self._fatal_media_failure = True
         try:
             await self._coordinator.report_media_failure(code, error)
         except Exception:
@@ -282,6 +316,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 self.session_id,
                 exc_info=True,
             )
+        self._drain_input_queue()
         try:
             await self._coordinator.session.close()
         except Exception:
@@ -290,6 +325,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 self.session_id,
                 exc_info=True,
             )
+        return True
 
     async def _handle_user_speaking_stopped(self) -> None:
         try:
@@ -302,11 +338,43 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             )
             await self._fail_active_media_operation("media_commit_failed", error)
 
+    def _is_frame_sendable(self, frame: RealtimeInputAudioFrame) -> bool:
+        """Generation fence for outbound input audio.
+
+        Only the currently active, non-tombstoned generation may reach the
+        provider, so stale queued audio can neither pollute the next turn nor
+        misattribute its own send failure to that turn.
+        """
+        mirror = self._coordinator.mirror
+        if frame.generation_id is None:
+            _LOGGER.debug(
+                "Dropping input audio without generation for session %s",
+                self.session_id,
+            )
+            return False
+        if mirror.is_tombstoned(frame.generation_id):
+            _LOGGER.debug(
+                "Dropping input audio for tombstoned generation %s",
+                frame.generation_id,
+            )
+            return False
+        if frame.generation_id != mirror.current_generation_id():
+            _LOGGER.debug(
+                "Dropping input audio for superseded generation %s",
+                frame.generation_id,
+            )
+            return False
+        return True
+
     async def _send_audio_loop(self) -> None:
         try:
             while True:
+                if self._fatal_media_failure:
+                    return
                 frame = await self._input_queue.get()
                 try:
+                    if self._fatal_media_failure or not self._is_frame_sendable(frame):
+                        continue
                     await self._coordinator.session.send_audio(frame)
                 except asyncio.CancelledError:
                     raise
@@ -316,7 +384,8 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                         self.session_id,
                         exc_info=True,
                     )
-                    await self._fail_active_media_operation("media_send_failed", error)
+                    if await self._fail_active_media_operation("media_send_failed", error):
+                        return
                 finally:
                     self._input_queue.task_done()
         except asyncio.CancelledError:

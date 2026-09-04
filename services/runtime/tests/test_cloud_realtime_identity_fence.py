@@ -35,6 +35,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
     OutputAudioEvent,
     ProviderErrorEvent,
+    RealtimeInputAudioFrame,
     RealtimeOutputAudioFrame,
     RealtimeProviderError,
     RealtimeSessionOpenRequest,
@@ -888,6 +889,195 @@ async def test_transcript_role_mismatch_rejected() -> None:
     assert sink.transcript_finals == []
     assert sink.transcript_deltas == []
     assert len([e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]) == 2
+
+
+async def _assistant_delta(
+    coordinator: CloudRealtimeCoordinator,
+    session_id: UUID,
+    generation_id: UUID | None,
+    text: str,
+    *,
+    provider_item_id: str | None = None,
+    provider_response_id: str | None = None,
+) -> None:
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=generation_id,
+                role="assistant",
+                phase="delta",
+                text=text,
+                source="provider",
+                provider_item_id=provider_item_id,
+                provider_response_id=provider_response_id,
+            )
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_rejected_conflict_leaves_no_residual_mapping() -> None:
+    """P1: a rejected mixed conflict must not plant new provider mappings."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    turn_b, gen_b = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+    await _assistant_delta(coordinator, session_id, gen_a, "首句", provider_item_id="item-1")
+    assert mirror.lookup_item_generation("item-1") == gen_a
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
+
+    # item-1 → A exists; the event also carries an unbound resp-new for B.
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_b,
+                role="assistant",
+                phase="delta",
+                text="错位句",
+                source="provider",
+                provider_item_id="item-1",
+                provider_response_id="resp-new",
+            )
+        )
+    )
+    assert len([e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]) == 1
+    assert mirror.lookup_response_generation("resp-new") is None
+    assert mirror.lookup_item_generation("item-1") == gen_a
+
+    # Reverse direction: resp-1 → A exists; item-new must not linger on B either.
+    await coordinator.dispatch_event(
+        ResponseStartedEvent(
+            session_id=session_id, generation_id=gen_a, provider_response_id="resp-1"
+        )
+    )
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_b,
+                role="assistant",
+                phase="delta",
+                text="又错位",
+                source="provider",
+                provider_item_id="item-new",
+                provider_response_id="resp-1",
+            )
+        )
+    )
+    assert len([e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]) == 2
+    assert mirror.lookup_item_generation("item-new") is None
+    assert mirror.lookup_response_generation("resp-1") == gen_a
+
+
+@pytest.mark.asyncio
+async def test_fatal_bridge_refuses_second_admission(tmp_path: Path) -> None:
+    """P0 A/B: after a fatal media failure the bridge admits nothing new."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity_a = bridge.current_identity
+        assert identity_a is not None
+
+        fake_session = bridge.coordinator.session
+        with patch.object(
+            fake_session, "send_audio", new=AsyncMock(side_effect=RuntimeError("uplink down"))
+        ):
+            await bridge.process_frame(
+                InputAudioRawFrame(audio=b"\x01\x00" * 160, sample_rate=16_000, num_channels=1),
+                FrameDirection.DOWNSTREAM,
+            )
+            await asyncio.wait_for(bridge._input_queue.join(), timeout=5)
+
+        assert bridge._fatal_media_failure is True
+
+        # Second speech start must not create Generation B.
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        assert bridge.current_identity is not None
+        assert bridge.current_identity.generation_id == identity_a.generation_id
+        assert container.conversation.active_generation_id(session.session_id) is None
+        gen_rows = await container.database.fetchall(
+            "SELECT state FROM generations WHERE session_id = ?",
+            (str(session.session_id),),
+        )
+        assert len(gen_rows) == 1
+        assert gen_rows[0]["state"] == "failed"
+
+        # D: the sender loop exited and the queue is drained.
+        send_task = bridge._send_task
+        assert send_task is not None
+        await asyncio.wait_for(asyncio.shield(send_task), timeout=5)
+        assert send_task.done()
+        assert bridge._input_queue.empty()
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_superseded_queued_audio_never_reaches_provider(tmp_path: Path) -> None:
+    """P0 C: queued audio from a cancelled generation is fenced at send time."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity_a = bridge.current_identity
+        assert identity_a is not None
+
+        gate: asyncio.Event = asyncio.Event()
+        entered: asyncio.Event = asyncio.Event()
+        sent: list[int] = []
+        calls = 0
+
+        async def gated_send(frame: RealtimeInputAudioFrame) -> None:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                entered.set()
+                await gate.wait()
+            sent.append(frame.sequence)
+
+        fake_session = bridge.coordinator.session
+        with patch.object(fake_session, "send_audio", new=gated_send):
+            await bridge.process_frame(
+                InputAudioRawFrame(audio=b"\x01\x00" * 160, sample_rate=16_000, num_channels=1),
+                FrameDirection.DOWNSTREAM,
+            )
+            await asyncio.wait_for(entered.wait(), timeout=5)
+
+            # Frame A2 queues while the sender is stuck inside A1's send.
+            await bridge.process_frame(
+                InputAudioRawFrame(audio=b"\x02\x00" * 160, sample_rate=16_000, num_channels=1),
+                FrameDirection.DOWNSTREAM,
+            )
+            # Barge-in cancels A and admits B; B1 queues behind A2.
+            await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+            identity_b = bridge.current_identity
+            assert identity_b is not None
+            assert identity_b.generation_id != identity_a.generation_id
+            await bridge.process_frame(
+                InputAudioRawFrame(audio=b"\x03\x00" * 160, sample_rate=16_000, num_channels=1),
+                FrameDirection.DOWNSTREAM,
+            )
+            gate.set()
+            await asyncio.wait_for(bridge._input_queue.join(), timeout=5)
+
+        # A1 was already in flight; stale A2 was fenced; live B1 was delivered.
+        assert sent == [1, 3]
+    finally:
+        await container.stop()
 
 
 def test_provider_bindings_refuse_silent_rebind() -> None:
