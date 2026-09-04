@@ -1033,9 +1033,11 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
     management = _replace_management(container, store, transport)
 
     hold_send = asyncio.Event()
+    send_started = asyncio.Event()
     original_send = transport.send_text
 
     async def _controlled_send(*args: Any, **kwargs: Any) -> str:
+        send_started.set()
         await hold_send.wait()
         return await original_send(*args, **kwargs)
 
@@ -1086,6 +1088,9 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
         loaded = WeixinCredentials.from_json(raw)
         assert "msg-fail-publish" in loaded.pending_contexts
 
+        # Wait until send_text is entered (part has been claimed and is waiting on hold_send)
+        await asyncio.wait_for(send_started.wait(), timeout=10.0)
+
         # Inject EventHub publish failure in event_publisher.publish_persisted
         async def _failing_publish_persisted(event: Any) -> None:
             raise RuntimeError("Injected EventHub failure")
@@ -1096,6 +1101,9 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
 
         # Release send_text to let scheduler execute and ACK the part
         hold_send.set()
+        scheduler = management.get_scheduler(connection_id)
+        if scheduler is not None:
+            scheduler.wake()
 
         # Context must still be cleaned up via finally block
         for _ in range(100):
@@ -1104,6 +1112,8 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
                 loaded = WeixinCredentials.from_json(raw)
                 if "msg-fail-publish" not in loaded.pending_contexts:
                     break
+            if scheduler is not None:
+                scheduler.wake()
             await asyncio.sleep(0.1)
 
         raw = await store.get(f"weixin_ilink:{connection_id}")

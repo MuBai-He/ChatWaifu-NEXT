@@ -131,10 +131,10 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
         .object({
           character_id: z.string().min(1),
           user_scope: z.string().min(1),
-          conversation: z.literal("current_session"),
-          audio: z.literal("current_session"),
-          memory: z.literal("current_character_user"),
-          character_state: z.literal("current_character_user"),
+          conversation: z.string().min(1).default("current_session"),
+          audio: z.string().min(1).default("current_session"),
+          memory: z.string().min(1).default("current_character_user"),
+          character_state: z.string().min(1).default("current_character_user"),
         })
         .passthrough(),
     })
@@ -299,6 +299,40 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
               correlation_id: uuid.nullish(),
             })
             .passthrough(),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("cloud.egress_receipt"),
+      payload: z
+        .object({
+          provider_backend_id: z.string().min(1),
+          patch_id: uuid,
+          component_kinds: z.array(z.string()).default([]),
+          memory_record_ids: z.array(uuid).default([]),
+          byte_count: z.number().int().nonnegative(),
+          estimated_tokens: z.number().int().nonnegative(),
+          policy_decision: z.string().min(1),
+          approved_by: z.string().nullish(),
+          scope: z.string().nullish(),
+          occurred_at: awareDateTime,
+        })
+        .passthrough(),
+    })
+    .passthrough(),
+  z
+    .object({
+      ...eventBase,
+      event_type: z.literal("cloud.egress_blocked"),
+      payload: z
+        .object({
+          provider_backend_id: z.string().min(1),
+          policy_decision: z.string().min(1),
+          reason: z.string().min(1),
+          occurred_at: awareDateTime,
         })
         .passthrough(),
     })
@@ -1125,6 +1159,9 @@ const skillCapabilitySchema = z
         "device_control",
       ])
       .default("read"),
+    adapter_operation: z
+      .enum(["invoke", "resource_read", "prompt_get"])
+      .default("invoke"),
     confirmation_required: z.boolean().default(false),
     timeout_seconds: z.number().positive().max(600).default(30),
     adapter_tool: z.string().nullish(),
@@ -1558,3 +1595,60 @@ export function decodeAudioFrameHeader(encoded: Uint8Array): AudioFrameHeader {
     throw new Error("invalid audio frame header", { cause: error });
   }
 }
+
+export {
+  audioFrameHeaderSchema,
+  avatarCapabilityManifestSchema,
+  avatarCueSchema,
+  avatarInteractionEventSchema,
+  channelAuthorizationSnapshotSchema,
+  channelAuthorizationStartRequestSchema,
+  channelAuthorizationVerificationRequestSchema,
+  channelConnectionConfigurationSchema,
+  channelConnectionSnapshotSchema,
+  channelDeliveryAcknowledgementSchema,
+  channelDeliveryClaimRequestSchema,
+  channelDeliveryPartAcknowledgementSchema,
+  channelDeliveryPartClaimRequestSchema,
+  channelDeliveryPartKindSchema,
+  channelDeliveryPartPayloadSchema,
+  channelDeliveryPartSnapshotSchema,
+  channelDeliveryPartStatusSchema,
+  channelDeliveryPlanSnapshotSchema,
+  channelDeliverySnapshotSchema,
+  channelDeliveryStatusSchema,
+  channelErrorResponseSchema,
+  channelGatewayStatusSnapshotSchema,
+  channelInboundTextMessageSchema,
+  channelProviderCapabilitiesSchema,
+  channelProviderRegistrationSchema,
+  channelTextDeliveryPartPayloadSchema,
+  channelTurnCancelReceiptSchema,
+  channelTurnCancelRequestSchema,
+  channelTurnReceiptSchema,
+  channelTurnSnapshotSchema,
+  channelTurnStatusSchema,
+  characterKernelSnapshotSchema,
+  commandEnvelopeSchema,
+  eventEnvelopeSchema,
+  genericCoreEventSchema,
+  mcpCapabilitySnapshotSchema,
+  mcpConnectionSnapshotSchema,
+  mcpPromptSchema,
+  mcpResourceSchema,
+  mcpResourceTemplateSchema,
+  mcpToolSchema,
+  memoryChannelAttributionSchema,
+  memoryDraftSchema,
+  memoryProposalSchema,
+  memoryRecordSchema,
+  memorySourceSchema,
+  pluginSnapshotSchema,
+  sessionSnapshotSchema,
+  skillCapabilitySchema,
+  skillDefinitionSchema,
+  skillResultSchema,
+  skillRunSnapshotSchema,
+  strongEventEnvelopeSchema,
+  structuredErrorSchema,
+};

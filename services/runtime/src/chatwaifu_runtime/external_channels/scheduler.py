@@ -198,8 +198,6 @@ class ChannelDeliveryScheduler:
                 except Exception:
                     logger.exception("on_plan_terminal callback failed")
 
-    _handle_ack_result = _handle_transition_result
-
     async def step(self, now: datetime | None = None) -> bool:
         """Execute one evaluation cycle over all nonterminal delivery plans.
 
