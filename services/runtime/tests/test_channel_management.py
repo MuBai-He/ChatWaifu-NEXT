@@ -1096,6 +1096,9 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
 
         # Release send_text to let scheduler execute and ACK the part
         hold_send.set()
+        scheduler = management.get_scheduler(connection_id)
+        if scheduler is not None:
+            scheduler.wake()
 
         # Context must still be cleaned up via finally block
         for _ in range(100):
@@ -1104,6 +1107,8 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
                 loaded = WeixinCredentials.from_json(raw)
                 if "msg-fail-publish" not in loaded.pending_contexts:
                     break
+            if scheduler is not None:
+                scheduler.wake()
             await asyncio.sleep(0.1)
 
         raw = await store.get(f"weixin_ilink:{connection_id}")

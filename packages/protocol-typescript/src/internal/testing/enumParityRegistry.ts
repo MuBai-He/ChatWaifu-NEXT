@@ -3,7 +3,6 @@
  * Not exported from the root `@chatwaifu/protocol` package.
  */
 
-
 import {
   audioFrameHeaderSchema,
   avatarCapabilityManifestSchema,
