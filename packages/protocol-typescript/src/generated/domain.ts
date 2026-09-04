@@ -778,6 +778,8 @@ export type GenericCoreEventType =
   | 'channel.delivery_plan_cancel_requested'
   | 'channel.delivery_plan_cancelled'
   | 'channel.delivery_plan_failed'
+  | 'channel.turn_failed'
+  | 'channel.turn_cancelled'
   | 'resource.models_slept'
   | 'resource.models_woke'
 export type GenerationId24 = string | null

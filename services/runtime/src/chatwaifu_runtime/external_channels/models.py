@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Self
 from uuid import UUID
 
 from chatwaifu_protocol.channels import (
@@ -220,3 +221,21 @@ class CompleteTurnResult:
         if hasattr(self.turn, name):
             return getattr(self.turn, name)
         raise AttributeError(f"'CompleteTurnResult' object has no attribute '{name}'")
+
+
+class LeaseRecoveryResult(int):
+    """Subclass of int for backward compatibility with `recovered_count: int` callers."""
+
+    terminal_plans: tuple[ChannelDeliveryPlanRecord, ...]
+    persisted_events: tuple[GenericCoreEvent, ...]
+
+    def __new__(
+        cls,
+        count: int,
+        terminal_plans: tuple[ChannelDeliveryPlanRecord, ...] = (),
+        persisted_events: tuple[GenericCoreEvent, ...] = (),
+    ) -> Self:
+        obj = super().__new__(cls, count)
+        obj.terminal_plans = tuple(terminal_plans)
+        obj.persisted_events = tuple(persisted_events)
+        return obj

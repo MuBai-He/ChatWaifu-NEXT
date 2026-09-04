@@ -241,6 +241,7 @@ class ChannelManagementService:
         self._credential_mutation_locks: dict[UUID, asyncio.Lock] = {}
         self._terminal_events_task: asyncio.Task[None] | None = None
         self._stopping = False
+        self._external_channels.add_turn_terminal_listener(self._on_turn_terminal)
 
     def _get_credential_lock(self, connection_id: UUID) -> asyncio.Lock:
         lock = self._credential_mutation_locks.get(connection_id)
@@ -1046,7 +1047,7 @@ class ChannelManagementService:
                 received_at=message.received_at,
             )
             try:
-                await self._external_channels.ingest(
+                receipt = await self._external_channels.ingest(
                     inbound, access_token=credentials.gateway_access_token
                 )
             except (ChannelBusyError, ChannelDeliveryBusyError):
@@ -1058,9 +1059,43 @@ class ChannelManagementService:
                 )
                 await self._forget_context(connection_id, message.external_message_id)
                 continue
+
+            if receipt.duplicate:
+                turn = await self._repository.find_turn_by_external_message(
+                    connection_id, message.external_message_id
+                )
+                if turn is not None:
+                    is_terminal = False
+                    if turn.delivery_id is not None:
+                        plan = await self._repository.get_delivery_plan(turn.delivery_id)
+                        if plan is not None and plan.status in (
+                            ChannelDeliveryStatus.DELIVERED,
+                            ChannelDeliveryStatus.FAILED,
+                            ChannelDeliveryStatus.CANCELLED,
+                        ):
+                            is_terminal = True
+                    elif turn.status in (
+                        ChannelTurnStatus.COMPLETED,
+                        ChannelTurnStatus.FAILED,
+                        ChannelTurnStatus.CANCELLED,
+                        ChannelTurnStatus.TIMED_OUT,
+                    ):
+                        is_terminal = True
+                    if is_terminal:
+                        await self._forget_context(connection_id, message.external_message_id)
+
             scheduler = self.get_scheduler(connection_id)
             if scheduler is not None:
                 scheduler.wake()
+
+    async def _on_turn_terminal(self, turn: ChannelTurnRecord) -> None:
+        if turn.delivery_id is None and turn.status in (
+            ChannelTurnStatus.FAILED,
+            ChannelTurnStatus.CANCELLED,
+            ChannelTurnStatus.COMPLETED,
+            ChannelTurnStatus.TIMED_OUT,
+        ):
+            await self._forget_context(turn.connection_id, turn.external_message_id)
 
     async def _handle_plan_terminal(
         self,
@@ -1077,6 +1112,15 @@ class ChannelManagementService:
 
     async def _reconcile_pending_contexts(self, connection_id: UUID) -> None:
         async with self._get_credential_lock(connection_id):
+            recovery_result = await self._repository.recover_expired_delivery_part_leases(
+                as_of=datetime.now(UTC)
+            )
+            if hasattr(recovery_result, "persisted_events") and self._event_publisher is not None:
+                for ev in recovery_result.persisted_events:
+                    try:
+                        await self._event_publisher.publish_persisted(ev)
+                    except Exception:
+                        logger.exception("failed to publish persisted event during reconciliation")
             credentials = await self._load_credentials(connection_id)
             if credentials is None or not credentials.pending_contexts:
                 return
@@ -1100,6 +1144,7 @@ class ChannelManagementService:
                     ChannelTurnStatus.FAILED,
                     ChannelTurnStatus.CANCELLED,
                     ChannelTurnStatus.COMPLETED,
+                    ChannelTurnStatus.TIMED_OUT,
                 ):
                     stale_message_ids.append(external_message_id)
 
@@ -1122,6 +1167,8 @@ class ChannelManagementService:
             "channel.delivery_plan_completed",
             "channel.delivery_plan_cancelled",
             "channel.delivery_plan_failed",
+            "channel.turn_failed",
+            "channel.turn_cancelled",
         }
 
         def _is_terminal_event(event: dict[str, object]) -> bool:
@@ -1150,6 +1197,7 @@ class ChannelManagementService:
         connection_id_str = payload.get("connection_id")
         channel_turn_id_str = payload.get("channel_turn_id")
         delivery_id_str = payload.get("delivery_id")
+        external_message_id = payload.get("external_message_id")
 
         turn: ChannelTurnRecord | None = None
         if channel_turn_id_str:
@@ -1166,19 +1214,23 @@ class ChannelManagementService:
             except Exception:
                 pass
 
-        if turn is None:
-            return
-
         conn_id: UUID | None = None
         if connection_id_str:
             try:
                 conn_id = UUID(str(connection_id_str))
             except (ValueError, TypeError):
                 pass
-        if conn_id is None:
+        if conn_id is None and turn is not None:
             conn_id = turn.connection_id
 
-        await self._forget_context(conn_id, turn.external_message_id)
+        msg_id: str | None = None
+        if isinstance(external_message_id, str):
+            msg_id = external_message_id
+        elif turn is not None:
+            msg_id = turn.external_message_id
+
+        if conn_id is not None and msg_id is not None:
+            await self._forget_context(conn_id, msg_id)
 
     async def _load_credentials(self, connection_id: UUID) -> WeixinCredentials | None:
         serialized = await self._credentials.get(_credential_reference(connection_id))

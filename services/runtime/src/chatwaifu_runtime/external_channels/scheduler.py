@@ -204,7 +204,21 @@ class ChannelDeliveryScheduler:
         Returns True if any part was claimed and processed.
         """
         current_time = now or datetime.now(UTC)
-        await self._repository.recover_expired_delivery_part_leases(as_of=current_time)
+        recovery_result = await self._repository.recover_expired_delivery_part_leases(
+            as_of=current_time
+        )
+        if hasattr(recovery_result, "persisted_events") and self._publisher is not None:
+            for ev in recovery_result.persisted_events:
+                try:
+                    await self._publisher.publish_persisted(ev)
+                except Exception:
+                    logger.exception("failed to publish recovery persisted event")
+        if hasattr(recovery_result, "terminal_plans") and self._on_plan_terminal is not None:
+            for term_plan in recovery_result.terminal_plans:
+                try:
+                    await self._on_plan_terminal(term_plan)
+                except Exception:
+                    logger.exception("on_plan_terminal failed during lease recovery")
 
         plans = await self._repository.list_nonterminal_delivery_plans(self._connection_id)
         any_progress = False

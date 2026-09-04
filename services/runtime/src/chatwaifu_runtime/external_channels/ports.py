@@ -30,6 +30,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
     CompleteTurnResult,
     DeliveryTransitionResult,
+    LeaseRecoveryResult,
 )
 
 
@@ -191,7 +192,7 @@ class ExternalChannelRepository(Protocol):
         self,
         *,
         as_of: datetime,
-    ) -> int: ...
+    ) -> LeaseRecoveryResult: ...
 
     async def set_turn_terminal(
         self,

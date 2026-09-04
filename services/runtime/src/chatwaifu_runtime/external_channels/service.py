@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import logging
 import secrets
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -194,6 +194,7 @@ class ExternalChannelService:
         self._ingress_lock = asyncio.Lock()
         self._turn_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._turn_sync_locks: dict[UUID, asyncio.Lock] = {}
+        self._turn_terminal_listeners: list[Callable[[ChannelTurnRecord], Awaitable[None]]] = []
         self._stopping = False
 
     @property
@@ -397,7 +398,7 @@ class ExternalChannelService:
         except asyncio.CancelledError:
             if generation_admitted:
                 await self._conversation.cancel(binding.session_id, "channel_ingress_cancelled")
-            await self._repository.set_turn_terminal(
+            await self._set_turn_terminal(
                 turn.channel_turn_id,
                 status=ChannelTurnStatus.CANCELLED,
                 error=_error(
@@ -410,7 +411,7 @@ class ExternalChannelService:
         except Exception as error:
             if generation_admitted:
                 await self._conversation.cancel(binding.session_id, "channel_admission_failed")
-            await self._repository.set_turn_terminal(
+            await self._set_turn_terminal(
                 turn.channel_turn_id,
                 status=ChannelTurnStatus.FAILED,
                 error=_error(
@@ -426,6 +427,67 @@ class ExternalChannelService:
             seen_at=datetime.now(UTC),
         )
         return self._turn_receipt(turn, duplicate=False)
+
+    def add_turn_terminal_listener(
+        self, listener: Callable[[ChannelTurnRecord], Awaitable[None]]
+    ) -> None:
+        self._turn_terminal_listeners.append(listener)
+
+    async def _notify_turn_terminal(self, turn: ChannelTurnRecord) -> None:
+        if self._turn_terminal_listeners:
+            for listener in list(self._turn_terminal_listeners):
+                try:
+                    await listener(turn)
+                except Exception:
+                    logger.exception(
+                        "turn terminal listener failed for turn %s", turn.channel_turn_id
+                    )
+        now = datetime.now(UTC)
+        event_type = (
+            "channel.turn_cancelled"
+            if turn.status is ChannelTurnStatus.CANCELLED
+            else "channel.turn_failed"
+        )
+        try:
+            await self._publisher.emit(
+                GenericCoreEvent.model_validate(
+                    {
+                        "event_id": uuid4(),
+                        "event_type": event_type,
+                        "session_id": turn.session_id,
+                        "turn_id": turn.turn_id,
+                        "generation_id": turn.generation_id,
+                        "occurred_at": now,
+                        "source": "runtime.external_channels",
+                        "privacy": PrivacyLevel.PRIVATE,
+                        "payload": {
+                            "connection_id": str(turn.connection_id),
+                            "channel_turn_id": str(turn.channel_turn_id),
+                            "external_message_id": turn.external_message_id,
+                            "status": turn.status.value,
+                        },
+                    }
+                )
+            )
+        except Exception:
+            logger.exception("failed to emit turn terminal event for %s", turn.channel_turn_id)
+
+    async def _set_turn_terminal(
+        self,
+        channel_turn_id: UUID,
+        *,
+        status: ChannelTurnStatus,
+        error: StructuredError | None,
+        completed_at: datetime,
+    ) -> ChannelTurnRecord:
+        record = await self._repository.set_turn_terminal(
+            channel_turn_id,
+            status=status,
+            error=error,
+            completed_at=completed_at,
+        )
+        await self._notify_turn_terminal(record)
+        return record
 
     async def _admit_ingress(
         self, message: ChannelInboundTextMessage, *, access_token: str
@@ -592,12 +654,19 @@ class ExternalChannelService:
         self, turn: ChannelTurnRecord, access_token: str | None = None
     ) -> None:
         try:
-            await self.wait_for_turn(
-                turn.connection_id,
-                turn.channel_turn_id,
-                access_token=access_token,
-                wait_seconds=300.0,
-            )
+            while not self._stopping:
+                snapshot = await self.wait_for_turn(
+                    turn.connection_id,
+                    turn.channel_turn_id,
+                    access_token=access_token,
+                    wait_seconds=30.0,
+                )
+                if snapshot.status not in {
+                    ChannelTurnStatus.ACCEPTED,
+                    ChannelTurnStatus.PROCESSING,
+                    ChannelTurnStatus.CANCELLING,
+                }:
+                    return
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -1130,7 +1199,7 @@ class ExternalChannelService:
             generation = await self._conversation_repository.generation_result(turn.generation_id)
             now = datetime.now(UTC)
             if generation is None:
-                return await self._repository.set_turn_terminal(
+                return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.FAILED,
                     error=_error(
@@ -1141,7 +1210,7 @@ class ExternalChannelService:
                 )
             if generation.state is GenerationState.COMPLETED:
                 if not generation.output_text:
-                    return await self._repository.set_turn_terminal(
+                    return await self._set_turn_terminal(
                         turn.channel_turn_id,
                         status=ChannelTurnStatus.FAILED,
                         error=_error(
@@ -1170,14 +1239,14 @@ class ExternalChannelService:
                     await self._emit_delivery_plan_created_event(turn_record, delivery_id, parts)
                 return turn_record
             if generation.state is GenerationState.CANCELLED:
-                return await self._repository.set_turn_terminal(
+                return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.CANCELLED,
                     error=_error("generation_cancelled", "The channel turn was cancelled."),
                     completed_at=now,
                 )
             if generation.state is GenerationState.FAILED:
-                return await self._repository.set_turn_terminal(
+                return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.FAILED,
                     error=_error(
@@ -1187,7 +1256,7 @@ class ExternalChannelService:
                     completed_at=now,
                 )
             if self._conversation.active_generation_id(turn.session_id) != turn.generation_id:
-                return await self._repository.set_turn_terminal(
+                return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.FAILED,
                     error=_error(
