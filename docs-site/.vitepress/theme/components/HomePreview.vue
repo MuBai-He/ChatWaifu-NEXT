@@ -34,7 +34,8 @@ const coarsePointer = ref(false);
 
 const currentLine = computed(() => LINES[lineIndex.value]);
 const isTyping = computed(
-  () => !reducedMotion.value && typed.value.length < currentLine.value.text.length,
+  () =>
+    !reducedMotion.value && typed.value.length < currentLine.value.text.length,
 );
 const hint = computed(() =>
   coarsePointer.value ? "点一下继续" : "点一下对话框继续，也可以按空格",
@@ -67,7 +68,10 @@ function typeNext(): void {
     typed.value = text;
     cursor = text.length;
     mood.value = "listening";
-    schedule(() => beginLine((lineIndex.value + 1) % LINES.length), hold + 1600);
+    schedule(
+      () => beginLine((lineIndex.value + 1) % LINES.length),
+      hold + 1600,
+    );
     return;
   }
 
@@ -152,8 +156,11 @@ function resetParallax(): void {
 }
 
 onMounted(() => {
-  reducedMotion.value = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  coarsePointer.value = !window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  reducedMotion.value = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  coarsePointer.value = !window.matchMedia("(hover: hover) and (pointer: fine)")
+    .matches;
 
   document.addEventListener("visibilitychange", handleVisibility);
 
@@ -215,7 +222,9 @@ onBeforeUnmount(() => {
     <i class="cw-scene__mote cw-scene__mote--four" aria-hidden="true" />
     <i class="cw-scene__mote cw-scene__mote--five" aria-hidden="true" />
 
-    <span class="cw-scene__motto" aria-hidden="true">在屏幕的一隅，写下属于你们的日常物语</span>
+    <span class="cw-scene__motto" aria-hidden="true"
+      >在屏幕的一隅，写下属于你们的日常物语</span
+    >
 
     <figcaption class="cw-scene__dialogue">
       <span class="cw-scene__name">宁宁</span>
@@ -224,7 +233,8 @@ onBeforeUnmount(() => {
         <span class="cw-scene__mood-text">{{ MOOD_LABEL[mood] }}</span>
       </span>
       <p class="cw-scene__line" aria-hidden="true">
-        <span>{{ typed }}</span><i class="cw-scene__caret" />
+        <span>{{ typed }}</span
+        ><i class="cw-scene__caret" />
       </p>
       <p class="cw-sr-only" aria-live="polite">{{ currentLine.text }}</p>
       <span class="cw-scene__aside">{{ hint }}</span>

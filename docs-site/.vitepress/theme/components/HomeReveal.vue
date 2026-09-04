@@ -12,10 +12,14 @@ function revealAll(targets: Iterable<Element>): void {
 }
 
 onMounted(() => {
-  const targets = document.querySelectorAll<HTMLElement>(".VPHome [data-reveal]");
+  const targets = document.querySelectorAll<HTMLElement>(
+    ".VPHome [data-reveal]",
+  );
   if (targets.length === 0) return;
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
   if (reduceMotion || !("IntersectionObserver" in window)) {
     revealAll(targets);
     return;

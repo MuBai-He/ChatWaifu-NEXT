@@ -47,8 +47,8 @@
   --vp-c-divider: rgba(241, 218, 231, 0.12);
   --vp-home-hero-image-background-image: radial-gradient(
     circle,
-    rgba(210, 148, 178, 0.32),
-    rgba(222, 196, 143, 0.12) 45%,
+    rgba(210, 148, 178, 0.22),
+    rgba(222, 196, 143, 0.08) 45%,
     transparent 72%
   );
   --cw-ink: #f5ecef;
@@ -166,9 +166,10 @@ body {
 .VPHomeHero .image-src {
   max-width: 320px;
   filter: drop-shadow(0 24px 34px rgba(61, 34, 58, 0.2));
+  /* The theme centers the mark with `transform`, so breathe via `translate`/`rotate`. */
   animation:
-    cw-rise 900ms 120ms both var(--cw-ease),
-    cw-mark-breathe 9s 900ms ease-in-out infinite;
+    cw-fade 900ms 120ms both ease-out,
+    cw-mark-breathe 9s ease-in-out infinite;
 }
 
 .VPButton {
@@ -249,7 +250,10 @@ body {
 }
 
 /* Home-page sections live inside .vp-doc; undo its heading/list defaults. */
-.VPHome .vp-doc :is(.cw-chapters, .cw-history, .cw-status, .cw-start) :is(h2, h3) {
+.VPHome
+  .vp-doc
+  :is(.cw-chapters, .cw-history, .cw-status, .cw-start)
+  :is(h2, h3) {
   margin: 0;
   padding: 0;
   border: 0;
@@ -529,7 +533,9 @@ body {
   height: 3px;
   border-radius: 2px;
   background: var(--cw-rose);
-  transition: height 260ms ease, background-color 400ms ease;
+  transition:
+    height 260ms ease,
+    background-color 400ms ease;
 }
 
 .cw-scene.is-speaking .cw-scene__bars b {
@@ -729,7 +735,9 @@ body {
   border: 1px solid var(--vp-c-divider);
   border-radius: 4px 18px 4px 18px;
   background: color-mix(in srgb, var(--vp-c-bg-soft) 76%, transparent);
-  transition: border-color 300ms ease, box-shadow 300ms ease;
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
 }
 
 .cw-chapter:hover .cw-demo {
@@ -778,13 +786,27 @@ body {
   animation: cw-wave 1.15s ease-in-out infinite alternate;
 }
 
-.cw-wave i:nth-child(1) { animation-delay: -0.2s; }
-.cw-wave i:nth-child(2) { animation-delay: -0.55s; }
-.cw-wave i:nth-child(3) { animation-delay: -0.9s; }
-.cw-wave i:nth-child(4) { animation-delay: -0.1s; }
-.cw-wave i:nth-child(5) { animation-delay: -0.75s; }
-.cw-wave i:nth-child(6) { animation-delay: -0.4s; }
-.cw-wave i:nth-child(7) { animation-delay: -1s; }
+.cw-wave i:nth-child(1) {
+  animation-delay: -0.2s;
+}
+.cw-wave i:nth-child(2) {
+  animation-delay: -0.55s;
+}
+.cw-wave i:nth-child(3) {
+  animation-delay: -0.9s;
+}
+.cw-wave i:nth-child(4) {
+  animation-delay: -0.1s;
+}
+.cw-wave i:nth-child(5) {
+  animation-delay: -0.75s;
+}
+.cw-wave i:nth-child(6) {
+  animation-delay: -0.4s;
+}
+.cw-wave i:nth-child(7) {
+  animation-delay: -1s;
+}
 
 .cw-memcard {
   width: 100%;
@@ -855,7 +877,9 @@ body {
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg);
-  transition: border-color 500ms ease, box-shadow 500ms ease;
+  transition:
+    border-color 500ms ease,
+    box-shadow 500ms ease;
 }
 
 .cw-win::before {
@@ -985,7 +1009,9 @@ body {
   border-bottom: 1px solid var(--vp-c-divider);
   font-size: 15px;
   line-height: 1.7;
-  transition: background-color 250ms ease, padding-left 250ms var(--cw-ease);
+  transition:
+    background-color 250ms ease,
+    padding-left 250ms var(--cw-ease);
 }
 
 .cw-then-now li:hover {
@@ -1223,10 +1249,12 @@ body {
 @keyframes cw-mark-breathe {
   0%,
   100% {
-    transform: translateY(0) rotate(-0.8deg);
+    translate: 0 0;
+    rotate: -0.8deg;
   }
   50% {
-    transform: translateY(-7px) rotate(0.8deg);
+    translate: 0 -7px;
+    rotate: 0.8deg;
   }
 }
 
