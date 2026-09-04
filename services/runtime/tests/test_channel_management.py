@@ -23,6 +23,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -51,7 +52,11 @@ from chatwaifu_runtime.external_channels.management import (
 )
 from chatwaifu_runtime.external_channels.models import ChannelTurnRecord
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
-from chatwaifu_runtime.external_channels.service import ChannelConflictError, ChannelNotFoundError
+from chatwaifu_runtime.external_channels.service import (
+    ChannelConflictError,
+    ChannelNotFoundError,
+    SingleTextDeliveryPlanFactory,
+)
 
 
 class _FakeWeixin:
@@ -898,7 +903,11 @@ async def test_pending_context_cleaned_up_when_plan_cancelled_by_new_message(
     management = _replace_management(container, store, transport)
 
     class _TwoPartFactory:
-        def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+        def create_parts(
+            self,
+            reply_text: str,
+            policy: ChannelPresentationPolicy | None = None,
+        ) -> tuple[ChannelDeliveryPartDraft, ...]:
             return (
                 ChannelDeliveryPartDraft(
                     ordinal=0,
@@ -1042,6 +1051,7 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
         return await original_send(*args, **kwargs)
 
     monkeypatch.setattr(transport, "send_text", _controlled_send)
+    container.external_channels.delivery_plan_factory = SingleTextDeliveryPlanFactory()
 
     await container.start()
     try:
@@ -1706,7 +1716,11 @@ async def test_sending_part_retryable_error_under_cancel_request_cancels_plan_an
     management = _replace_management(container, store, transport)
 
     class _TwoPartFactory:
-        def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+        def create_parts(
+            self,
+            reply_text: str,
+            policy: ChannelPresentationPolicy | None = None,
+        ) -> tuple[ChannelDeliveryPartDraft, ...]:
             return (
                 ChannelDeliveryPartDraft(
                     ordinal=0,

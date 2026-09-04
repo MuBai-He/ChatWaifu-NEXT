@@ -27,6 +27,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -74,7 +75,11 @@ from pydantic import ValidationError
 
 
 class _ThreePartsPlanFactory:
-    def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+    def create_parts(
+        self,
+        reply_text: str,
+        policy: ChannelPresentationPolicy | None = None,
+    ) -> tuple[ChannelDeliveryPartDraft, ...]:
         return (
             ChannelDeliveryPartDraft(
                 ordinal=0,
