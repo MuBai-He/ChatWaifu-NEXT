@@ -93,3 +93,35 @@ def test_rejects_incomplete_playback_ack_payload() -> None:
 
     with pytest.raises(ValidationError):
         create_default_registry().parse_event(raw)
+
+
+def test_parses_cloud_egress_receipt_event() -> None:
+    raw = make_event().model_dump(mode="json")
+    raw["event_type"] = "cloud.egress_receipt"
+    raw["payload"] = {
+        "provider_backend_id": "fake",
+        "patch_id": "00000000-0000-4000-8000-000000000701",
+        "component_kinds": ["persona", "memory"],
+        "memory_record_ids": ["00000000-0000-4000-8000-000000000702"],
+        "byte_count": 256,
+        "estimated_tokens": 64,
+        "policy_decision": "allow",
+        "approved_by": "user",
+        "scope": "session",
+        "occurred_at": "2026-08-23T08:00:00Z",
+    }
+    parsed = create_default_registry().parse_event(raw)
+    assert parsed.event_type == "cloud.egress_receipt"
+
+
+def test_parses_cloud_egress_blocked_event() -> None:
+    raw = make_event().model_dump(mode="json")
+    raw["event_type"] = "cloud.egress_blocked"
+    raw["payload"] = {
+        "provider_backend_id": "fake",
+        "policy_decision": "deny",
+        "reason": "Cloud egress denied by policy",
+        "occurred_at": "2026-08-23T08:00:00Z",
+    }
+    parsed = create_default_registry().parse_event(raw)
+    assert parsed.event_type == "cloud.egress_blocked"

@@ -87,6 +87,26 @@ class AvatarCueEmittedPayload(ProtocolModel):
     cue: AvatarCue
 
 
+class EgressReceiptPayload(ProtocolModel):
+    provider_backend_id: str = Field(min_length=1)
+    patch_id: UUID
+    component_kinds: list[str] = Field(default_factory=list)
+    memory_record_ids: list[UUID] = Field(default_factory=list[UUID])
+    byte_count: int = Field(ge=0)
+    estimated_tokens: int = Field(ge=0)
+    policy_decision: str = Field(min_length=1)
+    approved_by: str | None = None
+    scope: str | None = None
+    occurred_at: AwareDatetime
+
+
+class EgressBlockedPayload(ProtocolModel):
+    provider_backend_id: str = Field(min_length=1)
+    policy_decision: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    occurred_at: AwareDatetime
+
+
 class ErrorRaisedPayload(ProtocolModel):
     error: StructuredError
 
@@ -161,6 +181,14 @@ class AvatarCueEmittedEvent(EventEnvelope[Literal["avatar.cue_emitted"], AvatarC
 
 class ErrorRaisedEvent(EventEnvelope[Literal["system.error_raised"], ErrorRaisedPayload]):
     event_type: Literal["system.error_raised"] = "system.error_raised"
+
+
+class EgressReceiptEvent(EventEnvelope[Literal["cloud.egress_receipt"], EgressReceiptPayload]):
+    event_type: Literal["cloud.egress_receipt"] = "cloud.egress_receipt"
+
+
+class EgressBlockedEvent(EventEnvelope[Literal["cloud.egress_blocked"], EgressBlockedPayload]):
+    event_type: Literal["cloud.egress_blocked"] = "cloud.egress_blocked"
 
 
 type GenericCoreEventType = Literal[
@@ -290,5 +318,7 @@ type EventModel = (
     | AssistantSpokenTextCommittedEvent
     | AvatarCueEmittedEvent
     | ErrorRaisedEvent
+    | EgressReceiptEvent
+    | EgressBlockedEvent
     | GenericCoreEvent
 )

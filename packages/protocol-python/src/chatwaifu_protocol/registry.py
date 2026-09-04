@@ -21,6 +21,8 @@ from chatwaifu_protocol.events import (
     AssistantPlaybackStoppedEvent,
     AssistantSpokenTextCommittedEvent,
     AvatarCueEmittedEvent,
+    EgressBlockedEvent,
+    EgressReceiptEvent,
     ErrorRaisedEvent,
     EventModel,
     GenericCoreEvent,
@@ -110,6 +112,8 @@ def create_default_registry() -> SchemaRegistry:
     registry.register_event("assistant.spoken_text_committed", AssistantSpokenTextCommittedEvent)
     registry.register_event("avatar.cue_emitted", AvatarCueEmittedEvent)
     registry.register_event("system.error_raised", ErrorRaisedEvent)
+    registry.register_event("cloud.egress_receipt", EgressReceiptEvent)
+    registry.register_event("cloud.egress_blocked", EgressBlockedEvent)
     for event_type in GENERIC_CORE_EVENT_TYPES:
         registry.register_event(event_type, GenericCoreEvent)
     registry.register_command("cmd.session.start", SessionStartCommand)

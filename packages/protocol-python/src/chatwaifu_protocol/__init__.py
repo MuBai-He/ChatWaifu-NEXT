@@ -31,7 +31,13 @@ from chatwaifu_protocol.channels import (
 from chatwaifu_protocol.commands import CommandEnvelope
 from chatwaifu_protocol.conversation import ConversationInterruption
 from chatwaifu_protocol.errors import StructuredError
-from chatwaifu_protocol.events import EventEnvelope
+from chatwaifu_protocol.events import (
+    EgressBlockedEvent,
+    EgressBlockedPayload,
+    EgressReceiptEvent,
+    EgressReceiptPayload,
+    EventEnvelope,
+)
 from chatwaifu_protocol.media import (
     AudioFrameHeader,
     VideoFrameHeader,
@@ -93,6 +99,10 @@ __all__ = [
     "ChannelTurnStatus",
     "CommandEnvelope",
     "ConversationInterruption",
+    "EgressBlockedEvent",
+    "EgressBlockedPayload",
+    "EgressReceiptEvent",
+    "EgressReceiptPayload",
     "EventEnvelope",
     "GenerationSnapshot",
     "MemoryChannelAttribution",

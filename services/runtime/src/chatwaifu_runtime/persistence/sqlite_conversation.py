@@ -174,13 +174,15 @@ class SQLiteConversationRepository(ConversationRepository):
     async def generation_result(self, generation_id: UUID) -> ConversationGenerationRecord | None:
         row = await self._database.fetchone(
             """
-            SELECT generation_id, session_id, turn_id, state, output_text, error_code
+            SELECT generation_id, session_id, turn_id, state, output_text, error_code,
+                   audio_stream_id
             FROM generations WHERE generation_id = ?
             """,
             (str(generation_id),),
         )
         if row is None:
             return None
+        raw_audio_stream_id = row["audio_stream_id"] if "audio_stream_id" in row.keys() else None
         return ConversationGenerationRecord(
             generation_id=UUID(str(row["generation_id"])),
             session_id=UUID(str(row["session_id"])),
@@ -188,6 +190,9 @@ class SQLiteConversationRepository(ConversationRepository):
             state=GenerationState(str(row["state"])),
             output_text=str(row["output_text"]) if row["output_text"] is not None else None,
             error_code=str(row["error_code"]) if row["error_code"] is not None else None,
+            audio_stream_id=UUID(str(raw_audio_stream_id))
+            if raw_audio_stream_id is not None
+            else None,
         )
 
     async def commit_user_generation(
@@ -222,6 +227,94 @@ class SQLiteConversationRepository(ConversationRepository):
                 connection, generation_event
             )
         return persisted_user, persisted_generation
+
+    async def begin_realtime_generation(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        audio_stream_id: UUID,
+        backend_kind: str,
+        occurred_at: datetime,
+        generation_event: AssistantGenerationStartedEvent,
+    ) -> AssistantGenerationStartedEvent:
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                INSERT INTO turns(
+                    turn_id, session_id, role, committed_text, committed_at, created_at,
+                    source_context_json
+                ) VALUES (?, ?, 'user', NULL, NULL, ?, NULL)
+                """,
+                (str(turn_id), str(session_id), occurred_at.isoformat()),
+            )
+            await connection.execute(
+                """
+                INSERT INTO generations(
+                    generation_id, session_id, turn_id, state, backend_kind,
+                    audio_stream_id, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(generation_id),
+                    str(session_id),
+                    str(turn_id),
+                    GenerationState.RUNNING.value,
+                    backend_kind,
+                    str(audio_stream_id),
+                    occurred_at.isoformat(),
+                ),
+            )
+            await connection.execute(
+                """
+                UPDATE sessions SET conversation_state = 'generating', updated_at = ?
+                WHERE session_id = ?
+                """,
+                (occurred_at.isoformat(), str(session_id)),
+            )
+            persisted_generation = await self._event_store.append_in_transaction(
+                connection, generation_event
+            )
+        return persisted_generation
+
+    async def commit_realtime_user_transcript(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        occurred_at: datetime,
+        user_event: UserTurnCommittedEvent,
+    ) -> UserTurnCommittedEvent | None:
+        async with self._database.transaction() as connection:
+            # Defense in depth: the generation must provably own this
+            # session/turn pair, so a misrouted caller cannot commit text to a
+            # turn that belongs to a different generation.
+            cursor = await connection.execute(
+                """
+                UPDATE turns SET committed_text = ?, committed_at = ?
+                WHERE turn_id = ? AND session_id = ? AND committed_text IS NULL
+                AND EXISTS (
+                    SELECT 1 FROM generations
+                    WHERE generation_id = ? AND session_id = ? AND turn_id = ?
+                )
+                """,
+                (
+                    text,
+                    occurred_at.isoformat(),
+                    str(turn_id),
+                    str(session_id),
+                    str(generation_id),
+                    str(session_id),
+                    str(turn_id),
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+            persisted_user = await self._event_store.append_in_transaction(connection, user_event)
+        return persisted_user
 
     async def commit_proactive_generation(
         self,

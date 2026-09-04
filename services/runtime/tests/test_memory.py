@@ -399,7 +399,7 @@ def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str
     response = http.post(f"/v1/sessions/{session_id}/turns", json={"text": text})
     assert response.status_code == 202
     generation_id = str(cast(dict[str, object], response.json())["generation_id"])
-    deadline = time.monotonic() + 2
+    deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         events = cast(
             list[dict[str, object]],

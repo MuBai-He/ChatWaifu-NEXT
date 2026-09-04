@@ -50,7 +50,7 @@ class StorageConfig(BaseModel):
 class PrivacyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    cloud_egress: str = "ask"
+    cloud_egress: Literal["allow", "ask", "deny"] = "ask"
 
 
 class SecurityConfig(BaseModel):
@@ -135,6 +135,8 @@ class RealtimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     enabled: bool = True
+    connection_mode: Literal["cascade", "cloud_realtime"] = "cascade"
+    cloud_backend: Literal["fake"] | None = None
     input_sample_rate: int = Field(default=16_000, ge=8_000, le=48_000)
     output_sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     vad_confidence: float = Field(default=0.7, ge=0, le=1)
@@ -143,6 +145,15 @@ class RealtimeConfig(BaseModel):
     pre_roll_ms: int = Field(default=320, ge=0, le=2_000)
     max_utterance_seconds: int = Field(default=30, ge=1, le=120)
     echo_enabled: bool = False
+
+    @model_validator(mode="after")
+    def validate_cloud_backend(self) -> Self:
+        if self.connection_mode == "cloud_realtime" and self.cloud_backend != "fake":
+            raise ValueError(
+                "When connection_mode is 'cloud_realtime', cloud_backend must be "
+                "explicitly set to 'fake' (Phase 13.0-13.3)."
+            )
+        return self
 
 
 class SttConfig(BaseModel):

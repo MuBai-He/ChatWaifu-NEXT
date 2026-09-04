@@ -5,6 +5,7 @@ import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import cast
+from uuid import UUID
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
@@ -42,6 +43,11 @@ from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
 from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
+from chatwaifu_runtime.realtime.admission import RuntimeRealtimeTurnAdmission
+from chatwaifu_runtime.realtime.cloud.context import CloudEgressGateway
+from chatwaifu_runtime.realtime.cloud.factory import RuntimeCloudRealtimeFactory
+from chatwaifu_runtime.realtime.cloud.fake import FakeCloudRealtimeBackend
+from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
@@ -197,6 +203,40 @@ class RuntimeContainer:
             self.resources.status,
             on_trigger=self.resources.touch,
         )
+        cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
+        self.cloud_realtime_backend: FakeCloudRealtimeBackend | None = None
+        self.cloud_egress_gateway: CloudEgressGateway | None = None
+        self.realtime_admission: RuntimeRealtimeTurnAdmission | None = None
+        self.cloud_realtime_factory: RuntimeCloudRealtimeFactory | None = None
+
+        if settings.realtime.connection_mode == "cloud_realtime":
+            if settings.realtime.cloud_backend != "fake":
+                raise ValueError(
+                    f"Unsupported cloud realtime backend: {settings.realtime.cloud_backend}. "
+                    "Phase 13.0-13.3 supports only 'fake'."
+                )
+
+            self.cloud_realtime_backend = FakeCloudRealtimeBackend()
+            self.cloud_egress_gateway = CloudEgressGateway(
+                policy_mode=settings.privacy.cloud_egress,
+                event_store=self.event_store,
+                event_hub=self.event_hub,
+            )
+            self.realtime_admission = RuntimeRealtimeTurnAdmission(self.conversation)
+            self.cloud_realtime_factory = RuntimeCloudRealtimeFactory(
+                backend=self.cloud_realtime_backend,
+                egress_gateway=self.cloud_egress_gateway,
+                conversation=self.conversation,
+                sessions=self.sessions,
+                admission=self.realtime_admission,
+                characters=self.characters,
+                character_kernel=self.character_kernel,
+                memory=self.memory,
+                skills_source=self.runtime_skills,
+                event_hub=self.event_hub,
+            )
+            cloud_bridge_factory = self.cloud_realtime_factory.create_bridge
+
         self.voice_media = VoiceMediaService(
             PipecatMediaAdapter(
                 config=settings.realtime,
@@ -209,6 +249,7 @@ class RuntimeContainer:
                 companion_settings=self.companion_settings,
                 activity=self.activity,
                 resource_activity=self.resources.touch,
+                cloud_bridge_factory=cloud_bridge_factory,
             )
         )
         self._state = "new"
@@ -292,21 +333,29 @@ class RuntimeContainer:
                 _raise_lifecycle_group("Runtime shutdown failed", None, errors)
 
     def _shutdown_steps(self) -> list[_CleanupStep]:
-        return [
+        steps = [
             _CleanupStep("ambient", lambda: self.ambient.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),
-            _CleanupStep("channel_management", lambda: self.channel_management.stop()),
-            _CleanupStep("external_channels", lambda: self.external_channels.stop()),
-            _CleanupStep("conversation", lambda: self.conversation.stop()),
-            _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),
-            _CleanupStep("memory", lambda: self.memory.stop()),
-            _CleanupStep("stt", lambda: self.stt.close()),
-            _CleanupStep("tts", lambda: self.providers.tts.close()),
-            _CleanupStep("audio_streams", lambda: self.audio_streams.close()),
-            _CleanupStep("event_hub", lambda: self.event_hub.close()),
-            _CleanupStep("database", lambda: self.database.close()),
         ]
+        if self.cloud_realtime_backend is not None:
+            backend = self.cloud_realtime_backend
+            steps.append(_CleanupStep("cloud_realtime_backend", lambda: backend.close()))
+        steps.extend(
+            [
+                _CleanupStep("channel_management", lambda: self.channel_management.stop()),
+                _CleanupStep("external_channels", lambda: self.external_channels.stop()),
+                _CleanupStep("conversation", lambda: self.conversation.stop()),
+                _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),
+                _CleanupStep("memory", lambda: self.memory.stop()),
+                _CleanupStep("stt", lambda: self.stt.close()),
+                _CleanupStep("tts", lambda: self.providers.tts.close()),
+                _CleanupStep("audio_streams", lambda: self.audio_streams.close()),
+                _CleanupStep("event_hub", lambda: self.event_hub.close()),
+                _CleanupStep("database", lambda: self.database.close()),
+            ]
+        )
+        return steps
 
 
 async def _drain_cleanup_steps(

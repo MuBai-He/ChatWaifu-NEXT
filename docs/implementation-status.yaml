@@ -454,6 +454,17 @@ phases:
       - Web client enforces single immutable RuntimeConnection resolution, same-origin credential protection via runtimeFetchWithConnection, and fail-fast ticket acquisition
       - Web client delegates terminal text calibration strictly to StreamingTextProjector.complete(finalText) while Reducer only clears voice activity, eliminating duplicate appended text stutter during premature completion
       - Security CI documents accurate NLTK CVE-2026-81726 pathsec bypass risks and is backed by static AST inspection tests against banned model-artifact APIs
+  - id: 13.3
+    name: cloud-realtime-foundation
+    status: completed_and_tested
+    evidence:
+      - Runtime-owned RealtimeTurnAdmission coordinates speech turn and generation lifecycle for voice interactions, allocating authoritative domain identities before audio frames or provider events are processed and strictly avoiding random UUID fallback in lower layers
+      - RuntimeRealtimeDomainSink bridges normalized coordinator events into ConversationService CAS, user/assistant turns, outbox, and character kernel/memory post-turn boundaries
+      - PipecatMediaAdapter accepts cloud_bridge_factory and wires RuntimeCloudRealtimeFactory; RuntimeContainer boots end-to-end in cloud_realtime fake mode and fails fast on unsupported backends
+      - CloudEgressGateway enforces allow/ask/deny policies, consumes scoped EgressGrants, rejects initial_context bypass, and guarantees fail-closed durable audit receipt logging to EventStore before any network calls
+      - Context patch builder compiles budgeted, privacy-filtered context snapshots with typed RealtimeSkillCapability allowlists (no raw dicts/manifests/secrets) and maps retained memory IDs to receipts
+      - Provider event normalization and RealtimeSessionMirror map speech deltas with explicit role, enforce authoritative final transcript resolution (final > deltas), and track degradation, closure, and pump errors
+      - Official protocol catalog registers cloud.egress_receipt and cloud.egress_blocked with synchronized Python/TypeScript schemas and contract tests
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
