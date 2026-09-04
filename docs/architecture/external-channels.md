@@ -280,3 +280,5 @@ contracts, privacy policy, and acceptance gates exist.
 
 - [ADR 0029: External Channel Gateway](../adr/0029-external-channel-gateway.md)
 - [ADR 0030: Native WeChat iLink adapter](../adr/0030-native-weixin-ilink-adapter.md)
+- [ADR 0032: Durable Multipart Channel Delivery](../adr/0032-durable-multipart-channel-delivery.md)
+- [ADR 0033: Instant Messaging Bubble Planning and Durable Cadence](../adr/0033-instant-messaging-bubble-planning-and-durable-cadence.md)
