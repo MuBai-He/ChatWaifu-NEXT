@@ -1116,12 +1116,13 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
             cursor = await conn.execute(
                 "SELECT e.event_id, o.published_at FROM events e "
                 "JOIN outbox o ON o.event_id = e.event_id "
-                "WHERE e.event_type = 'channel.delivery_plan_completed'"
+                "WHERE e.event_type = 'channel.delivery_plan_completed' "
+                "AND json_extract(e.payload_json, '$.delivery_id') = ?",
+                (str(turn.delivery_id),),
             )
             rows = tuple(await cursor.fetchall())
-            assert len(rows) >= 1
-            for row in rows:
-                assert row["published_at"] is None
+            assert len(rows) == 1
+            assert rows[0]["published_at"] is None
     finally:
         hold_send.set()
         await container.stop()
@@ -1679,4 +1680,156 @@ async def test_cancel_requested_sending_part_lease_expiration_cleans_context(
         assert plan.status is ChannelDeliveryStatus.CANCELLED
     finally:
         hang_send.set()
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_sending_part_retryable_error_under_cancel_request_cancels_plan_and_cleans_context(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement: SENDING + cancel_requested + RETRYABLE_ERROR
+    -> defer -> CANCELLED -> Context cleaned up without reboot, durable event published."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+
+    class _TwoPartFactory:
+        def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+            return (
+                ChannelDeliveryPartDraft(
+                    ordinal=0,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(text="Part 0"),
+                    required=True,
+                ),
+                ChannelDeliveryPartDraft(
+                    ordinal=1,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(text="Part 1"),
+                    required=True,
+                ),
+            )
+
+    container.external_channels.delivery_plan_factory = _TwoPartFactory()
+
+    hold_send = asyncio.Event()
+    send_started = asyncio.Event()
+
+    async def _failing_retryable_send(*args: Any, **kwargs: Any) -> str:
+        send_started.set()
+        await hold_send.wait()
+        raise WeixinILinkError(
+            "network_timeout", "Temporary upstream network timeout", retryable=True
+        )
+
+    monkeypatch.setattr(transport, "send_text", _failing_retryable_send)
+
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        creds = _credentials(access_token)
+        await store.set(f"weixin_ilink:{connection_id}", creds.to_json())
+        await management.connection_configuration_changed(created.snapshot)
+
+        # Message A arrives
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="c1",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-retryable-cancel",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Message A multi-part",
+                        context_token="ctx-retryable-cancel",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+
+        # Wait until Part 0 is in SENDING and hits our mock send_text
+        await asyncio.wait_for(send_started.wait(), timeout=5.0)
+
+        # Context A must be in keyring
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-retryable-cancel" in loaded.pending_contexts
+
+        # Message B arrives on same binding -> triggers cancel_remaining_delivery_parts on Plan A
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="c2",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-interrupt-b",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Message B interrupting",
+                        context_token="ctx-interrupt-b",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+
+        # Wait until Message B is admitted
+        turn_b: ChannelTurnRecord | None = None
+        for _ in range(50):
+            turn_b = await container.external_channel_repository.find_turn_by_external_message(
+                connection_id, "msg-interrupt-b"
+            )
+            if turn_b is not None:
+                break
+            await asyncio.sleep(0.05)
+        assert turn_b is not None
+
+        # Release send_text to raise the retryable error
+        hold_send.set()
+
+        # Context A must be cleaned up without reboot
+        for _ in range(100):
+            raw = await store.get(f"weixin_ilink:{connection_id}")
+            if raw is not None:
+                loaded = WeixinCredentials.from_json(raw)
+                if "msg-retryable-cancel" not in loaded.pending_contexts:
+                    break
+            await asyncio.sleep(0.05)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-retryable-cancel" not in loaded.pending_contexts
+
+        # Assert Parent A and all parts are CANCELLED
+        turn_a = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "msg-retryable-cancel"
+        )
+        assert turn_a is not None
+        assert turn_a.delivery_id is not None
+        plan_a = await container.external_channel_repository.get_delivery_plan(turn_a.delivery_id)
+        assert plan_a is not None
+        assert plan_a.status is ChannelDeliveryStatus.CANCELLED
+        assert all(p.status is ChannelDeliveryPartStatus.CANCELLED for p in plan_a.parts)
+
+        # Assert exactly one channel.delivery_plan_cancelled event in EventStore/Outbox
+        async with container.database.transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT e.event_id, o.published_at FROM events e "
+                "JOIN outbox o ON o.event_id = e.event_id "
+                "WHERE e.event_type = 'channel.delivery_plan_cancelled' "
+                "AND json_extract(e.payload_json, '$.delivery_id') = ?",
+                (str(plan_a.delivery_id),),
+            )
+            rows = tuple(await cursor.fetchall())
+            assert len(rows) == 1
+    finally:
+        hold_send.set()
         await container.stop()

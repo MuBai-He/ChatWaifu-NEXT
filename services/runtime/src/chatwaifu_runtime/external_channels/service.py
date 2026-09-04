@@ -211,11 +211,6 @@ class ExternalChannelService:
 
     async def start(self) -> None:
         self._stopping = False
-        # The previous process may have committed generation output just before
-        # its channel row was synchronized. Recover that output into a pending
-        # delivery. Truly unfinished generations become terminal failures in
-        # `_sync_turn`; re-admission requires a new provider message identity.
-        await self._repository.recover_expired_delivery_part_leases(as_of=datetime.now(UTC))
         for turn in await self._repository.list_inflight_turns():
             turn = await self._sync_turn(turn)
             if turn.status in {

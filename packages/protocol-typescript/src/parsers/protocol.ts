@@ -1038,7 +1038,7 @@ const channelDeliveryPartAcknowledgementSchema = z
     delivery_id: uuid,
     part_id: uuid,
     lease_id: uuid,
-    status: z.enum(["delivered", "failed", "cancelled"]),
+    status: z.enum(["delivered", "failed"]),
     provider_message_id: z.string().min(1).max(512).nullish(),
     error: structuredErrorSchema.nullish(),
     acknowledged_at: awareDateTime,

@@ -1479,11 +1479,52 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 connection, defer_request.delivery_id, updated_at
             )
             part_record = next(p for p in plan.parts if p.part_id == defer_request.part_id)
+
+            persisted_events: list[GenericCoreEvent] = []
+            if self._event_store is not None and plan.status in (
+                ChannelDeliveryStatus.DELIVERED,
+                ChannelDeliveryStatus.CANCELLED,
+                ChannelDeliveryStatus.FAILED,
+            ):
+                ctx = await self._get_turn_context_tx(connection, defer_request.delivery_id)
+                if ctx is not None:
+                    event_type = (
+                        "channel.delivery_plan_completed"
+                        if plan.status is ChannelDeliveryStatus.DELIVERED
+                        else (
+                            "channel.delivery_plan_cancelled"
+                            if plan.status is ChannelDeliveryStatus.CANCELLED
+                            else "channel.delivery_plan_failed"
+                        )
+                    )
+                    persisted = await self._event_store.append_in_transaction(
+                        connection,
+                        GenericCoreEvent.model_validate(
+                            {
+                                "event_id": uuid4(),
+                                "event_type": event_type,
+                                "session_id": ctx.session_id,
+                                "turn_id": ctx.turn_id,
+                                "generation_id": ctx.generation_id,
+                                "occurred_at": updated_at,
+                                "source": "runtime.external_channels",
+                                "privacy": PrivacyLevel.PRIVATE,
+                                "payload": {
+                                    "connection_id": str(ctx.connection_id),
+                                    "channel_turn_id": str(ctx.channel_turn_id),
+                                    "delivery_id": str(plan.delivery_id),
+                                    "part_count": plan.part_count,
+                                },
+                            }
+                        ),
+                    )
+                    persisted_events.append(persisted)
+
             return DeliveryTransitionResult(
                 plan=plan,
                 part=part_record,
                 applied=True,
-                persisted_events=(),
+                persisted_events=tuple(persisted_events),
             )
 
     async def cancel_remaining_delivery_parts(
