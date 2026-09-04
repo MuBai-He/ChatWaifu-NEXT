@@ -1099,18 +1099,35 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--status-color) 18%, transparent);
+  background-color: color-mix(in srgb, var(--status-color) 18%, transparent);
+  background-repeat: no-repeat;
   color: var(--status-color);
   font-size: 12px;
-  content: "–";
+  line-height: 1;
+  content: "";
 }
 
 .cw-status__col--ok h3::before {
   content: "✓";
 }
 
+/* Glyphs like "…" and "–" sit on the baseline, so draw these two with gradients. */
 .cw-status__col--todo h3::before {
-  content: "…";
+  background-image:
+    radial-gradient(circle, var(--status-color) 1.4px, transparent 1.9px),
+    radial-gradient(circle, var(--status-color) 1.4px, transparent 1.9px),
+    radial-gradient(circle, var(--status-color) 1.4px, transparent 1.9px);
+  background-position:
+    4px 50%,
+    8px 50%,
+    12px 50%;
+  background-size: 4px 4px;
+}
+
+.cw-status__col--none h3::before {
+  background-image: linear-gradient(var(--status-color), var(--status-color));
+  background-position: 50% 50%;
+  background-size: 8px 1.5px;
 }
 
 .cw-status__col li {
