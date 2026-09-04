@@ -937,4 +937,10 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         FROM delivery_source;
         """,
     ),
+    (
+        23,
+        """
+        ALTER TABLE channel_connections ADD COLUMN presentation_policy_json TEXT;
+        """,
+    ),
 )

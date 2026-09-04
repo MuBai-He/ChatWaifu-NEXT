@@ -9,7 +9,6 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
-from typing import Protocol
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
@@ -24,7 +23,6 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartAcknowledgement,
     ChannelDeliveryPartClaimRequest,
     ChannelDeliveryPartDraft,
-    ChannelDeliveryPartKind,
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartSnapshot,
     ChannelDeliveryPartStatus,
@@ -35,7 +33,6 @@ from chatwaifu_protocol.channels import (
     ChannelMessageKind,
     ChannelProviderCapabilities,
     ChannelProviderRegistration,
-    ChannelTextDeliveryPartPayload,
     ChannelTurnCancelReceipt,
     ChannelTurnReceipt,
     ChannelTurnSnapshot,
@@ -65,6 +62,11 @@ from chatwaifu_runtime.external_channels.models import (
     CompleteTurnResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.external_channels.presentation import (
+    DeliveryPlanFactory,
+    InstantMessageDeliveryPlanFactory,
+    SingleTextDeliveryPlanFactory,
+)
 from chatwaifu_runtime.sessions.service import SessionService
 
 logger = logging.getLogger(__name__)
@@ -137,28 +139,15 @@ class CreatedChannelConnection:
     access_token: str
 
 
-class DeliveryPlanFactory(Protocol):
-    def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]: ...
-
-
-class SingleTextDeliveryPlanFactory:
-    """Default 1:1 plan factory: maps canonical reply text into one text part."""
-
-    def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
-        safe_text = reply_text if reply_text else "(empty reply)"
-        return (
-            ChannelDeliveryPartDraft(
-                ordinal=0,
-                kind=ChannelDeliveryPartKind.TEXT,
-                payload=ChannelTextDeliveryPartPayload(
-                    kind=ChannelDeliveryPartKind.TEXT,
-                    text=safe_text,
-                ),
-                required=True,
-                delay_after_ms=0,
-                not_before_at=None,
-            ),
-        )
+__all__ = [
+    "WEIXIN_ILINK_PROVIDER",
+    "CreatedChannelConnection",
+    "DeliveryPlanFactory",
+    "ExternalChannelError",
+    "ExternalChannelService",
+    "InstantMessageDeliveryPlanFactory",
+    "SingleTextDeliveryPlanFactory",
+]
 
 
 class ExternalChannelService:
@@ -190,7 +179,7 @@ class ExternalChannelService:
         self._event_hub = event_hub
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
-        self._delivery_plan_factory = delivery_plan_factory or SingleTextDeliveryPlanFactory()
+        self._delivery_plan_factory = delivery_plan_factory or InstantMessageDeliveryPlanFactory()
         self._ingress_lock = asyncio.Lock()
         self._turn_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._turn_sync_locks: dict[UUID, asyncio.Lock] = {}
@@ -550,6 +539,11 @@ class ExternalChannelService:
                     ChannelDeliveryStatus.PENDING,
                     ChannelDeliveryStatus.SENDING,
                 ):
+                    logger.info(
+                        "cancelling unsent tail of active delivery plan: delivery_id=%s reason=%s",
+                        active_plan.delivery_id,
+                        "superseded_by_new_inbound_message",
+                    )
                     cancel_res = await self._repository.cancel_remaining_delivery_parts(
                         active_plan.delivery_id,
                         ChannelDeliveryPartsCancelRequest(
@@ -1215,7 +1209,26 @@ class ExternalChannelService:
                         completed_at=now,
                     )
                 delivery_id = turn.delivery_id or uuid4()
-                parts = self._delivery_plan_factory.create_parts(generation.output_text)
+                connection = await self._repository.get_connection(turn.connection_id)
+                policy = (
+                    connection.configuration.presentation_policy
+                    if connection and connection.configuration
+                    else None
+                )
+                try:
+                    parts = self._delivery_plan_factory.create_parts(
+                        generation.output_text, policy=policy
+                    )
+                except TypeError:
+                    parts = self._delivery_plan_factory.create_parts(generation.output_text)
+                logger.info(
+                    "channel delivery plan created: delivery_id=%s part_count=%d "
+                    "chars_per_part=%s delays=%s",
+                    delivery_id,
+                    len(parts),
+                    [len(p.payload.text) for p in parts if hasattr(p.payload, "text")],
+                    [p.delay_after_ms for p in parts],
+                )
                 turn_result = await self._repository.complete_turn(
                     turn.channel_turn_id,
                     reply_text=generation.output_text,
