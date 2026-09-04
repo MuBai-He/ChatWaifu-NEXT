@@ -229,12 +229,15 @@ export type JsonSchemaDef = {
   oneOf?: JsonSchemaDef[];
   type?: string;
   items?: JsonSchemaDef;
+  prefixItems?: JsonSchemaDef[];
+  additionalProperties?: boolean | JsonSchemaDef;
   properties?: Record<string, JsonSchemaDef>;
 };
 
 /**
  * Recursively extracts all enum paths from a JSON Schema definition.
  * Combines all branches of anyOf, allOf, and oneOf into unified enum value sets.
+ * Also supports items, prefixItems, and additionalProperties schemas.
  */
 export function collectJsonSchemaEnumPaths(
   schema: JsonSchemaDef | null | undefined,
@@ -293,6 +296,35 @@ export function collectJsonSchemaEnumPaths(
     const sub = collectJsonSchemaEnumPaths(
       schema.items,
       `${currentPath}[]`,
+      defs,
+      nextAncestors,
+    );
+    for (const [k, v] of Object.entries(sub)) {
+      paths[k] = Array.from(new Set([...(paths[k] || []), ...v])).sort();
+    }
+  }
+
+  if (Array.isArray(schema.prefixItems)) {
+    schema.prefixItems.forEach((itemSchema, idx) => {
+      const sub = collectJsonSchemaEnumPaths(
+        itemSchema,
+        `${currentPath}[${idx}]`,
+        defs,
+        nextAncestors,
+      );
+      for (const [k, v] of Object.entries(sub)) {
+        paths[k] = Array.from(new Set([...(paths[k] || []), ...v])).sort();
+      }
+    });
+  }
+
+  if (
+    schema.additionalProperties &&
+    typeof schema.additionalProperties === "object"
+  ) {
+    const sub = collectJsonSchemaEnumPaths(
+      schema.additionalProperties,
+      `${currentPath}.*`,
       defs,
       nextAncestors,
     );
@@ -398,13 +430,34 @@ type ZodInspectable = {
     element?: ZodInspectable;
     innerType?: ZodInspectable;
     schema?: ZodInspectable;
+    getter?: () => ZodInspectable;
     shape?: Record<string, unknown>;
   };
 };
 
+/** Known leaf/non-enum node types in Zod AST */
+const KNOWN_NON_ENUM_TYPES = new Set([
+  "string",
+  "number",
+  "boolean",
+  "date",
+  "bigint",
+  "unknown",
+  "any",
+  "void",
+  "null",
+  "undefined",
+  "never",
+  "record",
+  "custom",
+  "nan",
+  "symbol",
+]);
+
 /**
  * Recursively extracts all enum paths from a Zod schema.
  * Correctly distinguishes enum options from union schema options and combines union branches.
+ * Throws on unknown or unhandled Zod AST node types to prevent silent omissions.
  */
 export function collectZodEnumPaths(
   schema: unknown,
@@ -419,14 +472,16 @@ export function collectZodEnumPaths(
 
   let curr: ZodInspectable | undefined = schema as ZodInspectable | undefined;
   while (curr && curr._def) {
-    if (curr._def.type === "enum") {
+    const nodeType = curr._def.type;
+
+    if (nodeType === "enum") {
       const vals: string[] = curr.options
         ? (curr.options as string[])
         : Object.keys(curr._def.entries || {});
       paths[currentPath] = vals.slice().sort();
       return paths;
     }
-    if (curr._def.type === "literal") {
+    if (nodeType === "literal") {
       const vals: string[] = Array.isArray(curr._def.values)
         ? curr._def.values.map(String)
         : curr._def.value !== undefined
@@ -435,7 +490,7 @@ export function collectZodEnumPaths(
       paths[currentPath] = vals.sort();
       return paths;
     }
-    if (curr._def.type === "union" && Array.isArray(curr._def.options)) {
+    if (nodeType === "union" && Array.isArray(curr._def.options)) {
       for (const opt of curr._def.options) {
         const sub = collectZodEnumPaths(opt, currentPath, nextAncestors);
         for (const [k, v] of Object.entries(sub)) {
@@ -444,11 +499,11 @@ export function collectZodEnumPaths(
       }
       return paths;
     }
-    if (curr._def.type === "array") {
+    if (nodeType === "array") {
       const itemSchema = curr._def.element ?? curr.element;
       return collectZodEnumPaths(itemSchema, `${currentPath}[]`, nextAncestors);
     }
-    if (curr._def.type === "object" || curr.shape) {
+    if (nodeType === "object" || curr.shape) {
       const shape = curr.shape || curr._def.shape;
       if (shape && typeof shape === "object") {
         for (const [prop, propSchema] of Object.entries(shape)) {
@@ -469,7 +524,22 @@ export function collectZodEnumPaths(
       curr = curr._def.schema;
       continue;
     }
-    break;
+    if (nodeType === "lazy") {
+      const getter = curr._def?.getter;
+      if (typeof getter === "function") {
+        curr = getter();
+        continue;
+      }
+    }
+
+    if (nodeType && KNOWN_NON_ENUM_TYPES.has(nodeType)) {
+      return paths;
+    }
+
+    throw new Error(
+      `Unsupported or unrecognized Zod node type "${nodeType}" at path "${currentPath}". ` +
+        `Please update collectZodEnumPaths to support this AST structure.`,
+    );
   }
   return paths;
 }

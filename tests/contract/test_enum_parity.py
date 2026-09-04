@@ -136,6 +136,21 @@ def _resolve_schema_enum_paths(
         for k, v in sub.items():
             paths.setdefault(k, set()).update(v)
 
+    if "prefixItems" in schema and isinstance(schema["prefixItems"], list):
+        for idx, item_schema in enumerate(schema["prefixItems"]):
+            sub = _resolve_schema_enum_paths(
+                item_schema, f"{current_path}[{idx}]", defs, new_ancestors
+            )
+            for k, v in sub.items():
+                paths.setdefault(k, set()).update(v)
+
+    if "additionalProperties" in schema and isinstance(schema["additionalProperties"], dict):
+        sub = _resolve_schema_enum_paths(
+            schema["additionalProperties"], f"{current_path}.*", defs, new_ancestors
+        )
+        for k, v in sub.items():
+            paths.setdefault(k, set()).update(v)
+
     if "properties" in schema and isinstance(schema["properties"], dict):
         for prop, prop_schema in schema["properties"].items():
             p = f"{current_path}.{prop}" if current_path else prop
@@ -274,6 +289,22 @@ def test_collector_recursively_extracts_nested_properties() -> None:
     }
     extracted = _resolve_schema_enum_paths(nested_schema, "Root")
     assert extracted["Root.child[].mode"] == {"fast", "precise"}
+
+
+def test_collector_extracts_prefix_items_and_additional_properties() -> None:
+    """Real collector test: verifies prefixItems and additionalProperties keywords."""
+    ext_schema: dict[str, Any] = {
+        "prefixItems": [{"enum": ["first_val"]}, {"enum": ["second_val"]}],
+        "additionalProperties": {
+            "properties": {
+                "flag": {"enum": ["enabled", "disabled"]},
+            }
+        },
+    }
+    extracted = _resolve_schema_enum_paths(ext_schema, "Ext")
+    assert extracted["Ext[0]"] == {"first_val"}
+    assert extracted["Ext[1]"] == {"second_val"}
+    assert extracted["Ext.*.flag"] == {"enabled", "disabled"}
 
 
 def test_parity_gate_detects_value_mismatch_and_path_omission() -> None:

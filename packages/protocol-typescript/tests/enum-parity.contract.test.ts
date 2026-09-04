@@ -413,4 +413,38 @@ describe("Collector and Gate Failure Mode Verification (Real Negative Tests)", (
       );
     }).toThrow();
   });
+
+  it("throws on an unrecognized or unsupported Zod node type to prevent silent omissions", () => {
+    const fakeZodNode = {
+      _def: {
+        type: "exotic_future_zod_type",
+      },
+    };
+
+    expect(() => {
+      collectZodEnumPaths(fakeZodNode, "FutureRoot");
+    }).toThrow(
+      /Unsupported or unrecognized Zod node type "exotic_future_zod_type"/,
+    );
+  });
+
+  it("extracts enum paths from prefixItems and additionalProperties in JSON Schema", () => {
+    const schemaWithFutureKeywords: JsonSchemaDef = {
+      prefixItems: [{ enum: ["fixed_first"] }, { enum: ["fixed_second"] }],
+      additionalProperties: {
+        properties: {
+          flag: { enum: ["enabled", "disabled"] },
+        },
+      },
+    };
+
+    const extracted = collectJsonSchemaEnumPaths(
+      schemaWithFutureKeywords,
+      "ExtSchema",
+      {},
+    );
+    expect(extracted["ExtSchema[0]"]).toEqual(["fixed_first"]);
+    expect(extracted["ExtSchema[1]"]).toEqual(["fixed_second"]);
+    expect(extracted["ExtSchema.*.flag"]).toEqual(["disabled", "enabled"]);
+  });
 });
