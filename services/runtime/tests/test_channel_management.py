@@ -1033,9 +1033,11 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
     management = _replace_management(container, store, transport)
 
     hold_send = asyncio.Event()
+    send_started = asyncio.Event()
     original_send = transport.send_text
 
     async def _controlled_send(*args: Any, **kwargs: Any) -> str:
+        send_started.set()
         await hold_send.wait()
         return await original_send(*args, **kwargs)
 
@@ -1085,6 +1087,9 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
         assert raw is not None
         loaded = WeixinCredentials.from_json(raw)
         assert "msg-fail-publish" in loaded.pending_contexts
+
+        # Wait until send_text is entered (part has been claimed and is waiting on hold_send)
+        await asyncio.wait_for(send_started.wait(), timeout=10.0)
 
         # Inject EventHub publish failure in event_publisher.publish_persisted
         async def _failing_publish_persisted(event: Any) -> None:
