@@ -41,7 +41,7 @@ EXEMPT_HTTP_PATHS: Final[frozenset[str]] = frozenset(
     {"/v1/runtime/health", "/docs", "/openapi.json", "/redoc"}
 )
 CHANNEL_EXEMPT_RE: Final[re.Pattern[str]] = re.compile(
-    r"^/v1/channel-connections/[^/]+/(messages(/[^/]+(/interrupt)?)?|deliveries/[^/]+/(claim|ack))$"
+    r"^/v1/channel-connections/[^/]+/(messages(/[^/]+(/interrupt)?)?|deliveries/[^/]+/(claim|ack|plan|parts(/claim|/ack|/cancel)?))$"
 )
 
 

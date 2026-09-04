@@ -16,6 +16,10 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionSnapshot,
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryClaimRequest,
+    ChannelDeliveryPartAcknowledgement,
+    ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartSnapshot,
+    ChannelDeliveryPlanSnapshot,
     ChannelDeliverySnapshot,
     ChannelErrorResponse,
     ChannelGatewayStatusSnapshot,
@@ -90,6 +94,10 @@ class ProtocolCatalog(ProtocolModel):
     channel_turn: ChannelTurnSnapshot
     channel_delivery_acknowledgement: ChannelDeliveryAcknowledgement
     channel_delivery_claim_request: ChannelDeliveryClaimRequest
+    channel_delivery_part_acknowledgement: ChannelDeliveryPartAcknowledgement
+    channel_delivery_part_claim_request: ChannelDeliveryPartClaimRequest
+    channel_delivery_part: ChannelDeliveryPartSnapshot
+    channel_delivery_plan: ChannelDeliveryPlanSnapshot
     channel_delivery: ChannelDeliverySnapshot
     channel_turn_cancel_request: ChannelTurnCancelRequest
     channel_turn_cancel_receipt: ChannelTurnCancelReceipt
@@ -129,6 +137,10 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "channel-connection-snapshot": ChannelConnectionSnapshot,
     "channel-delivery-acknowledgement": ChannelDeliveryAcknowledgement,
     "channel-delivery-claim-request": ChannelDeliveryClaimRequest,
+    "channel-delivery-part-acknowledgement": ChannelDeliveryPartAcknowledgement,
+    "channel-delivery-part-claim-request": ChannelDeliveryPartClaimRequest,
+    "channel-delivery-part-snapshot": ChannelDeliveryPartSnapshot,
+    "channel-delivery-plan-snapshot": ChannelDeliveryPlanSnapshot,
     "channel-delivery-snapshot": ChannelDeliverySnapshot,
     "channel-error-response": ChannelErrorResponse,
     "channel-gateway-status-snapshot": ChannelGatewayStatusSnapshot,

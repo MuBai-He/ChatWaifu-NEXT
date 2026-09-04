@@ -1852,13 +1852,327 @@
       "title": "ChannelDeliveryClaimRequest",
       "type": "object"
     },
-    "ChannelDeliverySnapshot": {
+    "ChannelDeliveryPartAcknowledgement": {
+      "properties": {
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lease_id": {
+          "format": "uuid",
+          "title": "Lease Id",
+          "type": "string"
+        },
+        "part_id": {
+          "format": "uuid",
+          "title": "Part Id",
+          "type": "string"
+        },
+        "provider_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Message Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "delivered",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "part_id",
+        "lease_id",
+        "status",
+        "acknowledged_at"
+      ],
+      "title": "ChannelDeliveryPartAcknowledgement",
+      "type": "object"
+    },
+    "ChannelDeliveryPartClaimRequest": {
+      "properties": {
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "lease_id": {
+          "format": "uuid",
+          "title": "Lease Id",
+          "type": "string"
+        },
+        "lease_seconds": {
+          "default": 60,
+          "maximum": 300,
+          "minimum": 5,
+          "title": "Lease Seconds",
+          "type": "integer"
+        },
+        "part_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "lease_id"
+      ],
+      "title": "ChannelDeliveryPartClaimRequest",
+      "type": "object"
+    },
+    "ChannelDeliveryPartKind": {
+      "enum": [
+        "text",
+        "image"
+      ],
+      "title": "ChannelDeliveryPartKind",
+      "type": "string"
+    },
+    "ChannelDeliveryPartSnapshot": {
       "properties": {
         "attempt": {
-          "default": 1,
-          "minimum": 1,
+          "default": 0,
+          "minimum": 0,
           "title": "Attempt",
           "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delay_after_ms": {
+          "default": 0,
+          "maximum": 60000,
+          "minimum": 0,
+          "title": "Delay After Ms",
+          "type": "integer"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ChannelDeliveryPartKind",
+          "default": "text"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Expires At"
+        },
+        "lease_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Id"
+        },
+        "not_before_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Not Before At"
+        },
+        "ordinal": {
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "part_id": {
+          "format": "uuid",
+          "title": "Part Id",
+          "type": "string"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "text": "#/$defs/ChannelTextDeliveryPartPayload"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ChannelTextDeliveryPartPayload"
+            }
+          ],
+          "title": "Payload"
+        },
+        "provider_client_id": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Provider Client Id",
+          "type": "string"
+        },
+        "provider_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Message Id"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelDeliveryPartStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part_id",
+        "delivery_id",
+        "ordinal",
+        "payload",
+        "status",
+        "provider_client_id",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelDeliveryPartSnapshot",
+      "type": "object"
+    },
+    "ChannelDeliveryPartStatus": {
+      "enum": [
+        "pending",
+        "sending",
+        "delivered",
+        "failed",
+        "cancelled",
+        "skipped"
+      ],
+      "title": "ChannelDeliveryPartStatus",
+      "type": "string"
+    },
+    "ChannelDeliveryPlanSnapshot": {
+      "properties": {
+        "cancel_requested_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancel Requested At"
         },
         "channel_turn_id": {
           "format": "uuid",
@@ -1887,6 +2201,130 @@
           ],
           "default": null,
           "title": "Delivered At"
+        },
+        "delivered_part_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Delivered Part Count",
+          "type": "integer"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "next_pending_ordinal": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Pending Ordinal"
+        },
+        "part_count": {
+          "minimum": 1,
+          "title": "Part Count",
+          "type": "integer"
+        },
+        "parts": {
+          "items": {
+            "$ref": "#/$defs/ChannelDeliveryPartSnapshot"
+          },
+          "title": "Parts",
+          "type": "array"
+        },
+        "plan_version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Plan Version",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelDeliveryStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delivery_id",
+        "channel_turn_id",
+        "connection_id",
+        "status",
+        "part_count",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelDeliveryPlanSnapshot",
+      "type": "object"
+    },
+    "ChannelDeliverySnapshot": {
+      "properties": {
+        "attempt": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "cancel_requested_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancel Requested At"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "delivered_part_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Delivered Part Count",
+          "type": "integer"
         },
         "delivery_id": {
           "format": "uuid",
@@ -1929,6 +2367,18 @@
           ],
           "default": null,
           "title": "Lease Id"
+        },
+        "part_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Part Count",
+          "type": "integer"
+        },
+        "plan_version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Plan Version",
+          "type": "integer"
         },
         "provider_message_id": {
           "anyOf": [
@@ -2344,6 +2794,33 @@
         "description"
       ],
       "title": "ChannelProviderRegistration",
+      "type": "object"
+    },
+    "ChannelTextDeliveryPartPayload": {
+      "properties": {
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "ChannelTextDeliveryPartPayload",
       "type": "object"
     },
     "ChannelTurnCancelReceipt": {
@@ -3855,6 +4332,17 @@
         "companion.proactive_triggered",
         "companion.proactive_deferred",
         "channel.delivery_acknowledged",
+        "channel.delivery_plan_created",
+        "channel.delivery_part_claimed",
+        "channel.delivery_part_acknowledged",
+        "channel.delivery_part_delivered",
+        "channel.delivery_part_failed",
+        "channel.delivery_plan_completed",
+        "channel.delivery_plan_cancel_requested",
+        "channel.delivery_plan_cancelled",
+        "channel.delivery_plan_failed",
+        "channel.turn_failed",
+        "channel.turn_cancelled",
         "resource.models_slept",
         "resource.models_woke"
       ],
@@ -8161,6 +8649,18 @@
     "channel_delivery_claim_request": {
       "$ref": "#/$defs/ChannelDeliveryClaimRequest"
     },
+    "channel_delivery_part": {
+      "$ref": "#/$defs/ChannelDeliveryPartSnapshot"
+    },
+    "channel_delivery_part_acknowledgement": {
+      "$ref": "#/$defs/ChannelDeliveryPartAcknowledgement"
+    },
+    "channel_delivery_part_claim_request": {
+      "$ref": "#/$defs/ChannelDeliveryPartClaimRequest"
+    },
+    "channel_delivery_plan": {
+      "$ref": "#/$defs/ChannelDeliveryPlanSnapshot"
+    },
     "channel_error": {
       "$ref": "#/$defs/ChannelErrorResponse"
     },
@@ -8325,6 +8825,10 @@
     "channel_turn",
     "channel_delivery_acknowledgement",
     "channel_delivery_claim_request",
+    "channel_delivery_part_acknowledgement",
+    "channel_delivery_part_claim_request",
+    "channel_delivery_part",
+    "channel_delivery_plan",
     "channel_delivery",
     "channel_turn_cancel_request",
     "channel_turn_cancel_receipt",

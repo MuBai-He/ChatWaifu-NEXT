@@ -13,6 +13,7 @@ import {
   parseChannelAuthorizationVerificationRequest,
   parseChannelConnectionSnapshot,
   parseChannelDeliveryAcknowledgement,
+  parseChannelDeliveryPartAcknowledgement,
   parseChannelDeliveryClaimRequest,
   parseChannelInboundTextMessage,
   parseChannelTurnSnapshot,
@@ -459,5 +460,68 @@ describe("cross-language protocol fixtures", () => {
       completed_at: now,
     });
     expect(turn.delivery_status).toBe("delivered");
+  });
+
+  it("enforces ChannelDeliveryPartAcknowledgement status cannot be cancelled", () => {
+    const validDelivered = {
+      schema_version: "1.0",
+      delivery_id: "00000000-0000-4000-8000-000000000a01",
+      part_id: "00000000-0000-4000-8000-000000000a02",
+      lease_id: "00000000-0000-4000-8000-000000000a03",
+      status: "delivered",
+      acknowledged_at: "2026-09-04T00:00:00Z",
+    };
+    const parsedDelivered =
+      parseChannelDeliveryPartAcknowledgement(validDelivered);
+    expect(parsedDelivered.status).toBe("delivered");
+
+    const validFailed = {
+      schema_version: "1.0",
+      delivery_id: "00000000-0000-4000-8000-000000000a01",
+      part_id: "00000000-0000-4000-8000-000000000a02",
+      lease_id: "00000000-0000-4000-8000-000000000a03",
+      status: "failed",
+      error: {
+        code: "test_error",
+        message: "delivery failed",
+        retryable: false,
+        component: "external_channels",
+      },
+      acknowledged_at: "2026-09-04T00:00:00Z",
+    };
+    const parsedFailed = parseChannelDeliveryPartAcknowledgement(validFailed);
+    expect(parsedFailed.status).toBe("failed");
+
+    const invalidCancelled = {
+      schema_version: "1.0",
+      delivery_id: "00000000-0000-4000-8000-000000000a01",
+      part_id: "00000000-0000-4000-8000-000000000a02",
+      lease_id: "00000000-0000-4000-8000-000000000a03",
+      status: "cancelled",
+      acknowledged_at: "2026-09-04T00:00:00Z",
+    };
+    expect(() =>
+      parseChannelDeliveryPartAcknowledgement(invalidCancelled),
+    ).toThrow();
+  });
+
+  it("keeps cancelled only for legacy whole-delivery acknowledgements", () => {
+    const cancelled = {
+      schema_version: "1.0",
+      delivery_id: "00000000-0000-4000-8000-000000000a01",
+      channel_turn_id: "00000000-0000-4000-8000-000000000a02",
+      lease_id: "00000000-0000-4000-8000-000000000a03",
+      status: "cancelled",
+      acknowledged_at: "2026-09-04T00:00:00Z",
+    };
+
+    expect(() => parseChannelDeliveryAcknowledgement(cancelled)).not.toThrow();
+
+    expect(() =>
+      parseChannelDeliveryPartAcknowledgement({
+        ...cancelled,
+        part_id: "00000000-0000-4000-8000-000000000a04",
+      }),
+    ).toThrow();
   });
 });

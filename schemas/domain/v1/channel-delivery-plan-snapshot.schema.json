@@ -1,0 +1,426 @@
+{
+  "$defs": {
+    "ChannelDeliveryPartKind": {
+      "enum": [
+        "text",
+        "image"
+      ],
+      "title": "ChannelDeliveryPartKind",
+      "type": "string"
+    },
+    "ChannelDeliveryPartSnapshot": {
+      "properties": {
+        "attempt": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delay_after_ms": {
+          "default": 0,
+          "maximum": 60000,
+          "minimum": 0,
+          "title": "Delay After Ms",
+          "type": "integer"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "delivery_id": {
+          "format": "uuid",
+          "title": "Delivery Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ChannelDeliveryPartKind",
+          "default": "text"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lease_expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Expires At"
+        },
+        "lease_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lease Id"
+        },
+        "not_before_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Not Before At"
+        },
+        "ordinal": {
+          "minimum": 0,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "part_id": {
+          "format": "uuid",
+          "title": "Part Id",
+          "type": "string"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "text": "#/$defs/ChannelTextDeliveryPartPayload"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ChannelTextDeliveryPartPayload"
+            }
+          ],
+          "title": "Payload"
+        },
+        "provider_client_id": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Provider Client Id",
+          "type": "string"
+        },
+        "provider_message_id": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Message Id"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelDeliveryPartStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part_id",
+        "delivery_id",
+        "ordinal",
+        "payload",
+        "status",
+        "provider_client_id",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelDeliveryPartSnapshot",
+      "type": "object"
+    },
+    "ChannelDeliveryPartStatus": {
+      "enum": [
+        "pending",
+        "sending",
+        "delivered",
+        "failed",
+        "cancelled",
+        "skipped"
+      ],
+      "title": "ChannelDeliveryPartStatus",
+      "type": "string"
+    },
+    "ChannelDeliveryStatus": {
+      "enum": [
+        "pending",
+        "sending",
+        "delivered",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ChannelDeliveryStatus",
+      "type": "string"
+    },
+    "ChannelTextDeliveryPartPayload": {
+      "properties": {
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "ChannelTextDeliveryPartPayload",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "StructuredError": {
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "component": {
+          "minLength": 1,
+          "title": "Component",
+          "type": "string"
+        },
+        "correlation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Id"
+        },
+        "details": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "component"
+      ],
+      "title": "StructuredError",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-delivery-plan-snapshot.schema.json",
+  "properties": {
+    "cancel_requested_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cancel Requested At"
+    },
+    "channel_turn_id": {
+      "format": "uuid",
+      "title": "Channel Turn Id",
+      "type": "string"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "delivered_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Delivered At"
+    },
+    "delivered_part_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Delivered Part Count",
+      "type": "integer"
+    },
+    "delivery_id": {
+      "format": "uuid",
+      "title": "Delivery Id",
+      "type": "string"
+    },
+    "next_pending_ordinal": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Pending Ordinal"
+    },
+    "part_count": {
+      "minimum": 1,
+      "title": "Part Count",
+      "type": "integer"
+    },
+    "parts": {
+      "items": {
+        "$ref": "#/$defs/ChannelDeliveryPartSnapshot"
+      },
+      "title": "Parts",
+      "type": "array"
+    },
+    "plan_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Plan Version",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ChannelDeliveryStatus"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "delivery_id",
+    "channel_turn_id",
+    "connection_id",
+    "status",
+    "part_count",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "ChannelDeliveryPlanSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

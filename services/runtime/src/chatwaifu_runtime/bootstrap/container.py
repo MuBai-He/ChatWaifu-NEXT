@@ -126,7 +126,9 @@ class RuntimeContainer:
             self.event_publisher,
         )
         self.conversation_repository = SQLiteConversationRepository(self.database, self.event_store)
-        self.external_channel_repository = SQLiteExternalChannelRepository(self.database)
+        self.external_channel_repository = SQLiteExternalChannelRepository(
+            self.database, self.event_store
+        )
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
         )
@@ -183,6 +185,8 @@ class RuntimeContainer:
             self.external_channel_repository,
             KeyringChannelCredentialStore(),
             WeixinILinkClient(),
+            event_hub=self.event_hub,
+            event_publisher=self.event_publisher,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,

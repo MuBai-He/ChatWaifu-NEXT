@@ -18,6 +18,9 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionConfiguration,
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryClaimRequest,
+    ChannelDeliveryPartAcknowledgement,
+    ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartsCancelRequest,
     ChannelErrorResponse,
     ChannelInboundTextMessage,
     ChannelTurnCancelRequest,
@@ -518,6 +521,97 @@ async def claim_channel_delivery(
 ) -> dict[str, object]:
     try:
         snapshot = await _container(request).external_channels.claim_delivery(
+            connection_id,
+            delivery_id,
+            body,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/channel-connections/{connection_id}/deliveries/{delivery_id}/plan")
+async def read_channel_delivery_plan(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.get_delivery_plan(
+            connection_id,
+            delivery_id,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.get("/channel-connections/{connection_id}/deliveries/{delivery_id}/parts")
+async def list_channel_delivery_parts(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+) -> list[dict[str, object]]:
+    try:
+        parts = await _container(request).external_channels.list_delivery_parts(
+            connection_id,
+            delivery_id,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return [part.model_dump(mode="json") for part in parts]
+
+
+@router.post("/channel-connections/{connection_id}/deliveries/{delivery_id}/parts/claim")
+async def claim_channel_delivery_part(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+    body: ChannelDeliveryPartClaimRequest,
+) -> dict[str, object] | None:
+    try:
+        snapshot = await _container(request).external_channels.claim_next_delivery_part(
+            connection_id,
+            delivery_id,
+            body,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json") if snapshot is not None else None
+
+
+@router.post("/channel-connections/{connection_id}/deliveries/{delivery_id}/parts/ack")
+async def acknowledge_channel_delivery_part(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+    body: ChannelDeliveryPartAcknowledgement,
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.acknowledge_delivery_part(
+            connection_id,
+            delivery_id,
+            body,
+            access_token=_channel_access_token(request),
+        )
+    except ExternalChannelError as error:
+        _raise_channel_error(error)
+    return snapshot.model_dump(mode="json")
+
+
+@router.post("/channel-connections/{connection_id}/deliveries/{delivery_id}/parts/cancel")
+async def cancel_remaining_channel_delivery_parts(
+    request: Request,
+    connection_id: UUID,
+    delivery_id: UUID,
+    body: ChannelDeliveryPartsCancelRequest,
+) -> dict[str, object]:
+    try:
+        snapshot = await _container(request).external_channels.cancel_remaining_delivery_parts(
             connection_id,
             delivery_id,
             body,
