@@ -1094,6 +1094,26 @@ class ExternalChannelService:
                     }
                 )
             )
+        elif plan.status is ChannelDeliveryStatus.FAILED:
+            await self._publisher.emit(
+                GenericCoreEvent.model_validate(
+                    {
+                        "event_id": uuid4(),
+                        "event_type": "channel.delivery_plan_failed",
+                        "session_id": turn.session_id,
+                        "turn_id": turn.turn_id,
+                        "generation_id": turn.generation_id,
+                        "occurred_at": now,
+                        "source": "runtime.external_channels",
+                        "privacy": PrivacyLevel.PRIVATE,
+                        "payload": {
+                            "connection_id": str(turn.connection_id),
+                            "channel_turn_id": str(turn.channel_turn_id),
+                            "delivery_id": str(plan.delivery_id),
+                        },
+                    }
+                )
+            )
 
     async def _sync_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
         lock = self._turn_sync_locks.setdefault(turn.channel_turn_id, asyncio.Lock())

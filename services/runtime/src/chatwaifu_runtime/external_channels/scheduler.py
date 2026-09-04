@@ -26,6 +26,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartDeferRequest,
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
+    DeliveryTransitionResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 
@@ -179,6 +180,24 @@ class ChannelDeliveryScheduler:
                     pass
             self._wake_event.clear()
 
+    async def _handle_ack_result(self, ack_res: DeliveryTransitionResult) -> None:
+        is_terminal = self._on_plan_terminal is not None and ack_res.plan.status in (
+            ChannelDeliveryStatus.DELIVERED,
+            ChannelDeliveryStatus.FAILED,
+            ChannelDeliveryStatus.CANCELLED,
+        )
+        try:
+            if self._publisher is not None:
+                for ev in ack_res.persisted_events:
+                    await self._publisher.publish_persisted(ev)
+        finally:
+            if is_terminal:
+                assert self._on_plan_terminal is not None
+                try:
+                    await self._on_plan_terminal(ack_res.plan)
+                except Exception:
+                    logger.exception("on_plan_terminal callback failed")
+
     async def step(self, now: datetime | None = None) -> bool:
         """Execute one evaluation cycle over all nonterminal delivery plans.
 
@@ -260,15 +279,7 @@ class ChannelDeliveryScheduler:
                 ack_res = await self._repository.acknowledge_delivery_part(
                     ack, updated_at=datetime.now(UTC)
                 )
-                if self._publisher is not None:
-                    for ev in ack_res.persisted_events:
-                        await self._publisher.publish_persisted(ev)
-                if self._on_plan_terminal and ack_res.plan.status in (
-                    ChannelDeliveryStatus.DELIVERED,
-                    ChannelDeliveryStatus.FAILED,
-                    ChannelDeliveryStatus.CANCELLED,
-                ):
-                    await self._on_plan_terminal(ack_res.plan)
+                await self._handle_ack_result(ack_res)
                 continue
 
             # Execute part
@@ -300,15 +311,7 @@ class ChannelDeliveryScheduler:
                 ack_res = await self._repository.acknowledge_delivery_part(
                     ack, updated_at=post_time
                 )
-                if self._publisher is not None:
-                    for ev in ack_res.persisted_events:
-                        await self._publisher.publish_persisted(ev)
-                if self._on_plan_terminal and ack_res.plan.status in (
-                    ChannelDeliveryStatus.DELIVERED,
-                    ChannelDeliveryStatus.FAILED,
-                    ChannelDeliveryStatus.CANCELLED,
-                ):
-                    await self._on_plan_terminal(ack_res.plan)
+                await self._handle_ack_result(ack_res)
 
             elif exec_result.outcome is DeliveryPartOutcome.RETRYABLE_ERROR:
                 if claimed_part.attempt < self._max_attempts:
@@ -348,15 +351,7 @@ class ChannelDeliveryScheduler:
                     ack_res = await self._repository.acknowledge_delivery_part(
                         ack, updated_at=post_time
                     )
-                    if self._publisher is not None:
-                        for ev in ack_res.persisted_events:
-                            await self._publisher.publish_persisted(ev)
-                    if self._on_plan_terminal and ack_res.plan.status in (
-                        ChannelDeliveryStatus.DELIVERED,
-                        ChannelDeliveryStatus.FAILED,
-                        ChannelDeliveryStatus.CANCELLED,
-                    ):
-                        await self._on_plan_terminal(ack_res.plan)
+                    await self._handle_ack_result(ack_res)
 
             else:  # FATAL_ERROR
                 ack = ChannelDeliveryPartAcknowledgement(
@@ -376,14 +371,6 @@ class ChannelDeliveryScheduler:
                 ack_res = await self._repository.acknowledge_delivery_part(
                     ack, updated_at=post_time
                 )
-                if self._publisher is not None:
-                    for ev in ack_res.persisted_events:
-                        await self._publisher.publish_persisted(ev)
-                if self._on_plan_terminal and ack_res.plan.status in (
-                    ChannelDeliveryStatus.DELIVERED,
-                    ChannelDeliveryStatus.FAILED,
-                    ChannelDeliveryStatus.CANCELLED,
-                ):
-                    await self._on_plan_terminal(ack_res.plan)
+                await self._handle_ack_result(ack_res)
 
         return any_progress

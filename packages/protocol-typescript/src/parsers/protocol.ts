@@ -357,6 +357,7 @@ const genericCoreEventTypes = [
   "channel.delivery_plan_completed",
   "channel.delivery_plan_cancel_requested",
   "channel.delivery_plan_cancelled",
+  "channel.delivery_plan_failed",
   "resource.models_slept",
   "resource.models_woke",
 ] as const;

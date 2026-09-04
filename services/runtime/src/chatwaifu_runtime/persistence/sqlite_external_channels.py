@@ -1394,6 +1394,29 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                 ),
                             )
                         )
+                    elif plan.status is ChannelDeliveryStatus.FAILED:
+                        persisted_events.append(
+                            await self._event_store.append_in_transaction(
+                                connection,
+                                GenericCoreEvent.model_validate(
+                                    {
+                                        "event_id": uuid4(),
+                                        "event_type": "channel.delivery_plan_failed",
+                                        "session_id": ctx.session_id,
+                                        "turn_id": ctx.turn_id,
+                                        "generation_id": ctx.generation_id,
+                                        "occurred_at": updated_at,
+                                        "source": "runtime.external_channels",
+                                        "privacy": PrivacyLevel.PRIVATE,
+                                        "payload": {
+                                            "connection_id": str(ctx.connection_id),
+                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            "delivery_id": str(plan.delivery_id),
+                                        },
+                                    }
+                                ),
+                            )
+                        )
 
             return DeliveryTransitionResult(
                 plan=plan,

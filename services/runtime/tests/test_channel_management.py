@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -42,6 +43,7 @@ from chatwaifu_runtime.external_channels.management import (
     ChannelProviderUnavailableError,
     _PendingEnrollment,
 )
+from chatwaifu_runtime.external_channels.models import ChannelTurnRecord
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
 from chatwaifu_runtime.external_channels.service import ChannelConflictError, ChannelNotFoundError
 
@@ -173,6 +175,8 @@ def _replace_management(
         container.external_channel_repository,
         store,
         transport,
+        event_hub=container.event_hub,
+        event_publisher=container.event_publisher,
     )
     container.channel_management = service
     return service
@@ -871,5 +875,456 @@ async def test_run_connection_calls_notify_start_before_scheduler_start(
             await asyncio.sleep(0.05)
 
         assert events == ["notify_start", "scheduler_start"]
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_pending_context_cleaned_up_when_plan_cancelled_by_new_message(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement: Plan A pending, message B arrives and cancels Plan A -> Context A is deleted."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+
+    hold_send = asyncio.Event()
+    send_called = asyncio.Event()
+    original_send = transport.send_text
+
+    async def delayed_send(*args: Any, **kwargs: Any) -> str:
+        send_called.set()
+        await hold_send.wait()
+        return await original_send(*args, **kwargs)
+
+    monkeypatch.setattr(transport, "send_text", delayed_send)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        creds = _credentials(access_token)
+        await store.set(f"weixin_ilink:{connection_id}", creds.to_json())
+        await management.connection_configuration_changed(created.snapshot)
+
+        # Message A arrives
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="c1",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-plan-a",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Message A",
+                        context_token="ctx-token-a",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+
+        await asyncio.wait_for(send_called.wait(), timeout=5.0)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-plan-a" in loaded.pending_contexts
+
+        # Message B arrives on same binding
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="c2",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-plan-b",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Message B",
+                        context_token="ctx-token-b",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+
+        hold_send.set()
+
+        for _ in range(100):
+            raw = await store.get(f"weixin_ilink:{connection_id}")
+            if raw is not None:
+                loaded = WeixinCredentials.from_json(raw)
+                if "msg-plan-a" not in loaded.pending_contexts:
+                    break
+            await asyncio.sleep(0.1)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-plan-a" not in loaded.pending_contexts
+    finally:
+        hold_send.set()
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement: ACK transaction succeeds, inject EventHub Publish failure
+    -> Context still cleaned up, Durable Outbox retained."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+
+    hold_send = asyncio.Event()
+    original_send = transport.send_text
+
+    async def _controlled_send(*args: Any, **kwargs: Any) -> str:
+        await hold_send.wait()
+        return await original_send(*args, **kwargs)
+
+    monkeypatch.setattr(transport, "send_text", _controlled_send)
+
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+
+        # Ingest via update batch so context is recorded and turn is admitted
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="c-fail-pub",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-fail-publish",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Test fail publish",
+                        context_token="ctx-fail-pub",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+
+        # Wait for delivery plan to be created
+        turn: ChannelTurnRecord | None = None
+        for _ in range(100):
+            turn = await container.external_channel_repository.find_turn_by_external_message(
+                connection_id, "msg-fail-publish"
+            )
+            if turn is not None and turn.delivery_id is not None:
+                break
+            await asyncio.sleep(0.1)
+        assert turn is not None
+        assert turn.delivery_id is not None
+
+        # Verify context is stored
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-fail-publish" in loaded.pending_contexts
+
+        # Inject EventHub publish failure in event_publisher.publish_persisted
+        async def _failing_publish_persisted(event: Any) -> None:
+            raise RuntimeError("Injected EventHub failure")
+
+        monkeypatch.setattr(
+            container.event_publisher, "publish_persisted", _failing_publish_persisted
+        )
+
+        # Release send_text to let scheduler execute and ACK the part
+        hold_send.set()
+
+        # Context must still be cleaned up via finally block
+        for _ in range(100):
+            raw = await store.get(f"weixin_ilink:{connection_id}")
+            if raw is not None:
+                loaded = WeixinCredentials.from_json(raw)
+                if "msg-fail-publish" not in loaded.pending_contexts:
+                    break
+            await asyncio.sleep(0.1)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-fail-publish" not in loaded.pending_contexts
+
+        # Durable Outbox event must be in DB
+        async with container.database.transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT COUNT(*) AS cnt FROM events WHERE event_type ="
+                " 'channel.delivery_plan_completed'"
+            )
+            row = await cursor.fetchone()
+            assert row is not None
+            assert row["cnt"] >= 1
+    finally:
+        hold_send.set()
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_startup_reconciliation_cleans_stale_contexts_after_crash(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement: Simulate crash after terminal commit
+    -> restart connection reconciles and cleans stale context."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        receipt = await container.external_channels.ingest(
+            ChannelInboundTextMessage(
+                connection_id=connection_id,
+                account_key="bot-1",
+                external_message_id="msg-terminal",
+                conversation_key="owner-1",
+                sender_key="owner-1",
+                principal_scope="local",
+                chat_type=ChannelChatType.DIRECT,
+                text="Terminal message",
+                received_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+        turn: ChannelTurnRecord | None = None
+        for _ in range(50):
+            turn = await container.external_channel_repository.get_turn(receipt.channel_turn_id)
+            if turn is not None and turn.delivery_id is not None:
+                break
+            await asyncio.sleep(0.05)
+        assert turn is not None and turn.delivery_id is not None
+        plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+        assert plan is not None
+
+        now = datetime.now(UTC)
+        # Manually transition plan to DELIVERED in DB
+        # to simulate terminal commit before context delete
+        async with container.database.transaction() as conn:
+            await conn.execute(
+                "UPDATE channel_deliveries SET status = 'delivered' WHERE delivery_id = ?",
+                (str(plan.delivery_id),),
+            )
+            await conn.execute(
+                (
+                    "UPDATE channel_delivery_parts SET status = 'delivered',"
+                    " delivered_at = ? WHERE delivery_id = ?"
+                ),
+                (now.isoformat(), str(plan.delivery_id)),
+            )
+
+        # Ingest active message
+        await container.external_channels.ingest(
+            ChannelInboundTextMessage(
+                connection_id=connection_id,
+                account_key="bot-1",
+                external_message_id="msg-active",
+                conversation_key="owner-1",
+                sender_key="owner-1",
+                principal_scope="local",
+                chat_type=ChannelChatType.DIRECT,
+                text="Active message",
+                received_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+
+        creds = WeixinCredentials(
+            bot_token="provider-token",
+            bot_id="bot-1",
+            user_id="owner-1",
+            base_url="https://api.weixin.qq.com/",
+            gateway_access_token=access_token,
+            pending_contexts={
+                "msg-terminal": WeixinPendingContext(
+                    context_token="ctx-term", recipient_user_id="owner-1"
+                ),
+                "msg-ghost": WeixinPendingContext(
+                    context_token="ctx-ghost", recipient_user_id="owner-1"
+                ),
+                "msg-active": WeixinPendingContext(
+                    context_token="ctx-active", recipient_user_id="owner-1"
+                ),
+            },
+        )
+        await store.set(f"weixin_ilink:{connection_id}", creds.to_json())
+
+        # Trigger reconciliation directly
+        await management.reconcile_pending_contexts(connection_id)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-terminal" not in loaded.pending_contexts
+        assert "msg-ghost" not in loaded.pending_contexts
+        assert "msg-active" in loaded.pending_contexts
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_twenty_consecutive_cancellations_never_hit_context_limit(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement: Run 20 iterations of generate then cancel by new message
+    -> never hit 16 context limit."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+
+    async def _delayed_send(*args: Any, **kwargs: Any) -> str:
+        await asyncio.sleep(0.5)
+        return "fake-provider-id"
+
+    monkeypatch.setattr(transport, "send_text", _delayed_send)
+
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+
+        for i in range(20):
+            msg_id = f"msg-burst-{i}"
+            await transport.updates.put(
+                WeixinUpdates(
+                    cursor=f"cursor-{i}",
+                    messages=(
+                        WeixinInboundText(
+                            external_message_id=msg_id,
+                            sender_user_id="owner-1",
+                            recipient_bot_id="bot-1",
+                            text=f"Burst message {i}",
+                            context_token=f"ctx-token-{i}",
+                            received_at=datetime.now(UTC),
+                        ),
+                    ),
+                )
+            )
+            await asyncio.sleep(0.08)
+            raw = await store.get(f"weixin_ilink:{connection_id}")
+            assert raw is not None
+            loaded = WeixinCredentials.from_json(raw)
+            assert len(loaded.pending_contexts) < 16, (
+                f"Contexts exceeded limit at iteration {i}: {len(loaded.pending_contexts)}"
+            )
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert len(loaded.pending_contexts) <= 4
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_terminal_event_replay_is_idempotent_for_context_cleanup(
+    runtime_settings: Settings,
+) -> None:
+    """Requirement: Terminal events replayed multiple times must be strictly idempotent
+    and not crash or corrupt pending_contexts."""
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+
+    await container.start()
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            _configuration(connection_id), access_token=access_token
+        )
+        creds = WeixinCredentials(
+            bot_token="provider-token",
+            bot_id="bot-1",
+            user_id="owner-1",
+            base_url="https://api.weixin.qq.com/",
+            gateway_access_token=access_token,
+            pending_contexts={
+                "msg-idempotent": WeixinPendingContext(
+                    context_token="ctx-idempotent", recipient_user_id="owner-1"
+                ),
+            },
+        )
+        await store.set(f"weixin_ilink:{connection_id}", creds.to_json())
+        await management.connection_configuration_changed(created.snapshot)
+
+        turn = await container.external_channels.ingest(
+            ChannelInboundTextMessage(
+                connection_id=connection_id,
+                account_key="bot-1",
+                external_message_id="msg-idempotent",
+                conversation_key="owner-1",
+                sender_key="owner-1",
+                principal_scope="local",
+                chat_type=ChannelChatType.DIRECT,
+                text="Idempotent test message",
+                received_at=datetime.now(UTC),
+            ),
+            access_token=access_token,
+        )
+
+        terminal_event: dict[str, object] = {
+            "event_type": "channel.delivery_plan_completed",
+            "payload": {
+                "connection_id": str(connection_id),
+                "channel_turn_id": str(turn.turn_id),
+                "delivery_id": str(uuid4()),
+            },
+        }
+
+        # First delivery plan terminal event: cleans up msg-idempotent
+        await management._on_delivery_plan_terminal_event(terminal_event)
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-idempotent" not in loaded.pending_contexts
+
+        # Replay the exact same event 3 more times: idempotent and no error
+        for _ in range(3):
+            await management._on_delivery_plan_terminal_event(terminal_event)
+
+        raw = await store.get(f"weixin_ilink:{connection_id}")
+        assert raw is not None
+        loaded = WeixinCredentials.from_json(raw)
+        assert "msg-idempotent" not in loaded.pending_contexts
+
+        # Replaying event for non-existent turn/connection must be a safe no-op
+        ghost_event: dict[str, object] = {
+            "event_type": "channel.delivery_plan_cancelled",
+            "payload": {
+                "connection_id": str(uuid4()),
+                "channel_turn_id": str(uuid4()),
+                "delivery_id": str(uuid4()),
+            },
+        }
+        await management._on_delivery_plan_terminal_event(ghost_event)
     finally:
         await container.stop()

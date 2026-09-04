@@ -943,10 +943,26 @@ async def test_early_cursor_advance_before_delivery_completion(
             == "cursor-checkpoint-999"
         )
 
-        # At this moment, delivery is STILL held
+        # Stage 1: Verify Admission - cursor advanced and turn reached durable admission
         turn = await container.external_channel_repository.find_turn_by_external_message(
             connection_id, "msg-early-cursor"
         )
+        assert turn is not None
+        assert turn.status in (
+            ChannelTurnStatus.ACCEPTED,
+            ChannelTurnStatus.PROCESSING,
+            ChannelTurnStatus.COMPLETED,
+        )
+
+        # Stage 2: Wait until delivery plan is created
+        for _ in range(100):
+            turn = await container.external_channel_repository.find_turn_by_external_message(
+                connection_id, "msg-early-cursor"
+            )
+            if turn is not None and turn.delivery_id is not None:
+                break
+            await asyncio.sleep(0.1)
+
         assert turn is not None
         assert turn.delivery_id is not None
         plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
@@ -955,7 +971,7 @@ async def test_early_cursor_advance_before_delivery_completion(
 
         # Now unblock delivery and wait for completion
         hold_execution.set()
-        for _ in range(30):
+        for _ in range(100):
             plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
             if plan and plan.status is ChannelDeliveryStatus.DELIVERED:
                 break

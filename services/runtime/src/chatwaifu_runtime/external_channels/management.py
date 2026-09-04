@@ -23,7 +23,9 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryPartKind,
     ChannelDeliveryPartsCancelRequest,
+    ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
 
@@ -45,6 +47,7 @@ from chatwaifu_runtime.external_channels.credentials import (
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
+    ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import (
@@ -236,6 +239,7 @@ class ChannelManagementService:
         self._auth_lock = asyncio.Lock()
         self._task_lock = asyncio.Lock()
         self._credential_mutation_locks: dict[UUID, asyncio.Lock] = {}
+        self._terminal_events_task: asyncio.Task[None] | None = None
         self._stopping = False
 
     def _get_credential_lock(self, connection_id: UUID) -> asyncio.Lock:
@@ -263,6 +267,11 @@ class ChannelManagementService:
             logger.exception("secure WeChat enrollment recovery is unavailable")
             await self._mark_secure_store_unavailable()
             return
+        if self._event_hub is not None and self._terminal_events_task is None:
+            self._terminal_events_task = asyncio.create_task(
+                self._listen_for_terminal_events(),
+                name="weixin-terminal-events-consumer",
+            )
         connections = await self._external_channels.list_connections()
         for connection in connections:
             if (
@@ -288,6 +297,10 @@ class ChannelManagementService:
             connection_tasks = list(self._connection_tasks.values())
             for task in connection_tasks:
                 task.cancel()
+        if self._terminal_events_task is not None:
+            self._terminal_events_task.cancel()
+            await _gather_cancelled([self._terminal_events_task])
+            self._terminal_events_task = None
         schedulers = list(self._schedulers.values())
         for sched in schedulers:
             await sched.stop()
@@ -891,6 +904,10 @@ class ChannelManagementService:
                 "The secure WeChat credentials are missing.",
             )
             return
+        await self._reconcile_pending_contexts(connection_id)
+        credentials = await self._load_credentials(connection_id)
+        if credentials is None:
+            return
         retries = 0
         executor = WeixinDeliveryPartExecutor(self, connection_id)
         publisher = (
@@ -1054,6 +1071,114 @@ class ChannelManagementService:
         if turn is None:
             return
         await self._forget_context(connection_id, turn.external_message_id)
+
+    async def reconcile_pending_contexts(self, connection_id: UUID) -> None:
+        await self._reconcile_pending_contexts(connection_id)
+
+    async def _reconcile_pending_contexts(self, connection_id: UUID) -> None:
+        async with self._get_credential_lock(connection_id):
+            credentials = await self._load_credentials(connection_id)
+            if credentials is None or not credentials.pending_contexts:
+                return
+            stale_message_ids: list[str] = []
+            for external_message_id in list(credentials.pending_contexts.keys()):
+                turn = await self._repository.find_turn_by_external_message(
+                    connection_id, external_message_id
+                )
+                if turn is None:
+                    stale_message_ids.append(external_message_id)
+                    continue
+                if turn.delivery_id is not None:
+                    plan = await self._repository.get_delivery_plan(turn.delivery_id)
+                    if plan is None or plan.status in (
+                        ChannelDeliveryStatus.DELIVERED,
+                        ChannelDeliveryStatus.FAILED,
+                        ChannelDeliveryStatus.CANCELLED,
+                    ):
+                        stale_message_ids.append(external_message_id)
+                elif turn.status in (
+                    ChannelTurnStatus.FAILED,
+                    ChannelTurnStatus.CANCELLED,
+                    ChannelTurnStatus.COMPLETED,
+                ):
+                    stale_message_ids.append(external_message_id)
+
+            if stale_message_ids:
+                pending = dict(credentials.pending_contexts)
+                for msg_id in stale_message_ids:
+                    pending.pop(msg_id, None)
+                updated = replace(credentials, pending_contexts=pending)
+                await self._credentials.set(_credential_reference(connection_id), updated.to_json())
+                logger.info(
+                    "reconciled %d stale pending WeChat contexts for connection %s",
+                    len(stale_message_ids),
+                    connection_id,
+                )
+
+    async def _listen_for_terminal_events(self) -> None:
+        if self._event_hub is None:
+            return
+        terminal_event_types = {
+            "channel.delivery_plan_completed",
+            "channel.delivery_plan_cancelled",
+            "channel.delivery_plan_failed",
+        }
+
+        def _is_terminal_event(event: dict[str, object]) -> bool:
+            return str(event.get("event_type")) in terminal_event_types
+
+        subscription = self._event_hub.subscribe(_is_terminal_event)
+        try:
+            while not self._stopping:
+                event_payload = await subscription.receive()
+                if self._stopping:
+                    break
+                try:
+                    await self._on_delivery_plan_terminal_event(event_payload)
+                except Exception:
+                    logger.exception("failed to process terminal delivery plan event")
+        except asyncio.CancelledError:
+            pass
+        finally:
+            self._event_hub.unsubscribe(subscription)
+
+    async def _on_delivery_plan_terminal_event(self, event: dict[str, object]) -> None:
+        raw_payload = event.get("payload")
+        if not isinstance(raw_payload, dict):
+            return
+        payload = cast(dict[str, object], raw_payload)
+        connection_id_str = payload.get("connection_id")
+        channel_turn_id_str = payload.get("channel_turn_id")
+        delivery_id_str = payload.get("delivery_id")
+
+        turn: ChannelTurnRecord | None = None
+        if channel_turn_id_str:
+            try:
+                turn = await self._repository.get_turn(UUID(str(channel_turn_id_str)))
+            except Exception:
+                pass
+
+        if turn is None and delivery_id_str:
+            try:
+                plan = await self._repository.get_delivery_plan(UUID(str(delivery_id_str)))
+                if plan is not None:
+                    turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
+            except Exception:
+                pass
+
+        if turn is None:
+            return
+
+        conn_id: UUID | None = None
+        if connection_id_str:
+            try:
+                conn_id = UUID(str(connection_id_str))
+            except (ValueError, TypeError):
+                pass
+        if conn_id is None:
+            conn_id = turn.connection_id
+
+        await self._forget_context(conn_id, turn.external_message_id)
 
     async def _load_credentials(self, connection_id: UUID) -> WeixinCredentials | None:
         serialized = await self._credentials.get(_credential_reference(connection_id))
