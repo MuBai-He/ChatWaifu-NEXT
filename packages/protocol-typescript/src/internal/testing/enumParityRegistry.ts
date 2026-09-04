@@ -3,7 +3,7 @@
  * Not exported from the root `@chatwaifu/protocol` package.
  */
 
-import { z } from "zod";
+
 import {
   audioFrameHeaderSchema,
   avatarCapabilityManifestSchema,
@@ -59,7 +59,7 @@ import {
   skillRunSnapshotSchema,
   strongEventEnvelopeSchema,
   structuredErrorSchema,
-} from "../parsers/protocol";
+} from "../../parsers/protocol";
 
 export {
   audioFrameHeaderSchema,
@@ -118,173 +118,105 @@ export {
   structuredErrorSchema,
 };
 
-export type PublicParserDescriptor = {
-  modelName: string;
-  schema: z.ZodTypeAny;
-};
+/**
+ * Registry of all root model schemas that back public parsers.
+ */
+export const protocolModelSchemas = {
+  AudioFrameHeader: audioFrameHeaderSchema,
+  AvatarCue: avatarCueSchema,
+  AvatarCapabilityManifest: avatarCapabilityManifestSchema,
+  AvatarInteractionEvent: avatarInteractionEventSchema,
+  SessionSnapshot: sessionSnapshotSchema,
+  CharacterKernelSnapshot: characterKernelSnapshotSchema,
+  ChannelProviderRegistration: channelProviderRegistrationSchema,
+  ChannelAuthorizationStartRequest: channelAuthorizationStartRequestSchema,
+  ChannelAuthorizationVerificationRequest:
+    channelAuthorizationVerificationRequestSchema,
+  ChannelAuthorizationSnapshot: channelAuthorizationSnapshotSchema,
+  ChannelConnectionConfiguration: channelConnectionConfigurationSchema,
+  ChannelConnectionSnapshot: channelConnectionSnapshotSchema,
+  ChannelGatewayStatusSnapshot: channelGatewayStatusSnapshotSchema,
+  ChannelInboundTextMessage: channelInboundTextMessageSchema,
+  ChannelTurnReceipt: channelTurnReceiptSchema,
+  ChannelTurnSnapshot: channelTurnSnapshotSchema,
+  ChannelDeliveryAcknowledgement: channelDeliveryAcknowledgementSchema,
+  ChannelDeliveryClaimRequest: channelDeliveryClaimRequestSchema,
+  ChannelDeliverySnapshot: channelDeliverySnapshotSchema,
+  ChannelDeliveryPartSnapshot: channelDeliveryPartSnapshotSchema,
+  ChannelDeliveryPartClaimRequest: channelDeliveryPartClaimRequestSchema,
+  ChannelDeliveryPartAcknowledgement: channelDeliveryPartAcknowledgementSchema,
+  ChannelDeliveryPlanSnapshot: channelDeliveryPlanSnapshotSchema,
+  ChannelTurnCancelRequest: channelTurnCancelRequestSchema,
+  ChannelTurnCancelReceipt: channelTurnCancelReceiptSchema,
+  ChannelErrorResponse: channelErrorResponseSchema,
+  MemoryRecord: memoryRecordSchema,
+  MemoryProposal: memoryProposalSchema,
+  MemorySource: memorySourceSchema,
+  MemoryChannelAttribution: memoryChannelAttributionSchema,
+  SkillDefinition: skillDefinitionSchema,
+  SkillRunSnapshot: skillRunSnapshotSchema,
+  PluginSnapshot: pluginSnapshotSchema,
+  McpCapabilitySnapshot: mcpCapabilitySnapshotSchema,
+  McpConnectionSnapshot: mcpConnectionSnapshotSchema,
+  CommandModel: commandEnvelopeSchema,
+  EventModel: eventEnvelopeSchema,
+} as const;
 
 /**
- * Maps every public parseXxx function to its catalog definition model name and Zod schema.
+ * Registry of standalone protocol enum schemas.
  */
-export const publicParserCatalogMapping: Record<
-  string,
-  PublicParserDescriptor
-> = {
-  parseAudioFrameHeader: {
-    modelName: "AudioFrameHeader",
-    schema: audioFrameHeaderSchema,
-  },
-  parseAvatarCue: {
-    modelName: "AvatarCue",
-    schema: avatarCueSchema,
-  },
-  parseAvatarCapabilityManifest: {
-    modelName: "AvatarCapabilityManifest",
-    schema: avatarCapabilityManifestSchema,
-  },
-  parseAvatarInteractionEvent: {
-    modelName: "AvatarInteractionEvent",
-    schema: avatarInteractionEventSchema,
-  },
-  parseSessionSnapshot: {
-    modelName: "SessionSnapshot",
-    schema: sessionSnapshotSchema,
-  },
-  parseCharacterKernelSnapshot: {
-    modelName: "CharacterKernelSnapshot",
-    schema: characterKernelSnapshotSchema,
-  },
-  parseChannelProviderRegistration: {
-    modelName: "ChannelProviderRegistration",
-    schema: channelProviderRegistrationSchema,
-  },
-  parseChannelAuthorizationStartRequest: {
-    modelName: "ChannelAuthorizationStartRequest",
-    schema: channelAuthorizationStartRequestSchema,
-  },
-  parseChannelAuthorizationVerificationRequest: {
-    modelName: "ChannelAuthorizationVerificationRequest",
-    schema: channelAuthorizationVerificationRequestSchema,
-  },
-  parseChannelAuthorizationSnapshot: {
-    modelName: "ChannelAuthorizationSnapshot",
-    schema: channelAuthorizationSnapshotSchema,
-  },
-  parseChannelConnectionConfiguration: {
-    modelName: "ChannelConnectionConfiguration",
-    schema: channelConnectionConfigurationSchema,
-  },
-  parseChannelConnectionSnapshot: {
-    modelName: "ChannelConnectionSnapshot",
-    schema: channelConnectionSnapshotSchema,
-  },
-  parseChannelGatewayStatusSnapshot: {
-    modelName: "ChannelGatewayStatusSnapshot",
-    schema: channelGatewayStatusSnapshotSchema,
-  },
-  parseChannelInboundTextMessage: {
-    modelName: "ChannelInboundTextMessage",
-    schema: channelInboundTextMessageSchema,
-  },
-  parseChannelTurnReceipt: {
-    modelName: "ChannelTurnReceipt",
-    schema: channelTurnReceiptSchema,
-  },
-  parseChannelTurnSnapshot: {
-    modelName: "ChannelTurnSnapshot",
-    schema: channelTurnSnapshotSchema,
-  },
-  parseChannelDeliveryAcknowledgement: {
-    modelName: "ChannelDeliveryAcknowledgement",
-    schema: channelDeliveryAcknowledgementSchema,
-  },
-  parseChannelDeliveryClaimRequest: {
-    modelName: "ChannelDeliveryClaimRequest",
-    schema: channelDeliveryClaimRequestSchema,
-  },
-  parseChannelDeliverySnapshot: {
-    modelName: "ChannelDeliverySnapshot",
-    schema: channelDeliverySnapshotSchema,
-  },
-  parseChannelDeliveryPartSnapshot: {
-    modelName: "ChannelDeliveryPartSnapshot",
-    schema: channelDeliveryPartSnapshotSchema,
-  },
-  parseChannelDeliveryPartClaimRequest: {
-    modelName: "ChannelDeliveryPartClaimRequest",
-    schema: channelDeliveryPartClaimRequestSchema,
-  },
-  parseChannelDeliveryPartAcknowledgement: {
-    modelName: "ChannelDeliveryPartAcknowledgement",
-    schema: channelDeliveryPartAcknowledgementSchema,
-  },
-  parseChannelDeliveryPlanSnapshot: {
-    modelName: "ChannelDeliveryPlanSnapshot",
-    schema: channelDeliveryPlanSnapshotSchema,
-  },
-  parseChannelTurnCancelRequest: {
-    modelName: "ChannelTurnCancelRequest",
-    schema: channelTurnCancelRequestSchema,
-  },
-  parseChannelTurnCancelReceipt: {
-    modelName: "ChannelTurnCancelReceipt",
-    schema: channelTurnCancelReceiptSchema,
-  },
-  parseChannelErrorResponse: {
-    modelName: "ChannelErrorResponse",
-    schema: channelErrorResponseSchema,
-  },
-  parseMemoryRecord: {
-    modelName: "MemoryRecord",
-    schema: memoryRecordSchema,
-  },
-  parseMemoryProposal: {
-    modelName: "MemoryProposal",
-    schema: memoryProposalSchema,
-  },
-  parseMemorySource: {
-    modelName: "MemorySource",
-    schema: memorySourceSchema,
-  },
-  parseMemoryChannelAttribution: {
-    modelName: "MemoryChannelAttribution",
-    schema: memoryChannelAttributionSchema,
-  },
-  parseSkillDefinition: {
-    modelName: "SkillDefinition",
-    schema: skillDefinitionSchema,
-  },
-  parseSkillRunSnapshot: {
-    modelName: "SkillRunSnapshot",
-    schema: skillRunSnapshotSchema,
-  },
-  parsePluginSnapshot: {
-    modelName: "PluginSnapshot",
-    schema: pluginSnapshotSchema,
-  },
-  parseMcpCapabilitySnapshot: {
-    modelName: "McpCapabilitySnapshot",
-    schema: mcpCapabilitySnapshotSchema,
-  },
-  parseMcpConnectionSnapshot: {
-    modelName: "McpConnectionSnapshot",
-    schema: mcpConnectionSnapshotSchema,
-  },
-  parseCommandEnvelope: {
-    modelName: "CommandModel",
-    schema: commandEnvelopeSchema,
-  },
-  parseEventEnvelope: {
-    modelName: "EventModel",
-    schema: eventEnvelopeSchema,
-  },
-};
-
-export const standaloneEnumSchemas: Record<string, z.ZodTypeAny> = {
+export const protocolEnumSchemas = {
   ChannelTurnStatus: channelTurnStatusSchema,
   ChannelDeliveryStatus: channelDeliveryStatusSchema,
   ChannelDeliveryPartKind: channelDeliveryPartKindSchema,
   ChannelDeliveryPartStatus: channelDeliveryPartStatusSchema,
+} as const;
+
+/**
+ * Maps every public parseXxx function to its corresponding root model key in protocolModelSchemas.
+ */
+export const parserRootRegistry: Record<
+  string,
+  keyof typeof protocolModelSchemas
+> = {
+  parseAudioFrameHeader: "AudioFrameHeader",
+  parseAvatarCue: "AvatarCue",
+  parseAvatarCapabilityManifest: "AvatarCapabilityManifest",
+  parseAvatarInteractionEvent: "AvatarInteractionEvent",
+  parseSessionSnapshot: "SessionSnapshot",
+  parseCharacterKernelSnapshot: "CharacterKernelSnapshot",
+  parseChannelProviderRegistration: "ChannelProviderRegistration",
+  parseChannelAuthorizationStartRequest: "ChannelAuthorizationStartRequest",
+  parseChannelAuthorizationVerificationRequest:
+    "ChannelAuthorizationVerificationRequest",
+  parseChannelAuthorizationSnapshot: "ChannelAuthorizationSnapshot",
+  parseChannelConnectionConfiguration: "ChannelConnectionConfiguration",
+  parseChannelConnectionSnapshot: "ChannelConnectionSnapshot",
+  parseChannelGatewayStatusSnapshot: "ChannelGatewayStatusSnapshot",
+  parseChannelInboundTextMessage: "ChannelInboundTextMessage",
+  parseChannelTurnReceipt: "ChannelTurnReceipt",
+  parseChannelTurnSnapshot: "ChannelTurnSnapshot",
+  parseChannelDeliveryAcknowledgement: "ChannelDeliveryAcknowledgement",
+  parseChannelDeliveryClaimRequest: "ChannelDeliveryClaimRequest",
+  parseChannelDeliverySnapshot: "ChannelDeliverySnapshot",
+  parseChannelDeliveryPartSnapshot: "ChannelDeliveryPartSnapshot",
+  parseChannelDeliveryPartClaimRequest: "ChannelDeliveryPartClaimRequest",
+  parseChannelDeliveryPartAcknowledgement: "ChannelDeliveryPartAcknowledgement",
+  parseChannelDeliveryPlanSnapshot: "ChannelDeliveryPlanSnapshot",
+  parseChannelTurnCancelRequest: "ChannelTurnCancelRequest",
+  parseChannelTurnCancelReceipt: "ChannelTurnCancelReceipt",
+  parseChannelErrorResponse: "ChannelErrorResponse",
+  parseMemoryRecord: "MemoryRecord",
+  parseMemoryProposal: "MemoryProposal",
+  parseMemorySource: "MemorySource",
+  parseMemoryChannelAttribution: "MemoryChannelAttribution",
+  parseSkillDefinition: "SkillDefinition",
+  parseSkillRunSnapshot: "SkillRunSnapshot",
+  parsePluginSnapshot: "PluginSnapshot",
+  parseMcpCapabilitySnapshot: "McpCapabilitySnapshot",
+  parseMcpConnectionSnapshot: "McpConnectionSnapshot",
+  parseCommandEnvelope: "CommandModel",
+  parseEventEnvelope: "EventModel",
 };
 
 export type JsonSchemaDef = {
@@ -474,3 +406,5 @@ export function collectZodEnumPaths(
   }
   return paths;
 }
+
+export const standaloneEnumSchemas = protocolEnumSchemas;

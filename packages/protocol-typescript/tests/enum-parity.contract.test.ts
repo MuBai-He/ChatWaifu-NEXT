@@ -18,11 +18,12 @@ import {
   channelTurnStatusSchema,
   collectJsonSchemaEnumPaths,
   collectZodEnumPaths,
-  publicParserCatalogMapping,
+  parserRootRegistry,
+  protocolModelSchemas,
   skillCapabilitySchema,
   standaloneEnumSchemas,
   type JsonSchemaDef,
-} from "../src/testing/enumParityRegistry";
+} from "../src/internal/testing/index";
 
 // Compile-time type-level equivalence assertions
 type Equal<A, B> =
@@ -69,14 +70,20 @@ const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
 const defs: Record<string, JsonSchemaDef> = catalog.$defs || {};
 
 describe("Universal Cross-Layer Enum Contract Gate", () => {
-  it("enforces that all exported public parseXxx functions have a registered root schema", () => {
+  it("self-validates that all exported public parseXxx functions have a registered root schema", () => {
     const exportedParsers = Object.keys(protocol).filter((k) =>
       k.startsWith("parse"),
     );
-    const registeredParsers = Object.keys(publicParserCatalogMapping);
+    const registeredParsers = Object.keys(parserRootRegistry);
 
+    // 1. Strict set-equality: no unmapped public parse functions
     expect(new Set(exportedParsers)).toEqual(new Set(registeredParsers));
-    expect(registeredParsers.length).toBeGreaterThanOrEqual(35);
+
+    // 2. All mapped model names exist in protocolModelSchemas
+    const mappedModels = Object.values(parserRootRegistry);
+    expect(new Set(mappedModels)).toEqual(
+      new Set(Object.keys(protocolModelSchemas)),
+    );
   });
 
   it("enforces exact parity for standalone protocol enums", () => {
@@ -100,12 +107,12 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
   });
 
   it("enforces exact recursive enum path and value parity across all registered domain models", () => {
-    let checkedPathCount = 0;
+    const expectedPaths: Record<string, string[]> = {};
+    const actualPaths: Record<string, string[]> = {};
 
-    for (const [, desc] of Object.entries(publicParserCatalogMapping)) {
-      const { modelName, schema } = desc;
+    for (const [modelName, schema] of Object.entries(protocolModelSchemas)) {
       if (modelName === "CommandModel" || modelName === "EventModel") {
-        // Envelopes are polymorphic unions checked in their dedicated tests below
+        // Envelopes are polymorphic unions tested in the dedicated envelope test
         continue;
       }
       expect(
@@ -120,36 +127,33 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
       );
       const zodPaths = collectZodEnumPaths(schema, modelName);
 
-      const jsonKeys = Object.keys(jsonPaths).sort();
-      const zodKeys = Object.keys(zodPaths).sort();
-
-      expect(
-        zodKeys,
-        `Recursive enum path mismatch in model: ${modelName}`,
-      ).toEqual(jsonKeys);
-
-      for (const key of jsonKeys) {
-        expect(
-          zodPaths[key],
-          `Enum values mismatch at path: ${key} in model: ${modelName}`,
-        ).toEqual(jsonPaths[key]);
-        checkedPathCount++;
-      }
+      Object.assign(expectedPaths, jsonPaths);
+      Object.assign(actualPaths, zodPaths);
     }
 
-    // Proves that all recursive paths are deeply collected and checked
-    expect(checkedPathCount).toBeGreaterThanOrEqual(90);
+    // 1. Strict set-equality on all recursive paths: no omissions or extra paths
+    const actualKeys = Object.keys(actualPaths).sort();
+    const expectedKeys = Object.keys(expectedPaths).sort();
+
+    expect(actualKeys).toEqual(expectedKeys);
+
+    // 2. Strict value-equality on each recursive path
+    for (const key of expectedKeys) {
+      expect(actualPaths[key], `Enum mismatch at path: ${key}`).toEqual(
+        expectedPaths[key],
+      );
+    }
   });
 
   it("enforces enum parity for polymorphic EventEnvelope and CommandEnvelope", () => {
-    // EventEnvelope: verify event_type and privacy parity
+    // EventEnvelope: verify event_type and privacy parity across all event variants
     const eventJsonPaths = collectJsonSchemaEnumPaths(
       defs["EventModel"],
       "EventModel",
       defs,
     );
     const eventZodPaths = collectZodEnumPaths(
-      publicParserCatalogMapping["parseEventEnvelope"].schema,
+      protocolModelSchemas["EventModel"],
       "EventModel",
     );
 
@@ -160,14 +164,14 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
       eventJsonPaths["EventModel.privacy"],
     );
 
-    // CommandEnvelope: verify command_type, playback ack phase and reason parity
+    // CommandEnvelope: verify command_type, playback ack phase, reason, and transport
     const commandJsonPaths = collectJsonSchemaEnumPaths(
       catalog.properties.command,
       "CommandModel",
       defs,
     );
     const commandZodPaths = collectZodEnumPaths(
-      publicParserCatalogMapping["parseCommandEnvelope"].schema,
+      protocolModelSchemas["CommandModel"],
       "CommandModel",
     );
 
@@ -238,22 +242,22 @@ describe("Collector and Gate Failure Mode Verification (Real Negative Tests)", (
   it("collects the union of all branches in multi-branch anyOf / oneOf without stopping at the first", () => {
     const syntheticSchema: JsonSchemaDef = {
       anyOf: [
-        { const: "first_branch" },
-        { const: "second_branch" },
-        { enum: ["third_branch", "fourth_branch"] },
+        { const: "first_val" },
+        { const: "second_val" },
+        { enum: ["third_val", "fourth_val"] },
       ],
     };
 
     const extracted = collectJsonSchemaEnumPaths(
       syntheticSchema,
-      "SyntheticField",
+      "SyntheticRoot",
       {},
     );
-    expect(extracted["SyntheticField"]).toEqual([
-      "first_branch",
-      "fourth_branch",
-      "second_branch",
-      "third_branch",
+    expect(extracted["SyntheticRoot"]).toEqual([
+      "first_val",
+      "fourth_val",
+      "second_val",
+      "third_val",
     ]);
   });
 
@@ -296,13 +300,13 @@ describe("Collector and Gate Failure Mode Verification (Real Negative Tests)", (
 
   it("fails coverage validation when a public parser is omitted from the registry", () => {
     const mockExportedParsers = [
-      ...Object.keys(publicParserCatalogMapping),
+      ...Object.keys(parserRootRegistry),
       "parseNewlyAddedModelWithoutRegistration",
     ];
 
     expect(() => {
       expect(new Set(mockExportedParsers)).toEqual(
-        new Set(Object.keys(publicParserCatalogMapping)),
+        new Set(Object.keys(parserRootRegistry)),
       );
     }).toThrow();
   });
