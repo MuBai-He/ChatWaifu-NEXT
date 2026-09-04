@@ -171,6 +171,8 @@ export const protocolEnumSchemas = {
   ChannelDeliveryPartStatus: channelDeliveryPartStatusSchema,
 } as const;
 
+export const standaloneEnumSchemas = protocolEnumSchemas;
+
 /**
  * Maps every public parseXxx function to its corresponding root model key in protocolModelSchemas.
  */
@@ -317,6 +319,72 @@ export function collectJsonSchemaEnumPaths(
   return paths;
 }
 
+/**
+ * Collects enum paths from a polymorphic JSON Schema union where each branch
+ * is identified by a discriminator field (e.g. event_type or command_type).
+ * Generates paths carrying discriminator identity: Root[discriminator=value].path
+ */
+export function collectDiscriminatedJsonSchemaEnumPaths(
+  schema: JsonSchemaDef | null | undefined,
+  options: {
+    rootName: string;
+    discriminator: string;
+    defs: Record<string, JsonSchemaDef>;
+  },
+): Record<string, string[]> {
+  const { rootName, discriminator, defs } = options;
+  const paths: Record<string, string[]> = {};
+  if (!schema) return paths;
+
+  const branches = schema.anyOf || schema.oneOf || [schema];
+
+  for (const branchRef of branches) {
+    const branch =
+      branchRef.$ref && branchRef.$ref.startsWith("#/$defs/")
+        ? defs[branchRef.$ref.slice(8)]
+        : branchRef;
+    if (!branch || !branch.properties) continue;
+
+    const discProp = branch.properties[discriminator];
+    let discVals: string[] = [];
+    if (discProp) {
+      if (typeof discProp.const === "string") {
+        discVals = [discProp.const];
+      } else if (Array.isArray(discProp.enum)) {
+        discVals = discProp.enum.filter(
+          (v): v is string => typeof v === "string",
+        );
+      } else if (discProp.$ref && discProp.$ref.startsWith("#/$defs/")) {
+        const target = defs[discProp.$ref.slice(8)];
+        if (target && Array.isArray(target.enum)) {
+          discVals = target.enum.filter(
+            (v): v is string => typeof v === "string",
+          );
+        }
+      }
+    }
+
+    for (const dVal of discVals) {
+      const branchPrefix = `${rootName}[${discriminator}=${dVal}]`;
+      paths[`${branchPrefix}.${discriminator}`] = [dVal];
+
+      for (const [prop, pSchema] of Object.entries(branch.properties)) {
+        if (prop === discriminator) continue;
+        const sub = collectJsonSchemaEnumPaths(
+          pSchema,
+          `${branchPrefix}.${prop}`,
+          defs,
+        );
+        for (const [k, v] of Object.entries(sub)) {
+          paths[k] = Array.from(new Set([...(paths[k] || []), ...v])).sort();
+        }
+      }
+    }
+  }
+
+  return paths;
+}
+
 type ZodInspectable = {
   options?: unknown[];
   element?: ZodInspectable;
@@ -406,4 +474,70 @@ export function collectZodEnumPaths(
   return paths;
 }
 
-export const standaloneEnumSchemas = protocolEnumSchemas;
+/**
+ * Collects enum paths from a Zod union or discriminated union where each branch
+ * is identified by a discriminator field (e.g. event_type or command_type).
+ * Generates paths carrying discriminator identity: Root[discriminator=value].path
+ */
+export function collectZodDiscriminatedUnionEnumPaths(
+  schema: unknown,
+  options: {
+    rootName: string;
+    discriminator: string;
+  },
+): Record<string, string[]> {
+  const { rootName, discriminator } = options;
+  const paths: Record<string, string[]> = {};
+
+  const branchSchemas: unknown[] = [];
+  function extractBranches(s: unknown) {
+    if (!s || typeof s !== "object") return;
+    const insp = s as ZodInspectable;
+    if (insp._def?.type === "union" && Array.isArray(insp._def.options)) {
+      for (const opt of insp._def.options) {
+        extractBranches(opt);
+      }
+      return;
+    }
+    branchSchemas.push(s);
+  }
+  extractBranches(schema);
+
+  for (const branch of branchSchemas) {
+    let curr = branch as ZodInspectable | undefined;
+    while (curr && curr._def?.innerType) curr = curr._def.innerType;
+    const shape = curr?.shape || curr?._def?.shape;
+    if (!shape) continue;
+
+    const discField = shape[discriminator] as ZodInspectable | undefined;
+    let discVals: string[] = [];
+    if (discField) {
+      if (discField._def?.type === "literal") {
+        discVals = Array.isArray(discField._def.values)
+          ? discField._def.values.map(String)
+          : discField._def.value !== undefined
+            ? [String(discField._def.value)]
+            : [];
+      } else if (discField._def?.type === "enum") {
+        discVals = discField.options
+          ? (discField.options as string[])
+          : Object.keys(discField._def.entries || {});
+      }
+    }
+
+    for (const dVal of discVals) {
+      const branchPrefix = `${rootName}[${discriminator}=${dVal}]`;
+      paths[`${branchPrefix}.${discriminator}`] = [dVal];
+
+      for (const [prop, propSchema] of Object.entries(shape)) {
+        if (prop === discriminator) continue;
+        const sub = collectZodEnumPaths(propSchema, `${branchPrefix}.${prop}`);
+        for (const [k, v] of Object.entries(sub)) {
+          paths[k] = Array.from(new Set([...(paths[k] || []), ...v])).sort();
+        }
+      }
+    }
+  }
+
+  return paths;
+}

@@ -131,10 +131,10 @@ const strongEventEnvelopeSchema = z.discriminatedUnion("event_type", [
         .object({
           character_id: z.string().min(1),
           user_scope: z.string().min(1),
-          conversation: z.literal("current_session"),
-          audio: z.literal("current_session"),
-          memory: z.literal("current_character_user"),
-          character_state: z.literal("current_character_user"),
+          conversation: z.string().min(1).default("current_session"),
+          audio: z.string().min(1).default("current_session"),
+          memory: z.string().min(1).default("current_character_user"),
+          character_state: z.string().min(1).default("current_character_user"),
         })
         .passthrough(),
     })

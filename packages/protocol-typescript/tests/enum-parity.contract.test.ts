@@ -10,13 +10,16 @@ import type {
   ChannelTurnStatus,
   SkillCapability,
 } from "../src/index";
-import * as protocol from "../src/index";
+import * as publicProtocol from "../src/index";
+import * as parserModule from "../src/parsers/protocol";
 import {
   channelDeliveryAcknowledgementSchema,
   channelDeliveryPartAcknowledgementSchema,
   channelDeliveryStatusSchema,
   channelTurnStatusSchema,
+  collectDiscriminatedJsonSchemaEnumPaths,
   collectJsonSchemaEnumPaths,
+  collectZodDiscriminatedUnionEnumPaths,
   collectZodEnumPaths,
   parserRootRegistry,
   protocolModelSchemas,
@@ -70,17 +73,29 @@ const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
 const defs: Record<string, JsonSchemaDef> = catalog.$defs || {};
 
 describe("Universal Cross-Layer Enum Contract Gate", () => {
-  it("self-validates that all exported public parseXxx functions have a registered root schema", () => {
-    const exportedParsers = Object.keys(protocol).filter((k) =>
-      k.startsWith("parse"),
-    );
-    const registeredParsers = Object.keys(parserRootRegistry);
+  it("enforces three-way parser consistency across Parser Module, Root Public Export, and parserRootRegistry", () => {
+    const isParseFunction = (k: string, mod: Record<string, unknown>) =>
+      k.startsWith("parse") && typeof mod[k] === "function";
 
-    // 1. Strict set-equality: no unmapped public parse functions
-    expect(new Set(exportedParsers)).toEqual(new Set(registeredParsers));
+    const declaredParsers = Object.keys(parserModule)
+      .filter((k) => isParseFunction(k, parserModule))
+      .sort();
+    const publicParsers = Object.keys(publicProtocol)
+      .filter((k) => isParseFunction(k, publicProtocol))
+      .sort();
+    const registeredParsers = Object.keys(parserRootRegistry).sort();
 
-    // 2. All mapped model names exist in protocolModelSchemas
+    // 1. All declared parsers in parsers/protocol.ts are publicly exported in src/index.ts
+    expect(publicParsers).toEqual(declaredParsers);
+
+    // 2. All declared parsers are registered in parserRootRegistry
+    expect(registeredParsers).toEqual(declaredParsers);
+
+    // 3. The registry mapping is a bijection (no duplicate target models)
     const mappedModels = Object.values(parserRootRegistry);
+    expect(mappedModels).toHaveLength(new Set(mappedModels).size);
+
+    // 4. All mapped model names exist in protocolModelSchemas
     expect(new Set(mappedModels)).toEqual(
       new Set(Object.keys(protocolModelSchemas)),
     );
@@ -106,13 +121,13 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     }
   });
 
-  it("enforces exact recursive enum path and value parity across all registered domain models", () => {
+  it("enforces exact recursive enum path and value parity across all registered direct domain models", () => {
     const expectedPaths: Record<string, string[]> = {};
     const actualPaths: Record<string, string[]> = {};
 
     for (const [modelName, schema] of Object.entries(protocolModelSchemas)) {
       if (modelName === "CommandModel" || modelName === "EventModel") {
-        // Envelopes are polymorphic unions tested in the dedicated envelope test
+        // Envelopes are polymorphic unions tested in dedicated discriminator-aware test
         continue;
       }
       expect(
@@ -145,45 +160,70 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     }
   });
 
-  it("enforces enum parity for polymorphic EventEnvelope and CommandEnvelope", () => {
-    // EventEnvelope: verify event_type and privacy parity across all event variants
-    const eventJsonPaths = collectJsonSchemaEnumPaths(
+  it("enforces exact discriminator-aware enum path parity for EventModel and CommandModel", () => {
+    // 1. EventModel: discriminator is event_type, path format: EventModel[event_type=...].path
+    const eventJsonPaths = collectDiscriminatedJsonSchemaEnumPaths(
       defs["EventModel"],
-      "EventModel",
-      defs,
+      {
+        rootName: "EventModel",
+        discriminator: "event_type",
+        defs,
+      },
     );
-    const eventZodPaths = collectZodEnumPaths(
+    const eventZodPaths = collectZodDiscriminatedUnionEnumPaths(
       protocolModelSchemas["EventModel"],
-      "EventModel",
+      {
+        rootName: "EventModel",
+        discriminator: "event_type",
+      },
     );
 
-    expect(eventZodPaths["EventModel.event_type"]).toEqual(
-      eventJsonPaths["EventModel.event_type"],
-    );
-    expect(eventZodPaths["EventModel.privacy"]).toEqual(
-      eventJsonPaths["EventModel.privacy"],
-    );
+    const eventJsonKeys = Object.keys(eventJsonPaths).sort();
+    const eventZodKeys = Object.keys(eventZodPaths).sort();
 
-    // CommandEnvelope: verify command_type, playback ack phase, reason, and transport
-    const commandJsonPaths = collectJsonSchemaEnumPaths(
+    expect(
+      eventZodKeys,
+      "Discriminator-aware EventModel enum path mismatch",
+    ).toEqual(eventJsonKeys);
+
+    for (const key of eventJsonKeys) {
+      expect(
+        eventZodPaths[key],
+        `EventModel enum values mismatch at ${key}`,
+      ).toEqual(eventJsonPaths[key]);
+    }
+
+    // 2. CommandModel: discriminator is command_type, path format: CommandModel[command_type=...].path
+    const commandJsonPaths = collectDiscriminatedJsonSchemaEnumPaths(
       catalog.properties.command,
-      "CommandModel",
-      defs,
+      {
+        rootName: "CommandModel",
+        discriminator: "command_type",
+        defs,
+      },
     );
-    const commandZodPaths = collectZodEnumPaths(
+    const commandZodPaths = collectZodDiscriminatedUnionEnumPaths(
       protocolModelSchemas["CommandModel"],
-      "CommandModel",
+      {
+        rootName: "CommandModel",
+        discriminator: "command_type",
+      },
     );
 
-    expect(commandZodPaths["CommandModel.command_type"]).toEqual(
-      commandJsonPaths["CommandModel.command_type"],
-    );
-    expect(commandZodPaths["CommandModel.payload.phase"]).toEqual(
-      commandJsonPaths["CommandModel.payload.phase"],
-    );
-    expect(commandZodPaths["CommandModel.payload.transport"]).toEqual(
-      commandJsonPaths["CommandModel.payload.transport"],
-    );
+    const commandJsonKeys = Object.keys(commandJsonPaths).sort();
+    const commandZodKeys = Object.keys(commandZodPaths).sort();
+
+    expect(
+      commandZodKeys,
+      "Discriminator-aware CommandModel enum path mismatch",
+    ).toEqual(commandJsonKeys);
+
+    for (const key of commandJsonKeys) {
+      expect(
+        commandZodPaths[key],
+        `CommandModel enum values mismatch at ${key}`,
+      ).toEqual(commandJsonPaths[key]);
+    }
   });
 
   it("explicitly verifies ACK status contracts across legacy whole-delivery and multipart", () => {
@@ -205,7 +245,7 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     // Legacy whole-delivery ACK allows delivered | failed | cancelled
     for (const status of ["delivered", "failed", "cancelled"] as const) {
       expect(() =>
-        protocol.parseChannelDeliveryAcknowledgement({
+        publicProtocol.parseChannelDeliveryAcknowledgement({
           ...legacyAck,
           status,
           error: status === "failed" ? structuredError : undefined,
@@ -221,7 +261,7 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
 
     for (const status of ["delivered", "failed"] as const) {
       expect(() =>
-        protocol.parseChannelDeliveryPartAcknowledgement({
+        publicProtocol.parseChannelDeliveryPartAcknowledgement({
           ...partAck,
           status,
           error: status === "failed" ? structuredError : undefined,
@@ -230,7 +270,7 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
     }
 
     expect(() =>
-      protocol.parseChannelDeliveryPartAcknowledgement({
+      publicProtocol.parseChannelDeliveryPartAcknowledgement({
         ...partAck,
         status: "cancelled",
       }),
@@ -239,6 +279,54 @@ describe("Universal Cross-Layer Enum Contract Gate", () => {
 });
 
 describe("Collector and Gate Failure Mode Verification (Real Negative Tests)", () => {
+  it("detects enum values swapped between discriminated union branches", () => {
+    const jsonBranchA: JsonSchemaDef = {
+      properties: {
+        type: { const: "A" },
+        mode: { enum: ["fast", "turbo"] },
+      },
+    };
+    const jsonBranchB: JsonSchemaDef = {
+      properties: {
+        type: { const: "B" },
+        mode: { enum: ["safe", "strict"] },
+      },
+    };
+    const jsonSchema: JsonSchemaDef = {
+      anyOf: [jsonBranchA, jsonBranchB],
+    };
+
+    // Zod schema with swapped enum values: A has safe/strict, B has fast/turbo
+    const zodSchemaSwapped = z.discriminatedUnion("type", [
+      z.object({
+        type: z.literal("A"),
+        mode: z.enum(["safe", "strict"]),
+      }),
+      z.object({
+        type: z.literal("B"),
+        mode: z.enum(["fast", "turbo"]),
+      }),
+    ]);
+
+    const jsonPaths = collectDiscriminatedJsonSchemaEnumPaths(jsonSchema, {
+      rootName: "SwappedModel",
+      discriminator: "type",
+      defs: {},
+    });
+    const zodPaths = collectZodDiscriminatedUnionEnumPaths(zodSchemaSwapped, {
+      rootName: "SwappedModel",
+      discriminator: "type",
+    });
+
+    // Even though the global set of modes across all branches is ["fast", "safe", "strict", "turbo"],
+    // the branch-specific paths SwappedModel[type=A].mode and SwappedModel[type=B].mode are swapped!
+    expect(() => {
+      for (const key of Object.keys(jsonPaths)) {
+        expect(zodPaths[key]).toEqual(jsonPaths[key]);
+      }
+    }).toThrow();
+  });
+
   it("collects the union of all branches in multi-branch anyOf / oneOf without stopping at the first", () => {
     const syntheticSchema: JsonSchemaDef = {
       anyOf: [
