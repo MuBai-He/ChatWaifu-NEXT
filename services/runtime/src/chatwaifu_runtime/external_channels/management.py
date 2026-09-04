@@ -25,6 +25,8 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
+    ChannelPresentationProfile,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
@@ -718,6 +720,9 @@ class ChannelManagementService:
             account_key=bot_id,
             allowed_sender_keys=[user_id],
             enabled=True,
+            presentation_policy=ChannelPresentationPolicy(
+                profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+            ),
         )
         gateway_access_token = secrets.token_urlsafe(32)
         credentials = WeixinCredentials(

@@ -24,6 +24,19 @@ from chatwaifu_protocol.channels import (
 
 
 @dataclass(frozen=True, slots=True)
+class DeliveryPlanCreationResult:
+    """Detailed outcome of delivery planning including diagnostic metadata."""
+
+    parts: tuple[ChannelDeliveryPartDraft, ...]
+    profile: str
+    fallback_reason: str | None = None
+
+    @property
+    def total_delay_ms(self) -> int:
+        return sum(p.delay_after_ms for p in self.parts)
+
+
+@dataclass(frozen=True, slots=True)
 class BubbleSplitResult:
     """Outcome of bubble planning containing planned parts and diagnostics."""
 
@@ -146,6 +159,8 @@ class BubbleSplitter:
         """Check whether the text qualifies for single-part long-form bypass."""
         if policy.profile is ChannelPresentationProfile.SINGLE_TEXT:
             return True, "single_text_profile"
+        if policy.profile is not ChannelPresentationProfile.INSTANT_MESSAGE:
+            return True, "not_instant_message_profile"
         if policy.max_parts <= 1:
             return True, "max_parts_is_one"
 
@@ -180,11 +195,15 @@ class BubbleSplitter:
         return False, None
 
     def split(self, text: str, policy: ChannelPresentationPolicy) -> BubbleSplitResult:
-        """Split canonical reply text into 1 to max_parts presentation bubbles."""
+        """Split canonical reply text into 1 to max_parts presentation bubbles.
+
+        Enforces strict lossless invariant:
+        unicodedata.normalize("NFC", "".join(result.parts)) == unicodedata.normalize("NFC", text)
+        """
         normalized = unicodedata.normalize("NFC", text)
         bypass, reason = self._should_bypass(normalized, policy)
         if bypass:
-            return BubbleSplitResult(parts=(normalized.strip(),), fallback_reason=reason)
+            return BubbleSplitResult(parts=(normalized,), fallback_reason=reason)
 
         atomic_spans = self._find_atomic_spans(normalized)
 
@@ -195,35 +214,31 @@ class BubbleSplitter:
             return False
 
         # Find candidate split boundaries outside atomic spans
-        # Boundaries represent cut positions: (cut_index, priority, whitespace_skip)
         boundaries: list[int] = []
 
-        # Candidate pattern: double newline > single newline > strong CJK/Latin sentence end
-        # Priority 1: line breaks
-        line_break_pattern = regex.compile(r"\n+")
+        # Priority 1: line breaks (with optional trailing horizontal whitespace)
+        line_break_pattern = regex.compile(r"\n+[ \t]*")
         for m in line_break_pattern.finditer(normalized):
-            cut = m.start()
+            cut = m.end()
             if 0 < cut < len(normalized) and not is_index_protected(cut):
                 boundaries.append(cut)
 
-        # Priority 2: strong sentence-ending punctuation
-        # CJK sentence-ending punctuation, or Latin followed by space or end
+        # Priority 2: strong sentence punctuation (with trailing whitespace/newlines)
         strong_punct_pattern = regex.compile(
-            r"[。！？～…]+|(?<=[a-zA-Z0-9])[.!?~]+(?=\s+|$)"  # noqa: RUF001
+            r"(?:[。！？～…]+|(?<=[a-zA-Z0-9])[.!?~]+)(?:[ \t\n]*)"  # noqa: RUF001
         )
         for m in strong_punct_pattern.finditer(normalized):
             cut = m.end()
             if 0 < cut < len(normalized) and not is_index_protected(cut):
                 boundaries.append(cut)
 
-        # Sort and deduplicate cut points
         boundaries = sorted(set(boundaries))
 
         if not boundaries:
             # Check weak clause punctuation if text is long
             if len(normalized) > policy.soft_max_chars_per_part:
                 weak_punct_pattern = regex.compile(
-                    r"[；，]+|(?<=[a-zA-Z0-9])[,;]+(?=\s+|$)"  # noqa: RUF001
+                    r"(?:[；，]+|(?<=[a-zA-Z0-9])[,;]+)(?:[ \t\n]*)"  # noqa: RUF001
                 )
                 for m in weak_punct_pattern.finditer(normalized):
                     cut = m.end()
@@ -232,73 +247,75 @@ class BubbleSplitter:
                 boundaries = sorted(set(boundaries))
 
         if not boundaries:
-            return BubbleSplitResult(
-                parts=(normalized.strip(),), fallback_reason="no_natural_boundaries"
-            )
+            return BubbleSplitResult(parts=(normalized,), fallback_reason="no_natural_boundaries")
 
-        # Slice text into raw segments at boundaries
-        raw_segments: list[str] = []
+        # Filter candidate cuts so neither side is whitespace-only
+        candidate_cuts = [
+            c
+            for c in boundaries
+            if 0 < c < len(normalized)
+            and not is_index_protected(c)
+            and bool(normalized[:c].strip())
+            and bool(normalized[c:].strip())
+        ]
+        if not candidate_cuts:
+            return BubbleSplitResult(parts=(normalized,), fallback_reason="no_natural_boundaries")
+
+        # Ensure every intermediate slice has substantive non-whitespace content
+        valid_cuts: list[int] = []
         last_cut = 0
-        for cut in boundaries:
-            segment = normalized[last_cut:cut]
-            if segment:
-                raw_segments.append(segment)
-            last_cut = cut
-        tail = normalized[last_cut:]
-        if tail:
-            raw_segments.append(tail)
+        for c in candidate_cuts:
+            if normalized[last_cut:c].strip():
+                valid_cuts.append(c)
+                last_cut = c
 
-        # Filter out empty or whitespace-only segments while preserving non-whitespace
-        segments: list[str] = []
-        for seg in raw_segments:
-            s = seg.strip()
-            if s:
-                segments.append(s)
+        while valid_cuts and not normalized[valid_cuts[-1] :].strip():
+            valid_cuts.pop()
 
-        if not segments:
-            return BubbleSplitResult(
-                parts=(normalized.strip(),), fallback_reason="empty_after_split"
-            )
+        if not valid_cuts:
+            return BubbleSplitResult(parts=(normalized,), fallback_reason="no_natural_boundaries")
 
-        if len(segments) <= 1:
-            return BubbleSplitResult(parts=(segments[0],), fallback_reason="single_segment")
+        cuts = [0, *valid_cuts, len(normalized)]
 
-        # Merge adjacent segments greedily up to preferred_chars_per_part / soft_max_chars_per_part
-        merged_parts: list[str] = [segments[0]]
-        for seg in segments[1:]:
-            current = merged_parts[-1]
-            combined_len = len(current) + len(seg)
-            # Merge if current part is below preferred_chars and combined doesn't exceed soft_max
+        # Step 1: Merge adjacent segments greedily up to preferred / soft_max
+        merged_cuts: list[int] = [0]
+        i = 1
+        while i < len(cuts) - 1:
+            current_start = merged_cuts[-1]
+            cand_cut = cuts[i]
+            next_cut = cuts[i + 1]
+            current_len = cand_cut - current_start
+            combined_len = next_cut - current_start
             if (
-                len(current) < policy.preferred_chars_per_part
+                current_len < policy.preferred_chars_per_part
                 and combined_len <= policy.soft_max_chars_per_part
             ):
-                merged_parts[-1] = (
-                    f"{current} {seg}"
-                    if current[-1].isalnum() and seg[0].isalnum()
-                    else f"{current}{seg}"
-                )
+                i += 1
             else:
-                merged_parts.append(seg)
+                merged_cuts.append(cand_cut)
+                i += 1
+        merged_cuts.append(len(normalized))
 
-        # Enforce max_parts cap: merge smallest or adjacent parts until len <= max_parts
-        # NO TEXT IS EVER DISCARDED!
-        while len(merged_parts) > policy.max_parts:
-            # Find the best merge pair (shortest combined length)
-            best_idx = 0
-            min_len = len(merged_parts[0]) + len(merged_parts[1])
-            for i in range(1, len(merged_parts) - 1):
-                comb = len(merged_parts[i]) + len(merged_parts[i + 1])
+        # Step 2: Enforce max_parts cap by removing cut with shortest combined length
+        while len(merged_cuts) - 1 > policy.max_parts:
+            best_idx = 1
+            min_len = merged_cuts[2] - merged_cuts[0]
+            for j in range(1, len(merged_cuts) - 1):
+                comb = merged_cuts[j + 1] - merged_cuts[j - 1]
                 if comb < min_len:
                     min_len = comb
-                    best_idx = i
-            p1 = merged_parts[best_idx]
-            p2 = merged_parts[best_idx + 1]
-            sep = " " if p1[-1].isalnum() and p2[0].isalnum() else ""
-            merged_parts[best_idx] = f"{p1}{sep}{p2}"
-            merged_parts.pop(best_idx + 1)
+                    best_idx = j
+            merged_cuts.pop(best_idx)
 
-        return BubbleSplitResult(parts=tuple(merged_parts))
+        # Produce lossless slices from cut indices
+        parts = tuple(
+            normalized[merged_cuts[k] : merged_cuts[k + 1]] for k in range(len(merged_cuts) - 1)
+        )
+
+        if len(parts) <= 1:
+            return BubbleSplitResult(parts=(normalized,), fallback_reason="single_segment")
+
+        return BubbleSplitResult(parts=parts)
 
 
 class CadenceCalculator:
@@ -393,6 +410,23 @@ class SingleTextDeliveryPlanFactory:
     Used when presentation policy selects single_text or as a feature-flag fallback.
     """
 
+    def create_plan(
+        self,
+        reply_text: str,
+        policy: ChannelPresentationPolicy | None = None,
+    ) -> DeliveryPlanCreationResult:
+        parts = self.create_parts(reply_text, policy)
+        profile_val = (
+            policy.profile.value
+            if policy is not None
+            else ChannelPresentationProfile.SINGLE_TEXT.value
+        )
+        return DeliveryPlanCreationResult(
+            parts=parts,
+            profile=profile_val,
+            fallback_reason="single_text_factory",
+        )
+
     def create_parts(
         self,
         reply_text: str,
@@ -429,18 +463,25 @@ class InstantMessageDeliveryPlanFactory:
     ) -> None:
         self._splitter = splitter or BubbleSplitter()
         self._cadence_calculator = cadence_calculator or CadenceCalculator()
-        self._default_policy = default_policy or ChannelPresentationPolicy()
+        self._default_policy = default_policy or ChannelPresentationPolicy(
+            profile=ChannelPresentationProfile.SINGLE_TEXT
+        )
 
-    def create_parts(
+    def create_plan(
         self,
         reply_text: str,
         policy: ChannelPresentationPolicy | None = None,
-    ) -> tuple[ChannelDeliveryPartDraft, ...]:
-        active_policy = policy or self._default_policy
+    ) -> DeliveryPlanCreationResult:
+        active_policy = policy if policy is not None else self._default_policy
         safe_text = reply_text if reply_text else "(empty reply)"
 
-        if active_policy.profile is ChannelPresentationProfile.SINGLE_TEXT:
-            return SingleTextDeliveryPlanFactory().create_parts(safe_text, active_policy)
+        if active_policy.profile is not ChannelPresentationProfile.INSTANT_MESSAGE:
+            single_parts = SingleTextDeliveryPlanFactory().create_parts(safe_text, active_policy)
+            return DeliveryPlanCreationResult(
+                parts=single_parts,
+                profile=active_policy.profile.value,
+                fallback_reason="not_instant_message_profile",
+            )
 
         split_result = self._splitter.split(safe_text, active_policy)
         delays = self._cadence_calculator.calculate_delays(split_result.parts, active_policy)
@@ -462,4 +503,15 @@ class InstantMessageDeliveryPlanFactory:
                     not_before_at=None,
                 )
             )
-        return tuple(drafts)
+        return DeliveryPlanCreationResult(
+            parts=tuple(drafts),
+            profile=active_policy.profile.value,
+            fallback_reason=split_result.fallback_reason,
+        )
+
+    def create_parts(
+        self,
+        reply_text: str,
+        policy: ChannelPresentationPolicy | None = None,
+    ) -> tuple[ChannelDeliveryPartDraft, ...]:
+        return self.create_plan(reply_text, policy).parts

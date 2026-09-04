@@ -1248,7 +1248,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if acknowledgement.status is ChannelDeliveryPartStatus.DELIVERED:
                 delay_after_ms = int(current_part["delay_after_ms"])
                 if delay_after_ms > 0:
-                    next_not_before = updated_at + timedelta(milliseconds=delay_after_ms)
+                    next_not_before = acknowledgement.acknowledged_at + timedelta(
+                        milliseconds=delay_after_ms
+                    )
                     next_ordinal = int(current_part["ordinal"]) + 1
                     await connection.execute(
                         """

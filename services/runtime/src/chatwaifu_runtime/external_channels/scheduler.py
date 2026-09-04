@@ -288,10 +288,10 @@ class ChannelDeliveryScheduler:
                     lease_id=lease_id,
                     status=ChannelDeliveryPartStatus.FAILED,
                     error=err,
-                    acknowledged_at=datetime.now(UTC),
+                    acknowledged_at=current_time,
                 )
                 ack_res = await self._repository.acknowledge_delivery_part(
-                    ack, updated_at=datetime.now(UTC)
+                    ack, updated_at=current_time
                 )
                 await self._handle_transition_result(ack_res)
                 continue
@@ -312,7 +312,7 @@ class ChannelDeliveryScheduler:
                     ),
                 )
 
-            post_time = datetime.now(UTC)
+            post_time = current_time
             if exec_result.outcome is DeliveryPartOutcome.DELIVERED:
                 ack = ChannelDeliveryPartAcknowledgement(
                     delivery_id=plan.delivery_id,

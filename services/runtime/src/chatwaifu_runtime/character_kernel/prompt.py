@@ -54,6 +54,7 @@ class PromptCompiler:
         history: tuple[ConversationHistoryEntry | tuple[str, str], ...],
         user_text: str,
         source_context: ConversationSourceContext | None = None,
+        presentation_profile: str | None = None,
     ) -> PromptCompilation:
         config = self._models.get("chat")
         total_budget = max(1024, config.context_window - 900)
@@ -121,7 +122,7 @@ class PromptCompiler:
             if summary:
                 context.append(("system", f"Earlier Conversation Summary:\n{_fit(summary, 700)}"))
 
-        if source_context is not None:
+        if presentation_profile == "instant_message":
             output_contract = (
                 "[OUTPUT CONTRACT]\n"
                 "Stay in character, answer the current user turn, and express the Response "

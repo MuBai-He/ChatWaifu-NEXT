@@ -97,7 +97,7 @@ class ChannelPresentationProfile(StrEnum):
 class ChannelPresentationPolicy(ChannelVersionedModel):
     """Provider-neutral cadence and bubble planning rules for channel outbound deliveries."""
 
-    profile: ChannelPresentationProfile = ChannelPresentationProfile.INSTANT_MESSAGE
+    profile: ChannelPresentationProfile = ChannelPresentationProfile.SINGLE_TEXT
     max_parts: int = Field(
         default=3,
         ge=1,

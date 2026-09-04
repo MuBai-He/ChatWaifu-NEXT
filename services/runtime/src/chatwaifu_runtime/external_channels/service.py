@@ -31,6 +31,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
     ChannelMessageKind,
+    ChannelPresentationProfile,
     ChannelProviderCapabilities,
     ChannelProviderRegistration,
     ChannelTurnCancelReceipt,
@@ -362,7 +363,17 @@ class ExternalChannelService:
             conversation_label=message.conversation_label,
             sender_display_name=message.sender_display_name,
         )
-        options = replace(EXTERNAL_TEXT_TURN_OPTIONS, source_context=source_context)
+        policy = connection.configuration.presentation_policy
+        profile = (
+            policy.profile.value
+            if policy is not None and hasattr(policy.profile, "value")
+            else (str(policy.profile) if policy is not None else None)
+        )
+        options = replace(
+            EXTERNAL_TEXT_TURN_OPTIONS,
+            source_context=source_context,
+            presentation_profile=profile,
+        )
         generation_admitted = False
         try:
             accepted = await self._conversation.submit_text(
@@ -1215,19 +1226,35 @@ class ExternalChannelService:
                     if connection and connection.configuration
                     else None
                 )
-                try:
-                    parts = self._delivery_plan_factory.create_parts(
-                        generation.output_text, policy=policy
-                    )
-                except TypeError:
-                    parts = self._delivery_plan_factory.create_parts(generation.output_text)
+                profile_name: str = (
+                    policy.profile.value
+                    if policy is not None
+                    else ChannelPresentationProfile.SINGLE_TEXT.value
+                )
+                fallback_reason: str | None = None
+                factory = self._delivery_plan_factory
+                if isinstance(
+                    factory, (SingleTextDeliveryPlanFactory, InstantMessageDeliveryPlanFactory)
+                ):
+                    plan_result = factory.create_plan(generation.output_text, policy=policy)
+                    parts = plan_result.parts
+                    profile_name = plan_result.profile
+                    fallback_reason = plan_result.fallback_reason
+                else:
+                    parts = factory.create_parts(generation.output_text, policy=policy)
+
+                delays = [p.delay_after_ms for p in parts]
+                chars_per_part: list[int] = [len(p.payload.text) for p in parts]
                 logger.info(
-                    "channel delivery plan created: delivery_id=%s part_count=%d "
-                    "chars_per_part=%s delays=%s",
+                    "channel delivery plan created: delivery_id=%s profile=%s part_count=%d "
+                    "chars_per_part=%s delays=%s total_delay_ms=%d fallback_reason=%s",
                     delivery_id,
+                    profile_name,
                     len(parts),
-                    [len(p.payload.text) for p in parts if hasattr(p.payload, "text")],
-                    [p.delay_after_ms for p in parts],
+                    chars_per_part,
+                    delays,
+                    sum(delays),
+                    fallback_reason,
                 )
                 turn_result = await self._repository.complete_turn(
                     turn.channel_turn_id,

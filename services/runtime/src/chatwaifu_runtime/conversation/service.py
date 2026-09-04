@@ -984,6 +984,7 @@ class ConversationService:
                 history=history,
                 user_text=user_text,
                 source_context=options.source_context,
+                presentation_profile=options.presentation_profile,
             )
             await self._emit_generic(
                 accepted,

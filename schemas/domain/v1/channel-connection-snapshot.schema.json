@@ -185,7 +185,7 @@
         },
         "profile": {
           "$ref": "#/$defs/ChannelPresentationProfile",
-          "default": "instant_message"
+          "default": "single_text"
         },
         "schema_version": {
           "const": "1.0",
