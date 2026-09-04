@@ -390,33 +390,124 @@ class CloudRealtimeCoordinator:
             case ProviderErrorEvent():
                 return event.error.session_id
 
+    async def _resolve_consistent_identities(
+        self,
+        *,
+        event_name: str,
+        generation_id: UUID | None = None,
+        provider_response_id: str | None = None,
+        provider_item_id: str | None = None,
+    ) -> UUID | None:
+        """Resolve only when every supplied provider identity agrees.
+
+        Each provided identity must independently point at a registered
+        binding; conflicting identities are dropped with a lineage_mismatch
+        instead of letting priority order silently reroute the event. A
+        brand-new item id is learned only when an explicit Runtime generation
+        anchors it. Never guesses the active or last generation.
+        """
+        resolved: dict[str, UUID] = {}
+        if generation_id is not None:
+            if not self._mirror.has_binding(generation_id):
+                await self._emit_unmapped_event(
+                    event_name=event_name,
+                    details={"generation_id": str(generation_id)},
+                )
+                return None
+            resolved["generation_id"] = generation_id
+        if provider_response_id is not None:
+            mapped_response = self._mirror.lookup_response_generation(provider_response_id)
+            if mapped_response is None:
+                anchor = resolved.get("generation_id")
+                if anchor is None:
+                    await self._emit_unmapped_event(
+                        event_name=event_name,
+                        details={"provider_response_id": str(provider_response_id)},
+                    )
+                    return None
+                # First sighting anchored by Runtime identity: learn it, unless
+                # the id is already owned elsewhere (immutable bindings).
+                if self._mirror.bind_provider_response(provider_response_id, anchor) is None:
+                    await self._emit_diagnostic(
+                        code="lineage_mismatch",
+                        message="Provider response id already bound elsewhere",
+                        details={
+                            "event": event_name,
+                            "provider_response_id": str(provider_response_id),
+                        },
+                    )
+                    return None
+                mapped_response = anchor
+            resolved["provider_response_id"] = mapped_response
+        if provider_item_id is not None:
+            mapped_item = self._mirror.lookup_item_generation(provider_item_id)
+            if mapped_item is None:
+                mapped_item = self._mirror.lookup_response_generation(provider_item_id)
+            if mapped_item is None:
+                anchor = resolved.get("generation_id")
+                if anchor is None:
+                    await self._emit_unmapped_event(
+                        event_name=event_name,
+                        details={"provider_item_id": str(provider_item_id)},
+                    )
+                    return None
+                if self._mirror.bind_provider_item(provider_item_id, anchor) is None:
+                    await self._emit_diagnostic(
+                        code="lineage_mismatch",
+                        message="Provider item id already bound elsewhere",
+                        details={
+                            "event": event_name,
+                            "provider_item_id": str(provider_item_id),
+                        },
+                    )
+                    return None
+                mapped_item = anchor
+            resolved["provider_item_id"] = mapped_item
+        if not resolved:
+            await self._emit_unmapped_event(event_name=event_name, details={})
+            return None
+        distinct = set(resolved.values())
+        if len(distinct) > 1:
+            await self._emit_diagnostic(
+                code="lineage_mismatch",
+                message="Conflicting provider identities for one event",
+                details={
+                    "event": event_name,
+                    **{name: str(gen) for name, gen in resolved.items()},
+                },
+            )
+            return None
+        return next(iter(distinct))
+
     async def _resolve_candidate_generation(
-        self, *, event_name: str, candidate: RealtimeTranscriptCandidate
+        self,
+        *,
+        event_name: str,
+        candidate: RealtimeTranscriptCandidate,
+        expected_role: str,
     ) -> UUID | None:
         """Strictly resolve a transcript candidate to a registered generation.
 
-        Never guesses the active or last generation. On success, learns the
-        provider item mapping from the authoritative Runtime identity so later
-        item-only candidates can resolve without guessing.
+        The candidate role must match the wrapping event; identity resolution
+        requires every supplied provider identity to agree.
         """
-        gen_id = self._mirror.resolve_generation_id(
+        if candidate.role != expected_role:
+            await self._emit_diagnostic(
+                code="lineage_mismatch",
+                message="Transcript candidate role does not match event",
+                details={
+                    "event": event_name,
+                    "candidate_role": str(candidate.role),
+                    "expected_role": expected_role,
+                },
+            )
+            return None
+        return await self._resolve_consistent_identities(
+            event_name=event_name,
             generation_id=candidate.generation_id,
             provider_response_id=candidate.provider_response_id,
             provider_item_id=candidate.provider_item_id,
         )
-        if gen_id is None:
-            await self._emit_unmapped_event(
-                event_name=event_name,
-                details={
-                    "generation_id": str(candidate.generation_id),
-                    "provider_item_id": str(candidate.provider_item_id),
-                    "provider_response_id": str(candidate.provider_response_id),
-                },
-            )
-            return None
-        if candidate.provider_item_id:
-            self._mirror.bind_provider_item(candidate.provider_item_id, gen_id)
-        return gen_id
 
     async def _resolve_candidate_turn(self, *, event_name: str, gen_id: UUID) -> UUID | None:
         turn_id = self._mirror.get_turn_id(gen_id)
@@ -455,6 +546,28 @@ class CloudRealtimeCoordinator:
             )
             return None
         return admitted
+
+    async def report_media_failure(self, code: str, error: Exception) -> None:
+        """Fail the active generation for a media-plane operation failure.
+
+        A failed send_audio/commit_input means the provider will never produce
+        the matching completion: the generation must leave RUNNING here rather
+        than stall the session. Retry/reconnect policy belongs to a later phase.
+        """
+        structured = StructuredError(
+            code=code,
+            message=f"Cloud realtime media operation failed: {error}",
+            retryable=False,
+            component="realtime.cloud",
+            details={"session_id": str(self.session_id), "error": str(error)},
+        )
+        await self.terminate_active_generation(
+            reason=f"{code}: {error}",
+            terminal="failed",
+            error=structured,
+        )
+        await self._domain_sink.provider_error(self.session_id, structured)
+        await self._domain_sink.session_degraded(self.session_id, code)
 
     async def cancel_generation(self, generation_id: UUID, reason: str = "cancelled") -> None:
         """Cancel a generation, invalidating it in the mirror and interrupting the provider."""
@@ -515,9 +628,10 @@ class CloudRealtimeCoordinator:
             )
             return
 
-        # 1. Event Deduplication
+        # 1. Event Deduplication. A None key means the event carries no
+        # replay identity and must always be processed (never content-deduped).
         event_key = self._compute_event_key(event)
-        if self._mirror.is_duplicate(event_key):
+        if event_key is not None and self._mirror.is_duplicate(event_key):
             _LOGGER.debug("Dropping duplicate realtime event: %s", event_key)
             return
 
@@ -542,28 +656,26 @@ class CloudRealtimeCoordinator:
                 await self._domain_sink.input_audio_committed(self.session_id, event.turn_id)
 
             case ResponseStartedEvent():
-                gen_id = self._mirror.resolve_generation_id(
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="ResponseStartedEvent",
                     generation_id=event.generation_id,
                     provider_response_id=event.provider_response_id,
                 )
                 if gen_id is None:
-                    await self._domain_sink.provider_error(
-                        self.session_id,
-                        StructuredError(
-                            code="unmapped_realtime_event",
-                            message="Cannot resolve generation_id for ResponseStartedEvent",
-                            retryable=False,
-                            component="realtime.cloud",
+                    return
+
+                if event.provider_response_id:
+                    bound = self._mirror.bind_provider_response(event.provider_response_id, gen_id)
+                    if bound is None:
+                        await self._emit_diagnostic(
+                            code="lineage_mismatch",
+                            message="Provider response id already bound elsewhere",
                             details={
                                 "event": "ResponseStartedEvent",
                                 "provider_response_id": str(event.provider_response_id),
                             },
-                        ),
-                    )
-                    return
-
-                if event.provider_response_id:
-                    self._mirror.bind_provider_response(event.provider_response_id, gen_id)
+                        )
+                        return
 
                 if self._mirror.is_tombstoned(gen_id):
                     _LOGGER.debug(
@@ -571,24 +683,18 @@ class CloudRealtimeCoordinator:
                     )
                     return
 
-                turn_id = self._mirror.get_turn_id(gen_id)
+                turn_id = await self._resolve_candidate_turn(
+                    event_name="ResponseStartedEvent", gen_id=gen_id
+                )
                 if turn_id is None:
-                    await self._domain_sink.provider_error(
-                        self.session_id,
-                        StructuredError(
-                            code="unmapped_realtime_event",
-                            message="Cannot resolve turn_id for ResponseStartedEvent",
-                            retryable=False,
-                            component="realtime.cloud",
-                            details={"generation_id": str(gen_id)},
-                        ),
-                    )
                     return
                 await self._domain_sink.response_started(self.session_id, turn_id, gen_id)
 
             case OutputAudioEvent():
                 frame = event.frame
-                gen_id = self._mirror.resolve_generation_id(generation_id=frame.generation_id)
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="OutputAudioEvent", generation_id=frame.generation_id
+                )
                 if (
                     gen_id is None
                     or self._mirror.is_tombstoned(gen_id)
@@ -617,7 +723,9 @@ class CloudRealtimeCoordinator:
             case AssistantTranscriptEvent():
                 candidate = event.candidate
                 gen_id = await self._resolve_candidate_generation(
-                    event_name="AssistantTranscriptEvent", candidate=candidate
+                    event_name="AssistantTranscriptEvent",
+                    candidate=candidate,
+                    expected_role="assistant",
                 )
                 if gen_id is None:
                     return
@@ -659,7 +767,9 @@ class CloudRealtimeCoordinator:
             case UserTranscriptEvent():
                 candidate = event.candidate
                 gen_id = await self._resolve_candidate_generation(
-                    event_name="UserTranscriptEvent", candidate=candidate
+                    event_name="UserTranscriptEvent",
+                    candidate=candidate,
+                    expected_role="user",
                 )
                 if gen_id is None:
                     return
@@ -696,7 +806,8 @@ class CloudRealtimeCoordinator:
                     )
 
             case ResponseCompletedEvent():
-                gen_id = self._mirror.resolve_generation_id(
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="ResponseCompletedEvent",
                     generation_id=event.generation_id,
                     provider_response_id=event.provider_response_id,
                 )
@@ -705,36 +816,17 @@ class CloudRealtimeCoordinator:
                     or self._mirror.is_tombstoned(gen_id)
                     or not self._mirror.is_active(gen_id)
                 ):
-                    if gen_id is None:
-                        await self._domain_sink.provider_error(
-                            self.session_id,
-                            StructuredError(
-                                code="unmapped_realtime_event",
-                                message="Cannot resolve generation_id for ResponseCompletedEvent",
-                                retryable=False,
-                                component="realtime.cloud",
-                                details={"event": "ResponseCompletedEvent"},
-                            ),
-                        )
-                    else:
+                    if gen_id is not None:
                         _LOGGER.debug(
                             "Dropping late ResponseCompletedEvent for generation %s",
                             gen_id,
                         )
                     return
 
-                turn_id = self._mirror.get_turn_id(gen_id)
+                turn_id = await self._resolve_candidate_turn(
+                    event_name="ResponseCompletedEvent", gen_id=gen_id
+                )
                 if turn_id is None:
-                    await self._domain_sink.provider_error(
-                        self.session_id,
-                        StructuredError(
-                            code="unmapped_realtime_event",
-                            message="Cannot resolve turn_id for ResponseCompletedEvent",
-                            retryable=False,
-                            component="realtime.cloud",
-                            details={"generation_id": str(gen_id)},
-                        ),
-                    )
                     return
 
                 text = self._mirror.get_completed_text(gen_id, event.final_text)
@@ -746,21 +838,17 @@ class CloudRealtimeCoordinator:
                     )
 
             case ResponseCancelledEvent():
-                gen_id = self._mirror.resolve_generation_id(
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="ResponseCancelledEvent",
                     generation_id=event.generation_id,
                     provider_response_id=event.provider_response_id,
                 )
                 if gen_id is None:
-                    await self._emit_unmapped_event(
-                        event_name="ResponseCancelledEvent",
-                        details={
-                            "generation_id": str(event.generation_id),
-                            "provider_response_id": str(event.provider_response_id),
-                        },
-                    )
                     return
                 was_tombstoned = self._mirror.is_tombstoned(gen_id)
-                turn_id = self._mirror.get_turn_id(gen_id)
+                turn_id = await self._resolve_candidate_turn(
+                    event_name="ResponseCancelledEvent", gen_id=gen_id
+                )
                 self._mirror.cancel_generation(gen_id)
                 if not was_tombstoned and turn_id is not None:
                     await self._domain_sink.response_cancelled(
@@ -768,25 +856,20 @@ class CloudRealtimeCoordinator:
                     )
 
             case UsageRecordedEvent():
-                gen_id = self._mirror.resolve_generation_id(
+                if event.usage.generation_id is None:
+                    # Session-level usage carries no generation identity and
+                    # must never be attributed to the last generation.
+                    return
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="UsageRecordedEvent",
                     generation_id=event.usage.generation_id,
                 )
                 if gen_id is None:
-                    # Session-level usage without an active generation is
-                    # dropped silently; an explicit but unknown generation is
-                    # reported so misrouted usage cannot collide silently.
-                    if event.usage.generation_id is not None:
-                        await self._emit_unmapped_event(
-                            event_name="UsageRecordedEvent",
-                            details={"generation_id": str(event.usage.generation_id)},
-                        )
                     return
-                turn_id = self._mirror.get_turn_id(gen_id)
+                turn_id = await self._resolve_candidate_turn(
+                    event_name="UsageRecordedEvent", gen_id=gen_id
+                )
                 if turn_id is None:
-                    await self._emit_unmapped_event(
-                        event_name="UsageRecordedEvent",
-                        details={"generation_id": str(gen_id)},
-                    )
                     return
                 await self._domain_sink.usage_recorded(
                     self.session_id, turn_id, gen_id, event.usage
@@ -798,18 +881,20 @@ class CloudRealtimeCoordinator:
                     # Generation-scoped errors fail only their own registered
                     # generation. Late, tombstoned, or unknown errors must
                     # never fall through to the current active generation.
-                    gen_id = self._mirror.resolve_generation_id(
+                    gen_id = await self._resolve_consistent_identities(
+                        event_name="ProviderErrorEvent",
                         generation_id=error.generation_id,
                     )
                     if gen_id is None or self._mirror.is_tombstoned(gen_id):
-                        await self._emit_unmapped_event(
-                            event_name="ProviderErrorEvent",
-                            details={
-                                "generation_id": str(error.generation_id),
-                                "provider_code": error.code,
-                                "reason": "unknown_or_tombstoned",
-                            },
-                        )
+                        if gen_id is not None:
+                            await self._emit_unmapped_event(
+                                event_name="ProviderErrorEvent",
+                                details={
+                                    "generation_id": str(error.generation_id),
+                                    "provider_code": error.code,
+                                    "reason": "tombstoned",
+                                },
+                            )
                         return
                     turn_id = await self._resolve_candidate_turn(
                         event_name="ProviderErrorEvent", gen_id=gen_id
@@ -840,7 +925,7 @@ class CloudRealtimeCoordinator:
                     self.session_id, f"provider_error.{error.code}"
                 )
 
-    def _compute_event_key(self, event: RealtimeProviderEvent) -> str:
+    def _compute_event_key(self, event: RealtimeProviderEvent) -> str | None:
         if event.event_id:
             return f"id:{event.event_id}"
         match event:
@@ -854,9 +939,19 @@ class CloudRealtimeCoordinator:
                 return f"commit:{event.session_id}:{event.turn_id}"
             case UserTranscriptEvent():
                 c = event.candidate
+                if c.phase == "final":
+                    return (
+                        f"usr_fin:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                        f"{c.provider_response_id}:{c.revision}:{c.text}"
+                    )
+                if c.provider_sequence is not None:
+                    return (
+                        f"usr_dseq:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                        f"{c.provider_response_id}:{c.provider_sequence}"
+                    )
                 return (
-                    f"usr_tx:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
-                    f"{c.provider_response_id}:{c.phase}:{c.revision}:{c.text}"
+                    f"usr_dlt:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                    f"{c.provider_response_id}:{c.revision}:{c.text}"
                 )
             case ResponseStartedEvent():
                 return f"resp_start:{event.generation_id}:{event.provider_response_id}"
@@ -865,10 +960,20 @@ class CloudRealtimeCoordinator:
                 return f"audio:{f.session_id}:{f.generation_id}:{f.sequence}"
             case AssistantTranscriptEvent():
                 c = event.candidate
-                return (
-                    f"ast_tx:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
-                    f"{c.provider_response_id}:{c.phase}:{c.revision}:{c.text}"
-                )
+                if c.phase == "final":
+                    return (
+                        f"ast_fin:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                        f"{c.provider_response_id}:{c.revision}:{c.text}"
+                    )
+                if c.provider_sequence is not None:
+                    return (
+                        f"ast_dseq:{c.session_id}:{c.generation_id}:{c.provider_item_id}:"
+                        f"{c.provider_response_id}:{c.provider_sequence}"
+                    )
+                # Streaming deltas without replay identity must never be
+                # content-deduped: identical consecutive fragments ("哈","哈")
+                # are legitimate stream output, not replays.
+                return None
             case ResponseCompletedEvent():
                 return f"resp_comp:{event.generation_id}:{event.provider_response_id}"
             case ResponseCancelledEvent():

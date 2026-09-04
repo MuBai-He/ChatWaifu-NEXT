@@ -202,6 +202,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         utterance_id: UUID | None = None,
         provider_item_id: str | None = None,
         provider_response_id: str | None = None,
+        provider_sequence: int | None = None,
     ) -> None:
         self.inject_event(
             UserTranscriptEvent(
@@ -216,6 +217,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     utterance_id=utterance_id,
                     provider_item_id=provider_item_id,
                     provider_response_id=provider_response_id,
+                    provider_sequence=provider_sequence,
                 ),
                 event_id=event_id,
             )
@@ -260,6 +262,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         utterance_id: UUID | None = None,
         provider_item_id: str | None = None,
         provider_response_id: str | None = None,
+        provider_sequence: int | None = None,
     ) -> None:
         self.inject_event(
             AssistantTranscriptEvent(
@@ -273,6 +276,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
                     utterance_id=utterance_id,
                     provider_item_id=provider_item_id,
                     provider_response_id=provider_response_id,
+                    provider_sequence=provider_sequence,
                 ),
                 event_id=event_id,
             )

@@ -136,22 +136,44 @@ class RealtimeSessionMirror:
                 self._response_to_generation.popitem(last=False)
         return binding
 
+    def lookup_response_generation(self, provider_response_id: str) -> UUID | None:
+        """Return the registered generation for a response id, if still bound."""
+        mapped = self._response_to_generation.get(provider_response_id)
+        if mapped is not None and mapped in self._bindings:
+            return mapped
+        return None
+
+    def lookup_item_generation(self, provider_item_id: str) -> UUID | None:
+        """Return the registered generation for an item id, if still bound."""
+        mapped = self._item_to_generation.get(provider_item_id)
+        if mapped is not None and mapped in self._bindings:
+            return mapped
+        return None
+
     def bind_provider_response(
         self,
         provider_response_id: str,
         generation_id: UUID | None = None,
     ) -> GenerationBinding | None:
-        """Associate an opaque provider response id with a runtime generation."""
-        target_gen_id = generation_id or self._active_generation_id or self._last_generation_id
-        if target_gen_id is None:
+        """Associate an opaque provider response id with a runtime generation.
+
+        Bindings are immutable: rebinding an id that already points at a
+        different generation is refused (returns None) instead of silently
+        rerouting late events. Rebinding to the same generation is idempotent.
+        """
+        if generation_id is None:
             return None
 
-        binding = self._bindings.get(target_gen_id)
+        binding = self._bindings.get(generation_id)
         if binding is None:
             return None
 
+        existing = self._response_to_generation.get(provider_response_id)
+        if existing is not None and existing != generation_id:
+            return None
+
         binding.provider_response_id = provider_response_id
-        self._response_to_generation[provider_response_id] = target_gen_id
+        self._response_to_generation[provider_response_id] = generation_id
         if len(self._response_to_generation) > self._max_responses:
             self._response_to_generation.popitem(last=False)
         return binding
@@ -187,9 +209,13 @@ class RealtimeSessionMirror:
         Item ids live in a different provider namespace than response ids and
         are recorded only against an explicitly registered binding, typically
         learned from a candidate that already carries Runtime identity.
+        Like response bindings, item bindings are immutable once set.
         """
         binding = self._bindings.get(generation_id)
         if binding is None:
+            return None
+        existing = self._item_to_generation.get(provider_item_id)
+        if existing is not None and existing != generation_id:
             return None
         self._item_to_generation[provider_item_id] = generation_id
         if len(self._item_to_generation) > self._max_items:

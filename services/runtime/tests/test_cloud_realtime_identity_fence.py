@@ -18,9 +18,10 @@ E. Completion, cancel, failure, and runtime stop all reuse the admission-time
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -31,6 +32,7 @@ from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.conversation.models import GenerationAccepted
 from chatwaifu_runtime.conversation.service import _ActiveGeneration
 from chatwaifu_runtime.realtime.cloud.contracts import (
+    AssistantTranscriptEvent,
     OutputAudioEvent,
     ProviderErrorEvent,
     RealtimeOutputAudioFrame,
@@ -49,7 +51,12 @@ from chatwaifu_runtime.realtime.cloud.coordinator import (
 )
 from chatwaifu_runtime.realtime.cloud.fake import FakeCloudRealtimeSession
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
-from pipecat.frames.frames import StartFrame, VADUserStartedSpeakingFrame
+from pipecat.frames.frames import (
+    InputAudioRawFrame,
+    StartFrame,
+    VADUserStartedSpeakingFrame,
+    VADUserStoppedSpeakingFrame,
+)
 from pipecat.processors.frame_processor import FrameDirection
 
 
@@ -723,6 +730,272 @@ async def test_repository_rejects_generation_turn_mismatch(tmp_path: Path) -> No
             (str(session.session_id),),
         )
         assert user_events == []
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_identical_assistant_deltas_without_sequence_both_processed() -> None:
+    """Blocking 1: two identical '哈' deltas are stream output, not replays."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    for _ in range(2):
+        await coordinator.dispatch_event(
+            AssistantTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session_id,
+                    generation_id=gen_a,
+                    role="assistant",
+                    phase="delta",
+                    text="哈",
+                    source="provider",
+                )
+            )
+        )
+
+    assert len(sink.transcript_deltas) == 2
+    assert mirror.get_accumulated_text(gen_a) == "哈哈"
+
+
+@pytest.mark.asyncio
+async def test_replayed_sequence_delta_processed_once() -> None:
+    """Blocking 1: same provider_sequence replays dedupe; next sequence applies."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    async def send_delta(text: str, sequence: int) -> None:
+        await coordinator.dispatch_event(
+            AssistantTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session_id,
+                    generation_id=gen_a,
+                    role="assistant",
+                    phase="delta",
+                    text=text,
+                    source="provider",
+                    provider_sequence=sequence,
+                )
+            )
+        )
+
+    await send_delta("哈", 7)
+    await send_delta("哈", 7)
+    assert len(sink.transcript_deltas) == 1
+    await send_delta("哈", 8)
+    assert len(sink.transcript_deltas) == 2
+    assert mirror.get_accumulated_text(gen_a) == "哈哈"
+
+
+@pytest.mark.asyncio
+async def test_conflicting_provider_identities_rejected() -> None:
+    """Blocking 3: a response id bound to A must not reroute to B silently."""
+    session_id = uuid4()
+    coordinator, sink, mirror = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    turn_b, gen_b = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    await coordinator.dispatch_event(
+        ResponseStartedEvent(
+            session_id=session_id, generation_id=gen_a, provider_response_id="resp-1"
+        )
+    )
+    assert len(sink.responses_started) == 1
+
+    # Item-level learning happens while A is still the active generation.
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_a,
+                role="assistant",
+                phase="delta",
+                text="首句",
+                source="provider",
+                provider_item_id="item-1",
+            )
+        )
+    )
+    assert len(sink.transcript_deltas) == 1
+
+    coordinator.admit_turn(turn_b, gen_b, uuid4())
+    await coordinator.dispatch_event(
+        ResponseStartedEvent(
+            session_id=session_id, generation_id=gen_b, provider_response_id="resp-1"
+        )
+    )
+    assert len(sink.responses_started) == 1
+    mismatch = [e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]
+    assert len(mismatch) == 1
+    assert mirror.lookup_response_generation("resp-1") == gen_a
+
+    # Item-level conflict behaves the same way.
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_b,
+                role="assistant",
+                phase="delta",
+                text="错位句",
+                source="provider",
+                provider_item_id="item-1",
+            )
+        )
+    )
+    assert len(sink.transcript_deltas) == 1
+    assert len([e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_transcript_role_mismatch_rejected() -> None:
+    """Blocking 3: candidate role must match the wrapping transcript event."""
+    session_id = uuid4()
+    coordinator, sink, _ = _build_coordinator(session_id)
+    turn_a, gen_a = uuid4(), uuid4()
+    coordinator.admit_turn(turn_a, gen_a, uuid4())
+
+    await coordinator.dispatch_event(
+        UserTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_a,
+                role="assistant",
+                phase="final",
+                text="角色错位",
+                source="provider",
+            )
+        )
+    )
+    await coordinator.dispatch_event(
+        AssistantTranscriptEvent(
+            candidate=RealtimeTranscriptCandidate(
+                session_id=session_id,
+                generation_id=gen_a,
+                role="user",
+                phase="delta",
+                text="角色错位",
+                source="provider",
+            )
+        )
+    )
+
+    assert sink.transcript_finals == []
+    assert sink.transcript_deltas == []
+    assert len([e for _, e in sink.provider_errors if e.code == "lineage_mismatch"]) == 2
+
+
+def test_provider_bindings_refuse_silent_rebind() -> None:
+    """Blocking 3: response/item bindings are immutable once set."""
+    session_id = uuid4()
+    mirror = RealtimeSessionMirror(session_id, backend_id="fake")
+    gen_a, gen_b = uuid4(), uuid4()
+    mirror.register_generation(gen_a, uuid4())
+    mirror.register_generation(gen_b, uuid4())
+
+    assert mirror.bind_provider_response("resp-x", gen_a) is not None
+    assert mirror.bind_provider_response("resp-x", gen_b) is None
+    assert mirror.lookup_response_generation("resp-x") == gen_a
+    assert mirror.bind_provider_response("resp-x", gen_a) is not None
+
+    assert mirror.bind_provider_item("item-x", gen_a) is not None
+    assert mirror.bind_provider_item("item-x", gen_b) is None
+    assert mirror.lookup_item_generation("item-x") == gen_a
+
+
+@pytest.mark.asyncio
+async def test_send_audio_failure_fails_generation_and_idles_session(
+    tmp_path: Path,
+) -> None:
+    """Blocking 2: a send_audio fault must not leave a RUNNING generation behind."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+
+        fake_session = bridge.coordinator.session
+        with patch.object(
+            fake_session, "send_audio", new=AsyncMock(side_effect=RuntimeError("uplink down"))
+        ):
+            await bridge.process_frame(
+                InputAudioRawFrame(audio=b"\x01\x00" * 160, sample_rate=16_000, num_channels=1),
+                FrameDirection.DOWNSTREAM,
+            )
+            await asyncio.wait_for(bridge._input_queue.join(), timeout=5)
+
+        gen_row = await container.database.fetchone(
+            "SELECT state FROM generations WHERE generation_id = ?",
+            (str(identity.generation_id),),
+        )
+        assert gen_row is not None
+        assert gen_row["state"] == "failed"
+        sess_row = await container.database.fetchone(
+            "SELECT conversation_state FROM sessions WHERE session_id = ?",
+            (str(session.session_id),),
+        )
+        assert sess_row is not None
+        assert sess_row["conversation_state"] == "idle"
+        fail_events = await container.database.fetchall(
+            "SELECT envelope_json FROM events "
+            "WHERE session_id = ? AND event_type = 'system.error_raised'",
+            (str(session.session_id),),
+        )
+        assert len(fail_events) == 1
+        fail_envelope = json.loads(str(fail_events[0]["envelope_json"]))
+        assert fail_envelope.get("generation_id") == str(identity.generation_id)
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_commit_input_failure_fails_generation_and_idles_session(
+    tmp_path: Path,
+) -> None:
+    """Blocking 2: a commit_input fault fails fast instead of awaiting completion."""
+    settings = create_cloud_settings(tmp_path)
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+
+        fake_session = bridge.coordinator.session
+        with patch.object(
+            fake_session,
+            "commit_input",
+            new=AsyncMock(side_effect=RuntimeError("commit down")),
+        ):
+            await bridge.process_frame(VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+
+        gen_row = await container.database.fetchone(
+            "SELECT state FROM generations WHERE generation_id = ?",
+            (str(identity.generation_id),),
+        )
+        assert gen_row is not None
+        assert gen_row["state"] == "failed"
+        sess_row = await container.database.fetchone(
+            "SELECT conversation_state FROM sessions WHERE session_id = ?",
+            (str(session.session_id),),
+        )
+        assert sess_row is not None
+        assert sess_row["conversation_state"] == "idle"
     finally:
         await container.stop()
 

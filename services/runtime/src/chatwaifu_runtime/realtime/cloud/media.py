@@ -85,6 +85,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._send_task: asyncio.Task[None] | None = None
         self._started: bool = False
         self._is_torn_down: bool = False
+        self._media_failure_reported: bool = False
 
         # Register self as media sink in coordinator
         self._coordinator.set_media_sink(self)
@@ -257,15 +258,49 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 identity.turn_id,
             )
 
-    async def _handle_user_speaking_stopped(self) -> None:
-        try:
-            await self._coordinator.session.commit_input()
-        except Exception:
+    async def _fail_active_media_operation(self, code: str, error: Exception) -> None:
+        """Route a media-plane failure into a terminal generation transition.
+
+        Runs the full failure sequence once; later failures only log, so a
+        dead session cannot spam terminal events per queued frame. The cloud
+        session is closed so no completion will ever arrive for the failed
+        generation.
+        """
+        if self._media_failure_reported:
             _LOGGER.debug(
-                "Error committing input on session %s (may be unsupported by backend)",
+                "Ignoring repeated media failure %s for session %s",
+                code,
+                self.session_id,
+            )
+            return
+        self._media_failure_reported = True
+        try:
+            await self._coordinator.report_media_failure(code, error)
+        except Exception:
+            _LOGGER.warning(
+                "Error reporting media failure for session %s",
                 self.session_id,
                 exc_info=True,
             )
+        try:
+            await self._coordinator.session.close()
+        except Exception:
+            _LOGGER.debug(
+                "Error closing cloud session %s after media failure",
+                self.session_id,
+                exc_info=True,
+            )
+
+    async def _handle_user_speaking_stopped(self) -> None:
+        try:
+            await self._coordinator.session.commit_input()
+        except Exception as error:
+            _LOGGER.warning(
+                "Error committing input on session %s",
+                self.session_id,
+                exc_info=True,
+            )
+            await self._fail_active_media_operation("media_commit_failed", error)
 
     async def _send_audio_loop(self) -> None:
         try:
@@ -275,12 +310,13 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                     await self._coordinator.session.send_audio(frame)
                 except asyncio.CancelledError:
                     raise
-                except Exception:
+                except Exception as error:
                     _LOGGER.warning(
                         "Error sending audio frame to cloud session %s",
                         self.session_id,
                         exc_info=True,
                     )
+                    await self._fail_active_media_operation("media_send_failed", error)
                 finally:
                     self._input_queue.task_done()
         except asyncio.CancelledError:
