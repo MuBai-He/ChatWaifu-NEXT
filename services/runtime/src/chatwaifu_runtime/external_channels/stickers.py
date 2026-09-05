@@ -281,8 +281,8 @@ class PresetStickerCatalog:
         if plan is None:
             return None
 
-        # Neutral expression defaults to no sticker
-        if plan.expression == "neutral":
+        # Neutral expression or generic answer intent defaults to no sticker
+        if plan.expression == "neutral" or plan.intent == "answer":
             return None
 
         manifest = self.load_manifest()

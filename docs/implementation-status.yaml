@@ -550,7 +550,10 @@ phases:
       - Three original generated kitten presets, opt-in settings, generation-anchored ResponsePlan matching, immutable image payloads, and bounded native iLink encrypted upload/send are implemented
       - Optional final image waits for terminal delivery, preserves delivered text on image failure, and retains cancellation, replay, and restart identities
       - 617 Python tests and 181 Web tests passed locally; 34 protocol tests, type checks, lint, Web and desktop builds, and 2 desktop E2E tests passed; wheel assets match the manifest hashes
-      - Real WeChat image-delivery acceptance and installed-platform packaging acceptance remain pending
+      - On 2026-09-05 at 18:50 China time, a real WeChat text reply was followed by the expected shy kitten image; both were delivered once and visually observed
+      - At 19:03, new ingress cancelled the old shy image before its send deadline; the stop reply incorrectly added a new happy image because generic answer intent inherited positive affect
+      - Selector now excludes generic answer intent; a failing-then-passing real Character/SQLite/scheduler regression verifies old-image cancellation and no new image for the stop reply, with 22 focused tests passing
+      - Real WeChat reacceptance of the stop-reply fix and installed-platform packaging acceptance remain pending
   - id: 17.3
     name: inbound-images-and-dynamic-sticker-learning
     status: not_started

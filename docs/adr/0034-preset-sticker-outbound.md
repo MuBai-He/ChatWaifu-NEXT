@@ -15,7 +15,8 @@ A sticker must not require a second model agent, a new conversation turn, or par
 Use an opt-in channel presentation policy and a local versioned preset catalog. Select at most one
 image from the exact generation's durable structured Character ResponsePlan. Unmatched plans,
 technical bypass, unsupported provider capabilities, and invalid or missing catalog assets fall back
-to text. The initial generated cat artwork is a small test preset pack for the default character.
+to text. Generic `answer` intent also falls back to text even when persisted affect yields a happy
+expression; background mood alone is not an intentional sticker reaction. The initial generated cat artwork is a small test preset pack for the default character.
 
 Store a typed image part containing a stable asset identifier, content hash, and MIME type. Resolve
 only catalog-owned bounded local files; never accept arbitrary paths, remote asset URLs, or model

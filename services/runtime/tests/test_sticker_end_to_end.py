@@ -165,3 +165,106 @@ async def test_character_plan_to_catalog_to_durable_image_send(
         assert await container.conversation_repository.generation_response_plan(uuid4()) is None
     finally:
         await container.stop()
+
+
+async def test_stop_cancels_old_image_without_decorating_new_answer(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _ImageTransport()
+    management = ChannelManagementService(
+        container.external_channels,
+        container.external_channel_repository,
+        store,
+        transport,
+    )
+    container.channel_management = management
+    text_acks: asyncio.Queue[DeliveryTransitionResult] = asyncio.Queue()
+    original_ack = container.external_channel_repository.acknowledge_delivery_part
+
+    async def observe_ack(
+        acknowledgement: ChannelDeliveryPartAcknowledgement,
+        *,
+        updated_at: datetime,
+    ) -> DeliveryTransitionResult:
+        result = await original_ack(acknowledgement, updated_at=updated_at)
+        if result.part is not None and result.part.ordinal == 0:
+            text_acks.put_nowait(result)
+        return result
+
+    monkeypatch.setattr(
+        container.external_channel_repository, "acknowledge_delivery_part", observe_ack
+    )
+    await container.start()
+    try:
+        # Reproduce carried-over positive affect through the real Character service.
+        warmup = await container.sessions.create_session("default")
+        await container.character_kernel.observe_user_turn(
+            session_id=warmup.session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            character_id="default",
+            text="今天很开心",
+        )
+        connection_id = uuid4()
+        config = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+                    stickers_enabled=True,
+                    min_delay_ms=8000,
+                    max_delay_ms=8000,
+                    total_cadence_delay_ceiling_ms=16000,
+                ),
+            }
+        )
+        created = await container.external_channels.create_connection(config, access_token="g" * 43)
+        await store.set(f"weixin_ilink:{connection_id}", _credentials("g" * 43).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+        for message_id, text in [("affection", "喜欢你，摸摸头"), ("stop", "停一下")]:
+            await transport.updates.put(
+                WeixinUpdates(
+                    cursor=message_id,
+                    messages=(
+                        WeixinInboundText(
+                            external_message_id=message_id,
+                            sender_user_id="owner-1",
+                            recipient_bot_id="bot-1",
+                            text=text,
+                            context_token=message_id,
+                            received_at=datetime.now(UTC),
+                        ),
+                    ),
+                )
+            )
+            result = await asyncio.wait_for(text_acks.get(), timeout=5)
+            if message_id == "affection":
+                assert len(result.plan.parts) == 2
+                assert result.plan.parts[1].status is ChannelDeliveryPartStatus.PENDING
+            else:
+                assert len(result.plan.parts) == 1
+                assert result.plan.status is ChannelDeliveryStatus.DELIVERED
+        old_turn = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "affection"
+        )
+        assert old_turn is not None and old_turn.delivery_id is not None
+        old_plan = await container.external_channel_repository.get_delivery_plan(
+            old_turn.delivery_id
+        )
+        assert old_plan is not None
+        assert old_plan.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
+        assert old_plan.parts[1].status is ChannelDeliveryPartStatus.CANCELLED
+        stop_turn = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "stop"
+        )
+        assert stop_turn is not None
+        stop_plan = await container.conversation_repository.generation_response_plan(
+            stop_turn.generation_id
+        )
+        assert stop_plan is not None
+        assert stop_plan.intent == "answer" and stop_plan.expression == "happy"
+        assert not transport.images
+    finally:
+        await container.stop()

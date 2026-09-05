@@ -127,3 +127,46 @@ def test_catalog_rejects_symlink(tmp_path: Path) -> None:
     (tmp_path / "happy.png").rename(tmp_path / "target.png")
     (tmp_path / "happy.png").symlink_to(tmp_path / "target.png")
     assert not catalog.load_manifest()
+
+
+@pytest.mark.parametrize("text", ["好的，我不动了", "好呀"])
+def test_answer_intent_with_happy_expression_yields_no_image(tmp_path: Path, text: str) -> None:
+    catalog = _catalog(tmp_path)
+    assert (
+        catalog.match_sticker(
+            ResponsePlan(intent="answer", tone="gentle", expression="happy", rationale="test")
+        )
+        is None
+    )
+    assert (
+        catalog.match_sticker(
+            ResponsePlan(intent="celebrate", tone="gentle", expression="happy", rationale="test")
+        )
+        is not None
+    )
+
+    factory = InstantMessageDeliveryPlanFactory(sticker_catalog=catalog)
+    policy = ChannelPresentationPolicy(
+        profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+        stickers_enabled=True,
+    )
+    answer_parts = factory.create_parts(
+        text,
+        policy,
+        response_plan=ResponsePlan(
+            intent="answer", tone="gentle", expression="happy", rationale="test"
+        ),
+        can_send_sticker=True,
+    )
+    assert len(answer_parts) == 1
+
+    celebrate_parts = factory.create_parts(
+        text,
+        policy,
+        response_plan=ResponsePlan(
+            intent="celebrate", tone="gentle", expression="happy", rationale="test"
+        ),
+        can_send_sticker=True,
+    )
+    assert len(celebrate_parts) == 2
+    assert isinstance(celebrate_parts[-1].payload, ChannelImageDeliveryPartPayload)
