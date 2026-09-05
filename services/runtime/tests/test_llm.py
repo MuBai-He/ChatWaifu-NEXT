@@ -1,6 +1,9 @@
 """Real LLM adapter context and structured tool-call regression tests."""
 
+import asyncio
 import json
+import logging
+from collections.abc import AsyncIterator
 from typing import cast
 from uuid import uuid4
 
@@ -505,3 +508,273 @@ async def test_openai_explicit_tool_unsupported_error_fails_without_text_fallbac
     assert len(requests) == 1
     assert "tools" in requests[0]
     assert requests[0]["tool_choice"] == "required"
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_retries_503_then_succeeds(caplog: pytest.LogCaptureFixture) -> None:
+    calls = 0
+    generation_id = uuid4()
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx2.Response(503, json={"error": "service unavailable"})
+        return _sse_response(
+            {"choices": [{"delta": {"content": "恢复成功。"}, "finish_reason": "stop"}]}
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key="test-secret-key",
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=generation_id, user_text="你好", system_prompt="test")
+
+    with caplog.at_level(logging.WARNING):
+        events = await _events(provider, request)
+
+    assert calls == 2
+    assert events == [LlmTextDelta("恢复成功。"), LlmResponseCompleted("stop")]
+    retry_records = [r for r in caplog.records if "OpenAI-compatible LLM retry" in r.message]
+    assert len(retry_records) == 1
+    assert f"generation={generation_id}" in retry_records[0].message
+    assert "attempt=1" in retry_records[0].message
+    assert "reason=http_503" in retry_records[0].message
+    assert "test-secret-key" not in retry_records[0].message
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_retries_exhausted_after_3_attempts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    calls = 0
+    generation_id = uuid4()
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        return httpx2.Response(503, json={"error": "service unavailable"})
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=generation_id, user_text="你好", system_prompt="test")
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(httpx2.HTTPStatusError) as exc_info:
+            await _events(provider, request)
+
+    assert exc_info.value.response.status_code == 503
+    assert calls == 3
+    retry_records = [r for r in caplog.records if "OpenAI-compatible LLM retry" in r.message]
+    assert len(retry_records) == 3
+    assert "attempt=1" in retry_records[0].message
+    assert "attempt=2" in retry_records[1].message
+    assert "exhausted" in retry_records[2].message
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_code", [401, 403])
+async def test_openai_stream_auth_error_does_not_retry(
+    status_code: int, caplog: pytest.LogCaptureFixture
+) -> None:
+    calls = 0
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        return httpx2.Response(status_code, json={"error": "unauthorized"})
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key="bad-token",
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(httpx2.HTTPStatusError) as exc_info:
+            await _events(provider, request)
+
+    assert exc_info.value.response.status_code == status_code
+    assert calls == 1
+    retry_records = [r for r in caplog.records if "OpenAI-compatible LLM retry" in r.message]
+    assert len(retry_records) == 0
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_partial_output_does_not_retry() -> None:
+    calls = 0
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+
+        async def body() -> AsyncIterator[bytes]:
+            yield b'data: {"choices":[{"delta":{"content":"\xe4\xbd\xa0\xe5\xa5\xbd"}}]}\n\n'
+            raise httpx2.ReadError("connection broken during stream")
+
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=body(),
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+
+    received_events: list[object] = []
+    with pytest.raises(httpx2.ReadError):
+        async for event in provider.stream(request):
+            received_events.append(event)
+
+    assert received_events == [LlmTextDelta("你好")]
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_cancellation_during_backoff() -> None:
+    calls = 0
+    backoff_entered = asyncio.Event()
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        return httpx2.Response(503, json={"error": "service unavailable"})
+
+    async def controllable_sleeper(_delay: float) -> None:
+        backoff_entered.set()
+        await asyncio.Event().wait()
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        sleeper=controllable_sleeper,
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+
+    task = asyncio.create_task(_events(provider, request))
+    await backoff_entered.wait()
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_cancellation_during_request() -> None:
+    request_entered = asyncio.Event()
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        request_entered.set()
+        await asyncio.Event().wait()
+        return httpx2.Response(200)
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+
+    task = asyncio.create_task(_events(provider, request))
+    await request_entered.wait()
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_bounds_total_budget_not_per_attempt_multiplication(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_timeouts: list[float] = []
+    clock = 100.0
+    monkeypatch.setattr("chatwaifu_runtime.providers.openai_compatible.monotonic", lambda: clock)
+
+    async def handler(req: httpx2.Request) -> httpx2.Response:
+        nonlocal clock
+        observed_timeouts.append(req.extensions.get("timeout", {}).get("connect", 0.0))
+        if len(observed_timeouts) == 1:
+            clock += 0.04
+            return httpx2.Response(503, json={"error": "service unavailable"})
+        try:
+            await asyncio.Event().wait()
+        finally:
+            clock += 0.04
+        raise AssertionError("request should time out")
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=0.08,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+    with pytest.raises((TimeoutError, httpx2.TimeoutException)):
+        await asyncio.wait_for(_events(provider, request), timeout=2)
+    assert observed_timeouts == pytest.approx([0.08, 0.04])
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_retries_transient_connection_error_then_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    calls = 0
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise httpx2.ConnectError("connection refused")
+        return _sse_response(
+            {"choices": [{"delta": {"content": "重连成功。"}, "finish_reason": "stop"}]}
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        backoff_delays=(0.0, 0.0),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="你好", system_prompt="test")
+
+    with caplog.at_level(logging.WARNING):
+        events = await _events(provider, request)
+
+    assert calls == 2
+    assert events == [LlmTextDelta("重连成功。"), LlmResponseCompleted("stop")]
+    retry_records = [r for r in caplog.records if "OpenAI-compatible LLM retry" in r.message]
+    assert len(retry_records) == 1
+    assert "reason=connection_error" in retry_records[0].message

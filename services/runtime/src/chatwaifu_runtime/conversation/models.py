@@ -113,6 +113,7 @@ class ConversationTurnOptions:
     allow_tools: bool = True
     source_context: ConversationSourceContext | None = None
     presentation_profile: str | None = None
+    failure_recovery_text: str | None = None
 
     def emits(self, mode: ConversationOutputMode) -> bool:
         return mode in self.output_modes

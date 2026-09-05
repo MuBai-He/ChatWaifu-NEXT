@@ -1121,7 +1121,7 @@ class ChannelManagementService:
             ingest_started = perf_counter()
             try:
                 receipt = await self._external_channels.ingest(
-                    inbound, access_token=credentials.gateway_access_token
+                    inbound, access_token=credentials.gateway_access_token, supersede_inflight=True
                 )
             except (ChannelBusyError, ChannelDeliveryBusyError):
                 raise
@@ -1354,6 +1354,13 @@ class ChannelManagementService:
         elif turn is not None:
             msg_id = turn.external_message_id
 
+        if turn is not None and turn.delivery_id is not None:
+            plan = await self._repository.get_delivery_plan(turn.delivery_id)
+            if plan is not None and plan.status in (
+                ChannelDeliveryStatus.PENDING,
+                ChannelDeliveryStatus.SENDING,
+            ):
+                return
         if conn_id is not None and msg_id is not None:
             await self._forget_context(conn_id, msg_id)
 

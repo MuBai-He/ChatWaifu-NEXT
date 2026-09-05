@@ -494,6 +494,41 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         completed_at: datetime,
         parts: Sequence[ChannelDeliveryPartDraft] | None = None,
     ) -> CompleteTurnResult:
+        return await self._finalize_turn_with_delivery(
+            channel_turn_id,
+            reply_text=reply_text,
+            delivery_id=delivery_id,
+            completed_at=completed_at,
+            parts=parts,
+        )
+
+    async def fail_turn_with_notice(
+        self,
+        channel_turn_id: UUID,
+        *,
+        error: StructuredError,
+        notice_text: str,
+        delivery_id: UUID,
+        completed_at: datetime,
+    ) -> CompleteTurnResult:
+        return await self._finalize_turn_with_delivery(
+            channel_turn_id,
+            reply_text=notice_text,
+            delivery_id=delivery_id,
+            completed_at=completed_at,
+            failure=error,
+        )
+
+    async def _finalize_turn_with_delivery(
+        self,
+        channel_turn_id: UUID,
+        *,
+        reply_text: str,
+        delivery_id: UUID,
+        completed_at: datetime,
+        parts: Sequence[ChannelDeliveryPartDraft] | None = None,
+        failure: StructuredError | None = None,
+    ) -> CompleteTurnResult:
         if not reply_text:
             raise ValueError("reply text cannot be empty")
         if parts is None:
@@ -525,6 +560,18 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             await cursor.close()
             if row is None:
                 raise KeyError(f"unknown channel turn {channel_turn_id}")
+            allowed_statuses = (
+                ("accepted", "processing")
+                if failure is not None
+                else ("accepted", "processing", "cancelling")
+            )
+            if row["status"] not in allowed_statuses or row["delivery_id"] is not None:
+                cursor = await connection.execute(
+                    _TURN_SELECT + " WHERE t.channel_turn_id = ?", (str(channel_turn_id),)
+                )
+                existing = await cursor.fetchone()
+                await cursor.close()
+                return CompleteTurnResult(turn=_turn_record(existing), persisted_events=())
             existing_delivery = row["delivery_id"]
             if existing_delivery is None:
                 await connection.execute(
@@ -607,13 +654,15 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 resolved_delivery = UUID(str(existing_delivery))
             await connection.execute(
                 """
-                UPDATE channel_turns SET status = 'completed', reply_text = ?,
-                    error_json = NULL, delivery_id = ?, revision = revision + 1,
+                UPDATE channel_turns SET status = ?, reply_text = ?,
+                    error_json = ?, delivery_id = ?, revision = revision + 1,
                     updated_at = ?, completed_at = COALESCE(completed_at, ?)
                 WHERE channel_turn_id = ?
                 """,
                 (
-                    reply_text,
+                    "failed" if failure is not None else "completed",
+                    None if failure is not None else reply_text,
+                    _error_json(failure),
                     str(resolved_delivery),
                     completed_at.isoformat(),
                     completed_at.isoformat(),

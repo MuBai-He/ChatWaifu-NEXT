@@ -282,6 +282,43 @@ that the remote client immediately removes a previously displayed indicator. Res
 fresh ticket only for the newest still-active durable reply; it never replays saved typing events.
 Structured `weixin.typing` logs contain only lifecycle stage, local time, and Runtime lineage IDs.
 
+## Model failure recovery notices
+
+The OpenAI-compatible adapter retries HTTP 502/503/504 and transient network/timeouts
+at most twice before any model event is emitted. Backoff is 0.5 then 1.5 seconds;
+all attempts share the configured timeout budget. Auth, validation, unsupported-tool
+and local protocol/configuration failures are not retried. Once text, a tool call or
+completion has been emitted, the request is never restarted. Cancellation aborts
+both requests and backoff using the original generation lineage.
+
+Managed native WeChat admission opts into superseding a PROCESSING turn on the same
+binding before admitting a new message. Authentication, owner policy and duplicate
+checks run first. Duplicate messages do not interrupt. An ACCEPTED turn still being
+prepared retains the existing busy/replay behavior until preparation completes.
+Other gateway API clients retain their default busy behavior.
+
+A final `provider_error` creates a single immediate text delivery on the failed
+channel turn, atomically with its failed state. The payload uses a fixed,
+character-compatible recovery line:
+`唔，刚才的话好像没能顺利说出来……能再和我说一次吗？`.
+The generation failure transaction also inserts that line once as an assistant turn
+in working conversation history. Its turn ID is deterministically derived from the
+generation ID, and the insert only occurs when the `RUNNING -> FAILED` CAS succeeds.
+The generation and channel turn stay failed and `reply_text` stays null. No generation
+completion or spoken-text event is emitted, so the line does not enter long-term memory
+extraction. The existing versioned text-part contract, lease/ACK state machine and
+stable provider client ID handle delivery. Replay cannot create a second history row or
+notice, and cancellation that wins before the generation failure creates neither.
+
+Private reply context remains until the notice plan is terminal, including when a
+`channel.turn_failed` event arrives before delivery. Restart discovers the pending
+plan and preserves its context. New inbound admission cancels an unsent notice using
+the ordinary delivery-tail cancellation path. A part already sending may complete
+its active lease; provider idempotency remains required for crash-after-send recovery.
+Once the generation has already failed, its single working-history row remains even if
+new inbound later cancels the unsent notice; this lets the next model turn understand
+the provider interruption. No exactly-once client display guarantee is added.
+
 ## Native WeChat timing diagnostics
 
 `weixin.timing` JSON log records correlate nonempty poll returns, message observation,

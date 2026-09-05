@@ -4,7 +4,6 @@ import json
 import os
 import sqlite3
 import sys
-import time
 from pathlib import Path
 from typing import Protocol, cast
 from uuid import UUID
@@ -14,6 +13,8 @@ from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.host_connections import McpConnectionSecretStore
 from fastapi.testclient import TestClient
 from httpx2 import Response
+
+from services.runtime.tests.runtime_wait import wait_for_skill_terminal
 
 
 class RuntimeHttpClient(Protocol):
@@ -138,9 +139,7 @@ def test_mcp_plugin_timeout_and_cancellation_are_terminal(client: TestClient) ->
         f"/v1/sessions/{session_id}/skill-runs",
         json={"skill_id": "local.echo", "capability": "wait", "arguments": {"seconds": 5}},
     )
-    timed_run = _wait_for_run(
-        http, str(cast(dict[str, object], timed.json())["skill_run_id"]), timeout=4
-    )
+    timed_run = _wait_for_run(http, str(cast(dict[str, object], timed.json())["skill_run_id"]))
     assert timed_run["state"] == "failed"
     assert cast(dict[str, object], timed_run["error"])["code"] == "skill_timeout"
 
@@ -351,12 +350,5 @@ def test_corrupt_mcp_secret_store_fails_closed(tmp_path: Path) -> None:
     assert path.read_text(encoding="utf-8") == "{broken"
 
 
-def _wait_for_run(http: RuntimeHttpClient, run_id: str, *, timeout: float = 2) -> dict[str, object]:
-    deadline = time.monotonic() + timeout
-    latest: dict[str, object] = {}
-    while time.monotonic() < deadline:
-        latest = cast(dict[str, object], http.get(f"/v1/skill-runs/{run_id}").json())
-        if latest.get("state") in {"succeeded", "failed", "cancelled", "expired"}:
-            return latest
-        time.sleep(0.01)
-    raise AssertionError(f"skill run {run_id} did not finish: {latest}")
+def _wait_for_run(http: RuntimeHttpClient, run_id: str) -> dict[str, object]:
+    return wait_for_skill_terminal(cast(TestClient, http), UUID(run_id))

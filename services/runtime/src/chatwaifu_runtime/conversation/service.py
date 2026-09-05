@@ -1031,7 +1031,12 @@ class ConversationService:
             await self._cancelled(accepted, reason)
             raise
         except Exception as error:
-            await self._failed(accepted, error)
+            await self._failed(
+                accepted,
+                error,
+                recovery_text=options.failure_recovery_text,
+                source_context=options.source_context,
+            )
         finally:
             if not memory_projection_submitted and memory_observation is not None:
                 try:
@@ -1214,6 +1219,8 @@ class ConversationService:
         error_code: str = "provider_error",
         retryable: bool = True,
         set_session_idle: bool | None = None,
+        recovery_text: str | None = None,
+        source_context: ConversationSourceContext | None = None,
     ) -> None:
         now = datetime.now(UTC)
         if isinstance(error, StructuredError):
@@ -1245,6 +1252,8 @@ class ConversationService:
                 self._is_current(accepted) if set_session_idle is None else set_session_idle
             ),
             fail_event=fail_event,
+            recovery_text=recovery_text,
+            source_context=source_context,
         )
         if persisted_event is None:
             logger.info(

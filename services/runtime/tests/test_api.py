@@ -23,6 +23,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
+from services.runtime.tests.runtime_wait import wait_for_generation_terminal
+
 
 class RuntimeHttpClient(Protocol):
     def get(self, url: str) -> Response: ...
@@ -1288,21 +1290,13 @@ def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) 
 def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str:
     accepted = http.post(f"/v1/sessions/{session_id}/turns", json={"text": text})
     assert accepted.status_code == 202
-    generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
-    deadline = time.monotonic() + 2
-    while time.monotonic() < deadline:
-        events_response = http.get(f"/v1/sessions/{session_id}/events?limit=500")
-        events = cast(
-            list[dict[str, object]], cast(dict[str, object], events_response.json())["items"]
-        )
-        for event in events:
-            if (
-                event["event_type"] == "assistant.generation_completed"
-                and str(event.get("generation_id")) == generation_id
-            ):
-                return str(cast(dict[str, object], event["payload"])["text"])
-        time.sleep(0.01)
-    raise AssertionError(f"generation {generation_id} did not complete")
+    generation_id = UUID(str(cast(dict[str, object], accepted.json())["generation_id"]))
+    generation = wait_for_generation_terminal(cast(TestClient, http), generation_id)
+    assert generation.state.value == "completed", (
+        f"generation {generation_id} ended as {generation.state.value}: {generation.error_code}"
+    )
+    assert generation.output_text is not None
+    return generation.output_text
 
 
 def _playback_ack(

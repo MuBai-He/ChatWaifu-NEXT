@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid5
 
 import aiosqlite
 from chatwaifu_protocol.events import (
@@ -456,6 +456,8 @@ class SQLiteConversationRepository(ConversationRepository):
         occurred_at: datetime,
         set_session_idle: bool,
         fail_event: ErrorRaisedEvent,
+        recovery_text: str | None = None,
+        source_context: ConversationSourceContext | None = None,
     ) -> ErrorRaisedEvent | None:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
@@ -477,6 +479,24 @@ class SQLiteConversationRepository(ConversationRepository):
             await cursor.close()
             if not updated:
                 return None
+            if recovery_text and recovery_text.strip():
+                recovery_turn_id = uuid5(generation_id, "provider-failure-recovery")
+                await connection.execute(
+                    """
+                    INSERT INTO turns(
+                        turn_id, session_id, role, committed_text, committed_at, created_at,
+                        source_context_json
+                    ) VALUES (?, ?, 'assistant', ?, ?, ?, ?)
+                    """,
+                    (
+                        str(recovery_turn_id),
+                        str(session_id),
+                        recovery_text,
+                        occurred_at.isoformat(),
+                        occurred_at.isoformat(),
+                        source_context.to_json() if source_context is not None else None,
+                    ),
+                )
             await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
             persisted_event = await self._event_store.append_in_transaction(connection, fail_event)
             return persisted_event
