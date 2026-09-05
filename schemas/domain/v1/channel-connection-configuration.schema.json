@@ -65,6 +65,12 @@
           "title": "Soft Max Chars Per Part",
           "type": "integer"
         },
+        "stickers_enabled": {
+          "default": false,
+          "description": "Whether supported adapters emit matching preset stickers on casual responses",
+          "title": "Stickers Enabled",
+          "type": "boolean"
+        },
         "total_cadence_delay_ceiling_ms": {
           "default": 6000,
           "description": "Maximum cumulative delay across all parts of a single delivery plan",

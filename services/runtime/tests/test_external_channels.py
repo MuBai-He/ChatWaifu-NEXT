@@ -615,3 +615,88 @@ async def test_restart_recovers_committed_generation_before_channel_sync(
         assert recovered.delivery_status is ChannelDeliveryStatus.PENDING
     finally:
         await restarted.stop()
+
+
+@pytest.mark.asyncio
+async def test_update_channel_connection_retains_cadence_and_profile_with_false_default(
+    runtime_settings: Settings,
+) -> None:
+    from chatwaifu_runtime.main import create_app
+    from httpx import ASGITransport, AsyncClient
+
+    app = create_app(runtime_settings)
+    container = app.state.container
+    await container.start()
+    try:
+        connection_id = uuid4()
+        initial_policy = ChannelPresentationPolicy(
+            profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+            cadence_enabled=True,
+            min_delay_ms=800,
+            max_delay_ms=3000,
+            total_cadence_delay_ceiling_ms=6000,
+        )
+        assert initial_policy.stickers_enabled is False
+
+        configuration = ChannelConnectionConfiguration(
+            connection_id=connection_id,
+            provider_id="weixin_ilink",
+            name="我的微信",
+            character_id="default",
+            principal_scope="local",
+            account_key="test-owner-account",
+            allowed_sender_keys=["test-sender"],
+            enabled=True,
+            presentation_policy=initial_policy,
+        )
+        created = await container.external_channels.create_connection(configuration)
+        snapshot = created.snapshot
+        assert snapshot.configuration.presentation_policy is not None
+        assert snapshot.configuration.presentation_policy.stickers_enabled is False
+        assert (
+            snapshot.configuration.presentation_policy.profile
+            == ChannelPresentationProfile.INSTANT_MESSAGE
+        )
+        assert snapshot.configuration.presentation_policy.cadence_enabled is True
+        assert snapshot.configuration.presentation_policy.min_delay_ms == 800
+
+        token = container.capability_token
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            updated_policy = initial_policy.model_copy(update={"stickers_enabled": True})
+            update_payload = configuration.model_copy(
+                update={"presentation_policy": updated_policy}
+            ).model_dump(mode="json")
+
+            put_res = await client.put(
+                f"/v1/channel-connections/{connection_id}?expected_revision={snapshot.revision}",
+                json=update_payload,
+                headers=headers,
+            )
+            assert put_res.status_code == 200
+            data = put_res.json()
+            persisted_policy = data["connection"]["configuration"]["presentation_policy"]
+            assert persisted_policy["stickers_enabled"] is True
+            assert persisted_policy["profile"] == "instant_message"
+            assert persisted_policy["cadence_enabled"] is True
+            assert persisted_policy["min_delay_ms"] == 800
+            assert persisted_policy["max_delay_ms"] == 3000
+            assert persisted_policy["total_cadence_delay_ceiling_ms"] == 6000
+
+            get_res = await client.get(
+                f"/v1/channel-connections/{connection_id}",
+                headers=headers,
+            )
+            assert get_res.status_code == 200
+            get_policy = get_res.json()["configuration"]["presentation_policy"]
+            assert get_policy["stickers_enabled"] is True
+            assert get_policy["profile"] == "instant_message"
+            assert get_policy["cadence_enabled"] is True
+            assert get_policy["min_delay_ms"] == 800
+            assert get_policy["max_delay_ms"] == 3000
+            assert get_policy["total_cadence_delay_ceiling_ms"] == 6000
+    finally:
+        await container.stop()

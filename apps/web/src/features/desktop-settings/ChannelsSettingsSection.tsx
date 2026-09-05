@@ -9,12 +9,14 @@ import {
   getChannelConnections,
   startChannelAuthorization,
   submitChannelAuthorizationVerification,
+  updateChannelPresentationPolicy,
   type ChannelAuthorizationSnapshot,
   type ChannelConnectionSnapshot,
+  type ChannelPresentationPolicy,
 } from "../chat/runtimeClient";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsIcon } from "./SettingsIcon";
-import { SettingsSectionIntro } from "./SettingsPrimitives";
+import { SettingsSectionIntro, SettingsToggle } from "./SettingsPrimitives";
 import "./channels-settings.css";
 
 const WEIXIN_PROVIDER_ID = "weixin_ilink";
@@ -33,6 +35,7 @@ export function ChannelsSettingsSection({
   const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [operation, setOperation] = useState<ChannelOperation | null>(null);
+  const [updatingPolicy, setUpdatingPolicy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [pollRevision, setPollRevision] = useState(0);
   const pollAbortRef = useRef<AbortController | null>(null);
@@ -181,6 +184,32 @@ export function ChannelsSettingsSection({
     }
   };
 
+  const handleToggleStickers = async (enabled: boolean) => {
+    if (!connection) return;
+    setUpdatingPolicy(true);
+    setNotice(null);
+    try {
+      const basePolicy = connection.configuration.presentation_policy ?? {
+        profile: "single_text",
+        cadence_enabled: true,
+        stickers_enabled: false,
+      };
+      const nextPolicy: ChannelPresentationPolicy = {
+        ...basePolicy,
+        stickers_enabled: enabled,
+      };
+      const updated = await updateChannelPresentationPolicy(
+        connection,
+        nextPolicy,
+      );
+      setConnection(updated);
+    } catch (error: unknown) {
+      setNotice(message(error, "更新表情设置失败"));
+    } finally {
+      setUpdatingPolicy(false);
+    }
+  };
+
   return (
     <div className="channels-settings-section">
       <section className="desktop-settings-voice-card channels-settings-intro">
@@ -215,7 +244,11 @@ export function ChannelsSettingsSection({
         ) : connection ? (
           <ConnectedWeixinCard
             connection={connection}
+            characterId={characterId}
+            updatingPolicy={updatingPolicy}
+            runtimeOnline={runtimeOnline}
             busy={operation === "disconnect"}
+            onToggleStickers={handleToggleStickers}
             onDisconnect={() => void disconnect()}
           />
         ) : authorization ? (
@@ -371,13 +404,44 @@ function AuthorizationCard({
 
 function ConnectedWeixinCard({
   connection,
+  characterId,
+  updatingPolicy,
+  runtimeOnline,
   busy,
+  onToggleStickers,
   onDisconnect,
 }: {
   connection: ChannelConnectionSnapshot;
+  characterId: string;
+  updatingPolicy: boolean;
+  runtimeOnline: boolean;
   busy: boolean;
+  onToggleStickers: (enabled: boolean) => Promise<void>;
   onDisconnect: () => void;
 }) {
+  const isDefaultCharacter =
+    characterId === "default" &&
+    connection.configuration.character_id === "default";
+  const profile =
+    connection.configuration.presentation_policy?.profile ?? "single_text";
+  const isInstantMessage = profile === "instant_message";
+  const stickersEnabled =
+    connection.configuration.presentation_policy?.stickers_enabled ?? false;
+
+  const toggleDisabled =
+    !isDefaultCharacter ||
+    !isInstantMessage ||
+    updatingPolicy ||
+    !runtimeOnline ||
+    busy;
+
+  const explanation = !isDefaultCharacter
+    ? "（仅默认角色支持）"
+    : !isInstantMessage
+      ? "（仅即时消息模式支持）"
+      : "";
+  const shortCopy = `原创小猫表情，默认关闭${explanation}`;
+
   return (
     <div className="channels-settings-connected-card">
       <span className="channels-settings-connected-mark">
@@ -391,9 +455,23 @@ function ConnectedWeixinCard({
         </p>
         <span>最近更新：{formatDate(connection.updated_at)}</span>
       </div>
-      <button type="button" disabled={busy} onClick={onDisconnect}>
+      <button
+        type="button"
+        disabled={busy || updatingPolicy}
+        onClick={onDisconnect}
+      >
         {busy ? "正在断开…" : "断开连接"}
       </button>
+
+      <div className="channels-settings-policy-toggle">
+        <SettingsToggle
+          label="合适的时候发送表情"
+          description={shortCopy}
+          checked={stickersEnabled}
+          disabled={toggleDisabled}
+          onChange={(enabled) => void onToggleStickers(enabled)}
+        />
+      </div>
     </div>
   );
 }

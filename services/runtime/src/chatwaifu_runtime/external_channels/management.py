@@ -25,9 +25,11 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartKind,
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryStatus,
+    ChannelImageDeliveryPartPayload,
     ChannelInboundTextMessage,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
+    ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
@@ -73,6 +75,7 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelError,
     ExternalChannelService,
 )
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +113,17 @@ class WeixinILinkTransport(WeixinTypingTransport, Protocol):
         client_id: str,
         text: str,
     ) -> str: ...
+
+    async def send_image(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        context_token: str,
+        client_id: str,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> str | None: ...
 
 
 class ChannelManagementError(ExternalChannelError):
@@ -233,6 +247,7 @@ class ChannelManagementService:
         credentials: ChannelCredentialStore,
         weixin: WeixinILinkTransport,
         *,
+        sticker_catalog: PresetStickerCatalog | None = None,
         event_hub: EventHub | None = None,
         event_publisher: EventPublisher | None = None,
     ) -> None:
@@ -240,6 +255,9 @@ class ChannelManagementService:
         self._repository = repository
         self._credentials = credentials
         self._weixin = weixin
+        self._sticker_catalog = sticker_catalog or getattr(
+            external_channels, "sticker_catalog", None
+        )
         self._event_hub = event_hub or getattr(external_channels, "event_hub", None)
         self._event_publisher = event_publisher or getattr(external_channels, "publisher", None)
         self._auth_sessions: dict[UUID, _AuthorizationSession] = {}
@@ -1501,7 +1519,7 @@ class ChannelManagementService:
         plan: ChannelDeliveryPlanRecord,
         part: ChannelDeliveryPartRecord,
     ) -> DeliveryPartExecutionResult:
-        if part.kind is not ChannelDeliveryPartKind.TEXT:
+        if part.kind not in (ChannelDeliveryPartKind.TEXT, ChannelDeliveryPartKind.IMAGE):
             return DeliveryPartExecutionResult(
                 outcome=DeliveryPartOutcome.FATAL_ERROR,
                 error=_structured_error(
@@ -1550,15 +1568,17 @@ class ChannelManagementService:
                     retryable=False,
                 ),
             )
+        connection = await self._repository.get_connection(connection_id)
+        if connection is None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_connection_missing",
+                    "The channel connection was not found.",
+                    retryable=False,
+                ),
+            )
         client_id = part.provider_client_id
-        text = render_bubble_text(
-            part.payload.text,
-            has_following_text_part=any(
-                candidate.ordinal == part.ordinal + 1
-                and candidate.kind is ChannelDeliveryPartKind.TEXT
-                for candidate in plan.parts
-            ),
-        )
         send_started = perf_counter()
         _log_weixin_timing(
             "send_started",
@@ -1568,13 +1588,89 @@ class ChannelManagementService:
             ordinal=part.ordinal,
         )
         try:
-            provider_message_id = await self._weixin.send_text(
-                credentials,
-                recipient_user_id=context.recipient_user_id,
-                context_token=context.context_token,
-                client_id=client_id,
-                text=text,
-            )
+            if part.kind is ChannelDeliveryPartKind.TEXT:
+                if not isinstance(part.payload, ChannelTextDeliveryPartPayload):
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "invalid_text_payload",
+                            "Text part payload is invalid.",
+                            retryable=False,
+                        ),
+                    )
+                text = render_bubble_text(
+                    part.payload.text,
+                    has_following_text_part=any(
+                        candidate.ordinal == part.ordinal + 1
+                        and candidate.kind is ChannelDeliveryPartKind.TEXT
+                        for candidate in plan.parts
+                    ),
+                )
+                provider_message_id = await self._weixin.send_text(
+                    credentials,
+                    recipient_user_id=context.recipient_user_id,
+                    context_token=context.context_token,
+                    client_id=client_id,
+                    text=text,
+                )
+            else:
+                if connection.configuration.character_id != "default":
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "unsupported_character_sticker",
+                            "Stickers are only supported for the default character.",
+                            retryable=False,
+                        ),
+                    )
+                if not isinstance(part.payload, ChannelImageDeliveryPartPayload):
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "invalid_sticker_payload",
+                            "Image part payload is invalid.",
+                            retryable=False,
+                        ),
+                    )
+                if part.payload.mime_type not in ("image/png", "image/jpeg"):
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "unsupported_mime_type",
+                            f"Unsupported sticker MIME type: {part.payload.mime_type}",
+                            retryable=False,
+                        ),
+                    )
+                if self._sticker_catalog is None:
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "sticker_catalog_unavailable",
+                            "Sticker catalog is not configured.",
+                            retryable=False,
+                        ),
+                    )
+                image_bytes = self._sticker_catalog.load_sticker_bytes(
+                    part.payload.sticker_id, part.payload.sha256
+                )
+                if image_bytes is None:
+                    return DeliveryPartExecutionResult(
+                        outcome=DeliveryPartOutcome.FATAL_ERROR,
+                        error=_structured_error(
+                            "sticker_load_failed",
+                            f"Failed to load sticker '{part.payload.sticker_id}'.",
+                            retryable=False,
+                        ),
+                    )
+                provider_message_id = await self._weixin.send_image(
+                    credentials,
+                    recipient_user_id=context.recipient_user_id,
+                    context_token=context.context_token,
+                    client_id=client_id,
+                    image_bytes=image_bytes,
+                    mime_type=part.payload.mime_type,
+                )
+
             _log_weixin_timing(
                 "send_returned",
                 connection_id=str(connection_id),

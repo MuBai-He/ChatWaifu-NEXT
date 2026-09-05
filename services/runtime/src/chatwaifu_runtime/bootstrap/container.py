@@ -27,6 +27,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import Wei
 from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.service import ExternalChannelService
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
@@ -171,6 +172,7 @@ class RuntimeContainer:
             self.prompt_compiler,
             self.agent,
         )
+        self.sticker_catalog = PresetStickerCatalog()
         self.external_channels = ExternalChannelService(
             self.external_channel_repository,
             self.conversation_repository,
@@ -179,12 +181,14 @@ class RuntimeContainer:
             self.characters,
             self.event_hub,
             self.event_publisher,
+            sticker_catalog=self.sticker_catalog,
         )
         self.channel_management = ChannelManagementService(
             self.external_channels,
             self.external_channel_repository,
             KeyringChannelCredentialStore(),
             WeixinILinkClient(),
+            sticker_catalog=self.sticker_catalog,
             event_hub=self.event_hub,
             event_publisher=self.event_publisher,
         )

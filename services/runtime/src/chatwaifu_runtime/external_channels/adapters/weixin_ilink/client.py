@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import hashlib
 import json
 import secrets
 from datetime import UTC, datetime
@@ -11,6 +13,12 @@ from urllib.parse import quote, urljoin, urlsplit
 
 import httpx
 
+from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
+    encode_media_aes_key,
+    encrypt_aes_128_ecb,
+    resolve_cdn_upload_url,
+    validate_image,
+)
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationPoll,
     WeixinAuthorizationStart,
@@ -256,6 +264,167 @@ class WeixinILinkClient:
             )
         return client_id
 
+    async def send_image(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        context_token: str,
+        client_id: str,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> str | None:
+        try:
+            async with asyncio.timeout(45.0):
+                validate_image(image_bytes, mime_type)
+
+                raw_size = len(image_bytes)
+                raw_file_md5 = hashlib.md5(image_bytes).hexdigest()
+                raw_key = secrets.token_bytes(16)
+                hex_key = raw_key.hex()
+                filekey = secrets.token_hex(16)
+                ciphertext = encrypt_aes_128_ecb(image_bytes, raw_key)
+                ciphertext_size = len(ciphertext)
+
+                upload_url_payload = await self._post_json(
+                    credentials.base_url,
+                    "ilink/bot/getuploadurl",
+                    {
+                        "filekey": filekey,
+                        "media_type": 1,
+                        "to_user_id": recipient_user_id,
+                        "rawsize": raw_size,
+                        "rawfilemd5": raw_file_md5,
+                        "filesize": ciphertext_size,
+                        "no_need_thumb": True,
+                        "aeskey": hex_key,
+                        "base_info": _base_info(),
+                    },
+                    token=credentials.bot_token,
+                    timeout_seconds=15,
+                )
+                ret = upload_url_payload.get("ret", 0)
+                if not isinstance(ret, int) or isinstance(ret, bool) or ret != 0:
+                    raise WeixinILinkError(
+                        "weixin.get_upload_url_failed",
+                        "WeChat rejected the upload URL request.",
+                        retryable=True,
+                    )
+
+                raw_full_url = upload_url_payload.get("upload_full_url")
+                raw_upload_param = upload_url_payload.get("upload_param")
+                cdn_url = resolve_cdn_upload_url(raw_full_url, raw_upload_param, filekey)
+                download_param = await self._upload_ciphertext_to_cdn(cdn_url, ciphertext)
+                base64_aes_key = encode_media_aes_key(hex_key)
+
+                send_payload = await self._post_json(
+                    credentials.base_url,
+                    "ilink/bot/sendmessage",
+                    {
+                        "msg": {
+                            "from_user_id": "",
+                            "to_user_id": recipient_user_id,
+                            "client_id": client_id,
+                            "message_type": 2,
+                            "message_state": 2,
+                            "item_list": [
+                                {
+                                    "type": 2,
+                                    "image_item": {
+                                        "media": {
+                                            "encrypt_query_param": download_param,
+                                            "aes_key": base64_aes_key,
+                                            "encrypt_type": 1,
+                                        },
+                                        "mid_size": ciphertext_size,
+                                    },
+                                }
+                            ],
+                            "context_token": context_token,
+                        },
+                        "base_info": _base_info(),
+                    },
+                    token=credentials.bot_token,
+                    timeout_seconds=15,
+                )
+                send_ret = send_payload.get("ret", 0)
+                if not isinstance(send_ret, int) or isinstance(send_ret, bool) or send_ret != 0:
+                    raise WeixinILinkError(
+                        "weixin.send_failed", "WeChat rejected the reply.", retryable=True
+                    )
+                return client_id
+        except TimeoutError:
+            raise WeixinILinkError(
+                "weixin.request_timeout", "WeChat image send timed out.", retryable=True
+            ) from None
+
+    async def _upload_ciphertext_to_cdn(self, cdn_url: str, ciphertext: bytes) -> str:
+        headers = {"Content-Type": "application/octet-stream"}
+        request = httpx.Request(
+            "POST",
+            cdn_url,
+            headers=headers,
+            content=ciphertext,
+            extensions={"timeout": httpx.Timeout(20.0).as_dict()},
+        )
+        response: httpx.Response | None = None
+        try:
+            try:
+                response = await self._client.send(
+                    request,
+                    stream=True,
+                    auth=None,
+                    follow_redirects=False,
+                )
+                if response.is_redirect or (300 <= response.status_code < 400):
+                    raise WeixinILinkError(
+                        "weixin.cdn_redirect_rejected",
+                        "CDN redirected the upload request.",
+                        retryable=False,
+                    )
+                if 400 <= response.status_code < 500:
+                    raise WeixinILinkError(
+                        "weixin.cdn_upload_failed",
+                        f"CDN upload rejected with status {response.status_code}.",
+                        retryable=False,
+                    )
+                if response.status_code != 200:
+                    raise WeixinILinkError(
+                        "weixin.cdn_upload_failed",
+                        f"CDN upload failed with status {response.status_code}.",
+                        retryable=True,
+                    )
+                download_param = response.headers.get("x-encrypted-param")
+                if not download_param or not download_param.strip():
+                    raise WeixinILinkError(
+                        "weixin.cdn_upload_failed",
+                        "CDN upload response missing x-encrypted-param header.",
+                        retryable=True,
+                    )
+                content = bytearray()
+                async for chunk in response.aiter_bytes():
+                    if len(content) + len(chunk) > 65536:
+                        raise WeixinILinkError(
+                            "weixin.response_too_large",
+                            "CDN returned oversized response.",
+                            retryable=False,
+                        )
+                    content.extend(chunk)
+                return download_param.strip()
+            finally:
+                if response is not None:
+                    await response.aclose()
+        except WeixinILinkError:
+            raise
+        except httpx.TimeoutException:
+            raise WeixinILinkError(
+                "weixin.request_timeout", "CDN upload request timed out.", retryable=True
+            ) from None
+        except httpx.HTTPError:
+            raise WeixinILinkError(
+                "weixin.request_failed", "CDN upload request failed.", retryable=True
+            ) from None
+
     async def _get_json(
         self, base_url: str, endpoint: str, *, timeout_seconds: float
     ) -> dict[str, object]:
@@ -319,14 +488,14 @@ class WeixinILinkClient:
                 return await _bounded_json(response)
         except WeixinILinkError:
             raise
-        except httpx.TimeoutException as error:
+        except httpx.TimeoutException:
             raise WeixinILinkError(
                 "weixin.request_timeout", "WeChat did not respond in time.", retryable=True
-            ) from error
-        except httpx.HTTPError as error:
+            ) from None
+        except httpx.HTTPError:
             raise WeixinILinkError(
                 "weixin.request_failed", "WeChat could not be reached.", retryable=True
-            ) from error
+            ) from None
 
 
 def validated_weixin_base_url(value: str) -> str:

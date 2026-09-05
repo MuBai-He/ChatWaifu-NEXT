@@ -20,6 +20,53 @@
       "title": "ChannelDeliveryPartStatus",
       "type": "string"
     },
+    "ChannelImageDeliveryPartPayload": {
+      "properties": {
+        "kind": {
+          "const": "image",
+          "default": "image",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "description": "MIME media type of the local image bytes",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^image/[a-zA-Z0-9.+-]+$",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "description": "Lowercase SHA-256 digest of the verified local image bytes",
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sticker_id": {
+          "description": "Immutable identifier of the local preset sticker asset",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "title": "Sticker Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sticker_id",
+        "sha256",
+        "mime_type"
+      ],
+      "title": "ChannelImageDeliveryPartPayload",
+      "type": "object"
+    },
     "ChannelTextDeliveryPartPayload": {
       "properties": {
         "kind": {
@@ -236,6 +283,7 @@
     "payload": {
       "discriminator": {
         "mapping": {
+          "image": "#/$defs/ChannelImageDeliveryPartPayload",
           "text": "#/$defs/ChannelTextDeliveryPartPayload"
         },
         "propertyName": "kind"
@@ -243,6 +291,9 @@
       "oneOf": [
         {
           "$ref": "#/$defs/ChannelTextDeliveryPartPayload"
+        },
+        {
+          "$ref": "#/$defs/ChannelImageDeliveryPartPayload"
         }
       ],
       "title": "Payload"
