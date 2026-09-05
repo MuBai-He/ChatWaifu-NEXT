@@ -37,7 +37,7 @@ Presentation policy is defined in versioned protocol contracts independently of 
 - `min_delay_ms`: Minimum inter-bubble delay (default 800 ms)
 - `max_delay_ms`: Maximum inter-bubble delay (default 3000 ms)
 - `total_cadence_delay_ceiling_ms`: Hard ceiling on cumulative delay across all parts of a plan (default 6000 ms)
-- `typing_enabled`: Reserved for Phase 17.1B-2 (default false)
+- `typing_enabled`: Opt-in transient typing for supported adapters in Phase 17.1B-2 (default false)
 - `bypass_long_form`: When true, technical code, structured markdown, or long explanations bypass splitting and deliver as a single part (default true)
 - `version`: Version integer
 

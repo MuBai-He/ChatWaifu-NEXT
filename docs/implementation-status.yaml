@@ -483,7 +483,7 @@ phases:
       - The dedicated companion settings panel reports daily use and controls attention, quiet hours, proactive limits, resource sleep, and native Runtime recovery
   - id: 17
     name: external-channel-gateway
-    status: native_weixin_owner_direct_text_implemented_pending_real_account_acceptance
+    status: native_weixin_macos_owner_direct_text_accepted_other_platforms_pending
     evidence:
       - ADR 0029 assigns messaging transport and credentials to adapters while ChatWaifu Runtime remains the sole owner of character, memory, relationship, model, Skill, session, and delivery state; ADR 0030 selects a Runtime-native Tencent iLink adapter instead of a second agent or bridge process
       - Versioned Python/JSON Schema/generated TypeScript contracts and Zod parsers cover provider discovery, QR authorization lifecycle, sanitized connections, idempotent ingress, turn polling/cancellation, exclusive delivery leases, and lease-bound ACK
@@ -494,7 +494,7 @@ phases:
       - The public manual-connection/token-rotation path and launcher discovery file were removed; the browser can neither type provider identities nor receive gateway or provider credentials
       - Desktop settings presents one responsive WeChat scan flow, shows a verification input only when requested, cancels stale long polls, and reuses the generic connection delete route for full local unbind
       - PyInstaller explicitly collects HTTP/keyring metadata and platform backends; a frozen macOS Runtime import, TLS/keyring discovery, startup, and stdin-EOF shutdown smoke passes, while Windows resolves the Credential Manager backend dependency
-      - Wire, lifecycle, failure-isolation, crash-recovery, cancellation, source-provenance, and complete getupdates-to-delivery tests pass; a real scanned WeChat owner round trip and installed Windows/Linux credential-store acceptance remain pending
+      - Wire and lifecycle tests pass; the real macOS owner direct-text, bubble rendering, cancellation, crash recovery, and single-text fallback were accepted on 2026-09-05 in PR 15; installed Windows/Linux credential-store acceptance remains pending
   - id: 17.1A
     name: durable-multipart-channel-delivery
     status: completed_and_tested
@@ -510,12 +510,21 @@ phases:
       - Idempotent ACK without duplicating domain events
   - id: 17.1B
     name: instant-messaging-bubble-planning-and-durable-cadence
-    status: in_progress
+    status: bubble_cadence_accepted_typing_in_progress
     evidence:
       - Provider-neutral ChannelPresentationPolicy contract and configuration
       - Lossless BubbleSplitter with atomic element protection and long-form bypass
       - Deterministic cadence calculation with durable SQLite next-part not_before_at scheduling
       - New user turn tail cancellation without modifying canonical assistant turns
+      - PR 15 merged as e3cb72c; explicit paragraph boundaries and outbound trailing-line rendering accepted by the owner on macOS
+      - Real SIGKILL recovery replaced Runtime PID 78190 with 79257, preserved second-part not_before and client IDs, and delivered all three parts exactly once; single-text fallback delivered one lossless part and the owner confirmed it
+      - Earlier roughly eleven-second provider-time-to-admission gaps were not reproduced after adding timing diagnostics; their cause remains unresolved
+  - id: 17.1B-2
+    name: native-weixin-typing
+    status: implemented_pending_real_account_acceptance
+    evidence:
+      - Implements opt-in private ticket acquisition and bounded transient typing with no delivery dependency
+      - 525 Runtime tests and 77 protocol tests passed locally; typecheck, format/lint, web and desktop UI builds passed; owner-visible typing acceptance is pending
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
@@ -527,7 +536,7 @@ entry_blockers:
   - Playback ACK is sentence-segment granular; per-word boundaries and long-running multi-turn voice stress tests remain pending
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
   - Proactive prospective-memory, Skill-completion, calendar, and scene event sources plus ignore-adaptive frequency remain pending
-  - The native WeChat iLink adapter passes local wire and lifecycle tests, but a real owner QR scan/direct-text round trip and installed Windows/Linux credential-store acceptance remain pending
+  - The native WeChat iLink adapter passes local wire and lifecycle tests, but macOS owner direct-text acceptance is complete; installed Windows/Linux credential-store acceptance remains pending
   - Memory sources persist typed channel attribution and retrieval/prompt projection preserve it, but the memory UI does not yet display that provenance; QQ/group and multi-human identity/privacy policy acceptance remain pending, and display labels must never become authorization or deduplication keys
 
 constraints:

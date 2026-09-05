@@ -113,6 +113,21 @@ class _FakeWeixin:
         del credentials, cursor
         return await self.updates.get()
 
+    async def get_typing_ticket(
+        self, credentials: WeixinCredentials, *, recipient_user_id: str, context_token: str
+    ) -> str | None:
+        return "test-typing-ticket"
+
+    async def send_typing(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        typing_ticket: str,
+        active: bool,
+    ) -> None:
+        pass
+
     async def send_text(
         self,
         credentials: WeixinCredentials,
@@ -1961,3 +1976,113 @@ async def test_sending_part_retryable_error_under_cancel_request_cancels_plan_an
     finally:
         hold_send.set()
         await container.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["enabled", "disabled", "ticket_hangs", "send_hangs"])
+async def test_typing_is_optional_and_never_blocks_text_delivery(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+) -> None:
+    generation_entered = asyncio.Event()
+    release_generation = asyncio.Event()
+
+    async def reply(self: DemoLlmProvider, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        generation_entered.set()
+        await release_generation.wait()
+        yield LlmTextDelta("The reply must arrive even when typing is unavailable.")
+        yield LlmResponseCompleted("stop")
+
+    class TypingTransport(_FakeWeixin):
+        def __init__(self) -> None:
+            super().__init__()
+            self.typing_entered = asyncio.Event()
+            self.typing_cancelled = asyncio.Event()
+            self.typing_calls: asyncio.Queue[bool] = asyncio.Queue()
+
+        async def get_typing_ticket(
+            self, credentials: WeixinCredentials, *, recipient_user_id: str, context_token: str
+        ) -> str | None:
+            self.typing_entered.set()
+            if mode == "ticket_hangs":
+                try:
+                    await asyncio.Event().wait()
+                finally:
+                    self.typing_cancelled.set()
+            return "typing-ticket"
+
+        async def send_typing(
+            self,
+            credentials: WeixinCredentials,
+            *,
+            recipient_user_id: str,
+            typing_ticket: str,
+            active: bool,
+        ) -> None:
+            await self.typing_calls.put(active)
+            if active and mode == "send_hangs":
+                try:
+                    await asyncio.Event().wait()
+                finally:
+                    self.typing_cancelled.set()
+
+    monkeypatch.setattr(DemoLlmProvider, "stream", reply)
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = TypingTransport()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    completed = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "channel.delivery_plan_completed"
+    )
+    try:
+        connection_id = uuid4()
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(typing_enabled=mode != "disabled")
+            }
+        )
+        created = await container.external_channels.create_connection(
+            configuration, access_token="g" * 43
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials("g" * 43).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="typing-cursor",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="typing-message",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Say hello",
+                        context_token="typing-context",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+        await asyncio.wait_for(generation_entered.wait(), 2)
+        if mode != "disabled":
+            await asyncio.wait_for(transport.typing_entered.wait(), 2)
+        if mode in ("enabled", "send_hangs"):
+            assert await asyncio.wait_for(transport.typing_calls.get(), 2) is True
+        release_generation.set()
+        await asyncio.wait_for(completed.receive(), 2)
+        assert len(transport.sent_messages) == 1
+        assert (
+            transport.sent_messages[0]["text"]
+            == "The reply must arrive even when typing is unavailable."
+        )
+        if mode in ("enabled", "send_hangs"):
+            assert await asyncio.wait_for(transport.typing_calls.get(), 2) is False
+        if mode in ("ticket_hangs", "send_hangs"):
+            await asyncio.wait_for(transport.typing_cancelled.wait(), 2)
+        if mode == "disabled":
+            assert not transport.typing_entered.is_set()
+    finally:
+        release_generation.set()
+        container.event_hub.unsubscribe(completed)
+        await container.stop()
+    assert transport.typing_calls.empty()
