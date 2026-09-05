@@ -559,10 +559,13 @@ phases:
     name: inbound-images-and-dynamic-sticker-learning
     status: in_progress
     evidence:
-      - Phase 17.3A starts with ephemeral single static PNG/JPEG understanding through native iLink and the configured chat model; real WeChat acceptance remains pending
+      - Phase 17.3A starts with ephemeral single static PNG/JPEG understanding through native iLink and the configured chat model; owner-confirmed real macOS image understanding passed on 2026-09-05
       - 682 Python tests passed with 11 Windows-only tests skipped; 181 Web tests, 2 desktop E2E tests, Ruff, Pyright, Web and desktop builds passed
       - Real Conversation and SQLite tests cover authorization before load, duplicate/conflicting image references, blocked-download cancellation, crash snapshot restart without replay, and one durable failure reply matching history
       - The configured gemini-3.1-flash-lite correctly identified a generated red circle on the left and blue square on the right via its actual multimodal endpoint; this does not replace owner WeChat image acceptance
+      - At 20:11:05 China time on 2026-09-05, real native WeChat admitted an image-only turn; generation completed at 20:11:15 and one text part delivered at 20:11:16 on its first attempt
+      - The owner confirmed the wallpaper-related response matched the supplied image; original image viewing through the automation screenshot interface remained unavailable, so visual correctness is owner-confirmed
+      - Phase 17.3A real image understanding is accepted; download-time cancellation, failure replay and crash recovery are automated-test evidence, while dynamic sticker learning remains pending
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4

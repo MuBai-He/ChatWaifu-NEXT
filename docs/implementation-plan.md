@@ -2524,3 +2524,8 @@ real macOS WeChat image round trip are separate gates. See [ADR 0035](adr/0035-e
 
 Persistent media, learning images into a sticker library, embeddings, deletion and privacy controls
 remain later Phase 17.3 work; completing 17.3A does not complete the parent phase.
+
+On 2026-09-05 at 20:11 China time, the owner confirmed a real WeChat image was understood correctly.
+The image-only turn produced one successful text delivery on its first attempt in about 10.6 seconds.
+This accepts the macOS image-understanding path; cancellation/failure/restart remain separately
+covered by automated tests. Dynamic sticker learning is still pending.

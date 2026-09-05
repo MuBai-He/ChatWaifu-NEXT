@@ -113,6 +113,7 @@ def test_parser_image_only():
 
 
 def test_parser_caption_and_image():
+    fixture_key = bytes(range(16)).hex()
     raw = _make_raw_inbound_msg(
         [
             {"type": 1, "text_item": {"text": "look at this photo"}},
@@ -122,7 +123,7 @@ def test_parser_caption_and_image():
                     "full_url": (
                         "https://novac2c.cdn.weixin.qq.com/c2c/download?encrypted_query_param=xyz"
                     ),
-                    "aeskey": "0123456789abcdef0123456789abcdef",
+                    "aeskey": fixture_key,
                 },
             },
         ]
@@ -134,7 +135,7 @@ def test_parser_caption_and_image():
     assert parsed.image.full_url == (
         "https://novac2c.cdn.weixin.qq.com/c2c/download?encrypted_query_param=xyz"
     )
-    assert parsed.image.aeskey == "0123456789abcdef0123456789abcdef"
+    assert parsed.image.aeskey == fixture_key
 
 
 def test_parser_text_only():

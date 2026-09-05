@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-05
-- Validation: 682 Python tests, 181 Web tests, native/model integration and live configured-model image probe passed; real WeChat acceptance pending
+- Validation: 682 Python tests, 181 Web tests, native/model integration and live configured-model image probe passed; real macOS WeChat image understanding confirmed by the owner on 2026-09-05
 
 ## Context
 
