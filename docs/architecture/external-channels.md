@@ -239,7 +239,7 @@ The fixed authorization endpoint and provider-returned API base are HTTPS allowl
 identifiers are redacted from logs. No secure credential backend means the adapter is unavailable; no
 plaintext fallback is allowed.
 
-V1 excludes groups, media, voice, proactive sends, and typing indicators.
+V1 excludes groups, media, voice, and proactive sends. Typing is an optional Phase 17.1B-2 presentation capability.
 
 ## Output and Runtime Skill policy
 
@@ -257,6 +257,30 @@ allow_tools = false
 This avoids loading voice workers for a remote text reply. Runtime Skills remain the only possible
 tool authority, but V1 has no trusted external confirmation surface. Proactive sends and new
 recipients remain separate external side effects.
+
+## Optional native WeChat typing (17.1B-2)
+
+The existing `presentation_policy.typing_enabled` flag is opt-in (default false), independent
+of single-text versus bubble presentation. Provider discovery advertises native typing support.
+The adapter obtains a per-owner ticket with `ilink/bot/getconfig` and sends status 1 (ON) or
+2 (OFF) through `ilink/bot/sendtyping`, following
+[Tencent's official adapter protocol](https://github.com/Tencent/openclaw-weixin/blob/main/README.md).
+Tickets and reply contexts remain provider-private, memory-only, and absent from logs and schemas.
+
+Each owner connection has one bounded typing worker and one replaceable target carrying
+`session_id`, `turn_id`, and `generation_id`. Admission requests typing without awaiting network
+calls. Generation and pending delivery keep it active; part-delivered events refresh it during
+cadence waits. Every refresh checks authoritative turn/plan state, so missed terminal notifications
+cannot keep a completed plan active. Periodic refresh is five seconds, each operation is bounded
+to two seconds, and a typing session lasts at most 120 seconds. Missing tickets and provider errors
+silently degrade presentation without affecting canonical turns, part claims, retries, or ACKs.
+
+Supersession interrupts pending typing I/O, attempts old OFF before new ON, and ignores stale
+terminal notifications for earlier targets. Completion, cancellation, connection retry, disabling,
+unbinding, and shutdown stop typing. Stop is best effort: an unavailable network cannot guarantee
+that the remote client immediately removes a previously displayed indicator. Restart reacquires a
+fresh ticket only for the newest still-active durable reply; it never replays saved typing events.
+Structured `weixin.typing` logs contain only lifecycle stage, local time, and Runtime lineage IDs.
 
 ## Native WeChat timing diagnostics
 

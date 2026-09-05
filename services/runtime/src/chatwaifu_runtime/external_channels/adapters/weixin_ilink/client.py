@@ -172,6 +172,56 @@ class WeixinILinkClient:
             )
         return WeixinUpdates(cursor=next_cursor, messages=messages)
 
+    async def get_typing_ticket(
+        self, credentials: WeixinCredentials, *, recipient_user_id: str, context_token: str
+    ) -> str | None:
+        payload = await self._post_json(
+            credentials.base_url,
+            "ilink/bot/getconfig",
+            {
+                "ilink_user_id": recipient_user_id,
+                "context_token": context_token,
+                "base_info": _base_info(),
+            },
+            token=credentials.bot_token,
+            timeout_seconds=2,
+        )
+        ret = payload.get("ret", 0)
+        if not isinstance(ret, int) or isinstance(ret, bool) or ret != 0:
+            raise WeixinILinkError(
+                "weixin.typing_config_failed", "WeChat typing is unavailable.", retryable=True
+            )
+        ticket = payload.get("typing_ticket")
+        if ticket is None or ticket == "":
+            return None
+        return _required_text(payload, "typing_ticket", max_length=16_384)
+
+    async def send_typing(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        typing_ticket: str,
+        active: bool,
+    ) -> None:
+        payload = await self._post_json(
+            credentials.base_url,
+            "ilink/bot/sendtyping",
+            {
+                "ilink_user_id": recipient_user_id,
+                "typing_ticket": typing_ticket,
+                "status": 1 if active else 2,
+                "base_info": _base_info(),
+            },
+            token=credentials.bot_token,
+            timeout_seconds=2,
+        )
+        ret = payload.get("ret", 0)
+        if not isinstance(ret, int) or isinstance(ret, bool) or ret != 0:
+            raise WeixinILinkError(
+                "weixin.typing_send_failed", "WeChat rejected typing status.", retryable=True
+            )
+
     async def send_text(
         self,
         credentials: WeixinCredentials,

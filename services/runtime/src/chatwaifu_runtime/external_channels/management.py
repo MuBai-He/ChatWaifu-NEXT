@@ -43,6 +43,11 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinPendingContext,
     WeixinUpdates,
 )
+from chatwaifu_runtime.external_channels.adapters.weixin_ilink.typing import (
+    WeixinTypingController,
+    WeixinTypingTarget,
+    WeixinTypingTransport,
+)
 from chatwaifu_runtime.external_channels.credentials import (
     ChannelCredentialStore,
     ChannelCredentialStoreError,
@@ -77,7 +82,7 @@ _MAX_AUTH_SESSIONS = 8
 _PENDING_ENROLLMENT_REFERENCE = "weixin_ilink:pending-enrollment"
 
 
-class WeixinILinkTransport(Protocol):
+class WeixinILinkTransport(WeixinTypingTransport, Protocol):
     async def close(self) -> None: ...
 
     async def start_authorization(self) -> WeixinAuthorizationStart: ...
@@ -240,6 +245,7 @@ class ChannelManagementService:
         self._auth_sessions: dict[UUID, _AuthorizationSession] = {}
         self._connection_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._schedulers: dict[UUID, ChannelDeliveryScheduler] = {}
+        self._typing: dict[UUID, WeixinTypingController] = {}
         self._auth_lock = asyncio.Lock()
         self._task_lock = asyncio.Lock()
         self._credential_mutation_locks: dict[UUID, asyncio.Lock] = {}
@@ -932,7 +938,36 @@ class ChannelManagementService:
             on_plan_terminal=lambda plan: self._handle_plan_terminal(connection_id, plan),
         )
         self._schedulers[connection_id] = scheduler
+        typing = WeixinTypingController(
+            self._weixin, lambda message_id: self._typing_active(connection_id, message_id)
+        )
+        self._typing[connection_id] = typing
         try:
+            connection = await self._external_channels.get_connection(connection_id)
+            policy = connection.configuration.presentation_policy
+            if policy is not None and policy.typing_enabled:
+                # Reacquire a fresh ticket for the newest durable pending reply after restart.
+                pending_turns: list[ChannelTurnRecord] = []
+                for message_id in credentials.pending_contexts:
+                    turn = await self._repository.find_turn_by_external_message(
+                        connection_id, message_id
+                    )
+                    if turn is not None and await self._typing_active(connection_id, message_id):
+                        pending_turns.append(turn)
+                if pending_turns:
+                    turn = max(pending_turns, key=lambda item: item.created_at)
+                    context = credentials.pending_contexts[turn.external_message_id]
+                    typing.start(
+                        WeixinTypingTarget(
+                            external_message_id=turn.external_message_id,
+                            session_id=turn.session_id,
+                            turn_id=turn.turn_id,
+                            generation_id=turn.generation_id,
+                            credentials=credentials,
+                            recipient_user_id=context.recipient_user_id,
+                            context_token=context.context_token,
+                        )
+                    )
             try:
                 await self._weixin.notify_start(credentials)
             except asyncio.CancelledError:
@@ -1004,6 +1039,7 @@ class ChannelManagementService:
                         connection_id,
                     )
                 if retries:
+                    typing.reset()
                     await self._set_connection_health(
                         connection_id,
                         "weixin.connection_retrying",
@@ -1015,6 +1051,8 @@ class ChannelManagementService:
                 else:
                     await asyncio.sleep(0)
         finally:
+            self._typing.pop(connection_id, None)
+            await typing.close()
             active_sched = self._schedulers.pop(connection_id, None)
             if active_sched is not None:
                 await active_sched.stop()
@@ -1127,9 +1165,45 @@ class ChannelManagementService:
                     if is_terminal:
                         await self._forget_context(connection_id, message.external_message_id)
 
+            typing = self._typing.get(connection_id)
+            policy = connection.configuration.presentation_policy
+            if (
+                typing is not None
+                and policy is not None
+                and policy.typing_enabled
+                and not receipt.duplicate
+            ):
+                typing.start(
+                    WeixinTypingTarget(
+                        external_message_id=message.external_message_id,
+                        session_id=receipt.session_id,
+                        turn_id=receipt.turn_id,
+                        generation_id=receipt.generation_id,
+                        credentials=credentials,
+                        recipient_user_id=message.sender_user_id,
+                        context_token=message.context_token,
+                    )
+                )
             scheduler = self.get_scheduler(connection_id)
             if scheduler is not None:
                 scheduler.wake()
+
+    async def _typing_active(self, connection_id: UUID, message_id: str) -> bool:
+        turn = await self._repository.find_turn_by_external_message(connection_id, message_id)
+        if turn is None:
+            return False
+        if turn.delivery_id is not None:
+            plan = await self._repository.get_delivery_plan(turn.delivery_id)
+            return (
+                plan is not None
+                and plan.status
+                in (
+                    ChannelDeliveryStatus.PENDING,
+                    ChannelDeliveryStatus.SENDING,
+                )
+                and plan.delivery.cancel_requested_at is None
+            )
+        return turn.status in (ChannelTurnStatus.ACCEPTED, ChannelTurnStatus.PROCESSING)
 
     async def _on_turn_terminal(self, turn: ChannelTurnRecord) -> None:
         if turn.delivery_id is None and turn.status in (
@@ -1207,6 +1281,7 @@ class ChannelManagementService:
         if self._event_hub is None:
             return
         terminal_event_types = {
+            "channel.delivery_part_delivered",
             "channel.delivery_plan_completed",
             "channel.delivery_plan_cancelled",
             "channel.delivery_plan_failed",
@@ -1237,6 +1312,13 @@ class ChannelManagementService:
         if not isinstance(raw_payload, dict):
             return
         payload = cast(dict[str, object], raw_payload)
+        if event.get("event_type") == "channel.delivery_part_delivered":
+            raw_connection_id = payload.get("connection_id")
+            if raw_connection_id:
+                typing = self._typing.get(UUID(str(raw_connection_id)))
+                if typing is not None:
+                    typing.refresh()
+            return
         connection_id_str = payload.get("connection_id")
         channel_turn_id_str = payload.get("channel_turn_id")
         delivery_id_str = payload.get("delivery_id")
@@ -1306,6 +1388,9 @@ class ChannelManagementService:
         connection_id: UUID,
         external_message_id: str,
     ) -> None:
+        typing = self._typing.get(connection_id)
+        if typing is not None:
+            typing.stop(external_message_id)
         async with self._get_credential_lock(connection_id):
             credentials = await self._load_credentials(connection_id)
             if credentials is None:

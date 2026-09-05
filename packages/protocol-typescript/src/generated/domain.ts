@@ -170,7 +170,7 @@ export type SoftMaxCharsPerPart = number
  */
 export type TotalCadenceDelayCeilingMs = number
 /**
- * Whether typing indicators are emitted (reserved for Phase 17.1B-2)
+ * Whether supported adapters emit best-effort typing indicators during active replies
  */
 export type TypingEnabled = boolean
 /**

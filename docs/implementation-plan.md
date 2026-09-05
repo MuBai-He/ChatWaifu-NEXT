@@ -2456,3 +2456,18 @@ Contract Gate
 ```
 
 任何一关失败，都不能通过 UI 演示掩盖。
+
+## Phase 17.1B-2 — Native WeChat Typing
+
+Smallest complete slice: opt-in typing while an admitted reply is generating or waiting between
+bubbles, through the existing channel configuration and native iLink adapter. Keep typing transient
+and independently cancellable; provider errors must not delay text. Excludes new channels, media,
+proactive messages, and changes to canonical turns or durable delivery semantics.
+
+- Verify the official Tencent getconfig/sendtyping wire contract and private ticket boundary.
+- Implement one bounded per-connection worker with turn/generation identity, refresh, supersession,
+  terminal cleanup, connection teardown, and restart reconciliation from durable reply state.
+- Test missing/failed/hanging provider calls, in-flight cancellation, late completion, stale terminal
+  events, feature disabled, and complete ingress-to-text delivery while typing is unavailable.
+- Run protocol, Runtime, type/format/lint, and client builds; then verify visible typing, completion,
+  bubble cadence, and interruption with the owner's real WeChat account before marking accepted.
