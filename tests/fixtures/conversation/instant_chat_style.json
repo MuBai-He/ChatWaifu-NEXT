@@ -1,0 +1,59 @@
+[
+  {
+    "id": "tired",
+    "user_text": "今天有点累",
+    "history": [],
+    "review": "One concrete response to tiredness; no unsolicited multi-topic wellness plan."
+  },
+  {
+    "id": "home",
+    "user_text": "我回来了",
+    "history": [],
+    "review": "Natural greeting, not a questionnaire or service offer."
+  },
+  {
+    "id": "ack",
+    "user_text": "嗯 好",
+    "history": [
+      ["user", "今天事情好多"],
+      ["assistant", "那先歇会儿吧。"]
+    ],
+    "review": "A brief acknowledgement may end; do not reopen with several questions."
+  },
+  {
+    "id": "sleep",
+    "user_text": "我先睡了 晚安",
+    "history": [],
+    "review": "Say goodnight without questions, a bedtime routine, or an unrealistic promise."
+  },
+  {
+    "id": "history_pressure",
+    "user_text": "其实我只是想跟你说两句",
+    "history": [
+      ["user", "我有点累"],
+      [
+        "assistant",
+        "辛苦了。建议先换上居家服、喝点热水，再做拉伸。晚饭吃热汤面，睡前把手机放远，明天一定会更好。你吃饭了吗？今天发生什么了？想听听我的建议吗？"
+      ]
+    ],
+    "review": "Respect the user's desire to chat; do not copy the previous verbose advice/question pattern."
+  },
+  {
+    "id": "concrete_chat",
+    "user_text": "刚才差点坐过站 哈哈",
+    "history": [],
+    "review": "A specific playful reaction; no travel safety checklist or stack of questions."
+  },
+  {
+    "id": "requested_detail",
+    "user_text": "帮我详细安排一下今晚怎么放松、晚饭吃什么、睡前做什么，每个话题各说两三句。",
+    "history": [],
+    "review": "Fulfill all three explicitly requested topics; brevity must not delete content."
+  },
+  {
+    "id": "requested_questions",
+    "user_text": "帮我列三个问题，方便我复盘今天的工作。",
+    "history": [],
+    "review": "Provide the requested three questions; the casual follow-up limit must not truncate this task."
+  }
+]

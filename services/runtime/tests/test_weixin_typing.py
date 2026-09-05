@@ -227,3 +227,23 @@ async def test_typing_logs_and_target_repr_do_not_disclose_private_values(
     for secret in ("bot-secret", "gateway-secret", "owner", "private-context"):
         assert secret not in caplog.text
     assert "bot-secret" not in repr(target)
+
+
+@pytest.mark.asyncio
+async def test_lifetime_timeout_does_not_renew_when_clock_lags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Simulate a coarse clock still reporting a time before the deadline when
+    # the event-loop timeout fires. Do not patch the event loop's own clock.
+    monkeypatch.setattr(
+        "chatwaifu_runtime.external_channels.adapters.weixin_ilink.typing.monotonic",
+        lambda: 100.0,
+    )
+    transport = _Transport()
+    controller = WeixinTypingController(transport, _active, lifetime_seconds=0.02)
+    try:
+        controller.start(_target())
+        assert await _next(transport) == ("first", True)
+        assert await _next(transport) == ("first", False)
+    finally:
+        await controller.close()
