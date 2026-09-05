@@ -90,6 +90,9 @@ test("desktop settings is an app-like control surface without chat ownership", a
   await expect(
     page.getByRole("heading", { level: 1, name: "模型" }),
   ).toBeVisible();
+  await expect(
+    page.locator(".model-role-card input:not([type=checkbox])").first(),
+  ).toBeVisible();
   const modelLayout = await page.evaluate<{
     panelDisplay: string;
     headingDisplay: string;
@@ -204,16 +207,18 @@ test("desktop pet reveals its controls and composer while the pointer is over th
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 430, height: 650 });
-  await page.mouse.move(-100, -100);
   await page.goto("/desktop-pet");
 
   const shell = page.locator(".desktop-pet-shell");
   const actions = page.getByRole("navigation", { name: "桌宠操作" });
   const composer = page.getByRole("textbox", { name: "桌宠文字消息" });
 
-  // The physical pointer is shared by the headless browser process and can be
-  // left over the new page by the preceding settings test. Establish the
-  // outside state explicitly before checking the reveal transition.
+  // Establish pointer presence after React mounts before moving outside.
+  // Moving outside before navigation completes does not guarantee that the
+  // mounted shell receives a leave event in every Chromium environment.
+  await expect(shell).toBeVisible();
+  await page.mouse.move(10, 10);
+  await expect(shell).toHaveAttribute("data-pointer-inside", "true");
   await page.mouse.move(-100, -100);
   await expect(shell).toHaveAttribute("data-pointer-inside", "false");
   await expect(actions).toHaveCSS("opacity", "0");
