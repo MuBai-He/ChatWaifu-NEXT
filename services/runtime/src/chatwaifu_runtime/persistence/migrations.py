@@ -982,4 +982,85 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON learned_stickers(principal_scope, character_id, learned_at ASC);
         """,
     ),
+    (
+        25,
+        """
+        CREATE TABLE photo_memory_settings (
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            retention_enabled INTEGER NOT NULL CHECK(retention_enabled IN (0, 1)),
+            revision INTEGER NOT NULL CHECK(revision >= 0),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(principal_scope, character_id)
+        );
+
+        CREATE TABLE photo_assets (
+            photo_id TEXT PRIMARY KEY,
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            sha256 TEXT NOT NULL,
+            mime_type TEXT NOT NULL CHECK(mime_type IN ('image/png', 'image/jpeg')),
+            byte_size INTEGER NOT NULL CHECK(byte_size > 0 AND byte_size <= 5242880),
+            width INTEGER NOT NULL CHECK(width > 0 AND width <= 2048),
+            height INTEGER NOT NULL CHECK(height > 0 AND height <= 2048),
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+            keywords TEXT NOT NULL,
+            caption TEXT NOT NULL,
+            received_at TEXT NOT NULL,
+            saved_at TEXT NOT NULL,
+            source_connection_id TEXT NOT NULL,
+            source_session_id TEXT NOT NULL,
+            source_turn_id TEXT NOT NULL,
+            source_generation_id TEXT NOT NULL,
+            data BLOB NOT NULL,
+            UNIQUE(principal_scope, character_id, sha256),
+            FOREIGN KEY(principal_scope, character_id)
+                REFERENCES photo_memory_settings(principal_scope, character_id)
+                ON DELETE CASCADE
+        );
+
+        CREATE TABLE photo_references (
+            photo_id TEXT NOT NULL REFERENCES photo_assets(photo_id) ON DELETE CASCADE,
+            generation_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            reference_type TEXT NOT NULL CHECK(reference_type IN ('source', 'recall')),
+            created_at TEXT NOT NULL,
+            PRIMARY KEY(photo_id, generation_id)
+        );
+
+        CREATE TABLE photo_context_redactions (
+            generation_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE VIRTUAL TABLE photo_assets_fts USING fts5(
+            photo_id UNINDEXED,
+            content,
+            tokenize='unicode61'
+        );
+
+        CREATE TRIGGER photo_assets_after_delete AFTER DELETE ON photo_assets
+        BEGIN
+            DELETE FROM photo_assets_fts WHERE photo_id = old.photo_id;
+        END;
+
+        CREATE TABLE conversation_history_dependencies (
+            source_generation_id TEXT NOT NULL,
+            derived_generation_id TEXT NOT NULL,
+            PRIMARY KEY (source_generation_id, derived_generation_id)
+        );
+        CREATE INDEX conversation_history_derived_idx
+            ON conversation_history_dependencies(derived_generation_id);
+
+        ALTER TABLE turns ADD COLUMN generation_id TEXT;
+        CREATE INDEX turns_generation_id_idx
+            ON turns(generation_id) WHERE generation_id IS NOT NULL;
+        """,
+    ),
 )

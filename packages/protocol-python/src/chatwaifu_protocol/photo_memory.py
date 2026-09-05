@@ -1,6 +1,6 @@
 """Versioned owner-scoped photo retention and inspection contracts."""
 
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field
@@ -31,7 +31,9 @@ class SavedPhoto(ProtocolModel):
     title: str = Field(min_length=1, max_length=80)
     description: str = Field(min_length=1, max_length=600)
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
-    keywords: list[str] = Field(default_factory=list[str], max_length=12)
+    keywords: list[Annotated[str, Field(min_length=1, max_length=40)]] = Field(
+        default_factory=list[str], max_length=12
+    )
     caption: str = Field(default="", max_length=1000)
     received_at: AwareDatetime
     saved_at: AwareDatetime

@@ -2554,7 +2554,7 @@ short plea without adding a model call. The owner confirmed the real WeChat reus
 after the fix; broader photo-screening coverage remains separate. See
 [ADR 0036](adr/0036-opt-in-learned-sticker-library.md).
 
-### Phase 17.3C — Photo retention and visual memory (planned)
+### Phase 17.3C — Photo retention and visual memory (in progress)
 
 On 2026-09-05 the owner clarified that photos should also be saved so Ningning can bring them up
 in later conversations. The preceding selection concerned only sticker eligibility. Photo
@@ -2565,6 +2565,12 @@ conversation/time provenance; use relevant retrieval to support later references
 and expose viewing and deletion. A saved photo does not automatically become an outbound sticker.
 Media storage and long-term memory remain separate: extracted memories pass through the existing
 policy, deduplication and provenance boundaries. Deletion must cover the asset and derived
-retrieval references. Automatic versus explicit photo saving, retention bounds and the exact
-recall contract remain design decisions for that slice. No original-photo retention or later
-photo recall is claimed by 17.3A or 17.3B.
+retrieval references. ADR 0037 specifies a separate default-off automatic photo-retention switch,
+metadata-free copies up to 2048 pixels per side and 5 MiB, and 200 photos / 500 MiB per owner and
+character. Disabling collection preserves existing photos. The first recall path uses bounded
+Chinese/Latin lexical matching and explicit recent-photo references, with optional image grounding
+and source-attributed observations separate from personal memory extraction. Direct and indirect
+photo-derived assistant context is redacted on deletion, with revision fences for concurrent
+observations and exact-generation cancellation. Experience reset also clears scoped photos.
+Real WeChat photo/restart/recall/deletion acceptance remains required. General embedding recall,
+groups and animations remain pending Phase 17.3 work; this slice does not complete Phase 17.

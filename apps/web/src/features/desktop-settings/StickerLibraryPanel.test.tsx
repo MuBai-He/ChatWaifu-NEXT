@@ -78,7 +78,11 @@ describe("StickerLibraryPanel", () => {
         "开启后自动筛选并保存适合作表情的图片，普通照片不进入表情库。",
       ),
     ).toBeTruthy();
-    expect(screen.getByText("照片保存与回忆将在后续提供。")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "想让宁宁以后记得普通照片，请开启下方的“记住我发的照片”。",
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         "已学习的表情会在开启“合适的时候发送表情”时由角色主动发出。",

@@ -1058,7 +1058,57 @@ export type Reason7 = string
 export type RequestId1 = string
 export type RequestedAt2 = string
 export type SideEffect = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
+export type Deleted = boolean
+export type Revision5 = number
+export type SchemaVersion45 = '1.0'
+export type RetentionEnabled = boolean
+export type Revision6 = number
+export type SchemaVersion46 = '1.0'
+export type ExpectedRevision4 = number
+export type RetentionEnabled1 = boolean
+export type SchemaVersion47 = '1.0'
+export type Capacity = 200
+export type ByteSize1 = number
+export type Caption = string
+export type Confidence3 = number
 export type Description6 = string
+export type Height = number
+/**
+ * @maxItems 12
+ */
+export type Keywords =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string, string, string]
+export type MimeType4 = 'image/png' | 'image/jpeg'
+export type PhotoId = string
+export type ReceivedAt2 = string
+export type SavedAt = string
+export type SchemaVersion48 = '1.0'
+export type Sha2562 = string
+export type SourceConnectionId1 = string
+export type SourceGenerationId = string
+export type SourceSessionId = string
+export type SourceTurnId = string
+export type Title4 = string
+export type Width = number
+/**
+ * @maxItems 200
+ */
+export type Items = SavedPhoto[]
+export type SchemaVersion49 = '1.0'
+export type TotalBytes = number
+export type Description7 = string
 export type Enabled3 = boolean
 export type InstallPath = string
 export type InstalledAt = string
@@ -1071,10 +1121,10 @@ export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
 export type UpdatedAt10 = string
 export type Version2 = string
-export type Description7 = string
+export type Description8 = string
 export type Name10 = string
 export type PluginId1 = string
-export type SchemaVersion45 = '1.0'
+export type SchemaVersion50 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -1118,7 +1168,7 @@ export type CharacterId5 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
 export type CreatedAt11 = string
-export type Revision5 = number
+export type Revision7 = number
 export type SessionId26 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
 export type UpdatedAt11 = string
@@ -1126,13 +1176,13 @@ export type BackgroundAllowed = boolean
 export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
 export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
-export type Description8 = string
+export type Description9 = string
 export type Name11 = string
 export type RequiredPermissions = string[]
 export type SideEffect1 = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
 export type TimeoutSeconds3 = number
 export type Capabilities1 = SkillCapability[]
-export type Description9 = string
+export type Description10 = string
 export type Enabled4 = boolean
 export type Interruptible1 = boolean
 export type McpConnectionId = string | null
@@ -1180,22 +1230,22 @@ export type SkillRunState =
   | 'expired'
 export type TurnId24 = string | null
 export type UpdatedAt12 = string
-export type Deleted = boolean
-export type Revision6 = number
-export type SchemaVersion46 = '1.0'
+export type Deleted1 = boolean
+export type Revision8 = number
+export type SchemaVersion51 = '1.0'
 export type LearningEnabled = boolean
-export type Revision7 = number
-export type SchemaVersion47 = '1.0'
-export type ExpectedRevision4 = number
+export type Revision9 = number
+export type SchemaVersion52 = '1.0'
+export type ExpectedRevision5 = number
 export type LearningEnabled1 = boolean
-export type SchemaVersion48 = '1.0'
-export type Capacity = 100
+export type SchemaVersion53 = '1.0'
+export type Capacity1 = 100
 /**
  * @maxItems 100
  */
-export type Items = LearnedSticker[]
-export type SchemaVersion49 = '1.0'
-export type TotalBytes = number
+export type Items1 = LearnedSticker[]
+export type SchemaVersion54 = '1.0'
+export type TotalBytes1 = number
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -1206,11 +1256,11 @@ export type ByteLength1 = number
 export type Codec1 = 'jpeg' | 'png' | 'h264' | 'vp8'
 export type EndOfStream1 = boolean
 export type GenerationId27 = string | null
-export type Height = number
+export type Height1 = number
 export type PtsMs1 = number
 export type Sequence17 = number
 export type StreamId5 = string
-export type Width = number
+export type Width1 = number
 
 /**
  * Schema-only catalog used to generate a single conflict-free TypeScript module.
@@ -1262,11 +1312,16 @@ export interface ProtocolCatalog {
   permission_decision: PermissionDecision
   permission_grant: PermissionGrant
   permission_request: PermissionRequest
+  photo_memory_delete_result: PhotoMemoryDeleteResult
+  photo_memory_settings: PhotoMemorySettings
+  photo_memory_settings_update: PhotoMemorySettingsUpdate
+  photo_memory_snapshot: PhotoMemorySnapshot
   plugin: PluginSnapshot
   plugin_manifest: PluginManifest
   prompt_budget: PromptBudgetReport
   response_plan: ResponsePlan
   route: RouteDecision
+  saved_photo: SavedPhoto
   session: SessionSnapshot
   skill: SkillDefinition
   skill_invocation: SkillInvocation
@@ -2488,8 +2543,55 @@ export interface PermissionRequest {
   side_effect: SideEffect
   [k: string]: unknown
 }
-export interface PluginSnapshot {
+export interface PhotoMemoryDeleteResult {
+  deleted: Deleted
+  revision: Revision5
+  schema_version?: SchemaVersion45
+  [k: string]: unknown
+}
+export interface PhotoMemorySettings {
+  retention_enabled?: RetentionEnabled
+  revision?: Revision6
+  schema_version?: SchemaVersion46
+  [k: string]: unknown
+}
+export interface PhotoMemorySettingsUpdate {
+  expected_revision: ExpectedRevision4
+  retention_enabled: RetentionEnabled1
+  schema_version?: SchemaVersion47
+  [k: string]: unknown
+}
+export interface PhotoMemorySnapshot {
+  capacity?: Capacity
+  items?: Items
+  schema_version?: SchemaVersion49
+  settings: PhotoMemorySettings
+  total_bytes: TotalBytes
+  [k: string]: unknown
+}
+export interface SavedPhoto {
+  byte_size: ByteSize1
+  caption?: Caption
+  confidence: Confidence3
   description: Description6
+  height: Height
+  keywords?: Keywords
+  mime_type: MimeType4
+  photo_id: PhotoId
+  received_at: ReceivedAt2
+  saved_at: SavedAt
+  schema_version?: SchemaVersion48
+  sha256: Sha2562
+  source_connection_id: SourceConnectionId1
+  source_generation_id: SourceGenerationId
+  source_session_id: SourceSessionId
+  source_turn_id: SourceTurnId
+  title: Title4
+  width: Width
+  [k: string]: unknown
+}
+export interface PluginSnapshot {
+  description: Description7
   enabled: Enabled3
   install_path: InstallPath
   installed_at: InstalledAt
@@ -2505,10 +2607,10 @@ export interface PluginSnapshot {
   [k: string]: unknown
 }
 export interface PluginManifest {
-  description: Description7
+  description: Description8
   name: Name10
   plugin_id: PluginId1
-  schema_version?: SchemaVersion45
+  schema_version?: SchemaVersion50
   skills: Skills
   transport: PluginTransport
   version: Version3
@@ -2559,7 +2661,7 @@ export interface SessionSnapshot {
   character_id: CharacterId5
   conversation_state: ConversationState
   created_at: CreatedAt11
-  revision: Revision5
+  revision: Revision7
   session_id: SessionId26
   state: SessionState
   updated_at: UpdatedAt11
@@ -2568,7 +2670,7 @@ export interface SessionSnapshot {
 export interface SkillDefinition {
   background_allowed?: BackgroundAllowed
   capabilities?: Capabilities1
-  description: Description9
+  description: Description10
   enabled?: Enabled4
   interruptible?: Interruptible1
   mcp_connection_id?: McpConnectionId
@@ -2583,7 +2685,7 @@ export interface SkillCapability {
   adapter_operation?: AdapterOperation
   adapter_tool?: AdapterTool
   confirmation_required?: ConfirmationRequired
-  description: Description8
+  description: Description9
   input_schema: JsonObject
   name: Name11
   output_schema: JsonObject
@@ -2642,29 +2744,29 @@ export interface SkillRunSnapshot {
   [k: string]: unknown
 }
 export interface StickerLibraryDeleteResult {
-  deleted: Deleted
-  revision: Revision6
-  schema_version?: SchemaVersion46
+  deleted: Deleted1
+  revision: Revision8
+  schema_version?: SchemaVersion51
   [k: string]: unknown
 }
 export interface StickerLibrarySettings {
   learning_enabled?: LearningEnabled
-  revision?: Revision7
-  schema_version?: SchemaVersion47
+  revision?: Revision9
+  schema_version?: SchemaVersion52
   [k: string]: unknown
 }
 export interface StickerLibrarySettingsUpdate {
-  expected_revision: ExpectedRevision4
+  expected_revision: ExpectedRevision5
   learning_enabled: LearningEnabled1
-  schema_version?: SchemaVersion48
+  schema_version?: SchemaVersion53
   [k: string]: unknown
 }
 export interface StickerLibrarySnapshot {
-  capacity?: Capacity
-  items?: Items
-  schema_version?: SchemaVersion49
+  capacity?: Capacity1
+  items?: Items1
+  schema_version?: SchemaVersion54
   settings: StickerLibrarySettings
-  total_bytes: TotalBytes
+  total_bytes: TotalBytes1
   [k: string]: unknown
 }
 export interface TurnSnapshot {
@@ -2681,10 +2783,10 @@ export interface VideoFrameHeader {
   codec: Codec1
   end_of_stream?: EndOfStream1
   generation_id?: GenerationId27
-  height: Height
+  height: Height1
   pts_ms: PtsMs1
   sequence: Sequence17
   stream_id: StreamId5
-  width: Width
+  width: Width1
   [k: string]: unknown
 }

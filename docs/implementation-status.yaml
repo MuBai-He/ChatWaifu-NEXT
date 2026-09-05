@@ -575,7 +575,14 @@ phases:
       - The selection fix passed 749 Python tests with 11 Windows-only skips, plus 202 Web tests on CI-matching Node 22.23.2; types, lint and Web/desktop builds passed, and read-only replay selected the actual saved image for both owner requests; real WeChat reuse acceptance is still pending
       - The owner subsequently confirmed the real WeChat reuse retest passed on selection fix 77b0b7f
       - Windows CI on 77b0b7f timed out during the typing test's two-second generation setup wait; the test now synchronizes generation and typing readiness separately, proves the simulated typing request remains hung, and retains the two-second text delivery and cleanup checks
-      - Owner clarified that ordinary photos must also support future retention and recall; exclusion applies only to the sticker library, with separate Phase 17.3C photo and visual memory work planned
+      - Owner clarified that ordinary photos must also support future retention and recall; exclusion applies only to the sticker library
+      - Phase 17.3C now implements separate default-off photo retention, conservative structured photo classification, metadata-free local copies, scoped lexical and recent-photo recall, and authenticated preview and deletion under ADR 0037
+      - Revision fences and authoritative completed-source checks prevent stale saves; deletion removes image bytes and FTS entries, redacts direct and transitive assistant prompt history, and cancels only affected active generations; experience reset clears scoped photos atomically
+      - Phase 17.3C local verification passed 952 Python tests with 46 platform-dependent skips, 222 Web tests, 34 protocol tests, 2 desktop E2E tests, Ruff and Pyright; Web and desktop UI builds passed
+      - An isolated actual Runtime and browser passed photo preview, enlargement and deletion; the resulting asset, FTS and reference tables were empty, while one opaque deletion fence remained; synthetic UI fixtures do not establish real photo classification accuracy
+      - Photo management stays available after WeChat disconnect; real owner WeChat photo, intervening conversation, restart, cross-surface recall and deletion acceptance remains pending, with the Mac locked during this pass
+      - On 2026-09-06 the actual Mac Runtime was restarted after an idle-state check and SQLite backup; migration 25 and health readiness were verified, the native WeChat binding remained enabled, and photo retention remained default-off with zero saved assets
+      - General embedding recall, groups and animations remain pending; Phase 17.3C does not complete Phase 17
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4

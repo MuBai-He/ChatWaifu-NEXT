@@ -37,6 +37,12 @@ transcript; deleting a photo does not rewrite user-authored messages or unrelate
 Active generations using deleted photo evidence are cancelled by exact generation identity.
 Deletion cannot withdraw already delivered messages or bytes already transmitted to a provider.
 
+Opaque history dependency edges are recorded before prompt compilation. Deletion traverses
+those edges as well as direct image recall references, so indirect assistant paraphrases and
+replies made before the background observation finishes are covered. Context read before a
+deletion is rechecked at the prompt boundary. Experience reset clears photo assets in the same
+transaction as other character/owner state, retaining revision fences and context redactions.
+
 ## Architecture and acceptance
 
 The photo service owns observation and relevance policy and depends on a typed repository port.
