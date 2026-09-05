@@ -117,6 +117,21 @@ class _FakeWeixin:
         del credentials, cursor
         return await self.updates.get()
 
+    async def get_typing_ticket(
+        self, credentials: WeixinCredentials, *, recipient_user_id: str, context_token: str
+    ) -> str | None:
+        return None
+
+    async def send_typing(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        typing_ticket: str,
+        active: bool,
+    ) -> None:
+        pass
+
     async def send_text(
         self,
         credentials: WeixinCredentials,

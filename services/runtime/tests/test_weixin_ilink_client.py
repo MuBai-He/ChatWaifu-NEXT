@@ -198,3 +198,62 @@ async def test_oversized_response_is_stopped_during_streaming() -> None:
     assert caught.value.code == "weixin.response_too_large"
     assert stream.chunks_read == 5
     assert stream.closed is True
+
+
+@pytest.mark.asyncio
+async def test_typing_ticket_and_status_wire_contract() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/getconfig"):
+            return httpx.Response(200, json={"ret": 0, "typing_ticket": "private-ticket"})
+        return httpx.Response(200, json={"ret": 0})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        client = WeixinILinkClient(http)
+        ticket = await client.get_typing_ticket(
+            _credentials(), recipient_user_id="owner-1", context_token="private-context"
+        )
+        assert ticket == "private-ticket"
+        for active in (True, False):
+            await client.send_typing(
+                _credentials(), recipient_user_id="owner-1", typing_ticket=ticket, active=active
+            )
+    config = json.loads(requests[0].content)
+    assert config["ilink_user_id"] == "owner-1"
+    assert config["context_token"] == "private-context"
+    assert [json.loads(r.content)["status"] for r in requests[1:]] == [1, 2]
+    for request in requests:
+        assert request.headers["authorization"] == "Bearer provider-token"
+        assert request.extensions["timeout"]["read"] == 2
+        assert "base_info" in json.loads(request.content)
+    for request in requests[1:]:
+        assert request.url.path == "/ilink/bot/sendtyping"
+        assert json.loads(request.content)["typing_ticket"] == ticket
+        assert "context_token" not in json.loads(request.content)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [{"ret": 1}, {"ret": True}, {"ret": "0"}])
+async def test_typing_provider_errors_are_normalized_without_echoing_private_data(
+    payload: dict[str, object],
+) -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, json={**payload, "errmsg": "private-ticket"})
+        )
+    ) as http:
+        client = WeixinILinkClient(http)
+        with pytest.raises(WeixinILinkError, match="typing") as error:
+            await client.send_typing(
+                _credentials(),
+                recipient_user_id="owner-1",
+                typing_ticket="private-ticket",
+                active=True,
+            )
+        assert "private-ticket" not in str(error.value)
+        with pytest.raises(WeixinILinkError):
+            await client.get_typing_ticket(
+                _credentials(), recipient_user_id="owner-1", context_token="private-context"
+            )

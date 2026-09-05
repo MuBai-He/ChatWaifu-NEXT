@@ -140,7 +140,9 @@ class ChannelPresentationPolicy(ChannelVersionedModel):
     )
     typing_enabled: bool = Field(
         default=False,
-        description="Whether typing indicators are emitted (reserved for Phase 17.1B-2)",
+        description=(
+            "Whether supported adapters emit best-effort typing indicators during active replies"
+        ),
     )
     bypass_long_form: bool = Field(
         default=True,
