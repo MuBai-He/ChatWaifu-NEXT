@@ -582,6 +582,8 @@ phases:
       - An isolated actual Runtime and browser passed photo preview, enlargement and deletion; the resulting asset, FTS and reference tables were empty, while one opaque deletion fence remained; synthetic UI fixtures do not establish real photo classification accuracy
       - Photo management stays available after WeChat disconnect; real owner WeChat photo, intervening conversation, restart, cross-surface recall and deletion acceptance remains pending, with the Mac locked during this pass
       - On 2026-09-06 the actual Mac Runtime was restarted after an idle-state check and SQLite backup; migration 25 and health readiness were verified, the native WeChat binding remained enabled, and photo retention remained default-off with zero saved assets
+      - Real owner photo retention and restart recall passed on 2026-09-06; deletion cleared assets, FTS and references, but the negative recall exposed stale-topic and speaker-ownership confusion after assistant history rows were removed
+      - Opaque assistant omission markers now preserve completed exchange boundaries in fresh and stale history without restoring deleted text or rebuilding redacted dependencies; latest-turn and unavailable-photo guidance passed three targeted actual-model probes, with 955 Python tests passing and 46 platform-dependent skips; owner WeChat retest remains pending
       - General embedding recall, groups and animations remain pending; Phase 17.3C does not complete Phase 17
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management

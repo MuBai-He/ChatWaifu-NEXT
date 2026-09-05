@@ -34,6 +34,11 @@ Deletion removes bytes, descriptions, search entries and recall associations in 
 Opaque generation redactions survive deletion so future model context excludes assistant replies
 derived from that photo, including cross-surface history. The visible chat transcript remains a
 transcript; deleting a photo does not rewrite user-authored messages or unrelated user facts.
+Redacted assistant turns retain an opaque omission marker in model history so completed exchanges
+do not collapse into unanswered user messages. Fresh and already-read histories use the same
+database-authorized redaction; marker text never determines whether a generation is redacted.
+These markers contain no photo details and create no new dependencies on redacted generations.
+Prompt and summary policies preserve speaker ownership and treat omitted exchanges as completed.
 Active generations using deleted photo evidence are cancelled by exact generation identity.
 Deletion cannot withdraw already delivered messages or bytes already transmitted to a provider.
 

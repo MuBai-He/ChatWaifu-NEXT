@@ -16,6 +16,16 @@ _PHOTO_REFERENCE = re.compile(r"照片|相片|图片|那张|这张|拍的|photo|
 _RECENT_REFERENCE = re.compile(r"刚才|刚刚|最近|上一张|上次|那张|这张|last|recent", re.IGNORECASE)
 
 
+_NO_PHOTO_EVIDENCE = (
+    "[Photo evidence]\n"
+    "No saved photo is currently available for this request. "
+    "Briefly state that the image is currently unavailable and invite the user to re-send "
+    "it if needed. Do not invent visual details, do not invent reasons for not seeing it "
+    "(such as claiming you never looked carefully), and do not answer stale or unrelated "
+    "earlier topics from conversation history."
+)
+
+
 @dataclass(frozen=True, slots=True)
 class PhotoRecall:
     evidence: str = ""
@@ -41,21 +51,14 @@ class PhotoRecallService:
             # Only an explicit recent-photo reference permits recency fallback.
             items = await self.repository.list_recent(scope, character_id, limit=1)
         if not items:
-            return PhotoRecall(
-                evidence=(
-                    "[Photo evidence]\nNo saved photo matches this request. "
-                    "Do not invent visual details or claim to see a missing attachment."
-                    if explicit
-                    else ""
-                )
-            )
+            return PhotoRecall(evidence=_NO_PHOTO_EVIDENCE if explicit else "")
         # Existence and generation authorization are checked atomically with the
         # provenance write. Deletion can cancel this exact generation afterwards.
         items = await self.repository.register_recall(
             scope, character_id, tuple(item.photo_id for item in items), generation_id=generation_id
         )
         if not items:
-            return PhotoRecall()
+            return PhotoRecall(evidence=_NO_PHOTO_EVIDENCE if explicit else "")
         image = None
         if explicit and attach_image and len(items) == 1:
             asset = await self.repository.get_image(

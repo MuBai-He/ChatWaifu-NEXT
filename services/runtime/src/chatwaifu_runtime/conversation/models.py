@@ -17,6 +17,8 @@ type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
 type ConversationChatType = Literal["direct", "group"]
 
+REDACTED_ASSISTANT_PLACEHOLDER: str = "[Photo response omitted]"
+
 
 @dataclass(frozen=True, slots=True)
 class ConversationSourceContext:

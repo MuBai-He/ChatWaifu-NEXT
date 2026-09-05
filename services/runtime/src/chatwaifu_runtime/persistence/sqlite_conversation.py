@@ -18,6 +18,7 @@ from chatwaifu_protocol.session import GenerationState
 from pydantic import BaseModel, ConfigDict
 
 from chatwaifu_runtime.conversation.models import (
+    REDACTED_ASSISTANT_PLACEHOLDER,
     ConversationHistoryEntry,
     ConversationSourceContext,
     ConversationUserInputContext,
@@ -121,17 +122,24 @@ class SQLiteConversationRepository(ConversationRepository):
     ) -> tuple[ConversationHistoryEntry, ...]:
         local_rows = await self._database.fetchall(
             """
-            SELECT role, committed_text, source_context_json, committed_at, generation_id
+            SELECT
+                turns.role,
+                CASE
+                    WHEN turns.role = 'assistant' AND redaction.generation_id IS NOT NULL
+                    THEN ?
+                    ELSE turns.committed_text
+                END AS committed_text,
+                turns.source_context_json,
+                turns.committed_at,
+                turns.generation_id
             FROM turns
-            WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
-                AND role IN ('user', 'assistant')
-                AND (role != 'assistant' OR NOT EXISTS (
-                    SELECT 1 FROM photo_context_redactions AS redaction
-                    WHERE redaction.generation_id = turns.generation_id
-                ))
-            ORDER BY created_at DESC LIMIT ?
+            LEFT JOIN photo_context_redactions AS redaction
+                ON turns.role = 'assistant' AND redaction.generation_id = turns.generation_id
+            WHERE turns.session_id = ? AND turns.turn_id != ? AND turns.committed_text IS NOT NULL
+                AND turns.role IN ('user', 'assistant')
+            ORDER BY turns.created_at DESC LIMIT ?
             """,
-            (str(session_id), str(current_turn_id), limit),
+            (REDACTED_ASSISTANT_PLACEHOLDER, str(session_id), str(current_turn_id), limit),
         )
         # Keep a small, durable cross-surface ledger beside the current session
         # history. This lets a later desktop turn understand that a recent
@@ -141,13 +149,22 @@ class SQLiteConversationRepository(ConversationRepository):
         # same character.
         sourced_rows = await self._database.fetchall(
             """
-            SELECT turn.role, turn.committed_text, turn.source_context_json,
-                   turn.committed_at, turn.generation_id
+            SELECT turn.role,
+                   CASE
+                       WHEN turn.role = 'assistant' AND redaction.generation_id IS NOT NULL
+                       THEN ?
+                       ELSE turn.committed_text
+                   END AS committed_text,
+                   turn.source_context_json,
+                   turn.committed_at,
+                   turn.generation_id
             FROM turns AS turn
             JOIN sessions AS source_session
               ON source_session.session_id = turn.session_id
             JOIN sessions AS current_session
               ON current_session.session_id = ?
+            LEFT JOIN photo_context_redactions AS redaction
+              ON turn.role = 'assistant' AND redaction.generation_id = turn.generation_id
             WHERE turn.session_id != ?
               AND source_session.character_id = current_session.character_id
               AND turn.source_context_json IS NOT NULL
@@ -157,14 +174,16 @@ class SQLiteConversationRepository(ConversationRepository):
                   ) = ?
               AND turn.committed_text IS NOT NULL
               AND turn.role IN ('user', 'assistant')
-              AND (turn.role != 'assistant' OR NOT EXISTS (
-                  SELECT 1 FROM photo_context_redactions AS redaction
-                  WHERE redaction.generation_id = turn.generation_id
-              ))
             ORDER BY turn.committed_at DESC, turn.created_at DESC
             LIMIT ?
             """,
-            (str(session_id), str(session_id), _LOCAL_OWNER_SCOPE, min(12, limit)),
+            (
+                REDACTED_ASSISTANT_PLACEHOLDER,
+                str(session_id),
+                str(session_id),
+                _LOCAL_OWNER_SCOPE,
+                min(12, limit),
+            ),
         )
         rows = sorted(
             (*local_rows, *sourced_rows),
@@ -199,7 +218,10 @@ class SQLiteConversationRepository(ConversationRepository):
         kept: list[ConversationHistoryEntry] = []
         async with self._database.transaction() as connection:
             for entry in history:
-                if entry.role != "assistant" or entry.generation_id is None:
+                if entry.role != "assistant":
+                    kept.append(entry)
+                    continue
+                if entry.generation_id is None:
                     kept.append(entry)
                     continue
                 cursor = await connection.execute(
@@ -209,6 +231,14 @@ class SQLiteConversationRepository(ConversationRepository):
                 redacted = await cursor.fetchone()
                 await cursor.close()
                 if redacted is not None:
+                    kept.append(
+                        ConversationHistoryEntry(
+                            role=entry.role,
+                            text=REDACTED_ASSISTANT_PLACEHOLDER,
+                            source_context=entry.source_context,
+                            generation_id=entry.generation_id,
+                        )
+                    )
                     continue
                 await connection.execute(
                     """
