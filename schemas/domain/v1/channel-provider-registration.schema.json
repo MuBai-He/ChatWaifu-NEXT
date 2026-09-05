@@ -20,7 +20,8 @@
     "ChannelMessageKind": {
       "description": "Message payload kinds understood by this schema major.",
       "enum": [
-        "text"
+        "text",
+        "image"
       ],
       "title": "ChannelMessageKind",
       "type": "string"

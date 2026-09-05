@@ -15,6 +15,10 @@ datas = [
     (str(ROOT / "config"), "config"),
     (str(ROOT / "characters"), "characters"),
     (str(ROOT / "skills"), "skills"),
+    (
+        str(ROOT / "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers"),
+        "chatwaifu_runtime/external_channels/preset_stickers",
+    ),
     (str(ROOT / ".local" / "nltk_data"), "nltk_data"),
     (
         str(PIPECAT_ROOT / "audio" / "vad" / "data" / "silero_vad.onnx"),

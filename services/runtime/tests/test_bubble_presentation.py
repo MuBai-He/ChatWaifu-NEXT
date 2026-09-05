@@ -21,6 +21,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartStatus,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
+    ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.character import (
@@ -88,7 +89,7 @@ class _RecordingExecutor:
         plan: ChannelDeliveryPlanRecord,
         part: ChannelDeliveryPartRecord,
     ) -> DeliveryPartExecutionResult:
-        text = part.payload.text if hasattr(part.payload, "text") else ""
+        text = part.payload.text if isinstance(part.payload, ChannelTextDeliveryPartPayload) else ""
         self.executed_parts.append((plan.delivery_id, part.ordinal, text))
         return DeliveryPartExecutionResult(
             outcome=DeliveryPartOutcome.DELIVERED,
@@ -338,6 +339,7 @@ def test_single_text_delivery_plan_factory_draft() -> None:
     drafts = factory.create_parts("一整条回复内容")
     assert len(drafts) == 1
     assert drafts[0].ordinal == 0
+    assert isinstance(drafts[0].payload, ChannelTextDeliveryPartPayload)
     assert drafts[0].payload.text == "一整条回复内容"
     assert drafts[0].delay_after_ms == 0
 
@@ -773,6 +775,7 @@ def test_default_presentation_policy_is_single_text_and_delegates() -> None:
     # Default without policy delegates to single text
     parts = factory.create_parts(text)
     assert len(parts) == 1
+    assert isinstance(parts[0].payload, ChannelTextDeliveryPartPayload)
     assert parts[0].payload.text == text
     assert parts[0].delay_after_ms == 0
 

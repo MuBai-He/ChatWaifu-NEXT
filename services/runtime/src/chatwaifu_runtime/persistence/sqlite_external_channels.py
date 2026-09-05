@@ -76,6 +76,36 @@ def _single_part_draft(reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
     )
 
 
+def _validate_delivery_part_drafts(parts: Sequence[ChannelDeliveryPartDraft]) -> None:
+    if not parts:
+        raise ValueError("delivery plan parts cannot be empty")
+    num_parts = len(parts)
+    for idx, draft in enumerate(parts):
+        if draft.ordinal != idx:
+            raise ValueError(
+                f"delivery plan part ordinals must be strictly continuous "
+                f"starting from 0 (expected {idx}, got {draft.ordinal})"
+            )
+        if draft.kind != draft.payload.kind:
+            raise ValueError("part kind does not match payload kind")
+        if idx < num_parts - 1:
+            if draft.kind is not ChannelDeliveryPartKind.TEXT:
+                raise ValueError("middle delivery parts must be text parts")
+            if not draft.required:
+                raise ValueError("middle delivery parts must be required")
+        else:
+            if draft.kind is ChannelDeliveryPartKind.TEXT:
+                if not draft.required:
+                    raise ValueError("text delivery parts must be required")
+            elif draft.kind is ChannelDeliveryPartKind.IMAGE:
+                if num_parts < 2:
+                    raise ValueError("image delivery part must follow required text parts")
+                if draft.required:
+                    raise ValueError("image delivery part must be optional")
+            else:
+                raise ValueError(f"unsupported delivery part kind {draft.kind}")
+
+
 class SQLiteExternalChannelRepository(ExternalChannelRepository):
     def __init__(self, database: Database, event_store: EventStore | None = None) -> None:
         self._database = database
@@ -534,20 +564,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         if parts is None:
             draft_parts = _single_part_draft(reply_text)
         else:
-            if not parts:
-                raise ValueError("delivery parts cannot be empty")
-            for idx, draft in enumerate(parts):
-                if draft.ordinal != idx:
-                    raise ValueError(
-                        f"delivery plan part ordinals must be strictly continuous "
-                        f"starting from 0 (expected {idx}, got {draft.ordinal})"
-                    )
-                if draft.kind != draft.payload.kind:
-                    raise ValueError("part kind does not match payload kind")
-                if not draft.required:
-                    raise ValueError("Phase 17.1A only supports required parts")
-                if draft.kind is not ChannelDeliveryPartKind.TEXT:
-                    raise ValueError(f"Phase 17.1A only supports text parts, got {draft.kind}")
+            _validate_delivery_part_drafts(parts)
             draft_parts = parts
 
         persisted_events: list[GenericCoreEvent] = []
@@ -680,20 +697,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         parts: Sequence[ChannelDeliveryPartDraft],
         created_at: datetime,
     ) -> DeliveryTransitionResult:
-        if not parts:
-            raise ValueError("delivery plan parts cannot be empty")
-        for idx, draft in enumerate(parts):
-            if draft.ordinal != idx:
-                raise ValueError(
-                    f"delivery plan part ordinals must be strictly continuous "
-                    f"starting from 0 (expected {idx}, got {draft.ordinal})"
-                )
-            if draft.kind != draft.payload.kind:
-                raise ValueError("part kind does not match payload kind")
-            if not draft.required:
-                raise ValueError("Phase 17.1A only supports required parts")
-            if draft.kind is not ChannelDeliveryPartKind.TEXT:
-                raise ValueError(f"Phase 17.1A only supports text parts, got {draft.kind}")
+        _validate_delivery_part_drafts(parts)
 
         persisted_events: list[GenericCoreEvent] = []
         async with self._database.transaction() as connection:
@@ -942,6 +946,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         has_failed_required = any(
             p.status is ChannelDeliveryPartStatus.FAILED and p.required for p in parts
         )
+        sending_parts = [p for p in parts if p.status is ChannelDeliveryPartStatus.SENDING]
+        has_sending = len(sending_parts) > 0
+        has_pending = any(p.status is ChannelDeliveryPartStatus.PENDING for p in parts)
         all_required_delivered = (
             all(p.status is ChannelDeliveryPartStatus.DELIVERED for p in parts if p.required)
             if any(p.required for p in parts)
@@ -950,8 +957,10 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 and all(p.status is ChannelDeliveryPartStatus.DELIVERED for p in parts)
             )
         )
-        sending_parts = [p for p in parts if p.status is ChannelDeliveryPartStatus.SENDING]
-        has_sending = len(sending_parts) > 0
+        all_parts_delivered = len(parts) > 0 and all(
+            p.status is ChannelDeliveryPartStatus.DELIVERED for p in parts
+        )
+        has_cancelled = any(p.status is ChannelDeliveryPartStatus.CANCELLED for p in parts)
 
         latest_delivered_at: datetime | None = None
         last_provider_msg_id: str | None = None
@@ -972,14 +981,16 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         new_parent_status: ChannelDeliveryStatus
         if has_failed_required:
             new_parent_status = ChannelDeliveryStatus.FAILED
-        elif all_required_delivered:
-            new_parent_status = ChannelDeliveryStatus.DELIVERED
-        elif cancel_requested and not has_sending:
+        elif cancel_requested and not has_sending and (has_cancelled or not all_parts_delivered):
             new_parent_status = ChannelDeliveryStatus.CANCELLED
         elif has_sending:
             new_parent_status = ChannelDeliveryStatus.SENDING
-        else:
+        elif has_pending:
             new_parent_status = ChannelDeliveryStatus.PENDING
+        elif all_required_delivered:
+            new_parent_status = ChannelDeliveryStatus.DELIVERED
+        else:
+            new_parent_status = ChannelDeliveryStatus.FAILED
 
         # Invariant: Terminal Parent不得有 Active Child
         if new_parent_status in (

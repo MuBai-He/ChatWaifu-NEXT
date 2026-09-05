@@ -35,6 +35,7 @@ class ChannelMessageKind(StrEnum):
     """Message payload kinds understood by this schema major."""
 
     TEXT = "text"
+    IMAGE = "image"
 
 
 class ChannelConnectionStatus(StrEnum):
@@ -143,6 +144,10 @@ class ChannelPresentationPolicy(ChannelVersionedModel):
         description=(
             "Whether supported adapters emit best-effort typing indicators during active replies"
         ),
+    )
+    stickers_enabled: bool = Field(
+        default=False,
+        description="Whether supported adapters emit matching preset stickers on casual responses",
     )
     bypass_long_form: bool = Field(
         default=True,
@@ -563,8 +568,30 @@ class ChannelTextDeliveryPartPayload(ChannelVersionedModel):
     text: str = Field(min_length=1, max_length=20_000)
 
 
+class ChannelImageDeliveryPartPayload(ChannelVersionedModel):
+    kind: Literal[ChannelDeliveryPartKind.IMAGE] = ChannelDeliveryPartKind.IMAGE
+    sticker_id: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Immutable identifier of the local preset sticker asset",
+    )
+    sha256: str = Field(
+        min_length=64,
+        max_length=64,
+        pattern=r"^[0-9a-f]{64}$",
+        description="Lowercase SHA-256 digest of the verified local image bytes",
+    )
+    mime_type: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^image/[a-zA-Z0-9.+-]+$",
+        description="MIME media type of the local image bytes",
+    )
+
+
 ChannelDeliveryPartPayload = Annotated[
-    ChannelTextDeliveryPartPayload,
+    ChannelTextDeliveryPartPayload | ChannelImageDeliveryPartPayload,
     Field(discriminator="kind"),
 ]
 
@@ -590,7 +617,9 @@ class ChannelDeliveryPartSnapshot(ChannelVersionedModel):
     delivered_at: AwareDatetime | None = None
 
     @model_validator(mode="after")
-    def require_sending_lease(self) -> ChannelDeliveryPartSnapshot:
+    def validate_part_snapshot(self) -> ChannelDeliveryPartSnapshot:
+        if self.kind != self.payload.kind:
+            raise ValueError("part kind does not match payload kind")
         if self.status == ChannelDeliveryPartStatus.SENDING and (
             self.lease_id is None or self.lease_expires_at is None
         ):
@@ -605,6 +634,12 @@ class ChannelDeliveryPartDraft(ChannelVersionedModel):
     required: bool = True
     delay_after_ms: int = Field(default=0, ge=0, le=60_000)
     not_before_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_draft(self) -> ChannelDeliveryPartDraft:
+        if self.kind != self.payload.kind:
+            raise ValueError("part kind does not match payload kind")
+        return self
 
 
 class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):

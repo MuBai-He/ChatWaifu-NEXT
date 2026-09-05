@@ -28,6 +28,8 @@ vi.mock("../chat/runtimeClient", () => ({
   getChannelConnections: vi.fn(),
   startChannelAuthorization: vi.fn(),
   submitChannelAuthorizationVerification: vi.fn(),
+  updateChannelConnection: vi.fn(),
+  updateChannelPresentationPolicy: vi.fn(),
 }));
 
 describe("ChannelsSettingsSection", () => {
@@ -38,6 +40,17 @@ describe("ChannelsSettingsSection", () => {
     vi.mocked(
       runtimeClient.submitChannelAuthorizationVerification,
     ).mockResolvedValue(authorization("scanned"));
+    vi.mocked(runtimeClient.updateChannelPresentationPolicy).mockImplementation(
+      (conn, policy) =>
+        Promise.resolve({
+          ...conn,
+          revision: conn.revision + 1,
+          configuration: {
+            ...conn.configuration,
+            presentation_policy: policy,
+          },
+        }),
+    );
   });
 
   afterEach(() => {
@@ -159,12 +172,118 @@ describe("ChannelsSettingsSection", () => {
       ),
     );
   });
+
+  it("persists stickers opt-in toggle and preserves existing presentation policy", async () => {
+    const existingConn = connection("ready", true, {
+      profile: "instant_message",
+      cadence_enabled: true,
+      min_delay_ms: 800,
+      max_delay_ms: 3000,
+      stickers_enabled: false,
+    });
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      existingConn,
+    ]);
+
+    render(<ChannelsSettingsSection context={context()} />);
+
+    expect(await screen.findByText("合适的时候发送表情")).toBeTruthy();
+    expect(screen.getByText("原创小猫表情，默认关闭")).toBeTruthy();
+
+    const toggle = screen.getByRole<HTMLInputElement>("switch", {
+      name: "合适的时候发送表情",
+    });
+    expect(toggle.checked).toBe(false);
+    expect(toggle.disabled).toBe(false);
+
+    fireEvent.click(toggle);
+
+    await waitFor(() =>
+      expect(
+        runtimeClient.updateChannelPresentationPolicy,
+      ).toHaveBeenCalledTimes(1),
+    );
+    expect(runtimeClient.updateChannelPresentationPolicy).toHaveBeenCalledWith(
+      existingConn,
+      expect.objectContaining({
+        profile: "instant_message",
+        cadence_enabled: true,
+        min_delay_ms: 800,
+        max_delay_ms: 3000,
+        stickers_enabled: true,
+      }),
+    );
+
+    await waitFor(() => expect(toggle.checked).toBe(true));
+  });
+
+  it("handles presentation policy update errors and leaves previous state intact", async () => {
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      connection(),
+    ]);
+    vi.mocked(
+      runtimeClient.updateChannelPresentationPolicy,
+    ).mockRejectedValueOnce(new Error("网络连接失败"));
+
+    render(<ChannelsSettingsSection context={context()} />);
+
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "合适的时候发送表情",
+    });
+    expect(toggle.checked).toBe(false);
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeTruthy();
+      expect(screen.getByText("网络连接失败")).toBeTruthy();
+    });
+    expect(toggle.checked).toBe(false);
+  });
+
+  it("disables stickers toggle for non-default characters with explanatory copy", async () => {
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      connection(),
+    ]);
+
+    render(<ChannelsSettingsSection context={context("custom_other_char")} />);
+
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "合适的时候发送表情",
+    });
+    expect(toggle.disabled).toBe(true);
+    expect(
+      screen.getByText("原创小猫表情，默认关闭（仅默认角色支持）"),
+    ).toBeTruthy();
+  });
+
+  it("disables stickers toggle when connection has non instant_message profile without force enabling single_text", async () => {
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      connection("ready", true, {
+        profile: "single_text",
+        stickers_enabled: false,
+      }),
+    ]);
+
+    render(<ChannelsSettingsSection context={context()} />);
+
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "合适的时候发送表情",
+    });
+    expect(toggle.disabled).toBe(true);
+    expect(
+      screen.getByText("原创小猫表情，默认关闭（仅即时消息模式支持）"),
+    ).toBeTruthy();
+    expect(
+      runtimeClient.updateChannelPresentationPolicy,
+    ).not.toHaveBeenCalled();
+  });
 });
 
-function context(): DesktopSettingsContext {
+function context(characterId = "default"): DesktopSettingsContext {
   return {
     appearance: {
-      character: { character_id: "default" },
+      character: { character_id: characterId },
     },
     runtime: {
       connection: "connected",
@@ -200,6 +319,7 @@ function authorization(
 function connection(
   status: ChannelConnectionSnapshot["status"] = "ready",
   enabled = true,
+  presentationPolicy?: ChannelConnectionSnapshot["configuration"]["presentation_policy"],
 ): ChannelConnectionSnapshot {
   return {
     configuration: {
@@ -209,6 +329,11 @@ function connection(
       character_id: "default",
       principal_scope: "local",
       enabled,
+      presentation_policy: presentationPolicy ?? {
+        profile: "instant_message",
+        cadence_enabled: true,
+        stickers_enabled: false,
+      },
     },
     revision: 1,
     status,

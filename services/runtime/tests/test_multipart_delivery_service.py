@@ -153,6 +153,19 @@ class _FakeWeixin:
         self.sent.set()
         return f"prov-msg-{client_id}"
 
+    async def send_image(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        context_token: str,
+        client_id: str,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> str | None:
+        del credentials, recipient_user_id, context_token, image_bytes, mime_type
+        return f"prov-img-{client_id}"
+
 
 def _configuration(connection_id: UUID) -> ChannelConnectionConfiguration:
     return ChannelConnectionConfiguration(
@@ -197,6 +210,7 @@ def test_single_text_delivery_plan_factory_defaults() -> None:
     assert len(parts) == 1
     assert parts[0].ordinal == 0
     assert parts[0].kind is ChannelDeliveryPartKind.TEXT
+    assert isinstance(parts[0].payload, ChannelTextDeliveryPartPayload)
     assert parts[0].payload.text == "Hello world"
     assert parts[0].required is True
     assert parts[0].delay_after_ms == 0
@@ -204,6 +218,7 @@ def test_single_text_delivery_plan_factory_defaults() -> None:
 
     empty_parts = factory.create_parts("")
     assert len(empty_parts) == 1
+    assert isinstance(empty_parts[0].payload, ChannelTextDeliveryPartPayload)
     assert empty_parts[0].payload.text == "(empty reply)"
 
 
@@ -586,7 +601,7 @@ async def test_weixin_management_loop_multipart_sequential_delivery(
 
 
 @pytest.mark.asyncio
-async def test_weixin_management_loop_unsupported_part_kind_fails_closed(
+async def test_weixin_management_loop_mismatched_image_payload_fails_closed(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -607,7 +622,7 @@ async def test_weixin_management_loop_unsupported_part_kind_fails_closed(
 
     original_claim = container.external_channel_repository.claim_next_delivery_part
 
-    async def _claim_with_unsupported_kind(*args: Any, **kwargs: Any) -> Any:
+    async def _claim_with_mismatched_payload(*args: Any, **kwargs: Any) -> Any:
         res = await original_claim(*args, **kwargs)
         if res is not None and res.part is not None:
             fake_part = replace(res.part, kind=ChannelDeliveryPartKind.IMAGE)
@@ -622,7 +637,7 @@ async def test_weixin_management_loop_unsupported_part_kind_fails_closed(
     monkeypatch.setattr(
         container.external_channel_repository,
         "claim_next_delivery_part",
-        _claim_with_unsupported_kind,
+        _claim_with_mismatched_payload,
     )
     await container.start()
 
@@ -672,7 +687,7 @@ async def test_weixin_management_loop_unsupported_part_kind_fails_closed(
         assert plan.status is ChannelDeliveryStatus.FAILED
         assert plan.parts[0].status is ChannelDeliveryPartStatus.FAILED
         assert plan.parts[0].last_error is not None
-        assert plan.parts[0].last_error.code == "unsupported_delivery_part_kind"
+        assert plan.parts[0].last_error.code == "invalid_sticker_payload"
 
         # Transport should not have sent any text
         assert len(transport.sent_messages) == 0

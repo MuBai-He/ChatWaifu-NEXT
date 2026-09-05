@@ -289,8 +289,11 @@ class ChannelDeliveryScheduler:
             claimed_part = claim_result.part
             any_progress = True
 
-            # Check kind: Phase 17.1A only supports TEXT
-            if claimed_part.kind is not ChannelDeliveryPartKind.TEXT:
+            # Check kind: supports TEXT and IMAGE
+            if claimed_part.kind not in (
+                ChannelDeliveryPartKind.TEXT,
+                ChannelDeliveryPartKind.IMAGE,
+            ):
                 post_time = self._now(now)
                 err = StructuredError(
                     code="unsupported_delivery_part_kind",

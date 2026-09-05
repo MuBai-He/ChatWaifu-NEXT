@@ -3,6 +3,7 @@ import {
   parseChannelConnectionSnapshot,
   type ChannelAuthorizationSnapshot as ProtocolChannelAuthorizationSnapshot,
   type ChannelConnectionSnapshot as ProtocolChannelConnectionSnapshot,
+  type ChannelPresentationPolicy as ProtocolChannelPresentationPolicy,
 } from "@chatwaifu/protocol";
 import { z } from "zod";
 
@@ -16,10 +17,15 @@ const channelConnectionsResponseSchema = z.object({
   items: z.array(z.unknown()),
 });
 
+const channelConnectionMutationResponseSchema = z.object({
+  connection: z.unknown(),
+});
+
 export type ChannelAuthorizationSnapshot = ProtocolChannelAuthorizationSnapshot;
 export type ChannelAuthorizationStatus =
   ProtocolChannelAuthorizationSnapshot["status"];
 export type ChannelConnectionSnapshot = ProtocolChannelConnectionSnapshot;
+export type ChannelPresentationPolicy = ProtocolChannelPresentationPolicy;
 
 export async function getChannelConnections(
   signal?: AbortSignal,
@@ -97,5 +103,40 @@ export async function deleteChannelConnection(
     `/v1/channel-connections/${encodeURIComponent(connectionId)}`,
     mutationReceiptSchema,
     { method: "DELETE" },
+  );
+}
+
+export async function updateChannelConnection(
+  connectionId: string,
+  configuration: ChannelConnectionSnapshot["configuration"],
+  expectedRevision: number,
+  signal?: AbortSignal,
+): Promise<ChannelConnectionSnapshot> {
+  const response = await requestRuntime(
+    `/v1/channel-connections/${encodeURIComponent(connectionId)}?expected_revision=${encodeURIComponent(expectedRevision)}`,
+    channelConnectionMutationResponseSchema,
+    {
+      method: "PUT",
+      body: JSON.stringify(configuration),
+      signal,
+    },
+  );
+  return parseChannelConnectionSnapshot(response.connection);
+}
+
+export async function updateChannelPresentationPolicy(
+  connection: ChannelConnectionSnapshot,
+  presentationPolicy: ChannelPresentationPolicy,
+  signal?: AbortSignal,
+): Promise<ChannelConnectionSnapshot> {
+  const configuration: ChannelConnectionSnapshot["configuration"] = {
+    ...connection.configuration,
+    presentation_policy: presentationPolicy,
+  };
+  return updateChannelConnection(
+    connection.configuration.connection_id,
+    configuration,
+    connection.revision,
+    signal,
   );
 }

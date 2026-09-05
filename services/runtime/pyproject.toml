@@ -13,6 +13,8 @@ dependencies = [
   "chatwaifu-model-worker-sdk",
   "chatwaifu-protocol",
   "fastapi>=0.116,<1",
+  "cryptography>=50,<51",
+  "pillow>=11,<13",
   "httpcore2>=2.12,<3",
   "httpx2>=2.12,<3",
   "jsonschema>=4.25,<5",

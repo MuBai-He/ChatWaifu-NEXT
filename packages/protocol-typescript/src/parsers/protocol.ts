@@ -684,6 +684,8 @@ const channelDeliveryStatusSchema = z.enum([
   "failed",
   "cancelled",
 ]);
+const channelMessageKindSchema = z.enum(["text", "image"]);
+
 const channelProviderCapabilitiesSchema = z
   .object({
     authorization_methods: z.array(z.literal("qr_code")).max(8).default([]),
@@ -691,8 +693,14 @@ const channelProviderCapabilitiesSchema = z
       .array(z.enum(["direct", "group"]))
       .min(1)
       .default(["direct"]),
-    inbound_message_kinds: z.array(z.literal("text")).min(1).default(["text"]),
-    outbound_message_kinds: z.array(z.literal("text")).min(1).default(["text"]),
+    inbound_message_kinds: z
+      .array(channelMessageKindSchema)
+      .min(1)
+      .default(["text"]),
+    outbound_message_kinds: z
+      .array(channelMessageKindSchema)
+      .min(1)
+      .default(["text"]),
     supports_typing: z.boolean().default(false),
     supports_partial_replies: z.boolean().default(false),
     supports_delivery_ack: z.boolean().default(true),
@@ -737,6 +745,7 @@ const channelPresentationPolicySchema = z
       .max(60_000)
       .default(6000),
     typing_enabled: z.boolean().default(false),
+    stickers_enabled: z.boolean().default(false),
     bypass_long_form: z.boolean().default(true),
     version: z.number().int().min(1).default(1),
   })
@@ -1047,7 +1056,20 @@ const channelTextDeliveryPartPayloadSchema = z
   })
   .passthrough();
 
-const channelDeliveryPartPayloadSchema = channelTextDeliveryPartPayloadSchema;
+const channelImageDeliveryPartPayloadSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    kind: z.literal("image").default("image"),
+    sticker_id: z.string().min(1).max(256),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    mime_type: z.string().min(1).max(128),
+  })
+  .passthrough();
+
+const channelDeliveryPartPayloadSchema = z.discriminatedUnion("kind", [
+  channelTextDeliveryPartPayloadSchema,
+  channelImageDeliveryPartPayloadSchema,
+]);
 
 const channelDeliveryPartSnapshotSchema = z
   .object({
@@ -1073,6 +1095,13 @@ const channelDeliveryPartSnapshotSchema = z
   })
   .passthrough()
   .superRefine((snapshot, context) => {
+    if (snapshot.kind !== snapshot.payload.kind) {
+      context.addIssue({
+        code: "custom",
+        message: "delivery part kind must match payload kind",
+        path: ["kind"],
+      });
+    }
     if (
       snapshot.status === "sending" &&
       (!snapshot.lease_id || !snapshot.lease_expires_at)
@@ -1656,7 +1685,9 @@ export {
   channelDeliveryStatusSchema,
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
+  channelImageDeliveryPartPayloadSchema,
   channelInboundTextMessageSchema,
+  channelMessageKindSchema,
   channelPresentationPolicySchema,
   channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,

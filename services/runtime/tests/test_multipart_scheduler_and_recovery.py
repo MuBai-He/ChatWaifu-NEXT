@@ -238,6 +238,19 @@ class _FakeWeixin:
         self.sent.set()
         return f"prov-msg-{client_id}"
 
+    async def send_image(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        context_token: str,
+        client_id: str,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> str | None:
+        del credentials, recipient_user_id, context_token, image_bytes, mime_type
+        return f"prov-img-{client_id}"
+
 
 def _configuration(connection_id: UUID) -> ChannelConnectionConfiguration:
     return ChannelConnectionConfiguration(

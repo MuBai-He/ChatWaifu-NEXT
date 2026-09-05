@@ -2095,6 +2095,7 @@
         "payload": {
           "discriminator": {
             "mapping": {
+              "image": "#/$defs/ChannelImageDeliveryPartPayload",
               "text": "#/$defs/ChannelTextDeliveryPartPayload"
             },
             "propertyName": "kind"
@@ -2102,6 +2103,9 @@
           "oneOf": [
             {
               "$ref": "#/$defs/ChannelTextDeliveryPartPayload"
+            },
+            {
+              "$ref": "#/$defs/ChannelImageDeliveryPartPayload"
             }
           ],
           "title": "Payload"
@@ -2549,6 +2553,53 @@
       "title": "ChannelGatewayStatusSnapshot",
       "type": "object"
     },
+    "ChannelImageDeliveryPartPayload": {
+      "properties": {
+        "kind": {
+          "const": "image",
+          "default": "image",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "description": "MIME media type of the local image bytes",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^image/[a-zA-Z0-9.+-]+$",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "description": "Lowercase SHA-256 digest of the verified local image bytes",
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sticker_id": {
+          "description": "Immutable identifier of the local preset sticker asset",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "title": "Sticker Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sticker_id",
+        "sha256",
+        "mime_type"
+      ],
+      "title": "ChannelImageDeliveryPartPayload",
+      "type": "object"
+    },
     "ChannelInboundTextMessage": {
       "description": "Normalized text message admitted by a trusted adapter.\n\nIdentity fields are opaque and provider-scoped:\n\n* ``external_message_id`` identifies one inbound message and is the\n  idempotency key within a connection. It must remain stable across retries.\n* ``conversation_key`` identifies the provider conversation, not a Runtime\n  session id.\n* ``sender_key`` identifies the provider peer, not a display name.\n* ``principal_scope`` is assigned by Runtime connection policy and must\n  equal the configured connection scope; adapters must not accept it from\n  untrusted user content.\n\n``conversation_label`` and ``sender_display_name`` are untrusted display\nhints only. They must never be used for identity, authorization, memory\nscope, prompt instructions, or idempotency.",
       "properties": {
@@ -2687,7 +2738,8 @@
     "ChannelMessageKind": {
       "description": "Message payload kinds understood by this schema major.",
       "enum": [
-        "text"
+        "text",
+        "image"
       ],
       "title": "ChannelMessageKind",
       "type": "string"
@@ -2756,6 +2808,12 @@
           "minimum": 20,
           "title": "Soft Max Chars Per Part",
           "type": "integer"
+        },
+        "stickers_enabled": {
+          "default": false,
+          "description": "Whether supported adapters emit matching preset stickers on casual responses",
+          "title": "Stickers Enabled",
+          "type": "boolean"
         },
         "total_cadence_delay_ceiling_ms": {
           "default": 6000,

@@ -27,6 +27,7 @@ import {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelInboundTextMessageSchema,
+  channelMessageKindSchema,
   channelPresentationPolicySchema,
   channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,
@@ -86,6 +87,7 @@ export {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelInboundTextMessageSchema,
+  channelMessageKindSchema,
   channelPresentationPolicySchema,
   channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,
@@ -175,6 +177,7 @@ export const protocolEnumSchemas = {
   ChannelDeliveryStatus: channelDeliveryStatusSchema,
   ChannelDeliveryPartKind: channelDeliveryPartKindSchema,
   ChannelDeliveryPartStatus: channelDeliveryPartStatusSchema,
+  ChannelMessageKind: channelMessageKindSchema,
 } as const;
 
 export const standaloneEnumSchemas = protocolEnumSchemas;

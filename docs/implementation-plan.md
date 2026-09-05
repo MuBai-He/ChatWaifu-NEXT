@@ -2489,3 +2489,24 @@ out of the UI. Preserve the existing event/turn fallback for non-channel sources
 
 This slice excludes new channels, group enablement, multiple human principals, memory extraction or
 ranking changes, and changes to prompt provenance.
+
+## Phase 17 roadmap continuity
+
+The owner selected messaging behavior as the active product direction in the referenced conversations
+[确认当前阶段17.1B-1](https://chatgpt.com/c/6a9b4752-75c4-83ee-afb7-f0ac2fdbb29f)
+and [分支 · 查看Chatwaifunext内容](https://chatgpt.com/c/6a989a98-5ff4-83e8-80ad-3bf1a2b81233).
+Phase 17.1C is an additional accepted memory-source UI slice, not completion of the entire Phase 17
+roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the remaining messaging work.
+
+- **17.2 — Preset sticker outbound (macOS accepted, PR 20 pending merge):** local preset asset library and manual tags, Character
+  ResponsePlan mapping, sticker selection, iLink image upload, and text plus image delivery parts.
+  User-image learning is deferred to 17.3. Real macOS image receipt and stop-reply cancellation
+  were accepted on 2026-09-05.
+- **17.3 — Inbound images and dynamic sticker learning (next):** receive, understand, and accumulate user
+  images/stickers with safe download/decryption/decoding, media limits, deduplication, OCR/VLM,
+  embeddings, principal isolation, deletion, and privacy management.
+- **17.4 — Shared jokes and adaptive recall:** shared-joke associations, usage history, and adaptive
+  retrieval remain planned in the broader roadmap; detailed design is pending.
+
+Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
+or the remaining image and sticker capabilities are accepted.

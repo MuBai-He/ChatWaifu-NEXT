@@ -11,6 +11,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartAcknowledgement,
     ChannelDeliveryPartClaimRequest,
     ChannelDeliveryPartStatus,
+    ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -57,6 +58,7 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         plan = await container.external_channel_repository.get_delivery_plan(snapshot.delivery_id)
         assert plan is not None and len(plan.parts) == 1
         expected_notice = _EXPECTED_RECOVERY_TEXT
+        assert isinstance(plan.parts[0].payload, ChannelTextDeliveryPartPayload)
         assert plan.parts[0].payload.text == expected_notice
         stable_id = plan.parts[0].provider_client_id
         generation = await container.conversation_repository.generation_result(

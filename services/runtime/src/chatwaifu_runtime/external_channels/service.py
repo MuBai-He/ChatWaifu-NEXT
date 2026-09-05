@@ -34,6 +34,7 @@ from chatwaifu_protocol.channels import (
     ChannelPresentationProfile,
     ChannelProviderCapabilities,
     ChannelProviderRegistration,
+    ChannelTextDeliveryPartPayload,
     ChannelTurnCancelReceipt,
     ChannelTurnReceipt,
     ChannelTurnSnapshot,
@@ -68,6 +69,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     InstantMessageDeliveryPlanFactory,
     SingleTextDeliveryPlanFactory,
 )
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.sessions.service import SessionService
 
 logger = logging.getLogger(__name__)
@@ -80,7 +82,7 @@ WEIXIN_ILINK_PROVIDER = ChannelProviderRegistration(
     capabilities=ChannelProviderCapabilities(
         chat_types=[ChannelChatType.DIRECT],
         inbound_message_kinds=[ChannelMessageKind.TEXT],
-        outbound_message_kinds=[ChannelMessageKind.TEXT],
+        outbound_message_kinds=[ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE],
         authorization_methods=[ChannelAuthorizationMethod.QR_CODE],
         supports_typing=True,
         supports_partial_replies=False,
@@ -174,6 +176,7 @@ class ExternalChannelService:
         *,
         providers: tuple[ChannelProviderRegistration, ...] = (WEIXIN_ILINK_PROVIDER,),
         delivery_plan_factory: DeliveryPlanFactory | None = None,
+        sticker_catalog: PresetStickerCatalog | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -183,7 +186,10 @@ class ExternalChannelService:
         self._event_hub = event_hub
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
-        self._delivery_plan_factory = delivery_plan_factory or InstantMessageDeliveryPlanFactory()
+        self._sticker_catalog = sticker_catalog
+        self._delivery_plan_factory = delivery_plan_factory or InstantMessageDeliveryPlanFactory(
+            sticker_catalog=sticker_catalog
+        )
         self._ingress_lock = asyncio.Lock()
         self._turn_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._turn_sync_locks: dict[UUID, asyncio.Lock] = {}
@@ -193,6 +199,10 @@ class ExternalChannelService:
     @property
     def repository(self) -> ExternalChannelRepository:
         return self._repository
+
+    @property
+    def sticker_catalog(self) -> PresetStickerCatalog | None:
+        return self._sticker_catalog
 
     @property
     def publisher(self) -> EventPublisher:
@@ -1251,6 +1261,37 @@ class ExternalChannelService:
                     if connection and connection.configuration
                     else None
                 )
+                provider = (
+                    self._providers.get(connection.configuration.provider_id)
+                    if connection and connection.configuration
+                    else None
+                )
+                provider_supports_image = (
+                    provider is not None
+                    and ChannelMessageKind.IMAGE in provider.capabilities.outbound_message_kinds
+                )
+                is_default_character = (
+                    connection is not None and connection.configuration.character_id == "default"
+                )
+                is_instant_message = (
+                    policy is not None
+                    and policy.profile is ChannelPresentationProfile.INSTANT_MESSAGE
+                )
+                stickers_enabled = policy is not None and policy.stickers_enabled
+
+                can_send_sticker = (
+                    stickers_enabled
+                    and is_instant_message
+                    and provider_supports_image
+                    and is_default_character
+                )
+
+                response_plan = None
+                if can_send_sticker:
+                    response_plan = await self._conversation_repository.generation_response_plan(
+                        turn.generation_id
+                    )
+
                 profile_name: str = (
                     policy.profile.value
                     if policy is not None
@@ -1258,9 +1299,17 @@ class ExternalChannelService:
                 )
                 fallback_reason: str | None = None
                 factory = self._delivery_plan_factory
-                if isinstance(
-                    factory, (SingleTextDeliveryPlanFactory, InstantMessageDeliveryPlanFactory)
-                ):
+                if isinstance(factory, InstantMessageDeliveryPlanFactory):
+                    plan_result = factory.create_plan(
+                        generation.output_text,
+                        policy=policy,
+                        response_plan=response_plan,
+                        can_send_sticker=can_send_sticker,
+                    )
+                    parts = plan_result.parts
+                    profile_name = plan_result.profile
+                    fallback_reason = plan_result.fallback_reason
+                elif isinstance(factory, SingleTextDeliveryPlanFactory):
                     plan_result = factory.create_plan(generation.output_text, policy=policy)
                     parts = plan_result.parts
                     profile_name = plan_result.profile
@@ -1269,7 +1318,12 @@ class ExternalChannelService:
                     parts = factory.create_parts(generation.output_text, policy=policy)
 
                 delays = [p.delay_after_ms for p in parts]
-                chars_per_part: list[int] = [len(p.payload.text) for p in parts]
+                chars_per_part: list[int] = [
+                    len(p.payload.text)
+                    if isinstance(p.payload, ChannelTextDeliveryPartPayload)
+                    else 0
+                    for p in parts
+                ]
                 logger.info(
                     "channel delivery plan created: delivery_id=%s profile=%s part_count=%d "
                     "chars_per_part=%s delays=%s total_delay_ms=%d fallback_reason=%s",

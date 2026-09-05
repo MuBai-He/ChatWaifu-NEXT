@@ -213,7 +213,8 @@
     "ChannelMessageKind": {
       "description": "Message payload kinds understood by this schema major.",
       "enum": [
-        "text"
+        "text",
+        "image"
       ],
       "title": "ChannelMessageKind",
       "type": "string"
@@ -282,6 +283,12 @@
           "minimum": 20,
           "title": "Soft Max Chars Per Part",
           "type": "integer"
+        },
+        "stickers_enabled": {
+          "default": false,
+          "description": "Whether supported adapters emit matching preset stickers on casual responses",
+          "title": "Stickers Enabled",
+          "type": "boolean"
         },
         "total_cadence_delay_ceiling_ms": {
           "default": 6000,

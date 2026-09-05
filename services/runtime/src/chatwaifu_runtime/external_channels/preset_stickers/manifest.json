@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "stickers": [
+    {
+      "sticker_id": "kitten_happy",
+      "filename": "kitten_happy.png",
+      "sha256": "760e4ac2b7c4955a045d507e1b0c1ae884cdf6b9753ef00bb7ac58a77b7d8714",
+      "mime_type": "image/png",
+      "expressions": ["happy"],
+      "intents": [],
+      "attribution": "Original AI-generated kitten artwork created for ChatWaifu NEXT acceptance testing, 2026-09-05. Not official character artwork."
+    },
+    {
+      "sticker_id": "kitten_shy",
+      "filename": "kitten_shy.png",
+      "sha256": "4656e5e95eb4fd5d43cd5d2a901ce7c8c64d6a52c6467cb99ce7fbc05d06ed79",
+      "mime_type": "image/png",
+      "expressions": ["shy"],
+      "intents": [],
+      "attribution": "Original AI-generated kitten artwork created for ChatWaifu NEXT acceptance testing, 2026-09-05. Not official character artwork."
+    },
+    {
+      "sticker_id": "kitten_comfort",
+      "filename": "kitten_comfort.png",
+      "sha256": "c3c80a68dea31559ce7268863fbadc0381b92009dcdc56a592ff04bb92c130c1",
+      "mime_type": "image/png",
+      "expressions": ["sad"],
+      "intents": [],
+      "attribution": "Original AI-generated kitten artwork created for ChatWaifu NEXT acceptance testing, 2026-09-05. Not official character artwork."
+    }
+  ]
+}
