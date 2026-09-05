@@ -1,6 +1,7 @@
 """Minimal streaming adapter for local OpenAI-compatible chat-completion servers."""
 
 import asyncio
+import base64
 import contextlib
 import hashlib
 import json
@@ -17,6 +18,7 @@ from chatwaifu_protocol.base import JsonObject
 
 from chatwaifu_runtime.providers.contracts import (
     LlmFinishReason,
+    LlmImageInputUnavailableError,
     LlmRequest,
     LlmResponseCompleted,
     LlmStreamEvent,
@@ -306,7 +308,21 @@ def build_messages(request: LlmRequest) -> list[dict[str, object]]:
     messages: list[dict[str, object]] = [{"role": "system", "content": request.system_prompt}]
     messages.extend({"role": role, "content": text} for role, text in request.context)
     messages.extend({"role": role, "content": text} for role, text in request.history)
-    messages.append({"role": "user", "content": request.user_text})
+    if request.images:
+        user_content: list[dict[str, object]] = [{"type": "text", "text": request.user_text}]
+        for image in request.images:
+            encoded = base64.b64encode(image.data).decode("ascii")
+            user_content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{image.mime_type};base64,{encoded}",
+                    },
+                }
+            )
+        messages.append({"role": "user", "content": user_content})
+    else:
+        messages.append({"role": "user", "content": request.user_text})
     for exchange in request.tool_exchanges:
         messages.append(
             {
@@ -546,6 +562,7 @@ def _is_retryable_error(error: BaseException) -> bool:
             asyncio.CancelledError,
             _ToolCallingUnsupported,
             LlmToolCallingUnavailableError,
+            LlmImageInputUnavailableError,
         ),
     ):
         return False

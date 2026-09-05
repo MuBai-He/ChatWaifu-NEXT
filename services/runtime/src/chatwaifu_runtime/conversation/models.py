@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, cast
 from uuid import UUID
 
 from chatwaifu_protocol.session import GenerationState
+
+from chatwaifu_runtime.providers.contracts import LlmInputImage
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
@@ -114,6 +117,9 @@ class ConversationTurnOptions:
     source_context: ConversationSourceContext | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
+    image_loader: Callable[[], Awaitable[LlmInputImage]] | None = field(
+        default=None, repr=False, compare=False
+    )
 
     def emits(self, mode: ConversationOutputMode) -> bool:
         return mode in self.output_modes

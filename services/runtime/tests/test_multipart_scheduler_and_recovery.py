@@ -42,6 +42,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundImage,
     WeixinInboundText,
     WeixinPendingContext,
     WeixinUpdates,
@@ -250,6 +251,13 @@ class _FakeWeixin:
     ) -> str | None:
         del credentials, recipient_user_id, context_token, image_bytes, mime_type
         return f"prov-img-{client_id}"
+
+    async def download_image(
+        self,
+        image: WeixinInboundImage,
+    ) -> tuple[bytes, str]:
+        del image
+        return b"", "image/png"
 
 
 def _configuration(connection_id: UUID) -> ChannelConnectionConfiguration:

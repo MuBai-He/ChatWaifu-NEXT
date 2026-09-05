@@ -453,6 +453,10 @@ function ConnectedWeixinCard({
         <p>
           微信消息会进入当前角色的对话与记忆，并保留消息来源。桌宠与微信共享同一个宁宁。
         </p>
+        <p>
+          可以发送单张静态图片（PNG/JPEG，最大 5
+          MB）。图片会交给当前聊天模型理解， 不保存原图，也不会自动学成表情。
+        </p>
         <span>最近更新：{formatDate(connection.updated_at)}</span>
       </div>
       <button

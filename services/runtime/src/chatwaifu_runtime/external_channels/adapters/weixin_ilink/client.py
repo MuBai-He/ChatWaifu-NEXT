@@ -14,9 +14,14 @@ from urllib.parse import quote, urljoin, urlsplit
 import httpx
 
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
+    MAX_CIPHERTEXT_BYTES,
+    decrypt_aes_128_ecb,
     encode_media_aes_key,
     encrypt_aes_128_ecb,
+    resolve_cdn_download_url,
     resolve_cdn_upload_url,
+    resolve_image_aes_key,
+    sniff_image_mime_type,
     validate_image,
 )
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
@@ -24,6 +29,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundImage,
     WeixinInboundText,
     WeixinUpdates,
 )
@@ -425,6 +431,115 @@ class WeixinILinkClient:
                 "weixin.request_failed", "CDN upload request failed.", retryable=True
             ) from None
 
+    async def download_image(self, image: WeixinInboundImage) -> tuple[bytes, str]:
+        if image.invalid_reason is not None:
+            raise WeixinILinkError(
+                "weixin.image_unavailable",
+                f"WeChat image is unavailable: {image.invalid_reason}",
+                retryable=False,
+            )
+
+        cdn_url = resolve_cdn_download_url(image.full_url, image.encrypt_query_param)
+        key = resolve_image_aes_key(image.aeskey, image.aes_key)
+
+        try:
+            async with asyncio.timeout(20.0):
+                raw_bytes = await self._download_bytes_from_cdn(cdn_url)
+        except TimeoutError:
+            raise WeixinILinkError(
+                "weixin.request_timeout", "CDN download request timed out.", retryable=True
+            ) from None
+
+        if key is not None:
+            plaintext = decrypt_aes_128_ecb(raw_bytes, key)
+        else:
+            plaintext = raw_bytes
+
+        mime_type = sniff_image_mime_type(plaintext)
+        validate_image(plaintext, mime_type)
+        return plaintext, mime_type
+
+    async def _download_bytes_from_cdn(self, cdn_url: str) -> bytes:
+        request = httpx.Request(
+            "GET",
+            cdn_url,
+            headers={"Accept-Encoding": "identity"},
+            extensions={"timeout": httpx.Timeout(20.0).as_dict()},
+        )
+        response: httpx.Response | None = None
+        try:
+            try:
+                response = await self._client.send(
+                    request,
+                    stream=True,
+                    auth=None,
+                    follow_redirects=False,
+                )
+                if response.is_redirect or (300 <= response.status_code < 400):
+                    raise WeixinILinkError(
+                        "weixin.cdn_redirect_rejected",
+                        "CDN redirected the download request.",
+                        retryable=False,
+                    )
+                if 400 <= response.status_code < 500:
+                    raise WeixinILinkError(
+                        "weixin.cdn_download_failed",
+                        f"CDN download rejected with status {response.status_code}.",
+                        retryable=False,
+                    )
+                if response.status_code != 200:
+                    raise WeixinILinkError(
+                        "weixin.cdn_download_failed",
+                        f"CDN download failed with status {response.status_code}.",
+                        retryable=True,
+                    )
+                if response.headers.get("content-encoding", "identity").lower() != "identity":
+                    raise WeixinILinkError(
+                        "weixin.cdn_encoding_rejected",
+                        "Compressed CDN responses are not supported.",
+                        retryable=False,
+                    )
+                content_length = response.headers.get("content-length")
+                if (
+                    content_length
+                    and content_length.isdigit()
+                    and int(content_length) > MAX_CIPHERTEXT_BYTES
+                ):
+                    raise WeixinILinkError(
+                        "weixin.response_too_large",
+                        "CDN returned an oversized response.",
+                        retryable=False,
+                    )
+                content = bytearray()
+                async for chunk in response.aiter_bytes():
+                    if len(content) + len(chunk) > MAX_CIPHERTEXT_BYTES:
+                        raise WeixinILinkError(
+                            "weixin.response_too_large",
+                            "CDN returned an oversized response.",
+                            retryable=False,
+                        )
+                    content.extend(chunk)
+                if not content:
+                    raise WeixinILinkError(
+                        "weixin.image_invalid",
+                        "Image data is empty.",
+                        retryable=False,
+                    )
+                return bytes(content)
+            finally:
+                if response is not None:
+                    await response.aclose()
+        except WeixinILinkError:
+            raise
+        except httpx.TimeoutException:
+            raise WeixinILinkError(
+                "weixin.request_timeout", "CDN download request timed out.", retryable=True
+            ) from None
+        except httpx.HTTPError:
+            raise WeixinILinkError(
+                "weixin.request_failed", "CDN download request failed.", retryable=True
+            ) from None
+
     async def _get_json(
         self, base_url: str, endpoint: str, *, timeout_seconds: float
     ) -> dict[str, object]:
@@ -617,9 +732,10 @@ def _parse_inbound_text(raw: object, expected_bot_id: str) -> WeixinInboundText 
             "WeChat returned a text message with invalid routing context.",
             retryable=False,
         )
-    text = _text_from_items(message.get("item_list"))
-    if text is None:
+    parsed_content = _extract_message_content(message.get("item_list"))
+    if parsed_content is None:
         return None
+    text, image = parsed_content
     created_ms = message.get("create_time_ms")
     if isinstance(created_ms, int) and not isinstance(created_ms, bool) and created_ms > 0:
         try:
@@ -635,22 +751,87 @@ def _parse_inbound_text(raw: object, expected_bot_id: str) -> WeixinInboundText 
         text=text,
         context_token=context_token,
         received_at=received_at,
+        image=image,
     )
 
 
-def _text_from_items(raw: object) -> str | None:
+def _extract_message_content(
+    raw: object,
+) -> tuple[str, WeixinInboundImage | None] | None:
     if not isinstance(raw, list):
         return None
     items = cast(list[object], raw)
     if len(items) > 64:
         return None
+
+    text_found: str | None = None
+    image_items: list[dict[str, object]] = []
+
     for item_raw in items:
         if not isinstance(item_raw, dict):
             continue
         item = cast(dict[str, object], item_raw)
-        if item.get("type") != 1 or not isinstance(item.get("text_item"), dict):
-            continue
-        text = cast(dict[str, object], item["text_item"]).get("text")
-        if isinstance(text, str) and text.strip() and len(text) <= 20_000:
-            return text.strip()
-    return None
+        item_type = item.get("type")
+        if item_type == 1 and text_found is None and isinstance(item.get("text_item"), dict):
+            t = cast(dict[str, object], item["text_item"]).get("text")
+            if isinstance(t, str) and t.strip() and len(t) <= 20_000:
+                text_found = t.strip()
+        elif item_type == 2:
+            image_items.append(item)
+
+    if text_found is None and not image_items:
+        return None
+
+    if not image_items:
+        assert text_found is not None
+        return text_found, None
+
+    if len(image_items) > 1:
+        text = text_found if text_found is not None else "[图片]"
+        image = WeixinInboundImage(invalid_reason="multiple_images")
+        return text, image
+
+    single_item = image_items[0]
+    image_obj = _parse_single_image_item(single_item)
+    text = text_found if text_found is not None else "[图片]"
+    return text, image_obj
+
+
+def _parse_single_image_item(item: dict[str, object]) -> WeixinInboundImage:
+    raw_img = item.get("image_item")
+    if not isinstance(raw_img, dict):
+        return WeixinInboundImage(invalid_reason="malformed_image")
+
+    img_dict = cast(dict[str, object], raw_img)
+    media = img_dict.get("media")
+    media_dict = cast(dict[str, object], media) if isinstance(media, dict) else {}
+
+    raw_param = media_dict.get("encrypt_query_param") or img_dict.get("encrypt_query_param")
+    encrypt_query_param = (
+        raw_param.strip() if isinstance(raw_param, str) and raw_param.strip() else None
+    )
+
+    raw_full = (
+        img_dict.get("full_url")
+        or img_dict.get("download_full_url")
+        or media_dict.get("full_url")
+        or media_dict.get("download_full_url")
+        or img_dict.get("url")
+    )
+    full_url = raw_full.strip() if isinstance(raw_full, str) and raw_full.strip() else None
+
+    raw_aes_key = media_dict.get("aes_key") or img_dict.get("aes_key")
+    aes_key = raw_aes_key.strip() if isinstance(raw_aes_key, str) and raw_aes_key.strip() else None
+
+    raw_aeskey = img_dict.get("aeskey") or media_dict.get("aeskey")
+    aeskey = raw_aeskey.strip() if isinstance(raw_aeskey, str) and raw_aeskey.strip() else None
+
+    if not encrypt_query_param and not full_url:
+        return WeixinInboundImage(invalid_reason="malformed_image")
+
+    return WeixinInboundImage(
+        encrypt_query_param=encrypt_query_param,
+        full_url=full_url,
+        aes_key=aes_key,
+        aeskey=aeskey,
+    )

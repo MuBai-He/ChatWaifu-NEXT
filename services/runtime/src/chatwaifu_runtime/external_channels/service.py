@@ -60,6 +60,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
+    ChannelInboundImageInput,
     ChannelTurnRecord,
     CompleteTurnResult,
 )
@@ -81,7 +82,7 @@ WEIXIN_ILINK_PROVIDER = ChannelProviderRegistration(
     description="通过腾讯 iLink 协议在本机扫码连接微信。",
     capabilities=ChannelProviderCapabilities(
         chat_types=[ChannelChatType.DIRECT],
-        inbound_message_kinds=[ChannelMessageKind.TEXT],
+        inbound_message_kinds=[ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE],
         outbound_message_kinds=[ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE],
         authorization_methods=[ChannelAuthorizationMethod.QR_CODE],
         supports_typing=True,
@@ -143,10 +144,12 @@ class CreatedChannelConnection:
 
 
 _PROVIDER_FAILURE_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
+_IMAGE_FAILURE_RECOVERY_TEXT = "这张图我刚才没看清，能再发一次吗？"
 
 
 __all__ = [
     "WEIXIN_ILINK_PROVIDER",
+    "ChannelInboundImageInput",
     "CreatedChannelConnection",
     "DeliveryPlanFactory",
     "ExternalChannelError",
@@ -361,9 +364,13 @@ class ExternalChannelService:
         *,
         access_token: str,
         supersede_inflight: bool = False,
+        image_input: ChannelInboundImageInput | None = None,
     ) -> ChannelTurnReceipt:
         connection, binding, turn, duplicate = await self._admit_ingress(
-            message, access_token=access_token, supersede_inflight=supersede_inflight
+            message,
+            access_token=access_token,
+            supersede_inflight=supersede_inflight,
+            image_fingerprint=image_input.source_fingerprint if image_input is not None else None,
         )
         if duplicate:
             return self._turn_receipt(turn, duplicate=True)
@@ -386,11 +393,17 @@ class ExternalChannelService:
             if policy is not None and hasattr(policy.profile, "value")
             else (str(policy.profile) if policy is not None else None)
         )
+        recovery_text = (
+            _IMAGE_FAILURE_RECOVERY_TEXT
+            if image_input is not None
+            else _PROVIDER_FAILURE_RECOVERY_TEXT
+        )
         options = replace(
             EXTERNAL_TEXT_TURN_OPTIONS,
             source_context=source_context,
             presentation_profile=profile,
-            failure_recovery_text=_PROVIDER_FAILURE_RECOVERY_TEXT,
+            failure_recovery_text=recovery_text,
+            image_loader=image_input.load if image_input is not None else None,
         )
         generation_admitted = False
         try:
@@ -508,6 +521,7 @@ class ExternalChannelService:
         *,
         access_token: str,
         supersede_inflight: bool = False,
+        image_fingerprint: str | None = None,
     ) -> tuple[ChannelConnectionRecord, ChannelBindingRecord, ChannelTurnRecord, bool]:
         """Persist a unique channel turn without serializing model preparation.
 
@@ -519,8 +533,8 @@ class ExternalChannelService:
 
         async with self._ingress_lock:
             connection = await self._authenticate(message.connection_id, access_token)
-            self._validate_ingress(connection, message)
-            digest = _message_digest(message)
+            self._validate_ingress(connection, message, has_image=image_fingerprint is not None)
+            digest = _message_digest(message, image_fingerprint=image_fingerprint)
             duplicate = await self._repository.find_turn_by_external_message(
                 message.connection_id, message.external_message_id
             )
@@ -1361,15 +1375,19 @@ class ExternalChannelService:
                 )
             if generation.state is GenerationState.FAILED:
                 if (
-                    generation.error_code == "provider_error"
+                    generation.error_code in {"provider_error", "image_input_error"}
                     and turn.status is not ChannelTurnStatus.CANCELLING
                 ):
                     result = await self._repository.fail_turn_with_notice(
                         turn.channel_turn_id,
                         error=_error(
-                            "provider_error", "The model generation failed before delivery."
+                            generation.error_code, "The model generation failed before delivery."
                         ),
-                        notice_text=_PROVIDER_FAILURE_RECOVERY_TEXT,
+                        notice_text=(
+                            _IMAGE_FAILURE_RECOVERY_TEXT
+                            if generation.error_code == "image_input_error"
+                            else _PROVIDER_FAILURE_RECOVERY_TEXT
+                        ),
                         delivery_id=uuid4(),
                         completed_at=now,
                     )
@@ -1446,7 +1464,11 @@ class ExternalChannelService:
             raise ChannelPolicyError("account_key cannot have surrounding whitespace")
 
     def _validate_ingress(
-        self, connection: ChannelConnectionRecord, message: ChannelInboundTextMessage
+        self,
+        connection: ChannelConnectionRecord,
+        message: ChannelInboundTextMessage,
+        *,
+        has_image: bool = False,
     ) -> None:
         configuration = connection.configuration
         provider = self._providers[configuration.provider_id]
@@ -1458,6 +1480,11 @@ class ExternalChannelService:
             )
         if message.kind not in provider.capabilities.inbound_message_kinds:
             raise ChannelPolicyError(f"provider does not allow {message.kind.value} messages")
+        if (
+            has_image
+            and ChannelMessageKind.IMAGE not in provider.capabilities.inbound_message_kinds
+        ):
+            raise ChannelPolicyError("provider does not allow image messages")
         if message.principal_scope != configuration.principal_scope:
             raise ChannelPolicyError("message principal_scope does not match connection policy")
         if (
@@ -1630,8 +1657,11 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _message_digest(message: ChannelInboundTextMessage) -> str:
-    parts = (
+def _message_digest(
+    message: ChannelInboundTextMessage,
+    image_fingerprint: str | None = None,
+) -> str:
+    parts = [
         message.account_key or "",
         message.external_message_id,
         message.conversation_key,
@@ -1641,7 +1671,9 @@ def _message_digest(message: ChannelInboundTextMessage) -> str:
         message.kind.value,
         message.text,
         message.reply_to_external_message_id or "",
-    )
+    ]
+    if image_fingerprint is not None:
+        parts.append(f"image:{image_fingerprint}")
     return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()
 
 

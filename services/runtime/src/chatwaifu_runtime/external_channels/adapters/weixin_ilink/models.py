@@ -121,6 +121,15 @@ class WeixinCredentials:
 
 
 @dataclass(frozen=True, slots=True)
+class WeixinInboundImage:
+    encrypt_query_param: str | None = field(default=None, repr=False)
+    full_url: str | None = field(default=None, repr=False)
+    aes_key: str | None = field(default=None, repr=False)
+    aeskey: str | None = field(default=None, repr=False)
+    invalid_reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class WeixinInboundText:
     external_message_id: str
     sender_user_id: str
@@ -128,6 +137,7 @@ class WeixinInboundText:
     text: str
     context_token: str
     received_at: datetime
+    image: WeixinInboundImage | None = None
 
 
 @dataclass(frozen=True, slots=True)

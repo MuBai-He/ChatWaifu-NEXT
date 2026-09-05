@@ -2,3 +2,8 @@
 # Full git history remains scanned in CI; exact fingerprints ignored for historical commits.
 a1540a9a4a9bb6641cb503a680c511042065f908:services/runtime/tests/test_channel_failure_notice.py:generic-api-key:147
 a1540a9a4a9bb6641cb503a680c511042065f908:services/runtime/tests/test_channel_failure_notice.py:generic-api-key:292
+
+# Synthetic AES parser fixture and its equality assertion, not issued credentials.
+# Current fixture is generated in code; retain exact exclusions for the historical PR commit.
+27af8c1a1f2e032b7dc78dfa846abc53b09e52b2:services/runtime/tests/external_channels/adapters/weixin_ilink/test_wire_image.py:generic-api-key:125
+27af8c1a1f2e032b7dc78dfa846abc53b09e52b2:services/runtime/tests/external_channels/adapters/weixin_ilink/test_wire_image.py:generic-api-key:137
