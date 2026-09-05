@@ -2471,3 +2471,21 @@ proactive messages, and changes to canonical turns or durable delivery semantics
   events, feature disabled, and complete ingress-to-text delivery while typing is unavailable.
 - Run protocol, Runtime, type/format/lint, and client builds; then verify visible typing, completion,
   bubble cadence, and interruption with the owner's real WeChat account before marking accepted.
+
+## Phase 17.1C — Cross-channel Memory Provenance UI
+
+Smallest complete slice: expose the channel provenance already persisted on `MemorySource` through a
+friendly Memory Center projection. Show provider, direct/group conversation type, local receive time,
+and at most one untrusted display label. Keep stable routing identifiers and unknown raw protocol values
+out of the UI. Preserve the existing event/turn fallback for non-channel sources.
+
+- Reuse the generated `MemorySource` contract; do not add API, schema, database, or retrieval changes.
+- Keep display labels presentation-only, normalize whitespace, and rely on React text escaping.
+- Test friendly WeChat rendering, label precedence, timestamp ordering, non-channel fallback, and
+  suppression of connection, account, principal, conversation, sender, event, and turn identifiers.
+- Run Web tests, formatting, lint, type checks, and the production build.
+- Before marking accepted, create one real memory through the bound WeChat account and confirm its
+  source in the native Memory Center without exposing routing keys.
+
+This slice excludes new channels, group enablement, multiple human principals, memory extraction or
+ranking changes, and changes to prompt provenance.
