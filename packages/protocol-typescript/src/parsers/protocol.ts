@@ -26,6 +26,7 @@ import type {
   ChannelTurnReceipt,
   ChannelTurnSnapshot,
   CharacterKernelSnapshot,
+  LearnedSticker,
   McpCapabilitySnapshot,
   McpConnectionSnapshot,
   MemoryChannelAttribution,
@@ -37,6 +38,10 @@ import type {
   SessionSnapshot,
   SkillDefinition,
   SkillRunSnapshot,
+  StickerLibraryDeleteResult,
+  StickerLibrarySettings,
+  StickerLibrarySettingsUpdate,
+  StickerLibrarySnapshot,
 } from "../generated/domain";
 import { SUPPORTED_SCHEMA_MAJOR } from "../version";
 
@@ -1402,6 +1407,63 @@ const mcpConnectionSnapshotSchema = z
   })
   .passthrough();
 
+const stickerLibrarySettingsSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    learning_enabled: z.boolean().default(false),
+    revision: z.number().int().nonnegative().default(0),
+  })
+  .passthrough();
+
+const stickerLibrarySettingsUpdateSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    learning_enabled: z.boolean(),
+    expected_revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
+const learnedStickerSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    sticker_id: z.string().regex(/^learned_[0-9a-f]{32}$/),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    mime_type: z.literal("image/png").default("image/png"),
+    label: z.string().min(1).max(80),
+    description: z.string().min(1).max(300),
+    expression: z.enum([
+      "neutral",
+      "happy",
+      "sad",
+      "angry",
+      "surprised",
+      "shy",
+      "curious",
+    ]),
+    byte_size: z.number().int().min(1).max(5 * 1024 * 1024),
+    learned_at: awareDateTime,
+    source_connection_id: uuid,
+  })
+  .passthrough();
+
+const stickerLibrarySnapshotSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    settings: stickerLibrarySettingsSchema,
+    items: z.array(learnedStickerSchema).max(100).default([]),
+    total_bytes: z.number().int().min(0).max(100 * 1024 * 1024),
+    capacity: z.literal(100).default(100),
+  })
+  .passthrough();
+
+const stickerLibraryDeleteResultSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    deleted: z.boolean(),
+    revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
 export function parseEventEnvelope(input: unknown): DomainEvent {
   return eventEnvelopeSchema.parse(input) as DomainEvent;
 }
@@ -1642,6 +1704,38 @@ export function parseMcpConnectionSnapshot(
   return mcpConnectionSnapshotSchema.parse(input) as McpConnectionSnapshot;
 }
 
+export function parseLearnedSticker(input: unknown): LearnedSticker {
+  return learnedStickerSchema.parse(input) as LearnedSticker;
+}
+
+export function parseStickerLibrarySettings(
+  input: unknown,
+): StickerLibrarySettings {
+  return stickerLibrarySettingsSchema.parse(input) as StickerLibrarySettings;
+}
+
+export function parseStickerLibrarySettingsUpdate(
+  input: unknown,
+): StickerLibrarySettingsUpdate {
+  return stickerLibrarySettingsUpdateSchema.parse(
+    input,
+  ) as StickerLibrarySettingsUpdate;
+}
+
+export function parseStickerLibrarySnapshot(
+  input: unknown,
+): StickerLibrarySnapshot {
+  return stickerLibrarySnapshotSchema.parse(input) as StickerLibrarySnapshot;
+}
+
+export function parseStickerLibraryDeleteResult(
+  input: unknown,
+): StickerLibraryDeleteResult {
+  return stickerLibraryDeleteResultSchema.parse(
+    input,
+  ) as StickerLibraryDeleteResult;
+}
+
 export function encodeAudioFrameHeader(input: unknown): Uint8Array {
   const header = parseAudioFrameHeader(input);
   const encoded = new TextEncoder().encode(JSON.stringify(header));
@@ -1702,6 +1796,7 @@ export {
   commandEnvelopeSchema,
   eventEnvelopeSchema,
   genericCoreEventSchema,
+  learnedStickerSchema,
   mcpCapabilitySnapshotSchema,
   mcpConnectionSnapshotSchema,
   mcpPromptSchema,
@@ -1719,6 +1814,10 @@ export {
   skillDefinitionSchema,
   skillResultSchema,
   skillRunSnapshotSchema,
+  stickerLibraryDeleteResultSchema,
+  stickerLibrarySettingsSchema,
+  stickerLibrarySettingsUpdateSchema,
+  stickerLibrarySnapshotSchema,
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 };

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
 from chatwaifu_runtime.api.routes import router
+from chatwaifu_runtime.api.sticker_library_routes import router as sticker_library_router
 from chatwaifu_runtime.bootstrap.container import (
     RuntimeCleanupError,
     RuntimeContainer,
@@ -101,6 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ticket_store=container.ws_ticket_store,
     )
     app.include_router(router)
+    app.include_router(sticker_library_router)
     # Keep this catch-all mount last so existing /v1 and documentation routes
     # retain precedence while the official MCP app owns the exact /mcp path.
     app.mount("/", mcp_server.app, name="mcp")

@@ -17,6 +17,7 @@ import {
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsSectionIntro, SettingsToggle } from "./SettingsPrimitives";
+import { StickerLibraryPanel } from "./StickerLibraryPanel";
 import "./channels-settings.css";
 
 const WEIXIN_PROVIDER_ID = "weixin_ilink";
@@ -440,7 +441,7 @@ function ConnectedWeixinCard({
     : !isInstantMessage
       ? "（仅即时消息模式支持）"
       : "";
-  const shortCopy = `原创小猫表情，默认关闭${explanation}`;
+  const shortCopy = `发送原创小猫和已学表情，默认关闭${explanation}`;
 
   return (
     <div className="channels-settings-connected-card">
@@ -455,7 +456,8 @@ function ConnectedWeixinCard({
         </p>
         <p>
           可以发送单张静态图片（PNG/JPEG，最大 5
-          MB）。图片会交给当前聊天模型理解， 不保存原图，也不会自动学成表情。
+          MB）。图片会交给当前聊天模型理解，
+          未开启表情学习时，图片仅用于本次理解。
         </p>
         <span>最近更新：{formatDate(connection.updated_at)}</span>
       </div>
@@ -476,6 +478,15 @@ function ConnectedWeixinCard({
           onChange={(enabled) => void onToggleStickers(enabled)}
         />
       </div>
+
+      {isDefaultCharacter ? (
+        <div className="channels-settings-sticker-library">
+          <StickerLibraryPanel
+            characterId={characterId}
+            runtimeOnline={runtimeOnline}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

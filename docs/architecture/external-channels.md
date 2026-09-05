@@ -347,6 +347,31 @@ Restart terminalizes an orphaned generation's channel turn without downloading a
 media, dynamic sticker learning and image deletion controls remain later Phase 17.3 work.
 See [ADR 0035](../adr/0035-ephemeral-inbound-image-understanding.md).
 
+## Opt-in learned sticker library (Phase 17.3B)
+
+The external-channel generation loader can additionally notify the sticker-library service with
+the validated image and server-owned source identity. Learning is disabled by default. When enabled,
+at most two in-memory jobs classify a bounded preview with the configured model; uncertain images
+and auxiliary-model failures are skipped without changing the conversational reply. Accepted stickers
+are normalized to metadata-free PNGs and saved through a repository port only after the source turn
+completed. Ordinary photographs do not enter this library.
+
+SQLite stores scoped image bytes and metadata atomically, with hash deduplication, count/byte limits
+and settings revisions. Delete and settings changes fence in-flight saves. HTTP library management
+uses Runtime authentication and the server's principal, while previews are authenticated no-store
+binary responses. The library contains no private CDN URLs, keys, or provider SDK objects.
+
+Existing response plans can select a saved sticker under the channel's outbound sticker switch.
+The delivery plan freezes its identifier and hash; the native executor resolves that exact asset
+from the scoped library. A missing/deleted asset fails the optional image part without changing the
+text already delivered. A part already holding a sending lease may finish. Shutdown cancels learning
+jobs; accepted assets and pending delivery plans retain their existing restart guarantees.
+
+Photo retention and visual memory remain separate planned work in Phase 17.3C: the owner wants
+ordinary photos to support later recall, with their own retention and deletion controls. Excluding
+photos from the sticker library does not exclude them from that roadmap. See
+[ADR 0036](../adr/0036-opt-in-learned-sticker-library.md).
+
 ## Native WeChat timing diagnostics
 
 `weixin.timing` JSON log records correlate nonempty poll returns, message observation,
