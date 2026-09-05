@@ -42,6 +42,11 @@ import type {
   StickerLibrarySettings,
   StickerLibrarySettingsUpdate,
   StickerLibrarySnapshot,
+  PhotoMemorySettings,
+  PhotoMemorySettingsUpdate,
+  SavedPhoto,
+  PhotoMemorySnapshot,
+  PhotoMemoryDeleteResult,
 } from "../generated/domain";
 import { SUPPORTED_SCHEMA_MAJOR } from "../version";
 
@@ -1407,6 +1412,71 @@ const mcpConnectionSnapshotSchema = z
   })
   .passthrough();
 
+const photoMemorySettingsSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    retention_enabled: z.boolean().default(false),
+    revision: z.number().int().nonnegative().default(0),
+  })
+  .passthrough();
+
+const photoMemorySettingsUpdateSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    retention_enabled: z.boolean(),
+    expected_revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
+const savedPhotoSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    photo_id: uuid,
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    mime_type: z.enum(["image/png", "image/jpeg"]),
+    byte_size: z
+      .number()
+      .int()
+      .min(1)
+      .max(5 * 1024 * 1024),
+    width: z.number().int().min(1).max(2048),
+    height: z.number().int().min(1).max(2048),
+    title: z.string().min(1).max(80),
+    description: z.string().min(1).max(600),
+    confidence: z.number().finite().min(0).max(1),
+    keywords: z.array(z.string().min(1).max(40)).max(12).default([]),
+    caption: z.string().max(1000).default(""),
+    received_at: awareDateTime,
+    saved_at: awareDateTime,
+    source_connection_id: uuid,
+    source_session_id: uuid,
+    source_turn_id: uuid,
+    source_generation_id: uuid,
+  })
+  .passthrough();
+
+const photoMemorySnapshotSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    settings: photoMemorySettingsSchema,
+    items: z.array(savedPhotoSchema).max(200).default([]),
+    total_bytes: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(500 * 1024 * 1024),
+    capacity: z.literal(200).default(200),
+  })
+  .passthrough();
+
+const photoMemoryDeleteResultSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    deleted: z.boolean(),
+    revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
 const stickerLibrarySettingsSchema = z
   .object({
     schema_version: z.literal("1.0").default("1.0"),
@@ -1440,7 +1510,11 @@ const learnedStickerSchema = z
       "shy",
       "curious",
     ]),
-    byte_size: z.number().int().min(1).max(5 * 1024 * 1024),
+    byte_size: z
+      .number()
+      .int()
+      .min(1)
+      .max(5 * 1024 * 1024),
     learned_at: awareDateTime,
     source_connection_id: uuid,
   })
@@ -1451,7 +1525,11 @@ const stickerLibrarySnapshotSchema = z
     schema_version: z.literal("1.0").default("1.0"),
     settings: stickerLibrarySettingsSchema,
     items: z.array(learnedStickerSchema).max(100).default([]),
-    total_bytes: z.number().int().min(0).max(100 * 1024 * 1024),
+    total_bytes: z
+      .number()
+      .int()
+      .min(0)
+      .max(100 * 1024 * 1024),
     capacity: z.literal(100).default(100),
   })
   .passthrough();
@@ -1757,6 +1835,11 @@ export function decodeAudioFrameHeader(encoded: Uint8Array): AudioFrameHeader {
 }
 
 export {
+  photoMemorySettingsSchema,
+  photoMemorySettingsUpdateSchema,
+  savedPhotoSchema,
+  photoMemorySnapshotSchema,
+  photoMemoryDeleteResultSchema,
   audioFrameHeaderSchema,
   avatarCapabilityManifestSchema,
   avatarCueSchema,
@@ -1821,3 +1904,27 @@ export {
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 };
+
+export function parsePhotoMemorySettings(value: unknown): PhotoMemorySettings {
+  return photoMemorySettingsSchema.parse(value);
+}
+
+export function parsePhotoMemorySettingsUpdate(
+  value: unknown,
+): PhotoMemorySettingsUpdate {
+  return photoMemorySettingsUpdateSchema.parse(value);
+}
+
+export function parseSavedPhoto(value: unknown): SavedPhoto {
+  return savedPhotoSchema.parse(value) as SavedPhoto;
+}
+
+export function parsePhotoMemorySnapshot(value: unknown): PhotoMemorySnapshot {
+  return photoMemorySnapshotSchema.parse(value) as PhotoMemorySnapshot;
+}
+
+export function parsePhotoMemoryDeleteResult(
+  value: unknown,
+): PhotoMemoryDeleteResult {
+  return photoMemoryDeleteResultSchema.parse(value);
+}

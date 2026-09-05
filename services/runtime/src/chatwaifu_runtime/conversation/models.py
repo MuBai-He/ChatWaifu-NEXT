@@ -108,6 +108,7 @@ class ConversationHistoryEntry:
     role: str
     text: str
     source_context: ConversationSourceContext | None = None
+    generation_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

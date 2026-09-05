@@ -55,6 +55,7 @@ class PromptCompiler:
         user_text: str,
         source_context: ConversationSourceContext | None = None,
         presentation_profile: str | None = None,
+        photo_evidence: str = "",
     ) -> PromptCompilation:
         config = self._models.get("chat")
         total_budget = max(1024, config.context_window - 900)
@@ -91,6 +92,11 @@ class PromptCompiler:
         selected_history = [(entry.role, entry.text) for entry in selected_entries]
 
         context: list[tuple[str, str]] = []
+        # Photo observations are separate from extracted personal memory. Keep
+        # their attribution and count their bounded evidence in the prompt budget.
+        photo_evidence = _fit(photo_evidence, min(1000, max(250, total_budget // 12)))
+        if photo_evidence:
+            context.append(("system", photo_evidence))
         if memory_text:
             context.append(
                 (
@@ -187,6 +193,7 @@ class PromptCompiler:
                 scene,
                 user_text,
                 source_ledger,
+                photo_evidence,
                 *(text for _role, text in selected_history),
             )
         )
@@ -203,7 +210,9 @@ class PromptCompiler:
                 persona_tokens=_tokens(persona),
                 state_tokens=_tokens(state),
                 relationship_tokens=_tokens(relationship),
-                memory_tokens=_tokens(memory_text) + _tokens(memory_source_text),
+                memory_tokens=(
+                    _tokens(memory_text) + _tokens(memory_source_text) + _tokens(photo_evidence)
+                ),
                 scene_tokens=_tokens(scene),
                 conversation_tokens=history_used,
                 dropped_history_turns=dropped,

@@ -121,10 +121,14 @@ class SQLiteConversationRepository(ConversationRepository):
     ) -> tuple[ConversationHistoryEntry, ...]:
         local_rows = await self._database.fetchall(
             """
-            SELECT role, committed_text, source_context_json, committed_at
+            SELECT role, committed_text, source_context_json, committed_at, generation_id
             FROM turns
             WHERE session_id = ? AND turn_id != ? AND committed_text IS NOT NULL
                 AND role IN ('user', 'assistant')
+                AND (role != 'assistant' OR NOT EXISTS (
+                    SELECT 1 FROM photo_context_redactions AS redaction
+                    WHERE redaction.generation_id = turns.generation_id
+                ))
             ORDER BY created_at DESC LIMIT ?
             """,
             (str(session_id), str(current_turn_id), limit),
@@ -138,7 +142,7 @@ class SQLiteConversationRepository(ConversationRepository):
         sourced_rows = await self._database.fetchall(
             """
             SELECT turn.role, turn.committed_text, turn.source_context_json,
-                   turn.committed_at
+                   turn.committed_at, turn.generation_id
             FROM turns AS turn
             JOIN sessions AS source_session
               ON source_session.session_id = turn.session_id
@@ -153,6 +157,10 @@ class SQLiteConversationRepository(ConversationRepository):
                   ) = ?
               AND turn.committed_text IS NOT NULL
               AND turn.role IN ('user', 'assistant')
+              AND (turn.role != 'assistant' OR NOT EXISTS (
+                  SELECT 1 FROM photo_context_redactions AS redaction
+                  WHERE redaction.generation_id = turn.generation_id
+              ))
             ORDER BY turn.committed_at DESC, turn.created_at DESC
             LIMIT ?
             """,
@@ -175,9 +183,43 @@ class SQLiteConversationRepository(ConversationRepository):
                     role=str(row["role"]),
                     text=str(row["committed_text"]),
                     source_context=source,
+                    generation_id=(
+                        UUID(str(row["generation_id"])) if row["generation_id"] else None
+                    ),
                 )
             )
         return tuple(entries)
+
+    async def prepare_history(
+        self, generation_id: UUID, history: tuple[ConversationHistoryEntry, ...]
+    ) -> tuple[ConversationHistoryEntry, ...]:
+        # History may have been read before a concurrent deletion. Check it again
+        # at the prompt boundary and persist indirect dependencies in the same
+        # transaction, including before a background photo observation finishes.
+        kept: list[ConversationHistoryEntry] = []
+        async with self._database.transaction() as connection:
+            for entry in history:
+                if entry.role != "assistant" or entry.generation_id is None:
+                    kept.append(entry)
+                    continue
+                cursor = await connection.execute(
+                    "SELECT 1 FROM photo_context_redactions WHERE generation_id = ?",
+                    (str(entry.generation_id),),
+                )
+                redacted = await cursor.fetchone()
+                await cursor.close()
+                if redacted is not None:
+                    continue
+                await connection.execute(
+                    """
+                    INSERT OR IGNORE INTO conversation_history_dependencies(
+                        source_generation_id, derived_generation_id
+                    ) VALUES (?, ?)
+                    """,
+                    (str(entry.generation_id), str(generation_id)),
+                )
+                kept.append(entry)
+        return tuple(kept)
 
     async def generation_result(self, generation_id: UUID) -> ConversationGenerationRecord | None:
         row = await self._database.fetchone(
@@ -480,8 +522,8 @@ class SQLiteConversationRepository(ConversationRepository):
                 """
                 INSERT INTO turns(
                     turn_id, session_id, role, committed_text, committed_at, created_at,
-                    source_context_json
-                ) VALUES (?, ?, 'assistant', ?, ?, ?, ?)
+                    source_context_json, generation_id
+                ) VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?)
                 """,
                 (
                     str(assistant_turn_id),
@@ -490,6 +532,7 @@ class SQLiteConversationRepository(ConversationRepository):
                     occurred_at.isoformat(),
                     occurred_at.isoformat(),
                     source_context.to_json() if source_context is not None else None,
+                    str(generation_id),
                 ),
             )
             await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)
@@ -577,8 +620,8 @@ class SQLiteConversationRepository(ConversationRepository):
                     """
                     INSERT INTO turns(
                         turn_id, session_id, role, committed_text, committed_at, created_at,
-                        source_context_json
-                    ) VALUES (?, ?, 'assistant', ?, ?, ?, ?)
+                        source_context_json, generation_id
+                    ) VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?)
                     """,
                     (
                         str(recovery_turn_id),
@@ -587,6 +630,7 @@ class SQLiteConversationRepository(ConversationRepository):
                         occurred_at.isoformat(),
                         occurred_at.isoformat(),
                         source_context.to_json() if source_context is not None else None,
+                        str(generation_id),
                     ),
                 )
             await self._set_idle(connection, session_id, occurred_at, enabled=set_session_idle)

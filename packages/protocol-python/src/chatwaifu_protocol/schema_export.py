@@ -50,6 +50,13 @@ from chatwaifu_protocol.memory import (
 )
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
 from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
+from chatwaifu_protocol.photo_memory import (
+    PhotoMemoryDeleteResult,
+    PhotoMemorySettings,
+    PhotoMemorySettingsUpdate,
+    PhotoMemorySnapshot,
+    SavedPhoto,
+)
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
 from chatwaifu_protocol.skills import (
     McpCapabilitySnapshot,
@@ -136,6 +143,11 @@ class ProtocolCatalog(ProtocolModel):
     sticker_library_settings_update: StickerLibrarySettingsUpdate
     sticker_library_snapshot: StickerLibrarySnapshot
     sticker_library_delete_result: StickerLibraryDeleteResult
+    photo_memory_settings: PhotoMemorySettings
+    photo_memory_settings_update: PhotoMemorySettingsUpdate
+    saved_photo: SavedPhoto
+    photo_memory_snapshot: PhotoMemorySnapshot
+    photo_memory_delete_result: PhotoMemoryDeleteResult
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
@@ -184,11 +196,16 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "permission-grant": PermissionGrant,
     "permission-request": PermissionRequest,
     "prompt-budget-report": PromptBudgetReport,
+    "photo-memory-settings": PhotoMemorySettings,
+    "photo-memory-settings-update": PhotoMemorySettingsUpdate,
+    "photo-memory-snapshot": PhotoMemorySnapshot,
+    "photo-memory-delete-result": PhotoMemoryDeleteResult,
     "plugin-manifest": PluginManifest,
     "plugin-snapshot": PluginSnapshot,
     "protocol-catalog": ProtocolCatalog,
     "route-decision": RouteDecision,
     "response-plan": ResponsePlan,
+    "saved-photo": SavedPhoto,
     "session-snapshot": SessionSnapshot,
     "skill-definition": SkillDefinition,
     "skill-invocation": SkillInvocation,

@@ -609,3 +609,211 @@
     justify-self: start;
   }
 }
+.photo-memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.channels-settings-card > .photo-memory-panel {
+  padding: 20px;
+  border-top: 1px solid var(--settings-line);
+}
+.photo-memory-toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.photo-memory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+}
+.photo-memory-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.photo-memory-count h4 {
+  margin: 0;
+  color: var(--settings-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.photo-memory-count span {
+  color: var(--settings-muted);
+  font-size: 0.62rem;
+  font-family: var(--mono);
+}
+.photo-memory-refresh-button {
+  padding: 5px 10px;
+  border: 1px solid rgb(117 70 105 / 18%);
+  border-radius: 7px;
+  color: #73506d;
+  background: rgb(255 255 255 / 80%);
+  cursor: pointer;
+  font-size: 0.59rem;
+}
+.photo-memory-refresh-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.photo-memory-error {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #a35c66;
+  background: rgb(177 85 99 / 10%);
+  font-size: 0.62rem;
+}
+.photo-memory-loading,
+.photo-memory-empty {
+  padding: 24px 16px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 40%);
+  border: 1px dashed rgb(177 108 150 / 20%);
+}
+.photo-memory-loading {
+  color: var(--settings-muted);
+  font-size: 0.64rem;
+}
+.photo-memory-empty p {
+  margin: 0;
+  color: var(--settings-text);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+.photo-memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.photo-memory-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 85%);
+  border: 1px solid rgb(177 108 150 / 15%);
+  box-shadow: 0 4px 12px rgb(61 41 63 / 4%);
+}
+.photo-memory-thumbnail-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(0 0 0 / 4%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-memory-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.photo-memory-thumbnail-placeholder {
+  color: var(--settings-muted);
+  font-size: 0.6rem;
+  padding: 8px;
+  text-align: center;
+}
+.photo-memory-thumbnail-placeholder.error {
+  color: #a35c66;
+}
+.photo-memory-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.photo-memory-tile-title {
+  color: var(--settings-text);
+  font-size: 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.photo-memory-tile-desc {
+  color: var(--settings-muted);
+  font-size: 0.58rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.photo-memory-tile-caption {
+  color: var(--settings-muted);
+  font-size: 0.55rem;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.photo-memory-tile-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+.photo-memory-tile-date,
+.photo-memory-source {
+  color: #9b9099;
+  font-size: 0.53rem;
+}
+.photo-memory-delete-button {
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgb(163 92 102 / 20%);
+  border-radius: 6px;
+  color: #a35c66;
+  background: rgb(255 255 255 / 90%);
+  cursor: pointer;
+  font-size: 0.58rem;
+}
+.photo-memory-delete-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.photo-memory-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* dialog */
+.photo-memory-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.photo-memory-dialog-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.photo-memory-dialog-image {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.photo-memory-dialog-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  color: white;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+}
