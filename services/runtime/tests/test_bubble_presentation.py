@@ -44,6 +44,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     CadenceCalculator,
     InstantMessageDeliveryPlanFactory,
     SingleTextDeliveryPlanFactory,
+    render_bubble_text,
 )
 from chatwaifu_runtime.external_channels.scheduler import (
     ChannelDeliveryScheduler,
@@ -58,6 +59,24 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
+
+
+@pytest.mark.parametrize(
+    ("text", "has_next", "expected"),
+    [
+        ("First paragraph.\n\n", True, "First paragraph."),
+        ("First paragraph.\r\n\r\n", True, "First paragraph."),
+        ("  First line\n  indented line\n\n", True, "  First line\n  indented line"),
+        ("Keep trailing spaces.  ", True, "Keep trailing spaces.  "),
+        ("```python\n    pass\n```\n\n", False, "```python\n    pass\n```\n\n"),
+        ("Last paragraph.\n\n", False, "Last paragraph.\n\n"),
+        ("\n\n", True, "\n\n"),
+    ],
+)
+def test_bubble_rendering_preserves_content_and_only_replaces_boundary_line_breaks(
+    text: str, has_next: bool, expected: str
+) -> None:
+    assert render_bubble_text(text, has_following_text_part=has_next) == expected
 
 
 class _RecordingExecutor:

@@ -23,6 +23,18 @@ from chatwaifu_protocol.channels import (
 )
 
 
+def render_bubble_text(text: str, *, has_following_text_part: bool) -> str:
+    """Use the next bubble's visual boundary in place of trailing line breaks.
+
+    Persisted parts retain the exact canonical slices for reconstruction. Only
+    the outbound rendering removes CR/LF separators between adjacent text
+    bubbles; single-part replies, interior whitespace and indentation survive.
+    """
+    if not has_following_text_part:
+        return text
+    return text.rstrip("\r\n") or text
+
+
 @dataclass(frozen=True, slots=True)
 class DeliveryPlanCreationResult:
     """Detailed outcome of delivery planning including diagnostic metadata."""

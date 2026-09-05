@@ -52,6 +52,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.external_channels.presentation import render_bubble_text
 from chatwaifu_runtime.external_channels.scheduler import (
     ChannelDeliveryScheduler,
     DeliveryPartExecutionResult,
@@ -1421,7 +1422,14 @@ class ChannelManagementService:
                 ),
             )
         client_id = part.provider_client_id
-        text = part.payload.text
+        text = render_bubble_text(
+            part.payload.text,
+            has_following_text_part=any(
+                candidate.ordinal == part.ordinal + 1
+                and candidate.kind is ChannelDeliveryPartKind.TEXT
+                for candidate in plan.parts
+            ),
+        )
         try:
             provider_message_id = await self._weixin.send_text(
                 credentials,

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -24,6 +25,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
     ChannelPresentationPolicy,
+    ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -57,6 +59,13 @@ from chatwaifu_runtime.external_channels.service import (
     ChannelNotFoundError,
     SingleTextDeliveryPlanFactory,
 )
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    LlmResponseCompleted,
+    LlmStreamEvent,
+    LlmTextDelta,
+)
+from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 
 
 class _FakeWeixin:
@@ -501,6 +510,82 @@ async def test_adapter_stop_interrupts_admitted_turn_before_remove_and_cursor_ad
             await container.external_channels.get_connection(connection_id)
     finally:
         monkeypatch.setattr(container.external_channels, "wait_for_turn", original_wait)
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_native_bubbles_render_without_separator_lines_but_persist_losslessly(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paragraphs = (
+        "First paragraph stays complete while we rest and relax after a long day.",
+        "Second paragraph offers a warm dinner with enough detail to keep together.",
+        "Third paragraph closes the conversation with a calm and friendly goodnight.",
+    )
+    canonical = "\n\n".join(paragraphs)
+
+    async def reply(self: DemoLlmProvider, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        del self, request
+        yield LlmTextDelta(canonical)
+        yield LlmResponseCompleted("stop")
+
+    monkeypatch.setattr(DemoLlmProvider, "stream", reply)
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    completed = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "channel.delivery_plan_completed"
+    )
+    try:
+        connection_id = uuid4()
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.INSTANT_MESSAGE, cadence_enabled=False
+                )
+            }
+        )
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            configuration, access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="paragraph-cursor",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="paragraph-message",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Tell me about relaxing, dinner and bedtime.",
+                        context_token="paragraph-context",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+        await asyncio.wait_for(completed.receive(), timeout=5)
+        assert [message["text"] for message in transport.sent_messages] == list(paragraphs)
+        turn = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "paragraph-message"
+        )
+        assert turn is not None and turn.delivery_id is not None
+        assert turn.reply_text == canonical
+        plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+        assert plan is not None and plan.status is ChannelDeliveryStatus.DELIVERED
+        assert "".join(part.payload.text for part in plan.parts) == canonical
+        assert plan.parts[0].payload.text.endswith("\n\n")
+        assert plan.parts[1].payload.text.endswith("\n\n")
+        assert all(part.attempt == 1 for part in plan.parts)
+        assert [message["client_id"] for message in transport.sent_messages] == [
+            part.provider_client_id for part in plan.parts
+        ]
+    finally:
+        container.event_hub.unsubscribe(completed)
         await container.stop()
 
 
