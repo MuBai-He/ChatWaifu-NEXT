@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import secrets
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.channels import (
@@ -42,6 +44,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundImage,
     WeixinPendingContext,
     WeixinUpdates,
 )
@@ -57,6 +60,7 @@ from chatwaifu_runtime.external_channels.credentials import (
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
+    ChannelInboundImageInput,
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
@@ -76,10 +80,66 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelService,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.providers.contracts import LlmInputImage
 
 logger = logging.getLogger(__name__)
 
 WEIXIN_ILINK_PROVIDER_ID = "weixin_ilink"
+
+
+def _compute_image_fingerprint(image: WeixinInboundImage) -> str:
+    payload = {
+        "aes_key": image.aes_key,
+        "aeskey": image.aeskey,
+        "encrypt_query_param": image.encrypt_query_param,
+        "full_url": image.full_url,
+        "invalid_reason": image.invalid_reason,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _make_image_loader(
+    transport: WeixinILinkTransport,
+    image: WeixinInboundImage,
+    *,
+    connection_id: UUID,
+    external_message_id: str,
+) -> Callable[[], Awaitable[LlmInputImage]]:
+    bound_image = image
+
+    async def _load() -> LlmInputImage:
+        start = perf_counter()
+        try:
+            image_bytes, mime = await transport.download_image(bound_image)
+            elapsed_ms = round((perf_counter() - start) * 1000, 3)
+            if mime == "image/png":
+                valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
+            elif mime in ("image/jpeg", "image/jpg"):
+                valid_mime = "image/jpeg"
+            else:
+                raise ValueError(f"unsupported image mime type: {mime}")
+            _log_weixin_timing(
+                "image_download_success",
+                connection_id=str(connection_id),
+                external_message_id=external_message_id,
+                duration_ms=elapsed_ms,
+            )
+            return LlmInputImage(data=image_bytes, mime_type=valid_mime)
+        except Exception as exc:
+            elapsed_ms = round((perf_counter() - start) * 1000, 3)
+            _log_weixin_timing(
+                "image_download_failure",
+                connection_id=str(connection_id),
+                external_message_id=external_message_id,
+                duration_ms=elapsed_ms,
+                error=exc.__class__.__name__,
+            )
+            raise
+
+    return _load
+
+
 _AUTH_TTL = timedelta(minutes=5)
 _MAX_AUTH_SESSIONS = 8
 _PENDING_ENROLLMENT_REFERENCE = "weixin_ilink:pending-enrollment"
@@ -124,6 +184,11 @@ class WeixinILinkTransport(WeixinTypingTransport, Protocol):
         image_bytes: bytes,
         mime_type: str,
     ) -> str | None: ...
+
+    async def download_image(
+        self,
+        image: WeixinInboundImage,
+    ) -> tuple[bytes, str]: ...
 
 
 class ChannelManagementError(ExternalChannelError):
@@ -1125,6 +1190,33 @@ class ChannelManagementService:
                 external_message_id=message.external_message_id,
                 context_elapsed_ms=round((perf_counter() - context_started) * 1000, 3),
             )
+            raw_image = message.image
+            image_input: ChannelInboundImageInput | None = None
+            if raw_image is not None:
+                caption = (message.text or "").strip()
+                if caption:
+                    if caption.startswith("[图片]"):
+                        normalized_text = caption
+                    else:
+                        normalized_text = f"[图片] {caption}"
+                else:
+                    normalized_text = "[图片]"
+                if len(normalized_text) > 20000:
+                    normalized_text = normalized_text[:20000]
+                fingerprint = _compute_image_fingerprint(raw_image)
+                loader = _make_image_loader(
+                    self._weixin,
+                    raw_image,
+                    connection_id=connection_id,
+                    external_message_id=message.external_message_id,
+                )
+                image_input = ChannelInboundImageInput(
+                    source_fingerprint=fingerprint,
+                    load=loader,
+                )
+            else:
+                normalized_text = message.text
+
             inbound = ChannelInboundTextMessage(
                 connection_id=connection_id,
                 account_key=credentials.bot_id,
@@ -1133,14 +1225,24 @@ class ChannelManagementService:
                 sender_key=message.sender_user_id,
                 principal_scope=connection.configuration.principal_scope,
                 chat_type=ChannelChatType.DIRECT,
-                text=message.text,
+                text=normalized_text,
                 received_at=message.received_at,
             )
             ingest_started = perf_counter()
             try:
-                receipt = await self._external_channels.ingest(
-                    inbound, access_token=credentials.gateway_access_token, supersede_inflight=True
-                )
+                if image_input is not None:
+                    receipt = await self._external_channels.ingest(
+                        inbound,
+                        access_token=credentials.gateway_access_token,
+                        supersede_inflight=True,
+                        image_input=image_input,
+                    )
+                else:
+                    receipt = await self._external_channels.ingest(
+                        inbound,
+                        access_token=credentials.gateway_access_token,
+                        supersede_inflight=True,
+                    )
             except (ChannelBusyError, ChannelDeliveryBusyError):
                 raise
             except ExternalChannelError:

@@ -326,6 +326,27 @@ Once the generation has already failed, its single working-history row remains e
 new inbound later cancels the unsent notice; this lets the next model turn understand
 the provider interruption. No exactly-once client display guarantee is added.
 
+## Native inbound image understanding (Phase 17.3A)
+
+The native adapter supplies a `ChannelInboundImageInput` alongside the existing text ingress
+identity/caption envelope. This internal attachment contains only a source fingerprint and a
+loader returning a provider-neutral `LlmInputImage`. The fingerprint hashes private source
+references for replay conflict detection; text-only digests remain unchanged. The HTTP text
+endpoint remains text-only, while native WeChat advertises inbound image capability.
+
+Gateway authentication, binding and durable generation admission precede download. The existing
+Conversation task awaits its loader outside the admission lock, checks current generation, and
+passes one ephemeral PNG/JPEG to the configured chat model. Native polling remains available to
+receive a newer message and cancel that task. The adapter bounds download/decryption/decoding,
+rejects redirects and compressed responses, and never forwards bot credentials to the CDN.
+
+Only a caption or `[图片]` marker enters history. Raw images, signed media URLs and AES keys stay
+out of events, memory and durable media storage. `image_input_error` uses the same durable failure
+path described above, with the matching history/delivery text `这张图我刚才没看清，能再发一次吗？`.
+Restart terminalizes an orphaned generation's channel turn without downloading again. Persistent
+media, dynamic sticker learning and image deletion controls remain later Phase 17.3 work.
+See [ADR 0035](../adr/0035-ephemeral-inbound-image-understanding.md).
+
 ## Native WeChat timing diagnostics
 
 `weixin.timing` JSON log records correlate nonempty poll returns, message observation,

@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 from chatwaifu_runtime.providers.contracts import (
+    LlmImageInputUnavailableError,
     LlmRequest,
     LlmResponseCompleted,
     LlmStreamEvent,
@@ -19,6 +20,8 @@ class DemoLlmProvider:
         self._delay_seconds = chunk_delay_ms / 1000
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if request.images:
+            raise LlmImageInputUnavailableError("Demo LLM provider does not support image inputs")
         if request.trigger == "proactive":
             response = "那个……忙了这么久，也别忘了稍微休息一下哦。想聊点什么的话，我就在这里。"
             for chunk in _chunks(response):

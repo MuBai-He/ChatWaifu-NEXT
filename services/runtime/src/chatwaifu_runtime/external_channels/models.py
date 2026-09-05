@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Self
+from typing import Self, cast
 from uuid import UUID
 
 from chatwaifu_protocol.channels import (
@@ -19,6 +20,23 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
+
+from chatwaifu_runtime.providers.contracts import LlmInputImage
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelInboundImageInput:
+    source_fingerprint: str
+    load: Callable[[], Awaitable[LlmInputImage]] = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        raw_fp = cast(object, self.source_fingerprint)
+        if (
+            not isinstance(raw_fp, str)
+            or len(self.source_fingerprint) != 64
+            or any(c not in "0123456789abcdef" for c in self.source_fingerprint)
+        ):
+            raise ValueError("source_fingerprint must be a 64-character lowercase hex string")
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-05"
-current_phase: 17.2
-next_phase: 17.3
+current_phase: 17.3
+next_phase: 17.4
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -554,11 +554,15 @@ phases:
       - At 19:03, new ingress cancelled the old shy image before its send deadline; the stop reply incorrectly added a new happy image because generic answer intent inherited positive affect
       - Selector now excludes generic answer intent; a failing-then-passing real Character/SQLite/scheduler regression verifies old-image cancellation and no new image for the stop reply, with 22 focused tests passing
       - At 19:18 on 2026-09-05 China time, the owner repeated affection then stop; the old image was cancelled and the stop reply delivered text only, with owner confirmation
-      - All 16 CI checks passed on fix commit 265c515; PR 20 awaits merge and installed-platform packaging acceptance remains separate
+      - All 16 CI checks passed on fix commit 265c515; PR 20 merged as 6fbf775 on 2026-09-05; installed-platform packaging acceptance remains separate
   - id: 17.3
     name: inbound-images-and-dynamic-sticker-learning
-    status: not_started
+    status: in_progress
     evidence:
+      - Phase 17.3A starts with ephemeral single static PNG/JPEG understanding through native iLink and the configured chat model; real WeChat acceptance remains pending
+      - 682 Python tests passed with 11 Windows-only tests skipped; 181 Web tests, 2 desktop E2E tests, Ruff, Pyright, Web and desktop builds passed
+      - Real Conversation and SQLite tests cover authorization before load, duplicate/conflicting image references, blocked-download cancellation, crash snapshot restart without replay, and one durable failure reply matching history
+      - The configured gemini-3.1-flash-lite correctly identified a generated red circle on the left and blue square on the right via its actual multimodal endpoint; this does not replace owner WeChat image acceptance
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4

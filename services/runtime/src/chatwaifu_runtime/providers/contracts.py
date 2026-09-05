@@ -1,16 +1,41 @@
 """Provider-neutral streaming and synthesis contracts."""
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject, JsonValue
 
+MAX_LLM_IMAGE_BYTES = 5 * 1024 * 1024
+
 
 class LlmToolCallingUnavailableError(RuntimeError):
     """The selected provider cannot honor a requested structured tool round."""
+
+
+class LlmImageInputUnavailableError(RuntimeError):
+    """The selected provider cannot honor an image input."""
+
+
+@dataclass(frozen=True, slots=True)
+class LlmInputImage:
+    """One provider-neutral raster image input attached to a turn."""
+
+    data: bytes = field(repr=False)
+    mime_type: Literal["image/png", "image/jpeg"]
+
+    def __post_init__(self) -> None:
+        if self.mime_type not in ("image/png", "image/jpeg"):
+            raise ValueError(f"unsupported image mime type: {self.mime_type}")
+        if type(self.data) is not bytes or not self.data:
+            raise ValueError("image data must be non-empty bytes")
+        if len(self.data) > MAX_LLM_IMAGE_BYTES:
+            raise ValueError(
+                f"image size {len(self.data)} exceeds maximum allowed of "
+                f"{MAX_LLM_IMAGE_BYTES} bytes"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +108,14 @@ class LlmRequest:
     trigger: Literal["user", "proactive"] = "user"
     tools: tuple[LlmToolDefinition, ...] = ()
     tool_exchanges: tuple[LlmToolExchange, ...] = ()
+    images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
+
+    def __post_init__(self) -> None:
+        if len(self.images) > 1:
+            raise ValueError("at most one image is currently supported")
+        for image in self.images:
+            if not isinstance(image, LlmInputImage):  # pyright: ignore[reportUnnecessaryIsInstance]
+                raise TypeError("images must contain only LlmInputImage instances")
 
 
 class LlmProvider(Protocol):

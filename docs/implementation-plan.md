@@ -2498,11 +2498,11 @@ and [分支 · 查看Chatwaifunext内容](https://chatgpt.com/c/6a989a98-5ff4-83
 Phase 17.1C is an additional accepted memory-source UI slice, not completion of the entire Phase 17
 roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the remaining messaging work.
 
-- **17.2 — Preset sticker outbound (macOS accepted, PR 20 pending merge):** local preset asset library and manual tags, Character
+- **17.2 — Preset sticker outbound (macOS accepted, PR 20 merged):** local preset asset library and manual tags, Character
   ResponsePlan mapping, sticker selection, iLink image upload, and text plus image delivery parts.
   User-image learning is deferred to 17.3. Real macOS image receipt and stop-reply cancellation
   were accepted on 2026-09-05.
-- **17.3 — Inbound images and dynamic sticker learning (next):** receive, understand, and accumulate user
+- **17.3 — Inbound images and dynamic sticker learning (in progress):** receive, understand, and accumulate user
   images/stickers with safe download/decryption/decoding, media limits, deduplication, OCR/VLM,
   embeddings, principal isolation, deletion, and privacy management.
 - **17.4 — Shared jokes and adaptive recall:** shared-joke associations, usage history, and adaptive
@@ -2510,3 +2510,17 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
 
 Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
 or the remaining image and sticker capabilities are accepted.
+
+### Phase 17.3A — Ephemeral single-image understanding
+
+The first slice admits one static PNG/JPEG through the native owner-direct WeChat connection,
+downloads and decrypts it inside the existing cancellable generation task, and supplies it to the
+configured chat model. The gateway authenticates and deduplicates before download. Only the caption
+or `[图片]` marker enters history; image bytes and private provider references are not saved.
+
+Acceptance requires image understanding, cancellation during download, duplicate/restart safety,
+a single conversational failure reply, and a subsequent normal text turn. Automated tests and a
+real macOS WeChat image round trip are separate gates. See [ADR 0035](adr/0035-ephemeral-inbound-image-understanding.md).
+
+Persistent media, learning images into a sticker library, embeddings, deletion and privacy controls
+remain later Phase 17.3 work; completing 17.3A does not complete the parent phase.
