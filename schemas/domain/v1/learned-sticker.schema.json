@@ -1,0 +1,81 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/learned-sticker.schema.json",
+  "properties": {
+    "byte_size": {
+      "maximum": 5242880,
+      "minimum": 1,
+      "title": "Byte Size",
+      "type": "integer"
+    },
+    "description": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "expression": {
+      "enum": [
+        "neutral",
+        "happy",
+        "sad",
+        "angry",
+        "surprised",
+        "shy",
+        "curious"
+      ],
+      "title": "Expression",
+      "type": "string"
+    },
+    "label": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Label",
+      "type": "string"
+    },
+    "learned_at": {
+      "format": "date-time",
+      "title": "Learned At",
+      "type": "string"
+    },
+    "mime_type": {
+      "const": "image/png",
+      "default": "image/png",
+      "title": "Mime Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "source_connection_id": {
+      "format": "uuid",
+      "title": "Source Connection Id",
+      "type": "string"
+    },
+    "sticker_id": {
+      "pattern": "^learned_[0-9a-f]{32}$",
+      "title": "Sticker Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "sticker_id",
+    "sha256",
+    "label",
+    "description",
+    "expression",
+    "byte_size",
+    "learned_at",
+    "source_connection_id"
+  ],
+  "title": "LearnedSticker",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

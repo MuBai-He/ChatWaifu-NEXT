@@ -355,6 +355,227 @@
   line-height: 1.5;
 }
 
+.channels-settings-sticker-library {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding-top: 18px;
+  border-top: 1px solid rgb(177 108 150 / 12%);
+}
+
+.sticker-library-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sticker-library-toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sticker-library-sub-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 2px;
+}
+
+.sticker-library-sub-copy {
+  color: #a06581;
+  font-size: 0.58rem;
+}
+
+.sticker-library-note-copy {
+  color: var(--settings-muted);
+  font-size: 0.58rem;
+}
+
+.sticker-library-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.sticker-library-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sticker-library-count h4 {
+  margin: 0;
+  color: var(--settings-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.sticker-library-count span {
+  color: var(--settings-muted);
+  font-size: 0.62rem;
+  font-family: var(--mono);
+}
+
+.sticker-library-refresh-button {
+  padding: 5px 10px;
+  border: 1px solid rgb(117 70 105 / 18%);
+  border-radius: 7px;
+  color: #73506d;
+  background: rgb(255 255 255 / 80%);
+  cursor: pointer;
+  font-size: 0.59rem;
+}
+
+.sticker-library-refresh-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sticker-library-error {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #a35c66;
+  background: rgb(177 85 99 / 10%);
+  font-size: 0.62rem;
+}
+
+.sticker-library-loading,
+.sticker-library-empty {
+  padding: 24px 16px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 40%);
+  border: 1px dashed rgb(177 108 150 / 20%);
+}
+
+.sticker-library-loading {
+  color: var(--settings-muted);
+  font-size: 0.64rem;
+}
+
+.sticker-library-empty p {
+  margin: 0;
+  color: var(--settings-text);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.sticker-library-empty small {
+  display: block;
+  margin-top: 6px;
+  color: var(--settings-muted);
+  font-size: 0.6rem;
+}
+
+.sticker-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.sticker-library-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 85%);
+  border: 1px solid rgb(177 108 150 / 15%);
+  box-shadow: 0 4px 12px rgb(61 41 63 / 4%);
+}
+
+.sticker-library-thumbnail-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(0 0 0 / 4%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sticker-library-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sticker-library-thumbnail-placeholder {
+  color: var(--settings-muted);
+  font-size: 0.6rem;
+  padding: 8px;
+  text-align: center;
+}
+
+.sticker-library-thumbnail-placeholder.error {
+  color: #a35c66;
+}
+
+.sticker-library-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.sticker-library-tile-label {
+  color: var(--settings-text);
+  font-size: 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sticker-library-tile-desc {
+  color: var(--settings-muted);
+  font-size: 0.58rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.sticker-library-tile-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.sticker-library-tile-expression {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgb(173 91 141 / 10%);
+  color: #8d527d;
+  font-size: 0.55rem;
+  font-weight: 500;
+}
+
+.sticker-library-tile-date {
+  color: #9b9099;
+  font-size: 0.53rem;
+}
+
+.sticker-library-delete-button {
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgb(163 92 102 / 20%);
+  border-radius: 6px;
+  color: #a35c66;
+  background: rgb(255 255 255 / 90%);
+  cursor: pointer;
+  font-size: 0.58rem;
+}
+
+.sticker-library-delete-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 @media (max-width: 760px) {
   .channels-settings-provider-heading {
     grid-template-columns: auto minmax(0, 1fr);

@@ -81,6 +81,7 @@ from chatwaifu_runtime.external_channels.service import (
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.providers.contracts import LlmInputImage
+from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +314,7 @@ class ChannelManagementService:
         weixin: WeixinILinkTransport,
         *,
         sticker_catalog: PresetStickerCatalog | None = None,
+        sticker_library: StickerLibraryService | None = None,
         event_hub: EventHub | None = None,
         event_publisher: EventPublisher | None = None,
     ) -> None:
@@ -320,6 +322,7 @@ class ChannelManagementService:
         self._repository = repository
         self._credentials = credentials
         self._weixin = weixin
+        self._sticker_library = sticker_library
         self._sticker_catalog = sticker_catalog or getattr(
             external_channels, "sticker_catalog", None
         )
@@ -974,6 +977,8 @@ class ChannelManagementService:
             logger.exception("native WeChat connection task failed")
 
     async def _stop_connection_task(self, connection_id: UUID) -> None:
+        if self._sticker_library is not None:
+            await self._sticker_library.cancel_connection(connection_id)
         async with self._task_lock:
             task = self._connection_tasks.pop(connection_id, None)
             if task is not None:
@@ -1743,18 +1748,18 @@ class ChannelManagementService:
                             retryable=False,
                         ),
                     )
-                if self._sticker_catalog is None:
-                    return DeliveryPartExecutionResult(
-                        outcome=DeliveryPartOutcome.FATAL_ERROR,
-                        error=_structured_error(
-                            "sticker_catalog_unavailable",
-                            "Sticker catalog is not configured.",
-                            retryable=False,
-                        ),
+                image_bytes: bytes | None = None
+                if part.payload.sticker_id.startswith("learned_"):
+                    if self._sticker_library is not None:
+                        image_bytes = await self._sticker_library.image_for_delivery(
+                            connection.configuration.principal_scope,
+                            connection.configuration.character_id,
+                            part.payload,
+                        )
+                elif self._sticker_catalog is not None:
+                    image_bytes = self._sticker_catalog.load_sticker_bytes(
+                        part.payload.sticker_id, part.payload.sha256
                     )
-                image_bytes = self._sticker_catalog.load_sticker_bytes(
-                    part.payload.sticker_id, part.payload.sha256
-                )
                 if image_bytes is None:
                     return DeliveryPartExecutionResult(
                         outcome=DeliveryPartOutcome.FATAL_ERROR,

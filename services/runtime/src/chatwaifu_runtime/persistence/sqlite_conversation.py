@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict
 from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
+    ConversationUserInputContext,
 )
 from chatwaifu_runtime.conversation.repository import (
     ConversationGenerationRecord,
@@ -200,6 +201,50 @@ class SQLiteConversationRepository(ConversationRepository):
             audio_stream_id=UUID(str(raw_audio_stream_id))
             if raw_audio_stream_id is not None
             else None,
+        )
+
+    async def generation_user_input_context(
+        self, generation_id: UUID
+    ) -> ConversationUserInputContext | None:
+        # Anchor the current input to its durable channel generation. Read only its
+        # immediate predecessor, so another route or topic acts as a barrier.
+        row = await self._database.fetchone(
+            """
+            SELECT substr(current.committed_text, 1, 2000) AS user_text,
+                   length(current.committed_text) AS text_length,
+                   CASE WHEN previous_channel.binding_id = channel.binding_id
+                        AND previous_channel.connection_id = channel.connection_id
+                        AND previous_channel.principal_scope = channel.principal_scope
+                        AND previous_channel.sender_key = channel.sender_key
+                        AND julianday(current.committed_at) - julianday(previous.committed_at)
+                            BETWEEN 0 AND (5.0 / 1440)
+                        AND length(previous.committed_text) <= 2000
+                   THEN previous.committed_text END AS previous_user_text
+            FROM generations AS generation
+            JOIN turns AS current ON current.turn_id = generation.turn_id
+                AND current.session_id = generation.session_id AND current.role = 'user'
+            JOIN channel_turns AS channel ON channel.generation_id = generation.generation_id
+                AND channel.turn_id = current.turn_id AND channel.session_id = current.session_id
+            LEFT JOIN turns AS previous ON previous.rowid = (
+                SELECT candidate.rowid FROM turns AS candidate
+                WHERE candidate.session_id = current.session_id AND candidate.role = 'user'
+                    AND candidate.rowid < current.rowid
+                ORDER BY candidate.rowid DESC LIMIT 1
+            )
+            LEFT JOIN channel_turns AS previous_channel
+                ON previous_channel.turn_id = previous.turn_id
+                AND previous_channel.session_id = current.session_id
+            WHERE generation.generation_id = ?
+            """,
+            (str(generation_id),),
+        )
+        if row is None or row["user_text"] is None or int(row["text_length"]) > 2000:
+            return None
+        return ConversationUserInputContext(
+            user_text=str(row["user_text"]),
+            previous_user_text=(
+                str(row["previous_user_text"]) if row["previous_user_text"] is not None else None
+            ),
         )
 
     async def generation_response_plan(self, generation_id: UUID) -> ResponsePlan | None:

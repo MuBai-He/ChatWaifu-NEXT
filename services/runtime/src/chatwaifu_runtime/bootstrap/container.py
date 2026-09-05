@@ -39,6 +39,7 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
 )
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
+from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
@@ -56,6 +57,8 @@ from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
+from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
+from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 type AsyncCleanup = Callable[[], Awaitable[None]]
 
@@ -172,6 +175,10 @@ class RuntimeContainer:
             self.prompt_compiler,
             self.agent,
         )
+        self.sticker_repository = SqliteStickerLibraryRepository(self.database)
+        self.sticker_library = StickerLibraryService(
+            self.sticker_repository, StickerClassifier(self.providers.llm)
+        )
         self.sticker_catalog = PresetStickerCatalog()
         self.external_channels = ExternalChannelService(
             self.external_channel_repository,
@@ -182,6 +189,7 @@ class RuntimeContainer:
             self.event_hub,
             self.event_publisher,
             sticker_catalog=self.sticker_catalog,
+            sticker_library=self.sticker_library,
         )
         self.channel_management = ChannelManagementService(
             self.external_channels,
@@ -189,6 +197,7 @@ class RuntimeContainer:
             KeyringChannelCredentialStore(),
             WeixinILinkClient(),
             sticker_catalog=self.sticker_catalog,
+            sticker_library=self.sticker_library,
             event_hub=self.event_hub,
             event_publisher=self.event_publisher,
         )
@@ -294,6 +303,7 @@ class RuntimeContainer:
 
                 await self.memory.start()
                 await self.runtime_skills.start()
+                self.sticker_library.start()
                 await self.external_channels.start()
                 await self.channel_management.start()
                 await self.resources.start()
@@ -352,6 +362,7 @@ class RuntimeContainer:
         steps.extend(
             [
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
+                _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
                 _CleanupStep("external_channels", lambda: self.external_channels.stop()),
                 _CleanupStep("conversation", lambda: self.conversation.stop()),
                 _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),

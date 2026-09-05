@@ -24,17 +24,35 @@ vi.mock("qrcode.react", () => ({
 vi.mock("../chat/runtimeClient", () => ({
   cancelChannelAuthorization: vi.fn(),
   deleteChannelConnection: vi.fn(),
+  deleteLearnedSticker: vi.fn(),
+  fetchStickerImageUrl: vi.fn(),
   getChannelAuthorization: vi.fn(),
   getChannelConnections: vi.fn(),
+  getStickerLibrary: vi.fn(),
   startChannelAuthorization: vi.fn(),
   submitChannelAuthorizationVerification: vi.fn(),
   updateChannelConnection: vi.fn(),
   updateChannelPresentationPolicy: vi.fn(),
+  updateStickerLibrarySettings: vi.fn(),
 }));
 
 describe("ChannelsSettingsSection", () => {
   beforeEach(() => {
     vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([]);
+    vi.mocked(runtimeClient.getStickerLibrary).mockResolvedValue({
+      schema_version: "1.0",
+      settings: {
+        schema_version: "1.0",
+        learning_enabled: false,
+        revision: 0,
+      },
+      items: [],
+      total_bytes: 0,
+      capacity: 100,
+    });
+    vi.mocked(runtimeClient.fetchStickerImageUrl).mockResolvedValue(
+      "blob:http://localhost/sticker",
+    );
     vi.mocked(runtimeClient.cancelChannelAuthorization).mockResolvedValue();
     vi.mocked(runtimeClient.deleteChannelConnection).mockResolvedValue();
     vi.mocked(
@@ -188,7 +206,7 @@ describe("ChannelsSettingsSection", () => {
     render(<ChannelsSettingsSection context={context()} />);
 
     expect(await screen.findByText("合适的时候发送表情")).toBeTruthy();
-    expect(screen.getByText("原创小猫表情，默认关闭")).toBeTruthy();
+    expect(screen.getByText("发送原创小猫和已学表情，默认关闭")).toBeTruthy();
 
     const toggle = screen.getByRole<HTMLInputElement>("switch", {
       name: "合适的时候发送表情",
@@ -253,7 +271,7 @@ describe("ChannelsSettingsSection", () => {
     });
     expect(toggle.disabled).toBe(true);
     expect(
-      screen.getByText("原创小猫表情，默认关闭（仅默认角色支持）"),
+      screen.getByText("发送原创小猫和已学表情，默认关闭（仅默认角色支持）"),
     ).toBeTruthy();
   });
 
@@ -272,7 +290,9 @@ describe("ChannelsSettingsSection", () => {
     });
     expect(toggle.disabled).toBe(true);
     expect(
-      screen.getByText("原创小猫表情，默认关闭（仅即时消息模式支持）"),
+      screen.getByText(
+        "发送原创小猫和已学表情，默认关闭（仅即时消息模式支持）",
+      ),
     ).toBeTruthy();
     expect(
       runtimeClient.updateChannelPresentationPolicy,

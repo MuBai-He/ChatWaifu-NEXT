@@ -10,6 +10,7 @@ import logging
 from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -45,6 +46,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinPendingContext,
     WeixinUpdates,
 )
+from chatwaifu_runtime.external_channels.adapters.weixin_ilink.typing import WeixinTypingController
 from chatwaifu_runtime.external_channels.credentials import (
     ChannelCredentialStoreError,
     InMemoryChannelCredentialStore,
@@ -2015,6 +2017,14 @@ async def test_typing_is_optional_and_never_blocks_text_delivery(
     generation_entered = asyncio.Event()
     release_generation = asyncio.Event()
 
+    # Admission and model preparation include real SQLite work, which can exceed
+    # two seconds on hosted Windows. Keep the simulated typing operation pending
+    # throughout setup: its own timeout must not make the non-blocking test pass.
+    monkeypatch.setattr(
+        "chatwaifu_runtime.external_channels.management.WeixinTypingController",
+        partial(WeixinTypingController, request_timeout=30),
+    )
+
     async def reply(self: DemoLlmProvider, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         generation_entered.set()
         await release_generation.wait()
@@ -2090,11 +2100,16 @@ async def test_typing_is_optional_and_never_blocks_text_delivery(
                 ),
             )
         )
-        await asyncio.wait_for(generation_entered.wait(), 2)
-        if mode != "disabled":
-            await asyncio.wait_for(transport.typing_entered.wait(), 2)
-        if mode in ("enabled", "send_hangs"):
-            assert await asyncio.wait_for(transport.typing_calls.get(), 2) is True
+        # Synchronize on both actual operations before measuring text delivery.
+        # This is a setup/deadlock bound, not a product latency assertion.
+        async with asyncio.timeout(15):
+            await generation_entered.wait()
+            if mode != "disabled":
+                await transport.typing_entered.wait()
+            if mode in ("enabled", "send_hangs"):
+                assert await transport.typing_calls.get() is True
+        if mode in ("ticket_hangs", "send_hangs"):
+            assert not transport.typing_cancelled.is_set()
         release_generation.set()
         await asyncio.wait_for(completed.receive(), 2)
         assert len(transport.sent_messages) == 1

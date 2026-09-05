@@ -943,4 +943,43 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         ALTER TABLE channel_connections ADD COLUMN presentation_policy_json TEXT;
         """,
     ),
+    (
+        24,
+        """
+        CREATE TABLE sticker_library_settings (
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            learning_enabled INTEGER NOT NULL DEFAULT 0 CHECK(learning_enabled IN (0, 1)),
+            revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(principal_scope, character_id)
+        );
+
+        CREATE TABLE learned_stickers (
+            sticker_id TEXT PRIMARY KEY,
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            sha256 TEXT NOT NULL,
+            mime_type TEXT NOT NULL DEFAULT 'image/png' CHECK(mime_type = 'image/png'),
+            label TEXT NOT NULL,
+            description TEXT NOT NULL,
+            expression TEXT NOT NULL CHECK(
+                expression IN ('neutral', 'happy', 'sad', 'angry', 'surprised', 'shy', 'curious')
+            ),
+            byte_size INTEGER NOT NULL CHECK(byte_size > 0 AND byte_size <= 5242880),
+            data BLOB NOT NULL,
+            source_connection_id TEXT NOT NULL,
+            generation_id TEXT NOT NULL,
+            learned_at TEXT NOT NULL,
+            FOREIGN KEY(principal_scope, character_id)
+                REFERENCES sticker_library_settings(principal_scope, character_id)
+                ON DELETE CASCADE,
+            UNIQUE(principal_scope, character_id, sha256)
+        );
+
+        CREATE INDEX learned_stickers_scope_char_idx
+            ON learned_stickers(principal_scope, character_id, learned_at ASC);
+        """,
+    ),
 )

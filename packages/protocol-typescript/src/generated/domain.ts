@@ -862,29 +862,39 @@ export type SessionId23 = string
 export type StartedAt = string | null
 export type GenerationState = 'created' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed'
 export type TurnId22 = string
+export type ByteSize = number
+export type Description1 = string
+export type Expression = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
+export type Label = string
+export type LearnedAt = string
+export type MimeType1 = 'image/png'
+export type SchemaVersion43 = '1.0'
+export type Sha2561 = string
+export type SourceConnectionId = string
+export type StickerId1 = string
 export type ConnectionId6 = string
 export type DiscoveredAt = string | null
 export type Arguments = JsonObject[]
-export type Description1 = string | null
+export type Description2 = string | null
 export type Name3 = string
 export type Title = string | null
 export type Prompts = McpPromptDescriptor[]
 export type ProtocolVersion = string | null
-export type Description2 = string | null
-export type MimeType1 = string | null
+export type Description3 = string | null
+export type MimeType2 = string | null
 export type Name4 = string
 export type Title1 = string | null
 export type UriTemplate = string
 export type ResourceTemplates = McpResourceTemplateDescriptor[]
-export type Description3 = string | null
-export type MimeType2 = string | null
+export type Description4 = string | null
+export type MimeType3 = string | null
 export type Name5 = string
 export type Title2 = string | null
 export type Uri = string
 export type Resources = McpResourceDescriptor[]
 export type ServerName = string | null
 export type ServerVersion = string | null
-export type Description4 = string | null
+export type Description5 = string | null
 export type Name6 = string
 export type Title3 = string | null
 export type Tools = McpToolDescriptor[]
@@ -961,7 +971,7 @@ export type ConversationLabel3 = string | null
 export type PrincipalScope5 = string
 export type ProviderId4 = string
 export type ReceivedAt1 = string
-export type SchemaVersion43 = '1.0'
+export type SchemaVersion44 = '1.0'
 export type SenderDisplayName3 = string | null
 export type SenderKey3 = string
 export type ChannelAttributions = MemoryChannelAttribution[]
@@ -1048,7 +1058,7 @@ export type Reason7 = string
 export type RequestId1 = string
 export type RequestedAt2 = string
 export type SideEffect = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
-export type Description5 = string
+export type Description6 = string
 export type Enabled3 = boolean
 export type InstallPath = string
 export type InstalledAt = string
@@ -1061,10 +1071,10 @@ export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
 export type UpdatedAt10 = string
 export type Version2 = string
-export type Description6 = string
+export type Description7 = string
 export type Name10 = string
 export type PluginId1 = string
-export type SchemaVersion44 = '1.0'
+export type SchemaVersion45 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -1091,7 +1101,7 @@ export type SafetyTokens = number
 export type SceneTokens = number
 export type StateTokens = number
 export type Used = number
-export type Expression = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
+export type Expression1 = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
 export type Intent = 'comfort' | 'answer' | 'celebrate' | 'reassure' | 'tease' | 'curious'
 export type Motion = ('headpat' | 'stare' | 'flustered' | 'sing') | null
 export type Rationale1 = string
@@ -1116,13 +1126,13 @@ export type BackgroundAllowed = boolean
 export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
 export type AdapterTool = string | null
 export type ConfirmationRequired = boolean
-export type Description7 = string
+export type Description8 = string
 export type Name11 = string
 export type RequiredPermissions = string[]
 export type SideEffect1 = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
 export type TimeoutSeconds3 = number
 export type Capabilities1 = SkillCapability[]
-export type Description8 = string
+export type Description9 = string
 export type Enabled4 = boolean
 export type Interruptible1 = boolean
 export type McpConnectionId = string | null
@@ -1170,6 +1180,22 @@ export type SkillRunState =
   | 'expired'
 export type TurnId24 = string | null
 export type UpdatedAt12 = string
+export type Deleted = boolean
+export type Revision6 = number
+export type SchemaVersion46 = '1.0'
+export type LearningEnabled = boolean
+export type Revision7 = number
+export type SchemaVersion47 = '1.0'
+export type ExpectedRevision4 = number
+export type LearningEnabled1 = boolean
+export type SchemaVersion48 = '1.0'
+export type Capacity = 100
+/**
+ * @maxItems 100
+ */
+export type Items = LearnedSticker[]
+export type SchemaVersion49 = '1.0'
+export type TotalBytes = number
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -1223,6 +1249,7 @@ export interface ProtocolCatalog {
   error: StructuredError
   event: EventModel
   generation: GenerationSnapshot
+  learned_sticker: LearnedSticker
   mcp_capabilities: McpCapabilitySnapshot
   mcp_connection: McpConnectionSnapshot
   mcp_connection_configuration: McpConnectionConfiguration
@@ -1245,6 +1272,10 @@ export interface ProtocolCatalog {
   skill_invocation: SkillInvocation
   skill_result: SkillResult
   skill_run: SkillRunSnapshot
+  sticker_library_delete_result: StickerLibraryDeleteResult
+  sticker_library_settings: StickerLibrarySettings
+  sticker_library_settings_update: StickerLibrarySettingsUpdate
+  sticker_library_snapshot: StickerLibrarySnapshot
   turn: TurnSnapshot
   video_frame: VideoFrameHeader
   [k: string]: unknown
@@ -2182,6 +2213,19 @@ export interface GenerationSnapshot {
   turn_id: TurnId22
   [k: string]: unknown
 }
+export interface LearnedSticker {
+  byte_size: ByteSize
+  description: Description1
+  expression: Expression
+  label: Label
+  learned_at: LearnedAt
+  mime_type?: MimeType1
+  schema_version?: SchemaVersion43
+  sha256: Sha2561
+  source_connection_id: SourceConnectionId
+  sticker_id: StickerId1
+  [k: string]: unknown
+}
 export interface McpCapabilitySnapshot {
   connection_id: ConnectionId6
   discovered_at?: DiscoveredAt
@@ -2196,29 +2240,29 @@ export interface McpCapabilitySnapshot {
 }
 export interface McpPromptDescriptor {
   arguments?: Arguments
-  description?: Description1
+  description?: Description2
   name: Name3
   title?: Title
   [k: string]: unknown
 }
 export interface McpResourceTemplateDescriptor {
-  description?: Description2
-  mime_type?: MimeType1
+  description?: Description3
+  mime_type?: MimeType2
   name: Name4
   title?: Title1
   uri_template: UriTemplate
   [k: string]: unknown
 }
 export interface McpResourceDescriptor {
-  description?: Description3
-  mime_type?: MimeType2
+  description?: Description4
+  mime_type?: MimeType3
   name: Name5
   title?: Title2
   uri: Uri
   [k: string]: unknown
 }
 export interface McpToolDescriptor {
-  description?: Description4
+  description?: Description5
   input_schema?: JsonObject
   name: Name6
   output_schema?: JsonObject | null
@@ -2313,7 +2357,7 @@ export interface MemoryChannelAttribution {
   principal_scope: PrincipalScope5
   provider_id: ProviderId4
   received_at: ReceivedAt1
-  schema_version?: SchemaVersion43
+  schema_version?: SchemaVersion44
   sender_display_name?: SenderDisplayName3
   sender_key: SenderKey3
   [k: string]: unknown
@@ -2445,7 +2489,7 @@ export interface PermissionRequest {
   [k: string]: unknown
 }
 export interface PluginSnapshot {
-  description: Description5
+  description: Description6
   enabled: Enabled3
   install_path: InstallPath
   installed_at: InstalledAt
@@ -2461,10 +2505,10 @@ export interface PluginSnapshot {
   [k: string]: unknown
 }
 export interface PluginManifest {
-  description: Description6
+  description: Description7
   name: Name10
   plugin_id: PluginId1
-  schema_version?: SchemaVersion44
+  schema_version?: SchemaVersion45
   skills: Skills
   transport: PluginTransport
   version: Version3
@@ -2493,7 +2537,7 @@ export interface PromptBudgetReport {
   [k: string]: unknown
 }
 export interface ResponsePlan {
-  expression: Expression
+  expression: Expression1
   intent: Intent
   motion?: Motion
   rationale: Rationale1
@@ -2524,7 +2568,7 @@ export interface SessionSnapshot {
 export interface SkillDefinition {
   background_allowed?: BackgroundAllowed
   capabilities?: Capabilities1
-  description: Description8
+  description: Description9
   enabled?: Enabled4
   interruptible?: Interruptible1
   mcp_connection_id?: McpConnectionId
@@ -2539,7 +2583,7 @@ export interface SkillCapability {
   adapter_operation?: AdapterOperation
   adapter_tool?: AdapterTool
   confirmation_required?: ConfirmationRequired
-  description: Description7
+  description: Description8
   input_schema: JsonObject
   name: Name11
   output_schema: JsonObject
@@ -2595,6 +2639,32 @@ export interface SkillRunSnapshot {
   state: SkillRunState
   turn_id?: TurnId24
   updated_at: UpdatedAt12
+  [k: string]: unknown
+}
+export interface StickerLibraryDeleteResult {
+  deleted: Deleted
+  revision: Revision6
+  schema_version?: SchemaVersion46
+  [k: string]: unknown
+}
+export interface StickerLibrarySettings {
+  learning_enabled?: LearningEnabled
+  revision?: Revision7
+  schema_version?: SchemaVersion47
+  [k: string]: unknown
+}
+export interface StickerLibrarySettingsUpdate {
+  expected_revision: ExpectedRevision4
+  learning_enabled: LearningEnabled1
+  schema_version?: SchemaVersion48
+  [k: string]: unknown
+}
+export interface StickerLibrarySnapshot {
+  capacity?: Capacity
+  items?: Items
+  schema_version?: SchemaVersion49
+  settings: StickerLibrarySettings
+  total_bytes: TotalBytes
   [k: string]: unknown
 }
 export interface TurnSnapshot {

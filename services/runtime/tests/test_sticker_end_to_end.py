@@ -167,9 +167,11 @@ async def test_character_plan_to_catalog_to_durable_image_send(
         await container.stop()
 
 
+@pytest.mark.parametrize("learned", [False, True])
 async def test_stop_cancels_old_image_without_decorating_new_answer(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
+    learned: bool,
 ) -> None:
     container = RuntimeContainer(runtime_settings)
     store = InMemoryChannelCredentialStore()
@@ -199,6 +201,18 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
     )
     await container.start()
     try:
+        if learned:
+            from test_learned_sticker_delivery import _seed_learned_sticker
+
+            await _seed_learned_sticker(
+                container.database,
+                container,
+                principal_scope="local",
+                character_id="default",
+                expression="happy",
+                label="捏脸互动",
+                description="女孩捏另一位女孩的脸颊",
+            )
         # Reproduce carried-over positive affect through the real Character service.
         warmup = await container.sessions.create_session("default")
         await container.character_kernel.observe_user_turn(
@@ -208,6 +222,17 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
             character_id="default",
             text="今天很开心",
         )
+        if learned:
+            # Two neutral user turns decay affect; establish positive affect through
+            # the real kernel so this regression still proves answer+happy is suppressed.
+            for _ in range(2):
+                await container.character_kernel.observe_user_turn(
+                    session_id=warmup.session_id,
+                    turn_id=uuid4(),
+                    generation_id=uuid4(),
+                    character_id="default",
+                    text="今天很开心",
+                )
         connection_id = uuid4()
         config = _configuration(connection_id).model_copy(
             update={
@@ -223,7 +248,10 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
         created = await container.external_channels.create_connection(config, access_token="g" * 43)
         await store.set(f"weixin_ilink:{connection_id}", _credentials("g" * 43).to_json())
         await management.connection_configuration_changed(created.snapshot)
-        for message_id, text in [("affection", "喜欢你，摸摸头"), ("stop", "停一下")]:
+        for message_id, text in [
+            ("affection", "捏捏我" if learned else "喜欢你，摸摸头"),
+            ("stop", "停一下"),
+        ]:
             await transport.updates.put(
                 WeixinUpdates(
                     cursor=message_id,

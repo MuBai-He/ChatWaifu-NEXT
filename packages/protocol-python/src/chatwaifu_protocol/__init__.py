@@ -76,6 +76,13 @@ from chatwaifu_protocol.skills import (
     SkillResult,
     SkillRunSnapshot,
 )
+from chatwaifu_protocol.sticker_library import (
+    LearnedSticker,
+    StickerLibraryDeleteResult,
+    StickerLibrarySettings,
+    StickerLibrarySettingsUpdate,
+    StickerLibrarySnapshot,
+)
 from chatwaifu_protocol.version import PACKAGE_VERSION, SCHEMA_VERSION
 
 __all__ = [
@@ -131,6 +138,7 @@ __all__ = [
     "EgressReceiptPayload",
     "EventEnvelope",
     "GenerationSnapshot",
+    "LearnedSticker",
     "MemoryChannelAttribution",
     "MemoryContextPacket",
     "MemoryProposal",
@@ -149,6 +157,10 @@ __all__ = [
     "SkillInvocation",
     "SkillResult",
     "SkillRunSnapshot",
+    "StickerLibraryDeleteResult",
+    "StickerLibrarySettings",
+    "StickerLibrarySettingsUpdate",
+    "StickerLibrarySnapshot",
     "StructuredError",
     "TurnSnapshot",
     "VideoFrameHeader",
