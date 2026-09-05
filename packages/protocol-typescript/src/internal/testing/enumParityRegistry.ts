@@ -27,6 +27,8 @@ import {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelInboundTextMessageSchema,
+  channelPresentationPolicySchema,
+  channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,
   channelProviderRegistrationSchema,
   channelTextDeliveryPartPayloadSchema,
@@ -84,6 +86,8 @@ export {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelInboundTextMessageSchema,
+  channelPresentationPolicySchema,
+  channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,
   channelProviderRegistrationSchema,
   channelTextDeliveryPartPayloadSchema,
@@ -128,6 +132,7 @@ export const protocolModelSchemas = {
   SessionSnapshot: sessionSnapshotSchema,
   CharacterKernelSnapshot: characterKernelSnapshotSchema,
   ChannelProviderRegistration: channelProviderRegistrationSchema,
+  ChannelPresentationPolicy: channelPresentationPolicySchema,
   ChannelAuthorizationStartRequest: channelAuthorizationStartRequestSchema,
   ChannelAuthorizationVerificationRequest:
     channelAuthorizationVerificationRequestSchema,
@@ -165,6 +170,7 @@ export const protocolModelSchemas = {
  * Registry of standalone protocol enum schemas.
  */
 export const protocolEnumSchemas = {
+  ChannelPresentationProfile: channelPresentationProfileSchema,
   ChannelTurnStatus: channelTurnStatusSchema,
   ChannelDeliveryStatus: channelDeliveryStatusSchema,
   ChannelDeliveryPartKind: channelDeliveryPartKindSchema,
@@ -187,6 +193,7 @@ export const parserRootRegistry: Record<
   parseSessionSnapshot: "SessionSnapshot",
   parseCharacterKernelSnapshot: "CharacterKernelSnapshot",
   parseChannelProviderRegistration: "ChannelProviderRegistration",
+  parseChannelPresentationPolicy: "ChannelPresentationPolicy",
   parseChannelAuthorizationStartRequest: "ChannelAuthorizationStartRequest",
   parseChannelAuthorizationVerificationRequest:
     "ChannelAuthorizationVerificationRequest",

@@ -5,6 +5,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
+from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -23,6 +26,8 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
+    ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -51,7 +56,18 @@ from chatwaifu_runtime.external_channels.management import (
 )
 from chatwaifu_runtime.external_channels.models import ChannelTurnRecord
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
-from chatwaifu_runtime.external_channels.service import ChannelConflictError, ChannelNotFoundError
+from chatwaifu_runtime.external_channels.service import (
+    ChannelConflictError,
+    ChannelNotFoundError,
+    SingleTextDeliveryPlanFactory,
+)
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    LlmResponseCompleted,
+    LlmStreamEvent,
+    LlmTextDelta,
+)
+from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 
 
 class _FakeWeixin:
@@ -500,6 +516,99 @@ async def test_adapter_stop_interrupts_admitted_turn_before_remove_and_cursor_ad
 
 
 @pytest.mark.asyncio
+async def test_native_bubbles_render_without_separator_lines_but_persist_losslessly(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO, logger="chatwaifu_runtime.external_channels.management")
+    paragraphs = (
+        "First paragraph stays complete while we rest and relax after a long day.",
+        "Second paragraph offers a warm dinner with enough detail to keep together.",
+        "Third paragraph closes the conversation with a calm and friendly goodnight.",
+    )
+    canonical = "\n\n".join(paragraphs)
+
+    async def reply(self: DemoLlmProvider, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        del self, request
+        yield LlmTextDelta(canonical)
+        yield LlmResponseCompleted("stop")
+
+    monkeypatch.setattr(DemoLlmProvider, "stream", reply)
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    await container.start()
+    completed = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "channel.delivery_plan_completed"
+    )
+    try:
+        connection_id = uuid4()
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.INSTANT_MESSAGE, cadence_enabled=False
+                )
+            }
+        )
+        access_token = "g" * 43
+        created = await container.external_channels.create_connection(
+            configuration, access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
+        await management.connection_configuration_changed(created.snapshot)
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="paragraph-cursor",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="paragraph-message",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="Tell me about relaxing, dinner and bedtime.",
+                        context_token="paragraph-context",
+                        received_at=datetime.now(UTC),
+                    ),
+                ),
+            )
+        )
+        await asyncio.wait_for(completed.receive(), timeout=5)
+        assert [message["text"] for message in transport.sent_messages] == list(paragraphs)
+        turn = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "paragraph-message"
+        )
+        assert turn is not None and turn.delivery_id is not None
+        assert turn.reply_text == canonical
+        plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+        assert plan is not None and plan.status is ChannelDeliveryStatus.DELIVERED
+        assert "".join(part.payload.text for part in plan.parts) == canonical
+        assert plan.parts[0].payload.text.endswith("\n\n")
+        assert plan.parts[1].payload.text.endswith("\n\n")
+        assert all(part.attempt == 1 for part in plan.parts)
+        assert [message["client_id"] for message in transport.sent_messages] == [
+            part.provider_client_id for part in plan.parts
+        ]
+        timings = [
+            json.loads(record.getMessage())
+            for record in caplog.records
+            if '"event": "weixin.timing"' in record.getMessage()
+        ]
+        stages = [entry["stage"] for entry in timings]
+        assert stages[:3] == ["poll_returned", "message_observed", "context_ready"]
+        admitted = next(entry for entry in timings if entry["stage"] == "ingest_returned")
+        assert datetime.fromisoformat(admitted["accepted_at"]) == turn.accepted_at
+        for part in plan.parts:
+            sends = [entry for entry in timings if entry.get("part_id") == str(part.part_id)]
+            assert [entry["stage"] for entry in sends] == ["send_started", "send_returned"]
+            assert sends[1]["send_elapsed_ms"] >= 0
+        timing_text = json.dumps(timings)
+        for private_value in (*paragraphs, "paragraph-context", access_token, "owner-1", "bot-1"):
+            assert private_value not in timing_text
+    finally:
+        container.event_hub.unsubscribe(completed)
+        await container.stop()
+
+
+@pytest.mark.asyncio
 async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_context(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
@@ -898,7 +1007,11 @@ async def test_pending_context_cleaned_up_when_plan_cancelled_by_new_message(
     management = _replace_management(container, store, transport)
 
     class _TwoPartFactory:
-        def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+        def create_parts(
+            self,
+            reply_text: str,
+            policy: ChannelPresentationPolicy | None = None,
+        ) -> tuple[ChannelDeliveryPartDraft, ...]:
             return (
                 ChannelDeliveryPartDraft(
                     ordinal=0,
@@ -1042,6 +1155,7 @@ async def test_terminal_ack_cleans_context_even_if_eventhub_publish_fails(
         return await original_send(*args, **kwargs)
 
     monkeypatch.setattr(transport, "send_text", _controlled_send)
+    container.external_channels.delivery_plan_factory = SingleTextDeliveryPlanFactory()
 
     await container.start()
     try:
@@ -1706,7 +1820,11 @@ async def test_sending_part_retryable_error_under_cancel_request_cancels_plan_an
     management = _replace_management(container, store, transport)
 
     class _TwoPartFactory:
-        def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+        def create_parts(
+            self,
+            reply_text: str,
+            policy: ChannelPresentationPolicy | None = None,
+        ) -> tuple[ChannelDeliveryPartDraft, ...]:
             return (
                 ChannelDeliveryPartDraft(
                     ordinal=0,

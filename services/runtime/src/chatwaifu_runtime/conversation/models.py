@@ -112,6 +112,7 @@ class ConversationTurnOptions:
     output_modes: frozenset[ConversationOutputMode] = frozenset({"text", "audio", "avatar"})
     allow_tools: bool = True
     source_context: ConversationSourceContext | None = None
+    presentation_profile: str | None = None
 
     def emits(self, mode: ConversationOutputMode) -> bool:
         return mode in self.output_modes

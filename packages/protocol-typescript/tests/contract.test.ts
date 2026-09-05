@@ -12,10 +12,12 @@ import {
   parseChannelAuthorizationStartRequest,
   parseChannelAuthorizationVerificationRequest,
   parseChannelConnectionSnapshot,
+  parseChannelConnectionConfiguration,
   parseChannelDeliveryAcknowledgement,
   parseChannelDeliveryPartAcknowledgement,
   parseChannelDeliveryClaimRequest,
   parseChannelInboundTextMessage,
+  parseChannelPresentationPolicy,
   parseChannelTurnSnapshot,
   parseCommandEnvelope,
   parseEventEnvelope,
@@ -523,5 +525,81 @@ describe("cross-language protocol fixtures", () => {
         part_id: "00000000-0000-4000-8000-000000000a04",
       }),
     ).toThrow();
+  });
+
+  it("defaults presentation profile to single_text for empty or omitted profile inputs and supports explicit instant_message", () => {
+    // 1. Omitted profile on empty object defaults to single_text with schema defaults
+    const defaultPolicy = parseChannelPresentationPolicy({});
+    expect(defaultPolicy.profile).toBe("single_text");
+    expect(defaultPolicy.schema_version).toBe("1.0");
+    expect(defaultPolicy.max_parts).toBe(3);
+    expect(defaultPolicy.preferred_chars_per_part).toBe(60);
+    expect(defaultPolicy.soft_max_chars_per_part).toBe(120);
+    expect(defaultPolicy.cadence_enabled).toBe(true);
+    expect(defaultPolicy.min_delay_ms).toBe(800);
+    expect(defaultPolicy.max_delay_ms).toBe(3000);
+    expect(defaultPolicy.total_cadence_delay_ceiling_ms).toBe(6000);
+    expect(defaultPolicy.typing_enabled).toBe(false);
+    expect(defaultPolicy.bypass_long_form).toBe(true);
+    expect(defaultPolicy.version).toBe(1);
+
+    // 2. Partial policy with omitted profile retains single_text while overriding specified fields
+    const partialPolicy = parseChannelPresentationPolicy({
+      max_parts: 5,
+      min_delay_ms: 1200,
+      cadence_enabled: false,
+    });
+    expect(partialPolicy.profile).toBe("single_text");
+    expect(partialPolicy.max_parts).toBe(5);
+    expect(partialPolicy.min_delay_ms).toBe(1200);
+    expect(partialPolicy.cadence_enabled).toBe(false);
+    expect(partialPolicy.max_delay_ms).toBe(3000);
+
+    // 3. Explicit instant_message profile remains fully supported
+    const imPolicy = parseChannelPresentationPolicy({
+      profile: "instant_message",
+      max_parts: 2,
+    });
+    expect(imPolicy.profile).toBe("instant_message");
+    expect(imPolicy.max_parts).toBe(2);
+
+    // 4. Embedded within ChannelConnectionConfiguration
+    const baseConfig = {
+      schema_version: "1.0",
+      connection_id: "00000000-0000-4000-8000-000000000a01",
+      provider_id: "weixin_ilink",
+      name: "WeChat direct connection",
+      character_id: "ayachi_nene",
+      principal_scope: "owner/local",
+      account_key: "wx-account-001",
+      allowed_sender_keys: ["wx-sender-001"],
+    };
+
+    const configWithDefaultPolicy = parseChannelConnectionConfiguration({
+      ...baseConfig,
+      presentation_policy: {},
+    });
+    expect(configWithDefaultPolicy.presentation_policy?.profile).toBe(
+      "single_text",
+    );
+
+    const configWithPartialPolicy = parseChannelConnectionConfiguration({
+      ...baseConfig,
+      presentation_policy: { min_delay_ms: 1500 },
+    });
+    expect(configWithPartialPolicy.presentation_policy?.profile).toBe(
+      "single_text",
+    );
+    expect(configWithPartialPolicy.presentation_policy?.min_delay_ms).toBe(
+      1500,
+    );
+
+    const configWithImPolicy = parseChannelConnectionConfiguration({
+      ...baseConfig,
+      presentation_policy: { profile: "instant_message" },
+    });
+    expect(configWithImPolicy.presentation_policy?.profile).toBe(
+      "instant_message",
+    );
   });
 });

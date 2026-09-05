@@ -54,6 +54,7 @@ class PromptCompiler:
         history: tuple[ConversationHistoryEntry | tuple[str, str], ...],
         user_text: str,
         source_context: ConversationSourceContext | None = None,
+        presentation_profile: str | None = None,
     ) -> PromptCompilation:
         config = self._models.get("chat")
         total_budget = max(1024, config.context_window - 900)
@@ -121,6 +122,24 @@ class PromptCompiler:
             if summary:
                 context.append(("system", f"Earlier Conversation Summary:\n{_fit(summary, 700)}"))
 
+        if presentation_profile == "instant_message":
+            output_contract = (
+                "[OUTPUT CONTRACT]\n"
+                "Stay in character, answer the current user turn, and express the Response "
+                "Plan naturally. You are messaging in an instant chat. For ordinary casual "
+                "conversation, keep responses short, natural, and conversational "
+                "(typically 1 to 3 short sentences), avoiding walls of text. "
+                "If the user explicitly asks for detailed explanations, technical assistance, "
+                "or code, provide a complete and structured answer. "
+                "Do not output internal tags, delimiters (such as |||), or stage directions."
+            )
+        else:
+            output_contract = (
+                "[OUTPUT CONTRACT]\nStay in character, answer the current user turn, "
+                "and express the Response Plan naturally. Do not print section labels, "
+                "state numbers, relationship scores, or stage directions."
+            )
+
         system_prompt = "\n\n".join(
             (
                 f"[SAFETY]\n{_SAFETY}",
@@ -128,11 +147,7 @@ class PromptCompiler:
                 f"[CURRENT AFFECT]\n{state}",
                 f"[RELATIONSHIP]\n{relationship}",
                 f"[RESPONSE PLAN]\n{scene}",
-                (
-                    "[OUTPUT CONTRACT]\nStay in character, answer the current user turn, "
-                    "and express the Response Plan naturally. Do not print section labels, "
-                    "state numbers, relationship scores, or stage directions."
-                ),
+                output_contract,
             )
         )
         used = sum(
@@ -142,6 +157,7 @@ class PromptCompiler:
                 persona,
                 state,
                 relationship,
+                output_contract,
                 memory_text,
                 memory_source_text,
                 scene,
