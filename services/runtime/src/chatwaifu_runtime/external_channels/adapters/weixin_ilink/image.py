@@ -29,7 +29,9 @@ ALLOWED_MIME_TYPES = frozenset(_ALLOWED_MIME_FORMATS.keys())
 _ALLOWED_CDN_SCHEME = "https"
 _ALLOWED_CDN_HOST = "novac2c.cdn.weixin.qq.com"
 _ALLOWED_CDN_PATH = "/c2c/upload"
+_ALLOWED_CDN_DOWNLOAD_PATH = "/c2c/download"
 _ALLOWED_CDN_PORTS = frozenset({None, 443})
+MAX_CIPHERTEXT_BYTES = MAX_IMAGE_BYTES + 16  # 5 MiB + 16 bytes
 
 
 def _make_error(code: str, message: str, *, retryable: bool) -> WeixinILinkError:
@@ -91,14 +93,17 @@ def validate_image(image_bytes: bytes, mime_type: str) -> None:
                     retryable=False,
                 )
             img.verify()
+        # JPEG verify() only checks the container; decode bounded pixels as well.
+        with Image.open(io.BytesIO(image_bytes)) as decoded:
+            decoded.load()
     except WeixinILinkError:
         raise
-    except Exception as error:
+    except Exception:
         raise _make_error(
             "weixin.image_invalid",
             "Image decoding verification failed.",
             retryable=False,
-        ) from error
+        ) from None
 
 
 def encrypt_aes_128_ecb(plaintext: bytes, key: bytes) -> bytes:
@@ -161,4 +166,151 @@ def resolve_cdn_upload_url(upload_full_url: object, upload_param: object, fileke
         "weixin.upload_url_missing",
         "WeChat returned no valid CDN upload URL or parameter.",
         retryable=True,
+    )
+
+
+def decrypt_aes_128_ecb(ciphertext: bytes, key: bytes) -> bytes:
+    """Decrypt ciphertext using AES-128-ECB with strict PKCS7 unpadding."""
+    if not ciphertext or len(ciphertext) % 16 != 0:
+        raise _make_error(
+            "weixin.image_decrypt_failed",
+            "Ciphertext length must be a non-zero multiple of 16 bytes.",
+            retryable=False,
+        )
+    if len(key) != 16:
+        raise _make_error(
+            "weixin.image_key_invalid",
+            "WeChat image AES key format is invalid.",
+            retryable=False,
+        )
+    try:
+        cipher = Cipher(algorithms.AES(key), modes.ECB())
+        decryptor = cipher.decryptor()
+        decrypted_padded = decryptor.update(ciphertext) + decryptor.finalize()
+        unpadder = padding.PKCS7(128).unpadder()
+        return unpadder.update(decrypted_padded) + unpadder.finalize()
+    except ValueError:
+        raise _make_error(
+            "weixin.image_decrypt_failed",
+            "Failed to decrypt image: invalid padding.",
+            retryable=False,
+        ) from None
+    except Exception:
+        raise _make_error(
+            "weixin.image_decrypt_failed",
+            "Failed to decrypt image.",
+            retryable=False,
+        ) from None
+
+
+def resolve_image_aes_key(aeskey: str | None, aes_key: str | None) -> bytes | None:
+    """Resolve 16-byte AES-128 key from image_item.aeskey or media.aes_key."""
+    if aeskey is not None and aeskey.strip():
+        s = aeskey.strip()
+        try:
+            raw = bytes.fromhex(s)
+            if len(raw) == 16:
+                return raw
+        except ValueError:
+            pass
+        raise _make_error(
+            "weixin.image_key_invalid",
+            "WeChat image AES key format is invalid.",
+            retryable=False,
+        )
+    if aes_key is not None and aes_key.strip():
+        s = aes_key.strip()
+        try:
+            decoded = base64.b64decode(s, validate=True)
+            if len(decoded) == 16:
+                return decoded
+            if len(decoded) == 32:
+                hex_str = decoded.decode("ascii")
+                raw = bytes.fromhex(hex_str)
+                if len(raw) == 16:
+                    return raw
+        except Exception:
+            pass
+        raise _make_error(
+            "weixin.image_key_invalid",
+            "WeChat image AES key format is invalid.",
+            retryable=False,
+        )
+    return None
+
+
+def resolve_cdn_download_url(full_url: object, encrypt_query_param: object) -> str:
+    """Validate full_url against strict host/scheme/path or build fallback download URL."""
+    if isinstance(full_url, str) and full_url.strip():
+        url = full_url.strip()
+        if any(ord(c) < 32 or ord(c) == 127 for c in url):
+            raise _make_error(
+                "weixin.cdn_url_rejected",
+                "WeChat returned a CDN download URL with control characters.",
+                retryable=False,
+            )
+        try:
+            parsed = urlsplit(url)
+            port = parsed.port
+        except ValueError:
+            raise _make_error(
+                "weixin.cdn_url_rejected", "Invalid CDN download URL.", retryable=False
+            ) from None
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        if (
+            parsed.scheme != _ALLOWED_CDN_SCHEME
+            or hostname != _ALLOWED_CDN_HOST
+            or port not in _ALLOWED_CDN_PORTS
+            or parsed.path != _ALLOWED_CDN_DOWNLOAD_PATH
+            or parsed.username is not None
+            or parsed.password is not None
+            or bool(parsed.fragment)
+        ):
+            raise _make_error(
+                "weixin.cdn_url_rejected",
+                "WeChat returned an unsafe or invalid CDN download URL.",
+                retryable=False,
+            )
+        canonical = f"https://{_ALLOWED_CDN_HOST}{_ALLOWED_CDN_DOWNLOAD_PATH}"
+        if parsed.query:
+            canonical = f"{canonical}?{parsed.query}"
+        return canonical
+
+    if full_url is not None and not isinstance(full_url, str):
+        raise _make_error(
+            "weixin.cdn_url_rejected",
+            "WeChat returned an invalid CDN download URL.",
+            retryable=False,
+        )
+
+    if isinstance(encrypt_query_param, str) and encrypt_query_param.strip():
+        param = encrypt_query_param.strip()
+        if any(ord(c) < 32 or ord(c) == 127 for c in param):
+            raise _make_error(
+                "weixin.cdn_url_rejected",
+                "WeChat returned an encrypted query param with control characters.",
+                retryable=False,
+            )
+        return (
+            f"https://{_ALLOWED_CDN_HOST}{_ALLOWED_CDN_DOWNLOAD_PATH}"
+            f"?encrypted_query_param={quote(param, safe='')}"
+        )
+
+    raise _make_error(
+        "weixin.cdn_url_rejected",
+        "WeChat returned no valid CDN download URL or parameter.",
+        retryable=False,
+    )
+
+
+def sniff_image_mime_type(data: bytes) -> str:
+    """Sniff MIME type from image magic bytes (PNG or JPEG)."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    raise _make_error(
+        "weixin.image_invalid",
+        "Unsupported image format: expected static PNG or JPEG.",
+        retryable=False,
     )
