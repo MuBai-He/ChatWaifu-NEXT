@@ -38,6 +38,14 @@ Shutdown cancels bounded in-memory jobs; restart retains accepted assets, not tr
 unfinished classifications. No unbounded durable backlog or automatic classification replay is added.
 
 Outbound selection freezes the existing image payload's sticker identifier and content hash.
+Local selection additionally recognizes explicit face-pinching requests and matches accepted
+labels/descriptions by interaction, independently of avatar emotion and generic `answer` intent.
+A short plea can refer only to the immediately preceding user input on the same session, binding,
+connection, owner scope and sender, within five minutes. Stops/refusals and intervening topics
+block that carry. Inputs over 2000 characters skip sticker selection. An explicit interaction with
+no related asset does not fall back to an unrelated emotional image. Other exchanges retain the
+existing conservative emotion rules. These are bounded Chinese language rules, not general
+semantic retrieval or adaptive recall; they add no model request inside the delivery lock.
 The `learned_` namespace resolves through the scoped repository; preset identifiers keep their
 existing resolver. Missing/deleted/hash-mismatched images fail the optional part rather than
 substituting a different image or repeating text. Existing generation cancellation, leases, ACKs

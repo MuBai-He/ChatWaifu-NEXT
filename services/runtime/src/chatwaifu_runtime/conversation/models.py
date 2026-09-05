@@ -96,6 +96,14 @@ class ConversationSourceContext:
 
 
 @dataclass(frozen=True, slots=True)
+class ConversationUserInputContext:
+    """Bounded committed input, with at most one adjacent input from the same route."""
+
+    user_text: str
+    previous_user_text: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ConversationHistoryEntry:
     role: str
     text: str

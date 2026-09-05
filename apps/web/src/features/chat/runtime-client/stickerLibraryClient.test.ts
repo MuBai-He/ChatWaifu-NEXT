@@ -145,7 +145,8 @@ describe("stickerLibraryClient", () => {
   });
 
   it("fetches sticker image binary with Bearer auth and no query token", async () => {
-    const mockBlob = new Blob(["fake png content"], { type: "image/png" });
+    // Use bytes: jsdom Blob lacks the stream() required by Node 22 Response.
+    const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
     const createObjectURLMock = vi
       .fn()
       .mockReturnValue("blob:http://localhost/fake-blob-id");
@@ -156,7 +157,7 @@ describe("stickerLibraryClient", () => {
     });
 
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(mockBlob, {
+      new Response(imageBytes, {
         status: 200,
         headers: { "Content-Type": "image/png" },
       }),
@@ -169,6 +170,10 @@ describe("stickerLibraryClient", () => {
     );
 
     expect(objectUrl).toBe("blob:http://localhost/fake-blob-id");
+    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+    const previewBlob = createObjectURLMock.mock.calls[0][0] as Blob;
+    expect(previewBlob.type).toBe("image/png");
+    expect(new Uint8Array(await previewBlob.arrayBuffer())).toEqual(imageBytes);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toMatch(
@@ -245,7 +250,7 @@ describe("stickerLibraryClient", () => {
 
   it("rejects image response when Content-Type is not image/png", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(new Blob(["not png"]), {
+      new Response("not png", {
         status: 200,
         headers: { "Content-Type": "image/jpeg" },
       }),
@@ -259,7 +264,7 @@ describe("stickerLibraryClient", () => {
 
   it("rejects image response when Content-Length exceeds 5MiB", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(new Blob(["oversized"]), {
+      new Response("oversized", {
         status: 200,
         headers: {
           "Content-Type": "image/png",
@@ -294,8 +299,7 @@ describe("stickerLibraryClient", () => {
 
   it("checks post-body abort when caller signal aborts while reading body", async () => {
     const controller = new AbortController();
-    const mockBlob = new Blob(["png bytes"], { type: "image/png" });
-    const response = new Response(mockBlob, {
+    const response = new Response("png bytes", {
       status: 200,
       headers: { "Content-Type": "image/png" },
     });

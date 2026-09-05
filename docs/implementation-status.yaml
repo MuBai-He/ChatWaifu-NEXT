@@ -570,6 +570,9 @@ phases:
       - Phase 17.3B passed the 720-test Python suite plus 3 independently verified learned-sticker delivery, deletion and actual Runtime restart regressions; 11 Windows-only tests remain skipped
       - Phase 17.3B Web suite passed 202 tests, protocol passed 34 tests, and desktop E2E passed 2 tests; real browser preview and deletion passed against an isolated Runtime after correcting the preview request CORS header
       - The actual configured chat model accepted the original kitten sticker and rejected a non-sticker geometric image after bounded-preview classification; broader photo screening and owner WeChat learning acceptance remain pending
+      - At 22:08 China time on 2026-09-05 the owner's face-pinching illustration was saved to the real library; subsequent playful requests exposed the generic-answer and emotion-only selection filter
+      - Bounded local interaction matching now recognizes face-pinching and one adjacent short plea within five minutes on the same route; stop and refusal gating applies to both learned and preset images, with no unrelated emotion fallback for an explicit interaction
+      - The selection fix passed 749 Python tests with 11 Windows-only skips, plus 202 Web tests on CI-matching Node 22.23.2; types, lint and Web/desktop builds passed, and read-only replay selected the actual saved image for both owner requests; real WeChat reuse acceptance is still pending
       - Owner clarified that ordinary photos must also support future retention and recall; exclusion applies only to the sticker library, with separate Phase 17.3C photo and visual memory work planned
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management

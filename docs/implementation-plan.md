@@ -2547,8 +2547,10 @@ Saved stickers reuse the existing durable text/image delivery plan under the exi
 asset invalidates in-flight collection and makes subsequent unsent lookups fail closed; an image
 whose external send has already started cannot be recalled by a local deletion.
 
-This slice has automated integration coverage and real-browser preview/deletion verification;
-owner WeChat learning/reuse acceptance remains pending. See
+This slice has automated integration coverage and real-browser preview/deletion verification.
+The owner's face-pinching image was learned on 2026-09-05. Its first reuse attempt exposed the
+generic-answer filter; bounded interaction matching now covers that request and an adjacent
+short plea without adding a model call. Owner WeChat reuse acceptance remains pending. See
 [ADR 0036](adr/0036-opt-in-learned-sticker-library.md).
 
 ### Phase 17.3C — Photo retention and visual memory (planned)

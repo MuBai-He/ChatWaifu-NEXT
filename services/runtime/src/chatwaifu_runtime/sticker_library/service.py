@@ -18,6 +18,7 @@ from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
 from chatwaifu_runtime.sticker_library.ports import StickerLibraryRepository
+from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, matches_interaction
 
 logger = logging.getLogger(__name__)
 MAX_PENDING_IMAGES = 2
@@ -129,13 +130,28 @@ class StickerLibraryService:
             logger.warning("sticker learning skipped generation_id=%s", source.generation_id)
 
     async def match(
-        self, principal_scope: str, character_id: str, plan: ResponsePlan | None
+        self,
+        principal_scope: str,
+        character_id: str,
+        plan: ResponsePlan | None,
+        *,
+        hints: StickerSelectionHints | None = None,
     ) -> ChannelImageDeliveryPartPayload | None:
-        if plan is None or plan.intent == "answer" or plan.expression == "neutral":
+        hints = hints or StickerSelectionHints()
+        if hints.blocked:
+            return None
+        if hints.interaction is None and (
+            plan is None or plan.intent == "answer" or plan.expression == "neutral"
+        ):
             return None
         snapshot = await self.repository.snapshot(principal_scope, character_id)
         for item in snapshot.items:
-            if item.expression == plan.expression:
+            related = (
+                matches_interaction(item.label, item.description, hints)
+                if hints.interaction is not None
+                else plan is not None and item.expression == plan.expression
+            )
+            if related:
                 return ChannelImageDeliveryPartPayload(
                     sticker_id=item.sticker_id, sha256=item.sha256, mime_type=item.mime_type
                 )

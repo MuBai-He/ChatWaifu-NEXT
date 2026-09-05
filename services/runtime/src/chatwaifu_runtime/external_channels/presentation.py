@@ -507,6 +507,7 @@ class InstantMessageDeliveryPlanFactory:
         can_send_sticker: bool = False,
         sticker_catalog: PresetStickerCatalog | None = None,
         learned_sticker: ChannelImageDeliveryPartPayload | None = None,
+        allow_preset_sticker: bool = True,
     ) -> DeliveryPlanCreationResult:
         active_policy = policy if policy is not None else self._default_policy
         safe_text = reply_text if reply_text else "(empty reply)"
@@ -526,15 +527,12 @@ class InstantMessageDeliveryPlanFactory:
         if (
             can_send_sticker
             and active_policy.stickers_enabled
-            and response_plan is not None
-            and response_plan.intent != "answer"
-            and response_plan.expression != "neutral"
             and split_result.fallback_reason
             in (None, "single_segment", "no_natural_boundaries", "below_preferred_chars")
         ):
             if learned_sticker is not None:
                 image_payload = learned_sticker
-            elif catalog is not None:
+            elif catalog is not None and allow_preset_sticker and response_plan is not None:
                 matched_sticker = catalog.match_sticker(response_plan)
                 if matched_sticker is not None:
                     image_payload = ChannelImageDeliveryPartPayload(

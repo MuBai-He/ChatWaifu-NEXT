@@ -74,6 +74,7 @@ from chatwaifu_runtime.external_channels.presentation import (
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
+from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, selection_hints
 from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
 
 logger = logging.getLogger(__name__)
@@ -1346,10 +1347,26 @@ class ExternalChannelService:
                 )
 
                 response_plan = None
+                sticker_hints = StickerSelectionHints(blocked=True)
                 if can_send_sticker:
-                    response_plan = await self._conversation_repository.generation_response_plan(
-                        turn.generation_id
-                    )
+                    try:
+                        response_plan = (
+                            await self._conversation_repository.generation_response_plan(
+                                turn.generation_id
+                            )
+                        )
+                        sticker_hints = selection_hints(
+                            await self._conversation_repository.generation_user_input_context(
+                                turn.generation_id
+                            )
+                        )
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.warning(
+                            "sticker input context unavailable generation_id=%s", turn.generation_id
+                        )
+                    can_send_sticker = not sticker_hints.blocked
 
                 learned_sticker: ChannelImageDeliveryPartPayload | None = None
                 if (
@@ -1362,6 +1379,7 @@ class ExternalChannelService:
                             connection.configuration.principal_scope,
                             connection.configuration.character_id,
                             response_plan,
+                            hints=sticker_hints,
                         )
                     except asyncio.CancelledError:
                         raise
@@ -1384,6 +1402,7 @@ class ExternalChannelService:
                         response_plan=response_plan,
                         can_send_sticker=can_send_sticker,
                         learned_sticker=learned_sticker,
+                        allow_preset_sticker=sticker_hints.interaction is None,
                     )
                     parts = plan_result.parts
                     profile_name = plan_result.profile

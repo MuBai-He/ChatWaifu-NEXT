@@ -20,6 +20,7 @@ from chatwaifu_protocol.session import GenerationState
 from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
+    ConversationUserInputContext,
 )
 
 
@@ -56,6 +57,10 @@ class ConversationRepository(Protocol):
     ) -> ConversationGenerationRecord | None: ...
 
     async def generation_response_plan(self, generation_id: UUID) -> ResponsePlan | None: ...
+
+    async def generation_user_input_context(
+        self, generation_id: UUID
+    ) -> ConversationUserInputContext | None: ...
 
     async def commit_user_generation(
         self,
