@@ -121,6 +121,56 @@ def test_casual_chinese_splitting_into_natural_bubbles() -> None:
     assert unicodedata.normalize("NFC", rejoined) == unicodedata.normalize("NFC", text)
 
 
+@pytest.mark.parametrize("separator", ["\n\n", "\r\n\r\n", "\n \t\n"])
+def test_short_explicit_paragraphs_remain_separate(separator: str) -> None:
+    paragraphs = ("先休息一下。", "晚饭喝点热粥。", "睡前早点放下手机。")
+    text = separator.join(paragraphs)
+    result = BubbleSplitter().split(
+        text, ChannelPresentationPolicy(profile=ChannelPresentationProfile.INSTANT_MESSAGE)
+    )
+    assert result.parts == (paragraphs[0] + separator, paragraphs[1] + separator, paragraphs[2])
+    assert "".join(result.parts) == text
+
+
+def test_real_wechat_short_first_paragraph_does_not_merge_with_dinner() -> None:
+    paragraphs = (
+        "辛苦了，回家之后先别想工作上的事，找个舒服的姿势窝在沙发里，"
+        "哪怕只是单纯地发会儿呆，也能让紧绷的神经慢慢松弛下来。",
+        "晚饭的话，建议选一些温热又清淡的食物，比如一碗热汤面或者粥，"
+        "那种暖意传遍全身的感觉，会让心境也平和不少。",
+        "睡前记得把手机放到远处，做些简单的深呼吸或拉伸，把纷乱的思绪从脑子里赶走，"
+        "安安静静地进入梦乡，今晚一定会睡个好觉的。",
+    )
+    result = BubbleSplitter().split(
+        "\n\n".join(paragraphs),
+        ChannelPresentationPolicy(profile=ChannelPresentationProfile.INSTANT_MESSAGE),
+    )
+    assert result.parts == (paragraphs[0] + "\n\n", paragraphs[1] + "\n\n", paragraphs[2])
+
+
+def test_part_cap_merges_sentences_before_explicit_paragraphs() -> None:
+    paragraphs = tuple(("这是一个足够长的完整句子。" * 4) for _ in range(3))
+    text = "\n\n".join(paragraphs)
+    result = BubbleSplitter().split(
+        text,
+        ChannelPresentationPolicy(
+            profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+            preferred_chars_per_part=20,
+            soft_max_chars_per_part=40,
+        ),
+    )
+    assert result.parts == (paragraphs[0] + "\n\n", paragraphs[1] + "\n\n", paragraphs[2])
+
+
+def test_excess_paragraphs_still_obey_part_cap_without_losing_text() -> None:
+    text = "\n\n".join(["一个独立的话题。"] * 5)
+    result = BubbleSplitter().split(
+        text, ChannelPresentationPolicy(profile=ChannelPresentationProfile.INSTANT_MESSAGE)
+    )
+    assert result.part_count == 3
+    assert "".join(result.parts) == text
+
+
 def test_atomic_spans_urls_and_markdown_links_preserved() -> None:
     splitter = BubbleSplitter()
     policy = ChannelPresentationPolicy(

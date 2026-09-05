@@ -47,6 +47,7 @@ The bubble splitter divides canonical text into 1~3 natural parts while enforcin
 
 - **Lossless Reconstruction**: Concatenating all parts NFC-normalized reproduces the canonical reply without dropped characters.
 - **Outbound Rendering**: Canonical text and persisted parts retain paragraph separators. When sending adjacent text bubbles, the bubble boundary replaces trailing CR/LF characters in the preceding part's wire text so the chat client does not display an extra empty line. Internal newlines, indentation, single-part replies (including technical bypass), and the last part remain unchanged. Reconstruction uses persisted parts, not rendered wire text.
+- **Explicit Paragraph Boundaries**: Blank-line paragraph boundaries (including CRLF and whitespace-only lines) take precedence over preferred-length merging, even for short casual replies. When enforcing `max_parts`, merge sentence segments within paragraphs before combining separate paragraphs. Technical and single-text bypass rules still apply.
 - **Atomic Span Protection**: Splits never cut across:
   - Fenced code blocks (```) and inline code (`)
   - URLs (`https?://...`) and Markdown links (`[...]`)

@@ -79,6 +79,9 @@ class BubbleSplitter:
        sentence and line boundaries into 1 to max_parts bubbles.
     """
 
+    # Blank lines are explicit paragraph boundaries, including CRLF and whitespace-only lines.
+    _PARAGRAPH_BREAK_PATTERN = regex.compile(r"(?:\r?\n[ \t]*){2,}")
+
     # Fenced code block (```...```)
     _FENCED_CODE_PATTERN = regex.compile(r"```[\s\S]*?```")
 
@@ -180,7 +183,9 @@ class BubbleSplitter:
         if not clean_text:
             return True, "empty_text"
 
-        if len(clean_text) <= policy.preferred_chars_per_part:
+        if len(clean_text) <= policy.preferred_chars_per_part and not (
+            self._PARAGRAPH_BREAK_PATTERN.search(clean_text)
+        ):
             return True, "below_preferred_chars"
 
         if policy.bypass_long_form:
@@ -225,11 +230,18 @@ class BubbleSplitter:
                     return True
             return False
 
+        # Explicit paragraphs survive length-based merging unless the part cap requires it.
+        paragraph_cuts = {
+            match.end()
+            for match in self._PARAGRAPH_BREAK_PATTERN.finditer(normalized)
+            if 0 < match.end() < len(normalized) and not is_index_protected(match.end())
+        }
+
         # Find candidate split boundaries outside atomic spans
         boundaries: list[int] = []
 
         # Priority 1: line breaks (with optional trailing horizontal whitespace)
-        line_break_pattern = regex.compile(r"\n+[ \t]*")
+        line_break_pattern = regex.compile(r"(?:\r?\n[ \t]*)+")
         for m in line_break_pattern.finditer(normalized):
             cut = m.end()
             if 0 < cut < len(normalized) and not is_index_protected(cut):
@@ -237,7 +249,7 @@ class BubbleSplitter:
 
         # Priority 2: strong sentence punctuation (with trailing whitespace/newlines)
         strong_punct_pattern = regex.compile(
-            r"(?:[。！？～…]+|(?<=[a-zA-Z0-9])[.!?~]+)(?:[ \t\n]*)"  # noqa: RUF001
+            r"(?:[。！？～…]+|(?<=[a-zA-Z0-9])[.!?~]+)(?:[ \t\r\n]*)"  # noqa: RUF001
         )
         for m in strong_punct_pattern.finditer(normalized):
             cut = m.end()
@@ -250,7 +262,7 @@ class BubbleSplitter:
             # Check weak clause punctuation if text is long
             if len(normalized) > policy.soft_max_chars_per_part:
                 weak_punct_pattern = regex.compile(
-                    r"(?:[；，]+|(?<=[a-zA-Z0-9])[,;]+)(?:[ \t\n]*)"  # noqa: RUF001
+                    r"(?:[；，]+|(?<=[a-zA-Z0-9])[,;]+)(?:[ \t\r\n]*)"  # noqa: RUF001
                 )
                 for m in weak_punct_pattern.finditer(normalized):
                     cut = m.end()
@@ -299,7 +311,8 @@ class BubbleSplitter:
             current_len = cand_cut - current_start
             combined_len = next_cut - current_start
             if (
-                current_len < policy.preferred_chars_per_part
+                cand_cut not in paragraph_cuts
+                and current_len < policy.preferred_chars_per_part
                 and combined_len <= policy.soft_max_chars_per_part
             ):
                 i += 1
@@ -308,15 +321,15 @@ class BubbleSplitter:
                 i += 1
         merged_cuts.append(len(normalized))
 
-        # Step 2: Enforce max_parts cap by removing cut with shortest combined length
+        # Step 2: Merge within paragraphs first; cross paragraphs only when the cap requires it.
         while len(merged_cuts) - 1 > policy.max_parts:
-            best_idx = 1
-            min_len = merged_cuts[2] - merged_cuts[0]
-            for j in range(1, len(merged_cuts) - 1):
-                comb = merged_cuts[j + 1] - merged_cuts[j - 1]
-                if comb < min_len:
-                    min_len = comb
-                    best_idx = j
+            best_idx = min(
+                range(1, len(merged_cuts) - 1),
+                key=lambda j: (
+                    merged_cuts[j] in paragraph_cuts,
+                    merged_cuts[j + 1] - merged_cuts[j - 1],
+                ),
+            )
             merged_cuts.pop(best_idx)
 
         # Produce lossless slices from cut indices
