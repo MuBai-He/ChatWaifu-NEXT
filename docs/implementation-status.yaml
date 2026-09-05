@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-05"
 current_phase: 17.1C
-next_phase: 13.4A
+next_phase: 17.2
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -470,7 +470,7 @@ phases:
     status: paused
     evidence:
       - Cloud Realtime foundation (13.0~13.3) is complete and tested on remote CI
-      - Public network STUN/TURN hardening and production provider rollout are paused pending Phase 17 channel delivery completion
+      - Real provider rollout and its lifecycle hardening remain paused while the owner prioritizes the Phase 17 messaging roadmap; completing 17.1C does not resume 13.4A
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
@@ -541,6 +541,24 @@ phases:
 
       - On 2026-09-05 the real WeChat message at 17:36:08 China time created one active memory and one WeChat direct source; delivery completed and the owner confirmed the native Memory Center displayed the correct friendly source and receive time
       - 175 Web tests, ESLint, TypeScript, formatting, Web and desktop builds, and independent review passed; all nine PR 19 CI checks passed on implementation commit 11a07d8
+
+  - id: 17.2
+    name: preset-sticker-outbound
+    status: planned_next
+    evidence:
+      - Restored from the original owner-prioritized Phase 17 roadmap; local preset assets and manual tags feed Character ResponsePlan selection and iLink image delivery alongside text parts
+      - Implementation and real WeChat image-delivery acceptance remain pending
+  - id: 17.3
+    name: inbound-images-and-dynamic-sticker-learning
+    status: not_started
+    evidence:
+      - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
+      - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
+  - id: 17.4
+    name: shared-jokes-and-adaptive-sticker-recall
+    status: not_started
+    evidence:
+      - Original broader Phase 17 roadmap reserves shared jokes, usage history, and adaptive recall; detailed design and acceptance remain pending
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
