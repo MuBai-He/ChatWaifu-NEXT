@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-05
-- Validation: Local protocol, lifecycle, catalog, adapter, and end-to-end tests passed; real WeChat acceptance pending
+- Validation: Local protocol, lifecycle, catalog, adapter, and end-to-end tests passed; real macOS WeChat image receipt and interruption accepted on 2026-09-05
 
 ## Context
 

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-05"
 current_phase: 17.2
-next_phase: 17.2
+next_phase: 17.3
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -544,7 +544,7 @@ phases:
 
   - id: 17.2
     name: preset-sticker-outbound
-    status: local_implementation_verified_real_weixin_pending
+    status: macos_real_weixin_accepted
     evidence:
       - Restored from the original owner-prioritized Phase 17 roadmap; local preset assets and manual tags feed Character ResponsePlan selection and iLink image delivery alongside text parts
       - Three original generated kitten presets, opt-in settings, generation-anchored ResponsePlan matching, immutable image payloads, and bounded native iLink encrypted upload/send are implemented
@@ -553,7 +553,8 @@ phases:
       - On 2026-09-05 at 18:50 China time, a real WeChat text reply was followed by the expected shy kitten image; both were delivered once and visually observed
       - At 19:03, new ingress cancelled the old shy image before its send deadline; the stop reply incorrectly added a new happy image because generic answer intent inherited positive affect
       - Selector now excludes generic answer intent; a failing-then-passing real Character/SQLite/scheduler regression verifies old-image cancellation and no new image for the stop reply, with 22 focused tests passing
-      - Real WeChat reacceptance of the stop-reply fix and installed-platform packaging acceptance remain pending
+      - At 19:18 on 2026-09-05 China time, the owner repeated affection then stop; the old image was cancelled and the stop reply delivered text only, with owner confirmation
+      - All 16 CI checks passed on fix commit 265c515; PR 20 awaits merge and installed-platform packaging acceptance remains separate
   - id: 17.3
     name: inbound-images-and-dynamic-sticker-learning
     status: not_started

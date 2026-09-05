@@ -5,7 +5,7 @@
 - Add opt-in Phase 17.2 preset sticker replies for the default character on WeChat: three original
   kitten images selected from durable Character ResponsePlan, encrypted native image transport,
   and an optional durable image tail that preserves delivered text on image failure.
-  Local validation passed; real WeChat image acceptance remains pending.
+  Local validation and real macOS WeChat image receipt/interruption acceptance passed.
 
 - Initialize the Phase 0 monorepo and cross-language quality gates.
 - Define the version 1 protocol package, schema generation, runtime validation, and

@@ -2498,10 +2498,11 @@ and [分支 · 查看Chatwaifunext内容](https://chatgpt.com/c/6a989a98-5ff4-83
 Phase 17.1C is an additional accepted memory-source UI slice, not completion of the entire Phase 17
 roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the remaining messaging work.
 
-- **17.2 — Preset sticker outbound (next):** local preset asset library and manual tags, Character
+- **17.2 — Preset sticker outbound (macOS accepted, PR 20 pending merge):** local preset asset library and manual tags, Character
   ResponsePlan mapping, sticker selection, iLink image upload, and text plus image delivery parts.
-  User-image learning is deferred to 17.3. Implementation and real WeChat acceptance are pending.
-- **17.3 — Inbound images and dynamic sticker learning:** receive, understand, and accumulate user
+  User-image learning is deferred to 17.3. Real macOS image receipt and stop-reply cancellation
+  were accepted on 2026-09-05.
+- **17.3 — Inbound images and dynamic sticker learning (next):** receive, understand, and accumulate user
   images/stickers with safe download/decryption/decoding, media limits, deduplication, OCR/VLM,
   embeddings, principal isolation, deletion, and privacy management.
 - **17.4 — Shared jokes and adaptive recall:** shared-joke associations, usage history, and adaptive
