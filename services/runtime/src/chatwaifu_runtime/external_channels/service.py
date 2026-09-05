@@ -140,6 +140,9 @@ class CreatedChannelConnection:
     access_token: str
 
 
+_PROVIDER_FAILURE_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
+
+
 __all__ = [
     "WEIXIN_ILINK_PROVIDER",
     "CreatedChannelConnection",
@@ -377,6 +380,7 @@ class ExternalChannelService:
             EXTERNAL_TEXT_TURN_OPTIONS,
             source_context=source_context,
             presentation_profile=profile,
+            failure_recovery_text=_PROVIDER_FAILURE_RECOVERY_TEXT,
         )
         generation_admitted = False
         try:
@@ -1311,7 +1315,7 @@ class ExternalChannelService:
                         error=_error(
                             "provider_error", "The model generation failed before delivery."
                         ),
-                        notice_text="唔，刚才的话好像没能顺利说出来……能再和我说一次吗？",
+                        notice_text=_PROVIDER_FAILURE_RECOVERY_TEXT,
                         delivery_id=uuid4(),
                         completed_at=now,
                     )

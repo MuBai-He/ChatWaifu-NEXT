@@ -4,7 +4,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 from chatwaifu_protocol.channels import (
@@ -22,6 +22,8 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
 )
 from test_external_channels import _configuration, _message
+
+_EXPECTED_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
 
 
 @pytest.mark.asyncio
@@ -54,7 +56,7 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         assert snapshot.delivery_id is not None
         plan = await container.external_channel_repository.get_delivery_plan(snapshot.delivery_id)
         assert plan is not None and len(plan.parts) == 1
-        expected_notice = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
+        expected_notice = _EXPECTED_RECOVERY_TEXT
         assert plan.parts[0].payload.text == expected_notice
         stable_id = plan.parts[0].provider_client_id
         generation = await container.conversation_repository.generation_result(
@@ -62,7 +64,34 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         )
         assert generation is not None and generation.output_text is None
         events = await container.event_store.read_stream(receipt.session_id, limit=200)
-        assert not any(e["event_type"] == "assistant.text_committed" for e in events)
+        assert not any(
+            str(e["event_type"])
+            in {
+                "assistant.generation_completed",
+                "assistant.text_committed",
+                "assistant.spoken_text_committed",
+            }
+            or "spoken" in str(e["event_type"])
+            for e in events
+        )
+        recovery_turn_id = uuid5(receipt.generation_id, "provider-failure-recovery")
+        initial_history = await container.conversation_repository.recent_history(
+            receipt.session_id, uuid4(), limit=16
+        )
+        initial_assistant = [entry for entry in initial_history if entry.role == "assistant"]
+        assert len(initial_assistant) == 1
+        assert initial_assistant[0].text == expected_notice
+        assert initial_assistant[0].source_context is not None
+        assert initial_assistant[0].source_context.provider_id == "weixin_ilink"
+
+        initial_rows = await container.database.fetchall(
+            "SELECT turn_id, role, committed_text FROM turns "
+            "WHERE session_id = ? AND role = 'assistant'",
+            (str(receipt.session_id),),
+        )
+        assert len(initial_rows) == 1
+        assert initial_rows[0]["turn_id"] == str(recovery_turn_id)
+        assert initial_rows[0]["committed_text"] == expected_notice
     finally:
         await container.stop()
     recovered = RuntimeContainer(runtime_settings)
@@ -72,6 +101,22 @@ async def test_failed_generation_notice_survives_restart_and_replay(
             message, access_token=created.access_token
         )
         assert replay.duplicate and replay.channel_turn_id == receipt.channel_turn_id
+        replayed_history = await recovered.conversation_repository.recent_history(
+            receipt.session_id, uuid4(), limit=16
+        )
+        replayed_assistant = [entry for entry in replayed_history if entry.role == "assistant"]
+        assert len(replayed_assistant) == 1
+        assert replayed_assistant[0].text == expected_notice
+
+        replayed_rows = await recovered.database.fetchall(
+            "SELECT turn_id, role, committed_text FROM turns "
+            "WHERE session_id = ? AND role = 'assistant'",
+            (str(receipt.session_id),),
+        )
+        assert len(replayed_rows) == 1
+        assert replayed_rows[0]["turn_id"] == str(recovery_turn_id)
+        assert replayed_rows[0]["committed_text"] == expected_notice
+
         plan = await recovered.external_channel_repository.get_delivery_plan(snapshot.delivery_id)
         assert plan is not None and plan.parts[0].provider_client_id == stable_id
         claim = await recovered.external_channel_repository.claim_next_delivery_part(
@@ -102,6 +147,41 @@ async def test_failed_generation_notice_survives_restart_and_replay(
                 claimed_at=datetime.now(UTC),
             )
             is None
+        )
+
+        seen_requests: list[LlmRequest] = []
+
+        async def succeed_next(request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            seen_requests.append(request)
+            yield LlmTextDelta("收到，听到你啦。")
+            yield LlmResponseCompleted("stop")
+
+        monkeypatch.setattr(recovered.model_configurations.chat, "stream", succeed_next)
+        next_message = _message(
+            connection_id,
+            external_message_id="subsequent-inbound",
+            text="刚才没听清，再发一次",
+        )
+        next_receipt = await recovered.external_channels.ingest(
+            next_message, access_token=created.access_token
+        )
+        next_turn = await recovered.external_channels.wait_for_turn(
+            connection_id,
+            next_receipt.channel_turn_id,
+            access_token=created.access_token,
+            wait_seconds=5,
+        )
+        assert next_turn.status is ChannelTurnStatus.COMPLETED
+        assert len(seen_requests) == 1
+        assert any(
+            role == "assistant" and text == expected_notice
+            for role, text in seen_requests[0].history
+        )
+        next_history = await recovered.conversation_repository.recent_history(
+            receipt.session_id, uuid4(), limit=16
+        )
+        assert any(
+            entry.role == "assistant" and entry.text == expected_notice for entry in next_history
         )
     finally:
         await recovered.stop()
@@ -154,6 +234,16 @@ async def test_new_inbound_cancels_generation_and_no_old_failure_notice(
         previous = await container.external_channel_repository.get_turn(old.channel_turn_id)
         assert previous is not None and previous.status is ChannelTurnStatus.CANCELLED
         assert previous.delivery_id is None
+        old_recovery_turn_id = uuid5(old.generation_id, "provider-failure-recovery")
+        old_recovery_row = await container.database.fetchone(
+            "SELECT turn_id FROM turns WHERE turn_id = ?",
+            (str(old_recovery_turn_id),),
+        )
+        assert old_recovery_row is None
+        old_history = await container.conversation_repository.recent_history(
+            old.session_id, old.turn_id, limit=16
+        )
+        assert not any(entry.text == _EXPECTED_RECOVERY_TEXT for entry in old_history)
     finally:
         await container.stop()
 
@@ -316,6 +406,20 @@ async def test_new_message_cancels_unsent_failure_notice(
             )
             is None
         )
+        recovery_turn_id = uuid5(old.generation_id, "provider-failure-recovery")
+        recovery_row = await container.database.fetchone(
+            "SELECT turn_id, role, committed_text FROM turns WHERE turn_id = ?",
+            (str(recovery_turn_id),),
+        )
+        assert recovery_row is not None
+        assert recovery_row["committed_text"] == _EXPECTED_RECOVERY_TEXT
+
+        all_recovery_rows = await container.database.fetchall(
+            "SELECT turn_id, role, committed_text FROM turns "
+            "WHERE session_id = ? AND committed_text = ?",
+            (str(old.session_id), _EXPECTED_RECOVERY_TEXT),
+        )
+        assert len(all_recovery_rows) == 1
     finally:
         await container.stop()
 
@@ -375,5 +479,59 @@ async def test_cancellation_wins_race_before_notice_transaction(
         events = await container.event_store.read_stream(receipt.session_id, limit=200)
         assert any(e["event_type"] == "channel.turn_cancelled" for e in events)
         assert not any(e["event_type"] == "channel.turn_failed" for e in events)
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_cancellation_before_failure_leaves_no_recovery_history_row(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    entered = asyncio.Event()
+
+    async def hang_and_cancel(request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        entered.set()
+        await asyncio.Event().wait()
+        yield LlmTextDelta("")
+
+    monkeypatch.setattr(container.model_configurations.chat, "stream", hang_and_cancel)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        created = await container.external_channels.create_connection(_configuration(connection_id))
+        receipt = await container.external_channels.ingest(
+            _message(connection_id), access_token=created.access_token
+        )
+        await asyncio.wait_for(entered.wait(), 3)
+        cancel_receipt = await container.external_channels.interrupt(
+            connection_id,
+            receipt.channel_turn_id,
+            access_token=created.access_token,
+            reason="test_cancel_before_failure",
+        )
+        assert cancel_receipt.accepted
+        snapshot = await container.external_channels.wait_for_turn(
+            connection_id,
+            receipt.channel_turn_id,
+            access_token=created.access_token,
+            wait_seconds=5,
+        )
+        assert snapshot.status is ChannelTurnStatus.CANCELLED
+        recovery_turn_id = uuid5(receipt.generation_id, "provider-failure-recovery")
+        recovery_row = await container.database.fetchone(
+            "SELECT turn_id FROM turns WHERE turn_id = ?",
+            (str(recovery_turn_id),),
+        )
+        assert recovery_row is None
+        assistant_turns = await container.database.fetchall(
+            "SELECT turn_id FROM turns WHERE session_id = ? AND role = 'assistant'",
+            (str(receipt.session_id),),
+        )
+        assert len(assistant_turns) == 0
+        history = await container.conversation_repository.recent_history(
+            receipt.session_id, uuid4(), limit=16
+        )
+        assert not any(h.role == "assistant" for h in history)
     finally:
         await container.stop()

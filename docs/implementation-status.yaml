@@ -517,7 +517,7 @@ phases:
       - Deterministic cadence calculation with durable SQLite next-part not_before_at scheduling
       - New user turn tail cancellation without modifying canonical assistant turns
       - PR 16 merged as 4efe1dd and PR 17 merged as a4d63c5; owner confirmed improved casual WeChat style
-      - Provider recovery slice adds bounded pre-output retries, durable system failure notices and native processing-turn supersession; native fault acceptance pending
+      - Provider recovery slice adds bounded pre-output retries, durable character-compatible failure notices, exactly one short-term assistant history row without long-term memory extraction, and native processing-turn supersession; native fault acceptance pending
       - PR 15 merged as e3cb72c; explicit paragraph boundaries and outbound trailing-line rendering accepted by the owner on macOS
       - Real SIGKILL recovery replaced Runtime PID 78190 with 79257, preserved second-part not_before and client IDs, and delivered all three parts exactly once; single-text fallback delivered one lossless part and the owner confirmed it
       - Earlier roughly eleven-second provider-time-to-admission gaps were not reproduced after adding timing diagnostics; their cause remains unresolved

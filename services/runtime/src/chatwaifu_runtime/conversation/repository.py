@@ -119,6 +119,8 @@ class ConversationRepository(Protocol):
         occurred_at: datetime,
         set_session_idle: bool,
         fail_event: ErrorRaisedEvent,
+        recovery_text: str | None = None,
+        source_context: ConversationSourceContext | None = None,
     ) -> ErrorRaisedEvent | None: ...
 
     async def begin_realtime_generation(
