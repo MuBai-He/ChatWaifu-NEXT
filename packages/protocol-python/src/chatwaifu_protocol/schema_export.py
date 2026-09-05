@@ -62,6 +62,13 @@ from chatwaifu_protocol.skills import (
     SkillResult,
     SkillRunSnapshot,
 )
+from chatwaifu_protocol.sticker_library import (
+    LearnedSticker,
+    StickerLibraryDeleteResult,
+    StickerLibrarySettings,
+    StickerLibrarySettingsUpdate,
+    StickerLibrarySnapshot,
+)
 
 
 class ProtocolCatalog(ProtocolModel):
@@ -124,6 +131,11 @@ class ProtocolCatalog(ProtocolModel):
     mcp_capabilities: McpCapabilitySnapshot
     skill_invocation: SkillInvocation
     error: StructuredError
+    learned_sticker: LearnedSticker
+    sticker_library_settings: StickerLibrarySettings
+    sticker_library_settings_update: StickerLibrarySettingsUpdate
+    sticker_library_snapshot: StickerLibrarySnapshot
+    sticker_library_delete_result: StickerLibraryDeleteResult
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
@@ -158,6 +170,7 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "conversation-interruption": ConversationInterruption,
     "event-envelope": TypeAdapter(EventModel),
     "generation-snapshot": GenerationSnapshot,
+    "learned-sticker": LearnedSticker,
     "memory-context-packet": MemoryContextPacket,
     "memory-channel-attribution": MemoryChannelAttribution,
     "memory-proposal": MemoryProposal,
@@ -181,6 +194,10 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "skill-invocation": SkillInvocation,
     "skill-result": SkillResult,
     "skill-run-snapshot": SkillRunSnapshot,
+    "sticker-library-delete-result": StickerLibraryDeleteResult,
+    "sticker-library-settings": StickerLibrarySettings,
+    "sticker-library-settings-update": StickerLibrarySettingsUpdate,
+    "sticker-library-snapshot": StickerLibrarySnapshot,
     "structured-error": StructuredError,
     "turn-snapshot": TurnSnapshot,
     "video-frame-header": VideoFrameHeader,

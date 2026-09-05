@@ -31,6 +31,7 @@ export {
   parseCharacterKernelSnapshot,
   parseCommandEnvelope,
   parseEventEnvelope,
+  parseLearnedSticker,
   parseMcpCapabilitySnapshot,
   parseMcpConnectionSnapshot,
   parseMemoryChannelAttribution,
@@ -41,5 +42,9 @@ export {
   parseSessionSnapshot,
   parseSkillDefinition,
   parseSkillRunSnapshot,
+  parseStickerLibraryDeleteResult,
+  parseStickerLibrarySettings,
+  parseStickerLibrarySettingsUpdate,
+  parseStickerLibrarySnapshot,
 } from "./parsers/protocol";
 export * from "./version";

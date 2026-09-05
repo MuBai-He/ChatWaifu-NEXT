@@ -4563,6 +4563,85 @@
         }
       ]
     },
+    "LearnedSticker": {
+      "properties": {
+        "byte_size": {
+          "maximum": 5242880,
+          "minimum": 1,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "description": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "expression": {
+          "enum": [
+            "neutral",
+            "happy",
+            "sad",
+            "angry",
+            "surprised",
+            "shy",
+            "curious"
+          ],
+          "title": "Expression",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "learned_at": {
+          "format": "date-time",
+          "title": "Learned At",
+          "type": "string"
+        },
+        "mime_type": {
+          "const": "image/png",
+          "default": "image/png",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_connection_id": {
+          "format": "uuid",
+          "title": "Source Connection Id",
+          "type": "string"
+        },
+        "sticker_id": {
+          "pattern": "^learned_[0-9a-f]{32}$",
+          "title": "Sticker Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sticker_id",
+        "sha256",
+        "label",
+        "description",
+        "expression",
+        "byte_size",
+        "learned_at",
+        "source_connection_id"
+      ],
+      "title": "LearnedSticker",
+      "type": "object"
+    },
     "McpCapabilitySnapshot": {
       "properties": {
         "connection_id": {
@@ -7662,6 +7741,118 @@
       "title": "SkillRunState",
       "type": "string"
     },
+    "StickerLibraryDeleteResult": {
+      "properties": {
+        "deleted": {
+          "title": "Deleted",
+          "type": "boolean"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deleted",
+        "revision"
+      ],
+      "title": "StickerLibraryDeleteResult",
+      "type": "object"
+    },
+    "StickerLibrarySettings": {
+      "properties": {
+        "learning_enabled": {
+          "default": false,
+          "title": "Learning Enabled",
+          "type": "boolean"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "StickerLibrarySettings",
+      "type": "object"
+    },
+    "StickerLibrarySettingsUpdate": {
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "learning_enabled": {
+          "title": "Learning Enabled",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "learning_enabled",
+        "expected_revision"
+      ],
+      "title": "StickerLibrarySettingsUpdate",
+      "type": "object"
+    },
+    "StickerLibrarySnapshot": {
+      "properties": {
+        "capacity": {
+          "const": 100,
+          "default": 100,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/LearnedSticker"
+          },
+          "maxItems": 100,
+          "title": "Items",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/StickerLibrarySettings"
+        },
+        "total_bytes": {
+          "maximum": 104857600,
+          "minimum": 0,
+          "title": "Total Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "settings",
+        "total_bytes"
+      ],
+      "title": "StickerLibrarySnapshot",
+      "type": "object"
+    },
     "StructuredError": {
       "properties": {
         "code": {
@@ -8895,6 +9086,9 @@
     "generation": {
       "$ref": "#/$defs/GenerationSnapshot"
     },
+    "learned_sticker": {
+      "$ref": "#/$defs/LearnedSticker"
+    },
     "mcp_capabilities": {
       "$ref": "#/$defs/McpCapabilitySnapshot"
     },
@@ -8961,6 +9155,18 @@
     "skill_run": {
       "$ref": "#/$defs/SkillRunSnapshot"
     },
+    "sticker_library_delete_result": {
+      "$ref": "#/$defs/StickerLibraryDeleteResult"
+    },
+    "sticker_library_settings": {
+      "$ref": "#/$defs/StickerLibrarySettings"
+    },
+    "sticker_library_settings_update": {
+      "$ref": "#/$defs/StickerLibrarySettingsUpdate"
+    },
+    "sticker_library_snapshot": {
+      "$ref": "#/$defs/StickerLibrarySnapshot"
+    },
     "turn": {
       "$ref": "#/$defs/TurnSnapshot"
     },
@@ -9025,7 +9231,12 @@
     "mcp_connection",
     "mcp_capabilities",
     "skill_invocation",
-    "error"
+    "error",
+    "learned_sticker",
+    "sticker_library_settings",
+    "sticker_library_settings_update",
+    "sticker_library_snapshot",
+    "sticker_library_delete_result"
   ],
   "title": "ProtocolCatalog",
   "type": "object",

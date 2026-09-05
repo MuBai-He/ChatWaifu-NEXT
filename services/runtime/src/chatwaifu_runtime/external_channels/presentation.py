@@ -24,7 +24,7 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.character import ResponsePlan
 
-from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog, StickerEntry
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 
 
 def render_bubble_text(text: str, *, has_following_text_part: bool) -> str:
@@ -506,6 +506,7 @@ class InstantMessageDeliveryPlanFactory:
         response_plan: ResponsePlan | None = None,
         can_send_sticker: bool = False,
         sticker_catalog: PresetStickerCatalog | None = None,
+        learned_sticker: ChannelImageDeliveryPartPayload | None = None,
     ) -> DeliveryPlanCreationResult:
         active_policy = policy if policy is not None else self._default_policy
         safe_text = reply_text if reply_text else "(empty reply)"
@@ -521,19 +522,30 @@ class InstantMessageDeliveryPlanFactory:
         split_result = self._splitter.split(safe_text, active_policy)
 
         catalog = sticker_catalog or self._sticker_catalog
-        matched_sticker: StickerEntry | None = None
+        image_payload: ChannelImageDeliveryPartPayload | None = None
         if (
             can_send_sticker
             and active_policy.stickers_enabled
+            and response_plan is not None
+            and response_plan.intent != "answer"
+            and response_plan.expression != "neutral"
             and split_result.fallback_reason
             in (None, "single_segment", "no_natural_boundaries", "below_preferred_chars")
-            and response_plan is not None
-            and catalog is not None
         ):
-            matched_sticker = catalog.match_sticker(response_plan)
+            if learned_sticker is not None:
+                image_payload = learned_sticker
+            elif catalog is not None:
+                matched_sticker = catalog.match_sticker(response_plan)
+                if matched_sticker is not None:
+                    image_payload = ChannelImageDeliveryPartPayload(
+                        kind=ChannelDeliveryPartKind.IMAGE,
+                        sticker_id=matched_sticker.sticker_id,
+                        sha256=matched_sticker.sha256,
+                        mime_type=matched_sticker.mime_type,
+                    )
 
         drafts: list[ChannelDeliveryPartDraft] = []
-        if matched_sticker is not None:
+        if image_payload is not None:
             delays = self._cadence_calculator.calculate_delays(
                 (*split_result.parts, "[sticker]"), active_policy
             )
@@ -557,12 +569,7 @@ class InstantMessageDeliveryPlanFactory:
                 ChannelDeliveryPartDraft(
                     ordinal=len(split_result.parts),
                     kind=ChannelDeliveryPartKind.IMAGE,
-                    payload=ChannelImageDeliveryPartPayload(
-                        kind=ChannelDeliveryPartKind.IMAGE,
-                        sticker_id=matched_sticker.sticker_id,
-                        sha256=matched_sticker.sha256,
-                        mime_type=matched_sticker.mime_type,
-                    ),
+                    payload=image_payload,
                     required=False,
                     delay_after_ms=0,
                     not_before_at=None,
@@ -601,6 +608,7 @@ class InstantMessageDeliveryPlanFactory:
         response_plan: ResponsePlan | None = None,
         can_send_sticker: bool = False,
         sticker_catalog: PresetStickerCatalog | None = None,
+        learned_sticker: ChannelImageDeliveryPartPayload | None = None,
     ) -> tuple[ChannelDeliveryPartDraft, ...]:
         return self.create_plan(
             reply_text,
@@ -608,4 +616,5 @@ class InstantMessageDeliveryPlanFactory:
             response_plan=response_plan,
             can_send_sticker=can_send_sticker,
             sticker_catalog=sticker_catalog,
+            learned_sticker=learned_sticker,
         ).parts

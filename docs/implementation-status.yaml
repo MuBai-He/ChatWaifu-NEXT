@@ -566,6 +566,11 @@ phases:
       - At 20:11:05 China time on 2026-09-05, real native WeChat admitted an image-only turn; generation completed at 20:11:15 and one text part delivered at 20:11:16 on its first attempt
       - The owner confirmed the wallpaper-related response matched the supplied image; original image viewing through the automation screenshot interface remained unavailable, so visual correctness is owner-confirmed
       - Phase 17.3A real image understanding is accepted; download-time cancellation, failure replay and crash recovery are automated-test evidence, while dynamic sticker learning remains pending
+      - Phase 17.3B implementation follows owner choice of default-off automatic conservative sticker screening, with scoped storage, preview, deletion and durable reuse; real-device acceptance is pending
+      - Phase 17.3B passed the 720-test Python suite plus 3 independently verified learned-sticker delivery, deletion and actual Runtime restart regressions; 11 Windows-only tests remain skipped
+      - Phase 17.3B Web suite passed 202 tests, protocol passed 34 tests, and desktop E2E passed 2 tests; real browser preview and deletion passed against an isolated Runtime after correcting the preview request CORS header
+      - The actual configured chat model accepted the original kitten sticker and rejected a non-sticker geometric image after bounded-preview classification; broader photo screening and owner WeChat learning acceptance remain pending
+      - Owner clarified that ordinary photos must also support future retention and recall; exclusion applies only to the sticker library, with separate Phase 17.3C photo and visual memory work planned
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4

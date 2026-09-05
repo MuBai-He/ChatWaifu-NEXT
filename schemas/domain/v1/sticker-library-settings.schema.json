@@ -1,0 +1,25 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/sticker-library-settings.schema.json",
+  "properties": {
+    "learning_enabled": {
+      "default": false,
+      "title": "Learning Enabled",
+      "type": "boolean"
+    },
+    "revision": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "StickerLibrarySettings",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

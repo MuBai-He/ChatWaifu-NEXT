@@ -29,6 +29,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPlanSnapshot,
     ChannelDeliverySnapshot,
     ChannelDeliveryStatus,
+    ChannelImageDeliveryPartPayload,
     ChannelInboundTextMessage,
     ChannelMessageKind,
     ChannelPresentationProfile,
@@ -71,7 +72,9 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
+from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +183,7 @@ class ExternalChannelService:
         providers: tuple[ChannelProviderRegistration, ...] = (WEIXIN_ILINK_PROVIDER,),
         delivery_plan_factory: DeliveryPlanFactory | None = None,
         sticker_catalog: PresetStickerCatalog | None = None,
+        sticker_library: StickerLibraryService | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -190,6 +194,7 @@ class ExternalChannelService:
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
         self._sticker_catalog = sticker_catalog
+        self._sticker_library = sticker_library
         self._delivery_plan_factory = delivery_plan_factory or InstantMessageDeliveryPlanFactory(
             sticker_catalog=sticker_catalog
         )
@@ -398,12 +403,50 @@ class ExternalChannelService:
             if image_input is not None
             else _PROVIDER_FAILURE_RECOVERY_TEXT
         )
+        image_loader = image_input.load if image_input is not None else None
+        library = self._sticker_library
+        if (
+            image_loader is not None
+            and library is not None
+            and connection.configuration.character_id == "default"
+            and message.chat_type is ChannelChatType.DIRECT
+        ):
+            original_loader = image_loader
+
+            async def wait_for_completion() -> bool:
+                result = await self.wait_for_turn(
+                    turn.connection_id, turn.channel_turn_id, wait_seconds=30
+                )
+                return result.status is ChannelTurnStatus.COMPLETED
+
+            async def learning_loader() -> LlmInputImage:
+                image = await original_loader()
+                try:
+                    await library.observe(
+                        StickerLearningSource(
+                            principal_scope=connection.configuration.principal_scope,
+                            character_id=connection.configuration.character_id,
+                            connection_id=turn.connection_id,
+                            generation_id=turn.generation_id,
+                        ),
+                        image,
+                        wait_for_completion=wait_for_completion,
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.warning(
+                        "sticker learning observation skipped generation_id=%s", turn.generation_id
+                    )
+                return image
+
+            image_loader = learning_loader
         options = replace(
             EXTERNAL_TEXT_TURN_OPTIONS,
             source_context=source_context,
             presentation_profile=profile,
             failure_recovery_text=recovery_text,
-            image_loader=image_input.load if image_input is not None else None,
+            image_loader=image_loader,
         )
         generation_admitted = False
         try:
@@ -743,6 +786,8 @@ class ExternalChannelService:
             turn.channel_turn_id, updated_at=datetime.now(UTC)
         )
         cancelled = await self._conversation.cancel(turn.session_id, reason)
+        if self._sticker_library is not None:
+            await self._sticker_library.cancel_generation(turn.generation_id)
         turn = await self._sync_turn(await self._required_turn(connection_id, channel_turn_id))
         task = self._turn_tasks.pop(turn.channel_turn_id, None)
         if task is not None:
@@ -1306,6 +1351,25 @@ class ExternalChannelService:
                         turn.generation_id
                     )
 
+                learned_sticker: ChannelImageDeliveryPartPayload | None = None
+                if (
+                    can_send_sticker
+                    and connection is not None
+                    and self._sticker_library is not None
+                ):
+                    try:
+                        learned_sticker = await self._sticker_library.match(
+                            connection.configuration.principal_scope,
+                            connection.configuration.character_id,
+                            response_plan,
+                        )
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.warning(
+                            "learned sticker selection unavailable generation_id=%s",
+                            turn.generation_id,
+                        )
                 profile_name: str = (
                     policy.profile.value
                     if policy is not None
@@ -1319,6 +1383,7 @@ class ExternalChannelService:
                         policy=policy,
                         response_plan=response_plan,
                         can_send_sticker=can_send_sticker,
+                        learned_sticker=learned_sticker,
                     )
                     parts = plan_result.parts
                     profile_name = plan_result.profile

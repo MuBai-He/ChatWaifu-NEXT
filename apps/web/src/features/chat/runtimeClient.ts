@@ -8,5 +8,6 @@ export * from "./runtime-client/memoryClient";
 export * from "./runtime-client/modelsClient";
 export * from "./runtime-client/sessionsClient";
 export * from "./runtime-client/skillsClient";
+export * from "./runtime-client/stickerLibraryClient";
 export * from "./runtime-client/ttsClient";
 export * from "./runtime-client/workerPacksClient";

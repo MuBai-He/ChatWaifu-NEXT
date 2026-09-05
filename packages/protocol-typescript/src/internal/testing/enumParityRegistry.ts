@@ -59,6 +59,11 @@ import {
   skillDefinitionSchema,
   skillResultSchema,
   skillRunSnapshotSchema,
+  stickerLibraryDeleteResultSchema,
+  stickerLibrarySettingsSchema,
+  stickerLibrarySettingsUpdateSchema,
+  stickerLibrarySnapshotSchema,
+  learnedStickerSchema,
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 } from "../../parsers/protocol";
@@ -119,6 +124,11 @@ export {
   skillDefinitionSchema,
   skillResultSchema,
   skillRunSnapshotSchema,
+  stickerLibraryDeleteResultSchema,
+  stickerLibrarySettingsSchema,
+  stickerLibrarySettingsUpdateSchema,
+  stickerLibrarySnapshotSchema,
+  learnedStickerSchema,
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 };
@@ -164,6 +174,11 @@ export const protocolModelSchemas = {
   PluginSnapshot: pluginSnapshotSchema,
   McpCapabilitySnapshot: mcpCapabilitySnapshotSchema,
   McpConnectionSnapshot: mcpConnectionSnapshotSchema,
+  LearnedSticker: learnedStickerSchema,
+  StickerLibrarySettings: stickerLibrarySettingsSchema,
+  StickerLibrarySettingsUpdate: stickerLibrarySettingsUpdateSchema,
+  StickerLibrarySnapshot: stickerLibrarySnapshotSchema,
+  StickerLibraryDeleteResult: stickerLibraryDeleteResultSchema,
   CommandModel: commandEnvelopeSchema,
   EventModel: eventEnvelopeSchema,
 } as const;
@@ -226,6 +241,11 @@ export const parserRootRegistry: Record<
   parsePluginSnapshot: "PluginSnapshot",
   parseMcpCapabilitySnapshot: "McpCapabilitySnapshot",
   parseMcpConnectionSnapshot: "McpConnectionSnapshot",
+  parseLearnedSticker: "LearnedSticker",
+  parseStickerLibrarySettings: "StickerLibrarySettings",
+  parseStickerLibrarySettingsUpdate: "StickerLibrarySettingsUpdate",
+  parseStickerLibrarySnapshot: "StickerLibrarySnapshot",
+  parseStickerLibraryDeleteResult: "StickerLibraryDeleteResult",
   parseCommandEnvelope: "CommandModel",
   parseEventEnvelope: "EventModel",
 };
@@ -266,8 +286,8 @@ export function collectJsonSchemaEnumPaths(
     if (vals.length > 0) {
       paths[currentPath] = vals.sort();
     }
-  } else if (typeof schema.const === "string") {
-    paths[currentPath] = [schema.const];
+  } else if (typeof schema.const === "string" || typeof schema.const === "number") {
+    paths[currentPath] = [String(schema.const)];
   }
 
   if (typeof schema.$ref === "string" && schema.$ref.startsWith("#/$defs/")) {

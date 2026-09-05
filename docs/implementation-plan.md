@@ -2505,6 +2505,9 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
 - **17.3 — Inbound images and dynamic sticker learning (in progress):** receive, understand, and accumulate user
   images/stickers with safe download/decryption/decoding, media limits, deduplication, OCR/VLM,
   embeddings, principal isolation, deletion, and privacy management.
+  Sticker collection and photo retention have distinct purposes: ordinary photos are excluded
+  from the sticker library, not from future visual memory. The owner explicitly wants saved
+  photos to be available for later conversation and recall.
 - **17.4 — Shared jokes and adaptive recall:** shared-joke associations, usage history, and adaptive
   retrieval remain planned in the broader roadmap; detailed design is pending.
 
@@ -2529,3 +2532,36 @@ On 2026-09-05 at 20:11 China time, the owner confirmed a real WeChat image was u
 The image-only turn produced one successful text delivery on its first attempt in about 10.6 seconds.
 This accepts the macOS image-understanding path; cancellation/failure/restart remain separately
 covered by automated tests. Dynamic sticker learning is still pending.
+
+### Phase 17.3B — Opt-in learned sticker library
+
+The owner selected automatic conservative screening after enabling `学习我发来的表情`.
+Default-off collection accepts suitable static reaction images into an owner/character-scoped
+library, with normalized PNG bytes, descriptions, emotion tags, source attribution, hash
+deduplication, authenticated previews and deletion. Ordinary photos, wallpapers and documents
+do not enter this library. Collection runs separately from the conversational reply; uncertainty
+or classification failure skips collection without failing the conversation.
+
+Saved stickers reuse the existing durable text/image delivery plan under the existing
+`合适的时候发送表情` outbound switch. Disabling collection retains saved stickers. Deleting an
+asset invalidates in-flight collection and makes subsequent unsent lookups fail closed; an image
+whose external send has already started cannot be recalled by a local deletion.
+
+This slice has automated integration coverage and real-browser preview/deletion verification;
+owner WeChat learning/reuse acceptance remains pending. See
+[ADR 0036](adr/0036-opt-in-learned-sticker-library.md).
+
+### Phase 17.3C — Photo retention and visual memory (planned)
+
+On 2026-09-05 the owner clarified that photos should also be saved so Ningning can bring them up
+in later conversations. The preceding selection concerned only sticker eligibility. Photo
+retention must have its own policy and controls, independent of the sticker-learning switch.
+
+The next slice should retain a local image asset, a grounded content description, and its
+conversation/time provenance; use relevant retrieval to support later references to that photo;
+and expose viewing and deletion. A saved photo does not automatically become an outbound sticker.
+Media storage and long-term memory remain separate: extracted memories pass through the existing
+policy, deduplication and provenance boundaries. Deletion must cover the asset and derived
+retrieval references. Automatic versus explicit photo saving, retention bounds and the exact
+recall contract remain design decisions for that slice. No original-photo retention or later
+photo recall is claimed by 17.3A or 17.3B.
