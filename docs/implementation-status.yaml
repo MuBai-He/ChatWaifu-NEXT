@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-05"
-current_phase: 17.1C
-next_phase: 13.4A
+current_phase: 17.2
+next_phase: 17.3
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -470,7 +470,7 @@ phases:
     status: paused
     evidence:
       - Cloud Realtime foundation (13.0~13.3) is complete and tested on remote CI
-      - Public network STUN/TURN hardening and production provider rollout are paused pending Phase 17 channel delivery completion
+      - Real provider rollout and its lifecycle hardening remain paused while the owner prioritizes the Phase 17 messaging roadmap; completing 17.1C does not resume 13.4A
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
@@ -541,6 +541,31 @@ phases:
 
       - On 2026-09-05 the real WeChat message at 17:36:08 China time created one active memory and one WeChat direct source; delivery completed and the owner confirmed the native Memory Center displayed the correct friendly source and receive time
       - 175 Web tests, ESLint, TypeScript, formatting, Web and desktop builds, and independent review passed; all nine PR 19 CI checks passed on implementation commit 11a07d8
+
+  - id: 17.2
+    name: preset-sticker-outbound
+    status: macos_real_weixin_accepted
+    evidence:
+      - Restored from the original owner-prioritized Phase 17 roadmap; local preset assets and manual tags feed Character ResponsePlan selection and iLink image delivery alongside text parts
+      - Three original generated kitten presets, opt-in settings, generation-anchored ResponsePlan matching, immutable image payloads, and bounded native iLink encrypted upload/send are implemented
+      - Optional final image waits for terminal delivery, preserves delivered text on image failure, and retains cancellation, replay, and restart identities
+      - 617 Python tests and 181 Web tests passed locally; 34 protocol tests, type checks, lint, Web and desktop builds, and 2 desktop E2E tests passed; wheel assets match the manifest hashes
+      - On 2026-09-05 at 18:50 China time, a real WeChat text reply was followed by the expected shy kitten image; both were delivered once and visually observed
+      - At 19:03, new ingress cancelled the old shy image before its send deadline; the stop reply incorrectly added a new happy image because generic answer intent inherited positive affect
+      - Selector now excludes generic answer intent; a failing-then-passing real Character/SQLite/scheduler regression verifies old-image cancellation and no new image for the stop reply, with 22 focused tests passing
+      - At 19:18 on 2026-09-05 China time, the owner repeated affection then stop; the old image was cancelled and the stop reply delivered text only, with owner confirmation
+      - All 16 CI checks passed on fix commit 265c515; PR 20 awaits merge and installed-platform packaging acceptance remains separate
+  - id: 17.3
+    name: inbound-images-and-dynamic-sticker-learning
+    status: not_started
+    evidence:
+      - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
+      - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
+  - id: 17.4
+    name: shared-jokes-and-adaptive-sticker-recall
+    status: not_started
+    evidence:
+      - Original broader Phase 17 roadmap reserves shared jokes, usage history, and adaptive recall; detailed design and acceptance remain pending
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review

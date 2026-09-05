@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.character import ResponsePlan
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
     AvatarCueEmittedEvent,
@@ -53,6 +54,8 @@ class ConversationRepository(Protocol):
     async def generation_result(
         self, generation_id: UUID
     ) -> ConversationGenerationRecord | None: ...
+
+    async def generation_response_plan(self, generation_id: UUID) -> ResponsePlan | None: ...
 
     async def commit_user_generation(
         self,

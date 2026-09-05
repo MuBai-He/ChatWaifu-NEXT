@@ -9,6 +9,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
 )
 from chatwaifu_runtime.external_channels.service import ExternalChannelService
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog, StickerEntry
 
 __all__ = [
     "BubbleSplitResult",
@@ -17,5 +18,7 @@ __all__ = [
     "DeliveryPlanFactory",
     "ExternalChannelService",
     "InstantMessageDeliveryPlanFactory",
+    "PresetStickerCatalog",
     "SingleTextDeliveryPlanFactory",
+    "StickerEntry",
 ]

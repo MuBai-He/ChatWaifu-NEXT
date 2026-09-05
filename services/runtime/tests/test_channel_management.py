@@ -149,6 +149,19 @@ class _FakeWeixin:
         self.sent.set()
         return client_id
 
+    async def send_image(
+        self,
+        credentials: WeixinCredentials,
+        *,
+        recipient_user_id: str,
+        context_token: str,
+        client_id: str,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> str | None:
+        del credentials, recipient_user_id, context_token, image_bytes, mime_type
+        return client_id
+
 
 class _JournalReadFailureStore(InMemoryChannelCredentialStore):
     async def get(self, reference: str) -> str | None:
@@ -595,9 +608,15 @@ async def test_native_bubbles_render_without_separator_lines_but_persist_lossles
         assert turn.reply_text == canonical
         plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
         assert plan is not None and plan.status is ChannelDeliveryStatus.DELIVERED
-        assert "".join(part.payload.text for part in plan.parts) == canonical
-        assert plan.parts[0].payload.text.endswith("\n\n")
-        assert plan.parts[1].payload.text.endswith("\n\n")
+        text_payloads = [
+            part.payload
+            for part in plan.parts
+            if isinstance(part.payload, ChannelTextDeliveryPartPayload)
+        ]
+        assert len(text_payloads) == len(plan.parts)
+        assert "".join(p.text for p in text_payloads) == canonical
+        assert text_payloads[0].text.endswith("\n\n")
+        assert text_payloads[1].text.endswith("\n\n")
         assert all(part.attempt == 1 for part in plan.parts)
         assert [message["client_id"] for message in transport.sent_messages] == [
             part.provider_client_id for part in plan.parts

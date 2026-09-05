@@ -13,6 +13,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartKind,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_runtime.config.settings import StorageConfig
 from chatwaifu_runtime.persistence.database import Database
@@ -363,6 +364,7 @@ async def test_migration_22_non_empty_database_backfill(tmp_path: Path) -> None:
         assert len(plan_1.parts) == 1
         assert plan_1.parts[0].status == ChannelDeliveryPartStatus.DELIVERED
         assert plan_1.parts[0].kind == ChannelDeliveryPartKind.TEXT
+        assert isinstance(plan_1.parts[0].payload, ChannelTextDeliveryPartPayload)
         assert plan_1.parts[0].payload.text == "reply 1"
     finally:
         await migrated_db.close()

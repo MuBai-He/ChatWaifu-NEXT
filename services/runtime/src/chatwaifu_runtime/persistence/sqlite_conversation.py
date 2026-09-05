@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import UUID, uuid5
 
 import aiosqlite
+from chatwaifu_protocol.character import ResponsePlan
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
     AvatarCueEmittedEvent,
@@ -14,6 +15,7 @@ from chatwaifu_protocol.events import (
     UserTurnCommittedEvent,
 )
 from chatwaifu_protocol.session import GenerationState
+from pydantic import BaseModel, ConfigDict
 
 from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
@@ -28,6 +30,11 @@ from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 
 _LOCAL_OWNER_SCOPE = "local"
+
+
+class _EventPayloadModel(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+    plan: ResponsePlan | None = None
 
 
 class SQLiteConversationRepository(ConversationRepository):
@@ -194,6 +201,46 @@ class SQLiteConversationRepository(ConversationRepository):
             if raw_audio_stream_id is not None
             else None,
         )
+
+    async def generation_response_plan(self, generation_id: UUID) -> ResponsePlan | None:
+        async with self._database.transaction() as connection:
+            gen_cursor = await connection.execute(
+                """
+                SELECT session_id, turn_id
+                FROM generations
+                WHERE generation_id = ?
+                """,
+                (str(generation_id),),
+            )
+            gen_row = await gen_cursor.fetchone()
+            await gen_cursor.close()
+            if gen_row is None:
+                return None
+            session_id = str(gen_row["session_id"])
+            turn_id = str(gen_row["turn_id"])
+
+            event_cursor = await connection.execute(
+                """
+                SELECT payload_json
+                FROM events
+                WHERE session_id = ?
+                  AND event_type = 'character.response_planned'
+                  AND json_extract(envelope_json, '$.generation_id') = ?
+                  AND json_extract(envelope_json, '$.turn_id') = ?
+                ORDER BY sequence DESC LIMIT 1
+                """,
+                (session_id, str(generation_id), turn_id),
+            )
+            event_row = await event_cursor.fetchone()
+            await event_cursor.close()
+            if event_row is None:
+                return None
+
+            try:
+                model = _EventPayloadModel.model_validate_json(str(event_row["payload_json"]))
+                return model.plan
+            except Exception:
+                return None
 
     async def commit_user_generation(
         self,

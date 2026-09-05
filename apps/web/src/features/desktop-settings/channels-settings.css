@@ -338,6 +338,13 @@
   font-size: 0.56rem;
 }
 
+.channels-settings-policy-toggle {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding-top: 14px;
+  border-top: 1px solid rgb(177 108 150 / 12%);
+}
+
 .channels-settings-notice {
   margin: 0;
   padding: 11px 20px;

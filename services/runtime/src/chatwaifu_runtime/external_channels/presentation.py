@@ -17,10 +17,14 @@ import regex
 from chatwaifu_protocol.channels import (
     ChannelDeliveryPartDraft,
     ChannelDeliveryPartKind,
+    ChannelImageDeliveryPartPayload,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
 )
+from chatwaifu_protocol.character import ResponsePlan
+
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog, StickerEntry
 
 
 def render_bubble_text(text: str, *, has_following_text_part: bool) -> str:
@@ -183,11 +187,6 @@ class BubbleSplitter:
         if not clean_text:
             return True, "empty_text"
 
-        if len(clean_text) <= policy.preferred_chars_per_part and not (
-            self._PARAGRAPH_BREAK_PATTERN.search(clean_text)
-        ):
-            return True, "below_preferred_chars"
-
         if policy.bypass_long_form:
             # Code blocks
             if "```" in clean_text:
@@ -208,6 +207,11 @@ class BubbleSplitter:
             # Safety warnings / disclaimers
             if any(marker in clean_text for marker in self._SAFETY_MARKERS):
                 return True, "safety_disclaimer_detected"
+
+        if len(clean_text) <= policy.preferred_chars_per_part and not (
+            self._PARAGRAPH_BREAK_PATTERN.search(clean_text)
+        ):
+            return True, "below_preferred_chars"
 
         return False, None
 
@@ -485,17 +489,23 @@ class InstantMessageDeliveryPlanFactory:
         splitter: BubbleSplitter | None = None,
         cadence_calculator: CadenceCalculator | None = None,
         default_policy: ChannelPresentationPolicy | None = None,
+        sticker_catalog: PresetStickerCatalog | None = None,
     ) -> None:
         self._splitter = splitter or BubbleSplitter()
         self._cadence_calculator = cadence_calculator or CadenceCalculator()
         self._default_policy = default_policy or ChannelPresentationPolicy(
             profile=ChannelPresentationProfile.SINGLE_TEXT
         )
+        self._sticker_catalog = sticker_catalog
 
     def create_plan(
         self,
         reply_text: str,
         policy: ChannelPresentationPolicy | None = None,
+        *,
+        response_plan: ResponsePlan | None = None,
+        can_send_sticker: bool = False,
+        sticker_catalog: PresetStickerCatalog | None = None,
     ) -> DeliveryPlanCreationResult:
         active_policy = policy if policy is not None else self._default_policy
         safe_text = reply_text if reply_text else "(empty reply)"
@@ -509,25 +519,74 @@ class InstantMessageDeliveryPlanFactory:
             )
 
         split_result = self._splitter.split(safe_text, active_policy)
-        delays = self._cadence_calculator.calculate_delays(split_result.parts, active_policy)
+
+        catalog = sticker_catalog or self._sticker_catalog
+        matched_sticker: StickerEntry | None = None
+        if (
+            can_send_sticker
+            and active_policy.stickers_enabled
+            and split_result.fallback_reason
+            in (None, "single_segment", "no_natural_boundaries", "below_preferred_chars")
+            and response_plan is not None
+            and catalog is not None
+        ):
+            matched_sticker = catalog.match_sticker(response_plan)
 
         drafts: list[ChannelDeliveryPartDraft] = []
-        for ordinal, (part_text, delay_ms) in enumerate(
-            zip(split_result.parts, delays, strict=True)
-        ):
+        if matched_sticker is not None:
+            delays = self._cadence_calculator.calculate_delays(
+                (*split_result.parts, "[sticker]"), active_policy
+            )
+            for ordinal, (part_text, delay_ms) in enumerate(
+                zip(split_result.parts, delays[: len(split_result.parts)], strict=True)
+            ):
+                drafts.append(
+                    ChannelDeliveryPartDraft(
+                        ordinal=ordinal,
+                        kind=ChannelDeliveryPartKind.TEXT,
+                        payload=ChannelTextDeliveryPartPayload(
+                            kind=ChannelDeliveryPartKind.TEXT,
+                            text=part_text,
+                        ),
+                        required=True,
+                        delay_after_ms=delay_ms,
+                        not_before_at=None,
+                    )
+                )
             drafts.append(
                 ChannelDeliveryPartDraft(
-                    ordinal=ordinal,
-                    kind=ChannelDeliveryPartKind.TEXT,
-                    payload=ChannelTextDeliveryPartPayload(
-                        kind=ChannelDeliveryPartKind.TEXT,
-                        text=part_text,
+                    ordinal=len(split_result.parts),
+                    kind=ChannelDeliveryPartKind.IMAGE,
+                    payload=ChannelImageDeliveryPartPayload(
+                        kind=ChannelDeliveryPartKind.IMAGE,
+                        sticker_id=matched_sticker.sticker_id,
+                        sha256=matched_sticker.sha256,
+                        mime_type=matched_sticker.mime_type,
                     ),
-                    required=True,
-                    delay_after_ms=delay_ms,
+                    required=False,
+                    delay_after_ms=0,
                     not_before_at=None,
                 )
             )
+        else:
+            delays = self._cadence_calculator.calculate_delays(split_result.parts, active_policy)
+            for ordinal, (part_text, delay_ms) in enumerate(
+                zip(split_result.parts, delays, strict=True)
+            ):
+                drafts.append(
+                    ChannelDeliveryPartDraft(
+                        ordinal=ordinal,
+                        kind=ChannelDeliveryPartKind.TEXT,
+                        payload=ChannelTextDeliveryPartPayload(
+                            kind=ChannelDeliveryPartKind.TEXT,
+                            text=part_text,
+                        ),
+                        required=True,
+                        delay_after_ms=delay_ms,
+                        not_before_at=None,
+                    )
+                )
+
         return DeliveryPlanCreationResult(
             parts=tuple(drafts),
             profile=active_policy.profile.value,
@@ -538,5 +597,15 @@ class InstantMessageDeliveryPlanFactory:
         self,
         reply_text: str,
         policy: ChannelPresentationPolicy | None = None,
+        *,
+        response_plan: ResponsePlan | None = None,
+        can_send_sticker: bool = False,
+        sticker_catalog: PresetStickerCatalog | None = None,
     ) -> tuple[ChannelDeliveryPartDraft, ...]:
-        return self.create_plan(reply_text, policy).parts
+        return self.create_plan(
+            reply_text,
+            policy,
+            response_plan=response_plan,
+            can_send_sticker=can_send_sticker,
+            sticker_catalog=sticker_catalog,
+        ).parts
