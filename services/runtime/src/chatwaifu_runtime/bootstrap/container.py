@@ -38,8 +38,12 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
+from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
+from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
+from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
+from chatwaifu_runtime.photo_memory.recall import PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
@@ -160,6 +164,11 @@ class RuntimeContainer:
             self.runtime_skills,
             RuntimeSkillRouter(self.runtime_skills.list),
         )
+        self.photo_repository = SQLitePhotoMemoryRepository(self.database)
+        self.photo_observer = PhotoMemoryObserver(
+            self.photo_repository, PhotoClassifier(self.providers.llm)
+        )
+        self.photo_recall = PhotoRecallService(self.photo_repository)
         self.conversation = ConversationService(
             self.conversation_repository,
             self.experience_reset_repository,
@@ -174,6 +183,7 @@ class RuntimeContainer:
             self.character_kernel,
             self.prompt_compiler,
             self.agent,
+            photo_recall=self.photo_recall,
         )
         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
         self.sticker_library = StickerLibraryService(
@@ -190,6 +200,7 @@ class RuntimeContainer:
             self.event_publisher,
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
+            photo_observer=self.photo_observer,
         )
         self.channel_management = ChannelManagementService(
             self.external_channels,
@@ -198,6 +209,7 @@ class RuntimeContainer:
             WeixinILinkClient(),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
+            photo_observer=self.photo_observer,
             event_hub=self.event_hub,
             event_publisher=self.event_publisher,
         )
@@ -304,6 +316,7 @@ class RuntimeContainer:
                 await self.memory.start()
                 await self.runtime_skills.start()
                 self.sticker_library.start()
+                self.photo_observer.start()
                 await self.external_channels.start()
                 await self.channel_management.start()
                 await self.resources.start()
@@ -363,6 +376,7 @@ class RuntimeContainer:
             [
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
+                _CleanupStep("photo_observer", lambda: self.photo_observer.stop()),
                 _CleanupStep("external_channels", lambda: self.external_channels.stop()),
                 _CleanupStep("conversation", lambda: self.conversation.stop()),
                 _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),

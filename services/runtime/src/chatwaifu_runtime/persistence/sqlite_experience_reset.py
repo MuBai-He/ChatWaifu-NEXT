@@ -11,6 +11,7 @@ from chatwaifu_runtime.conversation.reset import (
 )
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_photo_redaction import redact_scope_photos
 
 
 class SQLiteExperienceResetRepository(ExperienceResetRepository):
@@ -40,6 +41,7 @@ class SQLiteExperienceResetRepository(ExperienceResetRepository):
         reset_event: GenericCoreEvent,
     ) -> ExperienceResetRecord:
         async with self._database.transaction() as connection:
+            photo_generations = await redact_scope_photos(connection, user_scope, character_id)
             audio_cursor = await connection.execute(
                 "SELECT segment_id FROM playback_segments WHERE session_id = ?",
                 (str(session_id),),
@@ -118,4 +120,5 @@ class SQLiteExperienceResetRepository(ExperienceResetRepository):
             turns_deleted=turns_deleted,
             events_deleted=events_deleted,
             reset_event=persisted_reset_event,
+            photo_generations=photo_generations,
         )

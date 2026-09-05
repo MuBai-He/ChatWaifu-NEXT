@@ -60,6 +60,11 @@ import {
   skillResultSchema,
   skillRunSnapshotSchema,
   stickerLibraryDeleteResultSchema,
+  photoMemorySettingsSchema,
+  photoMemorySettingsUpdateSchema,
+  savedPhotoSchema,
+  photoMemorySnapshotSchema,
+  photoMemoryDeleteResultSchema,
   stickerLibrarySettingsSchema,
   stickerLibrarySettingsUpdateSchema,
   stickerLibrarySnapshotSchema,
@@ -125,6 +130,11 @@ export {
   skillResultSchema,
   skillRunSnapshotSchema,
   stickerLibraryDeleteResultSchema,
+  photoMemorySettingsSchema,
+  photoMemorySettingsUpdateSchema,
+  savedPhotoSchema,
+  photoMemorySnapshotSchema,
+  photoMemoryDeleteResultSchema,
   stickerLibrarySettingsSchema,
   stickerLibrarySettingsUpdateSchema,
   stickerLibrarySnapshotSchema,
@@ -175,6 +185,11 @@ export const protocolModelSchemas = {
   McpCapabilitySnapshot: mcpCapabilitySnapshotSchema,
   McpConnectionSnapshot: mcpConnectionSnapshotSchema,
   LearnedSticker: learnedStickerSchema,
+  PhotoMemorySettings: photoMemorySettingsSchema,
+  PhotoMemorySettingsUpdate: photoMemorySettingsUpdateSchema,
+  SavedPhoto: savedPhotoSchema,
+  PhotoMemorySnapshot: photoMemorySnapshotSchema,
+  PhotoMemoryDeleteResult: photoMemoryDeleteResultSchema,
   StickerLibrarySettings: stickerLibrarySettingsSchema,
   StickerLibrarySettingsUpdate: stickerLibrarySettingsUpdateSchema,
   StickerLibrarySnapshot: stickerLibrarySnapshotSchema,
@@ -242,6 +257,11 @@ export const parserRootRegistry: Record<
   parseMcpCapabilitySnapshot: "McpCapabilitySnapshot",
   parseMcpConnectionSnapshot: "McpConnectionSnapshot",
   parseLearnedSticker: "LearnedSticker",
+  parsePhotoMemorySettings: "PhotoMemorySettings",
+  parsePhotoMemorySettingsUpdate: "PhotoMemorySettingsUpdate",
+  parseSavedPhoto: "SavedPhoto",
+  parsePhotoMemorySnapshot: "PhotoMemorySnapshot",
+  parsePhotoMemoryDeleteResult: "PhotoMemoryDeleteResult",
   parseStickerLibrarySettings: "StickerLibrarySettings",
   parseStickerLibrarySettingsUpdate: "StickerLibrarySettingsUpdate",
   parseStickerLibrarySnapshot: "StickerLibrarySnapshot",
@@ -286,7 +306,10 @@ export function collectJsonSchemaEnumPaths(
     if (vals.length > 0) {
       paths[currentPath] = vals.sort();
     }
-  } else if (typeof schema.const === "string" || typeof schema.const === "number") {
+  } else if (
+    typeof schema.const === "string" ||
+    typeof schema.const === "number"
+  ) {
     paths[currentPath] = [String(schema.const)];
   }
 

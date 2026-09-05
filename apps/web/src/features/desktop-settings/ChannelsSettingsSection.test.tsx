@@ -29,6 +29,7 @@ vi.mock("../chat/runtimeClient", () => ({
   getChannelAuthorization: vi.fn(),
   getChannelConnections: vi.fn(),
   getStickerLibrary: vi.fn(),
+  getPhotoMemory: vi.fn(),
   startChannelAuthorization: vi.fn(),
   submitChannelAuthorizationVerification: vi.fn(),
   updateChannelConnection: vi.fn(),
@@ -38,6 +39,12 @@ vi.mock("../chat/runtimeClient", () => ({
 
 describe("ChannelsSettingsSection", () => {
   beforeEach(() => {
+    vi.mocked(runtimeClient.getPhotoMemory).mockResolvedValue({
+      settings: { retention_enabled: false, revision: 0 },
+      items: [],
+      total_bytes: 0,
+      capacity: 200,
+    });
     vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([]);
     vi.mocked(runtimeClient.getStickerLibrary).mockResolvedValue({
       schema_version: "1.0",
@@ -103,7 +110,11 @@ describe("ChannelsSettingsSection", () => {
       (await screen.findByTestId("weixin-qr")).getAttribute("data-value"),
     ).toBe("weixin://pair/session-1");
     expect(screen.queryByLabelText("手机验证码")).toBeNull();
-    expect(view.container.querySelectorAll("input")).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll('input:not([type="checkbox"])'),
+    ).toHaveLength(0);
+    // Retained photos stay manageable even when WeChat is disconnected.
+    expect(screen.getByRole("switch", { name: "记住我发的照片" })).toBeTruthy();
 
     view.unmount();
     expect(pollingSignal?.aborted).toBe(true);

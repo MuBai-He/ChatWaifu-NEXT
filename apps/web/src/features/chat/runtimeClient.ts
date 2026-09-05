@@ -11,3 +11,4 @@ export * from "./runtime-client/skillsClient";
 export * from "./runtime-client/stickerLibraryClient";
 export * from "./runtime-client/ttsClient";
 export * from "./runtime-client/workerPacksClient";
+export * from "./runtime-client/photoMemoryClient";

@@ -1,0 +1,27 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/photo-memory-settings-update.schema.json",
+  "properties": {
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "retention_enabled": {
+      "title": "Retention Enabled",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "retention_enabled",
+    "expected_revision"
+  ],
+  "title": "PhotoMemorySettingsUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}
