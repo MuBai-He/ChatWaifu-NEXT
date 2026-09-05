@@ -258,6 +258,22 @@ This avoids loading voice workers for a remote text reply. Runtime Skills remain
 tool authority, but V1 has no trusted external confirmation surface. Proactive sends and new
 recipients remain separate external side effects.
 
+## Native WeChat timing diagnostics
+
+`weixin.timing` JSON log records correlate nonempty poll returns, message observation,
+reply-context preparation, ingress return, and outbound send start/success. Local wall-clock
+fields locate boundaries; monotonic elapsed milliseconds measure local work. Records contain
+identifiers and timings, never message text, recipient identity, cursors, or credentials.
+Cancellation and durable admission timestamps remain authoritative in the event/turn store.
+`ingest_returned` may include generation preparation after admission; compare its `accepted_at`
+with the existing cancellation event rather than treating function return as arrival.
+
+The adapter's provider message timestamp comes from `create_time_ms` when supplied, with a
+local-time fallback. Its difference from `batch_received_at` includes transport delay and
+possible clock skew; it is not an AI decision-time metric or an exact client display timestamp.
+Long-poll duration also includes normal idle waiting. Compare several manually sent samples
+with local ingress and send timings before attributing latency to the provider.
+
 ## Acceptance
 
 An adapter is release-ready only after automated and observable checks cover:

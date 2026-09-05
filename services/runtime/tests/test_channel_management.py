@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -515,8 +517,9 @@ async def test_adapter_stop_interrupts_admitted_turn_before_remove_and_cursor_ad
 
 @pytest.mark.asyncio
 async def test_native_bubbles_render_without_separator_lines_but_persist_losslessly(
-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level(logging.INFO, logger="chatwaifu_runtime.external_channels.management")
     paragraphs = (
         "First paragraph stays complete while we rest and relax after a long day.",
         "Second paragraph offers a warm dinner with enough detail to keep together.",
@@ -584,6 +587,22 @@ async def test_native_bubbles_render_without_separator_lines_but_persist_lossles
         assert [message["client_id"] for message in transport.sent_messages] == [
             part.provider_client_id for part in plan.parts
         ]
+        timings = [
+            json.loads(record.getMessage())
+            for record in caplog.records
+            if '"event": "weixin.timing"' in record.getMessage()
+        ]
+        stages = [entry["stage"] for entry in timings]
+        assert stages[:3] == ["poll_returned", "message_observed", "context_ready"]
+        admitted = next(entry for entry in timings if entry["stage"] == "ingest_returned")
+        assert datetime.fromisoformat(admitted["accepted_at"]) == turn.accepted_at
+        for part in plan.parts:
+            sends = [entry for entry in timings if entry.get("part_id") == str(part.part_id)]
+            assert [entry["stage"] for entry in sends] == ["send_started", "send_returned"]
+            assert sends[1]["send_elapsed_ms"] >= 0
+        timing_text = json.dumps(timings)
+        for private_value in (*paragraphs, "paragraph-context", access_token, "owner-1", "bot-1"):
+            assert private_value not in timing_text
     finally:
         container.event_hub.unsubscribe(completed)
         await container.stop()

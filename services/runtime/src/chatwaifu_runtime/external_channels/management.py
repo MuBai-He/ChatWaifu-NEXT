@@ -8,6 +8,7 @@ import logging
 import secrets
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from time import perf_counter
 from typing import Protocol, cast
 from uuid import UUID, uuid4
 
@@ -956,7 +957,17 @@ class ChannelManagementService:
                             "The secure WeChat credentials are missing.",
                         )
                         return
+                    poll_started_at = datetime.now(UTC)
+                    poll_started = perf_counter()
                     updates = await self._weixin.get_updates(credentials, cursor)
+                    if updates.messages:
+                        _log_weixin_timing(
+                            "poll_returned",
+                            connection_id=str(connection_id),
+                            poll_started_at=poll_started_at.isoformat(),
+                            poll_elapsed_ms=round((perf_counter() - poll_started) * 1000, 3),
+                            message_count=len(updates.messages),
+                        )
                     await self._process_updates(connection_id, updates)
                     # The checkpoint advances only after every normalized message
                     # in this batch reached durable admission.
@@ -1024,6 +1035,8 @@ class ChannelManagementService:
         connection_id: UUID,
         updates: WeixinUpdates,
     ) -> None:
+        batch_started = perf_counter()
+        batch_received_at = datetime.now(UTC)
         connection = await self._external_channels.get_connection(connection_id)
         credentials = await self._load_credentials(connection_id)
         if credentials is None:
@@ -1033,6 +1046,15 @@ class ChannelManagementService:
                 # Gateway policy would also reject this. Reject here before
                 # saving any provider-private reply context.
                 continue
+            _log_weixin_timing(
+                "message_observed",
+                connection_id=str(connection_id),
+                external_message_id=message.external_message_id,
+                batch_received_at=batch_received_at.isoformat(),
+                provider_message_at=message.received_at.isoformat(),
+                batch_elapsed_ms=round((perf_counter() - batch_started) * 1000, 3),
+            )
+            context_started = perf_counter()
             await self._remember_context(
                 connection_id,
                 message.external_message_id,
@@ -1040,6 +1062,12 @@ class ChannelManagementService:
                     context_token=message.context_token,
                     recipient_user_id=message.sender_user_id,
                 ),
+            )
+            _log_weixin_timing(
+                "context_ready",
+                connection_id=str(connection_id),
+                external_message_id=message.external_message_id,
+                context_elapsed_ms=round((perf_counter() - context_started) * 1000, 3),
             )
             inbound = ChannelInboundTextMessage(
                 connection_id=connection_id,
@@ -1052,6 +1080,7 @@ class ChannelManagementService:
                 text=message.text,
                 received_at=message.received_at,
             )
+            ingest_started = perf_counter()
             try:
                 receipt = await self._external_channels.ingest(
                     inbound, access_token=credentials.gateway_access_token
@@ -1066,6 +1095,14 @@ class ChannelManagementService:
                 await self._forget_context(connection_id, message.external_message_id)
                 continue
 
+            _log_weixin_timing(
+                "ingest_returned",
+                connection_id=str(connection_id),
+                external_message_id=message.external_message_id,
+                accepted_at=receipt.accepted_at.isoformat(),
+                ingest_elapsed_ms=round((perf_counter() - ingest_started) * 1000, 3),
+                duplicate=receipt.duplicate,
+            )
             if receipt.duplicate:
                 turn = await self._repository.find_turn_by_external_message(
                     connection_id, message.external_message_id
@@ -1430,6 +1467,14 @@ class ChannelManagementService:
                 for candidate in plan.parts
             ),
         )
+        send_started = perf_counter()
+        _log_weixin_timing(
+            "send_started",
+            connection_id=str(connection_id),
+            delivery_id=str(plan.delivery_id),
+            part_id=str(part.part_id),
+            ordinal=part.ordinal,
+        )
         try:
             provider_message_id = await self._weixin.send_text(
                 credentials,
@@ -1437,6 +1482,14 @@ class ChannelManagementService:
                 context_token=context.context_token,
                 client_id=client_id,
                 text=text,
+            )
+            _log_weixin_timing(
+                "send_returned",
+                connection_id=str(connection_id),
+                delivery_id=str(plan.delivery_id),
+                part_id=str(part.part_id),
+                ordinal=part.ordinal,
+                send_elapsed_ms=round((perf_counter() - send_started) * 1000, 3),
             )
             return DeliveryPartExecutionResult(
                 outcome=DeliveryPartOutcome.DELIVERED,
@@ -1510,3 +1563,17 @@ async def _gather_cancelled(tasks: list[asyncio.Task[None]]) -> None:
     if not tasks:
         return
     await asyncio.gather(*tasks, return_exceptions=True)
+
+
+def _log_weixin_timing(stage: str, **fields: object) -> None:
+    """Correlatable local timing only; callers must never pass content or credentials."""
+    logger.info(
+        json.dumps(
+            {
+                "event": "weixin.timing",
+                "stage": stage,
+                "observed_at": datetime.now(UTC).isoformat(),
+                **fields,
+            }
+        )
+    )
