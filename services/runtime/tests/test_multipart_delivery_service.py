@@ -18,6 +18,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -42,7 +43,11 @@ from httpx import ASGITransport, AsyncClient
 class _ThreePartsPlanFactory:
     """Test plan factory that splits reply text into three sequential text parts."""
 
-    def create_parts(self, reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
+    def create_parts(
+        self,
+        reply_text: str,
+        policy: ChannelPresentationPolicy | None = None,
+    ) -> tuple[ChannelDeliveryPartDraft, ...]:
         return (
             ChannelDeliveryPartDraft(
                 ordinal=0,

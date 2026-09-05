@@ -70,6 +70,7 @@ class ChannelDeliveryScheduler:
         initial_backoff_seconds: float = 1.0,
         poll_interval_seconds: float = 1.0,
         on_plan_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]] | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._repository = repository
         self._publisher = publisher
@@ -81,11 +82,19 @@ class ChannelDeliveryScheduler:
         self._initial_backoff_seconds = initial_backoff_seconds
         self._poll_interval_seconds = poll_interval_seconds
         self._on_plan_terminal = on_plan_terminal
+        self._clock = clock
 
         self._wake_event = asyncio.Event()
         self._running_task: asyncio.Task[None] | None = None
         self._event_subscription_task: asyncio.Task[None] | None = None
         self._stopping = False
+
+    def _now(self, step_now: datetime | None = None) -> datetime:
+        if self._clock is not None:
+            return self._clock()
+        if step_now is not None:
+            return step_now
+        return datetime.now(UTC)
 
     def wake(self) -> None:
         """Wake up the scheduler loop immediately."""
@@ -163,7 +172,7 @@ class ChannelDeliveryScheduler:
             except Exception:
                 logger.exception("unexpected error in delivery scheduler step")
 
-            now = datetime.now(UTC)
+            now = self._now()
             next_wakeup = await self._repository.next_delivery_wakeup_at(self._connection_id)
             sleep_time = self._poll_interval_seconds
             if next_wakeup is not None:
@@ -202,8 +211,12 @@ class ChannelDeliveryScheduler:
         """Execute one evaluation cycle over all nonterminal delivery plans.
 
         Returns True if any part was claimed and processed.
+
+        An injected clock is read throughout the cycle. Without one, ``now``
+        freezes time for deterministic single-step tests; production callers
+        omit it so each transition reads the current UTC time.
         """
-        current_time = now or datetime.now(UTC)
+        current_time = self._now(now)
         recovery_result = await self._repository.recover_expired_delivery_part_leases(
             as_of=current_time
         )
@@ -224,12 +237,13 @@ class ChannelDeliveryScheduler:
         any_progress = False
 
         for plan in plans:
+            plan_now = self._now(now)
             # Check if this plan currently has a child part actively SENDING
             # under an unexpired lease
             has_active_sending = False
             for part in plan.parts:
                 if part.status is ChannelDeliveryPartStatus.SENDING:
-                    if part.lease_expires_at is not None and part.lease_expires_at > current_time:
+                    if part.lease_expires_at is not None and part.lease_expires_at > plan_now:
                         has_active_sending = True
                         break
             if has_active_sending:
@@ -249,7 +263,7 @@ class ChannelDeliveryScheduler:
                 continue
 
             # Check deferral (not_before_at)
-            if target_part.not_before_at is not None and target_part.not_before_at > current_time:
+            if target_part.not_before_at is not None and target_part.not_before_at > plan_now:
                 continue
 
             # Claim next part
@@ -260,8 +274,9 @@ class ChannelDeliveryScheduler:
                 lease_id=lease_id,
                 lease_seconds=self._lease_seconds,
             )
+            claim_time = self._now(now)
             claim_result = await self._repository.claim_next_delivery_part(
-                claim, claimed_at=current_time
+                claim, claimed_at=claim_time
             )
             if claim_result is None or claim_result.part is None:
                 continue
@@ -276,6 +291,7 @@ class ChannelDeliveryScheduler:
 
             # Check kind: Phase 17.1A only supports TEXT
             if claimed_part.kind is not ChannelDeliveryPartKind.TEXT:
+                post_time = self._now(now)
                 err = StructuredError(
                     code="unsupported_delivery_part_kind",
                     message=f"Delivery part kind {claimed_part.kind} is not supported.",
@@ -288,10 +304,10 @@ class ChannelDeliveryScheduler:
                     lease_id=lease_id,
                     status=ChannelDeliveryPartStatus.FAILED,
                     error=err,
-                    acknowledged_at=datetime.now(UTC),
+                    acknowledged_at=post_time,
                 )
                 ack_res = await self._repository.acknowledge_delivery_part(
-                    ack, updated_at=datetime.now(UTC)
+                    ack, updated_at=post_time
                 )
                 await self._handle_transition_result(ack_res)
                 continue
@@ -312,7 +328,7 @@ class ChannelDeliveryScheduler:
                     ),
                 )
 
-            post_time = datetime.now(UTC)
+            post_time = self._now(now)
             if exec_result.outcome is DeliveryPartOutcome.DELIVERED:
                 ack = ChannelDeliveryPartAcknowledgement(
                     delivery_id=plan.delivery_id,

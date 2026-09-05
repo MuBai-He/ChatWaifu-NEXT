@@ -12,6 +12,8 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryClaimRequest,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
+    ChannelPresentationProfile,
     ChannelTurnReceipt,
     ChannelTurnStatus,
 )
@@ -36,6 +38,9 @@ def _configuration(connection_id: UUID) -> ChannelConnectionConfiguration:
         principal_scope="local",
         account_key="wechat-owner-account",
         allowed_sender_keys=["wechat-owner-sender"],
+        presentation_policy=ChannelPresentationPolicy(
+            profile=ChannelPresentationProfile.SINGLE_TEXT
+        ),
     )
 
 

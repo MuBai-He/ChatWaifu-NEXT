@@ -24,6 +24,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -111,14 +112,20 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if configuration.enabled
             else ChannelConnectionStatus.DISABLED
         )
+        policy_json = (
+            configuration.presentation_policy.model_dump_json()
+            if configuration.presentation_policy is not None
+            else None
+        )
         try:
             await self._database.execute(
                 """
                 INSERT INTO channel_connections(
                     connection_id, provider_id, name, character_id, principal_scope,
                     account_key, allowed_sender_keys_json, enabled, timeout_seconds,
-                    access_token_hash, status, revision, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                    presentation_policy_json, access_token_hash, status, revision,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                 """,
                 (
                     str(configuration.connection_id),
@@ -130,6 +137,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     json.dumps(configuration.allowed_sender_keys, ensure_ascii=False),
                     int(configuration.enabled),
                     configuration.timeout_seconds,
+                    policy_json,
                     access_token_hash,
                     status.value,
                     created_at.isoformat(),
@@ -173,13 +181,18 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 if configuration.enabled
                 else ChannelConnectionStatus.DISABLED
             )
+            policy_json = (
+                configuration.presentation_policy.model_dump_json()
+                if configuration.presentation_policy is not None
+                else None
+            )
             await connection.execute(
                 """
                 UPDATE channel_connections SET
                     provider_id = ?, name = ?, character_id = ?, principal_scope = ?,
                     account_key = ?, allowed_sender_keys_json = ?, enabled = ?,
-                    timeout_seconds = ?, access_token_hash = ?, status = ?,
-                    last_error_json = NULL, revision = revision + 1, updated_at = ?
+                    timeout_seconds = ?, presentation_policy_json = ?, access_token_hash = ?,
+                    status = ?, last_error_json = NULL, revision = revision + 1, updated_at = ?
                 WHERE connection_id = ? AND revision = ? AND deleted_at IS NULL
                 """,
                 (
@@ -191,6 +204,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     json.dumps(configuration.allowed_sender_keys, ensure_ascii=False),
                     int(configuration.enabled),
                     configuration.timeout_seconds,
+                    policy_json,
                     token_hash,
                     status.value,
                     updated_at.isoformat(),
@@ -1231,6 +1245,26 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 ),
             )
 
+            if acknowledgement.status is ChannelDeliveryPartStatus.DELIVERED:
+                delay_after_ms = int(current_part["delay_after_ms"])
+                if delay_after_ms > 0:
+                    next_not_before = acknowledgement.acknowledged_at + timedelta(
+                        milliseconds=delay_after_ms
+                    )
+                    next_ordinal = int(current_part["ordinal"]) + 1
+                    await connection.execute(
+                        """
+                        UPDATE channel_delivery_parts
+                        SET not_before_at = ?
+                        WHERE delivery_id = ? AND ordinal = ? AND status = 'pending'
+                        """,
+                        (
+                            next_not_before.isoformat(),
+                            str(acknowledgement.delivery_id),
+                            next_ordinal,
+                        ),
+                    )
+
             plan = await self._derive_delivery_plan_state_tx(
                 connection, acknowledgement.delivery_id, updated_at
             )
@@ -2256,6 +2290,11 @@ def _connection_record(row: object) -> ChannelConnectionRecord:
     if not all(isinstance(value, str) for value in allowed_objects):
         raise ValueError("persisted allowed_sender_keys_json is invalid")
     allowed = cast(list[str], allowed_objects)
+    presentation_policy: ChannelPresentationPolicy | None = None
+    if hasattr(item, "keys") and "presentation_policy_json" in item.keys():  # type: ignore[attr-defined]
+        raw_policy = item["presentation_policy_json"]  # pyright: ignore[reportIndexIssue,reportUnknownVariableType]
+        if isinstance(raw_policy, str):
+            presentation_policy = ChannelPresentationPolicy.model_validate_json(raw_policy)
     configuration = ChannelConnectionConfiguration(
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
         provider_id=str(item["provider_id"]),  # type: ignore[index]
@@ -2268,6 +2307,7 @@ def _connection_record(row: object) -> ChannelConnectionRecord:
         allowed_sender_keys=allowed,
         enabled=bool(item["enabled"]),  # type: ignore[index]
         timeout_seconds=float(item["timeout_seconds"]),  # type: ignore[index]
+        presentation_policy=presentation_policy,
     )
     return ChannelConnectionRecord(
         configuration=configuration,

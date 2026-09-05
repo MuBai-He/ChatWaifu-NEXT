@@ -19,6 +19,7 @@ import type {
   ChannelErrorResponse,
   ChannelGatewayStatusSnapshot,
   ChannelInboundTextMessage,
+  ChannelPresentationPolicy,
   ChannelProviderRegistration,
   ChannelTurnCancelReceipt,
   ChannelTurnCancelRequest,
@@ -714,6 +715,33 @@ const channelProviderRegistrationSchema = z
   })
   .passthrough();
 
+const channelPresentationProfileSchema = z.enum([
+  "instant_message",
+  "single_text",
+]);
+
+const channelPresentationPolicySchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    profile: channelPresentationProfileSchema.default("single_text"),
+    max_parts: z.number().int().min(1).max(10).default(3),
+    preferred_chars_per_part: z.number().int().min(10).max(500).default(60),
+    soft_max_chars_per_part: z.number().int().min(20).max(1000).default(120),
+    cadence_enabled: z.boolean().default(true),
+    min_delay_ms: z.number().int().min(0).max(10_000).default(800),
+    max_delay_ms: z.number().int().min(0).max(30_000).default(3000),
+    total_cadence_delay_ceiling_ms: z
+      .number()
+      .int()
+      .min(0)
+      .max(60_000)
+      .default(6000),
+    typing_enabled: z.boolean().default(false),
+    bypass_long_form: z.boolean().default(true),
+    version: z.number().int().min(1).default(1),
+  })
+  .passthrough();
+
 const channelConnectionConfigurationSchema = z
   .object({
     schema_version: channelSchemaVersion.default("1.0"),
@@ -729,6 +757,7 @@ const channelConnectionConfigurationSchema = z
       .default([]),
     enabled: z.boolean().default(true),
     timeout_seconds: z.number().positive().max(600).default(120),
+    presentation_policy: channelPresentationPolicySchema.nullish(),
   })
   .passthrough();
 
@@ -1416,6 +1445,14 @@ export function parseChannelAuthorizationSnapshot(
   ) as ChannelAuthorizationSnapshot;
 }
 
+export function parseChannelPresentationPolicy(
+  input: unknown,
+): ChannelPresentationPolicy {
+  return channelPresentationPolicySchema.parse(
+    input,
+  ) as ChannelPresentationPolicy;
+}
+
 export function parseChannelConnectionConfiguration(
   input: unknown,
 ): ChannelConnectionConfiguration {
@@ -1620,6 +1657,8 @@ export {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelInboundTextMessageSchema,
+  channelPresentationPolicySchema,
+  channelPresentationProfileSchema,
   channelProviderCapabilitiesSchema,
   channelProviderRegistrationSchema,
   channelTextDeliveryPartPayloadSchema,

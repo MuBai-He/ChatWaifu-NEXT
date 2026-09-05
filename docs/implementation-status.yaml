@@ -1,7 +1,7 @@
 schema_version: "1.0"
-updated_at: "2026-09-03"
-current_phase: 12.5.1
-next_phase: 13
+updated_at: "2026-09-05"
+current_phase: 17.1B
+next_phase: 17.1B-2
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -465,6 +465,12 @@ phases:
       - Context patch builder compiles budgeted, privacy-filtered context snapshots with typed RealtimeSkillCapability allowlists (no raw dicts/manifests/secrets) and maps retained memory IDs to receipts
       - Provider event normalization and RealtimeSessionMirror map speech deltas with explicit role, enforce authoritative final transcript resolution (final > deltas), and track degradation, closure, and pump errors
       - Official protocol catalog registers cloud.egress_receipt and cloud.egress_blocked with synchronized Python/TypeScript schemas and contract tests
+  - id: 13.4A
+    name: cloud-realtime-hardening-and-turn
+    status: paused
+    evidence:
+      - Cloud Realtime foundation (13.0~13.3) is complete and tested on remote CI
+      - Public network STUN/TURN hardening and production provider rollout are paused pending Phase 17 channel delivery completion
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
@@ -489,6 +495,27 @@ phases:
       - Desktop settings presents one responsive WeChat scan flow, shows a verification input only when requested, cancels stale long polls, and reuses the generic connection delete route for full local unbind
       - PyInstaller explicitly collects HTTP/keyring metadata and platform backends; a frozen macOS Runtime import, TLS/keyring discovery, startup, and stdin-EOF shutdown smoke passes, while Windows resolves the Credential Manager backend dependency
       - Wire, lifecycle, failure-isolation, crash-recovery, cancellation, source-provenance, and complete getupdates-to-delivery tests pass; a real scanned WeChat owner round trip and installed Windows/Linux credential-store acceptance remain pending
+  - id: 17.1A
+    name: durable-multipart-channel-delivery
+    status: completed_and_tested
+    evidence:
+      - ADR 0032 defines ChannelDeliveryPlan aggregate root and child ChannelDeliveryPart entities in SQLite
+      - Independent ChannelDeliveryScheduler runs in the background decoupled from Weixin polling loop
+      - Inbound Weixin polling only handles durable admission and advances adapter cursor immediately
+      - Transactional atomicity across part state transitions, parent derivations, and event store outbox
+      - Retryable errors with exponential backoff deferral (pending + not_before_at) and max_attempts failure
+      - Auto-cancel unsent tail of older delivery plans upon receiving new inbound message on the same binding
+      - Reconcile legacy parent deliveries in migration 22, normalize payload with schema_version, and clear stale leases on restart
+      - Transparent single-part delegation for legacy whole-delivery API while rejecting multipart plans with HTTP 409
+      - Idempotent ACK without duplicating domain events
+  - id: 17.1B
+    name: instant-messaging-bubble-planning-and-durable-cadence
+    status: in_progress
+    evidence:
+      - Provider-neutral ChannelPresentationPolicy contract and configuration
+      - Lossless BubbleSplitter with atomic element protection and long-form bypass
+      - Deterministic cadence calculation with durable SQLite next-part not_before_at scheduling
+      - New user turn tail cancellation without modifying canonical assistant turns
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review

@@ -24,6 +24,7 @@ from chatwaifu_protocol.channels import (
     ChannelErrorResponse,
     ChannelGatewayStatusSnapshot,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
     ChannelProviderRegistration,
     ChannelTurnCancelReceipt,
     ChannelTurnCancelRequest,
@@ -86,6 +87,7 @@ class ProtocolCatalog(ProtocolModel):
     channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
     channel_authorization: ChannelAuthorizationSnapshot
     channel_provider: ChannelProviderRegistration
+    channel_presentation_policy: ChannelPresentationPolicy
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
     channel_gateway_status: ChannelGatewayStatusSnapshot
