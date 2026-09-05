@@ -144,7 +144,10 @@ async def test_new_inbound_cancels_generation_and_no_old_failure_notice(
         )
         assert cancelled.is_set()
         snapshot = await container.external_channels.wait_for_turn(
-            connection_id, new.channel_turn_id, access_token=created.access_token, wait_seconds=5
+            connection_id,
+            new.channel_turn_id,
+            access_token=created.access_token,
+            wait_seconds=5,
         )
         assert snapshot.status is ChannelTurnStatus.COMPLETED
         previous = await container.external_channel_repository.get_turn(old.channel_turn_id)
@@ -289,7 +292,10 @@ async def test_new_message_cancels_unsent_failure_notice(
             _message(connection_id, text="fail"), access_token=created.access_token
         )
         failed = await container.external_channels.wait_for_turn(
-            connection_id, old.channel_turn_id, access_token=created.access_token, wait_seconds=5
+            connection_id,
+            old.channel_turn_id,
+            access_token=created.access_token,
+            wait_seconds=5,
         )
         assert failed.delivery_id is not None
         await container.external_channels.ingest(
