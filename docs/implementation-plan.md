@@ -2550,7 +2550,8 @@ whose external send has already started cannot be recalled by a local deletion.
 This slice has automated integration coverage and real-browser preview/deletion verification.
 The owner's face-pinching image was learned on 2026-09-05. Its first reuse attempt exposed the
 generic-answer filter; bounded interaction matching now covers that request and an adjacent
-short plea without adding a model call. Owner WeChat reuse acceptance remains pending. See
+short plea without adding a model call. The owner confirmed the real WeChat reuse retest passed
+after the fix; broader photo-screening coverage remains separate. See
 [ADR 0036](adr/0036-opt-in-learned-sticker-library.md).
 
 ### Phase 17.3C — Photo retention and visual memory (planned)

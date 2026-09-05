@@ -573,6 +573,8 @@ phases:
       - At 22:08 China time on 2026-09-05 the owner's face-pinching illustration was saved to the real library; subsequent playful requests exposed the generic-answer and emotion-only selection filter
       - Bounded local interaction matching now recognizes face-pinching and one adjacent short plea within five minutes on the same route; stop and refusal gating applies to both learned and preset images, with no unrelated emotion fallback for an explicit interaction
       - The selection fix passed 749 Python tests with 11 Windows-only skips, plus 202 Web tests on CI-matching Node 22.23.2; types, lint and Web/desktop builds passed, and read-only replay selected the actual saved image for both owner requests; real WeChat reuse acceptance is still pending
+      - The owner subsequently confirmed the real WeChat reuse retest passed on selection fix 77b0b7f
+      - Windows CI on 77b0b7f timed out during the typing test's two-second generation setup wait; the test now synchronizes generation and typing readiness separately, proves the simulated typing request remains hung, and retains the two-second text delivery and cleanup checks
       - Owner clarified that ordinary photos must also support future retention and recall; exclusion applies only to the sticker library, with separate Phase 17.3C photo and visual memory work planned
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
