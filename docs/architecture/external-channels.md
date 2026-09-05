@@ -282,6 +282,36 @@ that the remote client immediately removes a previously displayed indicator. Res
 fresh ticket only for the newest still-active durable reply; it never replays saved typing events.
 Structured `weixin.typing` logs contain only lifecycle stage, local time, and Runtime lineage IDs.
 
+## Model failure recovery and system notices
+
+The OpenAI-compatible adapter retries HTTP 502/503/504 and transient network/timeouts
+at most twice before any model event is emitted. Backoff is 0.5 then 1.5 seconds;
+all attempts share the configured timeout budget. Auth, validation, unsupported-tool
+and local protocol/configuration failures are not retried. Once text, a tool call or
+completion has been emitted, the request is never restarted. Cancellation aborts
+both requests and backoff using the original generation lineage.
+
+Managed native WeChat admission opts into superseding a PROCESSING turn on the same
+binding before admitting a new message. Authentication, owner policy and duplicate
+checks run first. Duplicate messages do not interrupt. An ACCEPTED turn still being
+prepared retains the existing busy/replay behavior until preparation completes.
+Other gateway API clients retain their default busy behavior.
+
+A final `provider_error` creates a single immediate text delivery on the failed
+channel turn, atomically with its failed state. The payload is
+`【系统提示】暂时无法生成回复，请稍后再试。`.
+The generation and channel turn stay failed, `reply_text` stays null, and no assistant
+turn or memory observation is fabricated. The existing versioned text-part contract,
+lease/ACK state machine and stable provider client ID handle this presentation-only
+notice. A replay cannot create a second notice or resurrect a cancelled turn.
+
+Private reply context remains until the notice plan is terminal, including when a
+`channel.turn_failed` event arrives before delivery. Restart discovers the pending
+plan and preserves its context. New inbound admission cancels an unsent notice using
+the ordinary delivery-tail cancellation path. A part already sending may complete
+its active lease; provider idempotency remains required for crash-after-send recovery.
+No exactly-once client display guarantee is added.
+
 ## Native WeChat timing diagnostics
 
 `weixin.timing` JSON log records correlate nonempty poll returns, message observation,

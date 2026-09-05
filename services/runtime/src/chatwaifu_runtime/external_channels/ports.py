@@ -194,6 +194,16 @@ class ExternalChannelRepository(Protocol):
         as_of: datetime,
     ) -> LeaseRecoveryResult: ...
 
+    async def fail_turn_with_notice(
+        self,
+        channel_turn_id: UUID,
+        *,
+        error: StructuredError,
+        notice_text: str,
+        delivery_id: UUID,
+        completed_at: datetime,
+    ) -> CompleteTurnResult: ...
+
     async def set_turn_terminal(
         self,
         channel_turn_id: UUID,

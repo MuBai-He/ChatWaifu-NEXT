@@ -343,10 +343,14 @@ class ExternalChannelService:
         return self._connection_snapshot(updated)
 
     async def ingest(
-        self, message: ChannelInboundTextMessage, *, access_token: str
+        self,
+        message: ChannelInboundTextMessage,
+        *,
+        access_token: str,
+        supersede_inflight: bool = False,
     ) -> ChannelTurnReceipt:
         connection, binding, turn, duplicate = await self._admit_ingress(
-            message, access_token=access_token
+            message, access_token=access_token, supersede_inflight=supersede_inflight
         )
         if duplicate:
             return self._turn_receipt(turn, duplicate=True)
@@ -485,7 +489,11 @@ class ExternalChannelService:
         return record
 
     async def _admit_ingress(
-        self, message: ChannelInboundTextMessage, *, access_token: str
+        self,
+        message: ChannelInboundTextMessage,
+        *,
+        access_token: str,
+        supersede_inflight: bool = False,
     ) -> tuple[ChannelConnectionRecord, ChannelBindingRecord, ChannelTurnRecord, bool]:
         """Persist a unique channel turn without serializing model preparation.
 
@@ -533,6 +541,19 @@ class ExternalChannelService:
                 raise ChannelPolicyError(
                     "conversation_key is already bound to a different sender identity"
                 )
+
+            if supersede_inflight:
+                for previous in await self._repository.list_inflight_turns(message.connection_id):
+                    if (
+                        previous.binding_id == binding.binding_id
+                        and previous.status is ChannelTurnStatus.PROCESSING
+                    ):
+                        await self.interrupt(
+                            message.connection_id,
+                            previous.channel_turn_id,
+                            access_token=access_token,
+                            reason="superseded_by_new_inbound_message",
+                        )
 
             if await self._repository.has_inflight_turn(binding.binding_id):
                 raise ChannelBusyError(
@@ -1281,6 +1302,30 @@ class ExternalChannelService:
                     completed_at=now,
                 )
             if generation.state is GenerationState.FAILED:
+                if (
+                    generation.error_code == "provider_error"
+                    and turn.status is not ChannelTurnStatus.CANCELLING
+                ):
+                    result = await self._repository.fail_turn_with_notice(
+                        turn.channel_turn_id,
+                        error=_error(
+                            "provider_error", "The model generation failed before delivery."
+                        ),
+                        notice_text="【系统提示】暂时无法生成回复，请稍后再试。",
+                        delivery_id=uuid4(),
+                        completed_at=now,
+                    )
+                    if result.turn.status is ChannelTurnStatus.CANCELLING:
+                        return await self._set_turn_terminal(
+                            turn.channel_turn_id,
+                            status=ChannelTurnStatus.CANCELLED,
+                            error=_error("generation_cancelled", "The channel turn was cancelled."),
+                            completed_at=now,
+                        )
+                    for event in result.persisted_events:
+                        await self._publisher.publish_persisted(event)
+                    await self._notify_turn_terminal(result.turn)
+                    return result.turn
                 return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.FAILED,

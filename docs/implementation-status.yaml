@@ -510,12 +510,14 @@ phases:
       - Idempotent ACK without duplicating domain events
   - id: 17.1B
     name: instant-messaging-bubble-planning-and-durable-cadence
-    status: bubble_cadence_and_macos_typing_accepted_pending_typing_merge
+    status: accepted_with_provider_recovery_in_progress
     evidence:
       - Provider-neutral ChannelPresentationPolicy contract and configuration
       - Lossless BubbleSplitter with atomic element protection and long-form bypass
       - Deterministic cadence calculation with durable SQLite next-part not_before_at scheduling
       - New user turn tail cancellation without modifying canonical assistant turns
+      - PR 16 merged as 4efe1dd and PR 17 merged as a4d63c5; owner confirmed improved casual WeChat style
+      - Provider recovery slice adds bounded pre-output retries, durable system failure notices and native processing-turn supersession; native fault acceptance pending
       - PR 15 merged as e3cb72c; explicit paragraph boundaries and outbound trailing-line rendering accepted by the owner on macOS
       - Real SIGKILL recovery replaced Runtime PID 78190 with 79257, preserved second-part not_before and client IDs, and delivered all three parts exactly once; single-text fallback delivered one lossless part and the owner confirmed it
       - Earlier roughly eleven-second provider-time-to-admission gaps were not reproduced after adding timing diagnostics; their cause remains unresolved
