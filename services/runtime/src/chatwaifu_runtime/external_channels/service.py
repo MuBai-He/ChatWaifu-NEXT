@@ -72,6 +72,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver, PhotoObservationSource
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, selection_hints
@@ -185,6 +186,7 @@ class ExternalChannelService:
         delivery_plan_factory: DeliveryPlanFactory | None = None,
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
+        photo_observer: PhotoMemoryObserver | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -196,6 +198,7 @@ class ExternalChannelService:
         self._providers = {item.provider_id: item for item in providers}
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
+        self._photo_observer = photo_observer
         self._delivery_plan_factory = delivery_plan_factory or InstantMessageDeliveryPlanFactory(
             sticker_catalog=sticker_catalog
         )
@@ -406,9 +409,10 @@ class ExternalChannelService:
         )
         image_loader = image_input.load if image_input is not None else None
         library = self._sticker_library
+        photos = self._photo_observer
         if (
             image_loader is not None
-            and library is not None
+            and (library is not None or photos is not None)
             and connection.configuration.character_id == "default"
             and message.chat_type is ChannelChatType.DIRECT
         ):
@@ -423,22 +427,39 @@ class ExternalChannelService:
             async def learning_loader() -> LlmInputImage:
                 image = await original_loader()
                 try:
-                    await library.observe(
-                        StickerLearningSource(
-                            principal_scope=connection.configuration.principal_scope,
-                            character_id=connection.configuration.character_id,
-                            connection_id=turn.connection_id,
-                            generation_id=turn.generation_id,
-                        ),
-                        image,
-                        wait_for_completion=wait_for_completion,
-                    )
+                    if library is not None:
+                        await library.observe(
+                            StickerLearningSource(
+                                principal_scope=connection.configuration.principal_scope,
+                                character_id=connection.configuration.character_id,
+                                connection_id=turn.connection_id,
+                                generation_id=turn.generation_id,
+                            ),
+                            image,
+                            wait_for_completion=wait_for_completion,
+                        )
                 except asyncio.CancelledError:
                     raise
                 except Exception:
                     logger.warning(
                         "sticker learning observation skipped generation_id=%s", turn.generation_id
                     )
+                try:
+                    if photos is not None:
+                        await photos.observe(
+                            PhotoObservationSource(
+                                principal_scope=connection.configuration.principal_scope,
+                                character_id=connection.configuration.character_id,
+                                connection_id=turn.connection_id,
+                                generation_id=turn.generation_id,
+                            ),
+                            image,
+                            wait_for_completion=wait_for_completion,
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.warning("photo observation skipped generation_id=%s", turn.generation_id)
                 return image
 
             image_loader = learning_loader
@@ -789,6 +810,8 @@ class ExternalChannelService:
         cancelled = await self._conversation.cancel(turn.session_id, reason)
         if self._sticker_library is not None:
             await self._sticker_library.cancel_generation(turn.generation_id)
+        if self._photo_observer is not None:
+            await self._photo_observer.cancel_generation(turn.generation_id)
         turn = await self._sync_turn(await self._required_turn(connection_id, channel_turn_id))
         task = self._turn_tasks.pop(turn.channel_turn_id, None)
         if task is not None:

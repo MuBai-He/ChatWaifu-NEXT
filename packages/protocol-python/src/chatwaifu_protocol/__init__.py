@@ -66,6 +66,13 @@ from chatwaifu_protocol.memory import (
 )
 from chatwaifu_protocol.models import ModelManifest, RouteDecision
 from chatwaifu_protocol.permissions import PermissionDecision, PermissionGrant, PermissionRequest
+from chatwaifu_protocol.photo_memory import (
+    PhotoMemoryDeleteResult,
+    PhotoMemorySettings,
+    PhotoMemorySettingsUpdate,
+    PhotoMemorySnapshot,
+    SavedPhoto,
+)
 from chatwaifu_protocol.registry import SchemaRegistry, create_default_registry
 from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
 from chatwaifu_protocol.skills import (
@@ -148,9 +155,14 @@ __all__ = [
     "PermissionDecision",
     "PermissionGrant",
     "PermissionRequest",
+    "PhotoMemoryDeleteResult",
+    "PhotoMemorySettings",
+    "PhotoMemorySettingsUpdate",
+    "PhotoMemorySnapshot",
     "PluginManifest",
     "PluginSnapshot",
     "RouteDecision",
+    "SavedPhoto",
     "SchemaRegistry",
     "SessionSnapshot",
     "SkillDefinition",

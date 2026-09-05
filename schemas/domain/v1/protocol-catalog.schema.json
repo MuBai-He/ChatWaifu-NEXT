@@ -6240,6 +6240,118 @@
       "title": "PermissionRequest",
       "type": "object"
     },
+    "PhotoMemoryDeleteResult": {
+      "properties": {
+        "deleted": {
+          "title": "Deleted",
+          "type": "boolean"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deleted",
+        "revision"
+      ],
+      "title": "PhotoMemoryDeleteResult",
+      "type": "object"
+    },
+    "PhotoMemorySettings": {
+      "properties": {
+        "retention_enabled": {
+          "default": false,
+          "title": "Retention Enabled",
+          "type": "boolean"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "PhotoMemorySettings",
+      "type": "object"
+    },
+    "PhotoMemorySettingsUpdate": {
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "retention_enabled": {
+          "title": "Retention Enabled",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "retention_enabled",
+        "expected_revision"
+      ],
+      "title": "PhotoMemorySettingsUpdate",
+      "type": "object"
+    },
+    "PhotoMemorySnapshot": {
+      "properties": {
+        "capacity": {
+          "const": 200,
+          "default": 200,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/SavedPhoto"
+          },
+          "maxItems": 200,
+          "title": "Items",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/PhotoMemorySettings"
+        },
+        "total_bytes": {
+          "maximum": 524288000,
+          "minimum": 0,
+          "title": "Total Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "settings",
+        "total_bytes"
+      ],
+      "title": "PhotoMemorySnapshot",
+      "type": "object"
+    },
     "PlaybackAckCommand": {
       "properties": {
         "command_id": {
@@ -6930,6 +7042,135 @@
         "cloud_context_policy"
       ],
       "title": "RouteDecision",
+      "type": "object"
+    },
+    "SavedPhoto": {
+      "properties": {
+        "byte_size": {
+          "maximum": 5242880,
+          "minimum": 1,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "caption": {
+          "default": "",
+          "maxLength": 1000,
+          "title": "Caption",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "description": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "height": {
+          "maximum": 2048,
+          "minimum": 1,
+          "title": "Height",
+          "type": "integer"
+        },
+        "keywords": {
+          "items": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Keywords",
+          "type": "array"
+        },
+        "mime_type": {
+          "enum": [
+            "image/png",
+            "image/jpeg"
+          ],
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "photo_id": {
+          "format": "uuid",
+          "title": "Photo Id",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "saved_at": {
+          "format": "date-time",
+          "title": "Saved At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_connection_id": {
+          "format": "uuid",
+          "title": "Source Connection Id",
+          "type": "string"
+        },
+        "source_generation_id": {
+          "format": "uuid",
+          "title": "Source Generation Id",
+          "type": "string"
+        },
+        "source_session_id": {
+          "format": "uuid",
+          "title": "Source Session Id",
+          "type": "string"
+        },
+        "source_turn_id": {
+          "format": "uuid",
+          "title": "Source Turn Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "width": {
+          "maximum": 2048,
+          "minimum": 1,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "photo_id",
+        "sha256",
+        "mime_type",
+        "byte_size",
+        "width",
+        "height",
+        "title",
+        "description",
+        "confidence",
+        "received_at",
+        "saved_at",
+        "source_connection_id",
+        "source_session_id",
+        "source_turn_id",
+        "source_generation_id"
+      ],
+      "title": "SavedPhoto",
       "type": "object"
     },
     "SessionCreatedEvent": {
@@ -9125,6 +9366,18 @@
     "permission_request": {
       "$ref": "#/$defs/PermissionRequest"
     },
+    "photo_memory_delete_result": {
+      "$ref": "#/$defs/PhotoMemoryDeleteResult"
+    },
+    "photo_memory_settings": {
+      "$ref": "#/$defs/PhotoMemorySettings"
+    },
+    "photo_memory_settings_update": {
+      "$ref": "#/$defs/PhotoMemorySettingsUpdate"
+    },
+    "photo_memory_snapshot": {
+      "$ref": "#/$defs/PhotoMemorySnapshot"
+    },
     "plugin": {
       "$ref": "#/$defs/PluginSnapshot"
     },
@@ -9139,6 +9392,9 @@
     },
     "route": {
       "$ref": "#/$defs/RouteDecision"
+    },
+    "saved_photo": {
+      "$ref": "#/$defs/SavedPhoto"
     },
     "session": {
       "$ref": "#/$defs/SessionSnapshot"
@@ -9236,7 +9492,12 @@
     "sticker_library_settings",
     "sticker_library_settings_update",
     "sticker_library_snapshot",
-    "sticker_library_delete_result"
+    "sticker_library_delete_result",
+    "photo_memory_settings",
+    "photo_memory_settings_update",
+    "saved_photo",
+    "photo_memory_snapshot",
+    "photo_memory_delete_result"
   ],
   "title": "ProtocolCatalog",
   "type": "object",

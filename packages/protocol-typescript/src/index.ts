@@ -46,5 +46,10 @@ export {
   parseStickerLibrarySettings,
   parseStickerLibrarySettingsUpdate,
   parseStickerLibrarySnapshot,
+  parsePhotoMemorySettings,
+  parsePhotoMemorySettingsUpdate,
+  parseSavedPhoto,
+  parsePhotoMemorySnapshot,
+  parsePhotoMemoryDeleteResult,
 } from "./parsers/protocol";
 export * from "./version";

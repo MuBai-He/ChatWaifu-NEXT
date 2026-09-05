@@ -80,6 +80,7 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelService,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
@@ -315,6 +316,7 @@ class ChannelManagementService:
         *,
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
+        photo_observer: PhotoMemoryObserver | None = None,
         event_hub: EventHub | None = None,
         event_publisher: EventPublisher | None = None,
     ) -> None:
@@ -323,6 +325,7 @@ class ChannelManagementService:
         self._credentials = credentials
         self._weixin = weixin
         self._sticker_library = sticker_library
+        self._photo_observer = photo_observer
         self._sticker_catalog = sticker_catalog or getattr(
             external_channels, "sticker_catalog", None
         )
@@ -977,6 +980,8 @@ class ChannelManagementService:
             logger.exception("native WeChat connection task failed")
 
     async def _stop_connection_task(self, connection_id: UUID) -> None:
+        if self._photo_observer is not None:
+            await self._photo_observer.cancel_connection(connection_id)
         if self._sticker_library is not None:
             await self._sticker_library.cancel_connection(connection_id)
         async with self._task_lock:

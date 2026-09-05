@@ -1,31 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  deleteLearnedSticker,
-  fetchStickerImageUrl,
-  getStickerLibrary,
-  updateStickerLibrarySettings,
-  type LearnedSticker,
-  type StickerLibrarySnapshot,
+  deleteSavedPhoto,
+  fetchPhotoImageUrl,
+  getPhotoMemory,
+  updatePhotoMemorySettings,
+  type SavedPhoto,
+  type PhotoMemorySnapshot,
 } from "../chat/runtimeClient";
 import { SettingsToggle } from "./SettingsPrimitives";
 
-const EXPRESSION_LABELS: Record<LearnedSticker["expression"], string> = {
-  neutral: "平静",
-  happy: "开心",
-  sad: "难过",
-  angry: "生气",
-  surprised: "惊讶",
-  shy: "害羞",
-  curious: "好奇",
-};
-
-interface StickerLibraryPanelProps {
+interface PhotoMemoryPanelProps {
   characterId: string;
   runtimeOnline: boolean;
 }
 
-// Bounded concurrent download pool (e.g. at most 6 parallel image downloads)
 type QueueItem = {
   task: () => Promise<void>;
   signal?: AbortSignal;
@@ -95,21 +84,22 @@ class AsyncConcurrencyPool {
   }
 }
 
-const previewDownloadPool = new AsyncConcurrencyPool(6);
-
-export function StickerLibraryPanel(props: StickerLibraryPanelProps) {
-  return <ScopedStickerLibraryPanel key={props.characterId} {...props} />;
+export function PhotoMemoryPanel(props: PhotoMemoryPanelProps) {
+  return <ScopedPhotoMemoryPanel key={props.characterId} {...props} />;
 }
 
-function ScopedStickerLibraryPanel({
+function ScopedPhotoMemoryPanel({
   characterId,
   runtimeOnline,
-}: StickerLibraryPanelProps) {
-  const [snapshot, setSnapshot] = useState<StickerLibrarySnapshot | null>(null);
+}: PhotoMemoryPanelProps) {
+  const [snapshot, setSnapshot] = useState<PhotoMemorySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const previewDownloadPool = useMemo(() => new AsyncConcurrencyPool(6), []);
+
   const lifecycle = useRef({
     mounted: false,
     request: 0,
@@ -123,13 +113,13 @@ function ScopedStickerLibraryPanel({
     const request = ++life.request;
     const controller = new AbortController();
     life.controller = controller;
-    void getStickerLibrary(characterId, controller.signal)
+    void getPhotoMemory(characterId, controller.signal)
       .then((data) => {
         if (life.mounted && request === life.request) setSnapshot(data);
       })
       .catch((err: unknown) => {
         if (life.mounted && request === life.request && !isAbortError(err))
-          setError(getErrorMessage(err, "读取表情库失败"));
+          setError(getErrorMessage(err, "读取照片记忆失败"));
       })
       .finally(() => {
         if (life.mounted && request === life.request) setLoading(false);
@@ -139,9 +129,9 @@ function ScopedStickerLibraryPanel({
       ++life.request;
       life.controller?.abort();
     };
-  }, [characterId]);
+  }, [characterId, runtimeOnline]);
 
-  const loadLibrary = useCallback(
+  const loadMemory = useCallback(
     async (retainedError: string | null = null) => {
       const life = lifecycle.current;
       if (!life.mounted) return;
@@ -152,11 +142,11 @@ function ScopedStickerLibraryPanel({
       setLoading(true);
       setError(retainedError);
       try {
-        const data = await getStickerLibrary(characterId, controller.signal);
+        const data = await getPhotoMemory(characterId, controller.signal);
         if (life.mounted && request === life.request) setSnapshot(data);
       } catch (err: unknown) {
         if (life.mounted && request === life.request && !isAbortError(err))
-          setError(getErrorMessage(err, "读取表情库失败"));
+          setError(getErrorMessage(err, "读取照片记忆失败"));
       } finally {
         if (life.mounted && request === life.request) setLoading(false);
       }
@@ -166,35 +156,38 @@ function ScopedStickerLibraryPanel({
 
   const handleManualRefresh = () => {
     if (!lifecycle.current.mutating && !loading && runtimeOnline)
-      void loadLibrary();
+      void loadMemory();
   };
 
-  const handleToggleLearning = async (enabled: boolean) => {
+  const handleToggleRetention = async (enabled: boolean) => {
     const life = lifecycle.current;
     if (!snapshot || life.mutating || !runtimeOnline) return;
     life.mutating = true;
     ++life.request;
     life.controller?.abort();
+    const controller = new AbortController();
+    life.controller = controller;
     setSavingSettings(true);
     setError(null);
     try {
-      const updated = await updateStickerLibrarySettings(
+      const updated = await updatePhotoMemorySettings(
         {
           schema_version: "1.0",
-          learning_enabled: enabled,
+          retention_enabled: enabled,
           expected_revision: snapshot.settings.revision ?? 0,
         },
         characterId,
+        controller.signal,
       );
       if (life.mounted) {
         setSnapshot((prev) => (prev ? { ...prev, settings: updated } : prev));
-        await loadLibrary();
+        await loadMemory();
       }
     } catch (err: unknown) {
       if (life.mounted && !isAbortError(err)) {
-        const message = getErrorMessage(err, "保存表情学习设置失败");
+        const message = getErrorMessage(err, "保存照片记忆设置失败");
         setError(message);
-        if (isConflictError(err)) await loadLibrary(message);
+        if (isConflictError(err)) await loadMemory(message);
       }
     } finally {
       life.mutating = false;
@@ -205,20 +198,38 @@ function ScopedStickerLibraryPanel({
     }
   };
 
-  const handleDelete = async (stickerId: string) => {
+  const handleDelete = async (photoId: string) => {
     const life = lifecycle.current;
     if (life.mutating || !runtimeOnline) return;
     life.mutating = true;
     ++life.request;
     life.controller?.abort();
-    setDeletingId(stickerId);
+    const controller = new AbortController();
+    life.controller = controller;
+    setDeletingId(photoId);
     setError(null);
     try {
-      await deleteLearnedSticker(stickerId, characterId);
-      if (life.mounted) await loadLibrary();
+      await deleteSavedPhoto(photoId, characterId, controller.signal);
+      if (life.mounted) {
+        setSnapshot((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: (prev.items ?? []).filter((p) => p.photo_id !== photoId),
+            total_bytes: (prev.items ?? [])
+              .filter((p) => p.photo_id !== photoId)
+              .reduce((acc, p) => acc + p.byte_size, 0),
+          };
+        });
+        setDeletingId(null);
+        await loadMemory();
+      }
     } catch (err: unknown) {
-      if (life.mounted && !isAbortError(err))
-        setError(getErrorMessage(err, "删除表情失败"));
+      if (life.mounted && !isAbortError(err)) {
+        setError(getErrorMessage(err, "删除照片失败"));
+        setDeletingId(null);
+        setLoading(false);
+      }
     } finally {
       life.mutating = false;
       if (life.mounted) {
@@ -228,79 +239,69 @@ function ScopedStickerLibraryPanel({
     }
   };
 
-  const learningEnabled = snapshot?.settings.learning_enabled ?? false;
+  const retentionEnabled = snapshot?.settings.retention_enabled ?? false;
   const items = snapshot?.items ?? [];
   const count = items.length;
-  const capacity = snapshot?.capacity ?? 100;
+  const capacity = snapshot?.capacity ?? 200;
+  const totalBytes = snapshot?.total_bytes ?? 0;
   const isBusy = savingSettings || deletingId !== null;
 
   return (
-    <div className="sticker-library-panel" data-testid="sticker-library-panel">
-      <div className="sticker-library-toggle-section">
+    <div className="photo-memory-panel" data-testid="photo-memory-panel">
+      <div className="photo-memory-toggle-section">
         <SettingsToggle
-          label="学习我发来的表情"
-          description="开启后自动筛选并保存适合作表情的图片，普通照片不进入表情库。"
-          checked={learningEnabled}
+          label="记住我发的照片"
+          description="开启后保存照片副本和内容描述，便于以后回忆。关闭后停止保存新照片，已有照片可单独删除。"
+          checked={retentionEnabled}
           disabled={isBusy || !runtimeOnline || !snapshot}
-          onChange={(enabled) => void handleToggleLearning(enabled)}
+          onChange={(enabled) => void handleToggleRetention(enabled)}
         />
-        <div className="sticker-library-sub-notes">
-          <small className="sticker-library-sub-copy">
-            想让宁宁以后记得普通照片，请开启下方的“记住我发的照片”。
-          </small>
-          <small className="sticker-library-note-copy">
-            已学习的表情会在开启“合适的时候发送表情”时由角色主动发出。
-          </small>
-        </div>
       </div>
 
-      <div className="sticker-library-header">
-        <div className="sticker-library-count">
-          <h4>已学表情</h4>
+      <div className="photo-memory-header">
+        <div className="photo-memory-count">
+          <h4>已保存的照片</h4>
           <span>
-            {count} / {capacity}
+            {count} / {capacity} ({(totalBytes / 1024 / 1024).toFixed(1)} / 500
+            MiB)
           </span>
         </div>
         <button
           type="button"
-          className="sticker-library-refresh-button"
+          className="photo-memory-refresh-button"
           disabled={isBusy || !runtimeOnline}
           onClick={handleManualRefresh}
-          aria-label="刷新表情库"
+          aria-label="刷新照片记忆"
         >
           {loading ? "正在刷新…" : "刷新"}
         </button>
       </div>
 
       {error ? (
-        <div className="sticker-library-error" role="alert">
+        <div className="photo-memory-error" role="alert">
           {error}
         </div>
       ) : null}
 
       {loading && !snapshot ? (
-        <div className="sticker-library-loading" role="status">
-          正在加载表情库…
+        <div className="photo-memory-loading" role="status">
+          正在加载照片记忆…
         </div>
       ) : items.length === 0 ? (
-        <div className="sticker-library-empty">
-          <p>暂无已学习的表情</p>
-          <small>
-            {learningEnabled
-              ? "在聊天中发送适合的表情图，宁宁会自动筛选并保存到这里。"
-              : "开启“学习我发来的表情”后，发送的表情图经自动筛选后才会被收录。"}
-          </small>
+        <div className="photo-memory-empty">
+          <p>暂无已保存的照片</p>
         </div>
       ) : (
-        <div className="sticker-library-grid" role="list">
-          {items.map((sticker) => (
-            <StickerTile
-              key={sticker.sticker_id}
-              sticker={sticker}
+        <div className="photo-memory-grid" role="list">
+          {items.map((photo) => (
+            <PhotoTile
+              key={photo.photo_id}
+              photo={photo}
               characterId={characterId}
-              isDeleting={deletingId === sticker.sticker_id}
+              isDeleting={deletingId === photo.photo_id}
               disabled={!runtimeOnline || isBusy}
-              onDelete={() => void handleDelete(sticker.sticker_id)}
+              onDelete={() => void handleDelete(photo.photo_id)}
+              previewDownloadPool={previewDownloadPool}
             />
           ))}
         </div>
@@ -309,44 +310,46 @@ function ScopedStickerLibraryPanel({
   );
 }
 
-interface StickerTileProps {
-  sticker: LearnedSticker;
+interface PhotoTileProps {
+  photo: SavedPhoto;
   characterId: string;
   isDeleting: boolean;
   disabled: boolean;
   onDelete: () => void;
+  previewDownloadPool: AsyncConcurrencyPool;
 }
 
-function StickerTile({
-  sticker,
+function PhotoTile({
+  photo,
   characterId,
   isDeleting,
   disabled,
   onDelete,
-}: StickerTileProps) {
+  previewDownloadPool,
+}: PhotoTileProps) {
   const [imageState, setImageState] = useState<{
-    stickerId: string;
+    photoId: string;
     url: string | null;
     loading: boolean;
     error: boolean;
   }>({
-    stickerId: sticker.sticker_id,
+    photoId: photo.photo_id,
     url: null,
     loading: true,
     error: false,
   });
   const currentUrlRef = useRef<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const currentLoading =
-    imageState.stickerId === sticker.sticker_id ? imageState.loading : true;
+    imageState.photoId === photo.photo_id ? imageState.loading : true;
   const currentError =
-    imageState.stickerId === sticker.sticker_id ? imageState.error : false;
+    imageState.photoId === photo.photo_id ? imageState.error : false;
   const currentUrl =
-    imageState.stickerId === sticker.sticker_id ? imageState.url : null;
+    imageState.photoId === photo.photo_id ? imageState.url : null;
 
-  // Lazy thumbnail trigger: activate download only when near/in viewport
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof IntersectionObserver === "undefined") {
@@ -378,7 +381,7 @@ function StickerTile({
 
     void previewDownloadPool
       .enqueue(async () => {
-        const url = await fetchStickerImageUrl(sticker.sticker_id, {
+        const url = await fetchPhotoImageUrl(photo.photo_id, {
           characterId,
           signal: controller.signal,
           timeoutMs: 8_000,
@@ -390,7 +393,7 @@ function StickerTile({
           }
           currentUrlRef.current = url;
           setImageState({
-            stickerId: sticker.sticker_id,
+            photoId: photo.photo_id,
             url,
             loading: false,
             error: false,
@@ -402,7 +405,7 @@ function StickerTile({
       .catch((err: unknown) => {
         if (!controller.signal.aborted && !isAbortError(err)) {
           setImageState({
-            stickerId: sticker.sticker_id,
+            photoId: photo.photo_id,
             url: null,
             loading: false,
             error: true,
@@ -417,60 +420,102 @@ function StickerTile({
         currentUrlRef.current = null;
       }
     };
-  }, [sticker.sticker_id, characterId, isVisible]);
+  }, [photo.photo_id, characterId, isVisible, previewDownloadPool]);
 
   return (
-    <div
-      ref={containerRef}
-      className="sticker-library-tile"
-      role="listitem"
-      data-testid={`sticker-tile-${sticker.sticker_id}`}
-    >
-      <div className="sticker-library-thumbnail-wrap">
-        {currentLoading ? (
-          <div className="sticker-library-thumbnail-placeholder" role="status">
-            加载中…
-          </div>
-        ) : currentError || !currentUrl ? (
-          <div className="sticker-library-thumbnail-placeholder error">
-            图片加载失败
-          </div>
-        ) : (
-          <img
-            src={currentUrl}
-            alt={sticker.label}
-            className="sticker-library-thumbnail"
-          />
-        )}
-      </div>
+    <>
+      <div
+        ref={containerRef}
+        className="photo-memory-tile"
+        role="listitem"
+        data-testid={`photo-tile-${photo.photo_id}`}
+      >
+        <div className="photo-memory-thumbnail-wrap">
+          {currentLoading ? (
+            <div className="photo-memory-thumbnail-placeholder" role="status">
+              加载中…
+            </div>
+          ) : currentError || !currentUrl ? (
+            <div className="photo-memory-thumbnail-placeholder error">
+              图片加载失败
+            </div>
+          ) : (
+            <img
+              src={currentUrl}
+              alt={photo.title}
+              className="photo-memory-thumbnail"
+              onClick={() => setDialogOpen(true)}
+            />
+          )}
+        </div>
 
-      <div className="sticker-library-tile-info">
-        <strong className="sticker-library-tile-label" title={sticker.label}>
-          {sticker.label}
-        </strong>
-        <span className="sticker-library-tile-desc" title={sticker.description}>
-          {sticker.description}
-        </span>
-        <div className="sticker-library-tile-meta">
-          <span className="sticker-library-tile-expression">
-            {EXPRESSION_LABELS[sticker.expression] ?? sticker.expression}
+        <div className="photo-memory-tile-info">
+          <strong className="photo-memory-tile-title" title={photo.title}>
+            {photo.title}
+          </strong>
+          <span className="photo-memory-tile-desc" title={photo.description}>
+            {photo.description}
           </span>
-          <span className="sticker-library-tile-date">
-            {formatDate(sticker.learned_at)}
-          </span>
+          {photo.caption && (
+            <span className="photo-memory-tile-caption">"{photo.caption}"</span>
+          )}
+          <div className="photo-memory-tile-meta">
+            <span className="photo-memory-tile-date">
+              {formatDate(photo.received_at)}
+            </span>
+            <span
+              className="photo-memory-source"
+              title={`来自微信收到于 ${formatDate(photo.received_at)}`}
+            >
+              微信
+            </span>
+          </div>
+        </div>
+
+        <div className="photo-memory-actions">
+          <button
+            type="button"
+            className="photo-memory-delete-button"
+            disabled={disabled || isDeleting}
+            onClick={() => {
+              setDialogOpen(false);
+              onDelete();
+            }}
+            aria-label={`删除照片 ${photo.title}`}
+          >
+            {isDeleting ? "删除中…" : "删除"}
+          </button>
         </div>
       </div>
-
-      <button
-        type="button"
-        className="sticker-library-delete-button"
-        disabled={disabled || isDeleting}
-        onClick={onDelete}
-        aria-label={`删除表情 ${sticker.label}`}
-      >
-        {isDeleting ? "删除中…" : "删除"}
-      </button>
-    </div>
+      {dialogOpen && currentUrl && (
+        <div
+          className="photo-memory-dialog-overlay"
+          onClick={() => setDialogOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`照片：${photo.title}`}
+            className="photo-memory-dialog-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="关闭照片预览"
+              className="photo-memory-dialog-close"
+              onClick={() => setDialogOpen(false)}
+            >
+              ×
+            </button>
+            <img
+              src={currentUrl}
+              alt={photo.title}
+              className="photo-memory-dialog-image"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -1,0 +1,131 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/saved-photo.schema.json",
+  "properties": {
+    "byte_size": {
+      "maximum": 5242880,
+      "minimum": 1,
+      "title": "Byte Size",
+      "type": "integer"
+    },
+    "caption": {
+      "default": "",
+      "maxLength": 1000,
+      "title": "Caption",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "description": {
+      "maxLength": 600,
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "height": {
+      "maximum": 2048,
+      "minimum": 1,
+      "title": "Height",
+      "type": "integer"
+    },
+    "keywords": {
+      "items": {
+        "maxLength": 40,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 12,
+      "title": "Keywords",
+      "type": "array"
+    },
+    "mime_type": {
+      "enum": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "title": "Mime Type",
+      "type": "string"
+    },
+    "photo_id": {
+      "format": "uuid",
+      "title": "Photo Id",
+      "type": "string"
+    },
+    "received_at": {
+      "format": "date-time",
+      "title": "Received At",
+      "type": "string"
+    },
+    "saved_at": {
+      "format": "date-time",
+      "title": "Saved At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "source_connection_id": {
+      "format": "uuid",
+      "title": "Source Connection Id",
+      "type": "string"
+    },
+    "source_generation_id": {
+      "format": "uuid",
+      "title": "Source Generation Id",
+      "type": "string"
+    },
+    "source_session_id": {
+      "format": "uuid",
+      "title": "Source Session Id",
+      "type": "string"
+    },
+    "source_turn_id": {
+      "format": "uuid",
+      "title": "Source Turn Id",
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "width": {
+      "maximum": 2048,
+      "minimum": 1,
+      "title": "Width",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "photo_id",
+    "sha256",
+    "mime_type",
+    "byte_size",
+    "width",
+    "height",
+    "title",
+    "description",
+    "confidence",
+    "received_at",
+    "saved_at",
+    "source_connection_id",
+    "source_session_id",
+    "source_turn_id",
+    "source_generation_id"
+  ],
+  "title": "SavedPhoto",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

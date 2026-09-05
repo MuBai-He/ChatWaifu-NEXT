@@ -41,6 +41,9 @@ class _FakeCompilation:
 @pytest.mark.asyncio
 async def test_image_loaded_before_llm_and_request_has_images() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -108,6 +111,9 @@ async def test_image_loaded_before_llm_and_request_has_images() -> None:
 @pytest.mark.asyncio
 async def test_cancelled_loader_no_stale_llm_or_output() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -156,6 +162,9 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
 @pytest.mark.asyncio
 async def test_loader_failure_uses_existing_recovery_once() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -211,6 +220,9 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
 @pytest.mark.asyncio
 async def test_bytes_not_in_persisted_events() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -275,6 +287,9 @@ async def test_bytes_not_in_persisted_events() -> None:
 @pytest.mark.asyncio
 async def test_stale_before_loader_prevents_image_load() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -329,6 +344,9 @@ async def test_stale_before_loader_prevents_image_load() -> None:
 @pytest.mark.asyncio
 async def test_stale_after_loader_prevents_llm_stream() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -336,10 +354,13 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
     service._prompt_compiler.compile = AsyncMock(return_value=_FakeCompilation())
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
-    # First call before loader passes, second call after loader raises CancelledError
-    service._ensure_current = MagicMock(
-        side_effect=[None, asyncio.CancelledError("generation is no longer active")]
-    )
+
+    # Invalidate at the actual loader boundary, independently of guard call count.
+    def ensure_current(_accepted: GenerationAccepted) -> None:
+        if loader_called:
+            raise asyncio.CancelledError("generation is no longer active")
+
+    service._ensure_current = MagicMock(side_effect=ensure_current)
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
     service._failed = AsyncMock()
@@ -385,6 +406,9 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
 @pytest.mark.asyncio
 async def test_non_image_turn_failure_uses_provider_error() -> None:
     service = MagicMock(spec=ConversationService)
+    service._repository = MagicMock()
+    service._repository.prepare_history = AsyncMock(return_value=())
+    service._photo_recall = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )

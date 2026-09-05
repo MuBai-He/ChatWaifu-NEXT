@@ -18,6 +18,7 @@ import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsSectionIntro, SettingsToggle } from "./SettingsPrimitives";
 import { StickerLibraryPanel } from "./StickerLibraryPanel";
+import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
 import "./channels-settings.css";
 
 const WEIXIN_PROVIDER_ID = "weixin_ilink";
@@ -285,6 +286,13 @@ export function ChannelsSettingsSection({
           </div>
         )}
 
+        {characterId === "default" ? (
+          <PhotoMemoryPanel
+            characterId={characterId}
+            runtimeOnline={runtimeOnline}
+          />
+        ) : null}
+
         {notice ? (
           <p className="channels-settings-notice" role="alert">
             {notice}
@@ -456,8 +464,7 @@ function ConnectedWeixinCard({
         </p>
         <p>
           可以发送单张静态图片（PNG/JPEG，最大 5
-          MB）。图片会交给当前聊天模型理解，
-          未开启表情学习时，图片仅用于本次理解。
+          MB）。图片会交给当前聊天模型理解；是否保存表情或照片，由下方两个开关分别控制。
         </p>
         <span>最近更新：{formatDate(connection.updated_at)}</span>
       </div>

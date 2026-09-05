@@ -52,6 +52,12 @@ class ConversationRepository(Protocol):
         self, session_id: UUID, current_turn_id: UUID, *, limit: int
     ) -> tuple[ConversationHistoryEntry, ...]: ...
 
+    async def prepare_history(
+        self, generation_id: UUID, history: tuple[ConversationHistoryEntry, ...]
+    ) -> tuple[ConversationHistoryEntry, ...]:
+        """Fence deleted photo context and record indirect assistant dependencies."""
+        ...
+
     async def generation_result(
         self, generation_id: UUID
     ) -> ConversationGenerationRecord | None: ...

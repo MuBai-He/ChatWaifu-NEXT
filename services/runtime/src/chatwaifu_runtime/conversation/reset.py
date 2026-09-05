@@ -7,6 +7,8 @@ from uuid import UUID
 
 from chatwaifu_protocol.events import GenericCoreEvent
 
+from chatwaifu_runtime.photo_memory.models import PhotoGenerationReference
+
 
 @dataclass(frozen=True, slots=True)
 class ExperienceResetRecord:
@@ -15,6 +17,7 @@ class ExperienceResetRecord:
     turns_deleted: int
     events_deleted: int
     reset_event: GenericCoreEvent
+    photo_generations: tuple[PhotoGenerationReference, ...] = ()
 
 
 class ExperienceResetRepository(Protocol):
