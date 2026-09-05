@@ -200,13 +200,18 @@ class WeixinTypingController:
                 refresh = asyncio.create_task(session.refresh.wait())
                 cancelled = asyncio.create_task(session.cancelled.wait())
                 try:
-                    await asyncio.wait(
+                    remaining = max(0, deadline - monotonic())
+                    done, _ = await asyncio.wait(
                         (refresh, cancelled),
-                        timeout=min(self._refresh_seconds, max(0, deadline - monotonic())),
+                        timeout=min(self._refresh_seconds, remaining),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
                     if session.cancelled.is_set():
                         raise _Superseded
+                    # Timer resolution may wake us before monotonic reaches the deadline.
+                    # A lifetime-limited timeout must end typing, not renew it once more.
+                    if not done and remaining <= self._refresh_seconds:
+                        break
                 finally:
                     refresh.cancel()
                     cancelled.cancel()
