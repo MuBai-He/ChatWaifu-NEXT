@@ -2,7 +2,6 @@
 
 import asyncio
 import threading
-import time
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any, Protocol, cast
@@ -20,6 +19,8 @@ from chatwaifu_runtime.memory.retrieval import MemoryRetriever
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from fastapi.testclient import TestClient
 from httpx2 import Response
+
+from services.runtime.tests.runtime_wait import wait_for_generation_terminal
 
 
 class RuntimeHttpClient(Protocol):
@@ -398,24 +399,13 @@ def _create_session(http: RuntimeHttpClient) -> str:
 def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str:
     response = http.post(f"/v1/sessions/{session_id}/turns", json={"text": text})
     assert response.status_code == 202
-    generation_id = str(cast(dict[str, object], response.json())["generation_id"])
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        events = cast(
-            list[dict[str, object]],
-            cast(
-                dict[str, object],
-                http.get(f"/v1/sessions/{session_id}/events?limit=500").json(),
-            )["items"],
-        )
-        for event in events:
-            if (
-                event["event_type"] == "assistant.generation_completed"
-                and str(event.get("generation_id")) == generation_id
-            ):
-                return str(cast(dict[str, object], event["payload"])["text"])
-        time.sleep(0.01)
-    raise AssertionError(f"generation {generation_id} did not complete")
+    generation_id = UUID(str(cast(dict[str, object], response.json())["generation_id"]))
+    generation = wait_for_generation_terminal(cast(TestClient, http), generation_id)
+    assert generation.state.value == "completed", (
+        f"generation {generation_id} ended as {generation.state.value}: {generation.error_code}"
+    )
+    assert generation.output_text is not None
+    return generation.output_text
 
 
 def _memory_items(
