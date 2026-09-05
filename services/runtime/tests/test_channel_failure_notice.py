@@ -1,5 +1,5 @@
 # pyright: reportPrivateUsage=false
-"""Durable system notices and native inbound preemption after model failures."""
+"""Durable recovery notices and native inbound preemption after model failures."""
 
 import asyncio
 from collections.abc import AsyncIterator
@@ -54,7 +54,7 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         assert snapshot.delivery_id is not None
         plan = await container.external_channel_repository.get_delivery_plan(snapshot.delivery_id)
         assert plan is not None and len(plan.parts) == 1
-        expected_notice = "系统通知：这条消息暂时没能回复，稍后再试试吧。"  # noqa: RUF001
+        expected_notice = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
         assert plan.parts[0].payload.text == expected_notice
         stable_id = plan.parts[0].provider_client_id
         generation = await container.conversation_repository.generation_result(
@@ -187,7 +187,7 @@ async def test_native_notice_keeps_context_until_ack_and_then_cleans(
             text: str,
         ) -> str:
             assert context_token == "failure-context"
-            assert text == "系统通知：这条消息暂时没能回复，稍后再试试吧。"  # noqa: RUF001
+            assert text == "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
             sending.set()
             await release.wait()
             return await super().send_text(

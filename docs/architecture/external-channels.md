@@ -282,7 +282,7 @@ that the remote client immediately removes a previously displayed indicator. Res
 fresh ticket only for the newest still-active durable reply; it never replays saved typing events.
 Structured `weixin.typing` logs contain only lifecycle stage, local time, and Runtime lineage IDs.
 
-## Model failure recovery and system notices
+## Model failure recovery notices
 
 The OpenAI-compatible adapter retries HTTP 502/503/504 and transient network/timeouts
 at most twice before any model event is emitted. Backoff is 0.5 then 1.5 seconds;
@@ -298,8 +298,9 @@ prepared retains the existing busy/replay behavior until preparation completes.
 Other gateway API clients retain their default busy behavior.
 
 A final `provider_error` creates a single immediate text delivery on the failed
-channel turn, atomically with its failed state. The payload is
-`系统通知：这条消息暂时没能回复，稍后再试试吧。`.
+channel turn, atomically with its failed state. The payload uses a fixed,
+character-compatible recovery line:
+`唔，刚才的话好像没能顺利说出来……能再和我说一次吗？`.
 The generation and channel turn stay failed, `reply_text` stays null, and no assistant
 turn or memory observation is fabricated. The existing versioned text-part contract,
 lease/ACK state machine and stable provider client ID handle this presentation-only

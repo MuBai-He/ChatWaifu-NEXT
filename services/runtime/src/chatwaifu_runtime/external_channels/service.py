@@ -1311,7 +1311,7 @@ class ExternalChannelService:
                         error=_error(
                             "provider_error", "The model generation failed before delivery."
                         ),
-                        notice_text="系统通知：这条消息暂时没能回复，稍后再试试吧。",  # noqa: RUF001
+                        notice_text="唔，刚才的话好像没能顺利说出来……能再和我说一次吗？",
                         delivery_id=uuid4(),
                         completed_at=now,
                     )
