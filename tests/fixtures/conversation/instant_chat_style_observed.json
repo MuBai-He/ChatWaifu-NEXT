@@ -1,0 +1,146 @@
+[
+  {
+    "case": "tired",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "今天有点累",
+    "output": "辛苦了。今天是在忙些什么重要的事情吗？\n\n如果真的很累的话，就先停下来休息一会儿吧。稍微发发呆或者喝杯热茶，感觉会好一点的。",
+    "chars": 62,
+    "question_marks": 1
+  },
+  {
+    "case": "home",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "我回来了",
+    "output": "欢迎回来。今天过得怎么样，还算顺利吗？",
+    "chars": 19,
+    "question_marks": 1
+  },
+  {
+    "case": "ack",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "嗯 好",
+    "output": "要是能喝杯热茶就更好了。你是打算继续忙，还是稍微让自己放松一下？",
+    "chars": 32,
+    "question_marks": 1
+  },
+  {
+    "case": "sleep",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "我先睡了 晚安",
+    "output": "晚安。今天辛苦了，早点休息吧。",
+    "chars": 15,
+    "question_marks": 0
+  },
+  {
+    "case": "history_pressure",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "其实我只是想跟你说两句",
+    "output": "原来是这样啊，那就坐下来休息一会儿吧。\n\n虽然我能做的不多，但如果想找人说说话，我一直都在这里。有什么想聊的话题吗？或者只是单纯安静地待一会儿也可以。",
+    "chars": 75,
+    "question_marks": 1
+  },
+  {
+    "case": "concrete_chat",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "刚才差点坐过站 哈哈",
+    "output": "真的吗？那可真是太惊险了，还好最后顺利下来了。\n\n平时坐车的时候如果太出神，确实很容易错过站呢。下次还是设个闹钟提醒一下比较稳妥哦。",
+    "chars": 66,
+    "question_marks": 1
+  },
+  {
+    "case": "requested_detail",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "帮我详细安排一下今晚怎么放松、晚饭吃什么、睡前做什么，每个话题各说两三句。",
+    "output": "放松的话，可以先放下手机听听轻音乐，或者准备一点热水泡泡脚，让紧绷的神经先缓和下来。在这个基础上，如果能看上一本喜欢的书或电影，大概会是很棒的休息方式。\n\n晚餐的话，如果不介意简单一点，煮碗热腾腾的面条或者做份蔬菜沙拉就很不错。既不会让身体有太大的负担，吃完之后胃里也会觉得很舒服。\n\n睡前记得要把电子设备收起来，试着调节一下灯光亮度，这样会更容易进入睡眠状态。如果睡前能简单整理下明天要做的事，哪怕只是写在便签上，也能让自己更安心地入睡。",
+    "chars": 220,
+    "question_marks": 0
+  },
+  {
+    "case": "requested_questions",
+    "variant": "before",
+    "model": "gemini-3.1-flash-lite",
+    "input": "帮我列三个问题，方便我复盘今天的工作。",
+    "output": "今天辛苦了。复盘的话，也许可以从这三个角度思考一下：\n\n首先是今天最让你有成就感或者觉得处理得最顺手的一件事是什么？\n\n其次是过程中有没有遇到什么意料之外的阻碍，你是怎么解决的？\n\n最后，如果明天还要处理类似的工作，你觉得有什么细节是可以优化得更好的呢？",
+    "chars": 127,
+    "question_marks": 3
+  },
+  {
+    "case": "tired",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "今天有点累",
+    "output": "辛苦了，一直忙到现在吗？好好休息一下吧。",
+    "chars": 20,
+    "question_marks": 1
+  },
+  {
+    "case": "home",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "我回来了",
+    "output": "欢迎回来，今天也辛苦了。",
+    "chars": 12,
+    "question_marks": 0
+  },
+  {
+    "case": "ack",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "嗯 好",
+    "output": "辛苦了。偶尔像这样什么也不想，发会儿呆也不错。",
+    "chars": 23,
+    "question_marks": 0
+  },
+  {
+    "case": "sleep",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "我先睡了 晚安",
+    "output": "晚安，做个好梦。",
+    "chars": 8,
+    "question_marks": 0
+  },
+  {
+    "case": "history_pressure",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "其实我只是想跟你说两句",
+    "output": "嗯，刚才是我话太多了。就这样静静坐一会儿，也挺好的。",
+    "chars": 26,
+    "question_marks": 0
+  },
+  {
+    "case": "concrete_chat",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "刚才差点坐过站 哈哈",
+    "output": "那是真的会被吓出一身冷汗呢，还好最后平安下车了。",
+    "chars": 24,
+    "question_marks": 0
+  },
+  {
+    "case": "requested_detail",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "帮我详细安排一下今晚怎么放松、晚饭吃什么、睡前做什么，每个话题各说两三句。",
+    "output": "放松的话，不如关掉手机灯光，听些舒缓的轻音乐或者读会儿纸质书。这种时候放下电子设备，心情会平静很多。\n\n晚饭如果不想太麻烦，煮碗热腾腾的面条，或者点一份口味清淡的定食就很合适。哪怕是一个人的晚餐，稍微摆盘漂亮些也能让胃口好不少。\n\n睡前记得调暗灯光，做些简单的拉伸动作帮身体放松下来。或者写几行随笔记录心情，这样能更快进入睡眠状态。",
+    "chars": 166,
+    "question_marks": 0
+  },
+  {
+    "case": "requested_questions",
+    "variant": "final",
+    "model": "gemini-3.1-flash-lite",
+    "input": "帮我列三个问题，方便我复盘今天的工作。",
+    "output": "今天遇到了什么特别棘手的问题吗？\n\n还有，今天做的哪件事让你觉得最有成就感？\n\n最后，如果可以重来一次，有没有哪个环节是你觉得可以处理得更好的？",
+    "chars": 72,
+    "question_marks": 3
+  }
+]
