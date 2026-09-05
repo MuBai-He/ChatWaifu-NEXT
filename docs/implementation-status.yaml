@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-05"
-current_phase: 17.1B
-next_phase: 17.1B-2
+current_phase: 17.1C
+next_phase: 13.4A
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -531,6 +531,16 @@ phases:
       - Interruption delivery 137bd99a-4aac-4f2e-9c87-08803f54b8fe had two already delivered parts and one cancelled unsent part; owner confirmed no further old bubbles, old typing OFF preceded new typing ON, and the new reply ended with OFF
       - Real Typing failure during network loss, process restart, and installed Windows/Linux client display remain unobserved; local failure and cancellation paths are covered by automated tests
       - 525 Runtime tests and 77 protocol tests passed locally; typecheck, format/lint, web and desktop UI builds passed; owner-visible normal typing and interruption acceptance passed on macOS
+  - id: 17.1C
+    name: cross-channel-memory-provenance-ui
+    status: macos_real_weixin_source_ui_accepted
+    evidence:
+      - The Memory Center projects WeChat provenance as a friendly provider, direct/group conversation type, local receive time, and optional untrusted display label
+      - Channel routing identifiers and unknown provider or chat-type values are withheld from the UI; non-channel memory sources retain the existing event/turn fallback
+      - Web component coverage proves label precedence and whitespace normalization, React text escaping, friendly timestamp ordering, and suppression of connection, account, principal, conversation, sender, event, and turn identifiers
+
+      - On 2026-09-05 the real WeChat message at 17:36:08 China time created one active memory and one WeChat direct source; delivery completed and the owner confirmed the native Memory Center displayed the correct friendly source and receive time
+      - 175 Web tests, ESLint, TypeScript, formatting, Web and desktop builds, and independent review passed; all nine PR 19 CI checks passed on implementation commit 11a07d8
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review
@@ -543,7 +553,7 @@ entry_blockers:
   - Multiple tabs sharing one session merge playback truth and are not yet attributed by browser client id
   - Proactive prospective-memory, Skill-completion, calendar, and scene event sources plus ignore-adaptive frequency remain pending
   - The native WeChat iLink adapter passes local wire and lifecycle tests, but macOS owner direct-text acceptance is complete; installed Windows/Linux credential-store acceptance remains pending
-  - Memory sources persist typed channel attribution and retrieval/prompt projection preserve it, but the memory UI does not yet display that provenance; QQ/group and multi-human identity/privacy policy acceptance remain pending, and display labels must never become authorization or deduplication keys
+  - Memory sources persist typed channel attribution and retrieval/prompt projection preserve it; the owner accepted the friendly Memory Center projection against a real WeChat-created memory on macOS on 2026-09-05. QQ/group and multi-human identity/privacy policy acceptance remain pending, and display labels must never become authorization or deduplication keys
 
 constraints:
   real_model_sdks: forbidden_before_phase_8
