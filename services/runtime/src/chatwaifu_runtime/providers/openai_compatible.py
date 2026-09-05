@@ -1,10 +1,12 @@
 """Minimal streaming adapter for local OpenAI-compatible chat-completion servers."""
 
+import asyncio
+import contextlib
 import hashlib
 import json
 import logging
 import math
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from time import monotonic
 from typing import Literal, NoReturn, cast
@@ -43,37 +45,109 @@ class OpenAiCompatibleLlmProvider:
         api_key: str | None,
         timeout_seconds: float,
         transport: httpx2.AsyncBaseTransport | None = None,
+        backoff_delays: Sequence[float] = (0.5, 1.5),
+        sleeper: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._api_key = api_key
-        self._timeout = timeout_seconds
+        self._timeout = float(timeout_seconds)
         self._transport = transport
+        self._backoff_delays = tuple(backoff_delays)
+        self._sleeper = sleeper
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
-        try:
-            async for event in self._stream_once(request):
-                yield event
-        except _ToolCallingUnsupported as error:
-            # OpenAI-compatible describes an endpoint shape, not a guarantee that
-            # the selected model implements function calling. Never retry an
-            # external-action turn as plain text: that could look like a verified
-            # lookup even though no Runtime Skill ran.
-            logger.warning(
-                "OpenAI-compatible model rejected required function tools generation=%s model=%s",
-                request.generation_id,
-                self._model,
-            )
-            raise LlmToolCallingUnavailableError(
-                "OpenAI-compatible model does not support the required tool round"
-            ) from error
+        started_at = monotonic()
+        deadline = started_at + self._timeout
+        max_attempts = 3
+        emitted_any_event = False
+        last_error: Exception | None = None
 
-    async def _stream_once(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        for attempt in range(1, max_attempts + 1):
+            now = monotonic()
+            remaining_timeout = deadline - now
+            if remaining_timeout <= 0:
+                if last_error is not None:
+                    raise TimeoutError(
+                        "OpenAI-compatible request timeout budget exhausted"
+                    ) from last_error
+                raise TimeoutError("OpenAI-compatible request timeout budget exhausted")
+
+            try:
+                async for event in self._stream_once(request, attempt_timeout=remaining_timeout):
+                    emitted_any_event = True
+                    yield event
+                return
+            except _ToolCallingUnsupported as error:
+                # OpenAI-compatible describes an endpoint shape, not a guarantee that
+                # the selected model implements function calling. Never retry an
+                # external-action turn as plain text: that could look like a verified
+                # lookup even though no Runtime Skill ran.
+                logger.warning(
+                    "OpenAI-compatible model rejected required function tools "
+                    "generation=%s model=%s",
+                    _sanitize_generation_id(request.generation_id),
+                    self._model,
+                )
+                raise LlmToolCallingUnavailableError(
+                    "OpenAI-compatible model does not support the required tool round"
+                ) from error
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                last_error = error
+                if emitted_any_event or not _is_retryable_error(error):
+                    raise
+                if attempt >= max_attempts:
+                    logger.warning(
+                        "OpenAI-compatible LLM retry exhausted "
+                        "generation=%s attempt=%d reason=%s elapsed_ms=%d",
+                        _sanitize_generation_id(request.generation_id),
+                        attempt,
+                        _classify_error_reason(error),
+                        round((monotonic() - started_at) * 1000),
+                    )
+                    raise
+
+                elapsed_ms = round((monotonic() - started_at) * 1000)
+                reason = _classify_error_reason(error)
+                logger.warning(
+                    "OpenAI-compatible LLM retry generation=%s attempt=%d reason=%s elapsed_ms=%d",
+                    _sanitize_generation_id(request.generation_id),
+                    attempt,
+                    reason,
+                    elapsed_ms,
+                )
+
+                remaining_after_attempt = deadline - monotonic()
+                if remaining_after_attempt <= 0:
+                    raise
+
+                retry_index = attempt - 1
+                backoff = (
+                    self._backoff_delays[min(retry_index, len(self._backoff_delays) - 1)]
+                    if self._backoff_delays
+                    else 0.0
+                )
+                backoff = min(backoff, remaining_after_attempt)
+                if self._sleeper is not None:
+                    await self._sleeper(backoff)
+                elif backoff > 0:
+                    await asyncio.sleep(backoff)
+
+    async def _stream_once(
+        self, request: LlmRequest, *, attempt_timeout: float | None = None
+    ) -> AsyncIterator[LlmStreamEvent]:
         messages = build_messages(request)
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
         started_at = monotonic()
+        effective_timeout = self._timeout if attempt_timeout is None else attempt_timeout
+        if effective_timeout <= 0:
+            raise TimeoutError("OpenAI-compatible request timeout budget exhausted")
+        deadline = started_at + effective_timeout
+
         first_chunk_at: float | None = None
         last_chunk_at: float | None = None
         chunk_count = 0
@@ -82,80 +156,98 @@ class OpenAiCompatibleLlmProvider:
         completed = False
         tool_parts: dict[int, _ToolCallParts] = {}
         try:
-            async with httpx2.AsyncClient(
-                timeout=self._timeout, transport=self._transport
-            ) as client:
-                async with client.stream(
-                    "POST",
-                    openai_compatible_endpoint(self._base_url, "chat/completions"),
-                    headers=headers,
-                    json=build_chat_completions_payload(self._model, request, messages),
-                ) as response:
+            async with contextlib.AsyncExitStack() as stack:
+                client = await stack.enter_async_context(
+                    httpx2.AsyncClient(timeout=effective_timeout, transport=self._transport)
+                )
+                connect_remaining = max(0.0, deadline - monotonic())
+                if connect_remaining <= 0:
+                    raise TimeoutError("OpenAI-compatible request timeout budget exhausted")
+                async with asyncio.timeout(connect_remaining):
+                    response = await stack.enter_async_context(
+                        client.stream(
+                            "POST",
+                            openai_compatible_endpoint(self._base_url, "chat/completions"),
+                            headers=headers,
+                            json=build_chat_completions_payload(self._model, request, messages),
+                        )
+                    )
                     if response.status_code >= 400:
                         body = await response.aread()
                         if request.tools and _rejects_tool_calling(response.status_code, body):
                             raise _ToolCallingUnsupported
                     response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if not line.startswith("data:"):
-                            continue
-                        data = line.removeprefix("data:").strip()
-                        if data == "[DONE]":
-                            if tool_parts:
-                                for call in _finalize_tool_calls(tool_parts, request):
-                                    yield LlmToolCallRequested(call)
-                                yield LlmResponseCompleted("tool_calls")
-                            else:
-                                yield LlmResponseCompleted("stop")
-                            completed = True
-                            return
-                        try:
-                            payload = _strict_json_loads(data)
-                        except (json.JSONDecodeError, ValueError) as error:
-                            raise RuntimeError(
-                                "OpenAI-compatible LLM returned invalid stream JSON"
-                            ) from error
-                        if not isinstance(payload, dict):
-                            raise RuntimeError("OpenAI-compatible LLM returned invalid stream data")
-                        payload_object = cast(dict[str, object], payload)
-                        choices_value = payload_object.get("choices", [])
-                        if not isinstance(choices_value, list) or not choices_value:
-                            continue
-                        choices = cast(list[object], choices_value)
-                        choice_value = choices[0]
-                        if not isinstance(choice_value, dict):
-                            raise RuntimeError("OpenAI-compatible LLM returned invalid choice data")
-                        choice = cast(dict[str, object], choice_value)
-                        delta_value = choice.get("delta", {})
-                        if not isinstance(delta_value, dict):
-                            raise RuntimeError("OpenAI-compatible LLM returned invalid delta data")
-                        delta = cast(dict[str, object], delta_value)
-                        content = delta.get("content")
-                        if isinstance(content, str) and content:
-                            received_at = monotonic()
-                            first_chunk_at = first_chunk_at or received_at
-                            last_chunk_at = received_at
-                            chunk_count += 1
-                            character_count += len(content)
-                            max_chunk_characters = max(max_chunk_characters, len(content))
-                            yield LlmTextDelta(content)
-                        _accumulate_tool_calls(tool_parts, delta)
-                        finish_value = choice.get("finish_reason")
-                        if finish_value is not None:
-                            finish_reason = _finish_reason(finish_value)
-                            if finish_reason == "tool_calls":
-                                for call in _finalize_tool_calls(tool_parts, request):
-                                    yield LlmToolCallRequested(call)
-                            yield LlmResponseCompleted(finish_reason)
-                            completed = True
-                            return
-                    if tool_parts:
-                        for call in _finalize_tool_calls(tool_parts, request):
-                            yield LlmToolCallRequested(call)
-                        yield LlmResponseCompleted("tool_calls")
-                    else:
-                        yield LlmResponseCompleted("other")
-                    completed = True
+
+                line_iterator = response.aiter_lines().__aiter__()
+                while True:
+                    try:
+                        read_remaining = max(0.0, deadline - monotonic())
+                        if read_remaining <= 0:
+                            raise TimeoutError("OpenAI-compatible request timeout budget exhausted")
+                        async with asyncio.timeout(read_remaining):
+                            line = await anext(line_iterator)
+                    except StopAsyncIteration:
+                        break
+
+                    if not line.startswith("data:"):
+                        continue
+                    data = line.removeprefix("data:").strip()
+                    if data == "[DONE]":
+                        if tool_parts:
+                            for call in _finalize_tool_calls(tool_parts, request):
+                                yield LlmToolCallRequested(call)
+                            yield LlmResponseCompleted("tool_calls")
+                        else:
+                            yield LlmResponseCompleted("stop")
+                        completed = True
+                        return
+                    try:
+                        payload = _strict_json_loads(data)
+                    except (json.JSONDecodeError, ValueError) as error:
+                        raise RuntimeError(
+                            "OpenAI-compatible LLM returned invalid stream JSON"
+                        ) from error
+                    if not isinstance(payload, dict):
+                        raise RuntimeError("OpenAI-compatible LLM returned invalid stream data")
+                    payload_object = cast(dict[str, object], payload)
+                    choices_value = payload_object.get("choices", [])
+                    if not isinstance(choices_value, list) or not choices_value:
+                        continue
+                    choices = cast(list[object], choices_value)
+                    choice_value = choices[0]
+                    if not isinstance(choice_value, dict):
+                        raise RuntimeError("OpenAI-compatible LLM returned invalid choice data")
+                    choice = cast(dict[str, object], choice_value)
+                    delta_value = choice.get("delta", {})
+                    if not isinstance(delta_value, dict):
+                        raise RuntimeError("OpenAI-compatible LLM returned invalid delta data")
+                    delta = cast(dict[str, object], delta_value)
+                    content = delta.get("content")
+                    if isinstance(content, str) and content:
+                        received_at = monotonic()
+                        first_chunk_at = first_chunk_at or received_at
+                        last_chunk_at = received_at
+                        chunk_count += 1
+                        character_count += len(content)
+                        max_chunk_characters = max(max_chunk_characters, len(content))
+                        yield LlmTextDelta(content)
+                    _accumulate_tool_calls(tool_parts, delta)
+                    finish_value = choice.get("finish_reason")
+                    if finish_value is not None:
+                        finish_reason = _finish_reason(finish_value)
+                        if finish_reason == "tool_calls":
+                            for call in _finalize_tool_calls(tool_parts, request):
+                                yield LlmToolCallRequested(call)
+                        yield LlmResponseCompleted(finish_reason)
+                        completed = True
+                        return
+                if tool_parts:
+                    for call in _finalize_tool_calls(tool_parts, request):
+                        yield LlmToolCallRequested(call)
+                    yield LlmResponseCompleted("tool_calls")
+                else:
+                    yield LlmResponseCompleted("other")
+                completed = True
         finally:
             if first_chunk_at is not None and last_chunk_at is not None:
                 ttft_ms = round((first_chunk_at - started_at) * 1000)
@@ -171,7 +263,7 @@ class OpenAiCompatibleLlmProvider:
                     "OpenAI-compatible LLM stream generation=%s model=%s completed=%s "
                     "chunks=%d characters=%d ttft_ms=%d delivery_span_ms=%d "
                     "max_chunk_characters=%d delivery_pattern=%s",
-                    request.generation_id,
+                    _sanitize_generation_id(request.generation_id),
                     self._model,
                     completed,
                     chunk_count,
@@ -428,3 +520,46 @@ def _reject_nonfinite_json_values(value: object) -> None:
             pending.extend(cast(dict[object, object], item).values())
         elif isinstance(item, list):
             pending.extend(cast(list[object], item))
+
+
+def _sanitize_generation_id(generation_id: object) -> str:
+    cleaned = "".join(c for c in str(generation_id) if c.isalnum() or c in "-_")
+    return cleaned[:64] or "unknown"
+
+
+def _classify_error_reason(error: BaseException) -> str:
+    if isinstance(error, httpx2.HTTPStatusError):
+        return f"http_{error.response.status_code}"
+    if isinstance(error, (httpx2.TimeoutException, TimeoutError)):
+        return "timeout"
+    if isinstance(error, (httpx2.NetworkError, ConnectionError)):
+        return "connection_error"
+    if isinstance(error, httpx2.TransportError):
+        return "transport_error"
+    return "transient_error"
+
+
+def _is_retryable_error(error: BaseException) -> bool:
+    if isinstance(
+        error,
+        (
+            asyncio.CancelledError,
+            _ToolCallingUnsupported,
+            LlmToolCallingUnavailableError,
+        ),
+    ):
+        return False
+    if isinstance(error, httpx2.HTTPStatusError):
+        return error.response.status_code in {502, 503, 504}
+    if isinstance(
+        error,
+        (
+            httpx2.NetworkError,
+            httpx2.TimeoutException,
+            httpx2.RemoteProtocolError,
+            TimeoutError,
+            ConnectionError,
+        ),
+    ):
+        return True
+    return False
