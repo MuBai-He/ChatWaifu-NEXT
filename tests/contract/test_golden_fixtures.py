@@ -4,6 +4,8 @@ from pathlib import Path
 from chatwaifu_protocol.channels import (
     ChannelDeliveryAcknowledgement,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
+    ChannelPresentationProfile,
 )
 from chatwaifu_protocol.commands import TextSendCommand
 from chatwaifu_protocol.events import GENERIC_CORE_EVENT_TYPES, SessionCreatedEvent
@@ -61,3 +63,34 @@ def test_typescript_channel_delivery_ack_fixture_parses_in_python() -> None:
     )
     assert acknowledgement.status == "delivered"
     assert acknowledgement.provider_message_id == "provider-reply-001"
+
+
+def test_channel_presentation_policy_defaults_and_parity() -> None:
+    # 1. Omitted profile on empty dict defaults to single_text
+    policy_default = ChannelPresentationPolicy.model_validate({})
+    assert policy_default.profile == ChannelPresentationProfile.SINGLE_TEXT
+    assert policy_default.profile == "single_text"
+    assert policy_default.max_parts == 3
+    assert policy_default.preferred_chars_per_part == 60
+    assert policy_default.soft_max_chars_per_part == 120
+    assert policy_default.cadence_enabled is True
+    assert policy_default.min_delay_ms == 800
+    assert policy_default.max_delay_ms == 3000
+    assert policy_default.total_cadence_delay_ceiling_ms == 6000
+
+    # 2. Partial policy overrides fields while maintaining single_text
+    policy_partial = ChannelPresentationPolicy.model_validate(
+        {"max_parts": 5, "min_delay_ms": 1200, "cadence_enabled": False}
+    )
+    assert policy_partial.profile == ChannelPresentationProfile.SINGLE_TEXT
+    assert policy_partial.max_parts == 5
+    assert policy_partial.min_delay_ms == 1200
+    assert policy_partial.cadence_enabled is False
+
+    # 3. Explicit instant_message profile is preserved
+    policy_im = ChannelPresentationPolicy.model_validate(
+        {"profile": "instant_message", "max_parts": 2}
+    )
+    assert policy_im.profile == ChannelPresentationProfile.INSTANT_MESSAGE
+    assert policy_im.profile == "instant_message"
+    assert policy_im.max_parts == 2

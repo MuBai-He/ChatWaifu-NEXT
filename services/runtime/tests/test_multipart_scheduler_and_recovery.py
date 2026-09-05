@@ -303,8 +303,10 @@ async def _create_plan_with_parts(
     session_id: UUID,
     binding_id: UUID,
     texts: tuple[str, ...],
+    *,
+    created_at: datetime | None = None,
 ) -> tuple[ChannelTurnRecord, UUID]:
-    now = datetime.now(UTC)
+    now = created_at if created_at is not None else datetime.now(UTC)
     turn_id = uuid4()
     delivery_id = uuid4()
 
@@ -1774,3 +1776,438 @@ async def test_next_delivery_wakeup_at_avoids_busy_loop_on_blocked_subsequent_pa
         assert wakeup_c >= now + timedelta(seconds=10)
     finally:
         await container.stop()
+
+
+class _FakeUtcClock:
+    def __init__(self, initial_time: datetime) -> None:
+        self._current = initial_time
+
+    def __call__(self) -> datetime:
+        return self._current
+
+    def advance(self, seconds: float) -> None:
+        self._current += timedelta(seconds=seconds)
+
+
+class _SlowDeliveringExecutor(DeliveryPartExecutor):
+    def __init__(self, clock: _FakeUtcClock, delay_s: float = 5.0) -> None:
+        self._clock = clock
+        self._delay_s = delay_s
+        self.executed_parts: list[tuple[UUID, int]] = []
+
+    async def execute_part(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+    ) -> DeliveryPartExecutionResult:
+        self._clock.advance(self._delay_s)
+        self.executed_parts.append((plan.delivery_id, part.ordinal))
+        return DeliveryPartExecutionResult(
+            outcome=DeliveryPartOutcome.DELIVERED,
+            provider_message_id=f"prov-{part.provider_client_id}",
+        )
+
+
+class _SlowFailingExecutor(DeliveryPartExecutor):
+    def __init__(self, clock: _FakeUtcClock, delay_s: float = 5.0) -> None:
+        self._clock = clock
+        self._delay_s = delay_s
+        self.attempts: list[tuple[UUID, int, int]] = []
+
+    async def execute_part(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+    ) -> DeliveryPartExecutionResult:
+        self._clock.advance(self._delay_s)
+        self.attempts.append((plan.delivery_id, part.ordinal, part.attempt))
+        return DeliveryPartExecutionResult(
+            outcome=DeliveryPartOutcome.RETRYABLE_ERROR,
+            error=StructuredError(
+                code="slow_gateway_timeout",
+                message="Upstream timed out after 5 seconds",
+                retryable=True,
+                component="external_channels",
+            ),
+        )
+
+
+@pytest.mark.asyncio
+async def test_scheduler_slow_successful_send_advances_clock_and_cadence_waits_from_completion(
+    tmp_path: Path,
+) -> None:
+    (
+        database,
+        repo,
+        _,
+        _,
+        connection_id,
+        session_id,
+        binding_id,
+    ) = await _setup_test_environment(tmp_path)
+    try:
+        t0 = datetime(2026, 9, 5, 10, 0, 0, tzinfo=UTC)
+        clock = _FakeUtcClock(t0)
+
+        turn_id = uuid4()
+        delivery_id = uuid4()
+        now = t0
+
+        turn = ChannelTurnRecord(
+            channel_turn_id=turn_id,
+            connection_id=connection_id,
+            binding_id=binding_id,
+            external_message_id=f"ext-{uuid4().hex[:8]}",
+            content_sha256="fake-sha",
+            account_key="bot-owner",
+            conversation_key="chat-user-1",
+            chat_type=ChannelChatType.DIRECT,
+            conversation_label="Test Chat",
+            sender_key="sender-user-1",
+            sender_display_name="User",
+            principal_scope="local",
+            session_id=session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            status=ChannelTurnStatus.ACCEPTED,
+            reply_text=None,
+            error=None,
+            delivery_id=None,
+            delivery_status=None,
+            revision=0,
+            accepted_at=now,
+            created_at=now,
+            updated_at=now,
+            completed_at=None,
+        )
+        await repo.create_turn(turn)
+
+        draft_parts = (
+            ChannelDeliveryPartDraft(
+                ordinal=0,
+                kind=ChannelDeliveryPartKind.TEXT,
+                payload=ChannelTextDeliveryPartPayload(
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    text="Part 1 with 2s cadence",
+                ),
+                required=True,
+                delay_after_ms=2000,
+                not_before_at=None,
+            ),
+            ChannelDeliveryPartDraft(
+                ordinal=1,
+                kind=ChannelDeliveryPartKind.TEXT,
+                payload=ChannelTextDeliveryPartPayload(
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    text="Part 2 following Part 1",
+                ),
+                required=True,
+                delay_after_ms=0,
+                not_before_at=None,
+            ),
+        )
+
+        await repo.complete_turn(
+            turn_id,
+            reply_text="Part 1 with 2s cadence Part 2 following Part 1",
+            delivery_id=delivery_id,
+            completed_at=now,
+            parts=draft_parts,
+        )
+
+        executor = _SlowDeliveringExecutor(clock, delay_s=5.0)
+        scheduler = ChannelDeliveryScheduler(
+            repository=repo,
+            executor=executor,
+            connection_id=connection_id,
+            clock=clock,
+        )
+
+        # Step 1: Part 0 begins sending at T0, execution advances clock by 5s, finishes at T0+5s.
+        assert await scheduler.step() is True
+        assert clock() == t0 + timedelta(seconds=5)
+        assert len(executor.executed_parts) == 1
+        assert executor.executed_parts[0] == (delivery_id, 0)
+
+        # Delivered timestamp must be actual completion time (T0+5s), NOT start time (T0)
+        plan = await repo.get_delivery_plan(delivery_id)
+        assert plan is not None
+        assert plan.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
+        assert plan.parts[0].delivered_at == t0 + timedelta(seconds=5)
+
+        # Cadence delay (2000ms = 2s) MUST be scheduled from completion time: (T0+5s) + 2s = T0+7s
+        assert plan.parts[1].status is ChannelDeliveryPartStatus.PENDING
+        assert plan.parts[1].not_before_at == t0 + timedelta(seconds=7)
+
+        # At actual completion time (T0+5s), Part 1 must NOT be claimable yet
+        assert await scheduler.step() is False
+        assert len(executor.executed_parts) == 1
+
+        # Advance clock to T0+6s (still before T0+7s) -> still not claimable
+        clock.advance(1.0)
+        assert await scheduler.step() is False
+        assert len(executor.executed_parts) == 1
+
+        # Advance clock to T0+7s -> Part 1 is now claimable and delivered
+        clock.advance(1.0)
+        assert await scheduler.step() is True
+        assert len(executor.executed_parts) == 2
+        assert executor.executed_parts[1] == (delivery_id, 1)
+
+        plan_terminal = await repo.get_delivery_plan(delivery_id)
+        assert plan_terminal is not None
+        assert plan_terminal.status is ChannelDeliveryStatus.DELIVERED
+        assert plan_terminal.parts[1].status is ChannelDeliveryPartStatus.DELIVERED
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_scheduler_slow_retryable_send_advances_clock_and_backoff_waits_from_completion(
+    tmp_path: Path,
+) -> None:
+    (
+        database,
+        repo,
+        _,
+        _,
+        connection_id,
+        session_id,
+        binding_id,
+    ) = await _setup_test_environment(tmp_path)
+    try:
+        t0 = datetime(2026, 9, 5, 10, 0, 0, tzinfo=UTC)
+        clock = _FakeUtcClock(t0)
+
+        turn_id = uuid4()
+        delivery_id = uuid4()
+        now = t0
+
+        turn = ChannelTurnRecord(
+            channel_turn_id=turn_id,
+            connection_id=connection_id,
+            binding_id=binding_id,
+            external_message_id=f"ext-{uuid4().hex[:8]}",
+            content_sha256="fake-sha",
+            account_key="bot-owner",
+            conversation_key="chat-user-1",
+            chat_type=ChannelChatType.DIRECT,
+            conversation_label="Test Chat",
+            sender_key="sender-user-1",
+            sender_display_name="User",
+            principal_scope="local",
+            session_id=session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            status=ChannelTurnStatus.ACCEPTED,
+            reply_text=None,
+            error=None,
+            delivery_id=None,
+            delivery_status=None,
+            revision=0,
+            accepted_at=now,
+            created_at=now,
+            updated_at=now,
+            completed_at=None,
+        )
+        await repo.create_turn(turn)
+
+        draft_parts = (
+            ChannelDeliveryPartDraft(
+                ordinal=0,
+                kind=ChannelDeliveryPartKind.TEXT,
+                payload=ChannelTextDeliveryPartPayload(
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    text="Part requiring retry",
+                ),
+                required=True,
+                delay_after_ms=0,
+                not_before_at=None,
+            ),
+        )
+
+        await repo.complete_turn(
+            turn_id,
+            reply_text="Part requiring retry",
+            delivery_id=delivery_id,
+            completed_at=now,
+            parts=draft_parts,
+        )
+
+        executor = _SlowFailingExecutor(clock, delay_s=5.0)
+        scheduler = ChannelDeliveryScheduler(
+            repository=repo,
+            executor=executor,
+            connection_id=connection_id,
+            initial_backoff_seconds=2.0,
+            max_attempts=3,
+            clock=clock,
+        )
+
+        # Step 1: Send begins at T0, fails after 5s at T0+5s.
+        assert await scheduler.step() is True
+        assert clock() == t0 + timedelta(seconds=5)
+        assert len(executor.attempts) == 1
+        assert executor.attempts[0] == (delivery_id, 0, 1)
+
+        # Backoff delay is 2.0s. It MUST be computed from completion time (T0+5s) + 2s = T0+7s!
+        plan = await repo.get_delivery_plan(delivery_id)
+        assert plan is not None
+        part0 = plan.parts[0]
+        assert part0.status is ChannelDeliveryPartStatus.PENDING
+        assert part0.attempt == 1
+        assert part0.not_before_at == t0 + timedelta(seconds=7)
+
+        # At actual failure time (T0+5s), Part 0 must NOT retry immediately!
+        assert await scheduler.step() is False
+        assert len(executor.attempts) == 1
+
+        # Advance to T0+6s -> still within backoff window
+        clock.advance(1.0)
+        assert await scheduler.step() is False
+        assert len(executor.attempts) == 1
+
+        # Advance to T0+7s -> backoff expired, attempt 2 executes
+        clock.advance(1.0)
+        assert await scheduler.step() is True
+        assert len(executor.attempts) == 2
+        assert executor.attempts[1] == (delivery_id, 0, 2)
+    finally:
+        await database.close()
+
+
+@pytest.mark.asyncio
+async def test_scheduler_multiple_plans_fresh_timing_in_single_cycle(
+    tmp_path: Path,
+) -> None:
+    (
+        database,
+        repo,
+        _,
+        _,
+        connection_id,
+        session_id,
+        binding_id,
+    ) = await _setup_test_environment(tmp_path)
+    try:
+        t0 = datetime(2026, 9, 5, 10, 0, 0, tzinfo=UTC)
+        clock = _FakeUtcClock(t0)
+
+        # Plan A: Ready immediately
+        _, deliv_a = await _create_plan_with_parts(
+            repo,
+            connection_id,
+            session_id,
+            binding_id,
+            ("Plan A text",),
+            created_at=t0 - timedelta(seconds=1),
+        )
+
+        # Plan B: Scheduled with not_before_at = T0 + 3s
+        turn_b_id = uuid4()
+        deliv_b = uuid4()
+        turn_b = ChannelTurnRecord(
+            channel_turn_id=turn_b_id,
+            connection_id=connection_id,
+            binding_id=binding_id,
+            external_message_id=f"ext-{uuid4().hex[:8]}",
+            content_sha256="fake-sha-b",
+            account_key="bot-owner",
+            conversation_key="chat-user-1",
+            chat_type=ChannelChatType.DIRECT,
+            conversation_label="Test Chat",
+            sender_key="sender-user-1",
+            sender_display_name="User",
+            principal_scope="local",
+            session_id=session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            status=ChannelTurnStatus.ACCEPTED,
+            reply_text=None,
+            error=None,
+            delivery_id=None,
+            delivery_status=None,
+            revision=0,
+            accepted_at=t0,
+            created_at=t0,
+            updated_at=t0,
+            completed_at=None,
+        )
+        await repo.create_turn(turn_b)
+        await repo.complete_turn(
+            turn_b_id,
+            reply_text="Plan B text",
+            delivery_id=deliv_b,
+            completed_at=t0,
+            parts=(
+                ChannelDeliveryPartDraft(
+                    ordinal=0,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(
+                        kind=ChannelDeliveryPartKind.TEXT,
+                        text="Plan B text",
+                    ),
+                    required=True,
+                    delay_after_ms=0,
+                    not_before_at=t0 + timedelta(seconds=3),
+                ),
+            ),
+        )
+
+        # Plan A takes 5s to send. Plan B takes 1s to send.
+        class _MultiPlanExecutor(DeliveryPartExecutor):
+            def __init__(self, c: _FakeUtcClock) -> None:
+                self.c = c
+                self.history: list[tuple[UUID, datetime, datetime]] = []
+
+            async def execute_part(
+                self,
+                plan: ChannelDeliveryPlanRecord,
+                part: ChannelDeliveryPartRecord,
+            ) -> DeliveryPartExecutionResult:
+                start_time = self.c()
+                dur = 5.0 if plan.delivery_id == deliv_a else 1.0
+                self.c.advance(dur)
+                end_time = self.c()
+                self.history.append((plan.delivery_id, start_time, end_time))
+                return DeliveryPartExecutionResult(
+                    outcome=DeliveryPartOutcome.DELIVERED,
+                    provider_message_id=f"msg-{part.provider_client_id}",
+                )
+
+        multi_executor = _MultiPlanExecutor(clock)
+        scheduler = ChannelDeliveryScheduler(
+            repository=repo,
+            executor=multi_executor,
+            connection_id=connection_id,
+            lease_seconds=30,
+            clock=clock,
+        )
+
+        # Single step() cycle evaluates both plans.
+        # Plan A is claimed at T0, takes 5s, finishes at T0+5s.
+        # When loop reaches Plan B, fresh time T0+5s is evaluated:
+        # since T0+5s >= T0+3s (not_before_at), Plan B is claimed at T0+5s in the SAME cycle!
+        progress = await scheduler.step()
+        assert progress is True
+        assert len(multi_executor.history) == 2
+
+        # Verify execution timestamps
+        assert multi_executor.history[0][0] == deliv_a
+        assert multi_executor.history[0][1] == t0
+        assert multi_executor.history[0][2] == t0 + timedelta(seconds=5)
+
+        assert multi_executor.history[1][0] == deliv_b
+        assert multi_executor.history[1][1] == t0 + timedelta(seconds=5)
+        assert multi_executor.history[1][2] == t0 + timedelta(seconds=6)
+
+        # Verify delivered timestamps in database
+        plan_a_rec = await repo.get_delivery_plan(deliv_a)
+        assert plan_a_rec is not None
+        assert plan_a_rec.parts[0].delivered_at == t0 + timedelta(seconds=5)
+
+        plan_b_rec = await repo.get_delivery_plan(deliv_b)
+        assert plan_b_rec is not None
+        assert plan_b_rec.parts[0].delivered_at == t0 + timedelta(seconds=6)
+    finally:
+        await database.close()

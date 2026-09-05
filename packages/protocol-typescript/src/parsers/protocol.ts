@@ -723,7 +723,7 @@ const channelPresentationProfileSchema = z.enum([
 const channelPresentationPolicySchema = z
   .object({
     schema_version: channelSchemaVersion.default("1.0"),
-    profile: channelPresentationProfileSchema.default("instant_message"),
+    profile: channelPresentationProfileSchema.default("single_text"),
     max_parts: z.number().int().min(1).max(10).default(3),
     preferred_chars_per_part: z.number().int().min(10).max(500).default(60),
     soft_max_chars_per_part: z.number().int().min(20).max(1000).default(120),
