@@ -218,6 +218,13 @@ Memory extraction stores `MemoryChannelAttribution` on provenance. A later Deskt
 recall that a fact was learned through WeChat without treating the mutable contact label as identity.
 Reset, correction, export, and forgetting include this provenance.
 
+The Memory Center projects that attribution through a presentation-only boundary. It may render a
+friendly provider name, direct/group label, local receive time, and one React-escaped untrusted display
+label. It never renders connection, account, principal, conversation, sender, event, or turn routing
+identifiers for channel sources. Unknown provider and chat-type values use generic labels instead of
+exposing raw protocol values. These display strings never participate in authorization, identity,
+deduplication, or retrieval.
+
 The protocol reserves separate group and member keys, but V1 still rejects groups. Adding groups
 requires first-class human principals, per-member/group relationship and memory policy, privacy tests,
 and a new acceptance record.

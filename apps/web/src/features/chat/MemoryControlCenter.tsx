@@ -339,9 +339,7 @@ export function MemoryControlCenter({
                       <ul className="memory-sources">
                         {sources[record.memory_id]?.map((source) => (
                           <li key={source.source_id}>
-                            {source.source_kind} · event{" "}
-                            {source.source_event_id.slice(0, 8)} · turn{` `}
-                            {source.turn_id?.slice(0, 8) ?? "management"}
+                            {formatMemorySource(source)}
                           </li>
                         ))}
                       </ul>
@@ -362,4 +360,42 @@ export function MemoryControlCenter({
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "记忆操作失败";
+}
+
+const PROVIDER_NAMES = new Map([["weixin_ilink", "微信"]]);
+
+const CHAT_TYPE_NAMES = new Map([
+  ["direct", "私聊"],
+  ["group", "群聊"],
+]);
+
+function formatMemorySource(source: MemorySource): string {
+  const attribution = source.channel_attribution;
+  if (!attribution) {
+    const turn = source.turn_id?.slice(0, 8) ?? "management";
+    return `${source.source_kind} · event ${source.source_event_id.slice(0, 8)} · turn ${turn}`;
+  }
+
+  const provider = PROVIDER_NAMES.get(attribution.provider_id) ?? "外部渠道";
+  const chatType = CHAT_TYPE_NAMES.get(attribution.chat_type) ?? "会话";
+  const displayLabel =
+    normalizeDisplayLabel(attribution.sender_display_name) ||
+    normalizeDisplayLabel(attribution.conversation_label) ||
+    null;
+  const timestamp = formatReceivedAt(attribution.received_at);
+
+  return [provider, chatType, timestamp, displayLabel]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatReceivedAt(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "时间未知"
+    : date.toLocaleString("zh-CN");
+}
+
+function normalizeDisplayLabel(value: string | null | undefined): string {
+  return value?.replace(/\s+/g, " ").trim() ?? "";
 }
