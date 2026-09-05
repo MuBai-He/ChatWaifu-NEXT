@@ -299,7 +299,7 @@ Other gateway API clients retain their default busy behavior.
 
 A final `provider_error` creates a single immediate text delivery on the failed
 channel turn, atomically with its failed state. The payload is
-`【系统提示】暂时无法生成回复，请稍后再试。`.
+`系统通知：这条消息暂时没能回复，稍后再试试吧。`.
 The generation and channel turn stay failed, `reply_text` stays null, and no assistant
 turn or memory observation is fabricated. The existing versioned text-part contract,
 lease/ACK state machine and stable provider client ID handle this presentation-only

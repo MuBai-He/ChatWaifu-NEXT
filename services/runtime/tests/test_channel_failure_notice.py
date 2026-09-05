@@ -54,7 +54,8 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         assert snapshot.delivery_id is not None
         plan = await container.external_channel_repository.get_delivery_plan(snapshot.delivery_id)
         assert plan is not None and len(plan.parts) == 1
-        assert plan.parts[0].payload.text.startswith("【系统提示】")
+        expected_notice = "系统通知：这条消息暂时没能回复，稍后再试试吧。"  # noqa: RUF001
+        assert plan.parts[0].payload.text == expected_notice
         stable_id = plan.parts[0].provider_client_id
         generation = await container.conversation_repository.generation_result(
             receipt.generation_id
@@ -186,7 +187,7 @@ async def test_native_notice_keeps_context_until_ack_and_then_cleans(
             text: str,
         ) -> str:
             assert context_token == "failure-context"
-            assert text.startswith("【系统提示】")
+            assert text == "系统通知：这条消息暂时没能回复，稍后再试试吧。"  # noqa: RUF001
             sending.set()
             await release.wait()
             return await super().send_text(
