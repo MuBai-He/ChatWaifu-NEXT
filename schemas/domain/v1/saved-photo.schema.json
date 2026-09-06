@@ -1,4 +1,60 @@
 {
+  "$defs": {
+    "PhotoUserAnnotation": {
+      "properties": {
+        "annotation_id": {
+          "format": "uuid",
+          "title": "Annotation Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "date",
+            "event",
+            "context"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "quote": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_generation_id": {
+          "format": "uuid",
+          "title": "Source Generation Id",
+          "type": "string"
+        },
+        "superseded": {
+          "default": false,
+          "title": "Superseded",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "annotation_id",
+        "quote",
+        "kind",
+        "source_generation_id",
+        "observed_at"
+      ],
+      "title": "PhotoUserAnnotation",
+      "type": "object"
+    }
+  },
   "$id": "https://chatwaifu.local/schemas/domain/v1/saved-photo.schema.json",
   "properties": {
     "byte_size": {
@@ -12,6 +68,32 @@
       "maxLength": 1000,
       "title": "Caption",
       "type": "string"
+    },
+    "captured_at": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Captured At"
+    },
+    "captured_at_offset": {
+      "anyOf": [
+        {
+          "maxLength": 16,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Captured At Offset"
     },
     "confidence": {
       "maximum": 1,
@@ -48,6 +130,50 @@
       ],
       "title": "Mime Type",
       "type": "string"
+    },
+    "original_height": {
+      "anyOf": [
+        {
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Original Height"
+    },
+    "original_mime_type": {
+      "anyOf": [
+        {
+          "enum": [
+            "image/png",
+            "image/jpeg"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Original Mime Type"
+    },
+    "original_width": {
+      "anyOf": [
+        {
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Original Width"
     },
     "photo_id": {
       "format": "uuid",
@@ -100,6 +226,14 @@
       "minLength": 1,
       "title": "Title",
       "type": "string"
+    },
+    "user_annotations": {
+      "items": {
+        "$ref": "#/$defs/PhotoUserAnnotation"
+      },
+      "maxItems": 32,
+      "title": "User Annotations",
+      "type": "array"
     },
     "width": {
       "maximum": 2048,

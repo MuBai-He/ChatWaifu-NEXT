@@ -12,7 +12,9 @@ from uuid import UUID
 
 from PIL import Image, ImageOps
 
+from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
+from chatwaifu_runtime.photo_memory.metadata import extract_photo_metadata
 from chatwaifu_runtime.photo_memory.models import PhotoSaveCandidate
 from chatwaifu_runtime.photo_memory.ports import PhotoMemoryRepository
 from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
@@ -37,7 +39,9 @@ class PhotoMemoryObserver:
         repository: PhotoMemoryRepository,
         classifier: PhotoClassifier,
         semantic_service: PhotoSemanticService | None = None,
+        annotations: PhotoAnnotationService | None = None,
     ) -> None:
+        self._annotations = annotations
         self.repository = repository
         self._classifier = classifier
         self._semantic_service = semantic_service
@@ -127,6 +131,7 @@ class PhotoMemoryObserver:
                 if classification is None or not await wait_for_completion():
                     return
 
+                meta = extract_photo_metadata(image.data, fallback_mime=image.mime_type)
                 data, mime_type, width, height = _normalize_photo(image)
 
                 record = await self.repository.save(
@@ -143,6 +148,11 @@ class PhotoMemoryObserver:
                         keywords=tuple(k.strip() for k in classification.keywords),
                         source_connection_id=source.connection_id,
                         generation_id=source.generation_id,
+                        captured_at=meta.captured_at,
+                        captured_at_offset=meta.captured_at_offset,
+                        original_width=meta.original_width,
+                        original_height=meta.original_height,
+                        original_mime_type=meta.original_mime_type,
                     ),
                     expected_revision=revision,
                 )
@@ -151,6 +161,8 @@ class PhotoMemoryObserver:
                     source.generation_id,
                     record is not None,
                 )
+                if record is not None and self._annotations is not None:
+                    self._annotations.observe(source.generation_id)
                 if record is not None and self._semantic_service is not None:
                     self._semantic_service.index_new_photo(
                         source.principal_scope, source.character_id, record

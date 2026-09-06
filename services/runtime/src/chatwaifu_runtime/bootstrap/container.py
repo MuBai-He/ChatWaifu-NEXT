@@ -43,6 +43,7 @@ from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryR
 from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
+from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
 from chatwaifu_runtime.photo_memory.recall import PhotoRecallService
@@ -181,10 +182,14 @@ class RuntimeContainer:
             photo_semantic=self.photo_semantic,
             photo_semantic_adapter=self.photo_semantic_adapter,
         )
+        self.photo_annotations = PhotoAnnotationService(
+            self.photo_repository, self.model_configurations, self.photo_semantic
+        )
         self.photo_observer = PhotoMemoryObserver(
             self.photo_repository,
             PhotoClassifier(self.providers.llm),
             semantic_service=self.photo_semantic,
+            annotations=self.photo_annotations,
         )
         self.photo_recall = PhotoRecallService(
             self.photo_repository,
@@ -205,6 +210,7 @@ class RuntimeContainer:
             self.prompt_compiler,
             self.agent,
             photo_recall=self.photo_recall,
+            photo_annotations=self.photo_annotations,
         )
         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
         self.sticker_library = StickerLibraryService(
@@ -339,6 +345,7 @@ class RuntimeContainer:
                 self.sticker_library.start()
                 await self.photo_semantic.sync_epoch()
                 self.photo_semantic.start()
+                self.photo_annotations.start()
                 self.photo_observer.start()
                 await self.external_channels.start()
                 await self.channel_management.start()
@@ -400,6 +407,7 @@ class RuntimeContainer:
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
                 _CleanupStep("photo_observer", lambda: self.photo_observer.stop()),
+                _CleanupStep("photo_annotations", lambda: self.photo_annotations.stop()),
                 _CleanupStep("index_rebuild", lambda: self.index_rebuild.stop()),
                 _CleanupStep("photo_semantic", lambda: self.photo_semantic.stop()),
                 _CleanupStep("external_channels", lambda: self.external_channels.stop()),

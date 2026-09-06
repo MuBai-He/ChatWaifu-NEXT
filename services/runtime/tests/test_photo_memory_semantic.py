@@ -622,9 +622,26 @@ async def test_independent_accepted_negative_examples_score_below_threshold(
 
     generation_id = await _create_active_generation_for_recall(test_db)
 
-    for term in negative_examples:
-        # Register simulated query vector with all similarities < 0.55 (e.g. max 0.42)
-        q_vec = _make_unit_vector(2048, 2000 + hash(term) % 1000)
+    # Explicitly remove the document span. Python's randomized hash previously produced
+    # near-periodic sine vectors with cosine ~0.99 for some negative queries.
+    basis: list[list[float]] = []
+    for document in (v1, v2, v3, v4):
+        orthogonal = list(document)
+        for direction in basis:
+            dot = sum(a * b for a, b in zip(orthogonal, direction, strict=True))
+            orthogonal = [a - dot * b for a, b in zip(orthogonal, direction, strict=True)]
+        norm = math.hypot(*orthogonal)
+        basis.append([a / norm for a in orthogonal])
+    for index, term in enumerate(negative_examples):
+        q_vec = _make_unit_vector(2048, 2000 + index)
+        for direction in basis:
+            dot = sum(a * b for a, b in zip(q_vec, direction, strict=True))
+            q_vec = [a - dot * b for a, b in zip(q_vec, direction, strict=True)]
+        norm = math.hypot(*q_vec)
+        q_vec = [a / norm for a in q_vec]
+        assert all(
+            abs(sum(a * b for a, b in zip(q_vec, v, strict=True))) < 1e-8 for v in (v1, v2, v3, v4)
+        )
         provider.register(term, q_vec)
         provider.register(f"{term}照片", q_vec)
         provider.register(f"{term}的照片", q_vec)
