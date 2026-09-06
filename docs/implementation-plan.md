@@ -2508,8 +2508,9 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
   Sticker collection and photo retention have distinct purposes: ordinary photos are excluded
   from the sticker library, not from future visual memory. The owner explicitly wants saved
   photos to be available for later conversation and recall.
-- **17.4 — Shared jokes and adaptive recall:** shared-joke associations, usage history, and adaptive
-  retrieval remain planned in the broader roadmap; detailed design is pending.
+- **17.4 — Shared jokes and adaptive recall (in progress):** 17.4A shared-joke association and recall
+  were accepted on real WeChat and merged in PR #30. Delivery-backed sticker usage history,
+  adaptive selection, and sticker binding remain pending.
 
 Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
 or the remaining image and sticker capabilities are accepted.
@@ -2531,7 +2532,7 @@ remain later Phase 17.3 work; completing 17.3A does not complete the parent phas
 On 2026-09-05 at 20:11 China time, the owner confirmed a real WeChat image was understood correctly.
 The image-only turn produced one successful text delivery on its first attempt in about 10.6 seconds.
 This accepts the macOS image-understanding path; cancellation/failure/restart remain separately
-covered by automated tests. Dynamic sticker learning is still pending.
+covered by automated tests. Static sticker learning and reuse were subsequently accepted in 17.3B.
 
 ### Phase 17.3B — Opt-in learned sticker library
 
@@ -2578,7 +2579,7 @@ photo with no stale sleep topic (assets/FTS/references 0). Explicit reupload fol
 recall (06:26:14) correctly referenced red roofs with new photo recall. Issue #24 blackface is
 explicitly deferred.
 
-### Phase 17.3D — Bounded semantic photo recall (implementation complete, real-model acceptance pending)
+### Phase 17.3D — Bounded semantic photo recall (implemented; native semantic-only acceptance pending)
 
 While lexical search resolves exact matches, users naturally refer to retained photos via synonyms,
 paraphrases, and abstract descriptions. Phase 17.3D implements bounded semantic photo recall under
@@ -2610,10 +2611,11 @@ Key architecture and invariants:
   Saving changes to embedding provider/model/baseURL presents a warning modal with exact text; choosing
   "稍后" or Escape leaves normal retrieval enabled without rebuilding. Non-route edits never trigger warnings.
 
-Real-model acceptance on live WeChat remains pending (Issue #24 deferred). Multi-photo groups and animations
-remain pending Phase 17 work; completing this slice does not complete Phase 17.
+Configured embedding/model probes and manual-rebuild UI acceptance passed. A native WeChat
+semantic-only recall check (lexical miss, without recent-history assistance) remains pending.
+Multi-image intake was accepted in 17.3F; animations remain in Draft PR #29. Issue #24 is separate.
 
-### Phase 17.3E — Bounded photo source metadata and capture date extraction (implementation complete, real-device acceptance pending)
+### Phase 17.3E — Bounded photo source metadata and capture date extraction (native owner accepted)
 
 Phase 17.3E allows retaining trustworthy photo capture dates and basic source metadata without confusing
 immutable channel receipt evidence (`received_at`) with attributed device timestamps (`captured_at`), under
@@ -2646,8 +2648,8 @@ Key architecture and invariants:
 - **Desktop gallery UX**: Tiles display `captured_at` when available; preview dialog displays a metadata panel
   showing capture time (with explicit `(时区未知)` for naive timestamps), receipt time, save time, and original vs stored specs.
 
-Multi-photo groups, animations, shared jokes, and real-device WeChat acceptance remain pending; completing
-this slice does not complete Phase 17.
+Owner WeChat acceptance is recorded below. Native multi-image intake and shared jokes were
+subsequently accepted in 17.3F and 17.4A; animations remain in Draft PR #29.
 
 The owner-approved extension automatically associates exact user statements with authoritative current
 or adjacent photo references via the memory_extraction model role. Statements retain utterance time,
@@ -2660,7 +2662,7 @@ was verified: a real ice cream photo was saved, the exact user quote `今天上�
 a user annotation, conversational recall answered `今天上午买的`, and after a Runtime restart, a new recall
 query recorded a `photo_reference` and answered correctly. Because chat history remained intact across
 the restart, this verified real multi-turn recall with photo reference recording but did not constitute
-a history-independent memory proof. Animations and Phase 17.4 remain pending.
+a history-independent memory proof. Animations and adaptive sticker recall remain pending.
 
 ### Phase 17.3F — Bounded inbound multiple static images within one wire message
 
@@ -2683,8 +2685,9 @@ Key architecture and invariants:
   format/dimension checks, or byte limits, the entire batch is rejected. The turn terminates in
   `ChannelTurnStatus.FAILED` with the durable friendly recovery notice `刚才发来的图片我没看清，能再发一次吗？`,
   with 0 provider calls, 0 observer calls, and 0 partial assistant responses.
-- **Cross-message independence**: No time-based windowing or merging across separate wire messages.
-  Independent wire messages retain their existing identity, deduplication, and supersession semantics.
+- **Wire-message identity**: Every message retains its own identity and deduplication. The later
+  ADR 0041 collection below groups adjacent image messages for one reply while retaining each
+  source record; plain text still interrupts immediately.
 - **Composite batch fingerprinting**: Single-image fingerprint computation is strictly preserved for
   backward compatibility. Multi-image batches compute a deterministic SHA-256 over a canonical JSON array
   of private references. Replay with modified or reordered images triggers `ChannelConflictError`.
@@ -2707,7 +2710,11 @@ Key architecture and invariants:
   - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
     (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
   - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
-- **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and remaining Phase 17.4 adaptive sticker ranking remain pending.
+- **Native acceptance**: On 2026-09-06 at 16:04 Asia/Shanghai, two separate native image messages
+  formed one durable batch and one generation; one acknowledged reply addressed both images.
+  The owner confirmed success. PR #28 merged with all 13 checks green on 31ee526.
+- **Pending scope**: GIF/APNG remains in Draft PR #29, deferred to QQ acceptance; adaptive sticker
+  ranking and binding remain Phase 17.4 work.
 
 ### Phase 17.4A — Bounded shared joke association and recall
 
@@ -2740,3 +2747,22 @@ Key architecture and invariants:
 - **PromptCompiler guidance**: Recalled shared jokes provide natural callback guidance to LLM without mechanical
   explanation and without joke pinning.
 - **Pending scope**: Adaptive sticker ranking, sticker binding, group/multi-principal humor, provider-specific acceptance (including QQ), and animated media remain pending.
+
+### Phase 17.3G — Animated media (draft; integration deferred)
+
+PR #29 implements bounded GIF/APNG understanding, retention, preview and delivery after a channel
+provides supported bytes. Its automated and configured-model checks passed. Native WeChat clients
+did not provide a reliable GIF round trip; the owner explicitly deferred end-to-end acceptance
+until QQ integration. This code is outside main and must not be counted as a released capability.
+
+### Remaining Phase 17 sequence
+
+1. 17.4B-1: delivery-backed sticker usage history, preserving distinct failure/cancellation outcomes.
+2. 17.4B-2: bounded adaptive sticker selection based on that history.
+3. Grounded shared-joke/sticker binding (proposed 17.4C; design not yet accepted).
+4. QQ adapter and native media acceptance, then revisit Draft PR #29.
+
+Photo semantic-only native acceptance and long-range/follow-up-before-save photo association remain
+separate follow-ups. Multimodal embedding interfaces are reserved; the current implementation
+embeds photo descriptions. A visual provider/index path and standalone OCR are not implemented.
+No percentage-complete claim is derived from phase numbering. Phase 13.4A remains paused.
