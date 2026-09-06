@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.character_kernel.service import USER_SCOPE
+from chatwaifu_runtime.media.image import extract_static_poster
 from chatwaifu_runtime.sticker_library.models import StickerLibraryRevisionConflict
 
 router = APIRouter(prefix="/v1/sticker-library", tags=["sticker-library"])
@@ -80,18 +81,30 @@ async def get_learned_sticker_image(
     request: Request,
     sticker_id: str,
     character_id: str = Query(default="default"),
+    poster: bool = Query(default=False),
 ) -> Response:
     _assert_supported_character(character_id)
     container = _container(request)
-    data = await container.sticker_repository.get_image(USER_SCOPE, character_id, sticker_id)
-    if data is None:
+    asset = await container.sticker_repository.get_asset(USER_SCOPE, character_id, sticker_id)
+    if asset is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Sticker '{sticker_id}' not found.",
         )
+    data, mime_type, is_animated = asset
+    if poster and is_animated:
+        poster_data = extract_static_poster(data, mime_type)
+        return Response(
+            content=poster_data,
+            media_type="image/png",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
     return Response(
         content=data,
-        media_type="image/png",
+        media_type=mime_type,
         headers={
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",

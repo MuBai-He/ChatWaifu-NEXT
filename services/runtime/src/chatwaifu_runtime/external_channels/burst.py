@@ -37,6 +37,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.photo_memory.models import PhotoItemOrigin
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 
@@ -117,7 +118,10 @@ class BurstItem:
     turn: ChannelTurnRecord
     message: ChannelInboundTextMessage
     raw_images: tuple[object, ...]
-    loader: Callable[[], Awaitable[tuple[LlmInputImage, ...] | LlmInputImage]]
+    loader: Callable[
+        [],
+        Awaitable[tuple[LlmInputImage | InboundMediaItem, ...] | LlmInputImage | InboundMediaItem],
+    ]
     caption: str
     received_at: datetime
     context_token: str | None
@@ -237,7 +241,12 @@ class ImageBurstCoordinator:
         message: ChannelInboundTextMessage,
         turn: ChannelTurnRecord,
         raw_images: tuple[object, ...],
-        loader: Callable[[], Awaitable[tuple[LlmInputImage, ...] | LlmInputImage]],
+        loader: Callable[
+            [],
+            Awaitable[
+                tuple[LlmInputImage | InboundMediaItem, ...] | LlmInputImage | InboundMediaItem
+            ],
+        ],
         *,
         character_id: str,
         principal_scope: str,

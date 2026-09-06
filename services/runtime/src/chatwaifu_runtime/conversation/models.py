@@ -11,6 +11,7 @@ from uuid import UUID
 
 from chatwaifu_protocol.session import GenerationState
 
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
@@ -128,9 +129,15 @@ class ConversationTurnOptions:
     source_context: ConversationSourceContext | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
-    image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(
-        default=None, repr=False, compare=False
-    )
+    image_loader: (
+        Callable[
+            [],
+            Awaitable[
+                LlmInputImage | InboundMediaItem | tuple[LlmInputImage | InboundMediaItem, ...]
+            ],
+        ]
+        | None
+    ) = field(default=None, repr=False, compare=False)
 
     def emits(self, mode: ConversationOutputMode) -> bool:
         return mode in self.output_modes

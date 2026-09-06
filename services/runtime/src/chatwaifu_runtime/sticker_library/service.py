@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import io
 import logging
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
@@ -12,8 +11,9 @@ from uuid import UUID
 
 from chatwaifu_protocol.channels import ChannelImageDeliveryPartPayload
 from chatwaifu_protocol.character import ResponsePlan
-from PIL import Image
 
+from chatwaifu_runtime.media import InboundMediaItem
+from chatwaifu_runtime.media.image import normalize_animated_sticker
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
@@ -23,6 +23,14 @@ from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, m
 logger = logging.getLogger(__name__)
 MAX_PENDING_IMAGES = 2
 MAX_LEARNING_SECONDS = 45
+
+__all__ = [
+    "MAX_LEARNING_SECONDS",
+    "MAX_PENDING_IMAGES",
+    "StickerLearningSource",
+    "StickerLibraryService",
+    "_normalize_sticker",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +76,7 @@ class StickerLibraryService:
     async def observe_batch(
         self,
         source: StickerLearningSource,
-        images: Sequence[LlmInputImage],
+        images: Sequence[LlmInputImage | InboundMediaItem],
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
@@ -96,7 +104,7 @@ class StickerLibraryService:
     async def observe(
         self,
         source: StickerLearningSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
@@ -105,7 +113,7 @@ class StickerLibraryService:
     async def _learn_batch(
         self,
         source: StickerLearningSource,
-        images: tuple[LlmInputImage, ...],
+        images: tuple[LlmInputImage | InboundMediaItem, ...],
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
@@ -133,19 +141,29 @@ class StickerLibraryService:
     async def _learn(
         self,
         source: StickerLearningSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
         try:
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
+                classifier_image = (
+                    image.raster_image if isinstance(image, InboundMediaItem) else image
+                )
                 classification = await self._classifier.classify(
-                    image, generation_id=source.generation_id
+                    classifier_image, generation_id=source.generation_id
                 )
                 if classification is None or not await wait_for_completion():
                     return
                 # Re-encode only accepted stickers; strip source metadata and bound library size.
-                data = _normalize_sticker(image)
+                if isinstance(image, InboundMediaItem):
+                    data, mime_type, is_animated = normalize_animated_sticker(
+                        image.raw_data, image.original_mime_type
+                    )
+                else:
+                    data, mime_type, is_animated = normalize_animated_sticker(
+                        image.data, image.mime_type
+                    )
                 record = await self.repository.save(
                     source.principal_scope,
                     source.character_id,
@@ -156,6 +174,8 @@ class StickerLibraryService:
                         expression=classification.expression,
                         source_connection_id=source.connection_id,
                         generation_id=source.generation_id,
+                        mime_type=mime_type,
+                        is_animated=is_animated,
                     ),
                     expected_revision=revision,
                 )
@@ -210,20 +230,5 @@ class StickerLibraryService:
 
 
 def _normalize_sticker(image: LlmInputImage) -> bytes:
-    with Image.open(io.BytesIO(image.data)) as source:
-        if source.format not in {"PNG", "JPEG"} or getattr(source, "n_frames", 1) != 1:
-            raise ValueError("unsupported sticker image")
-        if source.width > 8192 or source.height > 8192 or source.width * source.height > 16_777_216:
-            raise ValueError("sticker image dimensions exceed limits")
-        source.load()
-        converted = source.convert("RGBA")
-        converted.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
-        # A fresh image discards EXIF/text metadata, including transparent palette metadata.
-        clean = Image.new("RGBA", converted.size)
-        clean.paste(converted)
-        result = io.BytesIO()
-        clean.save(result, format="PNG")
-    data = result.getvalue()
-    if len(data) > 5 * 1024 * 1024:
-        raise ValueError("normalized sticker exceeds size limit")
+    data, _, _ = normalize_animated_sticker(image.data, image.mime_type)
     return data

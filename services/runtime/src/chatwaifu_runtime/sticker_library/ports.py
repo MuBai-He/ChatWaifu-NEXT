@@ -54,6 +54,15 @@ class StickerLibraryRepository(Protocol):
         expected_sha256: str | None = None,
     ) -> bytes | None: ...
 
+    async def get_asset(
+        self,
+        scope: str,
+        character_id: str,
+        sticker_id: str,
+        *,
+        expected_sha256: str | None = None,
+    ) -> tuple[bytes, str, bool] | None: ...
+
     async def delete(
         self,
         scope: str,

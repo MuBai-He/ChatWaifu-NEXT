@@ -24,13 +24,14 @@ class LearnedSticker(ProtocolModel):
     schema_version: Literal["1.0"] = "1.0"
     sticker_id: str = Field(pattern=r"^learned_[0-9a-f]{32}$")
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    mime_type: Literal["image/png"] = "image/png"
+    mime_type: Literal["image/png", "image/gif"] = "image/png"
     label: str = Field(min_length=1, max_length=80)
     description: str = Field(min_length=1, max_length=300)
     expression: Literal["neutral", "happy", "sad", "angry", "surprised", "shy", "curious"]
     byte_size: int = Field(ge=1, le=5 * 1024 * 1024)
     learned_at: AwareDatetime
     source_connection_id: UUID
+    is_animated: bool = False
 
 
 class StickerLibrarySnapshot(ProtocolModel):

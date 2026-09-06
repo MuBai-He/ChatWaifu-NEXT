@@ -31,12 +31,14 @@ def _make_test_credentials() -> WeixinCredentials:
     )
 
 
-def _make_test_png(width: int = 1, height: int = 1, animated: bool = False) -> bytes:
+def _make_test_png(
+    width: int = 1, height: int = 1, animated: bool = False, num_frames: int = 2
+) -> bytes:
     if animated:
         img1 = Image.new("RGB", (width, height), color="red")
-        img2 = Image.new("RGB", (width, height), color="blue")
+        others = [Image.new("RGB", (width, height), color="blue") for _ in range(num_frames - 1)]
         out = io.BytesIO()
-        img1.save(out, format="PNG", save_all=True, append_images=[img2])
+        img1.save(out, format="PNG", save_all=True, append_images=others)
         return out.getvalue()
     img = Image.new("RGB", (width, height), color="red")
     out = io.BytesIO()
@@ -409,12 +411,12 @@ async def test_send_image_validation_rejections() -> None:
             context_token="c1",
             client_id="cid1",
             image_bytes=_make_test_png(1, 1),
-            mime_type="image/gif",
+            mime_type="image/webp",
         )
     assert exc_mime.value.code == "weixin.image_invalid"
 
-    # Animated PNG (multiple frames)
-    apng_data = _make_test_png(1, 1, animated=True)
+    # Animated PNG exceeding frame limit (> 60 frames)
+    apng_data = _make_test_png(1, 1, animated=True, num_frames=61)
     with pytest.raises(WeixinILinkError) as exc_apng:
         await client.send_image(
             creds,

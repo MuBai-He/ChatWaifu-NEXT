@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
-from typing import Literal, Protocol, cast
+from typing import Protocol, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.channels import (
@@ -80,8 +80,11 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelService,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.media import (
+    InboundMediaItem,
+    async_decode_and_sanitize_inbound_media,
+)
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
-from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 logger = logging.getLogger(__name__)
@@ -124,10 +127,10 @@ def _make_batch_image_loader(
     *,
     connection_id: UUID,
     external_message_id: str,
-) -> Callable[[], Awaitable[tuple[LlmInputImage, ...]]]:
+) -> Callable[[], Awaitable[tuple[InboundMediaItem, ...]]]:
     bound_images = images
 
-    async def _load() -> tuple[LlmInputImage, ...]:
+    async def _load() -> tuple[InboundMediaItem, ...]:
         start = perf_counter()
         try:
             raw_downloads = await transport.download_images(bound_images)
@@ -136,15 +139,9 @@ def _make_batch_image_loader(
                     f"expected {len(bound_images)} downloaded images, got {len(raw_downloads)}"
                 )
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
-            results: list[LlmInputImage] = []
+            results: list[InboundMediaItem] = []
             for image_bytes, mime in raw_downloads:
-                if mime == "image/png":
-                    valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
-                elif mime in ("image/jpeg", "image/jpg"):
-                    valid_mime = "image/jpeg"
-                else:
-                    raise ValueError(f"unsupported image mime type: {mime}")
-                results.append(LlmInputImage(data=image_bytes, mime_type=valid_mime))
+                results.append(await async_decode_and_sanitize_inbound_media(image_bytes, mime))
             _log_weixin_timing(
                 "image_download_success",
                 connection_id=str(connection_id),
@@ -1829,7 +1826,7 @@ class ChannelManagementService:
                             retryable=False,
                         ),
                     )
-                if part.payload.mime_type not in ("image/png", "image/jpeg"):
+                if part.payload.mime_type not in ("image/png", "image/jpeg", "image/gif"):
                     return DeliveryPartExecutionResult(
                         outcome=DeliveryPartOutcome.FATAL_ERROR,
                         error=_structured_error(

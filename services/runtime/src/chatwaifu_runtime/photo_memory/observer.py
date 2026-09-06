@@ -13,6 +13,7 @@ from uuid import UUID
 from chatwaifu_protocol.photo_memory import SavedPhoto
 from PIL import Image, ImageOps
 
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.metadata import extract_photo_metadata
@@ -77,7 +78,7 @@ class PhotoMemoryObserver:
     async def observe_batch(
         self,
         source: PhotoObservationSource,
-        images: Sequence[LlmInputImage],
+        images: Sequence[LlmInputImage | InboundMediaItem],
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origins: Sequence[PhotoItemOrigin] | None = None,
@@ -105,7 +106,7 @@ class PhotoMemoryObserver:
     async def observe(
         self,
         source: PhotoObservationSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
@@ -114,7 +115,7 @@ class PhotoMemoryObserver:
     async def _observe_batch_pipeline(
         self,
         source: PhotoObservationSource,
-        images: tuple[LlmInputImage, ...],
+        images: tuple[LlmInputImage | InboundMediaItem, ...],
         fence: object,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origins: tuple[PhotoItemOrigin, ...] | None = None,
@@ -133,12 +134,22 @@ class PhotoMemoryObserver:
                 for idx, image in enumerate(images):
                     if self._stop_fence is not fence:
                         return
+                    if isinstance(image, InboundMediaItem) and image.is_animated:
+                        logger.info(
+                            "skipping animated media item for photo memory generation_id=%s idx=%s",
+                            source.generation_id,
+                            idx,
+                        )
+                        continue
+                    actual_image = (
+                        image.raster_image if isinstance(image, InboundMediaItem) else image
+                    )
                     item_origin = item_origins[idx] if item_origins is not None else None
                     try:
                         async with asyncio.timeout(MAX_LEARNING_SECONDS):
                             record = await self._observe(
                                 source,
-                                image,
+                                actual_image,
                                 settings.revision,
                                 wait_for_completion,
                                 item_origin=item_origin,

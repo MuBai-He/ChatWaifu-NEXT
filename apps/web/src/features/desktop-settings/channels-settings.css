@@ -513,6 +513,47 @@
   color: #a35c66;
 }
 
+.sticker-library-tile-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 60%);
+  color: #ffffff;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.sticker-library-play-button {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgb(0 0 0 / 60%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.65rem;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.sticker-library-play-button:hover {
+  background: rgb(0 0 0 / 80%);
+  transform: scale(1.08);
+}
+
+.sticker-library-play-button.playing {
+  background: rgb(173 91 141 / 85%);
+}
+
 .sticker-library-tile-info {
   display: flex;
   flex-direction: column;

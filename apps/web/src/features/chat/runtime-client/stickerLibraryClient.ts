@@ -75,12 +75,13 @@ export interface FetchStickerImageOptions {
   characterId?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
+  poster?: boolean;
 }
 
 export const MAX_STICKER_IMAGE_BYTE_SIZE = 5 * 1024 * 1024; // 5 MiB
 
 /**
- * Fetches the binary PNG for a learned sticker using authenticated Bearer token (never query params)
+ * Fetches the binary PNG/GIF for a learned sticker using authenticated Bearer token (never query params)
  * and returns an object URL. The caller is responsible for revoking the returned URL.
  */
 export async function fetchStickerImageUrl(
@@ -91,6 +92,7 @@ export async function fetchStickerImageUrl(
     characterId = "default",
     signal: callerSignal,
     timeoutMs = 8_000,
+    poster = false,
   } = options;
 
   if (callerSignal?.aborted) {
@@ -120,6 +122,9 @@ export async function fetchStickerImageUrl(
   }, timeoutMs);
 
   const query = new URLSearchParams({ character_id: characterId });
+  if (poster) {
+    query.set("poster", "true");
+  }
   const url = `${connection.baseUrl}/v1/sticker-library/${encodeURIComponent(stickerId)}/image?${query.toString()}`;
 
   const headers: Record<string, string> = {};
@@ -143,8 +148,12 @@ export async function fetchStickerImageUrl(
       .get("Content-Type")
       ?.split(";")[0]
       ?.trim();
-    if (contentType && contentType !== "image/png") {
-      throw new Error(`表情图片类型错误 (${contentType})，仅支持 PNG`);
+    if (
+      contentType &&
+      contentType !== "image/png" &&
+      contentType !== "image/gif"
+    ) {
+      throw new Error(`表情图片类型错误 (${contentType})，仅支持 PNG 和 GIF`);
     }
 
     const contentLengthHeader = response.headers.get("Content-Length");
@@ -170,7 +179,7 @@ export async function fetchStickerImageUrl(
       );
     }
 
-    if (blob.type && blob.type !== "image/png") {
+    if (blob.type && blob.type !== "image/png" && blob.type !== "image/gif") {
       throw new Error(`表情图片格式不匹配 (${blob.type})`);
     }
     if (blob.size > MAX_STICKER_IMAGE_BYTE_SIZE) {
