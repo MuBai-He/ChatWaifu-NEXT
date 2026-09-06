@@ -542,7 +542,9 @@
   justify-content: center;
   cursor: pointer;
   font-size: 0.65rem;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .sticker-library-play-button:hover {
