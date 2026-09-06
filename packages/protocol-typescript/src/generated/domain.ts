@@ -1070,6 +1070,8 @@ export type SchemaVersion47 = '1.0'
 export type Capacity = 200
 export type ByteSize1 = number
 export type Caption = string
+export type CapturedAt = string | null
+export type CapturedAtOffset = string | null
 export type Confidence3 = number
 export type Description6 = string
 export type Height = number
@@ -1091,6 +1093,9 @@ export type Keywords =
   | [string, string, string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string, string, string]
 export type MimeType4 = 'image/png' | 'image/jpeg'
+export type OriginalHeight = number | null
+export type OriginalMimeType = ('image/png' | 'image/jpeg') | null
+export type OriginalWidth = number | null
 export type PhotoId = string
 export type ReceivedAt2 = string
 export type SavedAt = string
@@ -1101,12 +1106,23 @@ export type SourceGenerationId = string
 export type SourceSessionId = string
 export type SourceTurnId = string
 export type Title4 = string
+export type AnnotationId = string
+export type Kind6 = 'date' | 'event' | 'context'
+export type ObservedAt2 = string
+export type Quote = string
+export type SchemaVersion49 = '1.0'
+export type SourceGenerationId1 = string
+export type Superseded = boolean
+/**
+ * @maxItems 32
+ */
+export type UserAnnotations = PhotoUserAnnotation[]
 export type Width = number
 /**
  * @maxItems 200
  */
 export type Items = SavedPhoto[]
-export type SchemaVersion49 = '1.0'
+export type SchemaVersion50 = '1.0'
 export type TotalBytes = number
 export type Description7 = string
 export type Enabled3 = boolean
@@ -1124,7 +1140,7 @@ export type Version2 = string
 export type Description8 = string
 export type Name10 = string
 export type PluginId1 = string
-export type SchemaVersion50 = '1.0'
+export type SchemaVersion51 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -1135,7 +1151,7 @@ export type Skills = [string, ...string[]]
  * @maxItems 32
  */
 export type Command3 = [string, ...string[]]
-export type Kind6 = 'stdio'
+export type Kind7 = 'stdio'
 export type NetworkPolicy3 = 'deny' | 'loopback' | 'allow'
 export type SandboxMode3 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel3 = 'trusted' | 'untrusted'
@@ -1232,19 +1248,19 @@ export type TurnId24 = string | null
 export type UpdatedAt12 = string
 export type Deleted1 = boolean
 export type Revision8 = number
-export type SchemaVersion51 = '1.0'
+export type SchemaVersion52 = '1.0'
 export type LearningEnabled = boolean
 export type Revision9 = number
-export type SchemaVersion52 = '1.0'
+export type SchemaVersion53 = '1.0'
 export type ExpectedRevision5 = number
 export type LearningEnabled1 = boolean
-export type SchemaVersion53 = '1.0'
+export type SchemaVersion54 = '1.0'
 export type Capacity1 = 100
 /**
  * @maxItems 100
  */
 export type Items1 = LearnedSticker[]
-export type SchemaVersion54 = '1.0'
+export type SchemaVersion55 = '1.0'
 export type TotalBytes1 = number
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
@@ -2564,7 +2580,7 @@ export interface PhotoMemorySettingsUpdate {
 export interface PhotoMemorySnapshot {
   capacity?: Capacity
   items?: Items
-  schema_version?: SchemaVersion49
+  schema_version?: SchemaVersion50
   settings: PhotoMemorySettings
   total_bytes: TotalBytes
   [k: string]: unknown
@@ -2572,11 +2588,16 @@ export interface PhotoMemorySnapshot {
 export interface SavedPhoto {
   byte_size: ByteSize1
   caption?: Caption
+  captured_at?: CapturedAt
+  captured_at_offset?: CapturedAtOffset
   confidence: Confidence3
   description: Description6
   height: Height
   keywords?: Keywords
   mime_type: MimeType4
+  original_height?: OriginalHeight
+  original_mime_type?: OriginalMimeType
+  original_width?: OriginalWidth
   photo_id: PhotoId
   received_at: ReceivedAt2
   saved_at: SavedAt
@@ -2587,7 +2608,18 @@ export interface SavedPhoto {
   source_session_id: SourceSessionId
   source_turn_id: SourceTurnId
   title: Title4
+  user_annotations?: UserAnnotations
   width: Width
+  [k: string]: unknown
+}
+export interface PhotoUserAnnotation {
+  annotation_id: AnnotationId
+  kind: Kind6
+  observed_at: ObservedAt2
+  quote: Quote
+  schema_version?: SchemaVersion49
+  source_generation_id: SourceGenerationId1
+  superseded?: Superseded
   [k: string]: unknown
 }
 export interface PluginSnapshot {
@@ -2610,7 +2642,7 @@ export interface PluginManifest {
   description: Description8
   name: Name10
   plugin_id: PluginId1
-  schema_version?: SchemaVersion50
+  schema_version?: SchemaVersion51
   skills: Skills
   transport: PluginTransport
   version: Version3
@@ -2618,7 +2650,7 @@ export interface PluginManifest {
 }
 export interface PluginTransport {
   command: Command3
-  kind?: Kind6
+  kind?: Kind7
   network_policy?: NetworkPolicy3
   sandbox_mode?: SandboxMode3
   trust_level?: TrustLevel3
@@ -2746,25 +2778,25 @@ export interface SkillRunSnapshot {
 export interface StickerLibraryDeleteResult {
   deleted: Deleted1
   revision: Revision8
-  schema_version?: SchemaVersion51
+  schema_version?: SchemaVersion52
   [k: string]: unknown
 }
 export interface StickerLibrarySettings {
   learning_enabled?: LearningEnabled
   revision?: Revision9
-  schema_version?: SchemaVersion52
+  schema_version?: SchemaVersion53
   [k: string]: unknown
 }
 export interface StickerLibrarySettingsUpdate {
   expected_revision: ExpectedRevision5
   learning_enabled: LearningEnabled1
-  schema_version?: SchemaVersion53
+  schema_version?: SchemaVersion54
   [k: string]: unknown
 }
 export interface StickerLibrarySnapshot {
   capacity?: Capacity1
   items?: Items1
-  schema_version?: SchemaVersion54
+  schema_version?: SchemaVersion55
   settings: StickerLibrarySettings
   total_bytes: TotalBytes1
   [k: string]: unknown

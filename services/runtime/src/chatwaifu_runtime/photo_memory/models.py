@@ -23,6 +23,11 @@ class PhotoSaveCandidate:
     keywords: tuple[str, ...]
     source_connection_id: UUID
     generation_id: UUID
+    captured_at: str | None = None
+    captured_at_offset: str | None = None
+    original_width: int | None = None
+    original_height: int | None = None
+    original_mime_type: Literal["image/png", "image/jpeg"] | None = None
 
 
 @dataclass(frozen=True, slots=True)

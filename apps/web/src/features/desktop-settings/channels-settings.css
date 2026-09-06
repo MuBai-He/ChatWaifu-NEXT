@@ -790,30 +790,121 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 24px;
 }
 .photo-memory-dialog-content {
   position: relative;
-  max-width: 90vw;
+  max-width: 900px;
+  width: 100%;
   max-height: 90vh;
-}
-.photo-memory-dialog-image {
-  max-width: 100%;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: 8px;
+  background: var(--settings-card-bg, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .photo-memory-dialog-close {
   position: absolute;
-  top: -40px;
-  right: 0;
-  color: white;
-  background: none;
+  top: 12px;
+  right: 16px;
+  color: var(--settings-text, #333333);
+  background: rgba(0, 0, 0, 0.06);
   border: none;
-  font-size: 2rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  z-index: 10;
+  transition: background 0.15s ease;
+}
+.photo-memory-dialog-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+.photo-memory-dialog-body {
+  display: flex;
+  flex-direction: row;
+  max-height: 85vh;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .photo-memory-dialog-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+}
+.photo-memory-dialog-image {
+  flex: 1 1 60%;
+  min-width: 0;
+  max-width: 60%;
+  max-height: 85vh;
+  object-fit: contain;
+  background: #18181b;
+}
+@media (max-width: 640px) {
+  .photo-memory-dialog-image {
+    max-width: 100%;
+    max-height: 45vh;
+  }
+}
+.photo-memory-dialog-details {
+  flex: 1 1 40%;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  background: var(--settings-card-bg, #ffffff);
+}
+.photo-memory-dialog-desc {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--settings-text, #27272a);
+  margin: 0;
+}
+.photo-memory-dialog-caption {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--settings-muted, #71717a);
+  background: rgba(0, 0, 0, 0.03);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 0;
+}
+.photo-memory-dialog-meta-list {
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 12px;
+}
+.photo-memory-dialog-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.photo-memory-dialog-meta-item dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--settings-muted, #888888);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.photo-memory-dialog-meta-item dd {
+  font-size: 0.8rem;
+  color: var(--settings-text, #111111);
+  margin: 0;
+  word-break: break-all;
 }
