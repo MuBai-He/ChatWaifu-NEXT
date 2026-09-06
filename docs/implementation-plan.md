@@ -2697,5 +2697,15 @@ Key architecture and invariants:
   references return null. When multiple candidate photos exist in recent context, ambiguous user statements
   like `这张照片` or `this photo` return `null` to prevent arbitrary attribution to any photo candidate.
   Explicit references bind via descriptive distinctions.
+- **Bounded native multi-message image burst collection (ADR 0041)**: Handles the owner-observed
+  separate wire messages arriving ~1.0s apart on native multi-photo selection:
+  - `ImageBurstCoordinator` buffers inbound image turns using a 1.5s sliding idle window and a 4.0s hard ceiling.
+  - A wire message containing 4 images or bursts reaching 4 images eager-seal immediately with 0 debounce delay.
+  - Excess images (>4) seal as overflow, delivering the durable failure recovery notice (`刚才发来的图片我没看清，能再发一次吗？`)
+    at their dispatch slot without calling LLMs or cancelling active generations in flight.
+  - Inbound plain text messages (e.g. `"停一下"`) immediately cancel pending bursts and active image generation.
+  - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
+    (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
+  - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
 - **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and Phase 17.4
   (shared jokes, usage history, adaptive recall) remain pending.

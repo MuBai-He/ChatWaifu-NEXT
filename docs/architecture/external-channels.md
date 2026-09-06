@@ -392,6 +392,21 @@ Key architectural boundaries:
 
 See [ADR 0040](../adr/0040-bounded-inbound-multi-image.md).
 
+## Bounded multi-message image burst collection for native WeChat clients (Phase 17.3F / ADR 0041)
+
+The owner’s 2026-09-06 native WeChat multi-selection arrived as separate wire messages about one second apart; the client platform was not established. Poll response grouping does not determine image cardinality. `ImageBurstCoordinator` buffers inbound image turns within a connection:
+
+- **Sliding idle window (1.5s) & hard ceiling (4.0s)**: New images extend the idle timer up to a 4.0s hard ceiling from the leader turn's arrival.
+- **Product cap (4 images) & eager seal**: Single wire messages containing 4 images or bursts reaching 4 images seal immediately with 0 additional debounce delay.
+- **Wire batch and burst overflow**: Single wire messages containing >4 images or accumulated burst items exceeding 4 images seal as overflow, delivering the durable failure recovery notice (`刚才发来的图片我没看清，能再发一次吗？`) at their dispatch slot with 0 LLM calls, without cancelling active generations in flight.
+- **Immediate plain text supersession**: Plain text turns (such as `"停一下"`) immediately cancel pending bursts and active image generation before normal text intake proceeds.
+- **Durable leader / member records (Migration 28)**: Inbound turns are durably persisted in `channel_turns` before poll cursors advance. `channel_turn_burst_members` links followers to the leader. Followers transition to processing with the leader and authoritatively mirror the leader's terminal state (`completed`, `failed`, `cancelled`).
+- **Photo memory fidelity**: Each photo retains its distinct message's `received_at` timestamp in `photo_assets`, validated authoritatively against `channel_turn_burst_members`.
+
+- **Capacity and cleanup**: At most 16 retained batches globally, one active and one pending per binding. Excess messages behind a sealed pending batch join its single failure outcome; they never block later text. Only leaders retain reply contexts.
+
+See [ADR 0041](../adr/0041-bounded-multi-message-image-burst.md).
+
 ## Native WeChat timing diagnostics
 
 `weixin.timing` JSON log records correlate nonempty poll returns, message observation,

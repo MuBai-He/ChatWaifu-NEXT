@@ -1099,4 +1099,24 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         ALTER TABLE photo_assets ADD COLUMN original_mime_type TEXT;
         """,
     ),
+    (
+        28,
+        """
+        CREATE TABLE channel_turn_burst_members (
+            burst_id TEXT NOT NULL,
+            leader_channel_turn_id TEXT NOT NULL
+                REFERENCES channel_turns(channel_turn_id) ON DELETE CASCADE,
+            member_channel_turn_id TEXT NOT NULL PRIMARY KEY
+                REFERENCES channel_turns(channel_turn_id) ON DELETE CASCADE,
+            ordinal INTEGER NOT NULL CHECK(ordinal >= 0 AND ordinal < 4),
+            received_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX channel_turn_burst_members_leader_idx
+            ON channel_turn_burst_members(leader_channel_turn_id);
+        CREATE INDEX channel_turn_burst_members_burst_idx
+            ON channel_turn_burst_members(burst_id);
+        """,
+    ),
 )

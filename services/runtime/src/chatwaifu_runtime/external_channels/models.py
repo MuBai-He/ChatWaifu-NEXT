@@ -95,6 +95,16 @@ class ChannelTurnRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class ChannelTurnBurstMemberRecord:
+    burst_id: UUID
+    leader_channel_turn_id: UUID
+    member_channel_turn_id: UUID
+    ordinal: int
+    received_at: datetime
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class ChannelDeliveryRecord:
     delivery_id: UUID
     channel_turn_id: UUID

@@ -371,6 +371,13 @@ class ChannelManagementService:
         self._terminal_events_task: asyncio.Task[None] | None = None
         self._stopping = False
         self._external_channels.add_turn_terminal_listener(self._on_turn_terminal)
+        if hasattr(self._external_channels, "set_scheduler_wake_callback"):
+            self._external_channels.set_scheduler_wake_callback(self._wake_scheduler)
+
+    def _wake_scheduler(self, connection_id: UUID) -> None:
+        scheduler = self.get_scheduler(connection_id)
+        if scheduler is not None:
+            scheduler.wake()
 
     def _get_credential_lock(self, connection_id: UUID) -> asyncio.Lock:
         lock = self._credential_mutation_locks.get(connection_id)
@@ -1224,6 +1231,9 @@ class ChannelManagementService:
                     recipient_user_id=message.sender_user_id,
                 ),
             )
+            fresh_credentials = await self._load_credentials(connection_id)
+            if fresh_credentials is not None:
+                credentials = fresh_credentials
             _log_weixin_timing(
                 "context_ready",
                 connection_id=str(connection_id),
@@ -1268,14 +1278,23 @@ class ChannelManagementService:
                 text=normalized_text,
                 received_at=message.received_at,
             )
+            is_burst_eligible = bool(
+                raw_images
+                and connection.configuration.character_id == "default"
+                and message.sender_user_id == credentials.user_id
+            )
             ingest_started = perf_counter()
             try:
                 if image_input is not None:
                     receipt = await self._external_channels.ingest(
                         inbound,
                         access_token=credentials.gateway_access_token,
-                        supersede_inflight=True,
+                        supersede_inflight=not is_burst_eligible,
                         image_input=image_input,
+                        burst_intake=is_burst_eligible,
+                        raw_images=raw_images,
+                        context_token=message.context_token,
+                        pending_contexts_count=len(credentials.pending_contexts),
                     )
                 else:
                     receipt = await self._external_channels.ingest(
@@ -1284,6 +1303,7 @@ class ChannelManagementService:
                         supersede_inflight=True,
                     )
             except (ChannelBusyError, ChannelDeliveryBusyError):
+                await self._forget_context(connection_id, message.external_message_id)
                 raise
             except ExternalChannelError:
                 logger.warning(
@@ -1292,6 +1312,13 @@ class ChannelManagementService:
                 )
                 await self._forget_context(connection_id, message.external_message_id)
                 continue
+            except Exception:
+                logger.warning(
+                    "unexpected error ingesting inbound WeChat message %s",
+                    message.external_message_id,
+                )
+                await self._forget_context(connection_id, message.external_message_id)
+                raise
 
             _log_weixin_timing(
                 "ingest_returned",
@@ -1324,6 +1351,13 @@ class ChannelManagementService:
                         is_terminal = True
                     if is_terminal:
                         await self._forget_context(connection_id, message.external_message_id)
+
+            member = await self._repository.find_burst_leader(receipt.channel_turn_id)
+            if member is not None and member.leader_channel_turn_id != receipt.channel_turn_id:
+                # Only the leader sends a reply/typing indicator. Follower identities
+                # are durable; retaining their private send tokens can starve stop text.
+                await self._forget_context(connection_id, message.external_message_id)
+                continue
 
             typing = self._typing.get(connection_id)
             policy = connection.configuration.presentation_policy
@@ -1373,6 +1407,12 @@ class ChannelManagementService:
             ChannelTurnStatus.TIMED_OUT,
         ):
             await self._forget_context(turn.connection_id, turn.external_message_id)
+            members = await self._repository.list_burst_members(turn.channel_turn_id)
+            for member in members:
+                if member.member_channel_turn_id != turn.channel_turn_id:
+                    mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                    if mem_turn is not None:
+                        await self._forget_context(turn.connection_id, mem_turn.external_message_id)
 
     async def _handle_plan_terminal(
         self,
@@ -1383,6 +1423,12 @@ class ChannelManagementService:
         if turn is None:
             return
         await self._forget_context(connection_id, turn.external_message_id)
+        members = await self._repository.list_burst_members(turn.channel_turn_id)
+        for member in members:
+            if member.member_channel_turn_id != turn.channel_turn_id:
+                mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                if mem_turn is not None:
+                    await self._forget_context(connection_id, mem_turn.external_message_id)
 
     async def reconcile_pending_contexts(self, connection_id: UUID) -> None:
         await self._reconcile_pending_contexts(connection_id)
@@ -1409,15 +1455,24 @@ class ChannelManagementService:
                 if turn is None:
                     stale_message_ids.append(external_message_id)
                     continue
-                if turn.delivery_id is not None:
-                    plan = await self._repository.get_delivery_plan(turn.delivery_id)
+                member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
+                if (
+                    member_rec is not None
+                    and member_rec.leader_channel_turn_id != turn.channel_turn_id
+                ):
+                    leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
+                    check_turn = leader_turn if leader_turn is not None else turn
+                else:
+                    check_turn = turn
+                if check_turn.delivery_id is not None:
+                    plan = await self._repository.get_delivery_plan(check_turn.delivery_id)
                     if plan is None or plan.status in (
                         ChannelDeliveryStatus.DELIVERED,
                         ChannelDeliveryStatus.FAILED,
                         ChannelDeliveryStatus.CANCELLED,
                     ):
                         stale_message_ids.append(external_message_id)
-                elif turn.status in (
+                elif check_turn.status in (
                     ChannelTurnStatus.FAILED,
                     ChannelTurnStatus.CANCELLED,
                     ChannelTurnStatus.COMPLETED,

@@ -27,6 +27,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
+    ChannelTurnBurstMemberRecord,
     ChannelTurnRecord,
     CompleteTurnResult,
     DeliveryTransitionResult,
@@ -111,6 +112,24 @@ class ExternalChannelRepository(Protocol):
         completed_at: datetime,
         parts: Sequence[ChannelDeliveryPartDraft] | None = None,
     ) -> CompleteTurnResult | ChannelTurnRecord: ...
+
+    async def add_burst_member(
+        self,
+        burst_id: UUID,
+        leader_channel_turn_id: UUID,
+        member_channel_turn_id: UUID,
+        ordinal: int,
+        received_at: datetime,
+        created_at: datetime,
+    ) -> ChannelTurnBurstMemberRecord: ...
+
+    async def list_burst_members(
+        self, leader_channel_turn_id: UUID
+    ) -> tuple[ChannelTurnBurstMemberRecord, ...]: ...
+
+    async def find_burst_leader(
+        self, member_channel_turn_id: UUID
+    ) -> ChannelTurnBurstMemberRecord | None: ...
 
     async def create_delivery_plan(
         self,

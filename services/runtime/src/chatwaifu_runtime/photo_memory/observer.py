@@ -16,7 +16,7 @@ from PIL import Image, ImageOps
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.metadata import extract_photo_metadata
-from chatwaifu_runtime.photo_memory.models import PhotoSaveCandidate
+from chatwaifu_runtime.photo_memory.models import PhotoItemOrigin, PhotoSaveCandidate
 from chatwaifu_runtime.photo_memory.ports import PhotoMemoryRepository
 from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
 from chatwaifu_runtime.providers.contracts import LlmInputImage
@@ -80,6 +80,7 @@ class PhotoMemoryObserver:
         images: Sequence[LlmInputImage],
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        item_origins: Sequence[PhotoItemOrigin] | None = None,
     ) -> None:
         fence = self._stop_fence
         if fence is None or source.generation_id in self._tasks or not images:
@@ -90,9 +91,12 @@ class PhotoMemoryObserver:
 
         if len(images) > 4:
             return
+        if item_origins is not None and len(item_origins) != len(images):
+            return
         batch = tuple(images)
+        origins = tuple(item_origins) if item_origins is not None else None
         task = asyncio.create_task(
-            self._observe_batch_pipeline(source, batch, fence, wait_for_completion),
+            self._observe_batch_pipeline(source, batch, fence, wait_for_completion, origins),
             name=f"photo-observation-{source.generation_id}",
         )
         self._tasks[source.generation_id] = (source.connection_id, task)
@@ -113,7 +117,10 @@ class PhotoMemoryObserver:
         images: tuple[LlmInputImage, ...],
         fence: object,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        item_origins: tuple[PhotoItemOrigin, ...] | None = None,
     ) -> None:
+        if item_origins is not None and len(item_origins) != len(images):
+            return
         try:
             total_budget = len(images) * MAX_LEARNING_SECONDS
             async with asyncio.timeout(total_budget):
@@ -123,13 +130,18 @@ class PhotoMemoryObserver:
                 if not settings.retention_enabled or self._stop_fence is not fence:
                     return
                 saved_records: list[SavedPhoto] = []
-                for image in images:
+                for idx, image in enumerate(images):
                     if self._stop_fence is not fence:
                         return
+                    item_origin = item_origins[idx] if item_origins is not None else None
                     try:
                         async with asyncio.timeout(MAX_LEARNING_SECONDS):
                             record = await self._observe(
-                                source, image, settings.revision, wait_for_completion
+                                source,
+                                image,
+                                settings.revision,
+                                wait_for_completion,
+                                item_origin=item_origin,
                             )
                             if record is not None:
                                 saved_records.append(record)
@@ -163,6 +175,7 @@ class PhotoMemoryObserver:
         image: LlmInputImage,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        item_origin: PhotoItemOrigin | None = None,
     ) -> SavedPhoto | None:
         try:
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
@@ -194,6 +207,7 @@ class PhotoMemoryObserver:
                         original_width=meta.original_width,
                         original_height=meta.original_height,
                         original_mime_type=meta.original_mime_type,
+                        item_origin=item_origin,
                     ),
                     expected_revision=revision,
                 )

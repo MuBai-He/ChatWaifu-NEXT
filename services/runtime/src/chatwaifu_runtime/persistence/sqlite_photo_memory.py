@@ -320,7 +320,8 @@ class SQLitePhotoMemoryRepository:
 
             cursor = await conn.execute(
                 """
-                SELECT t.session_id, t.turn_id, IFNULL(u.committed_text, '') as caption,
+                SELECT t.channel_turn_id, t.session_id, t.turn_id,
+                       IFNULL(u.committed_text, '') as caption,
                        COALESCE(json_extract(u.source_context_json, '$.received_at'),
                                 t.accepted_at, u.created_at) as received_at
                 FROM channel_connections c
@@ -375,6 +376,33 @@ class SQLitePhotoMemoryRepository:
             if caption.strip() in {"[图片]", "[Image]"}:
                 caption = ""
             received_at = source_valid["received_at"]
+            if candidate.item_origin is not None:
+                origin = candidate.item_origin
+                m_cursor = await conn.execute(
+                    """
+                    SELECT bm.received_at
+                    FROM channel_turn_burst_members bm
+                    JOIN channel_turns mt ON mt.channel_turn_id = bm.member_channel_turn_id
+                    JOIN channel_turns lt ON lt.channel_turn_id = bm.leader_channel_turn_id
+                    WHERE bm.leader_channel_turn_id = ?
+                      AND bm.member_channel_turn_id = ?
+                      AND mt.connection_id = ?
+                      AND mt.binding_id = lt.binding_id
+                      AND mt.external_message_id = ?
+                    LIMIT 1
+                    """,
+                    (
+                        str(source_valid["channel_turn_id"]),
+                        str(origin.channel_turn_id),
+                        str(candidate.source_connection_id),
+                        origin.external_message_id,
+                    ),
+                )
+                member_row = await m_cursor.fetchone()
+                await m_cursor.close()
+                if member_row is None:
+                    return None
+                received_at = member_row["received_at"]
             now_dt = datetime.now(UTC)
             now = now_dt.isoformat()
 
