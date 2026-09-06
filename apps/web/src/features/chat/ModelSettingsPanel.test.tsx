@@ -33,6 +33,7 @@ describe("ModelSettingsPanel", () => {
       configurations,
     );
     vi.mocked(runtimeClient.getIndexRebuildStatus).mockResolvedValue({
+      schema_version: "1.0",
       job_id: "job-0",
       state: "idle",
       domains: {
@@ -53,6 +54,7 @@ describe("ModelSettingsPanel", () => {
       },
     });
     vi.mocked(runtimeClient.rebuildIndexes).mockResolvedValue({
+      schema_version: "1.0",
       job_id: "job-1",
       state: "running",
       domains: {
@@ -208,9 +210,9 @@ describe("ModelSettingsPanel", () => {
       target: { value: "text-embedding-3-small" },
     });
 
-    const saveButton = Array.from(embeddingCard.querySelectorAll("button")).find(
-      (b) => b.textContent === "保存",
-    );
+    const saveButton = Array.from(
+      embeddingCard.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存");
     if (!saveButton) throw new Error("expected save button");
 
     fireEvent.click(saveButton);
@@ -221,6 +223,11 @@ describe("ModelSettingsPanel", () => {
     expect(modalText).toBeTruthy();
     expect(screen.getByRole("button", { name: "稍后" })).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
+    const later = screen.getByRole("button", { name: "稍后" });
+    expect(document.activeElement).toBe(later);
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement?.textContent).toBe("重建索引");
+    expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
   });
 
   it("does NOT display warning modal on secret change, timeout change, or other model roles", async () => {
@@ -248,11 +255,13 @@ describe("ModelSettingsPanel", () => {
     });
     const embeddingCard = embeddingModel.closest("section");
     if (!embeddingCard) throw new Error("expected embedding card");
-    const timeoutInput = embeddingCard.querySelectorAll("input[type='number']")[1];
+    const timeoutInput = embeddingCard.querySelectorAll(
+      "input[type='number']",
+    )[1];
     fireEvent.change(timeoutInput, { target: { value: "120" } });
-    const embeddingSave = Array.from(embeddingCard.querySelectorAll("button")).find(
-      (b) => b.textContent === "保存",
-    );
+    const embeddingSave = Array.from(
+      embeddingCard.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存");
     fireEvent.click(embeddingSave!);
     await screen.findByText("Embedding 模型已保存");
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -271,9 +280,9 @@ describe("ModelSettingsPanel", () => {
 
     // 1. Click "稍后"
     fireEvent.change(embeddingModel, { target: { value: "model-a" } });
-    const saveButton = Array.from(embeddingCard.querySelectorAll("button")).find(
-      (b) => b.textContent === "保存",
-    );
+    const saveButton = Array.from(
+      embeddingCard.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存");
     fireEvent.click(saveButton!);
 
     const laterButton = await screen.findByRole("button", { name: "稍后" });
@@ -285,7 +294,9 @@ describe("ModelSettingsPanel", () => {
     fireEvent.change(embeddingModel, { target: { value: "model-b" } });
     fireEvent.click(saveButton!);
     await screen.findByRole("dialog");
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "稍后" }), {
+      key: "Escape",
+    });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
   });
@@ -349,6 +360,50 @@ describe("ModelSettingsPanel", () => {
       expect(runtimeClient.rebuildIndexes).toHaveBeenCalledTimes(1),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  it("does not warn or rebuild on failed or unchanged saves", async () => {
+    render(<ModelSettingsPanel sessionId={null} />);
+    const input = await screen.findByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const save = Array.from(
+      input.closest("section")!.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存")!;
+    fireEvent.click(save);
+    await screen.findByText("Embedding 模型已保存");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    vi.mocked(runtimeClient.updateModelConfiguration).mockRejectedValueOnce(
+      new Error("保存失败测试"),
+    );
+    fireEvent.change(input, { target: { value: "not-saved" } });
+    fireEvent.click(save);
+    await screen.findByText("保存失败测试");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
+  });
+
+  it("does not warn or rebuild when only the embedding key changes", async () => {
+    vi.mocked(runtimeClient.getModelConfigurations).mockResolvedValue(
+      configurations.map((c) =>
+        c.role === "embedding"
+          ? model("embedding", "openai_compatible", "text-v1", true)
+          : c,
+      ),
+    );
+    render(<ModelSettingsPanel sessionId={null} />);
+    const key = await screen.findByLabelText("Embedding 模型 API Key");
+    fireEvent.change(key, { target: { value: "fixture-key" } });
+    const input = screen.getByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const save = Array.from(
+      input.closest("section")!.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存")!;
+    fireEvent.click(save);
+    await screen.findByText("Embedding 模型已保存");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
+    expect(screen.queryByDisplayValue("fixture-key")).toBeNull();
   });
 });
 

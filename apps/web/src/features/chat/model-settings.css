@@ -211,7 +211,7 @@
   background: rgb(48 27 56 / 96%);
 }
 
-.modal-backdrop {
+.reindex-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -247,28 +247,28 @@
 .reindex-warning-text {
   margin: 0;
   color: rgb(255 240 250 / 80%);
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   line-height: 1.6;
 }
 
-.modal-actions {
+.reindex-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
 }
 
-.modal-actions button {
+.reindex-modal-actions button {
   padding: 8px 14px;
   border-radius: 7px;
   border: 1px solid rgb(255 255 255 / 15%);
   background: rgb(255 255 255 / 8%);
   color: #ffe8f6;
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   cursor: pointer;
 }
 
-.modal-actions button.danger {
+.reindex-modal-actions .reindex-confirm-button {
   border-color: rgb(244 183 194 / 40%);
   background: rgb(180 91 150 / 35%);
   color: #fff0f5;
@@ -339,4 +339,3 @@
   color: #f4b7c2;
   font-size: 0.52rem;
 }
-

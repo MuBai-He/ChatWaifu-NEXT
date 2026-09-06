@@ -53,6 +53,7 @@ class IndexRebuildStatus:
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "schema_version": "1.0",
             "job_id": self.job_id,
             "state": str(self.state),
             "domains": {k: v.to_dict() for k, v in self.domains.items()},

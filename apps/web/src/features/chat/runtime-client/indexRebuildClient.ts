@@ -31,6 +31,7 @@ export const overallRebuildStateSchema = z.enum([
 export type OverallRebuildState = z.infer<typeof overallRebuildStateSchema>;
 
 export const indexRebuildStatusSchema = z.object({
+  schema_version: z.literal("1.0"),
   job_id: z.string(),
   state: overallRebuildStateSchema,
   domains: z.record(z.string(), domainRebuildStatusSchema),
@@ -40,13 +41,20 @@ export const indexRebuildStatusSchema = z.object({
 });
 export type IndexRebuildStatus = z.infer<typeof indexRebuildStatusSchema>;
 
-export async function rebuildIndexes(): Promise<IndexRebuildStatus> {
+export async function rebuildIndexes(
+  signal?: AbortSignal,
+): Promise<IndexRebuildStatus> {
   return requestRuntime("/v1/indexes/rebuild", indexRebuildStatusSchema, {
+    signal,
     method: "POST",
     body: "{}",
   });
 }
 
-export async function getIndexRebuildStatus(): Promise<IndexRebuildStatus> {
-  return requestRuntime("/v1/indexes/rebuild", indexRebuildStatusSchema);
+export async function getIndexRebuildStatus(
+  signal?: AbortSignal,
+): Promise<IndexRebuildStatus> {
+  return requestRuntime("/v1/indexes/rebuild", indexRebuildStatusSchema, {
+    signal,
+  });
 }

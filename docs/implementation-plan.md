@@ -2585,6 +2585,7 @@ paraphrases, and abstract descriptions. Phase 17.3D implements bounded semantic 
 [ADR 0038](adr/0038-bounded-photo-semantic-recall.md).
 
 Key architecture and invariants:
+
 - **Separation from text memory**: Photos never enter `MemoryRecord` or `memory_embeddings`.
   Embeddings live in a dedicated `photo_embeddings` table (migration 26) with cascading FK to
   `photo_assets(photo_id)`.
@@ -2611,4 +2612,3 @@ Key architecture and invariants:
 
 Real-model acceptance on live WeChat remains pending (Issue #24 deferred). Multi-photo groups and animations
 remain pending Phase 17 work; completing this slice does not complete Phase 17.
-

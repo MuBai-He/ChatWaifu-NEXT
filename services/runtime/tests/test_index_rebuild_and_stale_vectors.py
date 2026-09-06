@@ -1,5 +1,6 @@
 """Tests for index rebuild orchestration, stale text vector searchability, and fences."""
 
+# pyright: reportPrivateUsage=false
 from __future__ import annotations
 
 import asyncio
@@ -175,7 +176,6 @@ async def _seed_photo(
     return saved
 
 
-
 async def _seed_memory_record(
     test_db: Database,
     *,
@@ -282,7 +282,6 @@ async def _seed_memory_record(
         created_at=datetime.fromisoformat(now),
         updated_at=datetime.fromisoformat(now),
     )
-
 
 
 @pytest.fixture
@@ -594,3 +593,75 @@ async def test_model_route_change_cancels_running_rebuild_safely(test_db: Databa
     orchestrator.on_model_route_change()
 
     assert orchestrator.get_status().state == OverallRebuildState.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_manual_rebuild_visits_more_than_management_page_and_reports_progress(
+    test_db: Database,
+) -> None:
+    repo = SQLitePhotoMemoryRepository(test_db)
+    adapter = SQLitePhotoSemanticAdapter(test_db)
+    mem_repo = SQLiteMemoryRepository(test_db)
+    provider = FakeEmbeddingService()
+    for i in range(505):
+        await _seed_memory_record(test_db, text=f"pagination record {i}")
+    original = provider.embed
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def embed(inputs: Any) -> list[list[float]]:
+        nonlocal calls
+        calls += 1
+        if calls == 501:
+            entered.set()
+            await release.wait()
+        return await original(inputs)
+
+    provider.embed = embed
+    service = IndexRebuildService(
+        cast(Any, provider),
+        mem_repo,
+        SQLiteSemanticMemoryIndex(test_db, cast(Any, provider)),
+        repo,
+        PhotoSemanticService(adapter, cast(Any, provider)),
+        adapter,
+    )
+    try:
+        await service.start_rebuild()
+        await asyncio.wait_for(entered.wait(), 10)
+        progress = service.get_status().domains["memory"]
+        assert progress.total_count == 505
+        assert progress.indexed_count == 500
+        release.set()
+        task = service._active_task
+        assert task is not None
+        await asyncio.wait_for(task, 10)
+        assert service.get_status().state == OverallRebuildState.COMPLETED
+        assert service.get_status().domains["memory"].indexed_count == 505
+        assert len(await test_db.fetchall("SELECT * FROM memory_embeddings")) == 505
+        assert service.get_status().to_dict()["schema_version"] == "1.0"
+    finally:
+        await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_memory_commit_rechecks_route_after_waiting_for_database(test_db: Database) -> None:
+    record = await _seed_memory_record(test_db)
+    provider = FakeEmbeddingService(fingerprint="old")
+    index = SQLiteSemanticMemoryIndex(test_db, cast(Any, provider))
+    entered = asyncio.Event()
+    original = provider.embed
+
+    async def embed(inputs: Any) -> list[list[float]]:
+        result = await original(inputs)
+        entered.set()
+        return result
+
+    provider.embed = embed
+    async with test_db.transaction():
+        task = asyncio.create_task(index.upsert(record))
+        await asyncio.wait_for(entered.wait(), 1)
+        provider.fingerprint = "new"
+    await task
+    assert not await test_db.fetchall("SELECT * FROM memory_embeddings")

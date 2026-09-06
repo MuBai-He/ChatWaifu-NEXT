@@ -21,7 +21,6 @@ from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryR
 from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.photo_memory.models import PhotoSaveCandidate
 from chatwaifu_runtime.photo_memory.ports import (
-    BackfillTrigger,
     DocumentRepresentationKind,
     EmbeddingDescriptor,
     EmbeddingModality,
@@ -423,34 +422,6 @@ async def test_search_skips_embedding_if_no_indexed_photos(test_db: Database) ->
 # ---------------------------------------------------------------------------
 # Test 4: Finite pass worker breaks on no-progress; readiness event settles
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_worker_finite_pass_break_on_no_progress_and_settle(test_db: Database) -> None:
-    repo = SQLitePhotoMemoryRepository(test_db)
-    adapter = SQLitePhotoSemanticAdapter(test_db)
-    provider = FakeNeuralEmbeddingProvider()
-    # Provider fails with 401 Unauthorized
-    provider.should_raise = RuntimeError("401 Unauthorized: Invalid API key")
-
-    # Seed 2 unindexed photos
-    await _seed_photo(test_db, repo, title="照片1")
-    await _seed_photo(test_db, repo, title="照片2")
-
-    service = PhotoSemanticService(adapter, provider)
-    service.start()
-    service.trigger_worker(BackfillTrigger.STARTUP)
-    try:
-        status = await service.wait_for_settled(timeout=2.0)
-        assert status is not None
-        assert status.settled is True
-        assert status.indexed_count == 0
-        assert status.failed_count == 2  # Attempted each once, then broke on no-progress!
-
-        # Verify worker does NOT loop forever or hammer provider
-        initial_calls = provider.embed_call_count
-        await asyncio.sleep(0.1)
-        assert provider.embed_call_count == initial_calls
-    finally:
-        await service.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -891,38 +862,11 @@ async def test_mixed_representations_not_fused_or_compared(test_db: Database) ->
 # ---------------------------------------------------------------------------
 # Test 14: Observer notifies worker without foreground indexing queue
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_observer_notifies_worker_without_competing_queue(test_db: Database) -> None:
-    adapter = SQLitePhotoSemanticAdapter(test_db)
-    provider = FakeNeuralEmbeddingProvider()
-    service = PhotoSemanticService(adapter, provider)
-
-    notified = False
-
-    def on_trigger(trigger: BackfillTrigger) -> None:
-        nonlocal notified
-        if trigger == BackfillTrigger.NEW_PHOTO:
-            notified = True
-
-    service.trigger_worker = on_trigger  # type: ignore
-    service.notify_new_photo()
-    assert notified is True
 
 
 # ---------------------------------------------------------------------------
 # Test 15: Task lifecycle and tracked graceful shutdown
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_shutdown_graceful_teardown(test_db: Database) -> None:
-    adapter = SQLitePhotoSemanticAdapter(test_db)
-    provider = FakeNeuralEmbeddingProvider()
-    service = PhotoSemanticService(adapter, provider)
-
-    service.start()
-    assert service.active_task_count > 0
-
-    await service.stop()
-    assert service.active_task_count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -938,7 +882,11 @@ async def test_photos_never_enter_memory_records_or_memory_embeddings(test_db: D
     photo = await _seed_photo(
         test_db, repo, title="特别红屋顶", description="红色的屋顶与钟楼", keywords=("红屋顶",)
     )
-    await service._index_single_photo("local", "ayachi_nene", photo, provider.describe(), 1)
+    service.start()
+    assert await service._index_single_photo(
+        "local", "ayachi_nene", photo, provider.describe(), service.route_generation
+    )
+    await service.stop()
 
     mem_records = await test_db.fetchall("SELECT * FROM memory_records WHERE text LIKE '%红屋顶%'")
     assert len(mem_records) == 0
@@ -950,26 +898,6 @@ async def test_photos_never_enter_memory_records_or_memory_embeddings(test_db: D
 # ---------------------------------------------------------------------------
 # Test 17: reindex_all is non-blocking and increments route generation
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_reindex_all_non_blocking(test_db: Database) -> None:
-    adapter = SQLitePhotoSemanticAdapter(test_db)
-    provider = FakeNeuralEmbeddingProvider()
-    provider.hang_seconds = 10.0  # Would hang 10 seconds if awaited
-    service = PhotoSemanticService(adapter, provider)
-
-    service.start()
-    initial_gen = service.route_generation
-
-    # Must return immediately without holding caller
-    start_t = asyncio.get_running_loop().time()
-    res = await service.reindex_all()
-    elapsed = asyncio.get_running_loop().time() - start_t
-
-    assert elapsed < 0.1
-    assert res == 0
-    assert service.route_generation > initial_gen
-
-    await service.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -1051,27 +979,6 @@ async def test_routes_embedding_update_photo_reindex_on_memory_failure(test_db: 
 # ---------------------------------------------------------------------------
 # Test 20: Rapid worker triggers coalesce cleanly into finite passes
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_rapid_worker_triggers_coalesce(test_db: Database) -> None:
-    repo = SQLitePhotoMemoryRepository(test_db)
-    adapter = SQLitePhotoSemanticAdapter(test_db)
-    provider = FakeNeuralEmbeddingProvider()
-    service = PhotoSemanticService(adapter, provider)
-
-    await _seed_photo(test_db, repo)
-
-    service.start()
-    try:
-        # Rapid trigger calls in succession
-        for _ in range(5):
-            service.notify_new_photo()
-
-        status = await service.wait_for_settled(timeout=2.0)
-        assert status is not None
-        assert status.settled is True
-        assert status.indexed_count == 1
-    finally:
-        await service.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -1140,3 +1047,73 @@ async def test_ambiguity_gap_threshold_boundary(test_db: Database) -> None:
     assert is_clear is False
 
     await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_manual_policy_no_startup_query_or_route_change_backfill(test_db: Database) -> None:
+    repo = SQLitePhotoMemoryRepository(test_db)
+    await _seed_photo(test_db, repo)
+    provider = FakeNeuralEmbeddingProvider()
+    service = PhotoSemanticService(SQLitePhotoSemanticAdapter(test_db), provider)
+    service.start()
+    service.start()
+    service.notify_route_change()
+    assert await service.search("local", "ayachi_nene", "照片里那只小猫") == ([], False)
+    await service.stop()
+    assert provider.embed_call_count == 0
+    assert service.active_task_count == 0
+
+
+@pytest.mark.asyncio
+async def test_incremental_capacity_and_shutdown_are_bounded(test_db: Database) -> None:
+    repo = SQLitePhotoMemoryRepository(test_db)
+    photo = await _seed_photo(test_db, repo)
+    provider = FakeNeuralEmbeddingProvider()
+    entered = asyncio.Event()
+    released = asyncio.Event()
+
+    async def block() -> None:
+        entered.set()
+        await released.wait()
+
+    provider.pre_embed_callback = block
+    service = PhotoSemanticService(SQLitePhotoSemanticAdapter(test_db), provider)
+    service.start()
+    assert service.index_new_photo("local", "ayachi_nene", photo)
+    await asyncio.wait_for(entered.wait(), 1)
+    assert service.index_new_photo("local", "ayachi_nene", photo)
+    assert not service.index_new_photo("local", "ayachi_nene", photo)
+    await service.stop()
+    assert service.active_task_count == 0
+    assert not await test_db.fetchall("SELECT * FROM photo_embeddings")
+
+
+@pytest.mark.asyncio
+async def test_restart_epoch_can_replace_prior_high_generation(test_db: Database) -> None:
+    repo = SQLitePhotoMemoryRepository(test_db)
+    photo = await _seed_photo(test_db, repo)
+    adapter = SQLitePhotoSemanticAdapter(test_db)
+    provider = FakeNeuralEmbeddingProvider(dim=3)
+    desc = provider.describe()
+    await adapter.upsert_embedding(
+        "local",
+        "ayachi_nene",
+        photo.photo_id,
+        photo.sha256,
+        "photo_description_v1",
+        desc.vector_space_id,
+        desc.opaque_fingerprint,
+        100,
+        [1.0, 0.0, 0.0],
+    )
+    restarted = PhotoSemanticService(adapter, provider)
+    await restarted.sync_epoch()
+    restarted.start()
+    try:
+        assert await restarted._index_single_photo(
+            "local", "ayachi_nene", photo, desc, restarted.route_generation
+        )
+        rows = await test_db.fetchall("SELECT route_generation FROM photo_embeddings")
+        assert rows[0][0] > 100
+    finally:
+        await restarted.stop()

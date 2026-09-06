@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
@@ -35,10 +36,14 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
         model_fingerprint: str,
         route_generation: int,
         vector: list[float],
+        *,
+        guard: Callable[[], bool] | None = None,
     ) -> bool:
         now = datetime.now(UTC).isoformat()
         vector_json = json.dumps(vector)
         async with self._database.transaction() as conn:
+            if guard is not None and not guard():
+                return False
             cursor = await conn.execute(
                 """
                 INSERT INTO photo_embeddings (
@@ -156,26 +161,50 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
             await cursor.close()
             return int(row["cnt"]) if row is not None else 0
 
+    async def get_max_route_generation(self) -> int:
+        async with self._database.transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT COALESCE(MAX(route_generation), 0) AS max_gen FROM photo_embeddings"
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
+            return int(row["max_gen"]) if row is not None else 0
+
     async def list_all_photos(
         self,
     ) -> list[tuple[str, str, SavedPhoto]]:
         async with self._database.transaction() as conn:
             cursor = await conn.execute(
                 """
-                SELECT p.principal_scope, p.character_id, p.photo_id, p.sha256, p.mime_type,
-                    p.byte_size, p.width, p.height, p.title, p.description, p.confidence,
-                    p.keywords, p.caption, p.received_at, p.saved_at, p.source_connection_id,
-                    p.source_session_id, p.source_turn_id, p.source_generation_id
-                FROM photo_assets p
-                ORDER BY p.saved_at ASC
+                SELECT DISTINCT principal_scope, character_id
+                FROM photo_assets
+                ORDER BY principal_scope, character_id
                 """
             )
-            rows = await cursor.fetchall()
+            principals = await cursor.fetchall()
             await cursor.close()
-            return [
-                (str(r["principal_scope"]), str(r["character_id"]), _row_to_saved_photo(r))
-                for r in rows
-            ]
+
+            results: list[tuple[str, str, SavedPhoto]] = []
+            for p in principals:
+                scope = str(p["principal_scope"])
+                char_id = str(p["character_id"])
+                c2 = await conn.execute(
+                    """
+                    SELECT p.principal_scope, p.character_id, p.photo_id, p.sha256, p.mime_type,
+                        p.byte_size, p.width, p.height, p.title, p.description, p.confidence,
+                        p.keywords, p.caption, p.received_at, p.saved_at, p.source_connection_id,
+                        p.source_session_id, p.source_turn_id, p.source_generation_id
+                    FROM photo_assets p
+                    WHERE p.principal_scope = ? AND p.character_id = ?
+                    ORDER BY p.saved_at ASC
+                    LIMIT 200
+                    """,
+                    (scope, char_id),
+                )
+                rows = await c2.fetchall()
+                await c2.close()
+                results.extend((scope, char_id, _row_to_saved_photo(r)) for r in rows)
+            return results
 
     async def delete_embedding(self, photo_id: UUID) -> None:
         async with self._database.transaction() as conn:

@@ -1,6 +1,6 @@
 # ADR 0037: Opt-in photo retention and source-backed visual recall
 
-Status: Accepted design; implementation and acceptance in progress
+Status: Accepted; first-slice implementation and owner acceptance complete in PR #23
 
 ## Decision
 

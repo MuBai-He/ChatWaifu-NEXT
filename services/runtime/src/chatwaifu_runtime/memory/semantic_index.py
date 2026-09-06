@@ -22,25 +22,11 @@ class SQLiteSemanticMemoryIndex(SemanticMemoryIndex):
         self._models = models
 
     async def upsert(self, record: MemoryRecord) -> None:
-        vectors = await self._models.embed([record.text])
-        if not vectors:
-            return
         fingerprint = self._models.embedding_fingerprint()
-        async with self._database.transaction() as connection:
-            await connection.execute(
-                """
-                INSERT INTO memory_embeddings(memory_id, model_fingerprint, vector_json, updated_at)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(memory_id, model_fingerprint) DO UPDATE SET
-                    vector_json=excluded.vector_json, updated_at=excluded.updated_at
-                """,
-                (
-                    str(record.memory_id),
-                    fingerprint,
-                    json.dumps(vectors[0], separators=(",", ":")),
-                    datetime.now(UTC).isoformat(),
-                ),
-            )
+        vectors = await self._models.embed([record.text])
+        if len(vectors) != 1:
+            return
+        await self.upsert_active_record(record, vectors[0], expected_fingerprint=fingerprint)
 
     async def delete(self, memory_id: UUID) -> None:
         async with self._database.transaction() as connection:
@@ -48,16 +34,20 @@ class SQLiteSemanticMemoryIndex(SemanticMemoryIndex):
                 "DELETE FROM memory_embeddings WHERE memory_id = ?", (str(memory_id),)
             )
 
-    async def upsert_active_record(self, record: MemoryRecord, vector: list[float]) -> bool:
-        fingerprint = self._models.embedding_fingerprint()
+    async def upsert_active_record(
+        self, record: MemoryRecord, vector: list[float], *, expected_fingerprint: str | None = None
+    ) -> bool:
+        fingerprint = expected_fingerprint or self._models.embedding_fingerprint()
         now = datetime.now(UTC).isoformat()
         async with self._database.transaction() as connection:
+            if self._models.embedding_fingerprint() != fingerprint:
+                return False
             cursor = await connection.execute(
                 """
                 INSERT INTO memory_embeddings(memory_id, model_fingerprint, vector_json, updated_at)
                 SELECT m.memory_id, ?, ?, ?
                 FROM memory_records m
-                WHERE m.memory_id = ? AND m.state = 'active'
+                WHERE m.memory_id = ? AND m.state = 'active' AND m.text = ?
                 ON CONFLICT(memory_id, model_fingerprint) DO UPDATE SET
                     vector_json=excluded.vector_json, updated_at=excluded.updated_at
                 """,
@@ -66,6 +56,7 @@ class SQLiteSemanticMemoryIndex(SemanticMemoryIndex):
                     json.dumps(vector, separators=(",", ":")),
                     now,
                     str(record.memory_id),
+                    record.text,
                 ),
             )
             inserted = cursor.rowcount > 0
@@ -167,9 +158,12 @@ class SQLiteSemanticMemoryIndex(SemanticMemoryIndex):
 def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
     if len(left) != len(right) or not left:
         return 0.0
-    dot = sum(a * b for a, b in zip(left, right, strict=True))
-    left_norm = math.sqrt(sum(value * value for value in left))
-    right_norm = math.sqrt(sum(value * value for value in right))
-    if left_norm == 0 or right_norm == 0:
+    left_norm = math.hypot(*left)
+    right_norm = math.hypot(*right)
+    if (
+        not math.isfinite(left_norm)
+        or not math.isfinite(right_norm)
+        or min(left_norm, right_norm) <= 1e-12
+    ):
         return 0.0
-    return dot / (left_norm * right_norm)
+    return math.fsum((a / left_norm) * (b / right_norm) for a, b in zip(left, right, strict=True))

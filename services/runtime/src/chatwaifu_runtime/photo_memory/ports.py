@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
@@ -90,22 +90,6 @@ class EmbeddingDescriptor:
     opaque_fingerprint: str
 
 
-class BackfillTrigger(StrEnum):
-    STARTUP = "startup"
-    NEW_PHOTO = "new_photo"
-    ROUTE_CHANGE = "route_change"
-    DEMAND = "demand"
-
-
-@dataclass(frozen=True, slots=True)
-class BackfillSettledStatus:
-    generation: int
-    indexed_count: int
-    failed_count: int
-    settled: bool
-    error: str | None = None
-
-
 class PhotoEmbeddingPort(Protocol):
     """Narrow provider-neutral embedding port with multimodal reservation."""
 
@@ -128,7 +112,11 @@ class PhotoSemanticPersistencePort(Protocol):
         model_fingerprint: str,
         route_generation: int,
         vector: list[float],
+        *,
+        guard: Callable[[], bool] | None = None,
     ) -> bool: ...
+
+    async def get_max_route_generation(self) -> int: ...
 
     async def list_embeddings(
         self,

@@ -337,6 +337,7 @@ class RuntimeContainer:
                 await self.memory.start()
                 await self.runtime_skills.start()
                 self.sticker_library.start()
+                await self.photo_semantic.sync_epoch()
                 self.photo_semantic.start()
                 self.photo_observer.start()
                 await self.external_channels.start()

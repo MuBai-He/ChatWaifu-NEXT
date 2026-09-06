@@ -1,6 +1,6 @@
 # ADR 0038: Bounded semantic photo recall
 
-Status: Accepted design; implementation complete, real-model acceptance pending
+Status: Accepted design; implementation and isolated Runtime acceptance complete; owner WeChat acceptance pending
 
 ## Context
 
@@ -33,8 +33,7 @@ polluting `MemoryRecord` or `memory_embeddings`.
      and authoritative inserts. Persistence adapters never invoke remote embedding models or
      calculate cosine similarity rankings.
    - `PhotoSemanticService` (domain service) owns model invocation, vector validation (finite,
-     non-zero, matching dimensions), similarity calculation, ambiguity detection, background
-     backfill, and query budget enforcement.
+     non-zero, matching dimensions), similarity calculation, ambiguity detection, bounded incremental indexing, and query budget enforcement.
    - Authoritative insert validation uses `INSERT INTO photo_embeddings ... SELECT ... FROM photo_assets p WHERE p.photo_id = ? AND p.principal_scope = ? AND p.character_id = ? AND p.sha256 = ?`
      to guarantee that concurrent deletion or scope reassignment prevents orphaned projections.
 
@@ -90,8 +89,8 @@ polluting `MemoryRecord` or `memory_embeddings`.
 
 ## Consequences
 
-- Semantic search enables natural paraphrased recall of retained photos without false attachments.
-- Ambiguity and miss policies prevent false memories and incorrect image grounding.
+- Semantic search enables natural paraphrased recall of retained photos with conservative attachment selection.
+- Ambiguity and miss policies reduce false recall and incorrect image grounding.
 - Decoupling embeddings from core photo storage ensures zero data loss or database corruption if
   an embedding model provider is swapped or unavailable.
 - Stale vector participation avoids artificial retrieval pause while giving users full manual control
@@ -99,3 +98,20 @@ polluting `MemoryRecord` or `memory_embeddings`.
 - Automated tests pass across backend and web UI; live real-model WeChat acceptance remains pending
   (Issue #24 deferred).
 
+## Validation on 2026-09-06
+
+Independent verification passed 983 Python tests (46 platform-dependent skips), 229 Web tests,
+Ruff, Pyright, frontend lint/type checks, and Web/desktop UI builds. A real configured text
+embedding endpoint with isolated SQLite fixtures passed five paraphrased photo queries and five
+unsupported-photo negatives through the actual recall service. These synthetic fixtures do not
+replace owner WeChat photo acceptance.
+
+The actual browser and isolated Runtime displayed the exact warning after a successful model save;
+choosing Later left rebuild status idle. Clicking Rebuild started a real job and displayed separate
+memory/photo completion states. Focus defaults to Later, Escape dismisses without a rebuild, and
+status requests are serialized and cancelled on unmount.
+
+Manual memory rebuild traverses bounded cursor pages beyond the management API's 500-record limit;
+a 505-record regression checks intermediate and final counts. Photo write epochs synchronize with
+persisted projections after restart. Incremental photo work is capped at two tasks and five seconds
+per task; it never implicitly rebuilds the existing library.

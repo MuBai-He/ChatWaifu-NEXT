@@ -13,8 +13,6 @@ from uuid import UUID
 from chatwaifu_protocol.photo_memory import SavedPhoto
 
 from chatwaifu_runtime.photo_memory.ports import (
-    BackfillSettledStatus,
-    BackfillTrigger,
     DocumentRepresentationKind,
     EmbeddingDescriptor,
     PhotoEmbeddingInput,
@@ -39,6 +37,10 @@ SEMANTIC_QUERY_BUDGET_SECONDS: float = 1.5
 
 # Upper bound on vector dimension for sanity and memory limits.
 MAX_VECTOR_DIM: int = 8192
+
+# Bounded incremental indexing tasks and per-task timeout
+MAX_INCREMENTAL_TASKS: int = 2
+INCREMENTAL_TIMEOUT_SECONDS: float = 5.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,13 +126,9 @@ class PhotoSemanticService:
         self._min_cosine = min_cosine
         self._ambiguity_gap = ambiguity_gap
         self._query_budget = query_budget
-        self._tasks: set[asyncio.Task[object]] = set()
+        self._incremental_tasks: set[asyncio.Task[bool]] = set()
         self._running: bool = False
         self._route_generation: int = 0
-        self._worker_task: asyncio.Task[None] | None = None
-        self._trigger_event: asyncio.Event = asyncio.Event()
-        self._settled_event: asyncio.Event = asyncio.Event()
-        self._last_settled_status: BackfillSettledStatus | None = None
 
     @property
     def route_generation(self) -> int:
@@ -138,173 +136,86 @@ class PhotoSemanticService:
 
     @property
     def active_task_count(self) -> int:
-        return len(self._tasks)
+        self._incremental_tasks = {t for t in self._incremental_tasks if not t.done()}
+        return len(self._incremental_tasks)
+
+    async def sync_epoch(self) -> int:
+        """Durable monotonic epoch synchronization across restarts."""
+        max_gen = await self._persistence.get_max_route_generation()
+        if max_gen >= self._route_generation:
+            self._route_generation = max_gen + 1
+        return self._route_generation
 
     def start(self) -> None:
-        """Idempotent start of lifecycle-owned coalesced worker."""
+        """Idempotent start of photo semantic service without automatic backfill."""
         if self._running:
             return
         self._running = True
         self._route_generation += 1
-        self._settled_event.clear()
-        task = asyncio.create_task(
-            self._worker_loop(),
-            name="photo-semantic-worker",
-        )
-        self._worker_task = task
-        self._tasks.add(task)
-        task.add_done_callback(lambda t: self._tasks.discard(t))
 
     async def stop(self) -> None:
-        """Tracked graceful shutdown cancelling worker and background tasks."""
+        """Tracked graceful shutdown cancelling incremental background tasks without leak."""
         self._running = False
-        self._trigger_event.set()
-        tasks = list(self._tasks)
+        tasks = list(self._incremental_tasks)
         for task in tasks:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        self._tasks.clear()
-        self._worker_task = None
+        self._incremental_tasks.clear()
 
-    def trigger_worker(self, trigger: BackfillTrigger) -> None:
-        """Coalesced event notification to worker without polling or sleep loops."""
+    def index_new_photo(self, scope: str, character_id: str, photo: SavedPhoto) -> bool:
+        """Incrementally index a newly saved photo, bounded to max 2 concurrent tasks."""
         if not self._running:
-            return
-        logger.debug("photo semantic worker triggered by %s", trigger)
-        self._trigger_event.set()
-
-    def notify_new_photo(self) -> None:
-        """Called by observer upon saving a photo; triggers worker pass."""
-        self.trigger_worker(BackfillTrigger.NEW_PHOTO)
-
-    def index_new_photo(self, scope: str, character_id: str, photo: SavedPhoto) -> None:
-        """Incrementally index a newly saved photo without touching existing ones."""
-        if not self._running:
-            return
+            return False
         desc = self._embedding.describe()
         if not desc.enabled or not desc.semantic_capability:
-            return
+            return False
+        self._incremental_tasks = {t for t in self._incremental_tasks if not t.done()}
+        if len(self._incremental_tasks) >= MAX_INCREMENTAL_TASKS:
+            logger.warning(
+                "dropping incremental photo indexing for %s: bounded task capacity (%d) reached",
+                photo.photo_id,
+                MAX_INCREMENTAL_TASKS,
+            )
+            return False
         gen = self._route_generation
         task = asyncio.create_task(
-            self._index_single_photo(scope, character_id, photo, desc, gen),
+            self._bounded_index_single_photo(scope, character_id, photo, desc, gen),
             name=f"photo-semantic-index-{photo.photo_id}",
         )
-        self._tasks.add(task)
-        task.add_done_callback(lambda t: self._tasks.discard(t))
+        self._incremental_tasks.add(task)
+        task.add_done_callback(lambda t: self._incremental_tasks.discard(t))
+        return True
 
     def notify_route_change(self) -> None:
-        """Increment generation token to stale in-flight work without auto-rebuild."""
+        """Increment generation token and cancel running incremental tasks without autobackfill."""
         self._route_generation += 1
-        self._settled_event.clear()
+        for task in list(self._incremental_tasks):
+            task.cancel()
 
-    async def wait_for_settled(
-        self, timeout_seconds: float | None = None, **kwargs: float
-    ) -> BackfillSettledStatus | None:
-        """Wait for the worker pass to settle (reach a steady state).
-
-        Settled means the pass finished (settled), not necessarily that all photos succeeded.
-        """
-        timeout_budget = kwargs.get("timeout", timeout_seconds)
-        if timeout_budget is not None:
-            async with asyncio.timeout(timeout_budget):
-                await self._settled_event.wait()
-        else:
-            await self._settled_event.wait()
-        return self._last_settled_status
-
-    async def reindex_all(self) -> int:
-        """Request worker rebuild on route change without blocking caller for full embedding."""
-        self.notify_route_change()
-        return 0
-
-    async def _worker_loop(self) -> None:
-        """Lifecycle-owned background event worker; strictly event-driven with finite passes."""
-        while self._running:
-            try:
-                await self._trigger_event.wait()
-            except asyncio.CancelledError:
-                break
-            self._trigger_event.clear()
-            if not self._running:
-                break
-
-            self._settled_event.clear()
-            status = await self._run_finite_pass()
-            self._last_settled_status = status
-            self._settled_event.set()
-
-    async def _run_finite_pass(self) -> BackfillSettledStatus:
-        """Run a finite backfill pass with model snapshot and break-on-no-progress."""
-        current_gen = self._route_generation
-        desc = self._embedding.describe()
-        if not desc.enabled or not desc.semantic_capability:
-            return BackfillSettledStatus(
-                generation=current_gen,
-                indexed_count=0,
-                failed_count=0,
-                settled=True,
-            )
-
-        representation = DocumentRepresentationKind.PHOTO_DESCRIPTION_V1.value
-        space_id = desc.vector_space_id
-
-        # Purge incompatible vector spaces for this representation projection
+    async def _bounded_index_single_photo(
+        self,
+        scope: str,
+        character_id: str,
+        photo: SavedPhoto,
+        desc: EmbeddingDescriptor,
+        generation: int,
+    ) -> bool:
         try:
-            purged = await self._persistence.purge_stale_spaces(representation, space_id)
-            if purged > 0:
-                logger.info("purged %d stale vector projections for space %s", purged, space_id)
-        except Exception as err:
-            logger.warning("purge stale spaces error: %s", err)
-
-        attempted_ids: set[UUID] = set()
-        indexed_count = 0
-        failed_count = 0
-
-        while self._running and self._route_generation == current_gen:
-            unindexed = await self._persistence.list_all_unindexed_photos(
-                representation, space_id, limit=10
+            async with asyncio.timeout(INCREMENTAL_TIMEOUT_SECONDS):
+                return await self._index_single_photo(scope, character_id, photo, desc, generation)
+        except TimeoutError:
+            logger.warning(
+                "incremental indexing for photo %s timed out after %.1fs",
+                photo.photo_id,
+                INCREMENTAL_TIMEOUT_SECONDS,
             )
-            candidates = [item for item in unindexed if item[2].photo_id not in attempted_ids]
-            if not candidates:
-                break
-
-            batch_progress = 0
-            for scope, character_id, photo in candidates:
-                if not self._running or self._route_generation != current_gen:
-                    break
-                attempted_ids.add(photo.photo_id)
-                try:
-                    async with asyncio.timeout(5.0):
-                        success = await self._index_single_photo(
-                            scope, character_id, photo, desc, current_gen
-                        )
-                    if success:
-                        indexed_count += 1
-                        batch_progress += 1
-                    else:
-                        failed_count += 1
-                except Exception as err:
-                    failed_count += 1
-                    logger.warning(
-                        "failed indexing photo %s in worker pass: %s", photo.photo_id, err
-                    )
-
-            # Break on no-progress: if a batch of unindexed photos made 0 progress,
-            # stop immediately to prevent infinite hammering of failing endpoints/vectors.
-            if batch_progress == 0:
-                logger.debug(
-                    "photo semantic worker break-on-no-progress: %d candidates attempted, 0 ok",
-                    len(candidates),
-                )
-                break
-
-        return BackfillSettledStatus(
-            generation=current_gen,
-            indexed_count=indexed_count,
-            failed_count=failed_count,
-            settled=True,
-        )
+            return False
+        except asyncio.CancelledError:
+            raise
+        except Exception as err:
+            logger.warning("incremental indexing for photo %s failed: %s", photo.photo_id, err)
+            return False
 
     async def _index_single_photo(
         self,
@@ -325,8 +236,19 @@ class PhotoSemanticService:
         input_item = PhotoEmbeddingInput.from_text(text)
         try:
             vectors = await self._embedding.embed([input_item])
+        except asyncio.CancelledError:
+            raise
         except Exception as err:
             logger.warning("failed to embed photo %s: %s", photo.photo_id, err)
+            return False
+
+        # Reject count != 1 for single embeds
+        if len(vectors) != 1:
+            logger.warning(
+                "single photo embed returned %d vectors instead of 1 for photo %s",
+                len(vectors),
+                photo.photo_id,
+            )
             return False
 
         # Post-await check 1: route generation or vector space changed during network call
@@ -334,6 +256,7 @@ class PhotoSemanticService:
         if (
             self._route_generation != generation
             or post_desc.vector_space_id != desc.vector_space_id
+            or post_desc.opaque_fingerprint != desc.opaque_fingerprint
             or not self._running
         ):
             logger.warning(
@@ -341,9 +264,18 @@ class PhotoSemanticService:
             )
             return False
 
-        if not vectors or not validate_embedding_vector(vectors[0]):
+        if not validate_embedding_vector(vectors[0]):
             logger.warning("invalid or corrupt vector returned for photo %s", photo.photo_id)
             return False
+
+        # Transaction guard immediately checked INSIDE awaited SQL transaction before commit
+        def guard() -> bool:
+            return (
+                self._running
+                and self._route_generation == generation
+                and self._embedding.describe().vector_space_id == desc.vector_space_id
+                and self._embedding.describe().opaque_fingerprint == desc.opaque_fingerprint
+            )
 
         return await self._persistence.upsert_embedding(
             scope,
@@ -355,6 +287,7 @@ class PhotoSemanticService:
             desc.opaque_fingerprint,
             generation,
             vectors[0],
+            guard=guard,
         )
 
     async def search(
@@ -422,9 +355,7 @@ class PhotoSemanticService:
         query_vec = vectors[0]
         q_dim = len(query_vec)
 
-        stored = await self._persistence.list_embeddings(
-            scope, character_id, representation
-        )
+        stored = await self._persistence.list_embeddings(scope, character_id, representation)
 
         # Post-await check 2: Model swap after fetching stored rows before ranking
         if (

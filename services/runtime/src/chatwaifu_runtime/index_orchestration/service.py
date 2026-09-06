@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import Protocol
 from uuid import uuid4
+
+from chatwaifu_protocol.memory import MemoryRecord
 
 from chatwaifu_runtime.index_orchestration.contracts import (
     DomainRebuildState,
@@ -14,22 +18,37 @@ from chatwaifu_runtime.index_orchestration.contracts import (
     IndexRebuildStatus,
     OverallRebuildState,
 )
-from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.photo_memory.ports import (
     DocumentRepresentationKind,
+    EmbeddingDescriptor,
     PhotoEmbeddingInput,
+    PhotoMemoryRepository,
+    PhotoSemanticPersistencePort,
 )
 from chatwaifu_runtime.photo_memory.semantic import (
+    PhotoSemanticService,
     photo_embedding_text,
     validate_embedding_vector,
 )
 
-if TYPE_CHECKING:
-    from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
-    from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
-    from chatwaifu_runtime.photo_memory.ports import PhotoMemoryRepository
-    from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
-    from chatwaifu_runtime.providers.model_config import ModelConfigurationService
+
+class RebuildModels(Protocol):
+    def describe(self) -> EmbeddingDescriptor: ...
+    async def embed(self, inputs: Sequence[str | PhotoEmbeddingInput]) -> list[list[float]]: ...
+
+
+class RebuildMemoryRepository(Protocol):
+    async def list_rebuild_page(
+        self, *, after_id: str = "", limit: int = 200
+    ) -> list[MemoryRecord]: ...
+
+
+class RebuildMemoryIndex(Protocol):
+    async def upsert_active_record(
+        self, record: MemoryRecord, vector: list[float], *, expected_fingerprint: str | None = None
+    ) -> bool: ...
+    async def purge_stale_embeddings(self, active_fingerprint: str) -> int: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,19 +61,19 @@ class IndexRebuildService:
 
     def __init__(
         self,
-        models: ModelConfigurationService,
-        memory_repository: SQLiteMemoryRepository,
-        semantic_memory_index: SQLiteSemanticMemoryIndex,
+        models: RebuildModels,
+        memory_repository: RebuildMemoryRepository,
+        semantic_memory_index: RebuildMemoryIndex,
         photo_repository: PhotoMemoryRepository,
         photo_semantic: PhotoSemanticService,
-        photo_semantic_adapter: SQLitePhotoSemanticAdapter,
+        photo_semantic_adapter: PhotoSemanticPersistencePort,
     ) -> None:
-        self._models: ModelConfigurationService = models
-        self._memory_repository: SQLiteMemoryRepository = memory_repository
-        self._semantic_memory_index: SQLiteSemanticMemoryIndex = semantic_memory_index
+        self._models: RebuildModels = models
+        self._memory_repository: RebuildMemoryRepository = memory_repository
+        self._semantic_memory_index: RebuildMemoryIndex = semantic_memory_index
         self._photo_repository: PhotoMemoryRepository = photo_repository
         self._photo_semantic: PhotoSemanticService = photo_semantic
-        self._photo_semantic_adapter: SQLitePhotoSemanticAdapter = photo_semantic_adapter
+        self._photo_semantic_adapter: PhotoSemanticPersistencePort = photo_semantic_adapter
 
         self._active_job: IndexRebuildStatus | None = None
         self._active_task: asyncio.Task[None] | None = None
@@ -91,6 +110,7 @@ class IndexRebuildService:
                 logger.info("rebuild already running, returning active status (singleflight)")
                 return self.get_status()
 
+            await self._photo_semantic.sync_epoch()
             job_id = str(uuid4())
             now_iso = datetime.now(UTC).isoformat()
             initial_status = IndexRebuildStatus(
@@ -224,9 +244,7 @@ class IndexRebuildService:
             )
 
             # 2. Rebuild Photo domain
-            photo_status = await self._rebuild_photos(
-                job_id, initial_fingerprint, initial_space_id
-            )
+            photo_status = await self._rebuild_photos(job_id, initial_fingerprint, initial_space_id)
 
             # Check if cancelled or model changed during photo rebuild
             if (
@@ -293,26 +311,47 @@ class IndexRebuildService:
                             total_count=dom.total_count,
                             indexed_count=dom.indexed_count,
                             failed_count=dom.failed_count,
-                            error=str(err),
+                            error="索引重建失败，请检查模型连接后重试。",
                         )
                         for d_name, dom in self._active_job.domains.items()
                     },
                     started_at=self._active_job.started_at,
                     completed_at=datetime.now(UTC).isoformat(),
-                    error=str(err),
+                    error="索引重建失败，请检查模型连接后重试。",
                 )
 
-    async def _rebuild_memory(
-        self, job_id: str, expected_fingerprint: str
-    ) -> DomainRebuildStatus:
+    def _publish_progress(
+        self, job_id: str, domain: str, total: int, indexed: int, failed: int
+    ) -> None:
+        job = self._active_job
+        if job is None or job.job_id != job_id or job.state != OverallRebuildState.RUNNING:
+            return
+        domains = dict(job.domains)
+        domains[domain] = DomainRebuildStatus(
+            domain=domain,
+            state=DomainRebuildState.RUNNING,
+            total_count=total,
+            indexed_count=indexed,
+            failed_count=failed,
+        )
+        self._active_job = replace(job, domains=domains)
+
+    async def _rebuild_memory(self, job_id: str, expected_fingerprint: str) -> DomainRebuildStatus:
         try:
-            records = await self._memory_repository.list_records(limit=1000)
-            active_records = [r for r in records if r.state == "active"]
+            active_records: list[MemoryRecord] = []
+            cursor = ""
+            while True:
+                page = await self._memory_repository.list_rebuild_page(after_id=cursor, limit=200)
+                if not page:
+                    break
+                active_records.extend(page)
+                cursor = str(page[-1].memory_id)
             total = len(active_records)
             indexed = 0
             failed = 0
             last_err: str | None = None
 
+            self._publish_progress(job_id, "memory", total, indexed, failed)
             for rec in active_records:
                 if self._models.describe().opaque_fingerprint != expected_fingerprint:
                     return DomainRebuildStatus(
@@ -326,7 +365,7 @@ class IndexRebuildService:
                 try:
                     async with asyncio.timeout(REBUILD_ITEM_TIMEOUT_SECONDS):
                         vectors = await self._models.embed([rec.text])
-                    if not vectors or not validate_embedding_vector(vectors[0]):
+                    if len(vectors) != 1 or not validate_embedding_vector(vectors[0]):
                         failed += 1
                         last_err = "Invalid vector generated"
                         continue
@@ -343,7 +382,9 @@ class IndexRebuildService:
                         )
 
                     # Atomically insert only if active record still exists (no resurrection!)
-                    ok = await self._semantic_memory_index.upsert_active_record(rec, vectors[0])
+                    ok = await self._semantic_memory_index.upsert_active_record(
+                        rec, vectors[0], expected_fingerprint=expected_fingerprint
+                    )
                     if ok:
                         indexed += 1
                     else:
@@ -351,16 +392,20 @@ class IndexRebuildService:
                         logger.debug("record %s no longer active; skipping insert", rec.memory_id)
                 except Exception as err:
                     failed += 1
-                    last_err = str(err)
-                    logger.warning("failed to embed memory record %s: %s", rec.memory_id, err)
+                    last_err = "索引生成失败，请检查模型连接后重试。"
+                    logger.warning(
+                        "memory indexing failed id=%s error_type=%s",
+                        rec.memory_id,
+                        type(err).__name__,
+                    )
+                finally:
+                    self._publish_progress(job_id, "memory", total, indexed, failed)
 
             # Purge stale embeddings for memory if no fatal errors
             if failed == 0 and self._models.describe().opaque_fingerprint == expected_fingerprint:
                 await self._semantic_memory_index.purge_stale_embeddings(expected_fingerprint)
 
-            domain_state = (
-                DomainRebuildState.FAILED if failed > 0 else DomainRebuildState.COMPLETED
-            )
+            domain_state = DomainRebuildState.FAILED if failed > 0 else DomainRebuildState.COMPLETED
             return DomainRebuildStatus(
                 domain="memory",
                 state=domain_state,
@@ -377,7 +422,7 @@ class IndexRebuildService:
                 total_count=0,
                 indexed_count=0,
                 failed_count=1,
-                error=str(err),
+                error="索引重建失败，请检查模型连接后重试。",
             )
 
     async def _rebuild_photos(
@@ -391,6 +436,7 @@ class IndexRebuildService:
             last_err: str | None = None
             representation = DocumentRepresentationKind.PHOTO_DESCRIPTION_V1.value
 
+            self._publish_progress(job_id, "photo", total, indexed, failed)
             for scope, char_id, photo in photos_data:
                 if self._models.describe().opaque_fingerprint != expected_fingerprint:
                     return DomainRebuildStatus(
@@ -408,7 +454,7 @@ class IndexRebuildService:
                 try:
                     async with asyncio.timeout(REBUILD_ITEM_TIMEOUT_SECONDS):
                         vectors = await self._models.embed([PhotoEmbeddingInput.from_text(text)])
-                    if not vectors or not validate_embedding_vector(vectors[0]):
+                    if len(vectors) != 1 or not validate_embedding_vector(vectors[0]):
                         failed += 1
                         last_err = "Invalid vector generated"
                         continue
@@ -435,6 +481,9 @@ class IndexRebuildService:
                         expected_fingerprint,
                         self._photo_semantic.route_generation,
                         vectors[0],
+                        guard=lambda: (
+                            self._models.describe().opaque_fingerprint == expected_fingerprint
+                        ),
                     )
                     if ok:
                         indexed += 1
@@ -444,8 +493,14 @@ class IndexRebuildService:
                         )
                 except Exception as err:
                     failed += 1
-                    last_err = str(err)
-                    logger.warning("failed to embed photo %s: %s", photo.photo_id, err)
+                    last_err = "索引生成失败，请检查模型连接后重试。"
+                    logger.warning(
+                        "photo indexing failed id=%s error_type=%s",
+                        photo.photo_id,
+                        type(err).__name__,
+                    )
+                finally:
+                    self._publish_progress(job_id, "photo", total, indexed, failed)
 
             # Purge stale vector spaces for photos if rebuild succeeded
             if failed == 0 and self._models.describe().opaque_fingerprint == expected_fingerprint:
@@ -453,9 +508,7 @@ class IndexRebuildService:
                     representation, expected_space_id
                 )
 
-            domain_state = (
-                DomainRebuildState.FAILED if failed > 0 else DomainRebuildState.COMPLETED
-            )
+            domain_state = DomainRebuildState.FAILED if failed > 0 else DomainRebuildState.COMPLETED
             return DomainRebuildStatus(
                 domain="photo",
                 state=domain_state,
@@ -472,5 +525,5 @@ class IndexRebuildService:
                 total_count=0,
                 indexed_count=0,
                 failed_count=1,
-                error=str(err),
+                error="索引重建失败，请检查模型连接后重试。",
             )

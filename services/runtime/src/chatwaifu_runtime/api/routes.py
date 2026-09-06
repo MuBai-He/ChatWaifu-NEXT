@@ -665,6 +665,7 @@ async def update_model_configuration(
                 or prev_config.provider != config.provider
                 or prev_config.model != config.model
                 or prev_config.base_url != config.base_url
+                or prev_config.enabled != config.enabled
             )
             if route_changed:
                 container.index_rebuild.on_model_route_change()

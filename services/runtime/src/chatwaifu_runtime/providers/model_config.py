@@ -311,7 +311,7 @@ class ModelConfigurationService:
             digest = hashlib.sha256(raw.encode()).hexdigest()[:16]
             return EmbeddingDescriptor(
                 supported_modalities=frozenset([EmbeddingModality.TEXT]),
-                vector_space_id=f"openai_compatible:{config.model}",
+                vector_space_id=f"text-v1:{digest}",
                 semantic_capability=True,
                 enabled=True,
                 opaque_fingerprint=f"oai_{digest}",

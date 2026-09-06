@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { createPortal } from "react-dom";
 
 import "./model-settings.css";
 
@@ -68,6 +70,12 @@ export function ModelSettingsPanel({ sessionId }: Props) {
     null,
   );
   const [isRebuilding, setIsRebuilding] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const laterRef = useRef<HTMLButtonElement>(null);
+  const embeddingSaveRef = useRef<HTMLButtonElement>(null);
+  const rebuildInFlight = useRef(false);
+  const rebuildRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => rebuildRequest.current?.abort(), []);
   const { busy, notice, setNotice, run } = useSettingsOperation<ModelRole>();
 
   useEffect(() => {
@@ -108,47 +116,88 @@ export function ModelSettingsPanel({ sessionId }: Props) {
 
   useEffect(() => {
     if (!showWarningModal) return;
+    const previousFocus = document.activeElement;
+    const embeddingSaveButton = embeddingSaveRef.current;
+    laterRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         setShowWarningModal(false);
       }
+      if (event.key === "Tab") {
+        const buttons = modalRef.current?.querySelectorAll<HTMLButtonElement>(
+          "button:not(:disabled)",
+        );
+        if (!buttons?.length) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      if (
+        previousFocus instanceof HTMLElement &&
+        previousFocus !== document.body &&
+        previousFocus.isConnected
+      )
+        previousFocus.focus();
+      else embeddingSaveButton?.focus();
+    };
   }, [showWarningModal]);
 
   useEffect(() => {
     if (rebuildStatus?.state !== "running") return;
-    let active = true;
-    const interval = setInterval(() => {
-      void getIndexRebuildStatus()
-        .then((status) => {
-          if (!active) return;
-          setRebuildStatus(status);
-        })
-        .catch(() => {
-          // ignore transient poll error
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const status = await getIndexRebuildStatus(controller.signal);
+        if (controller.signal.aborted) return;
+        setRebuildStatus(status);
+        if (status.state !== "running") return;
+      } catch {
+        if (controller.signal.aborted) return;
+        setNotice({
+          tone: "error",
+          text: "暂时无法刷新重建进度，正在重新连接。",
         });
-    }, 500);
-    return () => {
-      active = false;
-      clearInterval(interval);
+      }
+      timer = setTimeout(() => void poll(), 1000);
     };
-  }, [rebuildStatus?.state]);
+    timer = setTimeout(() => void poll(), 500);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [rebuildStatus?.state, setNotice]);
 
   const handleTriggerRebuild = async () => {
-    if (isRebuilding || rebuildStatus?.state === "running") return;
+    if (rebuildInFlight.current || rebuildStatus?.state === "running") return;
+    rebuildInFlight.current = true;
+    const controller = new AbortController();
+    rebuildRequest.current = controller;
     setIsRebuilding(true);
     try {
-      const status = await rebuildIndexes();
-      setRebuildStatus(status);
+      const status = await rebuildIndexes(controller.signal);
+      if (!controller.signal.aborted) setRebuildStatus(status);
     } catch (error: unknown) {
-      setNotice({
-        tone: "error",
-        text: error instanceof Error ? error.message : "触发重建索引失败",
-      });
+      if (!controller.signal.aborted)
+        setNotice({
+          tone: "error",
+          text: error instanceof Error ? error.message : "触发重建索引失败",
+        });
     } finally {
-      setIsRebuilding(false);
+      rebuildInFlight.current = false;
+      if (!controller.signal.aborted) setIsRebuilding(false);
     }
   };
 
@@ -345,6 +394,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
               <button
                 type="button"
                 disabled={busy === role}
+                ref={role === "embedding" ? embeddingSaveRef : undefined}
                 onClick={() => void save(role)}
               >
                 保存
@@ -386,7 +436,9 @@ export function ModelSettingsPanel({ sessionId }: Props) {
             rebuildStatus.state !== "idle" ? (
               <div className="reindex-status-card" aria-label="索引重建状态">
                 <div className="reindex-status-header">
-                  <span>索引状态：{rebuildStateLabel(rebuildStatus.state)}</span>
+                  <span>
+                    索引状态：{rebuildStateLabel(rebuildStatus.state)}
+                  </span>
                   {rebuildStatus.state === "failed" ? (
                     <button
                       type="button"
@@ -437,45 +489,58 @@ export function ModelSettingsPanel({ sessionId }: Props) {
         密钥不会回显或写入浏览器；保存后只进入本机 Runtime 的 0600 私密文件。
       </p>
       <SettingsStatus notice={notice} className="model-settings-notice" />
-      {showWarningModal ? (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onClick={() => setShowWarningModal(false)}
-        >
-          <div
-            className="reindex-warning-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reindex-modal-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="reindex-modal-title">Embedding 模型已更换</h3>
-            <p className="reindex-warning-text">
-              embedding 模型已更换，现有索引仍由旧模型生成。不重建可能导致漏检、错误匹配或相关度下降；向量维度不兼容的条目将无法参与语义检索。建议重建索引。
-            </p>
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="reindex-confirm-button danger"
-                onClick={() => {
-                  setShowWarningModal(false);
-                  void handleTriggerRebuild();
-                }}
+      {showWarningModal
+        ? createPortal(
+            <div
+              className="reindex-modal-backdrop"
+              role="presentation"
+              onClick={() => setShowWarningModal(false)}
+            >
+              <div
+                ref={modalRef}
+                className="reindex-warning-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="reindex-modal-title"
+                aria-describedby="reindex-modal-description"
+                onClick={(e) => e.stopPropagation()}
               >
-                重建索引
-              </button>
-              <button
-                type="button"
-                className="reindex-cancel-button"
-                onClick={() => setShowWarningModal(false)}
-              >
-                稍后
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <h3 id="reindex-modal-title">Embedding 模型已更换</h3>
+                <p
+                  id="reindex-modal-description"
+                  className="reindex-warning-text"
+                >
+                  embedding
+                  模型已更换，现有索引仍由旧模型生成。不重建可能导致漏检、错误匹配或相关度下降；向量维度不兼容的条目将无法参与语义检索。建议重建索引。
+                </p>
+                <div className="reindex-modal-actions">
+                  <button
+                    type="button"
+                    className="reindex-confirm-button"
+                    disabled={
+                      isRebuilding || rebuildStatus?.state === "running"
+                    }
+                    onClick={() => {
+                      setShowWarningModal(false);
+                      void handleTriggerRebuild();
+                    }}
+                  >
+                    重建索引
+                  </button>
+                  <button
+                    type="button"
+                    ref={laterRef}
+                    className="reindex-cancel-button"
+                    onClick={() => setShowWarningModal(false)}
+                  >
+                    稍后
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
