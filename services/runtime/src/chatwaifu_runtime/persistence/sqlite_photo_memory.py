@@ -14,11 +14,16 @@ from chatwaifu_protocol.photo_memory import (
     PhotoMemoryDeleteResult,
     PhotoMemorySettings,
     PhotoMemorySnapshot,
+    PhotoUserAnnotation,
     SavedPhoto,
 )
 from PIL import Image
 
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.photo_memory.annotations import (
+    PhotoAnnotationCandidate,
+    PhotoAnnotationContext,
+)
 from chatwaifu_runtime.photo_memory.models import (
     PhotoDeletion,
     PhotoGenerationReference,
@@ -188,7 +193,11 @@ class SQLitePhotoMemoryRepository:
             )
 
     def _row_to_saved_photo(self, row: aiosqlite.Row) -> SavedPhoto:
+        keys = row.keys()
         return SavedPhoto(
+            user_annotations=json.loads(row["user_annotations_json"])
+            if "user_annotations_json" in row.keys()
+            else [],
             photo_id=UUID(row["photo_id"]),
             sha256=row["sha256"],
             mime_type=row["mime_type"],
@@ -206,6 +215,11 @@ class SQLitePhotoMemoryRepository:
             source_session_id=UUID(row["source_session_id"]),
             source_turn_id=UUID(row["source_turn_id"]),
             source_generation_id=UUID(row["source_generation_id"]),
+            captured_at=row["captured_at"] if "captured_at" in keys else None,
+            captured_at_offset=row["captured_at_offset"] if "captured_at_offset" in keys else None,
+            original_width=row["original_width"] if "original_width" in keys else None,
+            original_height=row["original_height"] if "original_height" in keys else None,
+            original_mime_type=row["original_mime_type"] if "original_mime_type" in keys else None,
         )
 
     async def snapshot(self, scope: str, character_id: str) -> PhotoMemorySnapshot:
@@ -221,7 +235,9 @@ class SQLitePhotoMemoryRepository:
                 SELECT photo_id, sha256, mime_type, byte_size, width, height,
                        title, description, confidence, keywords, caption,
                        received_at, saved_at, source_connection_id,
-                       source_session_id, source_turn_id, source_generation_id
+                       source_session_id, source_turn_id, source_generation_id,
+                       captured_at, captured_at_offset, original_width,
+                       original_height, original_mime_type, user_annotations_json
                 FROM photo_assets
                 WHERE principal_scope = ? AND character_id = ?
                 ORDER BY saved_at DESC
@@ -368,7 +384,9 @@ class SQLitePhotoMemoryRepository:
                 SELECT photo_id, sha256, mime_type, byte_size, width, height,
                        title, description, confidence, keywords, caption,
                        received_at, saved_at, source_connection_id,
-                       source_session_id, source_turn_id, source_generation_id
+                       source_session_id, source_turn_id, source_generation_id,
+                       captured_at, captured_at_offset, original_width,
+                       original_height, original_mime_type, user_annotations_json
                 FROM photo_assets
                 WHERE principal_scope = ? AND character_id = ? AND sha256 = ?
                 """,
@@ -419,8 +437,10 @@ class SQLitePhotoMemoryRepository:
                     photo_id, principal_scope, character_id, sha256, mime_type,
                     byte_size, width, height, title, description, confidence,
                     keywords, caption, received_at, saved_at, source_connection_id,
-                    source_session_id, source_turn_id, source_generation_id, data
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_session_id, source_turn_id, source_generation_id,
+                    captured_at, captured_at_offset, original_width, original_height,
+                    original_mime_type, data
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     photo_id_str,
@@ -442,6 +462,11 @@ class SQLitePhotoMemoryRepository:
                     session_id,
                     turn_id,
                     str(candidate.generation_id),
+                    candidate.captured_at,
+                    candidate.captured_at_offset,
+                    candidate.original_width,
+                    candidate.original_height,
+                    candidate.original_mime_type,
                     data,
                 ),
             )
@@ -471,7 +496,9 @@ class SQLitePhotoMemoryRepository:
                 "SELECT photo_id, sha256, mime_type, byte_size, width, "
                 "height, title, description, confidence, keywords, caption, "
                 "received_at, saved_at, source_connection_id, "
-                "source_session_id, source_turn_id, source_generation_id "
+                "source_session_id, source_turn_id, source_generation_id, "
+                "captured_at, captured_at_offset, original_width, "
+                "original_height, original_mime_type, user_annotations_json "
                 "FROM photo_assets WHERE photo_id = ?",
                 (photo_id_str,),
             )
@@ -516,7 +543,9 @@ class SQLitePhotoMemoryRepository:
                 SELECT p.photo_id, p.sha256, p.mime_type, p.byte_size, p.width, p.height, p.title,
                     p.description, p.confidence, p.keywords, p.caption, p.received_at, p.saved_at,
                     p.source_connection_id, p.source_session_id, p.source_turn_id,
-                    p.source_generation_id
+                    p.source_generation_id,
+                    p.captured_at, p.captured_at_offset, p.original_width, p.original_height,
+                    p.original_mime_type, p.user_annotations_json
                 FROM photo_assets_fts f
                 JOIN photo_assets p ON p.photo_id = f.photo_id
                 WHERE f.photo_assets_fts MATCH ?
@@ -540,7 +569,9 @@ class SQLitePhotoMemoryRepository:
                 """
                 SELECT photo_id, sha256, mime_type, byte_size, width, height, title, description,
                     confidence, keywords, caption, received_at, saved_at, source_connection_id,
-                    source_session_id, source_turn_id, source_generation_id
+                    source_session_id, source_turn_id, source_generation_id,
+                    captured_at, captured_at_offset, original_width, original_height,
+                    original_mime_type, user_annotations_json
                 FROM photo_assets
                 WHERE principal_scope = ? AND character_id = ?
                 ORDER BY saved_at DESC
@@ -565,7 +596,9 @@ class SQLitePhotoMemoryRepository:
                     SELECT photo_id, sha256, mime_type, byte_size, width, height, title,
                         description, confidence, keywords, caption, received_at, saved_at,
                         source_connection_id, source_session_id, source_turn_id,
-                        source_generation_id
+                        source_generation_id,
+                        captured_at, captured_at_offset, original_width, original_height,
+                        original_mime_type, user_annotations_json
                     FROM photo_assets
                     WHERE principal_scope = ? AND character_id = ? AND photo_id = ?
                     """,
@@ -620,7 +653,9 @@ class SQLitePhotoMemoryRepository:
                     "SELECT photo_id, sha256, mime_type, byte_size, width, "
                     "height, title, description, confidence, keywords, "
                     "caption, received_at, saved_at, source_connection_id, "
-                    "source_session_id, source_turn_id, source_generation_id "
+                    "source_session_id, source_turn_id, source_generation_id, "
+                    "captured_at, captured_at_offset, original_width, "
+                    "original_height, original_mime_type, user_annotations_json "
                     "FROM photo_assets WHERE principal_scope = ? AND "
                     "character_id = ? AND photo_id = ?",
                     (scope, character_id, pid_str),
@@ -722,3 +757,176 @@ class SQLitePhotoMemoryRepository:
                 result=PhotoMemoryDeleteResult(deleted=True, revision=new_rev),
                 affected_generations=tuple(affected),
             )
+
+    async def annotation_context(self, generation_id: UUID) -> PhotoAnnotationContext | None:
+        async with self._database.transaction() as conn:
+            cursor = await conn.execute(
+                """SELECT g.session_id, g.turn_id, t.committed_text, t.created_at,
+                          t.source_context_json, s.character_id
+                   FROM generations g JOIN turns t ON t.turn_id=g.turn_id
+                   JOIN sessions s ON s.session_id=g.session_id
+                   WHERE g.generation_id=? AND g.state='completed' AND t.role='user'
+                     AND t.session_id=g.session_id
+                     AND NOT EXISTS (SELECT 1 FROM photo_context_redactions r
+                                     WHERE r.generation_id=g.generation_id)""",
+                (str(generation_id),),
+            )
+            row = await cursor.fetchone()
+            if row is None or not row["committed_text"]:
+                return None
+            source = json.loads(row["source_context_json"]) if row["source_context_json"] else None
+            if source and source.get("chat_type") != "direct":
+                return None
+            scope = source.get("principal_scope", "local") if source else "local"
+            settings = await self._ensure_settings(conn, scope, row["character_id"])
+            if not settings["retention_enabled"]:
+                return None
+            # Only current referenced photos or the immediately preceding user turn.
+            # A new unsaved image turn has no reference and therefore cannot bind to an older photo.
+            cursor = await conn.execute(
+                """SELECT photo_id FROM photo_references WHERE generation_id=?""",
+                (str(generation_id),),
+            )
+            refs = await cursor.fetchall()
+            if not refs:
+                cursor = await conn.execute(
+                    """SELECT g.generation_id FROM turns t JOIN generations g ON g.turn_id=t.turn_id
+                       WHERE t.session_id=? AND t.role='user' AND t.created_at<?
+                         AND julianday(?) - julianday(t.created_at) BETWEEN 0 AND 0.0208333333
+                       ORDER BY t.created_at DESC LIMIT 1""",
+                    (row["session_id"], row["created_at"], row["created_at"]),
+                )
+                previous = await cursor.fetchone()
+                if previous is None:
+                    return None
+                cursor = await conn.execute(
+                    "SELECT photo_id FROM photo_references WHERE generation_id=?",
+                    (previous["generation_id"],),
+                )
+                refs = await cursor.fetchall()
+            ids = [r["photo_id"] for r in refs]
+            if not ids or len(ids) > 3:
+                return None
+            placeholders = ",".join("?" for _ in ids)
+            cursor = await conn.execute(
+                "SELECT * FROM photo_assets WHERE principal_scope=? AND character_id=? "
+                f"AND photo_id IN ({placeholders})",
+                (scope, row["character_id"], *ids),
+            )
+            photos = tuple(self._row_to_saved_photo(p) for p in await cursor.fetchall())
+            return PhotoAnnotationContext(
+                scope,
+                row["character_id"],
+                generation_id,
+                int(settings["revision"]),
+                row["committed_text"],
+                row["created_at"],
+                photos,
+            )
+
+    async def save_annotation(
+        self, context: PhotoAnnotationContext, candidate: PhotoAnnotationCandidate
+    ) -> bool:
+        if candidate.confidence < 0.9 or candidate.quote not in context.text:
+            return False
+        if candidate.photo_id not in {p.photo_id for p in context.photos}:
+            return False
+        async with self._database.transaction() as conn:
+            settings = await self._ensure_settings(conn, context.scope, context.character_id)
+            if not settings["retention_enabled"] or settings["revision"] != context.revision:
+                return False
+            cursor = await conn.execute(
+                """SELECT g.session_id, t.committed_text FROM generations g
+                   JOIN turns t ON t.turn_id=g.turn_id AND t.session_id=g.session_id
+                   JOIN sessions s ON s.session_id=g.session_id
+                   WHERE g.generation_id=? AND g.state='completed' AND t.role='user'
+                     AND s.character_id=? AND NOT EXISTS
+                       (SELECT 1 FROM photo_context_redactions
+                        WHERE generation_id=g.generation_id)""",
+                (str(context.generation_id), context.character_id),
+            )
+            source = await cursor.fetchone()
+            if source is None or source["committed_text"] != context.text:
+                return False
+            cursor = await conn.execute(
+                "SELECT user_annotations_json, title, description, caption, keywords "
+                "FROM photo_assets "
+                "WHERE photo_id=? AND principal_scope=? AND character_id=?",
+                (str(candidate.photo_id), context.scope, context.character_id),
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                return False
+            annotations = [PhotoUserAnnotation.model_validate(a) for a in json.loads(row[0])]
+            if len(annotations) >= 32 or any(
+                a.source_generation_id == context.generation_id
+                or (not a.superseded and a.quote == candidate.quote)
+                for a in annotations
+            ):
+                return False
+            if candidate.replaces_id is not None:
+                target = next(
+                    (
+                        a
+                        for a in annotations
+                        if a.annotation_id == candidate.replaces_id
+                        and not a.superseded
+                        and a.kind == candidate.kind
+                    ),
+                    None,
+                )
+                if target is None:
+                    return False
+                annotations = [
+                    a.model_copy(update={"superseded": True}) if a is target else a
+                    for a in annotations
+                ]
+            annotations.append(
+                PhotoUserAnnotation(
+                    annotation_id=uuid4(),
+                    quote=candidate.quote,
+                    kind=candidate.kind,
+                    source_generation_id=context.generation_id,
+                    observed_at=datetime.fromisoformat(context.observed_at),
+                )
+            )
+            await conn.execute(
+                "UPDATE photo_assets SET user_annotations_json=? WHERE photo_id=?",
+                (
+                    json.dumps(
+                        [a.model_dump(mode="json") for a in annotations], ensure_ascii=False
+                    ),
+                    str(candidate.photo_id),
+                ),
+            )
+            content = " ".join(
+                [
+                    row["title"],
+                    row["description"],
+                    row["caption"],
+                    *json.loads(row["keywords"]),
+                    *[a.quote for a in annotations if not a.superseded],
+                ]
+            )
+            await conn.execute(
+                "DELETE FROM photo_assets_fts WHERE photo_id=?", (str(candidate.photo_id),)
+            )
+            await conn.execute(
+                "INSERT INTO photo_assets_fts(photo_id,content) VALUES (?,?)",
+                (str(candidate.photo_id), _tokenize_cjk(content)),
+            )
+            await conn.execute(
+                "DELETE FROM photo_embeddings WHERE photo_id=?", (str(candidate.photo_id),)
+            )
+            await conn.execute(
+                """INSERT INTO photo_references
+                   (photo_id,generation_id,session_id,reference_type,created_at)
+                   VALUES (?,?,?,'recall',?) ON CONFLICT(photo_id,generation_id) DO NOTHING""",
+                (
+                    str(candidate.photo_id),
+                    str(context.generation_id),
+                    source["session_id"],
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+            return True

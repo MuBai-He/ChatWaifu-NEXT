@@ -29,7 +29,9 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
 )
 
-_IMAGE_BYTES = b"ephemeral-image-not-in-history"
+_IMAGE_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+)
 
 
 class VisionRecorder:
@@ -138,7 +140,7 @@ async def test_real_image_admission_dedupe_privacy_and_next_turn(
         events = await container.event_store.read_stream(result.session_id, limit=200)
         serialized = json.dumps(events, default=str)
         for secret in (
-            _IMAGE_BYTES.decode(),
+            _IMAGE_BYTES.decode(errors="ignore"),
             base64.b64encode(_IMAGE_BYTES).decode(),
             "private-source",
         ):
@@ -322,3 +324,64 @@ async def test_image_failure_notice_matches_history_and_survives_replay(
         assert next_result.status is ChannelTurnStatus.COMPLETED
     finally:
         await restarted.stop()
+
+
+@pytest.mark.asyncio
+async def test_inbound_image_exif_stripped_before_vision_provider(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+
+    from chatwaifu_runtime.photo_memory.metadata import extract_photo_metadata
+    from PIL import ExifTags, Image
+
+    img = Image.new("RGB", (100, 100), color="green")
+    exif = img.getexif()
+    exif[ExifTags.Base.Orientation] = 6
+    exif_ifd = exif.get_ifd(ExifTags.IFD.Exif)
+    exif_ifd[ExifTags.Base.DateTimeOriginal] = "2023:05:01 10:00:00"
+    exif_ifd[ExifTags.Base.OffsetTimeOriginal] = "+08:00"
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif)
+    raw_with_exif = buf.getvalue()
+
+    # Verify our source image really has EXIF before testing inbound channel
+    initial_meta = extract_photo_metadata(raw_with_exif)
+    assert initial_meta.captured_at == "2023-05-01T10:00:00+08:00"
+
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    recorder = VisionRecorder()
+    monkeypatch.setattr(container.agent, "_llm", recorder)
+    conn_id, token = await connect(container)
+    msg = message(conn_id, "exif-photo-msg")
+
+    async def load_exif_image() -> LlmInputImage:
+        return LlmInputImage(data=raw_with_exif, mime_type="image/jpeg")
+
+    image_input = ChannelInboundImageInput(
+        hashlib.sha256(raw_with_exif).hexdigest(),
+        load_exif_image,
+    )
+
+    try:
+        receipt = await container.external_channels.ingest(
+            msg, access_token=token, image_input=image_input
+        )
+        result = await container.external_channels.wait_for_turn(
+            conn_id, receipt.channel_turn_id, wait_seconds=5
+        )
+        assert result.status is ChannelTurnStatus.COMPLETED
+
+        # Verify vision provider received the image
+        assert len(recorder.requests) >= 1
+        llm_images = recorder.requests[0].images
+        assert len(llm_images) == 1
+        delivered_image = llm_images[0]
+
+        # Verify EXIF is completely stripped for the vision provider turn!
+        delivered_meta = extract_photo_metadata(delivered_image.data)
+        assert delivered_meta.captured_at is None
+        assert delivered_meta.captured_at_offset is None
+    finally:
+        await container.stop()
