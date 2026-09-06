@@ -72,6 +72,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.photo_memory.metadata import strip_image_exif
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver, PhotoObservationSource
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
@@ -460,9 +461,17 @@ class ExternalChannelService:
                     raise
                 except Exception:
                     logger.warning("photo observation skipped generation_id=%s", turn.generation_id)
-                return image
+                return strip_image_exif(image)
 
             image_loader = learning_loader
+        elif image_loader is not None:
+            raw_base_loader = image_loader
+
+            async def sanitized_image_loader() -> LlmInputImage:
+                img = await raw_base_loader()
+                return strip_image_exif(img)
+
+            image_loader = sanitized_image_loader
         options = replace(
             EXTERNAL_TEXT_TURN_OPTIONS,
             source_context=source_context,

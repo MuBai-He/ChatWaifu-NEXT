@@ -589,6 +589,7 @@ phases:
       - Groups and animations remain pending; Phase 17.3 does not yet complete Phase 17
       - The actual configured text-embedding service and isolated SQLite recall passed five synonym queries and five unsupported-photo negatives; isolated Runtime/browser acceptance verified the exact post-save warning, Later with zero rebuild jobs, and manual memory/photo rebuild completion
       - Manual memory rebuild traverses beyond the management 500-record page cap, verified with 505 records and live progress; persisted photo write epochs survive restart, and incremental indexing is bounded to two tasks with five-second timeouts
+      - Phase 17.3E implements bounded EXIF capture dates and original dimensions plus owner-approved automatic user-statement association, source quotes and utterance times, correction history, deletion dependencies, lexical and incremental semantic updates with content fences, and photo detail UI; independent live-model positive, correction and two negative cases passed in isolated SQLite, with actual Runtime/browser detail acceptance; independent full verification passed 1004 Python tests with 46 platform skips, 234 Web tests, 34 protocol tests, types, lint and Web/desktop builds; owner WeChat acceptance remains pending
       - Original roadmap reserves user image and sticker reception, understanding, and dynamic accumulation for this phase
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4

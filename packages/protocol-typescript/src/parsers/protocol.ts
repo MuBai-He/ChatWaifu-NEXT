@@ -1452,6 +1452,28 @@ const savedPhotoSchema = z
     source_session_id: uuid,
     source_turn_id: uuid,
     source_generation_id: uuid,
+    user_annotations: z
+      .array(
+        z.object({
+          schema_version: z.literal("1.0").default("1.0"),
+          annotation_id: z.string().uuid(),
+          quote: z.string().min(1).max(600),
+          kind: z.enum(["date", "event", "context"]),
+          source_generation_id: z.string().uuid(),
+          observed_at: z.string().datetime({ offset: true }),
+          superseded: z.boolean().default(false),
+        }),
+      )
+      .max(32)
+      .default([]),
+    captured_at: z.string().max(64).nullable().optional(),
+    captured_at_offset: z.string().max(16).nullable().optional(),
+    original_width: z.number().int().min(1).max(65536).nullable().optional(),
+    original_height: z.number().int().min(1).max(65536).nullable().optional(),
+    original_mime_type: z
+      .enum(["image/png", "image/jpeg"])
+      .nullable()
+      .optional(),
   })
   .passthrough();
 
