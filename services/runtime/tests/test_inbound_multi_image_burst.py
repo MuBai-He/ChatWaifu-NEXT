@@ -162,6 +162,8 @@ class _FakeWeixin:
         self.download_count = 0
         self.image_data: dict[str, bytes] = {}
         self.closed = False
+        self.message_cursors: dict[str, str] = {}
+        self.committed_messages: set[tuple[UUID, str]] = set()
 
     async def close(self) -> None:
         self.closed = True
@@ -194,6 +196,7 @@ class _FakeWeixin:
                     WeixinUpdates(cursor=batch.cursor, messages=tuple(non_matching))
                 )
             if matching or not batch.messages:
+                self.message_cursors.update((m.external_message_id, batch.cursor) for m in matching)
                 return WeixinUpdates(cursor=batch.cursor, messages=tuple(matching))
             await asyncio.sleep(0.01)
 
@@ -310,7 +313,12 @@ async def _wait_for_turn(
         turn = await container.external_channels.repository.find_turn_by_external_message(
             connection_id, external_message_id
         )
-        if turn is not None:
+        transport = container.channel_management._weixin
+        assert isinstance(transport, _FakeWeixin)
+        if (
+            turn is not None
+            and (connection_id, external_message_id) in transport.committed_messages
+        ):
             return
         await asyncio.sleep(0.005)
     raise TimeoutError(
@@ -324,6 +332,7 @@ async def _wait_for_burst_admission(
     external_message_id: str,
     wait_seconds: float = 5.0,
 ) -> ChannelTurnRecord:
+    await _wait_for_turn(container, connection_id, external_message_id, wait_seconds)
     start = asyncio.get_running_loop().time()
     while asyncio.get_running_loop().time() - start < wait_seconds:
         turn = await container.external_channels.repository.find_turn_by_external_message(
@@ -394,6 +403,17 @@ async def _setup_burst_environment(
         event_publisher=container.event_publisher,
     )
     container.channel_management = management
+    original_checkpoint = container.external_channel_repository.set_adapter_cursor
+
+    async def checkpoint(connection_id: UUID, *, cursor: str, updated_at: datetime) -> None:
+        await original_checkpoint(connection_id, cursor=cursor, updated_at=updated_at)
+        transport.committed_messages.update(
+            (connection_id, message_id)
+            for message_id, observed_cursor in transport.message_cursors.items()
+            if observed_cursor == cursor
+        )
+
+    monkeypatch.setattr(container.external_channel_repository, "set_adapter_cursor", checkpoint)
 
     connection_id = uuid4()
     created = await container.external_channels.create_connection(
