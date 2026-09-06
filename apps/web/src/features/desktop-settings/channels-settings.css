@@ -908,3 +908,37 @@
   margin: 0;
   word-break: break-all;
 }
+
+.sticker-usage-panel {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--settings-line);
+  border-radius: 10px;
+}
+.sticker-usage-panel summary {
+  cursor: pointer;
+}
+.sticker-usage-panel p,
+.sticker-usage-panel time,
+.sticker-usage-panel small {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.sticker-usage-panel ul {
+  list-style: none;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.sticker-usage-panel li {
+  padding: 8px 0;
+}
+.sticker-usage-panel li > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.sticker-usage-panel strong {
+  overflow-wrap: anywhere;
+}

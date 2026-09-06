@@ -2509,8 +2509,8 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
   from the sticker library, not from future visual memory. The owner explicitly wants saved
   photos to be available for later conversation and recall.
 - **17.4 — Shared jokes and adaptive recall (in progress):** 17.4A shared-joke association and recall
-  were accepted on real WeChat and merged in PR #30. Delivery-backed sticker usage history,
-  adaptive selection, and sticker binding remain pending.
+  were accepted on real WeChat and merged in PR #30. Delivery-backed sticker usage history is
+  implemented in 17.4B-1 below; adaptive selection and sticker binding remain pending.
 
 Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
 or the remaining image and sticker capabilities are accepted.
@@ -2757,7 +2757,7 @@ until QQ integration. This code is outside main and must not be counted as a rel
 
 ### Remaining Phase 17 sequence
 
-1. 17.4B-1: delivery-backed sticker usage history, preserving distinct failure/cancellation outcomes.
+1. 17.4B-1: delivery-backed sticker usage history is implemented below; owner desktop acceptance pending.
 2. 17.4B-2: bounded adaptive sticker selection based on that history.
 3. Grounded shared-joke/sticker binding (proposed 17.4C; design not yet accepted).
 4. QQ adapter and native media acceptance, then revisit Draft PR #29.
@@ -2766,3 +2766,16 @@ Photo semantic-only native acceptance and long-range/follow-up-before-save photo
 separate follow-ups. Multimodal embedding interfaces are reserved; the current implementation
 embeds photo descriptions. A visual provider/index path and standalone OCR are not implemented.
 No percentage-complete claim is derived from phase numbering. Phase 13.4A remains paused.
+
+### Phase 17.4B-1 — Delivery-backed sticker usage history
+
+Under ADR 0044, the settings library exposes a collapsed recent-send history backed directly by
+retained image delivery parts. Success requires acknowledged image delivery; failures, cancellation
+and retries retain distinct outcomes without duplicate counters. The authenticated API validates
+owner/character/source lineage and current asset hashes, scans at most 200 candidate rows, and returns
+at most 50 visible rows. Deleted assets and reset source turns no longer appear. No migration,
+selection change or preference inference is introduced. Adaptive ranking remains 17.4B-2.
+
+Automated checks and isolated Runtime/browser acceptance against a read-only owner-data snapshot
+are recorded in the PR. Native owner desktop acceptance remains pending; the original running
+desktop and WeChat connection are preserved.
