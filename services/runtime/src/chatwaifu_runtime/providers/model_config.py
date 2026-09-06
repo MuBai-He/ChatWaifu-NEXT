@@ -17,6 +17,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.photo_memory.ports import (
+    EmbeddingDescriptor,
+    EmbeddingModality,
+    PhotoEmbeddingInput,
+)
 from chatwaifu_runtime.providers.contracts import (
     LlmProvider,
     LlmRequest,
@@ -28,6 +33,11 @@ from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
     openai_compatible_endpoint,
 )
+
+
+class UnsupportedEmbeddingModalityError(ValueError):
+    """Raised when an embedding input requests an unsupported modality."""
+
 
 type ModelRole = Literal["chat", "memory_extraction", "memory_summary", "embedding"]
 type ModelProviderKind = Literal["demo", "openai_compatible", "local_hash", "disabled"]
@@ -277,12 +287,65 @@ class ModelConfigurationService:
             raise RuntimeError(f"{role} model returned invalid content")
         return content
 
-    async def embed(self, texts: Sequence[str]) -> list[list[float]]:
+    def describe(self) -> EmbeddingDescriptor:
+        config = self.get("embedding")
+        if not config.enabled or config.provider == "disabled":
+            return EmbeddingDescriptor(
+                supported_modalities=frozenset(),
+                vector_space_id="disabled",
+                semantic_capability=False,
+                enabled=False,
+                opaque_fingerprint="disabled",
+            )
+        if config.provider == "local_hash":
+            return EmbeddingDescriptor(
+                supported_modalities=frozenset([EmbeddingModality.TEXT]),
+                vector_space_id="local_hash:v1",
+                semantic_capability=False,
+                enabled=True,
+                opaque_fingerprint=f"local_hash:{config.model}",
+            )
+        if config.provider == "openai_compatible":
+            endpoint = openai_compatible_endpoint(config.base_url, "embeddings")
+            raw = f"openai_compatible:{config.model}:{endpoint}"
+            digest = hashlib.sha256(raw.encode()).hexdigest()[:16]
+            return EmbeddingDescriptor(
+                supported_modalities=frozenset([EmbeddingModality.TEXT]),
+                vector_space_id=f"openai_compatible:{config.model}",
+                semantic_capability=True,
+                enabled=True,
+                opaque_fingerprint=f"oai_{digest}",
+            )
+        raw = f"{config.provider}:{config.model}"
+        digest = hashlib.sha256(raw.encode()).hexdigest()[:16]
+        return EmbeddingDescriptor(
+            supported_modalities=frozenset([EmbeddingModality.TEXT]),
+            vector_space_id=f"{config.provider}:{config.model}",
+            semantic_capability=True,
+            enabled=True,
+            opaque_fingerprint=f"other_{digest}",
+        )
+
+    async def embed(self, inputs: Sequence[str | PhotoEmbeddingInput]) -> list[list[float]]:
+        text_inputs: list[str] = []
+        for inp in inputs:
+            if isinstance(inp, PhotoEmbeddingInput):
+                if inp.modality != EmbeddingModality.TEXT:
+                    raise UnsupportedEmbeddingModalityError(
+                        f"Unsupported embedding modality: {inp.modality}. "
+                        "Current adapter only supports text."
+                    )
+                if inp.text is None:
+                    raise ValueError("PhotoEmbeddingInput with modality TEXT must provide text")
+                text_inputs.append(inp.text)
+            else:
+                text_inputs.append(inp)
+
         config = self.get("embedding")
         if not config.enabled or config.provider == "disabled":
             return []
         if config.provider == "local_hash":
-            return [_hash_embedding(text) for text in texts]
+            return [_hash_embedding(text) for text in text_inputs]
         if config.provider != "openai_compatible":
             raise RuntimeError(f"unsupported embedding provider: {config.provider}")
         headers = {"Content-Type": "application/json"}
@@ -292,7 +355,7 @@ class ModelConfigurationService:
             response = await client.post(
                 openai_compatible_endpoint(config.base_url, "embeddings"),
                 headers=headers,
-                json={"model": config.model, "input": list(texts)},
+                json={"model": config.model, "input": list(text_inputs)},
             )
             response.raise_for_status()
             payload = cast(object, response.json())
@@ -304,15 +367,38 @@ class ModelConfigurationService:
         data = [cast(dict[str, object], item) for item in raw_data if isinstance(item, dict)]
         ordered = sorted(data, key=lambda item: int(cast(Any, item.get("index", 0))))
         vectors = [item.get("embedding") for item in ordered]
-        if len(vectors) != len(texts) or not all(isinstance(vector, list) for vector in vectors):
-            raise RuntimeError("embedding provider returned invalid vector count")
-        return [
-            [float(cast(Any, value)) for value in cast(list[object], vector)] for vector in vectors
-        ]
+        if len(vectors) != len(text_inputs):
+            raise RuntimeError(
+                f"embedding provider returned invalid vector count: "
+                f"expected {len(text_inputs)}, got {len(vectors)}"
+            )
+
+        parsed_vectors: list[list[float]] = []
+        for raw_vec in vectors:
+            if not isinstance(raw_vec, list):
+                raise RuntimeError("embedding provider returned non-list vector")
+            vector = cast(list[object], raw_vec)
+            if len(vector) == 0 or len(vector) > 8192:
+                raise RuntimeError(f"embedding vector has invalid dimension: {len(vector)}")
+            parsed: list[float] = []
+            for val in vector:
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    raise RuntimeError("embedding vector contains non-numeric value")
+                fval = float(val)
+                if not math.isfinite(fval):
+                    raise RuntimeError("embedding vector contains non-finite value")
+                parsed.append(fval)
+            try:
+                norm = math.hypot(*parsed)
+            except OverflowError as err:
+                raise RuntimeError("embedding vector norm overflowed float") from err
+            if not math.isfinite(norm) or norm <= 1e-12:
+                raise RuntimeError("embedding vector norm is near-zero or non-finite")
+            parsed_vectors.append(parsed)
+        return parsed_vectors
 
     def embedding_fingerprint(self) -> str:
-        config = self.get("embedding")
-        return f"{config.provider}:{config.model}"
+        return self.describe().opaque_fingerprint
 
     async def probe(self, role: ModelRole) -> dict[str, object]:
         if role == "embedding":

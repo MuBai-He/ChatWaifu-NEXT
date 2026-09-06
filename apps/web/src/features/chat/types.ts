@@ -24,6 +24,10 @@ export type {
   TtsProviderPresentation,
   TtsStreamMessage,
 } from "./runtime-client/contracts";
+export type {
+  DomainRebuildStatus,
+  IndexRebuildStatus,
+} from "./runtime-client/indexRebuildClient";
 
 export interface ChatMessage {
   id: string;

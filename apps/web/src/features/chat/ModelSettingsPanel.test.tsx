@@ -16,6 +16,8 @@ vi.mock("./runtimeClient", () => ({
   getModelConfigurations: vi.fn(),
   testModelConfiguration: vi.fn(),
   updateModelConfiguration: vi.fn(),
+  rebuildIndexes: vi.fn(),
+  getIndexRebuildStatus: vi.fn(),
 }));
 
 const configurations: ModelRoleConfiguration[] = [
@@ -30,6 +32,46 @@ describe("ModelSettingsPanel", () => {
     vi.mocked(runtimeClient.getModelConfigurations).mockResolvedValue(
       configurations,
     );
+    vi.mocked(runtimeClient.getIndexRebuildStatus).mockResolvedValue({
+      job_id: "job-0",
+      state: "idle",
+      domains: {
+        memory: {
+          domain: "memory",
+          state: "idle",
+          total_count: 0,
+          indexed_count: 0,
+          failed_count: 0,
+        },
+        photo: {
+          domain: "photo",
+          state: "idle",
+          total_count: 0,
+          indexed_count: 0,
+          failed_count: 0,
+        },
+      },
+    });
+    vi.mocked(runtimeClient.rebuildIndexes).mockResolvedValue({
+      job_id: "job-1",
+      state: "running",
+      domains: {
+        memory: {
+          domain: "memory",
+          state: "running",
+          total_count: 5,
+          indexed_count: 0,
+          failed_count: 0,
+        },
+        photo: {
+          domain: "photo",
+          state: "running",
+          total_count: 2,
+          indexed_count: 0,
+          failed_count: 0,
+        },
+      },
+    });
     vi.mocked(runtimeClient.getCharacterState).mockResolvedValue({
       character_id: "default",
       user_scope: "local",
@@ -149,6 +191,164 @@ describe("ModelSettingsPanel", () => {
     expect(
       await screen.findByText("聊天模型连接 ok，返回 12 字符"),
     ).toBeTruthy();
+  });
+
+  it("displays warning modal with EXACT text when embedding model is changed", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    const embeddingModelInput = await screen.findByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const embeddingCard = embeddingModelInput.closest("section");
+    if (!embeddingCard) throw new Error("expected embedding card");
+
+    fireEvent.change(embeddingModelInput, {
+      target: { value: "text-embedding-3-small" },
+    });
+
+    const saveButton = Array.from(embeddingCard.querySelectorAll("button")).find(
+      (b) => b.textContent === "保存",
+    );
+    if (!saveButton) throw new Error("expected save button");
+
+    fireEvent.click(saveButton);
+
+    const exactWarning =
+      "embedding 模型已更换，现有索引仍由旧模型生成。不重建可能导致漏检、错误匹配或相关度下降；向量维度不兼容的条目将无法参与语义检索。建议重建索引。";
+    const modalText = await screen.findByText(exactWarning);
+    expect(modalText).toBeTruthy();
+    expect(screen.getByRole("button", { name: "稍后" })).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("does NOT display warning modal on secret change, timeout change, or other model roles", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    // 1. Changing chat model
+    const chatModel = await screen.findByRole("textbox", {
+      name: "聊天模型 模型 ID",
+    });
+    const chatCard = chatModel.closest("section");
+    if (!chatCard) throw new Error("expected chat card");
+    fireEvent.change(chatModel, { target: { value: "chat-v2" } });
+    const chatSave = Array.from(chatCard.querySelectorAll("button")).find(
+      (b) => b.textContent === "保存",
+    );
+    fireEvent.click(chatSave!);
+    await screen.findByText("聊天模型已保存");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // 2. Changing embedding timeout only
+    const embeddingModel = screen.getByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const embeddingCard = embeddingModel.closest("section");
+    if (!embeddingCard) throw new Error("expected embedding card");
+    const timeoutInput = embeddingCard.querySelectorAll("input[type='number']")[1];
+    fireEvent.change(timeoutInput, { target: { value: "120" } });
+    const embeddingSave = Array.from(embeddingCard.querySelectorAll("button")).find(
+      (b) => b.textContent === "保存",
+    );
+    fireEvent.click(embeddingSave!);
+    await screen.findByText("Embedding 模型已保存");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("dismisses warning modal on '稍后' or Escape without triggering rebuild", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    const embeddingModel = await screen.findByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const embeddingCard = embeddingModel.closest("section");
+    if (!embeddingCard) throw new Error("expected embedding card");
+
+    // 1. Click "稍后"
+    fireEvent.change(embeddingModel, { target: { value: "model-a" } });
+    const saveButton = Array.from(embeddingCard.querySelectorAll("button")).find(
+      (b) => b.textContent === "保存",
+    );
+    fireEvent.click(saveButton!);
+
+    const laterButton = await screen.findByRole("button", { name: "稍后" });
+    fireEvent.click(laterButton);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
+
+    // 2. Press Escape
+    fireEvent.change(embeddingModel, { target: { value: "model-b" } });
+    fireEvent.click(saveButton!);
+    await screen.findByRole("dialog");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
+  });
+
+  it("triggers rebuildIndexes singleflight from manual button or modal button", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    const embeddingModel = await screen.findByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const embeddingCard = embeddingModel.closest("section");
+    if (!embeddingCard) throw new Error("expected embedding card");
+
+    // Manual button in footer
+    const manualRebuildBtn = Array.from(
+      embeddingCard.querySelectorAll("button"),
+    ).find((b) => b.textContent === "重建索引");
+    if (!manualRebuildBtn) throw new Error("expected manual rebuild button");
+
+    fireEvent.click(manualRebuildBtn);
+
+    await waitFor(() =>
+      expect(runtimeClient.rebuildIndexes).toHaveBeenCalledTimes(1),
+    );
+    expect(manualRebuildBtn.textContent).toBe("重建中…");
+    expect(manualRebuildBtn.disabled).toBe(true);
+
+    // Clicking while disabled/running should not trigger a second rebuild
+    fireEvent.click(manualRebuildBtn);
+    expect(runtimeClient.rebuildIndexes).toHaveBeenCalledTimes(1);
+  });
+
+  it("triggers rebuildIndexes when confirming from warning modal", async () => {
+    render(
+      <ModelSettingsPanel sessionId="00000000-0000-4000-8000-000000000001" />,
+    );
+
+    const embeddingModel = await screen.findByRole("textbox", {
+      name: "Embedding 模型 模型 ID",
+    });
+    const embeddingCard = embeddingModel.closest("section");
+    if (!embeddingCard) throw new Error("expected embedding card");
+
+    fireEvent.change(embeddingModel, { target: { value: "model-new" } });
+    const saveButton = Array.from(
+      embeddingCard.querySelectorAll("button"),
+    ).find((b) => b.textContent === "保存");
+    fireEvent.click(saveButton!);
+
+    const modal = await screen.findByRole("dialog");
+    const confirmButton = Array.from(modal.querySelectorAll("button")).find(
+      (b) => b.textContent === "重建索引",
+    );
+    if (!confirmButton) throw new Error("expected confirm button in modal");
+
+    fireEvent.click(confirmButton);
+
+    await waitFor(() =>
+      expect(runtimeClient.rebuildIndexes).toHaveBeenCalledTimes(1),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 

@@ -15,6 +15,7 @@ from PIL import Image, ImageOps
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.models import PhotoSaveCandidate
 from chatwaifu_runtime.photo_memory.ports import PhotoMemoryRepository
+from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 
 logger = logging.getLogger(__name__)
@@ -31,9 +32,15 @@ class PhotoObservationSource:
 
 
 class PhotoMemoryObserver:
-    def __init__(self, repository: PhotoMemoryRepository, classifier: PhotoClassifier) -> None:
+    def __init__(
+        self,
+        repository: PhotoMemoryRepository,
+        classifier: PhotoClassifier,
+        semantic_service: PhotoSemanticService | None = None,
+    ) -> None:
         self.repository = repository
         self._classifier = classifier
+        self._semantic_service = semantic_service
         self._tasks: dict[UUID, tuple[UUID, asyncio.Task[None]]] = {}
         self._stop_fence: object | None = None
 
@@ -144,6 +151,10 @@ class PhotoMemoryObserver:
                     source.generation_id,
                     record is not None,
                 )
+                if record is not None and self._semantic_service is not None:
+                    self._semantic_service.index_new_photo(
+                        source.principal_scope, source.character_id, record
+                    )
         except asyncio.CancelledError:
             raise
         except Exception:

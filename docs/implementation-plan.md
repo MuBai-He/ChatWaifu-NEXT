@@ -2554,23 +2554,61 @@ short plea without adding a model call. The owner confirmed the real WeChat reus
 after the fix; broader photo-screening coverage remains separate. See
 [ADR 0036](adr/0036-opt-in-learned-sticker-library.md).
 
-### Phase 17.3C — Photo retention and visual memory (in progress)
+### Phase 17.3C — Photo retention and visual memory (completed)
 
 On 2026-09-05 the owner clarified that photos should also be saved so Ningning can bring them up
 in later conversations. The preceding selection concerned only sticker eligibility. Photo
 retention must have its own policy and controls, independent of the sticker-learning switch.
 
-The next slice should retain a local image asset, a grounded content description, and its
-conversation/time provenance; use relevant retrieval to support later references to that photo;
-and expose viewing and deletion. A saved photo does not automatically become an outbound sticker.
-Media storage and long-term memory remain separate: extracted memories pass through the existing
-policy, deduplication and provenance boundaries. Deletion must cover the asset and derived
-retrieval references. ADR 0037 specifies a separate default-off automatic photo-retention switch,
-metadata-free copies up to 2048 pixels per side and 5 MiB, and 200 photos / 500 MiB per owner and
-character. Disabling collection preserves existing photos. The first recall path uses bounded
-Chinese/Latin lexical matching and explicit recent-photo references, with optional image grounding
-and source-attributed observations separate from personal memory extraction. Direct and indirect
-photo-derived assistant context is redacted on deletion, with revision fences for concurrent
-observations and exact-generation cancellation. Experience reset also clears scoped photos.
-Real WeChat photo/restart/recall/deletion acceptance remains required. General embedding recall,
-groups and animations remain pending Phase 17.3 work; this slice does not complete Phase 17.
+The slice retains a local image asset, a grounded content description, and its conversation/time
+provenance; uses relevant retrieval to support later references to that photo; and exposes viewing
+and deletion. A saved photo does not automatically become an outbound sticker. Media storage and
+long-term memory remain separate: extracted memories pass through the existing policy, deduplication
+and provenance boundaries. Deletion covers the asset and derived retrieval references. ADR 0037
+specifies a separate default-off automatic photo-retention switch, metadata-free copies up to 2048
+pixels per side and 5 MiB, and 200 photos / 500 MiB per owner and character. Disabling collection
+preserves existing photos. Lexical matching and explicit recent-photo references provide baseline
+recall. Direct and indirect photo-derived assistant context is redacted on deletion, with revision
+fences for concurrent observations and exact-generation cancellation. Experience reset also clears
+scoped photos.
+
+PR #23 merged at `554469b` on 2026-09-06 with 16 CI checks passing at `a832d7a`. Owner WeChat
+save+restart roof-color recall passed. Post-delete retest (06:24:36) reported only unavailable
+photo with no stale sleep topic (assets/FTS/references 0). Explicit reupload followed by desktop
+recall (06:26:14) correctly referenced red roofs with new photo recall. Issue #24 blackface is
+explicitly deferred.
+
+### Phase 17.3D — Bounded semantic photo recall (implementation complete, real-model acceptance pending)
+
+While lexical search resolves exact matches, users naturally refer to retained photos via synonyms,
+paraphrases, and abstract descriptions. Phase 17.3D implements bounded semantic photo recall under
+[ADR 0038](adr/0038-bounded-photo-semantic-recall.md).
+
+Key architecture and invariants:
+- **Separation from text memory**: Photos never enter `MemoryRecord` or `memory_embeddings`.
+  Embeddings live in a dedicated `photo_embeddings` table (migration 26) with cascading FK to
+  `photo_assets(photo_id)`.
+- **Domain vs Persistence boundary**: Network embedding calls, batching, vector dimension/finite
+  validation, and similarity ranking reside strictly in domain service `PhotoSemanticService`.
+  `SQLitePhotoSemanticAdapter` handles only index reads and authoritative transactional writes
+  with `INSERT INTO photo_embeddings ... SELECT ... FROM photo_assets WHERE ...`.
+- **Conservative recall policy**: Lexical search runs first; semantic search is invoked only on
+  explicit photo reference with lexical miss. Minimum cosine similarity threshold is 0.55; ambiguity
+  gap is 0.08 (candidates within 0.08 suppress image attachment and prompt conversational
+  clarification). `local_hash` embedding provider produces an empty semantic candidate set, falling
+  back to lexical.
+- **Narrow recency fallback**: Only pure recency requests ("刚才那张照片") without content
+  qualifiers fall back to the latest photo. Content-specific queries ("之前那张红屋顶的照片") never
+  fall back silently to the latest photo on search miss.
+- **Concurrency and lifecycle**: Query budget is strictly bounded (<= 1.5s). Fingerprints are
+  snapshotted before and after `await` to prevent cross-route pollution.
+- **Stale vector and degraded retrieval policy**: For text embeddings, same-dimensional old vectors
+  participate in retrieval per user-accepted tradeoff, while dimension mismatches are skipped.
+- **Owner-approved manual rebuild UX**: Automatic background rebuild on save or startup is eliminated;
+  manual "重建索引" button in Model Settings triggers singleflight cross-domain (memory and photo) rebuild.
+  Saving changes to embedding provider/model/baseURL presents a warning modal with exact text; choosing
+  "稍后" or Escape leaves normal retrieval enabled without rebuilding. Non-route edits never trigger warnings.
+
+Real-model acceptance on live WeChat remains pending (Issue #24 deferred). Multi-photo groups and animations
+remain pending Phase 17 work; completing this slice does not complete Phase 17.
+

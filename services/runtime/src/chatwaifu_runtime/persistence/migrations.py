@@ -1063,4 +1063,29 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON turns(generation_id) WHERE generation_id IS NOT NULL;
         """,
     ),
+    (
+        26,
+        """
+        CREATE TABLE photo_embeddings (
+            photo_id TEXT NOT NULL REFERENCES photo_assets(photo_id) ON DELETE CASCADE,
+            representation TEXT NOT NULL,
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            vector_space_id TEXT NOT NULL,
+            model_fingerprint TEXT NOT NULL,
+            route_generation INTEGER NOT NULL DEFAULT 0,
+            vector_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(photo_id, representation)
+        );
+
+        CREATE INDEX photo_embeddings_lookup_idx
+            ON photo_embeddings(principal_scope, character_id, representation, vector_space_id);
+
+        CREATE TRIGGER photo_assets_after_delete_embeddings AFTER DELETE ON photo_assets
+        BEGIN
+            DELETE FROM photo_embeddings WHERE photo_id = old.photo_id;
+        END;
+        """,
+    ),
 )

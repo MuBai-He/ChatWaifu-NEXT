@@ -4,12 +4,15 @@ import "./model-settings.css";
 
 import {
   getCharacterState,
+  getIndexRebuildStatus,
   getModelConfigurations,
+  rebuildIndexes,
   testModelConfiguration,
   updateModelConfiguration,
 } from "./runtimeClient";
 import type {
   CharacterKernelSnapshot,
+  IndexRebuildStatus,
   ModelRole,
   ModelRoleConfiguration,
 } from "./types";
@@ -55,6 +58,16 @@ export function ModelSettingsPanel({ sessionId }: Props) {
   const [apiKeys, setApiKeys] = useState<Partial<Record<ModelRole, string>>>(
     {},
   );
+  const [persistedEmbedding, setPersistedEmbedding] = useState<{
+    provider: string;
+    model: string;
+    base_url: string;
+  } | null>(null);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [rebuildStatus, setRebuildStatus] = useState<IndexRebuildStatus | null>(
+    null,
+  );
+  const [isRebuilding, setIsRebuilding] = useState(false);
   const { busy, notice, setNotice, run } = useSettingsOperation<ModelRole>();
 
   useEffect(() => {
@@ -62,11 +75,23 @@ export function ModelSettingsPanel({ sessionId }: Props) {
     void Promise.all([
       getModelConfigurations(),
       sessionId ? getCharacterState(sessionId) : Promise.resolve(null),
+      getIndexRebuildStatus().catch(() => null),
     ])
-      .then(([models, state]) => {
+      .then(([models, state, currentRebuildStatus]) => {
         if (!active) return;
         setConfigurations(models);
         setCharacterState(state);
+        const emb = models.find((m) => m.role === "embedding");
+        if (emb) {
+          setPersistedEmbedding({
+            provider: emb.provider,
+            model: emb.model,
+            base_url: emb.base_url,
+          });
+        }
+        if (currentRebuildStatus && currentRebuildStatus.state !== "idle") {
+          setRebuildStatus(currentRebuildStatus);
+        }
         setNotice(null);
       })
       .catch((error: unknown) => {
@@ -80,6 +105,52 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       active = false;
     };
   }, [sessionId, setNotice]);
+
+  useEffect(() => {
+    if (!showWarningModal) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowWarningModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showWarningModal]);
+
+  useEffect(() => {
+    if (rebuildStatus?.state !== "running") return;
+    let active = true;
+    const interval = setInterval(() => {
+      void getIndexRebuildStatus()
+        .then((status) => {
+          if (!active) return;
+          setRebuildStatus(status);
+        })
+        .catch(() => {
+          // ignore transient poll error
+        });
+    }, 500);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [rebuildStatus?.state]);
+
+  const handleTriggerRebuild = async () => {
+    if (isRebuilding || rebuildStatus?.state === "running") return;
+    setIsRebuilding(true);
+    try {
+      const status = await rebuildIndexes();
+      setRebuildStatus(status);
+    } catch (error: unknown) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "触发重建索引失败",
+      });
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
 
   const byRole = useMemo(
     () => new Map(configurations.map((item) => [item.role, item])),
@@ -121,6 +192,21 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       },
     );
     if (!updated) return;
+    if (role === "embedding") {
+      if (
+        persistedEmbedding &&
+        (persistedEmbedding.provider !== updated.provider ||
+          persistedEmbedding.model !== updated.model ||
+          persistedEmbedding.base_url !== updated.base_url)
+      ) {
+        setShowWarningModal(true);
+      }
+      setPersistedEmbedding({
+        provider: updated.provider,
+        model: updated.model,
+        base_url: updated.base_url,
+      });
+    }
     setConfigurations((current) =>
       current.map((candidate) =>
         candidate.role === role ? updated : candidate,
@@ -270,6 +356,20 @@ export function ModelSettingsPanel({ sessionId }: Props) {
               >
                 测试
               </button>
+              {role === "embedding" ? (
+                <button
+                  type="button"
+                  className="reindex-button"
+                  disabled={
+                    busy === role ||
+                    isRebuilding ||
+                    rebuildStatus?.state === "running"
+                  }
+                  onClick={() => void handleTriggerRebuild()}
+                >
+                  {rebuildStatus?.state === "running" ? "重建中…" : "重建索引"}
+                </button>
+              ) : null}
               {isOpenAi && item.api_key_configured ? (
                 <button
                   className="danger"
@@ -281,6 +381,55 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                 </button>
               ) : null}
             </footer>
+            {role === "embedding" &&
+            rebuildStatus &&
+            rebuildStatus.state !== "idle" ? (
+              <div className="reindex-status-card" aria-label="索引重建状态">
+                <div className="reindex-status-header">
+                  <span>索引状态：{rebuildStateLabel(rebuildStatus.state)}</span>
+                  {rebuildStatus.state === "failed" ? (
+                    <button
+                      type="button"
+                      className="reindex-retry-button"
+                      disabled={isRebuilding}
+                      onClick={() => void handleTriggerRebuild()}
+                    >
+                      重试
+                    </button>
+                  ) : null}
+                </div>
+                {rebuildStatus.error ? (
+                  <p className="reindex-status-error">{rebuildStatus.error}</p>
+                ) : null}
+                <div className="reindex-domain-grid">
+                  {Object.entries(rebuildStatus.domains).map(
+                    ([domainName, dom]) => (
+                      <div key={domainName} className="reindex-domain-item">
+                        <strong>
+                          {domainName === "memory"
+                            ? "结构化记忆"
+                            : domainName === "photo"
+                              ? "照片语义"
+                              : domainName}
+                        </strong>
+                        <span>状态：{rebuildStateLabel(dom.state)}</span>
+                        <span>
+                          已索引：{dom.indexed_count} / {dom.total_count}
+                        </span>
+                        {dom.failed_count > 0 ? (
+                          <span className="domain-failed">
+                            失败：{dom.failed_count}
+                          </span>
+                        ) : null}
+                        {dom.error ? (
+                          <small className="domain-error">{dom.error}</small>
+                        ) : null}
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+            ) : null}
           </section>
         );
       })}
@@ -288,8 +437,62 @@ export function ModelSettingsPanel({ sessionId }: Props) {
         密钥不会回显或写入浏览器；保存后只进入本机 Runtime 的 0600 私密文件。
       </p>
       <SettingsStatus notice={notice} className="model-settings-notice" />
+      {showWarningModal ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setShowWarningModal(false)}
+        >
+          <div
+            className="reindex-warning-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reindex-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="reindex-modal-title">Embedding 模型已更换</h3>
+            <p className="reindex-warning-text">
+              embedding 模型已更换，现有索引仍由旧模型生成。不重建可能导致漏检、错误匹配或相关度下降；向量维度不兼容的条目将无法参与语义检索。建议重建索引。
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="reindex-confirm-button danger"
+                onClick={() => {
+                  setShowWarningModal(false);
+                  void handleTriggerRebuild();
+                }}
+              >
+                重建索引
+              </button>
+              <button
+                type="button"
+                className="reindex-cancel-button"
+                onClick={() => setShowWarningModal(false)}
+              >
+                稍后
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function rebuildStateLabel(state: string): string {
+  switch (state) {
+    case "running":
+      return "重建中";
+    case "completed":
+      return "已完成";
+    case "failed":
+      return "失败";
+    case "cancelled":
+      return "已取消";
+    default:
+      return "空闲";
+  }
 }
 
 function CharacterStateCard({

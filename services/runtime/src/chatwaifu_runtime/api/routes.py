@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import hmac
+import logging
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -78,6 +79,8 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelError,
 )
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1")
 
@@ -638,6 +641,8 @@ async def update_model_configuration(
 ) -> dict[str, object]:
     if role not in MODEL_ROLES:
         raise HTTPException(status_code=404, detail="model role not found")
+    container = _container(request)
+    prev_config = container.model_configurations.get(role) if role == "embedding" else None
     try:
         config = ModelRoleConfig(
             role=role,
@@ -649,16 +654,38 @@ async def update_model_configuration(
             enabled=body.enabled,
             updated_at=datetime.now(UTC),
         )
-        updated = await _container(request).model_configurations.update(
+        updated = await container.model_configurations.update(
             config,
             api_key=body.api_key,
             clear_api_key=body.clear_api_key,
         )
         if role == "embedding":
-            await _container(request).memory.reindex_all()
+            route_changed = (
+                prev_config is None
+                or prev_config.provider != config.provider
+                or prev_config.model != config.model
+                or prev_config.base_url != config.base_url
+            )
+            if route_changed:
+                container.index_rebuild.on_model_route_change()
+                container.photo_semantic.notify_route_change()
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     return updated.model_dump(mode="json")
+
+
+@router.post("/indexes/rebuild")
+async def rebuild_indexes(request: Request) -> dict[str, object]:
+    container = _container(request)
+    status_obj = await container.index_rebuild.start_rebuild()
+    return status_obj.to_dict()
+
+
+@router.get("/indexes/rebuild")
+async def get_index_rebuild_status(request: Request) -> dict[str, object]:
+    container = _container(request)
+    status_obj = container.index_rebuild.get_status()
+    return status_obj.to_dict()
 
 
 @router.post("/model-configurations/{role}/test")
