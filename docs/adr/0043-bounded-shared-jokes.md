@@ -30,6 +30,7 @@ Phase 17.4A implements bounded shared joke extraction and recall under strict fa
   - Lacking mutual uptake or falling below threshold fails closed.
   - Negated or corrective statements such as "别把这个当梗" and "this is not our inside joke" fail closed.
 - **Bounded Model Context**: The preceding assistant text is loaded and supplied to memory extraction only when the user text first passes the positive uptake classifier. Other user turns keep the existing single-turn extraction context.
+- **Deterministic Explicit-Quote Fallback**: An explicit statement such as `把“流星伞”当成我们的梗` does not depend on probabilistic model extraction. Runtime extracts the single quoted cue only when it also appears intact in the immediately preceding presented assistant text. Negated, ambiguous, ungrounded, or sensitive quoted cues still fail closed. Model extraction remains available for less explicit shared-joke uptake.
 - **Bounded Cue Grounding**: The joke cue must be 2..80 characters long, normalized for identity, and strictly grounded as an intact substring in the user or assistant text. ASCII cues require word boundaries; whitespace and punctuation are never removed from the evidence before matching.
 - **Sensitive Content Guard**: Content containing credential terms or directly identifying contact/address patterns fails closed immediately. Broader content moderation remains governed by the existing product safety policy.
 - **Factual Text Guard**: Runtime discards the model-authored memory sentence and context claim. It deterministically states that the user recognized the grounded phrase as a shared joke or code word without assigning the phrase to a particular speaker or character name, and retains a bounded excerpt of the actually presented assistant text as context.
@@ -43,6 +44,7 @@ Phase 17.4A implements bounded shared joke extraction and recall under strict fa
 The vertical-slice test suite (`services/runtime/tests/test_shared_jokes.py`) validates:
 
 - Positive voice presentation (`assistant.spoken_text_committed`) and positive external messaging delivery (`channel.delivery_plan_completed`) with multi-event provenance and channel attribution.
+- Explicit quoted uptake commits even when the memory-extraction model returns an empty candidate list.
 - Fail-closed rejection of generated-but-undelivered assistant text, one-sided assistant proposals, negated/interrogative uptake, ungrounded or cross-word cues, malformed/oversized cues, sensitive topics, stale exchanges (>30 min), intervening user turns, mixed local-voice/external-channel evidence, and mismatched external routes.
 - Uptake classification thresholds (explicit >= 0.80, implicit >= 0.90).
 - Coexistence of distinct jokes and idempotent deduplication of same-cue jokes.

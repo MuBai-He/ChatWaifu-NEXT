@@ -37,6 +37,7 @@ from chatwaifu_runtime.memory.repository import MemoryEventEvidence, MemoryRepos
 from chatwaifu_runtime.memory.retrieval import MemoryRetriever
 from chatwaifu_runtime.memory.shared_joke import (
     classify_uptake,
+    extract_explicit_quoted_shared_joke,
     is_shared_joke_draft,
     validate_and_transform_shared_joke,
 )
@@ -202,13 +203,24 @@ class MemoryService:
             explicit=explicit,
         )
         candidates = [deterministic] if deterministic is not None else []
-        if self._inference is not None and not explicit:
+        preceding_assistant = None
+        if not explicit:
             uptake_kind, _threshold = classify_uptake(text)
             preceding_assistant = (
                 await self._repository.get_preceding_presented_assistant(source_event_id)
                 if uptake_kind is not None
                 else None
             )
+            deterministic_shared_joke = extract_explicit_quoted_shared_joke(
+                user_text=text,
+                preceding_assistant=preceding_assistant,
+                source_event_id=source_event_id,
+                namespace=namespaces[0],
+                observed_at=evidence.occurred_at,
+            )
+            if deterministic_shared_joke is not None:
+                candidates.append(deterministic_shared_joke)
+        if self._inference is not None and not explicit:
             preceding_text = (
                 preceding_assistant.presented_text if preceding_assistant is not None else None
             )

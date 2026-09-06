@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -114,6 +115,14 @@ _SENSITIVE = re.compile(
 
 _MAX_CONTEXT_CHARS = 240
 
+_QUOTED_CUE_PATTERNS = (
+    re.compile(r"“([^”\r\n]{2,80})”"),
+    re.compile(r"「([^」\r\n]{2,80})」"),
+    re.compile(r"『([^』\r\n]{2,80})』"),
+    re.compile(r'"([^"\r\n]{2,80})"'),
+    re.compile(r"'([^'\r\n]{2,80})'"),
+)
+
 
 def classify_uptake(text: str) -> tuple[Literal["explicit", "implicit"] | None, float]:
     """Classify user uptake marker and return corresponding confidence threshold.
@@ -224,6 +233,63 @@ def _extract_cue_and_context(draft: MemoryRecordDraft) -> tuple[str, str] | None
 def ensure_factual_joke_text(cue: str) -> str:
     """Build deterministic wording without trusting model-authored event claims."""
     return f"用户将“{cue}”认作了双方的共同梗或暗号。"
+
+
+def extract_explicit_quoted_shared_joke(
+    *,
+    user_text: str,
+    preceding_assistant: PrecedingAssistantEvidence | None,
+    source_event_id: UUID,
+    namespace: str,
+    observed_at: datetime,
+) -> ExtractedMemoryCandidate | None:
+    """Extract an unambiguous quoted cue from explicit mutual uptake.
+
+    This deterministic path covers phrases such as ``把“流星伞”当成我们的梗``
+    without trusting the memory-extraction model to notice an explicit agreement.
+    The quoted cue must also occur in the immediately preceding presented assistant
+    text, so user-authored or ambiguous quoted phrases still fail closed.
+    """
+    uptake_kind, _threshold = classify_uptake(user_text)
+    if uptake_kind != "explicit" or preceding_assistant is None:
+        return None
+
+    grounded: dict[str, str] = {}
+    for pattern in _QUOTED_CUE_PATTERNS:
+        for match in pattern.finditer(user_text):
+            cue = match.group(1).strip()
+            if (
+                2 <= len(cue) <= 80
+                and is_cue_grounded(cue, "", preceding_assistant.presented_text)
+                and not is_sensitive_content(user_text, preceding_assistant.presented_text, cue)
+            ):
+                grounded.setdefault(normalize_cue(cue), cue)
+    if len(grounded) != 1:
+        return None
+
+    cue = next(iter(grounded.values()))
+    raw = ExtractedMemoryCandidate(
+        draft=MemoryRecordDraft(
+            namespace=namespace,
+            kind="episodic.shared_event",
+            subject_id="relationship",
+            predicate=f"shared_joke.{normalize_cue(cue)}",
+            value={"cue": cue, "context": "", "kind": "shared_joke"},
+            text=ensure_factual_joke_text(cue),
+            observed_at=observed_at,
+            confidence=1.0,
+            importance=0.7,
+            sensitivity=PrivacyLevel.PRIVATE,
+        ),
+        explicit=False,
+        rationale="deterministic explicit quoted shared-joke uptake",
+    )
+    return validate_and_transform_shared_joke(
+        raw,
+        user_text=user_text,
+        preceding_assistant=preceding_assistant,
+        source_event_id=source_event_id,
+    )
 
 
 def validate_and_transform_shared_joke(

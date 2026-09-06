@@ -2730,6 +2730,7 @@ Key architecture and invariants:
   - Implicit laughter / callback (e.g. "哈哈哈哈太搞笑了", "笑死我了"): confidence $\ge 0.90$.
   - Unrelated, negated, or one-sided jokes without positive uptake fail closed.
 - **Bounded model context**: Preceding assistant text is queried and sent to memory extraction only after the user text passes the positive uptake classifier.
+- **Deterministic explicit-quote fallback**: A single quoted cue in an explicit agreement is extracted locally when it also occurs intact in the immediately preceding presented assistant text, so an empty model candidate list cannot lose clear mutual uptake. Negated, ambiguous, ungrounded, and sensitive quotes fail closed.
 - **Bounded cue grounding**: Cues must be 2..80 characters and occur intact in user or assistant text; ASCII cues require word boundaries and matching never joins text across whitespace or punctuation.
 - **Sensitive-data and factual-text guards**: Credential/direct-identifier patterns fail closed. Runtime ignores model-authored event claims, emits character-neutral wording without claiming which speaker introduced the cue, and stores only a bounded excerpt of the presented assistant reply as context. One-sided assistant observation cannot create a shared-joke proposal.
 - **Deterministic predicate & deduplication**: Distinct jokes coexist under `shared_joke.<normalized_cue>`.

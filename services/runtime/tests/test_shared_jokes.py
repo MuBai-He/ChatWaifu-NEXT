@@ -44,6 +44,7 @@ from chatwaifu_runtime.memory.repository import PrecedingAssistantEvidence
 from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
 from chatwaifu_runtime.memory.shared_joke import (
     classify_uptake,
+    extract_explicit_quoted_shared_joke,
     is_cue_grounded,
     is_shared_joke_draft,
     validate_and_transform_shared_joke,
@@ -438,6 +439,98 @@ async def test_positive_external_delivered_exchange(
     assert "assistant_delivered" in source_map
     assert source_map["assistant_delivered"].channel_attribution is not None
     assert source_map["assistant_delivered"].channel_attribution.provider_id == "weixin_ilink"
+
+
+@pytest.mark.asyncio
+async def test_explicit_quoted_external_joke_commits_when_model_returns_no_candidates(
+    database: Database, event_store: EventStore, repository: SQLiteMemoryRepository
+) -> None:
+    session_id = uuid4()
+    originating_user_turn_id = uuid4()
+    generation_id = uuid4()
+    await _create_session(database, session_id)
+
+    channel_context = {
+        "provider_id": "weixin_ilink",
+        "connection_id": str(uuid4()),
+        "chat_type": "direct",
+        "conversation_key": "owner-direct",
+        "sender_key": "owner-user",
+        "principal_scope": "local",
+    }
+    await _create_turn(
+        database,
+        session_id,
+        originating_user_turn_id,
+        source_context=channel_context,
+    )
+    await _create_generation(
+        database,
+        session_id,
+        originating_user_turn_id,
+        generation_id,
+        output_text="流星伞。",
+    )
+
+    delivered_at = datetime.now(UTC)
+    delivery = GenericCoreEvent.model_validate(
+        {
+            "event_id": uuid4(),
+            "event_type": "channel.delivery_plan_completed",
+            "session_id": session_id,
+            "turn_id": originating_user_turn_id,
+            "generation_id": generation_id,
+            "occurred_at": delivered_at,
+            "source": "runtime.external_channels",
+            "payload": {
+                "connection_id": channel_context["connection_id"],
+                "channel_turn_id": str(uuid4()),
+                "delivery_id": str(uuid4()),
+                "part_count": 1,
+            },
+        }
+    )
+    user_turn_id = uuid4()
+    user_event_id = uuid4()
+    await _create_turn(database, session_id, user_turn_id, source_context=channel_context)
+    user_event = UserTurnCommittedEvent(
+        event_id=user_event_id,
+        session_id=session_id,
+        turn_id=user_turn_id,
+        occurred_at=delivered_at + timedelta(seconds=10),
+        source="runtime.external_channels",
+        payload=UserTurnCommittedPayload(text="哈哈，就把“流星伞”当成我们的梗吧。"),
+    )
+    async with database.transaction() as connection:
+        await event_store.append_in_transaction(connection, delivery)
+        await event_store.append_in_transaction(connection, user_event)
+
+    models = _MockExtractionModels()
+    service = MemoryService(
+        repository=repository,
+        publisher=EventPublisher(event_store, EventHub()),
+        models=cast(ModelConfigurationService, models),
+    )
+    proposals = await service.observe_user_turn(
+        session_id=session_id,
+        turn_id=user_turn_id,
+        source_event_id=user_event_id,
+        character_id="default-character",
+        text="哈哈，就把“流星伞”当成我们的梗吧。",
+    )
+
+    assert len(models.calls) == 1
+    assert len(proposals) == 1
+    assert proposals[0].status == "accepted"
+    records = await repository.list_records(kind="episodic.shared_event")
+    assert len(records) == 1
+    assert records[0].predicate == "shared_joke.流星伞"
+    assert records[0].text == "用户将“流星伞”认作了双方的共同梗或暗号。"
+    sources = await repository.list_sources(records[0].memory_id)
+    assert {source.source_kind for source in sources} == {
+        "user_turn",
+        "assistant_delivered",
+    }
 
 
 @pytest.mark.asyncio
@@ -987,6 +1080,49 @@ def test_uptake_classification_and_confidence_thresholds() -> None:
         kind, thresh = classify_uptake(rejected)
         assert kind is None
         assert thresh == 1.0
+
+
+def test_explicit_quoted_joke_fallback_rejects_negated_ambiguous_or_ungrounded_cues() -> None:
+    now = datetime.now(UTC)
+    evidence = PrecedingAssistantEvidence(
+        event_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        generation_id=uuid4(),
+        event_type="assistant.spoken_text_committed",
+        presented_text="流星伞和月光船。",
+        occurred_at=now,
+    )
+    assert (
+        extract_explicit_quoted_shared_joke(
+            user_text="别把“流星伞”当成我们的梗。",
+            preceding_assistant=evidence,
+            source_event_id=uuid4(),
+            namespace="character/default/user/local",
+            observed_at=now,
+        )
+        is None
+    )
+    assert (
+        extract_explicit_quoted_shared_joke(
+            user_text="把“流星伞”和“月光船”都当成我们的梗。",
+            preceding_assistant=evidence,
+            source_event_id=uuid4(),
+            namespace="character/default/user/local",
+            observed_at=now,
+        )
+        is None
+    )
+    assert (
+        extract_explicit_quoted_shared_joke(
+            user_text="把“海盐星”当成我们的梗。",
+            preceding_assistant=evidence,
+            source_event_id=uuid4(),
+            namespace="character/default/user/local",
+            observed_at=now,
+        )
+        is None
+    )
 
 
 def test_shared_joke_validation_uses_only_grounded_factual_shape() -> None:
