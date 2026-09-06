@@ -297,6 +297,17 @@ describe("cross-language protocol fixtures", () => {
     expect(source.channel_attribution?.received_at).toBe(
       "2026-08-31T08:00:00Z",
     );
+    const deliveredSource = parseMemorySource({
+      source_id: "00000000-0000-4000-8000-000000000957",
+      memory_id: "00000000-0000-4000-8000-000000000958",
+      source_event_id: "00000000-0000-4000-8000-000000000959",
+      session_id: "00000000-0000-4000-8000-000000000960",
+      turn_id: "00000000-0000-4000-8000-000000000961",
+      source_kind: "assistant_delivered",
+      created_at: "2026-08-31T08:00:02Z",
+      channel_attribution: channelAttribution,
+    });
+    expect(deliveredSource.source_kind).toBe("assistant_delivered");
     expect(() =>
       parseMemoryChannelAttribution({
         ...channelAttribution,

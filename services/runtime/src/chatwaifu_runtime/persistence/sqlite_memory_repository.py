@@ -20,6 +20,8 @@ from chatwaifu_runtime.memory.repository import (
     MemoryEventEvidence,
     MemoryRepository,
     MemorySearchHit,
+    PrecedingAssistantEvidence,
+    PresentedAssistantEventType,
 )
 from chatwaifu_runtime.persistence.database import Database
 
@@ -34,6 +36,9 @@ FROM memory_records AS record
 """
 _ASCII_WORD = re.compile(r"[a-z0-9_]{2,}")
 _CJK_RUN = re.compile(r"[\u3400-\u9fff]+")
+_MAX_SHARED_JOKE_EVIDENCE_AGE_SECONDS = 1800.0
+_MAX_PRESENTED_ASSISTANT_CHARS = 2_000
+_OWNER_PRINCIPAL_SCOPE = "local"
 
 
 class SQLiteMemoryRepository(MemoryRepository):
@@ -76,6 +81,134 @@ class SQLiteMemoryRepository(MemoryRepository):
             channel_attribution=_channel_attribution_from_source_context(
                 row["source_context_json"], fallback_received_at=occurred_at
             ),
+        )
+
+    async def get_preceding_presented_assistant(
+        self, user_turn_event_id: UUID
+    ) -> PrecedingAssistantEvidence | None:
+        user_row = await self._database.fetchone(
+            """
+            SELECT event.session_id, event.sequence, event.occurred_at, event.event_type,
+                   turn.source_context_json AS turn_source_context_json
+            FROM events AS event
+            LEFT JOIN turns AS turn
+              ON turn.session_id = event.session_id
+             AND turn.turn_id = json_extract(event.envelope_json, '$.turn_id')
+            WHERE event.event_id = ?
+            """,
+            (str(user_turn_event_id),),
+        )
+        if user_row is None or str(user_row["event_type"]) != "user.turn_committed":
+            return None
+        session_id = str(user_row["session_id"])
+        user_seq = int(user_row["sequence"])
+        user_occurred_at = datetime.fromisoformat(str(user_row["occurred_at"]))
+
+        asst_row = await self._database.fetchone(
+            """
+            SELECT
+                asst.event_id,
+                asst.session_id,
+                asst.event_type,
+                asst.sequence,
+                asst.occurred_at,
+                asst.payload_json,
+                asst.envelope_json,
+                gen.output_text AS generation_output_text,
+                gen.state AS generation_state,
+                turn.source_context_json AS turn_source_context_json
+            FROM events AS asst
+            LEFT JOIN generations AS gen
+              ON gen.generation_id = json_extract(asst.envelope_json, '$.generation_id')
+            LEFT JOIN turns AS turn
+              ON turn.session_id = asst.session_id
+             AND turn.turn_id = json_extract(asst.envelope_json, '$.turn_id')
+            WHERE asst.session_id = ?
+              AND asst.sequence < ?
+              AND asst.event_type IN (
+                  'assistant.spoken_text_committed',
+                  'channel.delivery_plan_completed'
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM events AS interv
+                  WHERE interv.session_id = asst.session_id
+                    AND interv.sequence > asst.sequence
+                    AND interv.sequence < ?
+                    AND interv.event_type = 'user.turn_committed'
+              )
+            ORDER BY asst.sequence DESC
+            LIMIT 1
+            """,
+            (session_id, user_seq, user_seq),
+        )
+        if asst_row is None:
+            return None
+
+        event_type = cast(PresentedAssistantEventType, str(asst_row["event_type"]))
+        asst_occurred_at = datetime.fromisoformat(str(asst_row["occurred_at"]))
+        age_seconds = (user_occurred_at - asst_occurred_at).total_seconds()
+        if age_seconds < 0.0 or age_seconds > _MAX_SHARED_JOKE_EVIDENCE_AGE_SECONDS:
+            return None
+
+        envelope = cast(dict[str, object], json.loads(str(asst_row["envelope_json"])))
+        turn_id = envelope.get("turn_id")
+        generation_id = envelope.get("generation_id")
+        user_channel_attribution = _channel_attribution_from_source_context(
+            user_row["turn_source_context_json"], fallback_received_at=user_occurred_at
+        )
+
+        if event_type == "assistant.spoken_text_committed":
+            payload = cast(dict[str, object], json.loads(str(asst_row["payload_json"])))
+            presented_text = str(payload.get("spoken_text") or "").strip()[
+                :_MAX_PRESENTED_ASSISTANT_CHARS
+            ]
+            if not presented_text:
+                return None
+            channel_attribution = _channel_attribution_from_source_context(
+                asst_row["turn_source_context_json"], fallback_received_at=asst_occurred_at
+            )
+            if channel_attribution is None:
+                if user_channel_attribution is not None:
+                    return None
+            elif (
+                user_channel_attribution is None
+                or channel_attribution.chat_type != "direct"
+                or channel_attribution.principal_scope != _OWNER_PRINCIPAL_SCOPE
+                or not _same_channel_route(channel_attribution, user_channel_attribution)
+            ):
+                return None
+        elif event_type == "channel.delivery_plan_completed":
+            if str(asst_row["generation_state"] or "") != "completed":
+                return None
+            output_text = asst_row["generation_output_text"]
+            if not output_text:
+                return None
+            presented_text = str(output_text).strip()[:_MAX_PRESENTED_ASSISTANT_CHARS]
+            if not presented_text:
+                return None
+            channel_attribution = _channel_attribution_from_source_context(
+                asst_row["turn_source_context_json"], fallback_received_at=asst_occurred_at
+            )
+            if (
+                channel_attribution is None
+                or user_channel_attribution is None
+                or channel_attribution.chat_type != "direct"
+                or channel_attribution.principal_scope != _OWNER_PRINCIPAL_SCOPE
+                or not _same_channel_route(channel_attribution, user_channel_attribution)
+            ):
+                return None
+        else:
+            return None
+
+        return PrecedingAssistantEvidence(
+            event_id=UUID(str(asst_row["event_id"])),
+            session_id=UUID(str(asst_row["session_id"])),
+            turn_id=UUID(str(turn_id)) if turn_id else None,
+            generation_id=UUID(str(generation_id)) if generation_id else None,
+            event_type=event_type,
+            presented_text=presented_text,
+            occurred_at=asst_occurred_at,
+            channel_attribution=channel_attribution,
         )
 
     async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None:
@@ -606,6 +739,29 @@ def _channel_attribution_from_source_context(
         )
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         raise ValueError("persisted channel source context is invalid") from error
+
+
+def _same_channel_route(
+    assistant: MemoryChannelAttribution, user: MemoryChannelAttribution
+) -> bool:
+    """Compare stable route identity without trusting display labels or timestamps."""
+    return (
+        assistant.provider_id,
+        assistant.connection_id,
+        assistant.account_key,
+        assistant.principal_scope,
+        assistant.chat_type,
+        assistant.conversation_key,
+        assistant.sender_key,
+    ) == (
+        user.provider_id,
+        user.connection_id,
+        user.account_key,
+        user.principal_scope,
+        user.chat_type,
+        user.conversation_key,
+        user.sender_key,
+    )
 
 
 def _normalize(text: str) -> str:

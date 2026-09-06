@@ -658,6 +658,7 @@ const memorySourceSchema = z
     source_kind: z.enum([
       "user_turn",
       "assistant_spoken",
+      "assistant_delivered",
       "memory_management",
       "migration",
     ]),

@@ -109,7 +109,10 @@ class PromptCompiler:
             context.append(
                 (
                     "system",
-                    "记忆: 仅使用以下经过策略、隐私与来源检查的内容:\n" + memory_text,
+                    "记忆: 仅使用以下经过策略、隐私与来源检查的内容:\n"
+                    + memory_text
+                    + "\n若回忆包含共同梗或暗号 (shared joke)，仅在与当前对话自然相关时呼应使用，"
+                    "切勿机械解释或复述，亦不可宣称虚构设定为真实历史。",
                 )
             )
         if memory_source_text:

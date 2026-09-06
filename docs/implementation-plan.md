@@ -2707,5 +2707,36 @@ Key architecture and invariants:
   - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
     (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
   - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
-- **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and Phase 17.4
-  (shared jokes, usage history, adaptive recall) remain pending.
+- **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and remaining Phase 17.4 adaptive sticker ranking remain pending.
+
+### Phase 17.4A — Bounded shared joke association and recall
+
+Phase 17.4A introduces bounded shared joke recognition, association, and recall under [ADR 0043](adr/0043-bounded-shared-jokes.md),
+enabling the companion persona to build shared conversational jokes and agreed-upon callbacks with the user without
+compromising factual truthfulness, hallucinating unpresented content, or creating noisy memory duplicates.
+
+Key architecture and invariants:
+
+- **Zero database migration**: Reuses `MemoryRecord.kind = "episodic.shared_event"` with structured payload
+  `value = {"cue": str, "kind": "shared_joke", ...}` and deterministic predicate `shared_joke.<normalized_cue>`.
+- **Authoritative presented assistant evidence**: Requires concrete proof of assistant delivery before extraction:
+  - Voice: `assistant.spoken_text_committed` in `runtime.playback`; local voice evidence cannot be paired with an externally attributed user turn.
+  - External messaging: `channel.delivery_plan_completed` in `runtime.external_channels`; assistant and user evidence must resolve to the same owner direct route through stable, provider-neutral keys.
+  - Undelivered model output, unpresented text, or cancelled turns fail closed (0 records produced).
+- **Strict session adjacency and age window**: The user turn must be the immediately next `user.turn_committed`
+  in the same session without intervening user turns, bounded by a 30-minute age ceiling.
+- **Mutual uptake classification**: Enforces positive uptake thresholds:
+  - Explicit declaration (e.g. "这是我们的暗号/梗", "inside joke"): confidence $\ge 0.80$.
+  - Implicit laughter / callback (e.g. "哈哈哈哈太搞笑了", "笑死我了"): confidence $\ge 0.90$.
+  - Unrelated, negated, or one-sided jokes without positive uptake fail closed.
+- **Bounded model context**: Preceding assistant text is queried and sent to memory extraction only after the user text passes the positive uptake classifier.
+- **Deterministic explicit-quote fallback**: A single quoted cue in an explicit agreement is extracted locally when it also occurs intact in the immediately preceding presented assistant text, so an empty model candidate list cannot lose clear mutual uptake. Negated, ambiguous, ungrounded, and sensitive quotes fail closed.
+- **Bounded cue grounding**: Cues must be 2..80 characters and occur intact in user or assistant text; ASCII cues require word boundaries and matching never joins text across whitespace or punctuation.
+- **Sensitive-data and factual-text guards**: Credential/direct-identifier patterns fail closed. Runtime ignores model-authored event claims, emits character-neutral wording without claiming which speaker introduced the cue, and stores only a bounded excerpt of the presented assistant reply as context. One-sided assistant observation cannot create a shared-joke proposal.
+- **Deterministic predicate & deduplication**: Distinct jokes coexist under `shared_joke.<normalized_cue>`.
+  Identical incoming cues deduplicate idempotently (`ignore` proposal) without creating duplicates or superseding existing records.
+- **Multi-event provenance**: Records both `user_turn` and `assistant_spoken` / `assistant_delivered` source kinds.
+  The triggering user event remains the causation ID.
+- **PromptCompiler guidance**: Recalled shared jokes provide natural callback guidance to LLM without mechanical
+  explanation and without joke pinning.
+- **Pending scope**: Adaptive sticker ranking, sticker binding, group/multi-principal humor, provider-specific acceptance (including QQ), and animated media remain pending.
