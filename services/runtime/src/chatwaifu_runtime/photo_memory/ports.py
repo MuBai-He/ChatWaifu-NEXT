@@ -114,6 +114,7 @@ class PhotoSemanticPersistencePort(Protocol):
         vector: list[float],
         *,
         guard: Callable[[], bool] | None = None,
+        expected_annotation_count: int | None = None,
     ) -> bool: ...
 
     async def get_max_route_generation(self) -> int: ...

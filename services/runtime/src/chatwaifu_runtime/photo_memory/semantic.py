@@ -52,6 +52,7 @@ class ScoredPhotoMatch:
 def photo_embedding_text(photo: SavedPhoto) -> str:
     """Format photo content for semantic embedding consistently with lexical indexing."""
     parts = [photo.title, photo.description, " ".join(photo.keywords), photo.caption]
+    parts.extend(a.quote for a in photo.user_annotations if not a.superseded)
     return " ".join(part.strip() for part in parts if part.strip())
 
 
@@ -288,6 +289,7 @@ class PhotoSemanticService:
             generation,
             vectors[0],
             guard=guard,
+            expected_annotation_count=len(photo.user_annotations),
         )
 
     async def search(

@@ -8,6 +8,11 @@ import {
   type SavedPhoto,
   type PhotoMemorySnapshot,
 } from "../chat/runtimeClient";
+import {
+  formatDate,
+  formatFullDateTime,
+  formatCaptureDate,
+} from "./photoDateUtils";
 import { SettingsToggle } from "./SettingsPrimitives";
 
 interface PhotoMemoryPanelProps {
@@ -460,8 +465,13 @@ function PhotoTile({
             <span className="photo-memory-tile-caption">"{photo.caption}"</span>
           )}
           <div className="photo-memory-tile-meta">
-            <span className="photo-memory-tile-date">
-              {formatDate(photo.received_at)}
+            <span
+              className="photo-memory-tile-date"
+              data-testid={`photo-date-${photo.photo_id}`}
+            >
+              {photo.captured_at
+                ? `拍摄: ${formatCaptureDate(photo.captured_at, photo.captured_at_offset)}`
+                : `收到: ${formatDate(photo.received_at)}`}
             </span>
             <span
               className="photo-memory-source"
@@ -507,11 +517,73 @@ function PhotoTile({
             >
               ×
             </button>
-            <img
-              src={currentUrl}
-              alt={photo.title}
-              className="photo-memory-dialog-image"
-            />
+            <div className="photo-memory-dialog-body">
+              <img
+                src={currentUrl}
+                alt={photo.title}
+                className="photo-memory-dialog-image"
+              />
+              <div className="photo-memory-dialog-details">
+                <h3 className="photo-memory-dialog-title">{photo.title}</h3>
+                <p className="photo-memory-dialog-desc">{photo.description}</p>
+                {photo.caption && (
+                  <p className="photo-memory-dialog-caption">
+                    用户描述: "{photo.caption}"
+                  </p>
+                )}
+                {(photo.user_annotations ?? [])
+                  .filter((a) => !a.superseded)
+                  .map((a) => (
+                    <p
+                      key={a.annotation_id}
+                      className="photo-memory-dialog-caption"
+                    >
+                      你补充的说明：{a.quote}
+                      <br />
+                      <small>说于 {formatFullDateTime(a.observed_at)}</small>
+                    </p>
+                  ))}
+                <dl className="photo-memory-dialog-meta-list">
+                  <div className="photo-memory-dialog-meta-item">
+                    <dt>拍摄时间 (EXIF)</dt>
+                    <dd data-testid="dialog-captured-at">
+                      {photo.captured_at
+                        ? formatCaptureDate(
+                            photo.captured_at,
+                            photo.captured_at_offset,
+                          )
+                        : "未知"}
+                    </dd>
+                  </div>
+                  <div className="photo-memory-dialog-meta-item">
+                    <dt>接收时间 (微信)</dt>
+                    <dd data-testid="dialog-received-at">
+                      {formatFullDateTime(photo.received_at)}
+                    </dd>
+                  </div>
+                  <div className="photo-memory-dialog-meta-item">
+                    <dt>保存时间 (入库)</dt>
+                    <dd data-testid="dialog-saved-at">
+                      {formatFullDateTime(photo.saved_at)}
+                    </dd>
+                  </div>
+                  <div className="photo-memory-dialog-meta-item">
+                    <dt>原始规格</dt>
+                    <dd data-testid="dialog-original-specs">
+                      {photo.original_width && photo.original_height
+                        ? `${photo.original_width} × ${photo.original_height} (${photo.original_mime_type === "image/jpeg" ? "JPEG" : "PNG"})`
+                        : "未知"}
+                    </dd>
+                  </div>
+                  <div className="photo-memory-dialog-meta-item">
+                    <dt>存储规格</dt>
+                    <dd data-testid="dialog-stored-specs">
+                      {`${photo.width} × ${photo.height} (${photo.mime_type === "image/jpeg" ? "JPEG" : "PNG"}), ${(photo.byte_size / 1024).toFixed(1)} KB`}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -536,17 +608,6 @@ function isConflictError(error: unknown): boolean {
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof TypeError) return fallback;
   return error instanceof Error ? error.message : fallback;
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
 }
 
 function asError(reason: unknown): Error {

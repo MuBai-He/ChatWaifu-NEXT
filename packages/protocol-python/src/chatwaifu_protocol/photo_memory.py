@@ -20,6 +20,16 @@ class PhotoMemorySettingsUpdate(ProtocolModel):
     expected_revision: int = Field(ge=0)
 
 
+class PhotoUserAnnotation(ProtocolModel):
+    schema_version: Literal["1.0"] = "1.0"
+    annotation_id: UUID
+    quote: str = Field(min_length=1, max_length=600)
+    kind: Literal["date", "event", "context"]
+    source_generation_id: UUID
+    observed_at: AwareDatetime
+    superseded: bool = False
+
+
 class SavedPhoto(ProtocolModel):
     schema_version: Literal["1.0"] = "1.0"
     photo_id: UUID
@@ -41,6 +51,14 @@ class SavedPhoto(ProtocolModel):
     source_session_id: UUID
     source_turn_id: UUID
     source_generation_id: UUID
+    user_annotations: list[PhotoUserAnnotation] = Field(
+        default_factory=list[PhotoUserAnnotation], max_length=32
+    )
+    captured_at: str | None = Field(default=None, max_length=64)
+    captured_at_offset: str | None = Field(default=None, max_length=16)
+    original_width: int | None = Field(default=None, ge=1, le=65536)
+    original_height: int | None = Field(default=None, ge=1, le=65536)
+    original_mime_type: Literal["image/png", "image/jpeg"] | None = None
 
 
 class PhotoMemorySnapshot(ProtocolModel):

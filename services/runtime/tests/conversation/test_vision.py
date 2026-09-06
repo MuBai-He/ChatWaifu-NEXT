@@ -44,6 +44,7 @@ async def test_image_loaded_before_llm_and_request_has_images() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -114,6 +115,7 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -165,6 +167,7 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -223,6 +226,7 @@ async def test_bytes_not_in_persisted_events() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -290,6 +294,7 @@ async def test_stale_before_loader_prevents_image_load() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -347,6 +352,7 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -409,6 +415,7 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
     service._repository = MagicMock()
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
+    service._photo_annotations = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )

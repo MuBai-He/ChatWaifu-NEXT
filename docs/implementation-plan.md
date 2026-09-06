@@ -2612,3 +2612,47 @@ Key architecture and invariants:
 
 Real-model acceptance on live WeChat remains pending (Issue #24 deferred). Multi-photo groups and animations
 remain pending Phase 17 work; completing this slice does not complete Phase 17.
+
+### Phase 17.3E — Bounded photo source metadata and capture date extraction (implementation complete, real-device acceptance pending)
+
+Phase 17.3E allows retaining trustworthy photo capture dates and basic source metadata without confusing
+immutable channel receipt evidence (`received_at`) with attributed device timestamps (`captured_at`), under
+[ADR 0039](adr/0039-bounded-photo-metadata.md).
+
+Key architecture and invariants:
+
+- **Strict allowlist extraction from original bytes**: Inbound raw bytes are inspected once before normalization.
+  Allowlist is restricted to:
+  - `captured_at`: EXIF `DateTimeOriginal` normalized to ISO 8601 (`YYYY-MM-DDTHH:MM:SS` or `YYYY-MM-DDTHH:MM:SS±HH:MM`).
+  - `captured_at_offset`: EXIF `OffsetTimeOriginal` normalized to `±HH:MM`.
+  - `original_width` & `original_height`: Inbound pixel dimensions adjusted for EXIF orientation (orientations 5, 6, 7, 8 transpose dimensions).
+  - `original_mime_type`: Inbound media type (`image/jpeg` or `image/png`).
+- **Strict privacy exclusions**: GPS coordinates (`GPSInfo`), device serial numbers (`BodySerialNumber`),
+  lens serials, maker notes, and private IFDs are completely dropped immediately upon extraction.
+- **Safe unknown fallback**: Missing tags, corrupted bytes, invalid
+  calendar dates gracefully resolve to `None` without raising exceptions. Naive timestamps preserve unknown timezone
+  explicitly without assuming host or browser local time.
+- **Metadata-free stored copies (ADR 0037 invariant preserved)**: Stored raster image bytes in `photo_assets.data`
+  remain completely stripped of all EXIF metadata. Allowlisted metadata is stored exclusively in dedicated columns.
+- **Vision provider EXIF isolation**: Inbound images dispatched to vision models (both main conversation turns
+  and preview classifiers) have EXIF stripped via `strip_image_exif` prior to delivery.
+- **Persistence & Migration 27**: Migration 27 introduces nullable columns to `photo_assets`. Pre-migration
+  records retain `NULL` for all new columns; capture dates are never fabricated from `received_at`.
+- **Deduplication preservation**: Duplicate uploads matching SHA256 reuse existing `photo_assets` and preserve
+  authoritative metadata rather than overwriting.
+- **Conversational recall guidance**: The recall prompt preamble instructs the assistant that `received_at`
+  is authoritative channel receipt evidence and NOT the date taken, while `captured_at` is EXIF attributed and
+  unverified.
+- **Desktop gallery UX**: Tiles display `captured_at` when available; preview dialog displays a metadata panel
+  showing capture time (with explicit `(时区未知)` for naive timestamps), receipt time, save time, and original vs stored specs.
+
+Multi-photo groups, animations, shared jokes, and real-device WeChat acceptance remain pending; completing
+this slice does not complete Phase 17.
+
+The owner-approved extension automatically associates exact user statements with authoritative current
+or adjacent photo references via the memory_extraction model role. Statements retain utterance time,
+source generation and correction history separately from EXIF, participate in scoped recall, appear
+in the gallery, and are removed with photo deletion. Ambiguous or unavailable references are skipped.
+Long-range pronoun resolution and replay of follow-ups arriving before photo retention completes remain
+follow-up work. Independent synthetic live-model association/correction/negative probes and isolated
+Runtime/browser photo-detail acceptance passed; owner WeChat acceptance remains pending.

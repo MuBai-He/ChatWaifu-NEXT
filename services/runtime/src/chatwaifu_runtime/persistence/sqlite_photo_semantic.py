@@ -38,6 +38,7 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
         vector: list[float],
         *,
         guard: Callable[[], bool] | None = None,
+        expected_annotation_count: int | None = None,
     ) -> bool:
         now = datetime.now(UTC).isoformat()
         vector_json = json.dumps(vector)
@@ -59,6 +60,7 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
                   AND p.principal_scope = ?
                   AND p.character_id = ?
                   AND p.sha256 = ?
+                  AND (? IS NULL OR json_array_length(p.user_annotations_json) = ?)
                 ON CONFLICT(photo_id, representation) DO UPDATE SET
                     vector_space_id = excluded.vector_space_id,
                     model_fingerprint = excluded.model_fingerprint,
@@ -78,6 +80,8 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
                     scope,
                     character_id,
                     sha256,
+                    expected_annotation_count,
+                    expected_annotation_count,
                 ),
             )
             inserted = cursor.rowcount > 0
@@ -193,7 +197,9 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
                     SELECT p.principal_scope, p.character_id, p.photo_id, p.sha256, p.mime_type,
                         p.byte_size, p.width, p.height, p.title, p.description, p.confidence,
                         p.keywords, p.caption, p.received_at, p.saved_at, p.source_connection_id,
-                        p.source_session_id, p.source_turn_id, p.source_generation_id
+                        p.source_session_id, p.source_turn_id, p.source_generation_id,
+                        p.captured_at, p.captured_at_offset, p.original_width, p.original_height,
+                        p.original_mime_type, p.user_annotations_json
                     FROM photo_assets p
                     WHERE p.principal_scope = ? AND p.character_id = ?
                     ORDER BY p.saved_at ASC
@@ -263,7 +269,9 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
                 SELECT p.photo_id, p.sha256, p.mime_type, p.byte_size, p.width, p.height, p.title,
                     p.description, p.confidence, p.keywords, p.caption, p.received_at, p.saved_at,
                     p.source_connection_id, p.source_session_id, p.source_turn_id,
-                    p.source_generation_id
+                    p.source_generation_id,
+                    p.captured_at, p.captured_at_offset, p.original_width, p.original_height,
+                    p.original_mime_type, p.user_annotations_json
                 FROM photo_assets p
                 LEFT JOIN photo_embeddings e
                     ON e.photo_id = p.photo_id
@@ -293,7 +301,9 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
                 SELECT p.principal_scope, p.character_id, p.photo_id, p.sha256, p.mime_type,
                     p.byte_size, p.width, p.height, p.title, p.description, p.confidence,
                     p.keywords, p.caption, p.received_at, p.saved_at, p.source_connection_id,
-                    p.source_session_id, p.source_turn_id, p.source_generation_id
+                    p.source_session_id, p.source_turn_id, p.source_generation_id,
+                    p.captured_at, p.captured_at_offset, p.original_width, p.original_height,
+                    p.original_mime_type, p.user_annotations_json
                 FROM photo_assets p
                 LEFT JOIN photo_embeddings e
                     ON e.photo_id = p.photo_id
@@ -311,7 +321,11 @@ class SQLitePhotoSemanticAdapter(PhotoSemanticPersistencePort):
 
 
 def _row_to_saved_photo(row: aiosqlite.Row) -> SavedPhoto:
+    keys = row.keys()
     return SavedPhoto(
+        user_annotations=json.loads(row["user_annotations_json"])
+        if "user_annotations_json" in row.keys()
+        else [],
         photo_id=UUID(row["photo_id"]),
         sha256=row["sha256"],
         mime_type=row["mime_type"],
@@ -329,4 +343,9 @@ def _row_to_saved_photo(row: aiosqlite.Row) -> SavedPhoto:
         source_session_id=UUID(row["source_session_id"]),
         source_turn_id=UUID(row["source_turn_id"]),
         source_generation_id=UUID(row["source_generation_id"]),
+        captured_at=row["captured_at"] if "captured_at" in keys else None,
+        captured_at_offset=row["captured_at_offset"] if "captured_at_offset" in keys else None,
+        original_width=row["original_width"] if "original_width" in keys else None,
+        original_height=row["original_height"] if "original_height" in keys else None,
+        original_mime_type=row["original_mime_type"] if "original_mime_type" in keys else None,
     )

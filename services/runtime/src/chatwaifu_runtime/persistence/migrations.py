@@ -1088,4 +1088,15 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         END;
         """,
     ),
+    (
+        27,
+        """
+        ALTER TABLE photo_assets ADD COLUMN user_annotations_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE photo_assets ADD COLUMN captured_at TEXT;
+        ALTER TABLE photo_assets ADD COLUMN captured_at_offset TEXT;
+        ALTER TABLE photo_assets ADD COLUMN original_width INTEGER;
+        ALTER TABLE photo_assets ADD COLUMN original_height INTEGER;
+        ALTER TABLE photo_assets ADD COLUMN original_mime_type TEXT;
+        """,
+    ),
 )

@@ -53,6 +53,7 @@ from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
+from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.contracts import LlmRequest
@@ -94,6 +95,7 @@ class ConversationService:
         prompt_compiler: PromptCompiler,
         agent: AgentTurnOrchestrator,
         photo_recall: PhotoRecallService | None = None,
+        photo_annotations: PhotoAnnotationService | None = None,
     ) -> None:
         self._repository = repository
         self._reset_repository = reset_repository
@@ -107,6 +109,7 @@ class ConversationService:
         self._character_kernel = character_kernel
         self._prompt_compiler = prompt_compiler
         self._agent = agent
+        self._photo_annotations = photo_annotations
         self._photo_recall = photo_recall
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._active: dict[UUID, _ActiveGeneration] = {}
@@ -1102,6 +1105,8 @@ class ConversationService:
                 source_context=options.source_context,
             )
         finally:
+            if self._photo_annotations is not None and options.image_loader is None:
+                self._photo_annotations.observe(accepted.generation_id)
             if not memory_projection_submitted and memory_observation is not None:
                 try:
                     await self._memory.enqueue_user_turn(memory_observation)
