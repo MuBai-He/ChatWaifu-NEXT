@@ -210,3 +210,132 @@
   color: #ffe8f6;
   background: rgb(48 27 56 / 96%);
 }
+
+.reindex-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(15 9 18 / 75%);
+  backdrop-filter: blur(4px);
+}
+
+.reindex-warning-modal {
+  max-width: 480px;
+  width: 100%;
+  padding: 20px;
+  border: 1px solid rgb(234 177 209 / 35%);
+  border-radius: 4px 16px 4px 16px;
+  background: #25162a;
+  box-shadow: 0 16px 36px rgb(0 0 0 / 60%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reindex-warning-modal h3 {
+  margin: 0;
+  font-family: "Yu Mincho", Georgia, serif;
+  font-size: 1rem;
+  color: #ffe8f6;
+  font-weight: 500;
+}
+
+.reindex-warning-text {
+  margin: 0;
+  color: rgb(255 240 250 / 80%);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.reindex-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reindex-modal-actions button {
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  background: rgb(255 255 255 / 8%);
+  color: #ffe8f6;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.reindex-modal-actions .reindex-confirm-button {
+  border-color: rgb(244 183 194 / 40%);
+  background: rgb(180 91 150 / 35%);
+  color: #fff0f5;
+}
+
+.reindex-status-card {
+  margin-top: 6px;
+  padding: 10px;
+  border: 1px solid rgb(234 177 209 / 20%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 3%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reindex-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #ffe8f6;
+}
+
+.reindex-retry-button {
+  padding: 3px 8px;
+  border: 1px solid rgb(244 183 194 / 40%);
+  border-radius: 4px;
+  background: rgb(180 91 150 / 25%);
+  color: #f4b7c2;
+  font-size: 0.55rem;
+  cursor: pointer;
+}
+
+.reindex-status-error {
+  margin: 0;
+  color: #f4b7c2;
+  font-size: 0.6rem;
+}
+
+.reindex-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reindex-domain-item {
+  padding: 8px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 20%);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.58rem;
+  color: rgb(255 240 250 / 70%);
+}
+
+.reindex-domain-item strong {
+  color: #ffe8f6;
+  font-size: 0.62rem;
+}
+
+.domain-failed {
+  color: #f4b7c2;
+}
+
+.domain-error {
+  color: #f4b7c2;
+  font-size: 0.52rem;
+}

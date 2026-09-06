@@ -389,6 +389,17 @@ class SQLiteMemoryRepository(MemoryRepository):
         )
         return [_record_from_row(dict(row)) for row in rows]
 
+    async def list_rebuild_page(
+        self, *, after_id: str = "", limit: int = 200
+    ) -> list[MemoryRecord]:
+        """Stable bounded cursor traversal; no management-page truncation during rebuild."""
+        rows = await self._database.fetchall(
+            _RECORD_SELECT + " WHERE record.state = 'active' AND record.memory_id > ?"
+            " ORDER BY record.memory_id LIMIT ?",
+            (after_id, min(max(limit, 1), 200)),
+        )
+        return [_record_from_row(dict(row)) for row in rows]
+
     async def list_sources(self, memory_id: UUID) -> list[MemorySource]:
         return (await self.list_sources_many((memory_id,))).get(memory_id, [])
 

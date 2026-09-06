@@ -5,6 +5,7 @@ import io
 import json
 import math
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -60,14 +61,22 @@ def _tokenize_query(query: str) -> str:
         "什么",
         "一张",
         "给我",
+        "给你",
         "看看",
+        "看下",
+        "看一下",
         "发给",
+        "发你",
+        "发我",
+        "发来",
+        "发过",
         "的",
         "呢",
         "吗",
         "帮我",
         "找找",
         "找一下",
+        "找下",
     }
     for f in filler:
         query = query.replace(f, " ")
@@ -93,6 +102,8 @@ def _tokenize_query(query: str) -> str:
                 "的",
                 "那",
                 "这",
+                "你",
+                "我",
             }:
                 tokens.append(f'"{block}"')
         else:
@@ -541,6 +552,31 @@ class SQLitePhotoMemoryRepository:
             await cursor.close()
             return [self._row_to_saved_photo(r) for r in rows]
 
+    async def get_photos(
+        self, scope: str, character_id: str, photo_ids: Sequence[UUID]
+    ) -> list[SavedPhoto]:
+        if not photo_ids:
+            return []
+        async with self._database.transaction() as conn:
+            photos: list[SavedPhoto] = []
+            for pid in photo_ids:
+                cursor = await conn.execute(
+                    """
+                    SELECT photo_id, sha256, mime_type, byte_size, width, height, title,
+                        description, confidence, keywords, caption, received_at, saved_at,
+                        source_connection_id, source_session_id, source_turn_id,
+                        source_generation_id
+                    FROM photo_assets
+                    WHERE principal_scope = ? AND character_id = ? AND photo_id = ?
+                    """,
+                    (scope, character_id, str(pid)),
+                )
+                row = await cursor.fetchone()
+                await cursor.close()
+                if row is not None:
+                    photos.append(self._row_to_saved_photo(row))
+            return photos
+
     async def register_recall(
         self, scope: str, character_id: str, photo_ids: tuple[UUID, ...], *, generation_id: UUID
     ) -> list[SavedPhoto]:
@@ -668,6 +704,7 @@ class SQLitePhotoMemoryRepository:
                     (gen_id, sess_id, scope, character_id, now),
                 )
 
+            await conn.execute("DELETE FROM photo_embeddings WHERE photo_id = ?", (str(photo_id),))
             await conn.execute("DELETE FROM photo_assets_fts WHERE photo_id = ?", (str(photo_id),))
             await conn.execute("DELETE FROM photo_assets WHERE photo_id = ?", (str(photo_id),))
 

@@ -49,6 +49,10 @@ async def redact_scope_photos(
         )
 
     await connection.execute(
+        "DELETE FROM photo_embeddings WHERE principal_scope = ? AND character_id = ?",
+        (scope, character_id),
+    )
+    await connection.execute(
         "DELETE FROM photo_assets WHERE principal_scope = ? AND character_id = ?",
         (scope, character_id),
     )

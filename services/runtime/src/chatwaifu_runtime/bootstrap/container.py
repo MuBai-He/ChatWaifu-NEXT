@@ -28,6 +28,7 @@ from chatwaifu_runtime.external_channels.credentials import KeyringChannelCreden
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.service import ExternalChannelService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.persistence.database import Database
@@ -39,11 +40,13 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
 )
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
+from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
 from chatwaifu_runtime.photo_memory.recall import PhotoRecallService
+from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
@@ -165,10 +168,28 @@ class RuntimeContainer:
             RuntimeSkillRouter(self.runtime_skills.list),
         )
         self.photo_repository = SQLitePhotoMemoryRepository(self.database)
-        self.photo_observer = PhotoMemoryObserver(
-            self.photo_repository, PhotoClassifier(self.providers.llm)
+        self.photo_semantic_adapter = SQLitePhotoSemanticAdapter(self.database)
+        self.photo_semantic = PhotoSemanticService(
+            self.photo_semantic_adapter,
+            self.model_configurations,
         )
-        self.photo_recall = PhotoRecallService(self.photo_repository)
+        self.index_rebuild = IndexRebuildService(
+            models=self.model_configurations,
+            memory_repository=self.memory_repository,
+            semantic_memory_index=self.semantic_memory_index,
+            photo_repository=self.photo_repository,
+            photo_semantic=self.photo_semantic,
+            photo_semantic_adapter=self.photo_semantic_adapter,
+        )
+        self.photo_observer = PhotoMemoryObserver(
+            self.photo_repository,
+            PhotoClassifier(self.providers.llm),
+            semantic_service=self.photo_semantic,
+        )
+        self.photo_recall = PhotoRecallService(
+            self.photo_repository,
+            semantic_service=self.photo_semantic,
+        )
         self.conversation = ConversationService(
             self.conversation_repository,
             self.experience_reset_repository,
@@ -316,6 +337,8 @@ class RuntimeContainer:
                 await self.memory.start()
                 await self.runtime_skills.start()
                 self.sticker_library.start()
+                await self.photo_semantic.sync_epoch()
+                self.photo_semantic.start()
                 self.photo_observer.start()
                 await self.external_channels.start()
                 await self.channel_management.start()
@@ -377,6 +400,8 @@ class RuntimeContainer:
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
                 _CleanupStep("photo_observer", lambda: self.photo_observer.stop()),
+                _CleanupStep("index_rebuild", lambda: self.index_rebuild.stop()),
+                _CleanupStep("photo_semantic", lambda: self.photo_semantic.stop()),
                 _CleanupStep("external_channels", lambda: self.external_channels.stop()),
                 _CleanupStep("conversation", lambda: self.conversation.stop()),
                 _CleanupStep("runtime_skills", lambda: self.runtime_skills.stop()),
