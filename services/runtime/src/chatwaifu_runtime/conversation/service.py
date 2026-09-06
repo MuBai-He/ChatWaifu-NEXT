@@ -52,6 +52,7 @@ from chatwaifu_runtime.conversation.reset import ExperienceResetRepository
 from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObservation
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
@@ -1034,14 +1035,29 @@ class ConversationService:
                 {"report": compilation.report.model_dump(mode="json")},
             )
             loaded_images: tuple[LlmInputImage, ...] = ()
+            temporal_vision_instructions: list[str] = []
             if options.image_loader is not None:
                 self._ensure_current(accepted)
                 raw_loaded = await options.image_loader()
                 self._ensure_current(accepted)
-                if isinstance(raw_loaded, tuple):
-                    loaded_images = raw_loaded
-                else:
-                    loaded_images = (raw_loaded,)
+                items = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
+                llm_images: list[LlmInputImage] = []
+                total_items = len(items)
+                for idx, item in enumerate(items, 1):
+                    if isinstance(item, InboundMediaItem):
+                        llm_images.append(item.raster_image)
+                        if item.is_animated and item.storyboard is not None:
+                            image_num = idx if total_items > 1 else None
+                            temporal_vision_instructions.append(
+                                item.storyboard.format_vision_description(
+                                    image_num, total_images=total_items
+                                )
+                            )
+                    elif isinstance(item, LlmInputImage):  # pyright: ignore[reportUnnecessaryIsInstance]
+                        llm_images.append(item)
+                    else:
+                        raise ValueError(f"unsupported loaded image item type: {type(item)}")
+                loaded_images = tuple(llm_images)
 
             system_prompt = compilation.system_prompt
             if len(loaded_images) == 1:
@@ -1064,6 +1080,12 @@ class ConversationService:
                     "Do not claim the images have been saved: retention is a separate process."
                 )
                 system_prompt = f"{system_prompt}\n\n[Vision Instruction]\n{instruction}"
+
+            if temporal_vision_instructions:
+                temporal_block = "\n\n".join(temporal_vision_instructions)
+                system_prompt = (
+                    f"{system_prompt}\n\n[Temporal Animation Analysis]\n{temporal_block}"
+                )
 
             if not loaded_images and photo_recall.image is not None:
                 loaded_images = (photo_recall.image,)

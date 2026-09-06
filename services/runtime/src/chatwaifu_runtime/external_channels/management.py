@@ -11,9 +11,10 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
-from typing import Literal, Protocol, cast
+from typing import Protocol, cast
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
     ChannelAuthorizationSnapshot,
@@ -35,6 +36,7 @@ from chatwaifu_protocol.channels import (
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
+from chatwaifu_protocol.events import GenericCoreEvent
 
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -44,6 +46,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundBatchObservation,
     WeixinInboundImage,
     WeixinPendingContext,
     WeixinUpdates,
@@ -80,8 +83,11 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelService,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.media import (
+    InboundMediaItem,
+    async_decode_and_sanitize_inbound_media,
+)
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
-from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 logger = logging.getLogger(__name__)
@@ -124,10 +130,10 @@ def _make_batch_image_loader(
     *,
     connection_id: UUID,
     external_message_id: str,
-) -> Callable[[], Awaitable[tuple[LlmInputImage, ...]]]:
+) -> Callable[[], Awaitable[tuple[InboundMediaItem, ...]]]:
     bound_images = images
 
-    async def _load() -> tuple[LlmInputImage, ...]:
+    async def _load() -> tuple[InboundMediaItem, ...]:
         start = perf_counter()
         try:
             raw_downloads = await transport.download_images(bound_images)
@@ -136,15 +142,9 @@ def _make_batch_image_loader(
                     f"expected {len(bound_images)} downloaded images, got {len(raw_downloads)}"
                 )
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
-            results: list[LlmInputImage] = []
+            results: list[InboundMediaItem] = []
             for image_bytes, mime in raw_downloads:
-                if mime == "image/png":
-                    valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
-                elif mime in ("image/jpeg", "image/jpg"):
-                    valid_mime = "image/jpeg"
-                else:
-                    raise ValueError(f"unsupported image mime type: {mime}")
-                results.append(LlmInputImage(data=image_bytes, mime_type=valid_mime))
+                results.append(await async_decode_and_sanitize_inbound_media(image_bytes, mime))
             _log_weixin_timing(
                 "image_download_success",
                 connection_id=str(connection_id),
@@ -1133,6 +1133,7 @@ class ChannelManagementService:
                             poll_elapsed_ms=round((perf_counter() - poll_started) * 1000, 3),
                             message_count=len(updates.messages),
                         )
+                    await self._record_inbound_batch_observation(connection_id, updates.observation)
                     await self._process_updates(connection_id, updates)
                     # The checkpoint advances only after every normalized message
                     # in this batch reached durable admission.
@@ -1197,6 +1198,58 @@ class ChannelManagementService:
                     "native WeChat stop notification failed for connection %s",
                     connection_id,
                 )
+
+    async def _record_inbound_batch_observation(
+        self,
+        connection_id: UUID,
+        observation: WeixinInboundBatchObservation | None,
+    ) -> None:
+        if observation is None or observation.raw_count <= 0:
+            return
+        if self._event_publisher is None:
+            return
+        try:
+            session_id = await self._resolve_observation_session_id(connection_id)
+            if session_id is None:
+                logger.warning(
+                    "cannot persist inbound batch observation: "
+                    "no session available for connection %s: %s",
+                    connection_id,
+                    observation.to_summary(),
+                )
+                return
+
+            now = datetime.now(UTC)
+            event = GenericCoreEvent.model_validate(
+                {
+                    "event_id": uuid4(),
+                    "event_type": "channel.inbound_batch_observed",
+                    "session_id": session_id,
+                    "occurred_at": now,
+                    "source": "channel.management",
+                    "privacy": PrivacyLevel.PRIVATE,
+                    "payload": {
+                        "connection_id": str(connection_id),
+                        "occurred_at": now.isoformat(),
+                        "summary": observation.to_summary(),
+                    },
+                }
+            )
+            await self._event_publisher.emit(event)
+        except Exception:
+            logger.warning(
+                "failed to record inbound batch observation for connection %s",
+                connection_id,
+                exc_info=True,
+            )
+
+    async def _resolve_observation_session_id(self, connection_id: UUID) -> UUID | None:
+        # Diagnostics must never create a conversation or inspect storage internals.
+        credentials = await self._load_credentials(connection_id)
+        if credentials is None:
+            return None
+        binding = await self._repository.find_binding(connection_id, credentials.user_id)
+        return binding.session_id if binding is not None else None
 
     async def _process_updates(
         self,
@@ -1829,7 +1882,7 @@ class ChannelManagementService:
                             retryable=False,
                         ),
                     )
-                if part.payload.mime_type not in ("image/png", "image/jpeg"):
+                if part.payload.mime_type not in ("image/png", "image/jpeg", "image/gif"):
                     return DeliveryPartExecutionResult(
                         outcome=DeliveryPartOutcome.FATAL_ERROR,
                         error=_structured_error(

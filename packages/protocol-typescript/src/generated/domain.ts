@@ -843,6 +843,7 @@ export type GenericCoreEventType =
   | 'channel.delivery_plan_failed'
   | 'channel.turn_failed'
   | 'channel.turn_cancelled'
+  | 'channel.inbound_batch_observed'
   | 'resource.models_slept'
   | 'resource.models_woke'
 export type GenerationId24 = string | null
@@ -865,9 +866,10 @@ export type TurnId22 = string
 export type ByteSize = number
 export type Description1 = string
 export type Expression = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
+export type IsAnimated = boolean
 export type Label = string
 export type LearnedAt = string
-export type MimeType1 = 'image/png'
+export type MimeType1 = 'image/png' | 'image/gif'
 export type SchemaVersion43 = '1.0'
 export type Sha2561 = string
 export type SourceConnectionId = string
@@ -2288,6 +2290,7 @@ export interface LearnedSticker {
   byte_size: ByteSize
   description: Description1
   expression: Expression
+  is_animated?: IsAnimated
   label: Label
   learned_at: LearnedAt
   mime_type?: MimeType1

@@ -405,6 +405,7 @@ const genericCoreEventTypes = [
   "channel.delivery_plan_failed",
   "channel.turn_failed",
   "channel.turn_cancelled",
+  "channel.inbound_batch_observed",
   "resource.models_slept",
   "resource.models_woke",
 ] as const;
@@ -1520,7 +1521,7 @@ const learnedStickerSchema = z
     schema_version: z.literal("1.0").default("1.0"),
     sticker_id: z.string().regex(/^learned_[0-9a-f]{32}$/),
     sha256: z.string().regex(/^[0-9a-f]{64}$/),
-    mime_type: z.literal("image/png").default("image/png"),
+    mime_type: z.enum(["image/png", "image/gif"]).default("image/png"),
     label: z.string().min(1).max(80),
     description: z.string().min(1).max(300),
     expression: z.enum([
@@ -1539,6 +1540,7 @@ const learnedStickerSchema = z
       .max(5 * 1024 * 1024),
     learned_at: awareDateTime,
     source_connection_id: uuid,
+    is_animated: z.boolean().default(false),
   })
   .passthrough();
 

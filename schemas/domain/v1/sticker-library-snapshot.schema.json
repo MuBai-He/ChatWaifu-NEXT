@@ -27,6 +27,11 @@
           "title": "Expression",
           "type": "string"
         },
+        "is_animated": {
+          "default": false,
+          "title": "Is Animated",
+          "type": "boolean"
+        },
         "label": {
           "maxLength": 80,
           "minLength": 1,
@@ -39,8 +44,11 @@
           "type": "string"
         },
         "mime_type": {
-          "const": "image/png",
           "default": "image/png",
+          "enum": [
+            "image/png",
+            "image/gif"
+          ],
           "title": "Mime Type",
           "type": "string"
         },

@@ -79,6 +79,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.photo_memory.metadata import strip_image_exif
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver, PhotoObservationSource
 from chatwaifu_runtime.providers.contracts import LlmInputImage
@@ -164,10 +165,10 @@ _IMAGE_FAILURE_RECOVERY_TEXT = "刚才发来的图片我没看清，能再发一
 
 def _normalize_and_sanitize_inbound_images(
     raw_loaded: object,
-) -> tuple[LlmInputImage, ...]:
+) -> tuple[InboundMediaItem | LlmInputImage, ...]:
     if isinstance(raw_loaded, tuple):
         images = cast(tuple[object, ...], raw_loaded)
-    elif isinstance(raw_loaded, LlmInputImage):
+    elif isinstance(raw_loaded, (LlmInputImage, InboundMediaItem)):
         images = (raw_loaded,)
     else:
         raise ValueError(f"unsupported raw image input type: {type(raw_loaded)}")
@@ -175,11 +176,16 @@ def _normalize_and_sanitize_inbound_images(
     if not images or len(images) > 4:
         raise ValueError(f"inbound images must be 1..4 items, got {len(images)}")
 
-    sanitized: list[LlmInputImage] = []
+    sanitized: list[InboundMediaItem | LlmInputImage] = []
     for img in images:
-        if not isinstance(img, LlmInputImage):
-            raise ValueError(f"inbound image item is not LlmInputImage: {type(img)}")
-        sanitized.append(strip_image_exif(img))
+        if isinstance(img, InboundMediaItem):
+            sanitized.append(img)
+        elif isinstance(img, LlmInputImage):
+            sanitized.append(strip_image_exif(img))
+        else:
+            raise ValueError(
+                f"inbound image item is not InboundMediaItem or LlmInputImage: {type(img)}"
+            )
 
     return tuple(sanitized)
 
@@ -506,7 +512,7 @@ class ExternalChannelService:
                 )
                 return result.status is ChannelTurnStatus.COMPLETED
 
-            async def learning_loader() -> tuple[LlmInputImage, ...]:
+            async def learning_loader() -> tuple[InboundMediaItem | LlmInputImage, ...]:
                 raw_loaded = await original_loader()
                 sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
                 original_images = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
@@ -550,7 +556,7 @@ class ExternalChannelService:
         elif image_loader is not None:
             raw_base_loader = image_loader
 
-            async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
+            async def sanitized_image_loader() -> tuple[InboundMediaItem | LlmInputImage, ...]:
                 raw_loaded = await raw_base_loader()
                 return _normalize_and_sanitize_inbound_images(raw_loaded)
 
@@ -640,8 +646,8 @@ class ExternalChannelService:
             else (str(policy.profile) if policy is not None else None)
         )
 
-        async def combined_base_loader() -> tuple[LlmInputImage, ...]:
-            all_images: list[LlmInputImage] = []
+        async def combined_base_loader() -> tuple[InboundMediaItem | LlmInputImage, ...]:
+            all_images: list[InboundMediaItem | LlmInputImage] = []
             async with asyncio.timeout(BURST_LOAD_TIMEOUT_SECONDS):
                 for item in batch.items:
                     loaded = await item.loader()
@@ -670,7 +676,7 @@ class ExternalChannelService:
                 )
                 return result.status is ChannelTurnStatus.COMPLETED
 
-            async def learning_loader() -> tuple[LlmInputImage, ...]:
+            async def learning_loader() -> tuple[InboundMediaItem | LlmInputImage, ...]:
                 raw_loaded = await combined_base_loader()
                 sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
                 original_images = raw_loaded
@@ -717,7 +723,7 @@ class ExternalChannelService:
             image_loader = learning_loader
         else:
 
-            async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
+            async def sanitized_image_loader() -> tuple[InboundMediaItem | LlmInputImage, ...]:
                 raw_loaded = await combined_base_loader()
                 return _normalize_and_sanitize_inbound_images(raw_loaded)
 

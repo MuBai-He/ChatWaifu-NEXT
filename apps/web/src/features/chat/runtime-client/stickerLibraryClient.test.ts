@@ -248,9 +248,9 @@ describe("stickerLibraryClient", () => {
     }
   });
 
-  it("rejects image response when Content-Type is not image/png", async () => {
+  it("rejects image response when Content-Type is not image/png or image/gif", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response("not png", {
+      new Response("not png or gif", {
         status: 200,
         headers: { "Content-Type": "image/jpeg" },
       }),
@@ -259,7 +259,36 @@ describe("stickerLibraryClient", () => {
 
     await expect(
       fetchStickerImageUrl("learned_0123456789abcdef0123456789abcdef"),
-    ).rejects.toThrow("表情图片类型错误 (image/jpeg)，仅支持 PNG");
+    ).rejects.toThrow("表情图片类型错误 (image/jpeg)，仅支持 PNG 和 GIF");
+  });
+
+  it("fetches animated sticker image binary with image/gif Content-Type", async () => {
+    const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+    const createObjectURLMock = vi
+      .fn()
+      .mockReturnValue("blob:http://localhost/fake-gif-id");
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: createObjectURLMock,
+      revokeObjectURL: vi.fn(),
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(gifBytes, {
+        status: 200,
+        headers: { "Content-Type": "image/gif" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const objectUrl = await fetchStickerImageUrl(
+      "learned_0123456789abcdef0123456789abcdef",
+      { characterId: "default", poster: true },
+    );
+
+    expect(objectUrl).toBe("blob:http://localhost/fake-gif-id");
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("poster=true");
   });
 
   it("rejects image response when Content-Length exceeds 5MiB", async () => {

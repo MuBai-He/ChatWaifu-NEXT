@@ -21,15 +21,17 @@ from chatwaifu_protocol.channels import (
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 
 
 @dataclass(frozen=True, slots=True)
 class ChannelInboundImageInput:
     source_fingerprint: str
-    load: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] = field(
-        repr=False, compare=False
-    )
+    load: Callable[
+        [],
+        Awaitable[LlmInputImage | InboundMediaItem | tuple[LlmInputImage | InboundMediaItem, ...]],
+    ] = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
         raw_fp = cast(object, self.source_fingerprint)

@@ -251,6 +251,7 @@ type GenericCoreEventType = Literal[
     "channel.delivery_plan_failed",
     "channel.turn_failed",
     "channel.turn_cancelled",
+    "channel.inbound_batch_observed",
     "resource.models_slept",
     "resource.models_woke",
 ]
@@ -315,6 +316,7 @@ GENERIC_CORE_EVENT_TYPES: tuple[GenericCoreEventType, ...] = (
     "channel.delivery_plan_failed",
     "channel.turn_failed",
     "channel.turn_cancelled",
+    "channel.inbound_batch_observed",
     "resource.models_slept",
     "resource.models_woke",
 )

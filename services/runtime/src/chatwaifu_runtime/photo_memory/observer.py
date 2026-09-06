@@ -13,6 +13,7 @@ from uuid import UUID
 from chatwaifu_protocol.photo_memory import SavedPhoto
 from PIL import Image, ImageOps
 
+from chatwaifu_runtime.media import InboundMediaItem
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.metadata import extract_photo_metadata
@@ -77,7 +78,7 @@ class PhotoMemoryObserver:
     async def observe_batch(
         self,
         source: PhotoObservationSource,
-        images: Sequence[LlmInputImage],
+        images: Sequence[LlmInputImage | InboundMediaItem],
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origins: Sequence[PhotoItemOrigin] | None = None,
@@ -105,7 +106,7 @@ class PhotoMemoryObserver:
     async def observe(
         self,
         source: PhotoObservationSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
@@ -114,7 +115,7 @@ class PhotoMemoryObserver:
     async def _observe_batch_pipeline(
         self,
         source: PhotoObservationSource,
-        images: tuple[LlmInputImage, ...],
+        images: tuple[LlmInputImage | InboundMediaItem, ...],
         fence: object,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origins: tuple[PhotoItemOrigin, ...] | None = None,
@@ -133,6 +134,13 @@ class PhotoMemoryObserver:
                 for idx, image in enumerate(images):
                     if self._stop_fence is not fence:
                         return
+                    if isinstance(image, InboundMediaItem) and image.is_animated:
+                        logger.info(
+                            "skipping animated media item for photo memory generation_id=%s idx=%s",
+                            source.generation_id,
+                            idx,
+                        )
+                        continue
                     item_origin = item_origins[idx] if item_origins is not None else None
                     try:
                         async with asyncio.timeout(MAX_LEARNING_SECONDS):
@@ -172,21 +180,42 @@ class PhotoMemoryObserver:
     async def _observe(
         self,
         source: PhotoObservationSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origin: PhotoItemOrigin | None = None,
     ) -> SavedPhoto | None:
+        if isinstance(image, InboundMediaItem) and image.is_animated:
+            return None
         try:
+            if isinstance(image, InboundMediaItem):
+                raw_data = image.raw_data
+                raw_mime = image.original_mime_type
+                preview_image = image.raster_image
+                clean_raw_mime = raw_mime.split(";")[0].strip().lower()
+                norm_mime: Literal["image/png", "image/jpeg"] = (
+                    "image/png" if clean_raw_mime == "image/png" else "image/jpeg"
+                )
+                norm_input = (
+                    image.raster_image
+                    if clean_raw_mime == "image/gif"
+                    else LlmInputImage(data=raw_data, mime_type=norm_mime)
+                )
+            else:
+                raw_data = image.data
+                raw_mime = image.mime_type
+                preview_image = image
+                norm_input = image
+
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
                 classification = await self._classifier.classify(
-                    image, generation_id=source.generation_id
+                    preview_image, generation_id=source.generation_id
                 )
                 if classification is None or not await wait_for_completion():
                     return None
 
-                meta = extract_photo_metadata(image.data, fallback_mime=image.mime_type)
-                data, mime_type, width, height = _normalize_photo(image)
+                meta = extract_photo_metadata(raw_data, fallback_mime=raw_mime)
+                data, mime_type, width, height = _normalize_photo(norm_input)
 
                 record = await self.repository.save(
                     source.principal_scope,

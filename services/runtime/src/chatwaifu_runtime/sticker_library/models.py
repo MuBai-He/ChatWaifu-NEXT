@@ -21,6 +21,8 @@ class StickerSaveCandidate:
     expression: StickerExpression
     source_connection_id: UUID
     generation_id: UUID
+    mime_type: Literal["image/png", "image/gif"] = "image/png"
+    is_animated: bool = False
 
     def __repr__(self) -> str:
         return (
@@ -28,5 +30,7 @@ class StickerSaveCandidate:
             f"label={self.label!r}, description={self.description!r}, "
             f"expression={self.expression!r}, "
             f"source_connection_id={self.source_connection_id!r}, "
-            f"generation_id={self.generation_id!r})"
+            f"generation_id={self.generation_id!r}, "
+            f"mime_type={self.mime_type!r}, "
+            f"is_animated={self.is_animated!r})"
         )

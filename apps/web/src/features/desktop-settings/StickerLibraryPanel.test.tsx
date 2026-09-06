@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -326,5 +327,102 @@ describe("StickerLibraryPanel", () => {
       expect(screen.queryByText("摸鱼小猫")).toBeNull();
       expect(screen.getByText("暂无已学习的表情")).toBeTruthy();
     });
+  });
+  function useAnimatedSnapshot() {
+    vi.mocked(runtimeClient.getStickerLibrary).mockResolvedValue({
+      ...sampleSnapshot,
+      items: (sampleSnapshot.items ?? []).map((item) => ({
+        ...item,
+        is_animated: true,
+        mime_type: "image/gif",
+      })),
+    });
+  }
+
+  it("loads a poster first and fetches the animation once on demand", async () => {
+    useAnimatedSnapshot();
+    let finish: (url: string) => void = () => {};
+    vi.mocked(runtimeClient.fetchStickerImageUrl)
+      .mockResolvedValueOnce("blob:poster")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+    render(<StickerLibraryPanel characterId="default" runtimeOnline={true} />);
+    const image = await screen.findByRole("img", { name: "摸鱼小猫" });
+    expect(image.getAttribute("src")).toBe("blob:poster");
+    expect(runtimeClient.fetchStickerImageUrl).toHaveBeenCalledTimes(1);
+    expect(
+      vi.mocked(runtimeClient.fetchStickerImageUrl).mock.calls[0][1]?.poster,
+    ).toBe(true);
+    const play = screen.getByRole("button", { name: "播放动图预览" });
+    fireEvent.click(play);
+    fireEvent.click(play);
+    expect(runtimeClient.fetchStickerImageUrl).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      finish("blob:animation");
+      await Promise.resolve();
+    });
+    expect(image.getAttribute("src")).toBe("blob:animation");
+    fireEvent.click(screen.getByRole("button", { name: "暂停动图预览" }));
+    expect(image.getAttribute("src")).toBe("blob:poster");
+    fireEvent.click(screen.getByRole("button", { name: "播放动图预览" }));
+    expect(image.getAttribute("src")).toBe("blob:animation");
+    expect(runtimeClient.fetchStickerImageUrl).toHaveBeenCalledTimes(2);
+  });
+
+  it("aborts animation loading and revokes a late URL after unmount", async () => {
+    useAnimatedSnapshot();
+    const revoke = vi.fn();
+    vi.stubGlobal("URL", { ...URL, revokeObjectURL: revoke });
+    let finish: (url: string) => void = () => {};
+    let signal: AbortSignal | undefined;
+    vi.mocked(runtimeClient.fetchStickerImageUrl)
+      .mockResolvedValueOnce("blob:poster")
+      .mockImplementationOnce((_id, options) => {
+        signal = options?.signal;
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      });
+    const view = render(
+      <StickerLibraryPanel characterId="default" runtimeOnline={true} />,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "播放动图预览" }),
+    );
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
+    await act(async () => {
+      finish("blob:late-animation");
+      await Promise.resolve();
+    });
+    expect(revoke).toHaveBeenCalledWith("blob:poster");
+    expect(revoke).toHaveBeenCalledWith("blob:late-animation");
+  });
+
+  it("keeps the poster and offers retry when animation loading fails", async () => {
+    useAnimatedSnapshot();
+    vi.mocked(runtimeClient.fetchStickerImageUrl)
+      .mockResolvedValueOnce("blob:poster")
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce("blob:retry-animation");
+    render(<StickerLibraryPanel characterId="default" runtimeOnline={true} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "播放动图预览" }),
+    );
+    expect(
+      await screen.findByText("动图加载失败，可以再次点击播放。"),
+    ).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("src")).toBe("blob:poster");
+    fireEvent.click(screen.getByRole("button", { name: "播放动图预览" }));
+    await waitFor(() =>
+      expect(screen.getByRole("img").getAttribute("src")).toBe(
+        "blob:retry-animation",
+      ),
+    );
+    expect(screen.queryByText("动图加载失败，可以再次点击播放。")).toBeNull();
   });
 });

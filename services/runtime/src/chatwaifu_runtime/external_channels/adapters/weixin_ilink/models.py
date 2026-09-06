@@ -8,9 +8,11 @@ adapter and its secure credential/checkpoint stores.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from types import MappingProxyType
 from typing import cast
 
 
@@ -145,9 +147,34 @@ class WeixinInboundText:
 
 
 @dataclass(frozen=True, slots=True)
+class WeixinInboundBatchObservation:
+    raw_count: int
+    accepted_count: int
+    ignored_count: int
+    message_type_counts: Mapping[str, int] = field(default_factory=dict[str, int])
+    item_type_counts: Mapping[str, int] = field(default_factory=dict[str, int])
+    rejection_reasons: Mapping[str, int] = field(default_factory=dict[str, int])
+
+    def __post_init__(self) -> None:
+        for name in ("message_type_counts", "item_type_counts", "rejection_reasons"):
+            object.__setattr__(self, name, MappingProxyType(dict(getattr(self, name))))
+
+    def to_summary(self) -> dict[str, object]:
+        return {
+            "raw_count": self.raw_count,
+            "accepted_count": self.accepted_count,
+            "ignored_count": self.ignored_count,
+            "message_type_counts": dict(self.message_type_counts),
+            "item_type_counts": dict(self.item_type_counts),
+            "rejection_reasons": dict(self.rejection_reasons),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class WeixinUpdates:
     cursor: str
     messages: tuple[WeixinInboundText, ...]
+    observation: WeixinInboundBatchObservation | None = None
 
 
 def _required_string(value: object, name: str, max_length: int) -> str:

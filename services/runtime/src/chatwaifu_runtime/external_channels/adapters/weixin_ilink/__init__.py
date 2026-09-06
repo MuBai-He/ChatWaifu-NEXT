@@ -5,6 +5,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationPoll,
     WeixinAuthorizationStart,
     WeixinCredentials,
+    WeixinInboundBatchObservation,
     WeixinInboundText,
     WeixinUpdates,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "WeixinAuthorizationStart",
     "WeixinCredentials",
     "WeixinILinkClient",
+    "WeixinInboundBatchObservation",
     "WeixinInboundText",
     "WeixinUpdates",
 ]

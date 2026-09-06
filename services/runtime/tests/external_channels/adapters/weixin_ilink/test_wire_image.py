@@ -643,11 +643,29 @@ async def test_download_rejects_corrupt_or_non_image():
 
 
 @pytest.mark.asyncio
-async def test_download_rejects_animated_image():
+async def test_download_accepts_bounded_animated_gif():
     animated_gif = _make_animated_gif_bytes()
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=animated_gif)
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = WeixinILinkClient(http_client)
+        data, mime = await client.download_image(WeixinInboundImage(encrypt_query_param="param"))
+        assert data == animated_gif
+        assert mime == "image/gif"
+
+
+@pytest.mark.asyncio
+async def test_download_rejects_oversized_animated_image():
+    buf = io.BytesIO()
+    images = [Image.new("RGB", (4, 4), (i, i, i)) for i in range(61)]
+    images[0].save(buf, format="GIF", save_all=True, append_images=images[1:], loop=0)
+    oversized_gif = buf.getvalue()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=oversized_gif)
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as http_client:

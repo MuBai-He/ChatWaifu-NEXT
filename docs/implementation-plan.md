@@ -2707,5 +2707,42 @@ Key architecture and invariants:
   - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
     (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
   - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
-- **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and Phase 17.4
-  (shared jokes, usage history, adaptive recall) remain pending.
+- **Accepted**: Owner native multi-photo acceptance passed on 2026-09-06 at 16:04 China time; two source messages produced one generation and one delivered reply. PR #28 merged as c422cc9.
+- **Pending scope**: Animated native acceptance and Phase 17.4 (shared jokes, usage history, adaptive recall).
+
+### Phase 17.3G — Bounded animated media understanding and sticker reuse (implementation verified, native acceptance pending)
+
+Phase 17.3G introduces support for receiving, understanding, opt-in learning, storing, previewing, and reusing
+animated GIF and animated PNG (APNG) media under [ADR 0042](adr/0042-bounded-animated-media-understanding-and-sticker-reuse.md),
+strictly preserving animation integrity across learning and reuse without degrading to static first frames.
+
+Key architecture and invariants:
+
+- **Wire format reality (`item_type: 2`)**: Inbound and outbound animated media strictly utilize WeChat iLink's
+  standard `item_type: 2` (`image_item`) via AES-128-ECB CDN transfer. No synthetic emoji 47 or XML types are used.
+- **Outbound animated reuse**: Outbound sticker reuse routes normalized animated GIF and APNG assets through the
+  standard `send_image` path.
+- **Resource guardrails and safety bounds**: Strict pre-decode checks enforce:
+  - Max encoded file size: $5\text{ MiB}$ ($5,242,880\text{ bytes}$).
+  - Max dimensions: $4096\text{ px}$ along either axis.
+  - Max frame count: $60\text{ frames}$.
+  - Max animation duration: $60.0\text{ seconds}$.
+  - Max cumulative decoded canvas pixels: $32,000,000\text{ pixels}$.
+  - Cooperative cancellation and monotonic time budget checks between consecutive frames during sequential decoding.
+- **APNG & GIF decoding semantics**:
+  - Discards APNG `default_image` when `fcTL` is absent on frame 0 so fallback static art does not contaminate the animation sequence.
+  - Respects GIF disposal methods and APNG blend/dispose canvas composite operations.
+- **Temporal vision understanding via storyboard synthesis**:
+  - Raw animation bytes are never sent directly to multi-modal vision LLMs.
+  - Uniform sampling selects up to 4 keyframes composited into a clean raster storyboard grid ($\le 1024\times 1024$, JPEG/PNG).
+  - Prompts are augmented with explicit temporal instruction: `[Temporal Animation Analysis]`, layout description,
+    reading order, frame indices, presentation timestamps (PTS), and frame durations.
+- **Photo memory exclusion**: Inbound animated media is explicitly excluded from `PhotoMemoryObserver`. Storyboards
+  and animated stickers are never silently retained as autobiographical photo memories.
+- **Opt-in sticker learning & deterministic normalization**:
+  - Rejects static-first-frame downgrade: learns full animation sequences when approved by the sticker classifier.
+  - Strips ancillary chunks/metadata while preserving exact frame durations, loop counts (`loop=0`), and alpha/transparency.
+  - Persistence Migration 29 widens the `mime_type` constraint to PNG/GIF and adds `is_animated`, preserving existing rows.
+- **Web UI safe preview & deferred playback**:
+  - Static poster returned by default (`?poster=true`) with a Chinese animation badge to prevent grid CPU/battery drain.
+  - Interactive preview toggle activates full animation on explicit click.

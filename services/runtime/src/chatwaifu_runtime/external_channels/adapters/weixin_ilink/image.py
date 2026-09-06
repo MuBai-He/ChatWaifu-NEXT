@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import base64
-import io
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlsplit
 
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from PIL import Image
+
+from chatwaifu_runtime.media.image import (
+    MediaInvalidError,
+    async_validate_image_bounds,
+    validate_image_bounds,
+)
+from chatwaifu_runtime.media.image import (
+    sniff_image_mime_type as _central_sniff_image_mime_type,
+)
 
 if TYPE_CHECKING:
     from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import (
@@ -26,6 +33,7 @@ _ALLOWED_MIME_FORMATS = {
     "image/png": "PNG",
     "image/jpeg": "JPEG",
     "image/jpg": "JPEG",
+    "image/gif": "GIF",
 }
 ALLOWED_MIME_TYPES = frozenset(_ALLOWED_MIME_FORMATS.keys())
 _ALLOWED_CDN_SCHEME = "https"
@@ -45,65 +53,38 @@ def _make_error(code: str, message: str, *, retryable: bool) -> WeixinILinkError
 
 
 def validate_image(image_bytes: bytes, mime_type: str) -> None:
-    """Validate static PNG/JPEG format, size constraints, and pixel bounds."""
-    from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkError
-
-    if not image_bytes:
-        raise _make_error("weixin.image_invalid", "Image data is empty.", retryable=False)
-
-    if len(image_bytes) > MAX_IMAGE_BYTES:
-        raise _make_error(
-            "weixin.image_invalid",
-            "Image size exceeds 5 MiB maximum limit.",
-            retryable=False,
-        )
-
-    clean_mime = mime_type.split(";")[0].strip().lower()
-    expected_format = _ALLOWED_MIME_FORMATS.get(clean_mime)
-    if expected_format is None:
-        raise _make_error(
-            "weixin.image_invalid",
-            f"Unsupported image MIME type: {mime_type}",
-            retryable=False,
-        )
-
+    """Validate static PNG/JPEG and bounded animated GIF/APNG image format, size, and bounds."""
     try:
-        with Image.open(io.BytesIO(image_bytes)) as img:
-            if img.format != expected_format:
-                raise _make_error(
-                    "weixin.image_invalid",
-                    f"Image format mismatch: {img.format}",
-                    retryable=False,
-                )
-            if getattr(img, "n_frames", 1) != 1 or getattr(img, "is_animated", False):
-                raise _make_error(
-                    "weixin.image_invalid",
-                    "Animated images are not supported.",
-                    retryable=False,
-                )
-            w, h = img.size
-            if (
-                w <= 0
-                or h <= 0
-                or w > MAX_IMAGE_DIMENSION
-                or h > MAX_IMAGE_DIMENSION
-                or (w * h) > MAX_IMAGE_PIXELS
-            ):
-                raise _make_error(
-                    "weixin.image_invalid",
-                    f"Image dimensions {w}x{h} exceed allowed bounds.",
-                    retryable=False,
-                )
-            img.verify()
-        # JPEG verify() only checks the container; decode bounded pixels as well.
-        with Image.open(io.BytesIO(image_bytes)) as decoded:
-            decoded.load()
-    except WeixinILinkError:
-        raise
-    except Exception:
+        validate_image_bounds(image_bytes, mime_type)
+    except MediaInvalidError as exc:
+        raise _make_error("weixin.image_invalid", str(exc), retryable=False) from None
+    except Exception as exc:
         raise _make_error(
             "weixin.image_invalid",
-            "Image decoding verification failed.",
+            f"Image decoding verification failed: {exc}",
+            retryable=False,
+        ) from None
+
+
+async def async_validate_image(
+    image_bytes: bytes,
+    mime_type: str,
+    *,
+    timeout_seconds: float = 5.0,
+) -> None:
+    """Asynchronously validate static and bounded animated image format, size, and bounds."""
+    try:
+        await async_validate_image_bounds(image_bytes, mime_type, timeout_seconds=timeout_seconds)
+    except MediaInvalidError as exc:
+        raise _make_error("weixin.image_invalid", str(exc), retryable=False) from None
+    except TimeoutError:
+        raise _make_error(
+            "weixin.request_timeout", "Image validation timed out.", retryable=True
+        ) from None
+    except Exception as exc:
+        raise _make_error(
+            "weixin.image_invalid",
+            f"Image decoding verification failed: {exc}",
             retryable=False,
         ) from None
 
@@ -306,13 +287,8 @@ def resolve_cdn_download_url(full_url: object, encrypt_query_param: object) -> s
 
 
 def sniff_image_mime_type(data: bytes) -> str:
-    """Sniff MIME type from image magic bytes (PNG or JPEG)."""
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
-    if data.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-    raise _make_error(
-        "weixin.image_invalid",
-        "Unsupported image format: expected static PNG or JPEG.",
-        retryable=False,
-    )
+    """Sniff MIME type from image magic bytes (PNG, JPEG, or GIF)."""
+    try:
+        return _central_sniff_image_mime_type(data)
+    except MediaInvalidError as exc:
+        raise _make_error("weixin.image_invalid", str(exc), retryable=False) from None

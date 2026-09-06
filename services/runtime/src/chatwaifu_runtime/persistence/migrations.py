@@ -1119,4 +1119,50 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON channel_turn_burst_members(burst_id);
         """,
     ),
+    (
+        29,
+        """
+        CREATE TABLE learned_stickers_migration_29 (
+            sticker_id TEXT PRIMARY KEY,
+            principal_scope TEXT NOT NULL,
+            character_id TEXT NOT NULL,
+            sha256 TEXT NOT NULL,
+            mime_type TEXT NOT NULL DEFAULT 'image/png'
+                CHECK(mime_type IN ('image/png', 'image/gif')),
+            label TEXT NOT NULL,
+            description TEXT NOT NULL,
+            expression TEXT NOT NULL CHECK(
+                expression IN ('neutral', 'happy', 'sad', 'angry', 'surprised', 'shy', 'curious')
+            ),
+            byte_size INTEGER NOT NULL CHECK(byte_size > 0 AND byte_size <= 5242880),
+            data BLOB NOT NULL,
+            source_connection_id TEXT NOT NULL,
+            generation_id TEXT NOT NULL,
+            learned_at TEXT NOT NULL,
+            is_animated INTEGER NOT NULL DEFAULT 0 CHECK(is_animated IN (0, 1)),
+            FOREIGN KEY(principal_scope, character_id)
+                REFERENCES sticker_library_settings(principal_scope, character_id)
+                ON DELETE CASCADE,
+            UNIQUE(principal_scope, character_id, sha256)
+        );
+
+        INSERT INTO learned_stickers_migration_29 (
+            sticker_id, principal_scope, character_id, sha256, mime_type,
+            label, description, expression, byte_size, data,
+            source_connection_id, generation_id, learned_at, is_animated
+        )
+        SELECT
+            sticker_id, principal_scope, character_id, sha256, mime_type,
+            label, description, expression, byte_size, data,
+            source_connection_id, generation_id, learned_at, 0
+        FROM learned_stickers;
+
+        DROP TABLE learned_stickers;
+
+        ALTER TABLE learned_stickers_migration_29 RENAME TO learned_stickers;
+
+        CREATE INDEX learned_stickers_scope_char_idx
+            ON learned_stickers(principal_scope, character_id, learned_at ASC);
+        """,
+    ),
 )

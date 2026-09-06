@@ -326,25 +326,38 @@ function StickerTile({
 }: StickerTileProps) {
   const [imageState, setImageState] = useState<{
     stickerId: string;
-    url: string | null;
+    posterUrl: string | null;
+    animatedUrl: string | null;
     loading: boolean;
     error: boolean;
   }>({
     stickerId: sticker.sticker_id,
-    url: null,
+    posterUrl: null,
+    animatedUrl: null,
     loading: true,
     error: false,
   });
-  const currentUrlRef = useRef<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [animatingLoading, setAnimatingLoading] = useState(false);
+  const [animationError, setAnimationError] = useState(false);
+  const animationRequestRef = useRef<AbortController | null>(null);
+  const posterUrlRef = useRef<string | null>(null);
+  const animatedUrlRef = useRef<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const isAnimated = Boolean(sticker.is_animated);
 
   const currentLoading =
     imageState.stickerId === sticker.sticker_id ? imageState.loading : true;
   const currentError =
     imageState.stickerId === sticker.sticker_id ? imageState.error : false;
   const currentUrl =
-    imageState.stickerId === sticker.sticker_id ? imageState.url : null;
+    imageState.stickerId === sticker.sticker_id
+      ? isPlaying && imageState.animatedUrl
+        ? imageState.animatedUrl
+        : imageState.posterUrl
+      : null;
 
   // Lazy thumbnail trigger: activate download only when near/in viewport
   useEffect(() => {
@@ -382,42 +395,100 @@ function StickerTile({
           characterId,
           signal: controller.signal,
           timeoutMs: 8_000,
+          poster: isAnimated,
         });
 
         if (!controller.signal.aborted) {
-          if (currentUrlRef.current) {
-            URL.revokeObjectURL(currentUrlRef.current);
+          if (posterUrlRef.current) {
+            URL.revokeObjectURL(posterUrlRef.current);
           }
-          currentUrlRef.current = url;
-          setImageState({
+          posterUrlRef.current = url;
+          setImageState((prev) => ({
+            ...prev,
             stickerId: sticker.sticker_id,
-            url,
+            posterUrl: url,
             loading: false,
             error: false,
-          });
+          }));
         } else {
           URL.revokeObjectURL(url);
         }
       }, controller.signal)
       .catch((err: unknown) => {
         if (!controller.signal.aborted && !isAbortError(err)) {
-          setImageState({
+          setImageState((prev) => ({
+            ...prev,
             stickerId: sticker.sticker_id,
-            url: null,
+            posterUrl: null,
             loading: false,
             error: true,
-          });
+          }));
         }
       });
 
     return () => {
       controller.abort();
-      if (currentUrlRef.current) {
-        URL.revokeObjectURL(currentUrlRef.current);
-        currentUrlRef.current = null;
+      animationRequestRef.current?.abort();
+      animationRequestRef.current = null;
+      if (posterUrlRef.current) {
+        URL.revokeObjectURL(posterUrlRef.current);
+        posterUrlRef.current = null;
+      }
+      if (animatedUrlRef.current) {
+        URL.revokeObjectURL(animatedUrlRef.current);
+        animatedUrlRef.current = null;
       }
     };
-  }, [sticker.sticker_id, characterId, isVisible]);
+  }, [sticker.sticker_id, characterId, isVisible, isAnimated]);
+
+  const handleTogglePlay = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAnimated || disabled || animationRequestRef.current) return;
+
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (imageState.animatedUrl) {
+      setIsPlaying(true);
+      return;
+    }
+
+    const controller = new AbortController();
+    animationRequestRef.current = controller;
+    setAnimatingLoading(true);
+    setAnimationError(false);
+    try {
+      await previewDownloadPool.enqueue(async () => {
+        const url = await fetchStickerImageUrl(sticker.sticker_id, {
+          characterId,
+          signal: controller.signal,
+          timeoutMs: 8_000,
+          poster: false,
+        });
+        if (
+          controller.signal.aborted ||
+          animationRequestRef.current !== controller
+        ) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (animatedUrlRef.current) URL.revokeObjectURL(animatedUrlRef.current);
+        animatedUrlRef.current = url;
+        setImageState((prev) => ({ ...prev, animatedUrl: url }));
+        setIsPlaying(true);
+      }, controller.signal);
+    } catch (error: unknown) {
+      if (!controller.signal.aborted && !isAbortError(error)) {
+        setAnimationError(true);
+      }
+    } finally {
+      if (animationRequestRef.current === controller) {
+        animationRequestRef.current = null;
+        setAnimatingLoading(false);
+      }
+    }
+  };
 
   return (
     <div
@@ -436,14 +507,39 @@ function StickerTile({
             图片加载失败
           </div>
         ) : (
-          <img
-            src={currentUrl}
-            alt={sticker.label}
-            className="sticker-library-thumbnail"
-          />
+          <>
+            <img
+              src={currentUrl}
+              alt={sticker.label}
+              className="sticker-library-thumbnail"
+            />
+            {isAnimated ? (
+              <span
+                className="sticker-library-tile-badge"
+                data-testid={`sticker-badge-${sticker.sticker_id}`}
+              >
+                动图
+              </span>
+            ) : null}
+            {isAnimated ? (
+              <button
+                type="button"
+                className={`sticker-library-play-button ${isPlaying ? "playing" : ""}`}
+                onClick={(event) => void handleTogglePlay(event)}
+                disabled={disabled || animatingLoading}
+                aria-label={isPlaying ? "暂停动图预览" : "播放动图预览"}
+                data-testid={`sticker-play-${sticker.sticker_id}`}
+              >
+                {animatingLoading ? "…" : isPlaying ? "⏸" : "▶"}
+              </button>
+            ) : null}
+          </>
         )}
       </div>
 
+      {animationError ? (
+        <span role="alert">动图加载失败，可以再次点击播放。</span>
+      ) : null}
       <div className="sticker-library-tile-info">
         <strong className="sticker-library-tile-label" title={sticker.label}>
           {sticker.label}

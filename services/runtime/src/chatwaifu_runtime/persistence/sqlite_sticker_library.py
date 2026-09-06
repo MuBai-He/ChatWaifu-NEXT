@@ -22,6 +22,8 @@ from chatwaifu_runtime.sticker_library.models import (
 )
 
 PNG_MAGIC = bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+GIF87A_MAGIC = b"GIF87a"
+GIF89A_MAGIC = b"GIF89a"
 MAX_STICKER_SIZE = 5 * 1024 * 1024  # 5 MiB
 MAX_CAPACITY = 100
 MAX_TOTAL_BYTES = 100 * 1024 * 1024  # 100 MiB
@@ -141,7 +143,7 @@ class SqliteStickerLibraryRepository:
                 """
                 SELECT sticker_id, sha256, mime_type, label, description,
                        expression, byte_size, source_connection_id, generation_id,
-                       learned_at
+                       learned_at, is_animated
                 FROM learned_stickers
                 WHERE principal_scope = ? AND character_id = ?
                 ORDER BY learned_at ASC
@@ -158,13 +160,14 @@ class SqliteStickerLibraryRepository:
                     LearnedSticker(
                         sticker_id=r["sticker_id"],
                         sha256=r["sha256"],
-                        mime_type="image/png",
+                        mime_type=r["mime_type"],
                         label=r["label"],
                         description=r["description"],
                         expression=r["expression"],
                         byte_size=r["byte_size"],
                         learned_at=datetime.fromisoformat(r["learned_at"]),
                         source_connection_id=UUID(r["source_connection_id"]),
+                        is_animated=bool(r["is_animated"]),
                     )
                 )
                 total_bytes += int(r["byte_size"])
@@ -188,7 +191,13 @@ class SqliteStickerLibraryRepository:
         byte_size = len(data)
         if byte_size == 0 or byte_size > MAX_STICKER_SIZE:
             return None
-        if not data.startswith(PNG_MAGIC):
+        if candidate.mime_type == "image/png":
+            if not data.startswith(PNG_MAGIC):
+                return None
+        elif candidate.mime_type == "image/gif":
+            if not (data.startswith(GIF87A_MAGIC) or data.startswith(GIF89A_MAGIC)):
+                return None
+        else:
             return None
         sha256 = hashlib.sha256(data).hexdigest()
 
@@ -199,13 +208,14 @@ class SqliteStickerLibraryRepository:
             LearnedSticker(
                 sticker_id=dummy_id,
                 sha256=sha256,
-                mime_type="image/png",
+                mime_type=candidate.mime_type,
                 label=candidate.label,
                 description=candidate.description,
                 expression=candidate.expression,
                 byte_size=byte_size,
                 learned_at=now_dt,
                 source_connection_id=candidate.source_connection_id,
+                is_animated=candidate.is_animated,
             )
         except ValidationError:
             return None
@@ -254,7 +264,7 @@ class SqliteStickerLibraryRepository:
                 """
                 SELECT sticker_id, sha256, mime_type, label, description,
                        expression, byte_size, source_connection_id, generation_id,
-                       learned_at
+                       learned_at, is_animated
                 FROM learned_stickers
                 WHERE principal_scope = ? AND character_id = ? AND sha256 = ?
                 """,
@@ -266,13 +276,14 @@ class SqliteStickerLibraryRepository:
                 return LearnedSticker(
                     sticker_id=dup_row["sticker_id"],
                     sha256=dup_row["sha256"],
-                    mime_type="image/png",
+                    mime_type=dup_row["mime_type"],
                     label=dup_row["label"],
                     description=dup_row["description"],
                     expression=dup_row["expression"],
                     byte_size=dup_row["byte_size"],
                     learned_at=datetime.fromisoformat(dup_row["learned_at"]),
                     source_connection_id=UUID(dup_row["source_connection_id"]),
+                    is_animated=bool(dup_row["is_animated"]),
                 )
 
             # Capacity bounds check: count and total_bytes
@@ -299,14 +310,16 @@ class SqliteStickerLibraryRepository:
                 INSERT INTO learned_stickers (
                     sticker_id, principal_scope, character_id, sha256,
                     mime_type, label, description, expression, byte_size,
-                    data, source_connection_id, generation_id, learned_at
-                ) VALUES (?, ?, ?, ?, 'image/png', ?, ?, ?, ?, ?, ?, ?, ?)
+                    data, source_connection_id, generation_id, learned_at,
+                    is_animated
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     sticker_id,
                     scope,
                     character_id,
                     sha256,
+                    candidate.mime_type,
                     candidate.label,
                     candidate.description,
                     candidate.expression,
@@ -315,6 +328,7 @@ class SqliteStickerLibraryRepository:
                     str(candidate.source_connection_id),
                     str(candidate.generation_id),
                     learned_at_str,
+                    1 if candidate.is_animated else 0,
                 ),
             )
             await cursor.close()
@@ -322,27 +336,28 @@ class SqliteStickerLibraryRepository:
             return LearnedSticker(
                 sticker_id=sticker_id,
                 sha256=sha256,
-                mime_type="image/png",
+                mime_type=candidate.mime_type,
                 label=candidate.label,
                 description=candidate.description,
                 expression=candidate.expression,
                 byte_size=byte_size,
                 learned_at=now_dt,
                 source_connection_id=candidate.source_connection_id,
+                is_animated=candidate.is_animated,
             )
 
-    async def get_image(
+    async def get_asset(
         self,
         scope: str,
         character_id: str,
         sticker_id: str,
         *,
         expected_sha256: str | None = None,
-    ) -> bytes | None:
+    ) -> tuple[bytes, str, bool] | None:
         async with self._database.transaction() as conn:
             cursor = await conn.execute(
                 """
-                SELECT sha256, byte_size, data
+                SELECT sha256, byte_size, mime_type, is_animated, data
                 FROM learned_stickers
                 WHERE principal_scope = ? AND character_id = ? AND sticker_id = ?
                 """,
@@ -356,6 +371,8 @@ class SqliteStickerLibraryRepository:
             data: bytes = row["data"]
             stored_sha256: str = row["sha256"]
             byte_size: int = row["byte_size"]
+            mime_type: str = row["mime_type"]
+            is_animated: bool = bool(row["is_animated"])
 
             # Fail closed on corruption or mismatch
             if len(data) != byte_size:
@@ -365,7 +382,20 @@ class SqliteStickerLibraryRepository:
                 return None
             if expected_sha256 is not None and stored_sha256 != expected_sha256:
                 return None
-            return data
+            return data, mime_type, is_animated
+
+    async def get_image(
+        self,
+        scope: str,
+        character_id: str,
+        sticker_id: str,
+        *,
+        expected_sha256: str | None = None,
+    ) -> bytes | None:
+        asset = await self.get_asset(
+            scope, character_id, sticker_id, expected_sha256=expected_sha256
+        )
+        return asset[0] if asset is not None else None
 
     async def delete(
         self,
