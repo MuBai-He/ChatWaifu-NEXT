@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.character_kernel.service import USER_SCOPE
-from chatwaifu_runtime.media.image import extract_static_poster
+from chatwaifu_runtime.media.image import async_extract_static_poster
 from chatwaifu_runtime.sticker_library.models import StickerLibraryRevisionConflict
 
 router = APIRouter(prefix="/v1/sticker-library", tags=["sticker-library"])
@@ -93,7 +93,7 @@ async def get_learned_sticker_image(
         )
     data, mime_type, is_animated = asset
     if poster and is_animated:
-        poster_data = extract_static_poster(data, mime_type)
+        poster_data = await async_extract_static_poster(data, mime_type)
         return Response(
             content=poster_data,
             media_type="image/png",

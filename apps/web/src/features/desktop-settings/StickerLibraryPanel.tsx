@@ -339,6 +339,8 @@ function StickerTile({
   });
   const [isPlaying, setIsPlaying] = useState(false);
   const [animatingLoading, setAnimatingLoading] = useState(false);
+  const [animationError, setAnimationError] = useState(false);
+  const animationRequestRef = useRef<AbortController | null>(null);
   const posterUrlRef = useRef<string | null>(null);
   const animatedUrlRef = useRef<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -426,6 +428,8 @@ function StickerTile({
 
     return () => {
       controller.abort();
+      animationRequestRef.current?.abort();
+      animationRequestRef.current = null;
       if (posterUrlRef.current) {
         URL.revokeObjectURL(posterUrlRef.current);
         posterUrlRef.current = null;
@@ -439,35 +443,50 @@ function StickerTile({
 
   const handleTogglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAnimated) return;
+    if (!isAnimated || disabled || animationRequestRef.current) return;
 
     if (isPlaying) {
       setIsPlaying(false);
       return;
     }
-
     if (imageState.animatedUrl) {
       setIsPlaying(true);
       return;
     }
 
+    const controller = new AbortController();
+    animationRequestRef.current = controller;
     setAnimatingLoading(true);
+    setAnimationError(false);
     try {
-      const url = await fetchStickerImageUrl(sticker.sticker_id, {
-        characterId,
-        timeoutMs: 8_000,
-        poster: false,
-      });
-      if (animatedUrlRef.current) {
-        URL.revokeObjectURL(animatedUrlRef.current);
+      await previewDownloadPool.enqueue(async () => {
+        const url = await fetchStickerImageUrl(sticker.sticker_id, {
+          characterId,
+          signal: controller.signal,
+          timeoutMs: 8_000,
+          poster: false,
+        });
+        if (
+          controller.signal.aborted ||
+          animationRequestRef.current !== controller
+        ) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (animatedUrlRef.current) URL.revokeObjectURL(animatedUrlRef.current);
+        animatedUrlRef.current = url;
+        setImageState((prev) => ({ ...prev, animatedUrl: url }));
+        setIsPlaying(true);
+      }, controller.signal);
+    } catch (error: unknown) {
+      if (!controller.signal.aborted && !isAbortError(error)) {
+        setAnimationError(true);
       }
-      animatedUrlRef.current = url;
-      setImageState((prev) => ({ ...prev, animatedUrl: url }));
-      setIsPlaying(true);
-    } catch {
-      // ignore
     } finally {
-      setAnimatingLoading(false);
+      if (animationRequestRef.current === controller) {
+        animationRequestRef.current = null;
+        setAnimatingLoading(false);
+      }
     }
   };
 
@@ -506,8 +525,8 @@ function StickerTile({
               <button
                 type="button"
                 className={`sticker-library-play-button ${isPlaying ? "playing" : ""}`}
-                onClick={handleTogglePlay}
-                disabled={disabled}
+                onClick={(event) => void handleTogglePlay(event)}
+                disabled={disabled || animatingLoading}
                 aria-label={isPlaying ? "暂停动图预览" : "播放动图预览"}
                 data-testid={`sticker-play-${sticker.sticker_id}`}
               >
@@ -518,6 +537,9 @@ function StickerTile({
         )}
       </div>
 
+      {animationError ? (
+        <span role="alert">动图加载失败，可以再次点击播放。</span>
+      ) : null}
       <div className="sticker-library-tile-info">
         <strong className="sticker-library-tile-label" title={sticker.label}>
           {sticker.label}

@@ -43,8 +43,6 @@ from PIL import Image
 from test_inbound_image_lifecycle import VisionRecorder, connect, message
 from test_sticker_repository import _init_db, _seed_source_chain
 
-FIXTURE_DIR = Path("/Users/mubai/Desktop/CW2/.local/validation/phase-17-3g")
-
 
 def _make_test_gif(num_frames: int = 4, size: tuple[int, int] = (64, 64)) -> bytes:
     images: list[Image.Image] = []
@@ -131,14 +129,8 @@ def test_validate_image_bounds_rejections() -> None:
 
 
 def test_decode_and_synthesize_validation_fixtures() -> None:
-    gif_path = FIXTURE_DIR / "moving-ball.gif"
-    apng_path = FIXTURE_DIR / "moving-ball.apng"
-
-    if not gif_path.exists() or not apng_path.exists():
-        pytest.skip("Local validation fixtures not found")
-
-    # 1. Test moving-ball.gif
-    gif_bytes = gif_path.read_bytes()
+    # 1. Test 12-frame GIF portable asset
+    gif_bytes = _make_test_gif(12, size=(320, 180))
     gif_item = decode_and_sanitize_inbound_media(gif_bytes, "image/gif")
 
     assert gif_item.is_animated is True
@@ -155,8 +147,8 @@ def test_decode_and_synthesize_validation_fixtures() -> None:
     assert "Frame 1 at" in desc
     assert "Frame 12 at" in desc
 
-    # 2. Test moving-ball.apng
-    apng_bytes = apng_path.read_bytes()
+    # 2. Test 12-frame APNG portable asset
+    apng_bytes = _make_test_apng(12, size=(320, 180))
     apng_item = decode_and_sanitize_inbound_media(apng_bytes, "image/png")
 
     assert apng_item.is_animated is True
@@ -243,11 +235,7 @@ def test_normalize_animated_sticker_preserves_animation() -> None:
 
 
 def test_normalization_strips_metadata_while_preserving_animation() -> None:
-    gif_path = FIXTURE_DIR / "moving-ball.gif"
-    if not gif_path.exists():
-        pytest.skip("moving-ball.gif not found")
-
-    orig_data = gif_path.read_bytes()
+    orig_data = _make_test_gif(12, size=(320, 180))
     norm_data, mime, is_anim = normalize_animated_sticker(orig_data, "image/gif")
 
     assert is_anim is True
@@ -301,6 +289,73 @@ async def test_conversation_service_injects_temporal_vision_instruction(
         # System prompt contains temporal analysis instructions
         assert "[Temporal Animation Analysis]" in req.system_prompt
         assert "Reading order:" in req.system_prompt
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_conversation_service_mixed_static_and_animated_ordinals(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        recorder = VisionRecorder()
+        monkeypatch.setattr(container.agent, "_llm", recorder)
+        conn_id, token = await connect(container)
+        msg = message(conn_id, "mixed-media-msg", text="看这组图片")
+
+        # Item 1: Static PNG
+        static_img = Image.new("RGB", (64, 64), "blue")
+        static_buf = io.BytesIO()
+        static_img.save(static_buf, format="PNG")
+        item1 = decode_and_sanitize_inbound_media(static_buf.getvalue(), "image/png")
+
+        # Item 2: Animated GIF
+        item2 = decode_and_sanitize_inbound_media(_make_test_gif(10), "image/gif")
+
+        # Item 3: Animated APNG
+        item3 = decode_and_sanitize_inbound_media(_make_test_apng(8), "image/png")
+
+        async def load_batch():
+            return (item1, item2, item3)
+
+        fp = "d" * 64
+        image_input = ChannelInboundImageInput(fp, load_batch)
+
+        receipt = await container.external_channels.ingest(
+            msg, access_token=token, image_input=image_input
+        )
+        result = await container.external_channels.wait_for_turn(
+            conn_id, receipt.channel_turn_id, wait_seconds=5
+        )
+        assert result.status is ChannelTurnStatus.COMPLETED
+
+        assert len(recorder.requests) == 1
+        req = recorder.requests[0]
+        assert len(req.images) == 3
+
+        # Sequential attachment instruction
+        assert (
+            "3 images are attached to the current user turn in sequential order "
+            "(Image 1 to Image 3)" in req.system_prompt
+        )
+
+        # Image 2 is GIF storyboard
+        assert (
+            "Image 2 is a 4-frame storyboard depicting an animation sequence" in req.system_prompt
+        )
+
+        # Image 3 is APNG storyboard
+        assert (
+            "Image 3 is a 4-frame storyboard depicting an animation sequence" in req.system_prompt
+        )
+
+        # Ensure single-attachment phrasing is NOT present
+        assert (
+            "An animated media storyboard is attached to the current user turn"
+            not in req.system_prompt
+        )
     finally:
         await container.stop()
 
@@ -471,8 +526,10 @@ async def test_sticker_learning_preserves_animated_gif(
         class_img = mock_classifier.classify.call_args[0][0]
         assert class_img.data == item.raster_image.data
 
-        # Wait for learning task to complete
-        await asyncio.sleep(0.2)
+        # Real state synchronization: wait for learning background task without arbitrary sleep
+        learning_tasks = [task for _, task in container.sticker_library._tasks.values()]
+        if learning_tasks:
+            await asyncio.gather(*learning_tasks)
 
         # Check sticker library snapshot
         snapshot = await container.sticker_repository.snapshot("local", "default")
@@ -499,9 +556,17 @@ async def test_sticker_learning_preserves_animated_gif(
 
 
 @pytest.mark.asyncio
-async def test_async_decode_respects_cancellation() -> None:
-    # Set a tiny timeout
+async def test_async_decode_time_budget_timeout() -> None:
     with pytest.raises(TimeoutError):
         await async_decode_and_sanitize_inbound_media(
             _make_test_gif(20), "image/gif", timeout_seconds=0.00001
         )
+
+
+@pytest.mark.asyncio
+async def test_async_decode_cooperative_cancellation() -> None:
+    gif_data = _make_test_gif(30, size=(256, 256))
+    task = asyncio.create_task(async_decode_and_sanitize_inbound_media(gif_data, "image/gif"))
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task

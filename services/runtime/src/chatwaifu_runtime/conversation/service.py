@@ -1042,13 +1042,16 @@ class ConversationService:
                 self._ensure_current(accepted)
                 items = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
                 llm_images: list[LlmInputImage] = []
+                total_items = len(items)
                 for idx, item in enumerate(items, 1):
                     if isinstance(item, InboundMediaItem):
                         llm_images.append(item.raster_image)
                         if item.is_animated and item.storyboard is not None:
-                            image_num = idx if len(items) > 1 else None
+                            image_num = idx if total_items > 1 else None
                             temporal_vision_instructions.append(
-                                item.storyboard.format_vision_description(image_num)
+                                item.storyboard.format_vision_description(
+                                    image_num, total_images=total_items
+                                )
                             )
                     elif isinstance(item, LlmInputImage):  # pyright: ignore[reportUnnecessaryIsInstance]
                         llm_images.append(item)

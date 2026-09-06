@@ -2707,10 +2707,10 @@ Key architecture and invariants:
   - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
     (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
   - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
-- **Pending scope**: Multi-photo real WeChat acceptance, burst native retest, and Phase 17.4
-  (shared jokes, usage history, adaptive recall) remain pending.
+- **Accepted**: Owner native multi-photo acceptance passed on 2026-09-06 at 16:04 China time; two source messages produced one generation and one delivered reply. PR #28 merged as c422cc9.
+- **Pending scope**: Animated native acceptance and Phase 17.4 (shared jokes, usage history, adaptive recall).
 
-### Phase 17.3G — Bounded animated media understanding and sticker reuse (implementation complete, native retest pending)
+### Phase 17.3G — Bounded animated media understanding and sticker reuse (implementation verified, native acceptance pending)
 
 Phase 17.3G introduces support for receiving, understanding, opt-in learning, storing, previewing, and reusing
 animated GIF and animated PNG (APNG) media under [ADR 0042](adr/0042-bounded-animated-media-understanding-and-sticker-reuse.md),
@@ -2742,7 +2742,7 @@ Key architecture and invariants:
 - **Opt-in sticker learning & deterministic normalization**:
   - Rejects static-first-frame downgrade: learns full animation sequences when approved by the sticker classifier.
   - Strips ancillary chunks/metadata while preserving exact frame durations, loop counts (`loop=0`), and alpha/transparency.
-  - Persistence Migration 29 adds `mime_type` (`image/png` | `image/gif`) and `is_animated` (`0` | `1`) columns to `learned_stickers`.
+  - Persistence Migration 29 widens the `mime_type` constraint to PNG/GIF and adds `is_animated`, preserving existing rows.
 - **Web UI safe preview & deferred playback**:
-  - Static poster returned by default (`?poster=true`) with an `[ANIM]` badge to prevent grid CPU/battery drain.
-  - Interactive preview toggle activates full animation on hover/click.
+  - Static poster returned by default (`?poster=true`) with a Chinese animation badge to prevent grid CPU/battery drain.
+  - Interactive preview toggle activates full animation on explicit click.

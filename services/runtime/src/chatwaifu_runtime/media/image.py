@@ -8,7 +8,7 @@ import asyncio
 import io
 import time
 from collections.abc import Callable, Sequence
-from typing import Literal
+from typing import Any, Literal
 
 from PIL import Image, ImageOps
 
@@ -16,6 +16,10 @@ from chatwaifu_runtime.media.contracts import (
     InboundMediaItem,
     StoryboardFrame,
     StoryboardMetadata,
+)
+from chatwaifu_runtime.media.executor import (
+    DEFAULT_MEDIA_TIMEOUT_SECONDS,
+    get_default_media_pool,
 )
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 
@@ -36,7 +40,7 @@ MAX_ANIMATION_DURATION_MS = 60_000  # 60 seconds
 # Storyboard bounds
 MAX_STORYBOARD_DIMENSION = 1024
 MAX_STORYBOARD_FRAMES = 4
-DEFAULT_DECODE_TIMEOUT_SECONDS = 5.0
+DEFAULT_DECODE_TIMEOUT_SECONDS = DEFAULT_MEDIA_TIMEOUT_SECONDS
 
 # Sticker bounds
 MAX_STICKER_DIMENSION = 1024
@@ -69,8 +73,26 @@ def sniff_image_mime_type(data: bytes) -> str:
     raise MediaInvalidError("Unsupported image format: expected PNG, JPEG, or GIF.")
 
 
-def validate_image_bounds(data: bytes, mime_type: str) -> None:
-    """Validate format, size constraints, and pixel bounds for static and animated media."""
+def validate_image_bounds(
+    data: bytes,
+    mime_type: str,
+    *,
+    deadline: float | None = None,
+    check_cancelled: Callable[[], bool] | None = None,
+) -> None:
+    """Validate format, size constraints, and pixel bounds for static and animated media.
+
+    Enforces finite sequential seek capped at 60 animation frames (APNG default poster
+    excluded from frame count but counted in decoded canvas budget).
+    Verifies frame integrity, cumulative decoded pixels <= 32M, and animation duration <= 60s.
+    Never reads unbounded PIL n_frames or is_animated.
+    Checks deadline and cancellation before inspection and between bounded operations.
+    """
+    if deadline is not None and time.monotonic() > deadline:
+        raise TimeoutError("Image validation deadline exceeded.")
+    if check_cancelled is not None and check_cancelled():
+        raise asyncio.CancelledError("Image validation cancelled.")
+
     if not data:
         raise MediaInvalidError("Image data is empty.")
 
@@ -93,108 +115,244 @@ def validate_image_bounds(data: bytes, mime_type: str) -> None:
             if w <= 0 or h <= 0:
                 raise MediaInvalidError(f"Invalid image dimensions: {w}x{h}")
 
-            n_frames = getattr(img, "n_frames", 1)
-            is_animated = bool(getattr(img, "is_animated", False) or n_frames > 1)
+            # Early dimensions check BEFORE traversal or allocation
+            if w > MAX_STATIC_DIMENSION or h > MAX_STATIC_DIMENSION or (w * h) > MAX_STATIC_PIXELS:
+                raise MediaInvalidError(f"Static image dimensions {w}x{h} exceed allowed bounds.")
 
-            if is_animated:
-                if w > MAX_ANIMATED_DIMENSION or h > MAX_ANIMATED_DIMENSION:
-                    raise MediaInvalidError(
-                        f"Animated image dimensions {w}x{h} exceed {MAX_ANIMATED_DIMENSION} limit."
-                    )
-                if n_frames > MAX_ANIMATED_FRAMES:
-                    raise MediaInvalidError(
-                        f"Animated frame count {n_frames} exceeds {MAX_ANIMATED_FRAMES} limit."
-                    )
-                if (w * h * n_frames) > MAX_CUMULATIVE_DECODED_CANVAS_PIXELS:
+            is_apng = clean_mime == "image/png"
+            default_image = bool(
+                is_apng
+                and (getattr(img, "default_image", False) or img.info.get("default_image", False))
+            )
+
+            is_animated = False
+            try:
+                img.seek(1)
+                is_animated = True
+            except EOFError:
+                is_animated = False
+
+            if default_image and not is_animated:
+                raise MediaInvalidError("APNG with default_image has no animation frames.")
+
+            if not is_animated:
+                if deadline is not None and time.monotonic() > deadline:
+                    raise TimeoutError("Image validation deadline exceeded.")
+                if check_cancelled is not None and check_cancelled():
+                    raise asyncio.CancelledError("Image validation cancelled.")
+                img.seek(0)
+                img.load()
+                return
+
+            # Animated image bounds enforcement
+            if w > MAX_ANIMATED_DIMENSION or h > MAX_ANIMATED_DIMENSION:
+                raise MediaInvalidError(
+                    f"Animated image dimensions {w}x{h} exceed {MAX_ANIMATED_DIMENSION} limit."
+                )
+
+            start_frame = 1 if default_image else 0
+            cumulative_pixels = 0
+            if default_image:
+                # Frame 0 is default poster: counted in decoded budget
+                cumulative_pixels += w * h
+                if deadline is not None and time.monotonic() > deadline:
+                    raise TimeoutError("Image validation deadline exceeded.")
+                if check_cancelled is not None and check_cancelled():
+                    raise asyncio.CancelledError("Image validation cancelled.")
+                img.seek(0)
+                img.load()
+
+            animation_frames = 0
+            total_duration_ms = 0
+            frame_idx = start_frame
+
+            while True:
+                if deadline is not None and time.monotonic() > deadline:
+                    raise TimeoutError("Image validation deadline exceeded.")
+                if check_cancelled is not None and check_cancelled():
+                    raise asyncio.CancelledError("Image validation cancelled.")
+
+                if animation_frames >= MAX_ANIMATED_FRAMES:
+                    try:
+                        img.seek(frame_idx)
+                        raise MediaInvalidError(
+                            f"Animated frame count exceeds {MAX_ANIMATED_FRAMES} limit."
+                        )
+                    except EOFError:
+                        break
+
+                try:
+                    img.seek(frame_idx)
+                except EOFError:
+                    break
+
+                if deadline is not None and time.monotonic() > deadline:
+                    raise TimeoutError("Image validation deadline exceeded.")
+                if check_cancelled is not None and check_cancelled():
+                    raise asyncio.CancelledError("Image validation cancelled.")
+
+                # GIF frame descriptors can enlarge the logical canvas on seek.
+                frame_w, frame_h = img.size
+                if frame_w > MAX_ANIMATED_DIMENSION or frame_h > MAX_ANIMATED_DIMENSION:
+                    raise MediaInvalidError("Animated frame dimensions exceed allowed bounds.")
+                cumulative_pixels += frame_w * frame_h
+                if cumulative_pixels > MAX_CUMULATIVE_DECODED_CANVAS_PIXELS:
                     raise MediaInvalidError(
                         "Animated image potential decoded pixels exceed 32 million limit."
                     )
-            else:
-                if (
-                    w > MAX_STATIC_DIMENSION
-                    or h > MAX_STATIC_DIMENSION
-                    or (w * h) > MAX_STATIC_PIXELS
-                ):
+                img.load()
+
+                dur = img.info.get("duration")
+                if dur is None or int(dur) <= 0:
+                    frame_dur = 100
+                else:
+                    frame_dur = int(dur)
+
+                total_duration_ms += frame_dur
+                if total_duration_ms > MAX_ANIMATION_DURATION_MS:
                     raise MediaInvalidError(
-                        f"Static image dimensions {w}x{h} exceed allowed bounds."
+                        f"Animation duration exceeds {MAX_ANIMATION_DURATION_MS}ms limit."
                     )
 
-            img.verify()
+                animation_frames += 1
+                frame_idx += 1
 
-        # Extra check: load first frame to ensure decode integrity
-        with Image.open(io.BytesIO(data)) as decoded:
-            decoded.load()
+            if animation_frames < 1:
+                raise MediaInvalidError("Animated image has no valid animation frames.")
+
     except MediaInvalidError:
+        raise
+    except (TimeoutError, asyncio.CancelledError):
         raise
     except Exception as exc:
         raise MediaInvalidError(f"Image decoding verification failed: {exc}") from None
 
 
-def strip_static_image_exif(image: LlmInputImage) -> LlmInputImage:
-    """Remove EXIF and container metadata from a single static raster image.
+async def async_validate_image_bounds(
+    data: bytes,
+    mime_type: str,
+    *,
+    timeout_seconds: float = DEFAULT_DECODE_TIMEOUT_SECONDS,
+) -> None:
+    """Asynchronously validate image bounds within the bounded execution pool."""
+    pool = get_default_media_pool()
+    await pool.run_bounded(
+        validate_image_bounds,
+        data,
+        mime_type,
+        timeout_seconds=timeout_seconds,
+    )
 
-    Images without EXIF are preserved unchanged.
+
+def strip_static_image_exif(image: LlmInputImage) -> LlmInputImage:
+    """Remove EXIF, ICC profiles, text comments, and container metadata from a static raster image.
+
+    Always re-encodes to a clean raster container (PNG for GIF/PNG or images with alpha,
+    JPEG for opaque JPEG images). Strips all private metadata while preserving pixel data.
     """
     if not image.data:
         return image
 
     try:
         with Image.open(io.BytesIO(image.data)) as img:
-            try:
-                exif = img.getexif()
-            except Exception:
-                exif = None
-            if exif is not None and not exif:
-                return image
+            fmt = img.format
             try:
                 transposed = ImageOps.exif_transpose(img)
             except Exception:
                 transposed = img.copy()
-            if transposed.mode in ("RGBA", "P"):
-                converted = transposed.convert("RGBA")
-                fmt = "PNG"
-                mime: Literal["image/png", "image/jpeg"] = "image/png"
+
+            has_alpha = transposed.mode in ("RGBA", "LA", "PA") or (
+                transposed.mode == "P" and "transparency" in transposed.info
+            )
+
+            # Convert static GIF, PNG, or any image with transparency to a clean PNG
+            if fmt in ("GIF", "PNG") or has_alpha or image.mime_type == "image/png":
+                target_mode = "RGBA" if has_alpha else "RGB"
+                clean = Image.new(target_mode, transposed.size)
+                clean.paste(transposed.convert(target_mode))
+                output = io.BytesIO()
+                clean.save(output, format="PNG")
+                return LlmInputImage(data=output.getvalue(), mime_type="image/png")
             else:
-                converted = transposed.convert("RGB")
-                fmt = "JPEG"
-                mime = "image/jpeg"
-
-            clean = Image.new(converted.mode, converted.size)
-            clean.paste(converted)
-
-            output = io.BytesIO()
-            clean.save(output, format=fmt)
-            return LlmInputImage(data=output.getvalue(), mime_type=mime)
+                clean = Image.new("RGB", transposed.size)
+                clean.paste(transposed.convert("RGB"))
+                output = io.BytesIO()
+                clean.save(output, format="JPEG", quality=90)
+                return LlmInputImage(data=output.getvalue(), mime_type="image/jpeg")
     except Exception as exc:
         raise MediaInvalidError("cannot sanitize inbound image") from exc
 
 
-def _sample_frame_indices(total_frames: int, max_samples: int = MAX_STORYBOARD_FRAMES) -> list[int]:
-    """Uniformly sample up to max_samples frame indices across total_frames."""
-    if total_frames <= max_samples:
-        return list(range(total_frames))
+def _sample_frames_by_pts(
+    durations: Sequence[int],
+    max_samples: int = MAX_STORYBOARD_FRAMES,
+) -> list[int]:
+    """Sample up to max_samples frame indices temporally based on Presentation Timestamp (PTS).
+
+    Guarantees:
+    - Frame 0 (start) is included.
+    - Frame N-1 (end) is included when N > 1.
+    - Intermediate samples reflect temporal progression across the animation duration.
+    - Resulting indices are sorted and deduplicated.
+    """
+    n = len(durations)
+    if n <= max_samples:
+        return list(range(n))
     if max_samples == 1:
         return [0]
-    # For max_samples == 4: sample start (0), two intermediate points, and end (total_frames - 1)
-    step = (total_frames - 1) / (max_samples - 1)
-    indices = [round(i * step) for i in range(max_samples)]
-    # Deduplicate while preserving order
-    seen: set[int] = set()
-    result: list[int] = []
-    for idx in indices:
-        clamped = max(0, min(total_frames - 1, idx))
-        if clamped not in seen:
-            seen.add(clamped)
-            result.append(clamped)
-    return result
+
+    total_dur = sum(durations)
+    pts_list = [0]
+    for d in durations[:-1]:
+        pts_list.append(pts_list[-1] + d)
+
+    def _find_frame_at_t(target_t: float) -> int:
+        for idx, (pts, dur) in enumerate(zip(pts_list, durations, strict=True)):
+            if pts <= target_t < pts + dur:
+                return idx
+        return n - 1
+
+    if max_samples == 2:
+        return [0, n - 1]
+
+    if max_samples == 3:
+        i1 = _find_frame_at_t(total_dur / 2.0)
+        i1 = max(1, min(n - 2, i1))
+        return [0, i1, n - 1]
+
+    # For max_samples == 4:
+    t1 = total_dur / 3.0
+    t2 = total_dur * 2.0 / 3.0
+    i0 = 0
+    i3 = n - 1
+    i1 = _find_frame_at_t(t1)
+    i2 = _find_frame_at_t(t2)
+
+    # Ensure 0 < i1 < i2 < i3 for n >= 4
+    i1 = max(1, min(n - 3, i1))
+    i2 = max(i1 + 1, min(n - 2, i2))
+    return [i0, i1, i2, i3]
+
+
+def _has_transparent_pixels(alpha_channel: Image.Image) -> bool:
+    extrema = alpha_channel.getextrema()
+    first = extrema[0]
+    min_alpha = first[0] if isinstance(first, tuple) else first
+    return float(min_alpha) < 255.0
 
 
 def synthesize_storyboard(
     frames: Sequence[Image.Image],
     frame_metadata: Sequence[StoryboardFrame],
     total_duration_ms: int,
+    total_frames: int | None = None,
 ) -> tuple[LlmInputImage, StoryboardMetadata]:
-    """Composite up to 4 frames into a clean, metadata-free storyboard grid (max 1024x1024)."""
+    """Composite up to 4 frames into a clean storyboard grid (bounded to max 1024x1024).
+
+    Composites alpha over an explicit neutral background (240, 240, 240) before RGB conversion,
+    ensuring transparent pixels do not turn black.
+    Records the authoritative total_frames count in StoryboardMetadata.
+    """
     if not frames:
         raise MediaInvalidError("No frames provided for storyboard synthesis.")
 
@@ -204,7 +362,17 @@ def synthesize_storyboard(
         frame_metadata = frame_metadata[:MAX_STORYBOARD_FRAMES]
         count = len(frames)
 
-    orig_w, orig_h = frames[0].size
+    def _flatten_frame(f: Image.Image) -> Image.Image:
+        if f.mode != "RGBA":
+            f = f.convert("RGBA")
+        alpha = f.getchannel("A")
+        if _has_transparent_pixels(alpha):
+            bg = Image.new("RGBA", f.size, (240, 240, 240, 255))
+            f = Image.alpha_composite(bg, f)
+        return f.convert("RGB")
+
+    flat_frames = [_flatten_frame(f) for f in frames]
+    orig_w, orig_h = flat_frames[0].size
     gap = 4
 
     if count == 1:
@@ -212,37 +380,37 @@ def synthesize_storyboard(
         scale = min(max_dim / max(orig_w, 1), max_dim / max(orig_h, 1), 1.0)
         out_w = max(1, int(orig_w * scale))
         out_h = max(1, int(orig_h * scale))
-        board = frames[0].resize((out_w, out_h), Image.Resampling.LANCZOS).convert("RGB")
+        board = flat_frames[0].resize((out_w, out_h), Image.Resampling.LANCZOS)
         layout_desc = "single frame"
     elif count == 2:
-        max_cell = (MAX_STORYBOARD_DIMENSION - gap * 3) // 2
-        scale = min(
-            max_cell / max(orig_w, 1), (MAX_STORYBOARD_DIMENSION - gap * 2) / max(orig_h, 1), 1.0
-        )
+        max_cell_w = (MAX_STORYBOARD_DIMENSION - gap * 3) // 2
+        max_cell_h = MAX_STORYBOARD_DIMENSION - gap * 2
+        scale = min(max_cell_w / max(orig_w, 1), max_cell_h / max(orig_h, 1), 1.0)
         tw = max(1, int(orig_w * scale))
         th = max(1, int(orig_h * scale))
-        board = Image.new("RGB", (tw * 2 + gap * 3, th + gap * 2), (240, 240, 240))
-        board.paste(frames[0].resize((tw, th), Image.Resampling.LANCZOS).convert("RGB"), (gap, gap))
-        board.paste(
-            frames[1].resize((tw, th), Image.Resampling.LANCZOS).convert("RGB"), (gap * 2 + tw, gap)
-        )
+        board_w = min(MAX_STORYBOARD_DIMENSION, tw * 2 + gap * 3)
+        board_h = min(MAX_STORYBOARD_DIMENSION, th + gap * 2)
+        board = Image.new("RGB", (board_w, board_h), (240, 240, 240))
+        board.paste(flat_frames[0].resize((tw, th), Image.Resampling.LANCZOS), (gap, gap))
+        board.paste(flat_frames[1].resize((tw, th), Image.Resampling.LANCZOS), (gap * 2 + tw, gap))
         layout_desc = "1x2 horizontal sequence (reading order: left, right)"
     else:
-        max_cell = (MAX_STORYBOARD_DIMENSION - gap * 3) // 2
-        scale = min(max_cell / max(orig_w, 1), max_cell / max(orig_h, 1), 1.0)
+        max_cell_w = (MAX_STORYBOARD_DIMENSION - gap * 3) // 2
+        max_cell_h = (MAX_STORYBOARD_DIMENSION - gap * 3) // 2
+        scale = min(max_cell_w / max(orig_w, 1), max_cell_h / max(orig_h, 1), 1.0)
         tw = max(1, int(orig_w * scale))
         th = max(1, int(orig_h * scale))
-        board = Image.new("RGB", (tw * 2 + gap * 3, th * 2 + gap * 3), (240, 240, 240))
+        board_w = min(MAX_STORYBOARD_DIMENSION, tw * 2 + gap * 3)
+        board_h = min(MAX_STORYBOARD_DIMENSION, th * 2 + gap * 3)
+        board = Image.new("RGB", (board_w, board_h), (240, 240, 240))
         positions = [
             (gap, gap),
             (gap * 2 + tw, gap),
             (gap, gap * 2 + th),
             (gap * 2 + tw, gap * 2 + th),
         ]
-        for idx, frame in enumerate(frames):
-            board.paste(
-                frame.resize((tw, th), Image.Resampling.LANCZOS).convert("RGB"), positions[idx]
-            )
+        for idx, f in enumerate(flat_frames):
+            board.paste(f.resize((tw, th), Image.Resampling.LANCZOS), positions[idx])
         layout_desc = "2x2 grid (reading order: top-left, top-right, bottom-left, bottom-right)"
 
     buf = io.BytesIO()
@@ -250,7 +418,7 @@ def synthesize_storyboard(
     board_bytes = buf.getvalue()
 
     metadata = StoryboardMetadata(
-        total_frames=len(frame_metadata),
+        total_frames=total_frames if total_frames is not None else len(frame_metadata),
         duration_ms=total_duration_ms,
         sampled_frames=tuple(frame_metadata),
         layout=layout_desc,
@@ -267,21 +435,34 @@ def decode_and_sanitize_inbound_media(
 ) -> InboundMediaItem:
     """Sequentially inspect, bounds-check, and decode inbound media.
 
-    For static images, strips EXIF and returns a sanitized InboundMediaItem.
-    For animated media (GIF / APNG), enforces finite bounds, honors compositing,
-    APNG default_image, samples <=4 frames, and synthesizes a cleaned storyboard.
+    For static images (including static GIF), strips metadata, converts static GIF to clean PNG,
+    and returns a sanitized InboundMediaItem.
+    For animated media (GIF / APNG), enforces finite bounds without unbounded n_frames,
+    honors compositing, APNG default_image, samples <=4 frames based on PTS,
+    and synthesizes a cleaned storyboard.
     """
-    validate_image_bounds(data, mime_type)
+    validate_image_bounds(data, mime_type, deadline=deadline, check_cancelled=check_cancelled)
     clean_mime = mime_type.split(";")[0].strip().lower()
 
     with Image.open(io.BytesIO(data)) as img:
         w, h = img.size
-        n_frames = getattr(img, "n_frames", 1)
-        is_animated = bool(getattr(img, "is_animated", False) or n_frames > 1)
+        is_apng = clean_mime == "image/png"
+        default_image = bool(
+            is_apng
+            and (getattr(img, "default_image", False) or img.info.get("default_image", False))
+        )
+
+        is_animated = False
+        try:
+            img.seek(1)
+            is_animated = True
+        except EOFError:
+            is_animated = False
 
         if not is_animated:
+            # Static image: static GIF converted to clean PNG, PNG to PNG, JPEG to JPEG
             raster_mime: Literal["image/png", "image/jpeg"] = (
-                "image/png" if clean_mime == "image/png" else "image/jpeg"
+                "image/png" if clean_mime in ("image/png", "image/gif") else "image/jpeg"
             )
             raw_input = LlmInputImage(data=data, mime_type=raster_mime)
             sanitized = strip_static_image_exif(raw_input)
@@ -298,71 +479,64 @@ def decode_and_sanitize_inbound_media(
             )
 
         # Animated image: GIF or APNG
-        is_apng = clean_mime == "image/png"
-        default_image = bool(
-            is_apng
-            and (getattr(img, "default_image", False) or img.info.get("default_image", False))
-        )
+        start_frame_offset = 1 if default_image else 0
 
-        if default_image:
-            # Frame 0 is the fallback static image; animation frames are 1 .. n_frames - 1
-            if n_frames <= 1:
-                raise MediaInvalidError("APNG with default_image has no animation frames.")
-            animation_frame_count = n_frames - 1
-            start_frame_offset = 1
-        else:
-            animation_frame_count = n_frames
-            start_frame_offset = 0
+        # First, sequentially collect animation frame durations and total animation frame count
+        animation_durations: list[int] = []
+        frame_idx = start_frame_offset
+        while True:
+            if deadline is not None and time.monotonic() > deadline:
+                raise TimeoutError("Animation decode exceeded time budget.")
+            if check_cancelled is not None and check_cancelled():
+                raise asyncio.CancelledError("Animation decode cancelled.")
 
-        sample_offsets = _sample_frame_indices(
-            animation_frame_count, max_samples=MAX_STORYBOARD_FRAMES
+            if len(animation_durations) >= MAX_ANIMATED_FRAMES:
+                break
+
+            try:
+                img.seek(frame_idx)
+            except EOFError:
+                break
+
+            dur = img.info.get("duration")
+            if dur is None or int(dur) <= 0:
+                frame_dur = 100
+            else:
+                frame_dur = int(dur)
+            animation_durations.append(frame_dur)
+            frame_idx += 1
+
+        animation_frame_count = len(animation_durations)
+        if animation_frame_count < 1:
+            raise MediaInvalidError("Animated image has no animation frames.")
+
+        total_duration_ms = sum(animation_durations)
+        sample_offsets = _sample_frames_by_pts(
+            animation_durations, max_samples=MAX_STORYBOARD_FRAMES
         )
         target_physical_frames = set(start_frame_offset + offset for offset in sample_offsets)
 
-        # Sequential decode honoring compositing and time budget
+        # Decode frames sequentially to preserve compositing / disposal
         decoded_frames: dict[int, Image.Image] = {}
-        frame_durations: list[int] = []
-        cumulative_pixels = 0
-        total_duration_ms = 0
+        max_target_physical = max(target_physical_frames)
 
-        try:
-            for physical_idx in range(n_frames):
-                if deadline is not None and time.monotonic() > deadline:
-                    raise TimeoutError("Animation decode exceeded time budget.")
-                if check_cancelled is not None and check_cancelled():
-                    raise asyncio.CancelledError("Animation decode cancelled.")
+        for physical_idx in range(max_target_physical + 1):
+            if deadline is not None and time.monotonic() > deadline:
+                raise TimeoutError("Animation decode exceeded time budget.")
+            if check_cancelled is not None and check_cancelled():
+                raise asyncio.CancelledError("Animation decode cancelled.")
 
-                img.seek(physical_idx)
+            img.seek(physical_idx)
+            img.load()
 
-                # Duration for this frame
-                frame_dur = int(img.info.get("duration", 100) or 100)
-                if frame_dur <= 0:
-                    frame_dur = 100
-                if physical_idx >= start_frame_offset:
-                    frame_durations.append(frame_dur)
-                    total_duration_ms += frame_dur
-                    if total_duration_ms > MAX_ANIMATION_DURATION_MS:
-                        raise MediaInvalidError(
-                            f"Animation duration exceeds {MAX_ANIMATION_DURATION_MS}ms limit."
-                        )
+            if physical_idx in target_physical_frames:
+                decoded_frames[physical_idx] = img.convert("RGBA").copy()
 
-                cumulative_pixels += w * h
-                if cumulative_pixels > MAX_CUMULATIVE_DECODED_CANVAS_PIXELS:
-                    raise MediaInvalidError("Cumulative decoded pixels exceed 32 million limit.")
+        # Build sampled frames in sequential reading order
+        pts_list = [0]
+        for d in animation_durations[:-1]:
+            pts_list.append(pts_list[-1] + d)
 
-                if physical_idx in target_physical_frames:
-                    # Capture composited frame
-                    img.load()
-                    decoded_frames[physical_idx] = img.convert("RGBA").copy()
-
-                if len(decoded_frames) == len(target_physical_frames) and physical_idx >= (
-                    start_frame_offset + animation_frame_count - 1
-                ):
-                    break
-        except (EOFError, SyntaxError) as exc:
-            raise MediaInvalidError(f"Malformed or truncated animation: {exc}") from None
-
-        # Build sampled frames list in sequential reading order
         sampled_images: list[Image.Image] = []
         sampled_metadata: list[StoryboardFrame] = []
 
@@ -372,9 +546,8 @@ def decode_and_sanitize_inbound_media(
             if frame_img is None:
                 raise MediaInvalidError(f"Failed to decode animation frame {physical_idx}.")
 
-            # Calculate PTS (presentation timestamp) from animation start
-            pts_ms = sum(frame_durations[:offset])
-            duration_ms = frame_durations[offset] if offset < len(frame_durations) else 100
+            pts_ms = pts_list[offset]
+            duration_ms = animation_durations[offset]
             sampled_images.append(frame_img)
             sampled_metadata.append(
                 StoryboardFrame(
@@ -385,7 +558,10 @@ def decode_and_sanitize_inbound_media(
             )
 
         raster_storyboard, storyboard_meta = synthesize_storyboard(
-            sampled_images, sampled_metadata, total_duration_ms
+            sampled_images,
+            sampled_metadata,
+            total_duration_ms,
+            total_frames=animation_frame_count,
         )
 
         return InboundMediaItem(
@@ -408,22 +584,13 @@ async def async_decode_and_sanitize_inbound_media(
     timeout_seconds: float = DEFAULT_DECODE_TIMEOUT_SECONDS,
 ) -> InboundMediaItem:
     """Asynchronously execute bounded decode and sanitization with cooperative cancellation."""
-    cancelled = False
-    deadline = time.monotonic() + timeout_seconds
-
-    def _worker() -> InboundMediaItem:
-        return decode_and_sanitize_inbound_media(
-            data,
-            mime_type,
-            deadline=deadline,
-            check_cancelled=lambda: cancelled,
-        )
-
-    try:
-        return await asyncio.to_thread(_worker)
-    except asyncio.CancelledError:
-        cancelled = True
-        raise
+    pool = get_default_media_pool()
+    return await pool.run_bounded(
+        decode_and_sanitize_inbound_media,
+        data,
+        mime_type,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 def normalize_animated_sticker(
@@ -435,19 +602,30 @@ def normalize_animated_sticker(
 ) -> tuple[bytes, Literal["image/gif", "image/png"], bool]:
     """Deterministically normalize an accepted sticker asset, stripping metadata.
 
-    Preserves timing, loops, and alpha transparency.
+    Preserves timing, loop intent (absent, zero, finite), and alpha transparency.
     Returns (normalized_bytes, mime_type, is_animated).
     """
     clean_mime = mime_type.split(";")[0].strip().lower()
-    validate_image_bounds(data, clean_mime)
+    validate_image_bounds(data, clean_mime, deadline=deadline, check_cancelled=check_cancelled)
 
     with Image.open(io.BytesIO(data)) as img:
         w, h = img.size
-        n_frames = getattr(img, "n_frames", 1)
-        is_animated = bool(getattr(img, "is_animated", False) or n_frames > 1)
+        is_apng = clean_mime == "image/png"
+        default_image = bool(
+            is_apng
+            and (getattr(img, "default_image", False) or img.info.get("default_image", False))
+        )
 
-        # Static case: normalize to 1024x1024 PNG
+        is_animated = False
+        try:
+            img.seek(1)
+            is_animated = True
+        except EOFError:
+            is_animated = False
+
+        # Static case: normalize to max 1024x1024 PNG
         if not is_animated:
+            img.seek(0)
             img.load()
             converted = img.convert("RGBA")
             if converted.width > MAX_STICKER_DIMENSION or converted.height > MAX_STICKER_DIMENSION:
@@ -467,23 +645,49 @@ def normalize_animated_sticker(
         if clean_mime == "image/gif":
             frames: list[Image.Image] = []
             durations: list[int] = []
-            loop = int(img.info.get("loop", 0) or 0)
+            disposals: list[int] = []
+            raw_loop = img.info.get("loop")
+            loop = int(raw_loop) if raw_loop is not None else None
             cumulative_pixels = 0
+            total_duration_ms = 0
+            has_any_transparency = False
 
-            for idx in range(min(n_frames, MAX_ANIMATED_FRAMES)):
+            idx = 0
+            while True:
                 if deadline is not None and time.monotonic() > deadline:
                     raise TimeoutError("Sticker normalization exceeded time budget.")
                 if check_cancelled is not None and check_cancelled():
                     raise asyncio.CancelledError("Sticker normalization cancelled.")
 
-                img.seek(idx)
+                if len(frames) >= MAX_ANIMATED_FRAMES:
+                    break
+
+                try:
+                    img.seek(idx)
+                except EOFError:
+                    break
+
                 img.load()
                 cumulative_pixels += w * h
                 if cumulative_pixels > MAX_CUMULATIVE_DECODED_CANVAS_PIXELS:
                     raise MediaInvalidError("Cumulative decoded pixels exceed limit.")
 
-                dur = int(img.info.get("duration", 100) or 100)
-                durations.append(max(20, dur))
+                dur = img.info.get("duration")
+                if dur is None or int(dur) <= 0:
+                    dur_val = 100
+                else:
+                    dur_val = int(dur)
+
+                durations.append(dur_val)
+                total_duration_ms += dur_val
+                if total_duration_ms > MAX_ANIMATION_DURATION_MS:
+                    raise MediaInvalidError(
+                        f"Animation duration exceeds {MAX_ANIMATION_DURATION_MS}ms limit."
+                    )
+
+                # Frames are already composited full canvases. Clear before the
+                # next canvas so transparent pixels cannot expose stale content.
+                disposals.append(2)
 
                 frame_rgba = img.convert("RGBA")
                 if (
@@ -494,25 +698,39 @@ def normalize_animated_sticker(
                         (MAX_STICKER_DIMENSION, MAX_STICKER_DIMENSION), Image.Resampling.LANCZOS
                     )
 
-                # Convert to palette mode preserving alpha
-                clean_frame = Image.new("RGBA", frame_rgba.size)
-                clean_frame.paste(frame_rgba)
-                palette_frame = clean_frame.convert("P", palette=Image.Palette.ADAPTIVE)
-                frames.append(palette_frame)
+                alpha = frame_rgba.getchannel("A")
+                if _has_transparent_pixels(alpha):
+                    has_any_transparency = True
+                    rgb = frame_rgba.convert("RGB")
+                    palette_frame = rgb.quantize(colors=255, method=Image.Quantize.MEDIANCUT)
+                    mask = Image.eval(alpha, lambda a: 255 if a < 128 else 0)
+                    palette_frame.paste(255, mask)
+                    palette_frame.info["transparency"] = 255
+                    frames.append(palette_frame)
+                else:
+                    rgb = frame_rgba.convert("RGB")
+                    palette_frame = rgb.quantize(colors=255, method=Image.Quantize.MEDIANCUT)
+                    frames.append(palette_frame)
+
+                idx += 1
 
             if not frames:
                 raise MediaInvalidError("No frames extracted from animated GIF.")
 
             out = io.BytesIO()
-            frames[0].save(
-                out,
-                format="GIF",
-                save_all=True,
-                append_images=frames[1:],
-                duration=durations,
-                loop=loop,
-                disposal=2,
-            )
+            save_kwargs: dict[str, Any] = {
+                "format": "GIF",
+                "save_all": True,
+                "append_images": frames[1:],
+                "duration": durations,
+                "disposal": disposals,
+            }
+            if loop is not None:
+                save_kwargs["loop"] = loop
+            if has_any_transparency:
+                save_kwargs["transparency"] = 255
+
+            frames[0].save(out, **save_kwargs)
             out_bytes = out.getvalue()
             if len(out_bytes) > MAX_IMAGE_BYTES:
                 raise MediaInvalidError("Normalized GIF sticker exceeds 5 MiB limit.")
@@ -520,29 +738,46 @@ def normalize_animated_sticker(
 
         # Animated APNG (image/png)
         if clean_mime == "image/png":
-            default_image = bool(
-                getattr(img, "default_image", False) or img.info.get("default_image", False)
-            )
             start_frame = 1 if default_image else 0
             frames_apng: list[Image.Image] = []
             durations_apng: list[int] = []
-            loop = int(img.info.get("loop", 0) or 0)
+            raw_loop = img.info.get("loop")
+            loop = int(raw_loop) if raw_loop is not None else None
             cumulative_pixels = 0
+            total_duration_ms = 0
 
-            for idx in range(start_frame, min(n_frames, MAX_ANIMATED_FRAMES + start_frame)):
+            idx = start_frame
+            while True:
                 if deadline is not None and time.monotonic() > deadline:
                     raise TimeoutError("Sticker normalization exceeded time budget.")
                 if check_cancelled is not None and check_cancelled():
                     raise asyncio.CancelledError("Sticker normalization cancelled.")
 
-                img.seek(idx)
+                if len(frames_apng) >= MAX_ANIMATED_FRAMES:
+                    break
+
+                try:
+                    img.seek(idx)
+                except EOFError:
+                    break
+
                 img.load()
                 cumulative_pixels += w * h
                 if cumulative_pixels > MAX_CUMULATIVE_DECODED_CANVAS_PIXELS:
                     raise MediaInvalidError("Cumulative decoded pixels exceed limit.")
 
-                dur = int(img.info.get("duration", 100) or 100)
-                durations_apng.append(max(20, dur))
+                dur = img.info.get("duration")
+                if dur is None or int(dur) <= 0:
+                    dur_val = 100
+                else:
+                    dur_val = int(dur)
+
+                durations_apng.append(dur_val)
+                total_duration_ms += dur_val
+                if total_duration_ms > MAX_ANIMATION_DURATION_MS:
+                    raise MediaInvalidError(
+                        f"Animation duration exceeds {MAX_ANIMATION_DURATION_MS}ms limit."
+                    )
 
                 frame_rgba = img.convert("RGBA")
                 if (
@@ -556,19 +791,22 @@ def normalize_animated_sticker(
                 clean_frame = Image.new("RGBA", frame_rgba.size)
                 clean_frame.paste(frame_rgba)
                 frames_apng.append(clean_frame)
+                idx += 1
 
             if not frames_apng:
                 raise MediaInvalidError("No frames extracted from animated APNG.")
 
             out = io.BytesIO()
-            frames_apng[0].save(
-                out,
-                format="PNG",
-                save_all=True,
-                append_images=frames_apng[1:],
-                duration=durations_apng,
-                loop=loop,
-            )
+            save_kwargs_apng: dict[str, Any] = {
+                "format": "PNG",
+                "save_all": True,
+                "append_images": frames_apng[1:],
+                "duration": durations_apng,
+            }
+            if loop is not None:
+                save_kwargs_apng["loop"] = loop
+
+            frames_apng[0].save(out, **save_kwargs_apng)
             out_bytes = out.getvalue()
             if len(out_bytes) > MAX_IMAGE_BYTES:
                 raise MediaInvalidError("Normalized APNG sticker exceeds 5 MiB limit.")
@@ -577,10 +815,32 @@ def normalize_animated_sticker(
         raise MediaInvalidError(f"Unsupported format for sticker normalization: {clean_mime}")
 
 
-def extract_static_poster(data: bytes, mime_type: str) -> bytes:
+async def async_normalize_animated_sticker(
+    data: bytes,
+    mime_type: str,
+    *,
+    timeout_seconds: float = DEFAULT_DECODE_TIMEOUT_SECONDS,
+) -> tuple[bytes, Literal["image/gif", "image/png"], bool]:
+    """Asynchronously normalize an animated sticker within the bounded execution pool."""
+    pool = get_default_media_pool()
+    return await pool.run_bounded(
+        normalize_animated_sticker,
+        data,
+        mime_type,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def extract_static_poster(
+    data: bytes,
+    mime_type: str,
+    *,
+    deadline: float | None = None,
+    check_cancelled: Callable[[], bool] | None = None,
+) -> bytes:
     """Extract Frame 0 (or first animated frame) as a clean static PNG poster."""
     clean_mime = mime_type.split(";")[0].strip().lower()
-    validate_image_bounds(data, clean_mime)
+    validate_image_bounds(data, clean_mime, deadline=deadline, check_cancelled=check_cancelled)
 
     with Image.open(io.BytesIO(data)) as img:
         # For APNG with default_image, frame 0 is already the poster!
@@ -592,3 +852,19 @@ def extract_static_poster(data: bytes, mime_type: str) -> bytes:
         out = io.BytesIO()
         clean.save(out, format="PNG")
         return out.getvalue()
+
+
+async def async_extract_static_poster(
+    data: bytes,
+    mime_type: str,
+    *,
+    timeout_seconds: float = DEFAULT_DECODE_TIMEOUT_SECONDS,
+) -> bytes:
+    """Asynchronously extract static poster within the bounded execution pool."""
+    pool = get_default_media_pool()
+    return await pool.run_bounded(
+        extract_static_poster,
+        data,
+        mime_type,
+        timeout_seconds=timeout_seconds,
+    )

@@ -13,7 +13,10 @@ from chatwaifu_protocol.channels import ChannelImageDeliveryPartPayload
 from chatwaifu_protocol.character import ResponsePlan
 
 from chatwaifu_runtime.media import InboundMediaItem
-from chatwaifu_runtime.media.image import normalize_animated_sticker
+from chatwaifu_runtime.media.image import (
+    async_normalize_animated_sticker,
+    normalize_animated_sticker,
+)
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
@@ -157,11 +160,11 @@ class StickerLibraryService:
                     return
                 # Re-encode only accepted stickers; strip source metadata and bound library size.
                 if isinstance(image, InboundMediaItem):
-                    data, mime_type, is_animated = normalize_animated_sticker(
+                    data, mime_type, is_animated = await async_normalize_animated_sticker(
                         image.raw_data, image.original_mime_type
                     )
                 else:
-                    data, mime_type, is_animated = normalize_animated_sticker(
+                    data, mime_type, is_animated = await async_normalize_animated_sticker(
                         image.data, image.mime_type
                     )
                 record = await self.repository.save(

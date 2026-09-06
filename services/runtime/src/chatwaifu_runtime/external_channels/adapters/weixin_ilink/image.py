@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from chatwaifu_runtime.media.image import (
     MediaInvalidError,
+    async_validate_image_bounds,
     validate_image_bounds,
 )
 from chatwaifu_runtime.media.image import (
@@ -57,6 +58,29 @@ def validate_image(image_bytes: bytes, mime_type: str) -> None:
         validate_image_bounds(image_bytes, mime_type)
     except MediaInvalidError as exc:
         raise _make_error("weixin.image_invalid", str(exc), retryable=False) from None
+    except Exception as exc:
+        raise _make_error(
+            "weixin.image_invalid",
+            f"Image decoding verification failed: {exc}",
+            retryable=False,
+        ) from None
+
+
+async def async_validate_image(
+    image_bytes: bytes,
+    mime_type: str,
+    *,
+    timeout_seconds: float = 5.0,
+) -> None:
+    """Asynchronously validate static and bounded animated image format, size, and bounds."""
+    try:
+        await async_validate_image_bounds(image_bytes, mime_type, timeout_seconds=timeout_seconds)
+    except MediaInvalidError as exc:
+        raise _make_error("weixin.image_invalid", str(exc), retryable=False) from None
+    except TimeoutError:
+        raise _make_error(
+            "weixin.request_timeout", "Image validation timed out.", retryable=True
+        ) from None
     except Exception as exc:
         raise _make_error(
             "weixin.image_invalid",

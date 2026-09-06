@@ -141,15 +141,12 @@ class PhotoMemoryObserver:
                             idx,
                         )
                         continue
-                    actual_image = (
-                        image.raster_image if isinstance(image, InboundMediaItem) else image
-                    )
                     item_origin = item_origins[idx] if item_origins is not None else None
                     try:
                         async with asyncio.timeout(MAX_LEARNING_SECONDS):
                             record = await self._observe(
                                 source,
-                                actual_image,
+                                image,
                                 settings.revision,
                                 wait_for_completion,
                                 item_origin=item_origin,
@@ -183,21 +180,42 @@ class PhotoMemoryObserver:
     async def _observe(
         self,
         source: PhotoObservationSource,
-        image: LlmInputImage,
+        image: LlmInputImage | InboundMediaItem,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
         item_origin: PhotoItemOrigin | None = None,
     ) -> SavedPhoto | None:
+        if isinstance(image, InboundMediaItem) and image.is_animated:
+            return None
         try:
+            if isinstance(image, InboundMediaItem):
+                raw_data = image.raw_data
+                raw_mime = image.original_mime_type
+                preview_image = image.raster_image
+                clean_raw_mime = raw_mime.split(";")[0].strip().lower()
+                norm_mime: Literal["image/png", "image/jpeg"] = (
+                    "image/png" if clean_raw_mime == "image/png" else "image/jpeg"
+                )
+                norm_input = (
+                    image.raster_image
+                    if clean_raw_mime == "image/gif"
+                    else LlmInputImage(data=raw_data, mime_type=norm_mime)
+                )
+            else:
+                raw_data = image.data
+                raw_mime = image.mime_type
+                preview_image = image
+                norm_input = image
+
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
                 classification = await self._classifier.classify(
-                    image, generation_id=source.generation_id
+                    preview_image, generation_id=source.generation_id
                 )
                 if classification is None or not await wait_for_completion():
                     return None
 
-                meta = extract_photo_metadata(image.data, fallback_mime=image.mime_type)
-                data, mime_type, width, height = _normalize_photo(image)
+                meta = extract_photo_metadata(raw_data, fallback_mime=raw_mime)
+                data, mime_type, width, height = _normalize_photo(norm_input)
 
                 record = await self.repository.save(
                     source.principal_scope,

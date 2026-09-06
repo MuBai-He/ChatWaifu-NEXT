@@ -18,6 +18,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
     MAX_CIPHERTEXT_BYTES,
     MAX_INBOUND_IMAGES_PER_MESSAGE,
     MAX_TOTAL_IMAGE_BYTES,
+    async_validate_image,
     decrypt_aes_128_ecb,
     encode_media_aes_key,
     encrypt_aes_128_ecb,
@@ -25,7 +26,6 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
     resolve_cdn_upload_url,
     resolve_image_aes_key,
     sniff_image_mime_type,
-    validate_image,
 )
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationPoll,
@@ -285,7 +285,7 @@ class WeixinILinkClient:
     ) -> str | None:
         try:
             async with asyncio.timeout(45.0):
-                validate_image(image_bytes, mime_type)
+                await async_validate_image(image_bytes, mime_type)
 
                 raw_size = len(image_bytes)
                 raw_file_md5 = hashlib.md5(image_bytes).hexdigest()
@@ -468,7 +468,7 @@ class WeixinILinkClient:
                         plaintext = raw_bytes
 
                     mime_type = sniff_image_mime_type(plaintext)
-                    validate_image(plaintext, mime_type)
+                    await async_validate_image(plaintext, mime_type)
                     total_decoded += len(plaintext)
                     if total_decoded > MAX_TOTAL_IMAGE_BYTES:
                         raise WeixinILinkError(
