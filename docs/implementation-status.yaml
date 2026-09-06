@@ -1,5 +1,5 @@
 schema_version: "1.0"
-updated_at: "2026-09-05"
+updated_at: "2026-09-07"
 current_phase: 17.3
 next_phase: 17.4
 phase_2_entry_allowed: true
@@ -599,9 +599,12 @@ phases:
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4
     name: shared-jokes-and-adaptive-sticker-recall
-    status: not_started
+    status: in_progress
     evidence:
       - Original broader Phase 17 roadmap reserves shared jokes, usage history, and adaptive recall; detailed design and acceptance remain pending
+      - Phase 17.4A bounded shared jokes slice under ADR 0043: zero DB migration; reuses episodic.shared_event with a structured cue; accepts only adjacent authoritative presentation evidence within 30 minutes; external evidence must remain on the same owner direct route; queries preceding assistant text only after positive uptake; rejects negation, ungrounded cues, credential/direct-identifier patterns, and generated-but-undelivered text; replaces model-authored event claims with deterministic factual wording; persists user plus assistant provenance; deduplicates by shared_joke.<normalized_cue>; and recalls through the existing bounded memory pipeline
+      - Real WeChat acceptance exposed an empty memory-extraction model result for explicit quoted agreement (`把“流星伞”当成我们的梗`); the Runtime now deterministically extracts the single quoted cue only when it occurs intact in the immediately preceding delivered assistant text, while negated, ambiguous, ungrounded, and sensitive cases remain fail-closed
+      - Owner WeChat retest passed on 2026-09-07: `云朵扳手` committed as one active `episodic.shared_event` with the exact user-turn and `assistant_delivered` sources; the same memory ID survived a Runtime restart and was explicitly present in `memory.recalled` before a natural callback; the negated `月光船` control produced neither a proposal nor a record
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review

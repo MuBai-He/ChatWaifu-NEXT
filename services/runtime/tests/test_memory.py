@@ -76,8 +76,9 @@ class _BlockingMemoryInference:
         namespace: str,
         observed_at: datetime,
         related: list[MemoryRecord],
+        preceding_assistant_text: str | None = None,
     ) -> list[ExtractedMemoryCandidate]:
-        del text, namespace, observed_at, related
+        del text, namespace, observed_at, related, preceding_assistant_text
         self.started.set()
         await asyncio.to_thread(self.release.wait)
         return []

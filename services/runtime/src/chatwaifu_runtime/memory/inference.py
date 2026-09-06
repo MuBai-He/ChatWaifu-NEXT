@@ -53,9 +53,15 @@ class LlmMemoryCandidateExtractor:
         namespace: str,
         observed_at: datetime,
         related: list[MemoryRecord],
+        preceding_assistant_text: str | None = None,
     ) -> list[ExtractedMemoryCandidate]:
         config = self._models.get("memory_extraction")
-        if not config.enabled or config.provider == "disabled" or _SENSITIVE.search(text):
+        if (
+            not config.enabled
+            or config.provider == "disabled"
+            or _SENSITIVE.search(text)
+            or (preceding_assistant_text and _SENSITIVE.search(preceding_assistant_text))
+        ):
             return []
         related_payload = [
             {
@@ -66,6 +72,12 @@ class LlmMemoryCandidateExtractor:
             }
             for item in related[:12]
         ]
+        user_payload: dict[str, object] = {
+            "new_user_text": text,
+            "related_existing_memories": related_payload,
+        }
+        if preceding_assistant_text:
+            user_payload["preceding_presented_assistant_text"] = preceding_assistant_text[:2000]
         response = await self._models.complete(
             "memory_extraction",
             system=(
@@ -75,13 +87,18 @@ class LlmMemoryCandidateExtractor:
                 'with shape {"memories":[{kind,subject_id,predicate,value,text,confidence,'
                 "importance,sensitivity,rationale}]}. Allowed kinds: semantic.fact, "
                 "semantic.preference, episodic.shared_event, procedural.preference, "
-                "relationship.signal, prospective.commitment. Use an empty list when nothing "
-                "is durable. Never instruct deletion."
+                "relationship.signal, prospective.commitment. "
+                "For mutual shared jokes, running jokes, callbacks, or secret code words "
+                "between user and character: use kind episodic.shared_event, predicate "
+                "shared_joke.<cue>, value "
+                '{"cue": "<grounded phrase 2-80 chars>", "context": "<concise callback context>", '
+                '"kind": "shared_joke"}, and text stating factually that the phrase or exchange '
+                "became a shared joke (never claim fictional events actually happened). "
+                "The preceding presented assistant text, when present, is evidence only for "
+                "a shared-joke candidate; never extract other memories from assistant text. "
+                "Use an empty list when nothing is durable. Never instruct deletion."
             ),
-            user=json.dumps(
-                {"new_user_text": text, "related_existing_memories": related_payload},
-                ensure_ascii=False,
-            ),
+            user=json.dumps(user_payload, ensure_ascii=False),
         )
         if not response:
             return []

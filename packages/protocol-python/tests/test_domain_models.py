@@ -89,6 +89,17 @@ def test_memory_source_preserves_versioned_external_channel_attribution() -> Non
         created_at=NOW,
         channel_attribution=attribution,
     )
+    delivered_source = MemorySource(
+        source_id=uuid4(),
+        memory_id=uuid4(),
+        source_event_id=uuid4(),
+        session_id=uuid4(),
+        turn_id=uuid4(),
+        source_kind="assistant_delivered",
+        created_at=NOW,
+        channel_attribution=attribution,
+    )
+    assert delivered_source.source_kind == "assistant_delivered"
 
     assert source.channel_attribution is not None
     assert source.channel_attribution.schema_version == "1.0"
