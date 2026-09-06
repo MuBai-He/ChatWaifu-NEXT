@@ -14,6 +14,7 @@ from time import perf_counter
 from typing import Protocol, cast
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
     ChannelAuthorizationSnapshot,
@@ -35,6 +36,7 @@ from chatwaifu_protocol.channels import (
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
+from chatwaifu_protocol.events import GenericCoreEvent
 
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -44,6 +46,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundBatchObservation,
     WeixinInboundImage,
     WeixinPendingContext,
     WeixinUpdates,
@@ -1130,6 +1133,7 @@ class ChannelManagementService:
                             poll_elapsed_ms=round((perf_counter() - poll_started) * 1000, 3),
                             message_count=len(updates.messages),
                         )
+                    await self._record_inbound_batch_observation(connection_id, updates.observation)
                     await self._process_updates(connection_id, updates)
                     # The checkpoint advances only after every normalized message
                     # in this batch reached durable admission.
@@ -1194,6 +1198,58 @@ class ChannelManagementService:
                     "native WeChat stop notification failed for connection %s",
                     connection_id,
                 )
+
+    async def _record_inbound_batch_observation(
+        self,
+        connection_id: UUID,
+        observation: WeixinInboundBatchObservation | None,
+    ) -> None:
+        if observation is None or observation.raw_count <= 0:
+            return
+        if self._event_publisher is None:
+            return
+        try:
+            session_id = await self._resolve_observation_session_id(connection_id)
+            if session_id is None:
+                logger.warning(
+                    "cannot persist inbound batch observation: "
+                    "no session available for connection %s: %s",
+                    connection_id,
+                    observation.to_summary(),
+                )
+                return
+
+            now = datetime.now(UTC)
+            event = GenericCoreEvent.model_validate(
+                {
+                    "event_id": uuid4(),
+                    "event_type": "channel.inbound_batch_observed",
+                    "session_id": session_id,
+                    "occurred_at": now,
+                    "source": "channel.management",
+                    "privacy": PrivacyLevel.PRIVATE,
+                    "payload": {
+                        "connection_id": str(connection_id),
+                        "occurred_at": now.isoformat(),
+                        "summary": observation.to_summary(),
+                    },
+                }
+            )
+            await self._event_publisher.emit(event)
+        except Exception:
+            logger.warning(
+                "failed to record inbound batch observation for connection %s",
+                connection_id,
+                exc_info=True,
+            )
+
+    async def _resolve_observation_session_id(self, connection_id: UUID) -> UUID | None:
+        # Diagnostics must never create a conversation or inspect storage internals.
+        credentials = await self._load_credentials(connection_id)
+        if credentials is None:
+            return None
+        binding = await self._repository.find_binding(connection_id, credentials.user_id)
+        return binding.session_id if binding is not None else None
 
     async def _process_updates(
         self,

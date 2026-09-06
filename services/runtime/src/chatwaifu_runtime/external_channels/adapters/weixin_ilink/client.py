@@ -32,6 +32,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationStart,
     WeixinAuthorizationState,
     WeixinCredentials,
+    WeixinInboundBatchObservation,
     WeixinInboundImage,
     WeixinInboundText,
     WeixinUpdates,
@@ -175,10 +176,19 @@ class WeixinILinkClient:
                 "WeChat returned an invalid or oversized message batch.",
                 retryable=False,
             )
-        messages = tuple(
-            message
-            for raw in typed_messages
-            if (message := _parse_inbound_text(raw, credentials.bot_id)) is not None
+        parsed_messages: list[WeixinInboundText] = []
+        rejected_indices: set[int] = set()
+        for idx, raw in enumerate(typed_messages):
+            message = _parse_inbound_text(raw, credentials.bot_id)
+            if message is not None:
+                parsed_messages.append(message)
+            else:
+                rejected_indices.add(idx)
+        messages = tuple(parsed_messages)
+        observation = _build_batch_observation(
+            typed_messages,
+            rejected_indices=rejected_indices,
+            expected_bot_id=credentials.bot_id,
         )
         next_cursor = payload.get("get_updates_buf", cursor)
         if not isinstance(next_cursor, str) or len(next_cursor) > 1_000_000:
@@ -187,7 +197,7 @@ class WeixinILinkClient:
                 "WeChat returned an invalid update cursor.",
                 retryable=False,
             )
-        return WeixinUpdates(cursor=next_cursor, messages=messages)
+        return WeixinUpdates(cursor=next_cursor, messages=messages, observation=observation)
 
     async def get_typing_ticket(
         self, credentials: WeixinCredentials, *, recipient_user_id: str, context_token: str
@@ -861,4 +871,97 @@ def _parse_single_image_item(item: dict[str, object]) -> WeixinInboundImage:
         full_url=full_url,
         aes_key=aes_key,
         aeskey=aeskey,
+    )
+
+
+_MAX_HISTOGRAM_ENTRIES = 32
+
+
+def _sanitize_type_value(val: object) -> str:
+    if isinstance(val, int) and not isinstance(val, bool) and 0 <= val <= 255:
+        return str(val)
+    return "unknown"
+
+
+def _increment_histogram(
+    hist: dict[str, int], key: str, max_entries: int = _MAX_HISTOGRAM_ENTRIES
+) -> None:
+    if key in hist:
+        hist[key] += 1
+    elif key != "unknown" and len(hist) < max_entries - 1:
+        hist[key] = 1
+    else:
+        hist["unknown"] = hist.get("unknown", 0) + 1
+
+
+def _classify_rejection_reason(message: dict[str, object], expected_bot_id: str) -> str:
+    if message.get("group_id") not in {None, ""}:
+        return "group_ignored"
+    if message.get("from_user_id") == expected_bot_id or message.get("message_type") == 2:
+        return "echo_ignored"
+    if message.get("message_type") != 1:
+        return "unsupported_message_type"
+    if message.get("message_state") not in {None, 2}:
+        return "wrong_message_state"
+
+    item_list = message.get("item_list")
+    if not isinstance(item_list, list):
+        return "malformed_item_list"
+    items = cast(list[object], item_list)
+    if len(items) > 64:
+        return "item_list_overflow"
+    if len(items) == 0:
+        return "empty_item_list"
+
+    return "unsupported_item_types"
+
+
+def _build_batch_observation(
+    raw_messages: list[object],
+    *,
+    rejected_indices: set[int],
+    expected_bot_id: str,
+) -> WeixinInboundBatchObservation:
+    raw_count = len(raw_messages)
+    accepted_count = raw_count - len(rejected_indices)
+    ignored_count = len(rejected_indices)
+    message_type_counts: dict[str, int] = {}
+    item_type_counts: dict[str, int] = {}
+    rejection_reasons: dict[str, int] = {}
+
+    for idx, raw in enumerate(raw_messages):
+        if not isinstance(raw, dict):
+            _increment_histogram(message_type_counts, "unknown")
+            if idx in rejected_indices:
+                _increment_histogram(rejection_reasons, "malformed_message")
+            continue
+
+        raw_dict = cast(dict[str, object], raw)
+        _increment_histogram(
+            message_type_counts, _sanitize_type_value(raw_dict.get("message_type"))
+        )
+
+        raw_items = raw_dict.get("item_list")
+        if isinstance(raw_items, list):
+            bounded_items = cast(list[object], raw_items)[:64]
+            for item_raw in bounded_items:
+                if isinstance(item_raw, dict):
+                    it_val = cast(dict[str, object], item_raw).get("type")
+                    _increment_histogram(item_type_counts, _sanitize_type_value(it_val))
+                else:
+                    _increment_histogram(item_type_counts, "unknown")
+        elif raw_items is not None:
+            _increment_histogram(item_type_counts, "unknown")
+
+        if idx in rejected_indices:
+            reason = _classify_rejection_reason(raw_dict, expected_bot_id)
+            _increment_histogram(rejection_reasons, reason)
+
+    return WeixinInboundBatchObservation(
+        raw_count=raw_count,
+        accepted_count=accepted_count,
+        ignored_count=ignored_count,
+        message_type_counts=message_type_counts,
+        item_type_counts=item_type_counts,
+        rejection_reasons=rejection_reasons,
     )
