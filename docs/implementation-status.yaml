@@ -599,9 +599,10 @@ phases:
       - Requires download and decryption, safe decoding and media limits, deduplication, OCR and VLM, embeddings, principal scope, deletion, and privacy management
   - id: 17.4
     name: shared-jokes-and-adaptive-sticker-recall
-    status: not_started
+    status: in_progress
     evidence:
       - Original broader Phase 17 roadmap reserves shared jokes, usage history, and adaptive recall; detailed design and acceptance remain pending
+      - Phase 17.4A bounded shared jokes slice under ADR 0043: zero DB migration; reuses episodic.shared_event with a structured cue; accepts only adjacent authoritative presentation evidence within 30 minutes; external evidence must remain on the same owner direct route; queries preceding assistant text only after positive uptake; rejects negation, ungrounded cues, credential/direct-identifier patterns, and generated-but-undelivered text; replaces model-authored event claims with deterministic factual wording; persists user plus assistant provenance; deduplicates by shared_joke.<normalized_cue>; and recalls through the existing bounded memory pipeline
 
 entry_blockers:
   - Live2D release packaging and a custom character require an explicit asset-license review

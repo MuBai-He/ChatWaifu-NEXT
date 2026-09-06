@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import UUID
 
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.memory import MemoryRecordDraft
@@ -47,6 +48,8 @@ class ExtractedMemoryCandidate:
     draft: MemoryRecordDraft
     explicit: bool
     rationale: str
+    evidence_event_ids: tuple[UUID, ...] = ()
+    auto_commit: bool = False
 
 
 class DeterministicMemoryExtractor:

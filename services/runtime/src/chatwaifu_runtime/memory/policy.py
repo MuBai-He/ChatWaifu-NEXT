@@ -23,7 +23,13 @@ class MemoryPolicy:
             return MemoryWriteDecision.REJECT
         if candidate.draft.sensitivity is PrivacyLevel.SENSITIVE and not confirmed:
             return MemoryWriteDecision.REVIEW
-        if candidate.explicit or confirmed:
+        trusted_shared_joke = (
+            candidate.auto_commit
+            and candidate.draft.kind == "episodic.shared_event"
+            and candidate.draft.predicate is not None
+            and candidate.draft.predicate.startswith("shared_joke.")
+        )
+        if candidate.explicit or trusted_shared_joke or confirmed:
             return MemoryWriteDecision.COMMIT
         return MemoryWriteDecision.REVIEW
 

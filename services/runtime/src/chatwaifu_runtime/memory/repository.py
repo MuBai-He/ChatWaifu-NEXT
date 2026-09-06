@@ -1,8 +1,9 @@
 """Persistence port owned by the memory domain."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.memory import (
@@ -48,10 +49,31 @@ class MemoryEventEvidence:
         self.channel_attribution = channel_attribution
 
 
+type PresentedAssistantEventType = Literal[
+    "assistant.spoken_text_committed", "channel.delivery_plan_completed"
+]
+
+
+@dataclass(frozen=True, slots=True)
+class PrecedingAssistantEvidence:
+    event_id: UUID
+    session_id: UUID
+    turn_id: UUID | None
+    generation_id: UUID | None
+    event_type: PresentedAssistantEventType
+    presented_text: str
+    occurred_at: datetime
+    channel_attribution: MemoryChannelAttribution | None = None
+
+
 class MemoryRepository(Protocol):
     async def event_exists(self, event_id: UUID) -> bool: ...
 
     async def event_evidence(self, event_id: UUID) -> MemoryEventEvidence | None: ...
+
+    async def get_preceding_presented_assistant(
+        self, user_turn_event_id: UUID
+    ) -> PrecedingAssistantEvidence | None: ...
 
     async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None: ...
 

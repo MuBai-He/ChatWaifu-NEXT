@@ -35,6 +35,11 @@ from chatwaifu_runtime.memory.ports import (
 )
 from chatwaifu_runtime.memory.repository import MemoryEventEvidence, MemoryRepository
 from chatwaifu_runtime.memory.retrieval import MemoryRetriever
+from chatwaifu_runtime.memory.shared_joke import (
+    classify_uptake,
+    is_shared_joke_draft,
+    validate_and_transform_shared_joke,
+)
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 type MemoryItem = MemoryRecord
@@ -198,21 +203,42 @@ class MemoryService:
         )
         candidates = [deterministic] if deterministic is not None else []
         if self._inference is not None and not explicit:
+            uptake_kind, _threshold = classify_uptake(text)
+            preceding_assistant = (
+                await self._repository.get_preceding_presented_assistant(source_event_id)
+                if uptake_kind is not None
+                else None
+            )
+            preceding_text = (
+                preceding_assistant.presented_text if preceding_assistant is not None else None
+            )
             related = await self._repository.search_fts(content, namespaces, limit=12)
             try:
-                candidates.extend(
-                    await self._inference.extract(
-                        content,
-                        namespace=namespaces[0],
-                        observed_at=evidence.occurred_at,
-                        related=[item.record for item in related],
-                    )
+                raw_inferred = await self._inference.extract(
+                    content,
+                    namespace=namespaces[0],
+                    observed_at=evidence.occurred_at,
+                    related=[item.record for item in related],
+                    preceding_assistant_text=preceding_text,
                 )
             except Exception as error:
                 logger.warning(
                     "memory extraction provider failed",
                     extra={"source_event_id": str(source_event_id), "error": type(error).__name__},
                 )
+                raw_inferred = []
+            for item in raw_inferred:
+                if is_shared_joke_draft(item.draft):
+                    validated = validate_and_transform_shared_joke(
+                        item,
+                        user_text=text,
+                        preceding_assistant=preceding_assistant,
+                        source_event_id=source_event_id,
+                    )
+                    if validated is not None:
+                        candidates.append(validated)
+                else:
+                    candidates.append(item)
         unique: dict[tuple[str, str | None, str], ExtractedMemoryCandidate] = {}
         for item in candidates:
             unique.setdefault(
@@ -299,6 +325,8 @@ class MemoryService:
                 source_kind=(
                     "assistant_spoken"
                     if item.event_type == "assistant.spoken_text_committed"
+                    else "assistant_delivered"
+                    if item.event_type == "channel.delivery_plan_completed"
                     else "user_turn"
                     if item.event_type == "user.turn_committed"
                     else "memory_management"
@@ -528,6 +556,7 @@ class MemoryService:
             item
             for item in candidates
             if item.draft.kind in {"episodic.shared_event", "relationship.signal"}
+            and not is_shared_joke_draft(item.draft)
         ]
         return [
             await self._process_candidate(session_id, turn_id, source_event_id, item)
@@ -682,6 +711,7 @@ class MemoryService:
     ) -> MemoryProposal:
         now = datetime.now(UTC)
         draft = extracted.draft
+        evidence_ids = extracted.evidence_event_ids or (source_event_id,)
         exact = await self._repository.find_exact(draft.namespace, _normalize(draft.text))
         if exact is not None and target_override is None:
             proposal = MemoryProposal(
@@ -689,7 +719,7 @@ class MemoryService:
                 operation="ignore",
                 candidate=draft,
                 target_memory_id=exact.memory_id,
-                evidence_event_ids=[source_event_id],
+                evidence_event_ids=list(evidence_ids),
                 confidence=extracted.draft.confidence,
                 rationale="duplicate active memory",
                 status="ignored",
@@ -704,6 +734,21 @@ class MemoryService:
             identities = await self._repository.find_identity(
                 draft.namespace, draft.subject_id, draft.predicate
             )
+            if identities and draft.predicate.startswith("shared_joke."):
+                proposal = MemoryProposal(
+                    proposal_id=uuid4(),
+                    operation="ignore",
+                    candidate=draft,
+                    target_memory_id=identities[0].memory_id,
+                    evidence_event_ids=list(evidence_ids),
+                    confidence=extracted.draft.confidence,
+                    rationale="duplicate active shared joke",
+                    status="ignored",
+                    created_at=now,
+                    decided_at=now,
+                )
+                await self._repository.save_proposal(proposal)
+                return proposal
             target = identities[0].memory_id if identities else None
         operation: Literal["add", "supersede"] = "supersede" if target else "add"
         decision = self._policy.decide_write(extracted)
@@ -718,7 +763,7 @@ class MemoryService:
             operation=operation,
             candidate=draft,
             target_memory_id=target,
-            evidence_event_ids=[source_event_id],
+            evidence_event_ids=list(evidence_ids),
             confidence=draft.confidence,
             rationale=extracted.rationale,
             status=status,
@@ -776,6 +821,8 @@ class MemoryService:
                 source_kind=(
                     "assistant_spoken"
                     if item.event_type == "assistant.spoken_text_committed"
+                    else "assistant_delivered"
+                    if item.event_type == "channel.delivery_plan_completed"
                     else "user_turn"
                     if item.event_type == "user.turn_committed"
                     else "memory_management"
