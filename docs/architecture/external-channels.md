@@ -342,7 +342,7 @@ rejects redirects and compressed responses, and never forwards bot credentials t
 
 Only a caption or `[图片]` marker enters history. Raw images, signed media URLs and AES keys stay
 out of events, memory and durable media storage. `image_input_error` uses the same durable failure
-path described above, with the matching history/delivery text `这张图我刚才没看清，能再发一次吗？`.
+path described above, with the matching history/delivery text `刚才发来的图片我没看清，能再发一次吗？`.
 Restart terminalizes an orphaned generation's channel turn without downloading again. Persistent
 media, dynamic sticker learning and image deletion controls remain later Phase 17.3 work.
 See [ADR 0035](../adr/0035-ephemeral-inbound-image-understanding.md).
@@ -371,6 +371,26 @@ Photo retention and visual memory remain separate planned work in Phase 17.3C: t
 ordinary photos to support later recall, with their own retention and deletion controls. Excluding
 photos from the sticker library does not exclude them from that roadmap. See
 [ADR 0036](../adr/0036-opt-in-learned-sticker-library.md).
+
+## Bounded inbound multiple static images within one wire message (Phase 17.3F)
+
+The native WeChat adapter supports receiving an ordered batch of up to 4 static PNG or JPEG images
+within a single wire message. While the WeChat iLink wire format supports an item list carrying multiple image elements,
+native client multi-select UI presentation remains pending verification. This upper limit of 4 images is an explicit,
+conservative product sizing decision to protect against denial-of-service, memory pressure, and model context saturation,
+rather than a claim about native WeChat capabilities.
+
+Key architectural boundaries:
+
+- **Limits**: Maximum 4 images per wire message, maximum 5 MiB per decoded image, maximum 20 MiB aggregate decoded bytes across the batch.
+- **Whole-batch timeout and sequential download**: A single 20-second timeout applies across the entire batch download. Downloads occur sequentially to preserve arrival order and respond cleanly to turn cancellation.
+- **Fail-closed all-or-nothing**: If any image in the batch fails download, decryption, decoding, or violates dimension/byte bounds, the entire batch is rejected fail-closed. The turn fails with the existing durable failure notice (`刚才发来的图片我没看清，能再发一次吗？`), with 0 vision provider calls, 0 observer calls, and 0 partial assistant replies.
+- **Cross-message independence**: No time-based merging across separate wire messages. Independent messages retain existing identity and supersession semantics.
+- **Composite batch fingerprinting**: Single-image fingerprinting is strictly preserved for backward compatibility and replay safety. Multi-image batches compute a deterministic SHA-256 over the canonical JSON array of private references.
+- **Observer batching**: Both `PhotoMemoryObserver` and `StickerLibraryService` implement `observe_batch`, spawning exactly one background task per generation to avoid generation-key collision drops. Images are evaluated sequentially within an overall $N \times 45\text{s}$ budget; an error classifying one image does not prevent later valid images in the batch from persisting.
+- **Multi-photo annotation disambiguation**: Disambiguation is model-guided based on prompt guidance, not a deterministic guarantee. Candidate order presented to the model is not attachment order, and ordinal-only references return null. Ambiguous user follow-ups like `"这张照片"` return null rather than arbitrarily binding to the first photo. Explicit references bind via descriptive distinctions.
+
+See [ADR 0040](../adr/0040-bounded-inbound-multi-image.md).
 
 ## Native WeChat timing diagnostics
 
@@ -412,3 +432,9 @@ contracts, privacy policy, and acceptance gates exist.
 - [ADR 0030: Native WeChat iLink adapter](../adr/0030-native-weixin-ilink-adapter.md)
 - [ADR 0032: Durable Multipart Channel Delivery](../adr/0032-durable-multipart-channel-delivery.md)
 - [ADR 0033: Instant Messaging Bubble Planning and Durable Cadence](../adr/0033-instant-messaging-bubble-planning-and-durable-cadence.md)
+- [ADR 0035: Ephemeral Inbound Image Understanding](../adr/0035-ephemeral-inbound-image-understanding.md)
+- [ADR 0036: Opt-in Learned Sticker Library](../adr/0036-opt-in-learned-sticker-library.md)
+- [ADR 0037: Opt-in Photo Memory](../adr/0037-opt-in-photo-memory.md)
+- [ADR 0038: Bounded Photo Semantic Recall](../adr/0038-bounded-photo-semantic-recall.md)
+- [ADR 0039: Bounded Photo Source Metadata and Capture Date Extraction](../adr/0039-bounded-photo-metadata.md)
+- [ADR 0040: Bounded Inbound Multiple Static Images Within One Wire Message](../adr/0040-bounded-inbound-multi-image.md)

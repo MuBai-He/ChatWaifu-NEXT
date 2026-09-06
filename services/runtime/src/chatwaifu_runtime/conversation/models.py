@@ -128,7 +128,7 @@ class ConversationTurnOptions:
     source_context: ConversationSourceContext | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
-    image_loader: Callable[[], Awaitable[LlmInputImage]] | None = field(
+    image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(
         default=None, repr=False, compare=False
     )
 

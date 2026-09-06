@@ -805,7 +805,7 @@ class SQLitePhotoMemoryRepository:
                 )
                 refs = await cursor.fetchall()
             ids = [r["photo_id"] for r in refs]
-            if not ids or len(ids) > 3:
+            if not ids or len(ids) > 4:
                 return None
             placeholders = ",".join("?" for _ in ids)
             cursor = await conn.execute(

@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 import secrets
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
@@ -101,33 +101,58 @@ def _compute_image_fingerprint(image: WeixinInboundImage) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _make_image_loader(
+def _compute_images_fingerprint(images: Sequence[WeixinInboundImage]) -> str:
+    if len(images) == 1:
+        return _compute_image_fingerprint(images[0])
+    payload = [
+        {
+            "aes_key": img.aes_key,
+            "aeskey": img.aeskey,
+            "encrypt_query_param": img.encrypt_query_param,
+            "full_url": img.full_url,
+            "invalid_reason": img.invalid_reason,
+        }
+        for img in images
+    ]
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _make_batch_image_loader(
     transport: WeixinILinkTransport,
-    image: WeixinInboundImage,
+    images: tuple[WeixinInboundImage, ...],
     *,
     connection_id: UUID,
     external_message_id: str,
-) -> Callable[[], Awaitable[LlmInputImage]]:
-    bound_image = image
+) -> Callable[[], Awaitable[tuple[LlmInputImage, ...]]]:
+    bound_images = images
 
-    async def _load() -> LlmInputImage:
+    async def _load() -> tuple[LlmInputImage, ...]:
         start = perf_counter()
         try:
-            image_bytes, mime = await transport.download_image(bound_image)
+            raw_downloads = await transport.download_images(bound_images)
+            if len(raw_downloads) != len(bound_images):
+                raise ValueError(
+                    f"expected {len(bound_images)} downloaded images, got {len(raw_downloads)}"
+                )
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
-            if mime == "image/png":
-                valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
-            elif mime in ("image/jpeg", "image/jpg"):
-                valid_mime = "image/jpeg"
-            else:
-                raise ValueError(f"unsupported image mime type: {mime}")
+            results: list[LlmInputImage] = []
+            for image_bytes, mime in raw_downloads:
+                if mime == "image/png":
+                    valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
+                elif mime in ("image/jpeg", "image/jpg"):
+                    valid_mime = "image/jpeg"
+                else:
+                    raise ValueError(f"unsupported image mime type: {mime}")
+                results.append(LlmInputImage(data=image_bytes, mime_type=valid_mime))
             _log_weixin_timing(
                 "image_download_success",
                 connection_id=str(connection_id),
                 external_message_id=external_message_id,
                 duration_ms=elapsed_ms,
+                count=len(results),
             )
-            return LlmInputImage(data=image_bytes, mime_type=valid_mime)
+            return tuple(results)
         except Exception as exc:
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
             _log_weixin_timing(
@@ -191,6 +216,11 @@ class WeixinILinkTransport(WeixinTypingTransport, Protocol):
         self,
         image: WeixinInboundImage,
     ) -> tuple[bytes, str]: ...
+
+    async def download_images(
+        self,
+        images: Sequence[WeixinInboundImage],
+    ) -> Sequence[tuple[bytes, str]]: ...
 
 
 class ChannelManagementError(ExternalChannelError):
@@ -1200,9 +1230,9 @@ class ChannelManagementService:
                 external_message_id=message.external_message_id,
                 context_elapsed_ms=round((perf_counter() - context_started) * 1000, 3),
             )
-            raw_image = message.image
+            raw_images = message.images
             image_input: ChannelInboundImageInput | None = None
-            if raw_image is not None:
+            if raw_images:
                 caption = (message.text or "").strip()
                 if caption:
                     if caption.startswith("[图片]"):
@@ -1213,10 +1243,10 @@ class ChannelManagementService:
                     normalized_text = "[图片]"
                 if len(normalized_text) > 20000:
                     normalized_text = normalized_text[:20000]
-                fingerprint = _compute_image_fingerprint(raw_image)
-                loader = _make_image_loader(
+                fingerprint = _compute_images_fingerprint(raw_images)
+                loader = _make_batch_image_loader(
                     self._weixin,
-                    raw_image,
+                    raw_images,
                     connection_id=connection_id,
                     external_message_id=message.external_message_id,
                 )

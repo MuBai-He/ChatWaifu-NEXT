@@ -1,6 +1,6 @@
 # ADR 0039: Bounded Photo Source Metadata and Capture Date Extraction
 
-Status: Accepted design; implementation and isolated Runtime/Web acceptance complete; owner WeChat acceptance pending
+Status: Accepted design; implementation and isolated Runtime/Web acceptance complete; owner real photo WeChat acceptance succeeded on 2026-09-06
 
 ## Context
 
@@ -120,4 +120,4 @@ Recall presents bounded active quotes, and the photo detail panel displays the u
 
 Independent live memory-model probes in an isolated database associated a birthday statement,
 accepted its correction, and rejected an aesthetic question and unrelated food statement. These
-four examples do not establish general reference-resolution accuracy; owner WeChat acceptance remains pending.
+four examples do not establish general reference-resolution accuracy; owner real photo WeChat acceptance succeeded on 2026-09-06 (single photo annotation/recall confirmed; animations and Phase 17.4 remain pending).

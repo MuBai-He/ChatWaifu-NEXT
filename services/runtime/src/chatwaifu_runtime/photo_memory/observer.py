@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
+from chatwaifu_protocol.photo_memory import SavedPhoto
 from PIL import Image, ImageOps
 
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
@@ -73,6 +74,30 @@ class PhotoMemoryObserver:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
+    async def observe_batch(
+        self,
+        source: PhotoObservationSource,
+        images: Sequence[LlmInputImage],
+        *,
+        wait_for_completion: Callable[[], Awaitable[bool]],
+    ) -> None:
+        fence = self._stop_fence
+        if fence is None or source.generation_id in self._tasks or not images:
+            return
+
+        if len(self._tasks) >= MAX_PENDING_IMAGES:
+            return
+
+        if len(images) > 4:
+            return
+        batch = tuple(images)
+        task = asyncio.create_task(
+            self._observe_batch_pipeline(source, batch, fence, wait_for_completion),
+            name=f"photo-observation-{source.generation_id}",
+        )
+        self._tasks[source.generation_id] = (source.connection_id, task)
+        task.add_done_callback(lambda _: self._tasks.pop(source.generation_id, None))
+
     async def observe(
         self,
         source: PhotoObservationSource,
@@ -80,35 +105,51 @@ class PhotoMemoryObserver:
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
-        fence = self._stop_fence
-        if fence is None or source.generation_id in self._tasks:
-            return
+        await self.observe_batch(source, (image,), wait_for_completion=wait_for_completion)
 
-        if len(self._tasks) >= MAX_PENDING_IMAGES:
-            return
-
-        task = asyncio.create_task(
-            self._observe_pipeline(source, image, fence, wait_for_completion),
-            name=f"photo-observation-{source.generation_id}",
-        )
-        self._tasks[source.generation_id] = (source.connection_id, task)
-        task.add_done_callback(lambda _: self._tasks.pop(source.generation_id, None))
-
-    async def _observe_pipeline(
+    async def _observe_batch_pipeline(
         self,
         source: PhotoObservationSource,
-        image: LlmInputImage,
+        images: tuple[LlmInputImage, ...],
         fence: object,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
         try:
-            async with asyncio.timeout(MAX_LEARNING_SECONDS):
+            total_budget = len(images) * MAX_LEARNING_SECONDS
+            async with asyncio.timeout(total_budget):
                 settings = await self.repository.get_settings(
                     source.principal_scope, source.character_id
                 )
                 if not settings.retention_enabled or self._stop_fence is not fence:
                     return
-                await self._observe(source, image, settings.revision, wait_for_completion)
+                saved_records: list[SavedPhoto] = []
+                for image in images:
+                    if self._stop_fence is not fence:
+                        return
+                    try:
+                        async with asyncio.timeout(MAX_LEARNING_SECONDS):
+                            record = await self._observe(
+                                source, image, settings.revision, wait_for_completion
+                            )
+                            if record is not None:
+                                saved_records.append(record)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.warning(
+                            "photo observation failed for image in batch generation_id=%s",
+                            source.generation_id,
+                        )
+                if saved_records and self._annotations is not None and self._stop_fence is fence:
+                    self._annotations.observe(source.generation_id)
+                if (
+                    saved_records
+                    and self._semantic_service is not None
+                    and self._stop_fence is fence
+                ):
+                    self._semantic_service.index_new_photos(
+                        source.principal_scope, source.character_id, tuple(saved_records)
+                    )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -122,14 +163,14 @@ class PhotoMemoryObserver:
         image: LlmInputImage,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
-    ) -> None:
+    ) -> SavedPhoto | None:
         try:
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
                 classification = await self._classifier.classify(
                     image, generation_id=source.generation_id
                 )
                 if classification is None or not await wait_for_completion():
-                    return
+                    return None
 
                 meta = extract_photo_metadata(image.data, fallback_mime=image.mime_type)
                 data, mime_type, width, height = _normalize_photo(image)
@@ -161,16 +202,12 @@ class PhotoMemoryObserver:
                     source.generation_id,
                     record is not None,
                 )
-                if record is not None and self._annotations is not None:
-                    self._annotations.observe(source.generation_id)
-                if record is not None and self._semantic_service is not None:
-                    self._semantic_service.index_new_photo(
-                        source.principal_scope, source.character_id, record
-                    )
+                return record
         except asyncio.CancelledError:
             raise
         except Exception:
             logger.warning("photo observation skipped generation_id=%s", source.generation_id)
+            return None
 
 
 def _normalize_photo(

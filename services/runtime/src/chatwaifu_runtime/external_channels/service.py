@@ -9,6 +9,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
@@ -150,7 +151,29 @@ class CreatedChannelConnection:
 
 
 _PROVIDER_FAILURE_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
-_IMAGE_FAILURE_RECOVERY_TEXT = "这张图我刚才没看清，能再发一次吗？"
+_IMAGE_FAILURE_RECOVERY_TEXT = "刚才发来的图片我没看清，能再发一次吗？"
+
+
+def _normalize_and_sanitize_inbound_images(
+    raw_loaded: object,
+) -> tuple[LlmInputImage, ...]:
+    if isinstance(raw_loaded, tuple):
+        images = cast(tuple[object, ...], raw_loaded)
+    elif isinstance(raw_loaded, LlmInputImage):
+        images = (raw_loaded,)
+    else:
+        raise ValueError(f"unsupported raw image input type: {type(raw_loaded)}")
+
+    if not images or len(images) > 4:
+        raise ValueError(f"inbound images must be 1..4 items, got {len(images)}")
+
+    sanitized: list[LlmInputImage] = []
+    for img in images:
+        if not isinstance(img, LlmInputImage):
+            raise ValueError(f"inbound image item is not LlmInputImage: {type(img)}")
+        sanitized.append(strip_image_exif(img))
+
+    return tuple(sanitized)
 
 
 __all__ = [
@@ -425,18 +448,20 @@ class ExternalChannelService:
                 )
                 return result.status is ChannelTurnStatus.COMPLETED
 
-            async def learning_loader() -> LlmInputImage:
-                image = await original_loader()
+            async def learning_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await original_loader()
+                sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
+                original_images = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
                 try:
                     if library is not None:
-                        await library.observe(
+                        await library.observe_batch(
                             StickerLearningSource(
                                 principal_scope=connection.configuration.principal_scope,
                                 character_id=connection.configuration.character_id,
                                 connection_id=turn.connection_id,
                                 generation_id=turn.generation_id,
                             ),
-                            image,
+                            original_images,
                             wait_for_completion=wait_for_completion,
                         )
                 except asyncio.CancelledError:
@@ -447,29 +472,29 @@ class ExternalChannelService:
                     )
                 try:
                     if photos is not None:
-                        await photos.observe(
+                        await photos.observe_batch(
                             PhotoObservationSource(
                                 principal_scope=connection.configuration.principal_scope,
                                 character_id=connection.configuration.character_id,
                                 connection_id=turn.connection_id,
                                 generation_id=turn.generation_id,
                             ),
-                            image,
+                            original_images,
                             wait_for_completion=wait_for_completion,
                         )
                 except asyncio.CancelledError:
                     raise
                 except Exception:
                     logger.warning("photo observation skipped generation_id=%s", turn.generation_id)
-                return strip_image_exif(image)
+                return sanitized_images
 
             image_loader = learning_loader
         elif image_loader is not None:
             raw_base_loader = image_loader
 
-            async def sanitized_image_loader() -> LlmInputImage:
-                img = await raw_base_loader()
-                return strip_image_exif(img)
+            async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await raw_base_loader()
+                return _normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
         options = replace(

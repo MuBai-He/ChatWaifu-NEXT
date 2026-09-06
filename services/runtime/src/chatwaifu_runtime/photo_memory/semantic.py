@@ -165,8 +165,15 @@ class PhotoSemanticService:
         self._incremental_tasks.clear()
 
     def index_new_photo(self, scope: str, character_id: str, photo: SavedPhoto) -> bool:
-        """Incrementally index a newly saved photo, bounded to max 2 concurrent tasks."""
-        if not self._running:
+        """Incrementally index one newly saved photo."""
+        return self.index_new_photos(scope, character_id, (photo,))
+
+    def index_new_photos(
+        self, scope: str, character_id: str, photos: tuple[SavedPhoto, ...]
+    ) -> bool:
+        """Index up to four newly saved photos in one of two bounded batch tasks."""
+        first = next(iter(photos), None)
+        if first is None or len(photos) > 4 or not self._running:
             return False
         desc = self._embedding.describe()
         if not desc.enabled or not desc.semantic_capability:
@@ -175,18 +182,36 @@ class PhotoSemanticService:
         if len(self._incremental_tasks) >= MAX_INCREMENTAL_TASKS:
             logger.warning(
                 "dropping incremental photo indexing for %s: bounded task capacity (%d) reached",
-                photo.photo_id,
+                first.photo_id,
                 MAX_INCREMENTAL_TASKS,
             )
             return False
         gen = self._route_generation
         task = asyncio.create_task(
-            self._bounded_index_single_photo(scope, character_id, photo, desc, gen),
-            name=f"photo-semantic-index-{photo.photo_id}",
+            self._index_new_batch(scope, character_id, photos, desc, gen),
+            name=f"photo-semantic-index-{first.photo_id}",
         )
         self._incremental_tasks.add(task)
         task.add_done_callback(lambda t: self._incremental_tasks.discard(t))
         return True
+
+    async def _index_new_batch(
+        self,
+        scope: str,
+        character_id: str,
+        photos: tuple[SavedPhoto, ...],
+        desc: EmbeddingDescriptor,
+        generation: int,
+    ) -> bool:
+        indexed = False
+        for photo in photos:
+            if not self._running or self._route_generation != generation:
+                break
+            result = await self._bounded_index_single_photo(
+                scope, character_id, photo, desc, generation
+            )
+            indexed = result or indexed
+        return indexed
 
     def notify_route_change(self) -> None:
         """Increment generation token and cancel running incremental tasks without autobackfill."""
