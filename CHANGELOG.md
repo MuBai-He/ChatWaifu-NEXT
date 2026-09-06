@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add native WeChat typing, durable in-character failure recovery, and friendly memory-source UI.
+- Add opt-in static sticker learning/reuse, photo retention/deletion, semantic description retrieval,
+  manual embedding-index rebuild, photo capture metadata and user-statement association.
+- Combine native consecutive image messages into one bounded multi-image reply (PR #28).
+- Remember shared jokes from adjacent delivered exchanges, with natural recall, deduplication,
+  and negation rejection (Phase 17.4A, PR #30).
+- Reconcile Phase 17 progress and restore parseable status YAML. GIF/APNG remains Draft PR #29;
+  adaptive sticker history/ranking and sticker binding are not yet implemented.
+
 - Add opt-in Phase 17.2 preset sticker replies for the default character on WeChat: three original
   kitten images selected from durable Character ResponsePlan, encrypted native image transport,
   and an optional durable image tail that preserves delivered text on image failure.

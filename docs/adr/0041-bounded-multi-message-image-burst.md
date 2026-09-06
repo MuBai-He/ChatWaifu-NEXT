@@ -1,6 +1,6 @@
 # ADR 0041: Bounded native WeChat image burst collection
 
-Status: Accepted design; native owner retest pending.
+Status: Accepted; native owner retest passed on 2026-09-06 in PR #28.
 
 ## Context
 
