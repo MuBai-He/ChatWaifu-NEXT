@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import uuid4
 
@@ -34,6 +35,13 @@ class InboundTransport(_FakeWeixin):
     async def download_image(self, image: WeixinInboundImage) -> tuple[bytes, str]:
         self.download_count += 1
         return await self.wire.download_image(image)
+
+    async def download_images(
+        self,
+        images: Sequence[WeixinInboundImage],
+    ) -> Sequence[tuple[bytes, str]]:
+        self.download_count += len(images)
+        return await self.wire.download_images(images)
 
 
 @pytest.mark.asyncio

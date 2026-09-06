@@ -146,7 +146,23 @@ def test_parser_text_only():
     assert parsed.image is None
 
 
-def test_parser_extra_images_marked_unavailable():
+def test_parser_one_image_parsing_order_and_caption():
+    raw = _make_raw_inbound_msg(
+        [
+            {"type": 1, "text_item": {"text": "one picture"}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p1"}}},
+        ]
+    )
+    parsed = _parse_inbound_text(raw, "bot_123")
+    assert isinstance(parsed, WeixinInboundText)
+    assert parsed.text == "one picture"
+    assert len(parsed.images) == 1
+    assert parsed.image is parsed.images[0]
+    assert parsed.images[0].encrypt_query_param == "p1"
+    assert parsed.images[0].invalid_reason is None
+
+
+def test_parser_two_images_parsing_order_and_caption():
     raw = _make_raw_inbound_msg(
         [
             {"type": 1, "text_item": {"text": "two pictures"}},
@@ -157,21 +173,61 @@ def test_parser_extra_images_marked_unavailable():
     parsed = _parse_inbound_text(raw, "bot_123")
     assert isinstance(parsed, WeixinInboundText)
     assert parsed.text == "two pictures"
-    assert parsed.image is not None
-    assert parsed.image.invalid_reason == "multiple_images"
+    assert len(parsed.images) == 2
+    assert [img.encrypt_query_param for img in parsed.images] == ["p1", "p2"]
+    assert all(img.invalid_reason is None for img in parsed.images)
+    assert parsed.image is parsed.images[0]
 
-    # Image-only multiple images gets placeholder text
-    raw2 = _make_raw_inbound_msg(
+
+def test_parser_four_images_parsing_order_and_caption():
+    raw = _make_raw_inbound_msg(
         [
+            {"type": 1, "text_item": {"text": "four pictures"}},
             {"type": 2, "image_item": {"media": {"encrypt_query_param": "p1"}}},
             {"type": 2, "image_item": {"media": {"encrypt_query_param": "p2"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p3"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p4"}}},
+        ]
+    )
+    parsed = _parse_inbound_text(raw, "bot_123")
+    assert isinstance(parsed, WeixinInboundText)
+    assert parsed.text == "four pictures"
+    assert len(parsed.images) == 4
+    assert [img.encrypt_query_param for img in parsed.images] == ["p1", "p2", "p3", "p4"]
+    assert all(img.invalid_reason is None for img in parsed.images)
+
+
+def test_parser_five_images_rejected():
+    raw = _make_raw_inbound_msg(
+        [
+            {"type": 1, "text_item": {"text": "five pictures"}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p1"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p2"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p3"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p4"}}},
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": "p5"}}},
+        ]
+    )
+    parsed = _parse_inbound_text(raw, "bot_123")
+    assert isinstance(parsed, WeixinInboundText)
+    assert parsed.text == "five pictures"
+    assert len(parsed.images) == 1
+    assert parsed.images[0].invalid_reason == "too_many_images"
+    assert parsed.image is not None
+    assert parsed.image.invalid_reason == "too_many_images"
+
+    # Image-only 5 images gets placeholder text and invalid_reason
+    raw2 = _make_raw_inbound_msg(
+        [
+            {"type": 2, "image_item": {"media": {"encrypt_query_param": f"p{i}"}}}
+            for i in range(1, 6)
         ]
     )
     parsed2 = _parse_inbound_text(raw2, "bot_123")
     assert isinstance(parsed2, WeixinInboundText)
     assert parsed2.text == "[图片]"
-    assert parsed2.image is not None
-    assert parsed2.image.invalid_reason == "multiple_images"
+    assert len(parsed2.images) == 1
+    assert parsed2.images[0].invalid_reason == "too_many_images"
 
 
 def test_parser_malformed_image():
@@ -631,3 +687,70 @@ def test_truncated_jpeg_pixel_data_is_rejected() -> None:
     original = _make_jpeg_bytes(width=64, height=64)
     with pytest.raises(WeixinILinkError):
         validate_image(original[:-20], "image/jpeg")
+
+
+@pytest.mark.asyncio
+async def test_download_two_images_real_decrypt_fake_http():
+    raw_key1 = secrets.token_bytes(16)
+    raw_key2 = secrets.token_bytes(16)
+    plain1 = _make_png_bytes(4, 4)
+    plain2 = _make_jpeg_bytes(8, 8)
+    cipher1 = encrypt_aes_128_ecb(plain1, raw_key1)
+    cipher2 = encrypt_aes_128_ecb(plain2, raw_key2)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if "param1" in url_str:
+            return httpx.Response(200, content=cipher1)
+        elif "param2" in url_str:
+            return httpx.Response(200, content=cipher2)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = WeixinILinkClient(http_client)
+        img1 = WeixinInboundImage(encrypt_query_param="param1", aeskey=raw_key1.hex())
+        img2 = WeixinInboundImage(encrypt_query_param="param2", aeskey=raw_key2.hex())
+
+        results = await client.download_images((img1, img2))
+        assert len(results) == 2
+        assert results[0][0] == plain1
+        assert results[0][1] == "image/png"
+        assert results[1][0] == plain2
+        assert results[1][1] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_download_images_aggregate_limit_exceeded():
+    raw_key = secrets.token_bytes(16)
+    plain = _make_png_bytes(10, 10)
+    cipher = encrypt_aes_128_ecb(plain, raw_key)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=cipher)
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = WeixinILinkClient(http_client)
+        img1 = WeixinInboundImage(encrypt_query_param="p1", aeskey=raw_key.hex())
+        img2 = WeixinInboundImage(encrypt_query_param="p2", aeskey=raw_key.hex())
+
+        from chatwaifu_runtime.external_channels.adapters.weixin_ilink import client as client_mod
+
+        orig_max = client_mod.MAX_TOTAL_IMAGE_BYTES
+        try:
+            client_mod.MAX_TOTAL_IMAGE_BYTES = len(plain) + 1
+            with pytest.raises(WeixinILinkError) as exc:
+                await client.download_images((img1, img2))
+            assert exc.value.code == "weixin.response_too_large"
+        finally:
+            client_mod.MAX_TOTAL_IMAGE_BYTES = orig_max
+
+
+@pytest.mark.asyncio
+async def test_download_images_five_rejected():
+    client = WeixinILinkClient()
+    images = tuple(WeixinInboundImage(encrypt_query_param=f"p{i}") for i in range(5))
+    with pytest.raises(WeixinILinkError) as exc:
+        await client.download_images(images)
+    assert exc.value.code == "weixin.image_unavailable"

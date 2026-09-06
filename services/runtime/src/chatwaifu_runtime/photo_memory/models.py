@@ -1,6 +1,7 @@
 """Photo assets and observed descriptions are evidence, not inferred personal facts."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -9,6 +10,13 @@ from chatwaifu_protocol.photo_memory import PhotoMemoryDeleteResult
 
 class PhotoMemoryRevisionConflict(ValueError):
     """Concurrent settings or deletion invalidated the requested write."""
+
+
+@dataclass(frozen=True, slots=True)
+class PhotoItemOrigin:
+    channel_turn_id: UUID
+    external_message_id: str
+    received_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +36,7 @@ class PhotoSaveCandidate:
     original_width: int | None = None
     original_height: int | None = None
     original_mime_type: Literal["image/png", "image/jpeg"] | None = None
+    item_origin: PhotoItemOrigin | None = None
 
 
 @dataclass(frozen=True, slots=True)

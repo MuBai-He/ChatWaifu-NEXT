@@ -39,6 +39,7 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
+    ChannelTurnBurstMemberRecord,
     ChannelTurnRecord,
     CompleteTurnResult,
     DeliveryTransitionResult,
@@ -515,6 +516,89 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         )
         return await self._required_turn(channel_turn_id)
 
+    async def add_burst_member(
+        self,
+        burst_id: UUID,
+        leader_channel_turn_id: UUID,
+        member_channel_turn_id: UUID,
+        ordinal: int,
+        received_at: datetime,
+        created_at: datetime,
+    ) -> ChannelTurnBurstMemberRecord:
+        await self._database.execute(
+            """
+            INSERT INTO channel_turn_burst_members(
+                burst_id, leader_channel_turn_id, member_channel_turn_id,
+                ordinal, received_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(burst_id),
+                str(leader_channel_turn_id),
+                str(member_channel_turn_id),
+                ordinal,
+                received_at.isoformat(),
+                created_at.isoformat(),
+            ),
+        )
+        return ChannelTurnBurstMemberRecord(
+            burst_id=burst_id,
+            leader_channel_turn_id=leader_channel_turn_id,
+            member_channel_turn_id=member_channel_turn_id,
+            ordinal=ordinal,
+            received_at=received_at,
+            created_at=created_at,
+        )
+
+    async def list_burst_members(
+        self, leader_channel_turn_id: UUID
+    ) -> tuple[ChannelTurnBurstMemberRecord, ...]:
+        rows = await self._database.fetchall(
+            """
+            SELECT burst_id, leader_channel_turn_id, member_channel_turn_id,
+                   ordinal, received_at, created_at
+            FROM channel_turn_burst_members
+            WHERE leader_channel_turn_id = ?
+            ORDER BY ordinal ASC
+            """,
+            (str(leader_channel_turn_id),),
+        )
+        return tuple(
+            ChannelTurnBurstMemberRecord(
+                burst_id=UUID(row["burst_id"]),
+                leader_channel_turn_id=UUID(row["leader_channel_turn_id"]),
+                member_channel_turn_id=UUID(row["member_channel_turn_id"]),
+                ordinal=int(row["ordinal"]),
+                received_at=datetime.fromisoformat(row["received_at"]),
+                created_at=datetime.fromisoformat(row["created_at"]),
+            )
+            for row in rows
+        )
+
+    async def find_burst_leader(
+        self, member_channel_turn_id: UUID
+    ) -> ChannelTurnBurstMemberRecord | None:
+        row = await self._database.fetchone(
+            """
+            SELECT burst_id, leader_channel_turn_id, member_channel_turn_id,
+                   ordinal, received_at, created_at
+            FROM channel_turn_burst_members
+            WHERE member_channel_turn_id = ?
+            LIMIT 1
+            """,
+            (str(member_channel_turn_id),),
+        )
+        if row is None:
+            return None
+        return ChannelTurnBurstMemberRecord(
+            burst_id=UUID(row["burst_id"]),
+            leader_channel_turn_id=UUID(row["leader_channel_turn_id"]),
+            member_channel_turn_id=UUID(row["member_channel_turn_id"]),
+            ordinal=int(row["ordinal"]),
+            received_at=datetime.fromisoformat(row["received_at"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
+
     async def complete_turn(
         self,
         channel_turn_id: UUID,
@@ -683,6 +767,28 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     str(resolved_delivery),
                     completed_at.isoformat(),
                     completed_at.isoformat(),
+                    str(channel_turn_id),
+                ),
+            )
+            await connection.execute(
+                """
+                UPDATE channel_turns SET status = ?, reply_text = NULL,
+                    error_json = ?, delivery_id = NULL, revision = revision + 1,
+                    updated_at = ?, completed_at = COALESCE(completed_at, ?)
+                WHERE channel_turn_id IN (
+                    SELECT member_channel_turn_id
+                    FROM channel_turn_burst_members
+                    WHERE leader_channel_turn_id = ?
+                      AND member_channel_turn_id != ?
+                )
+                AND status IN ('accepted', 'processing', 'cancelling')
+                """,
+                (
+                    "failed" if failure is not None else "completed",
+                    _error_json(failure),
+                    completed_at.isoformat(),
+                    completed_at.isoformat(),
+                    str(channel_turn_id),
                     str(channel_turn_id),
                 ),
             )
@@ -2320,16 +2426,65 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             placeholders = ",".join("?" for _item in allowed_from)
             where += f" AND status IN ({placeholders})"
             parameters.extend(item.value for item in allowed_from)
-        changed = await self._database.execute(
-            f"""
-            UPDATE channel_turns SET status = ?, error_json = ?, revision = revision + 1,
-                updated_at = ?, completed_at = COALESCE(?, completed_at)
-            WHERE {where}
-            """,
-            parameters,
-        )
-        if changed == 0 and await self.get_turn(channel_turn_id) is None:
-            raise KeyError(f"unknown channel turn {channel_turn_id}")
+        async with self._database.transaction() as conn:
+            cursor = await conn.execute(
+                f"""
+                UPDATE channel_turns SET status = ?, error_json = ?, revision = revision + 1,
+                    updated_at = ?, completed_at = COALESCE(?, completed_at)
+                WHERE {where}
+                """,
+                parameters,
+            )
+            if cursor.rowcount == 0:
+                existing = await conn.execute_fetchall(
+                    "SELECT 1 FROM channel_turns WHERE channel_turn_id = ?",
+                    (str(channel_turn_id),),
+                )
+                if not existing:
+                    raise KeyError(f"unknown channel turn {channel_turn_id}")
+            if cursor.rowcount > 0:
+                if status is ChannelTurnStatus.PROCESSING:
+                    await conn.execute(
+                        """
+                        UPDATE channel_turns SET status = 'processing', revision = revision + 1,
+                            updated_at = ?
+                        WHERE status = 'accepted' AND channel_turn_id IN (
+                            SELECT member_channel_turn_id
+                            FROM channel_turn_burst_members
+                            WHERE leader_channel_turn_id = ?
+                              AND member_channel_turn_id != ?
+                        )
+                        """,
+                        (updated_at.isoformat(), str(channel_turn_id), str(channel_turn_id)),
+                    )
+                elif status in {
+                    ChannelTurnStatus.COMPLETED,
+                    ChannelTurnStatus.CANCELLED,
+                    ChannelTurnStatus.FAILED,
+                    ChannelTurnStatus.TIMED_OUT,
+                }:
+                    await conn.execute(
+                        """
+                        UPDATE channel_turns
+                        SET status = ?, error_json = ?, revision = revision + 1,
+                            updated_at = ?, completed_at = COALESCE(?, completed_at)
+                        WHERE channel_turn_id IN (
+                            SELECT member_channel_turn_id
+                            FROM channel_turn_burst_members
+                            WHERE leader_channel_turn_id = ?
+                              AND member_channel_turn_id != ?
+                        )
+                        AND status IN ('accepted', 'processing', 'cancelling')
+                        """,
+                        (
+                            status.value,
+                            _error_json(error),
+                            updated_at.isoformat(),
+                            completed_at.isoformat() if completed_at is not None else None,
+                            str(channel_turn_id),
+                            str(channel_turn_id),
+                        ),
+                    )
 
 
 _TURN_SELECT = """

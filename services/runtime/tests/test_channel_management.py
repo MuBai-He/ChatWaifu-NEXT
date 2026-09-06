@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -171,6 +171,12 @@ class _FakeWeixin:
     ) -> tuple[bytes, str]:
         del image
         return b"", "image/png"
+
+    async def download_images(
+        self,
+        images: Sequence[WeixinInboundImage],
+    ) -> Sequence[tuple[bytes, str]]:
+        return [await self.download_image(img) for img in images]
 
 
 class _JournalReadFailureStore(InMemoryChannelCredentialStore):

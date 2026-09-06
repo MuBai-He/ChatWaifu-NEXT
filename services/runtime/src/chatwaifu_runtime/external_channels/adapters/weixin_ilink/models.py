@@ -137,7 +137,11 @@ class WeixinInboundText:
     text: str
     context_token: str
     received_at: datetime
-    image: WeixinInboundImage | None = None
+    images: tuple[WeixinInboundImage, ...] = ()
+
+    @property
+    def image(self) -> WeixinInboundImage | None:
+        return self.images[0] if self.images else None
 
 
 @dataclass(frozen=True, slots=True)

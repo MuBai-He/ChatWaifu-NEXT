@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 import secrets
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
@@ -101,33 +101,58 @@ def _compute_image_fingerprint(image: WeixinInboundImage) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _make_image_loader(
+def _compute_images_fingerprint(images: Sequence[WeixinInboundImage]) -> str:
+    if len(images) == 1:
+        return _compute_image_fingerprint(images[0])
+    payload = [
+        {
+            "aes_key": img.aes_key,
+            "aeskey": img.aeskey,
+            "encrypt_query_param": img.encrypt_query_param,
+            "full_url": img.full_url,
+            "invalid_reason": img.invalid_reason,
+        }
+        for img in images
+    ]
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _make_batch_image_loader(
     transport: WeixinILinkTransport,
-    image: WeixinInboundImage,
+    images: tuple[WeixinInboundImage, ...],
     *,
     connection_id: UUID,
     external_message_id: str,
-) -> Callable[[], Awaitable[LlmInputImage]]:
-    bound_image = image
+) -> Callable[[], Awaitable[tuple[LlmInputImage, ...]]]:
+    bound_images = images
 
-    async def _load() -> LlmInputImage:
+    async def _load() -> tuple[LlmInputImage, ...]:
         start = perf_counter()
         try:
-            image_bytes, mime = await transport.download_image(bound_image)
+            raw_downloads = await transport.download_images(bound_images)
+            if len(raw_downloads) != len(bound_images):
+                raise ValueError(
+                    f"expected {len(bound_images)} downloaded images, got {len(raw_downloads)}"
+                )
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
-            if mime == "image/png":
-                valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
-            elif mime in ("image/jpeg", "image/jpg"):
-                valid_mime = "image/jpeg"
-            else:
-                raise ValueError(f"unsupported image mime type: {mime}")
+            results: list[LlmInputImage] = []
+            for image_bytes, mime in raw_downloads:
+                if mime == "image/png":
+                    valid_mime: Literal["image/png", "image/jpeg"] = "image/png"
+                elif mime in ("image/jpeg", "image/jpg"):
+                    valid_mime = "image/jpeg"
+                else:
+                    raise ValueError(f"unsupported image mime type: {mime}")
+                results.append(LlmInputImage(data=image_bytes, mime_type=valid_mime))
             _log_weixin_timing(
                 "image_download_success",
                 connection_id=str(connection_id),
                 external_message_id=external_message_id,
                 duration_ms=elapsed_ms,
+                count=len(results),
             )
-            return LlmInputImage(data=image_bytes, mime_type=valid_mime)
+            return tuple(results)
         except Exception as exc:
             elapsed_ms = round((perf_counter() - start) * 1000, 3)
             _log_weixin_timing(
@@ -191,6 +216,11 @@ class WeixinILinkTransport(WeixinTypingTransport, Protocol):
         self,
         image: WeixinInboundImage,
     ) -> tuple[bytes, str]: ...
+
+    async def download_images(
+        self,
+        images: Sequence[WeixinInboundImage],
+    ) -> Sequence[tuple[bytes, str]]: ...
 
 
 class ChannelManagementError(ExternalChannelError):
@@ -341,6 +371,13 @@ class ChannelManagementService:
         self._terminal_events_task: asyncio.Task[None] | None = None
         self._stopping = False
         self._external_channels.add_turn_terminal_listener(self._on_turn_terminal)
+        if hasattr(self._external_channels, "set_scheduler_wake_callback"):
+            self._external_channels.set_scheduler_wake_callback(self._wake_scheduler)
+
+    def _wake_scheduler(self, connection_id: UUID) -> None:
+        scheduler = self.get_scheduler(connection_id)
+        if scheduler is not None:
+            scheduler.wake()
 
     def _get_credential_lock(self, connection_id: UUID) -> asyncio.Lock:
         lock = self._credential_mutation_locks.get(connection_id)
@@ -1194,15 +1231,18 @@ class ChannelManagementService:
                     recipient_user_id=message.sender_user_id,
                 ),
             )
+            fresh_credentials = await self._load_credentials(connection_id)
+            if fresh_credentials is not None:
+                credentials = fresh_credentials
             _log_weixin_timing(
                 "context_ready",
                 connection_id=str(connection_id),
                 external_message_id=message.external_message_id,
                 context_elapsed_ms=round((perf_counter() - context_started) * 1000, 3),
             )
-            raw_image = message.image
+            raw_images = message.images
             image_input: ChannelInboundImageInput | None = None
-            if raw_image is not None:
+            if raw_images:
                 caption = (message.text or "").strip()
                 if caption:
                     if caption.startswith("[图片]"):
@@ -1213,10 +1253,10 @@ class ChannelManagementService:
                     normalized_text = "[图片]"
                 if len(normalized_text) > 20000:
                     normalized_text = normalized_text[:20000]
-                fingerprint = _compute_image_fingerprint(raw_image)
-                loader = _make_image_loader(
+                fingerprint = _compute_images_fingerprint(raw_images)
+                loader = _make_batch_image_loader(
                     self._weixin,
-                    raw_image,
+                    raw_images,
                     connection_id=connection_id,
                     external_message_id=message.external_message_id,
                 )
@@ -1238,14 +1278,23 @@ class ChannelManagementService:
                 text=normalized_text,
                 received_at=message.received_at,
             )
+            is_burst_eligible = bool(
+                raw_images
+                and connection.configuration.character_id == "default"
+                and message.sender_user_id == credentials.user_id
+            )
             ingest_started = perf_counter()
             try:
                 if image_input is not None:
                     receipt = await self._external_channels.ingest(
                         inbound,
                         access_token=credentials.gateway_access_token,
-                        supersede_inflight=True,
+                        supersede_inflight=not is_burst_eligible,
                         image_input=image_input,
+                        burst_intake=is_burst_eligible,
+                        raw_images=raw_images,
+                        context_token=message.context_token,
+                        pending_contexts_count=len(credentials.pending_contexts),
                     )
                 else:
                     receipt = await self._external_channels.ingest(
@@ -1254,6 +1303,7 @@ class ChannelManagementService:
                         supersede_inflight=True,
                     )
             except (ChannelBusyError, ChannelDeliveryBusyError):
+                await self._forget_context(connection_id, message.external_message_id)
                 raise
             except ExternalChannelError:
                 logger.warning(
@@ -1262,6 +1312,13 @@ class ChannelManagementService:
                 )
                 await self._forget_context(connection_id, message.external_message_id)
                 continue
+            except Exception:
+                logger.warning(
+                    "unexpected error ingesting inbound WeChat message %s",
+                    message.external_message_id,
+                )
+                await self._forget_context(connection_id, message.external_message_id)
+                raise
 
             _log_weixin_timing(
                 "ingest_returned",
@@ -1294,6 +1351,13 @@ class ChannelManagementService:
                         is_terminal = True
                     if is_terminal:
                         await self._forget_context(connection_id, message.external_message_id)
+
+            member = await self._repository.find_burst_leader(receipt.channel_turn_id)
+            if member is not None and member.leader_channel_turn_id != receipt.channel_turn_id:
+                # Only the leader sends a reply/typing indicator. Follower identities
+                # are durable; retaining their private send tokens can starve stop text.
+                await self._forget_context(connection_id, message.external_message_id)
+                continue
 
             typing = self._typing.get(connection_id)
             policy = connection.configuration.presentation_policy
@@ -1343,6 +1407,12 @@ class ChannelManagementService:
             ChannelTurnStatus.TIMED_OUT,
         ):
             await self._forget_context(turn.connection_id, turn.external_message_id)
+            members = await self._repository.list_burst_members(turn.channel_turn_id)
+            for member in members:
+                if member.member_channel_turn_id != turn.channel_turn_id:
+                    mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                    if mem_turn is not None:
+                        await self._forget_context(turn.connection_id, mem_turn.external_message_id)
 
     async def _handle_plan_terminal(
         self,
@@ -1353,6 +1423,12 @@ class ChannelManagementService:
         if turn is None:
             return
         await self._forget_context(connection_id, turn.external_message_id)
+        members = await self._repository.list_burst_members(turn.channel_turn_id)
+        for member in members:
+            if member.member_channel_turn_id != turn.channel_turn_id:
+                mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                if mem_turn is not None:
+                    await self._forget_context(connection_id, mem_turn.external_message_id)
 
     async def reconcile_pending_contexts(self, connection_id: UUID) -> None:
         await self._reconcile_pending_contexts(connection_id)
@@ -1379,15 +1455,24 @@ class ChannelManagementService:
                 if turn is None:
                     stale_message_ids.append(external_message_id)
                     continue
-                if turn.delivery_id is not None:
-                    plan = await self._repository.get_delivery_plan(turn.delivery_id)
+                member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
+                if (
+                    member_rec is not None
+                    and member_rec.leader_channel_turn_id != turn.channel_turn_id
+                ):
+                    leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
+                    check_turn = leader_turn if leader_turn is not None else turn
+                else:
+                    check_turn = turn
+                if check_turn.delivery_id is not None:
+                    plan = await self._repository.get_delivery_plan(check_turn.delivery_id)
                     if plan is None or plan.status in (
                         ChannelDeliveryStatus.DELIVERED,
                         ChannelDeliveryStatus.FAILED,
                         ChannelDeliveryStatus.CANCELLED,
                     ):
                         stale_message_ids.append(external_message_id)
-                elif turn.status in (
+                elif check_turn.status in (
                     ChannelTurnStatus.FAILED,
                     ChannelTurnStatus.CANCELLED,
                     ChannelTurnStatus.COMPLETED,

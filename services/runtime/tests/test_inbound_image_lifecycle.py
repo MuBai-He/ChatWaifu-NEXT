@@ -291,7 +291,7 @@ async def test_image_failure_notice_matches_history_and_survives_replay(
         assert result.status is ChannelTurnStatus.FAILED and result.delivery_id is not None
         plan = await container.external_channel_repository.get_delivery_plan(result.delivery_id)
         assert plan is not None and len(plan.parts) == 1
-        notice = "这张图我刚才没看清，能再发一次吗？"
+        notice = "刚才发来的图片我没看清，能再发一次吗？"
         assert plan.parts[0].payload.model_dump()["text"] == notice
         history = await container.conversation_repository.recent_history(
             result.session_id, uuid4(), limit=20
