@@ -9,6 +9,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
@@ -55,6 +56,12 @@ from chatwaifu_runtime.conversation.repository import ConversationRepository
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.burst import (
+    BurstBatch,
+    BurstScheduler,
+    ImageBurstCoordinator,
+    combine_burst_captions,
+)
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -80,6 +87,8 @@ from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, s
 from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
 
 logger = logging.getLogger(__name__)
+
+BURST_LOAD_TIMEOUT_SECONDS = 20.0
 
 WEIXIN_ILINK_PROVIDER = ChannelProviderRegistration(
     provider_id="weixin_ilink",
@@ -150,7 +159,29 @@ class CreatedChannelConnection:
 
 
 _PROVIDER_FAILURE_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
-_IMAGE_FAILURE_RECOVERY_TEXT = "这张图我刚才没看清，能再发一次吗？"
+_IMAGE_FAILURE_RECOVERY_TEXT = "刚才发来的图片我没看清，能再发一次吗？"
+
+
+def _normalize_and_sanitize_inbound_images(
+    raw_loaded: object,
+) -> tuple[LlmInputImage, ...]:
+    if isinstance(raw_loaded, tuple):
+        images = cast(tuple[object, ...], raw_loaded)
+    elif isinstance(raw_loaded, LlmInputImage):
+        images = (raw_loaded,)
+    else:
+        raise ValueError(f"unsupported raw image input type: {type(raw_loaded)}")
+
+    if not images or len(images) > 4:
+        raise ValueError(f"inbound images must be 1..4 items, got {len(images)}")
+
+    sanitized: list[LlmInputImage] = []
+    for img in images:
+        if not isinstance(img, LlmInputImage):
+            raise ValueError(f"inbound image item is not LlmInputImage: {type(img)}")
+        sanitized.append(strip_image_exif(img))
+
+    return tuple(sanitized)
 
 
 __all__ = [
@@ -160,6 +191,7 @@ __all__ = [
     "DeliveryPlanFactory",
     "ExternalChannelError",
     "ExternalChannelService",
+    "ImageBurstCoordinator",
     "InstantMessageDeliveryPlanFactory",
     "SingleTextDeliveryPlanFactory",
 ]
@@ -188,6 +220,7 @@ class ExternalChannelService:
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
         photo_observer: PhotoMemoryObserver | None = None,
+        burst_scheduler: BurstScheduler | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -208,6 +241,23 @@ class ExternalChannelService:
         self._turn_sync_locks: dict[UUID, asyncio.Lock] = {}
         self._turn_terminal_listeners: list[Callable[[ChannelTurnRecord], Awaitable[None]]] = []
         self._stopping = False
+        self._on_wake_scheduler: Callable[[UUID], None] | None = None
+        self._burst_coordinator = ImageBurstCoordinator(
+            repository=repository,
+            scheduler=burst_scheduler,
+            on_dispatch_burst=self._dispatch_burst,
+            on_turn_terminal=self._notify_turn_terminal,
+            publisher=self._publisher,
+        )
+        self.add_turn_terminal_listener(self._burst_coordinator.on_turn_terminal)
+
+    @property
+    def burst_coordinator(self) -> ImageBurstCoordinator:
+        return self._burst_coordinator
+
+    def set_scheduler_wake_callback(self, callback: Callable[[UUID], None]) -> None:
+        self._on_wake_scheduler = callback
+        self._burst_coordinator.set_scheduler_wake_callback(callback)
 
     @property
     def repository(self) -> ExternalChannelRepository:
@@ -234,10 +284,17 @@ class ExternalChannelService:
                 ChannelTurnStatus.PROCESSING,
                 ChannelTurnStatus.CANCELLING,
             }:
+                member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
+                if (
+                    member_rec is not None
+                    and member_rec.leader_channel_turn_id != turn.channel_turn_id
+                ):
+                    continue
                 self._ensure_turn_task(turn)
 
     async def stop(self) -> None:
         self._stopping = True
+        await self._burst_coordinator.stop()
         tasks = list(self._turn_tasks.values())
         for task in tasks:
             task.cancel()
@@ -375,15 +432,39 @@ class ExternalChannelService:
         access_token: str,
         supersede_inflight: bool = False,
         image_input: ChannelInboundImageInput | None = None,
+        burst_intake: bool = False,
+        raw_images: tuple[object, ...] = (),
+        context_token: str | None = None,
+        pending_contexts_count: int = 0,
     ) -> ChannelTurnReceipt:
         connection, binding, turn, duplicate = await self._admit_ingress(
             message,
             access_token=access_token,
             supersede_inflight=supersede_inflight,
             image_fingerprint=image_input.source_fingerprint if image_input is not None else None,
+            burst_intake=burst_intake,
         )
         if duplicate:
             return self._turn_receipt(turn, duplicate=True)
+
+        if burst_intake and image_input is not None:
+            receipt = await self._burst_coordinator.admit_image(
+                message=message,
+                turn=turn,
+                raw_images=raw_images,
+                loader=image_input.load,
+                character_id=connection.configuration.character_id,
+                principal_scope=connection.configuration.principal_scope,
+                context_token=context_token,
+                access_token=access_token,
+                pending_contexts_count=pending_contexts_count,
+            )
+            await self._repository.touch_connection(
+                message.connection_id,
+                status=ChannelConnectionStatus.READY,
+                seen_at=datetime.now(UTC),
+            )
+            return receipt
 
         source_context = ConversationSourceContext(
             provider_id=connection.configuration.provider_id,
@@ -425,18 +506,20 @@ class ExternalChannelService:
                 )
                 return result.status is ChannelTurnStatus.COMPLETED
 
-            async def learning_loader() -> LlmInputImage:
-                image = await original_loader()
+            async def learning_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await original_loader()
+                sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
+                original_images = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
                 try:
                     if library is not None:
-                        await library.observe(
+                        await library.observe_batch(
                             StickerLearningSource(
                                 principal_scope=connection.configuration.principal_scope,
                                 character_id=connection.configuration.character_id,
                                 connection_id=turn.connection_id,
                                 generation_id=turn.generation_id,
                             ),
-                            image,
+                            original_images,
                             wait_for_completion=wait_for_completion,
                         )
                 except asyncio.CancelledError:
@@ -447,29 +530,29 @@ class ExternalChannelService:
                     )
                 try:
                     if photos is not None:
-                        await photos.observe(
+                        await photos.observe_batch(
                             PhotoObservationSource(
                                 principal_scope=connection.configuration.principal_scope,
                                 character_id=connection.configuration.character_id,
                                 connection_id=turn.connection_id,
                                 generation_id=turn.generation_id,
                             ),
-                            image,
+                            original_images,
                             wait_for_completion=wait_for_completion,
                         )
                 except asyncio.CancelledError:
                     raise
                 except Exception:
                     logger.warning("photo observation skipped generation_id=%s", turn.generation_id)
-                return strip_image_exif(image)
+                return sanitized_images
 
             image_loader = learning_loader
         elif image_loader is not None:
             raw_base_loader = image_loader
 
-            async def sanitized_image_loader() -> LlmInputImage:
-                img = await raw_base_loader()
-                return strip_image_exif(img)
+            async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await raw_base_loader()
+                return _normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
         options = replace(
@@ -528,6 +611,171 @@ class ExternalChannelService:
         )
         return self._turn_receipt(turn, duplicate=False)
 
+    async def _dispatch_burst(self, batch: BurstBatch) -> None:
+        connection = await self._repository.get_connection(batch.connection_id)
+        if connection is None:
+            logger.error("burst dispatch failed: missing connection %s", batch.connection_id)
+            return
+
+        leader_turn = batch.leader_turn
+        first_item = batch.items[0]
+        combined_text = combine_burst_captions(batch.items)
+
+        source_context = ConversationSourceContext(
+            provider_id=connection.configuration.provider_id,
+            connection_id=connection.configuration.connection_id,
+            account_key=first_item.message.account_key,
+            principal_scope=first_item.message.principal_scope,
+            chat_type=first_item.message.chat_type.value,
+            conversation_key=first_item.message.conversation_key,
+            sender_key=first_item.message.sender_key,
+            received_at=first_item.message.received_at,
+            conversation_label=first_item.message.conversation_label,
+            sender_display_name=first_item.message.sender_display_name,
+        )
+        policy = connection.configuration.presentation_policy
+        profile = (
+            policy.profile.value
+            if policy is not None and hasattr(policy.profile, "value")
+            else (str(policy.profile) if policy is not None else None)
+        )
+
+        async def combined_base_loader() -> tuple[LlmInputImage, ...]:
+            all_images: list[LlmInputImage] = []
+            async with asyncio.timeout(BURST_LOAD_TIMEOUT_SECONDS):
+                for item in batch.items:
+                    loaded = await item.loader()
+                    item_images = loaded if isinstance(loaded, tuple) else (loaded,)
+                    if len(item_images) != len(item.item_origins):
+                        raise ValueError(
+                            f"burst item returned {len(item_images)} images, "
+                            f"expected {len(item.item_origins)} from wire descriptor"
+                        )
+                    all_images.extend(item_images)
+            return tuple(all_images)
+
+        batch_item_origins = tuple(origin for item in batch.items for origin in item.item_origins)
+        library = self._sticker_library
+        photos = self._photo_observer
+
+        if (
+            (library is not None or photos is not None)
+            and connection.configuration.character_id == "default"
+            and first_item.message.chat_type is ChannelChatType.DIRECT
+        ):
+
+            async def wait_for_completion() -> bool:
+                result = await self.wait_for_turn(
+                    leader_turn.connection_id, leader_turn.channel_turn_id, wait_seconds=30
+                )
+                return result.status is ChannelTurnStatus.COMPLETED
+
+            async def learning_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await combined_base_loader()
+                sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
+                original_images = raw_loaded
+                try:
+                    if library is not None:
+                        await library.observe_batch(
+                            StickerLearningSource(
+                                principal_scope=connection.configuration.principal_scope,
+                                character_id=connection.configuration.character_id,
+                                connection_id=leader_turn.connection_id,
+                                generation_id=leader_turn.generation_id,
+                            ),
+                            original_images,
+                            wait_for_completion=wait_for_completion,
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.warning(
+                        "sticker learning observation skipped generation_id=%s",
+                        leader_turn.generation_id,
+                    )
+                try:
+                    if photos is not None:
+                        await photos.observe_batch(
+                            PhotoObservationSource(
+                                principal_scope=connection.configuration.principal_scope,
+                                character_id=connection.configuration.character_id,
+                                connection_id=leader_turn.connection_id,
+                                generation_id=leader_turn.generation_id,
+                            ),
+                            original_images,
+                            wait_for_completion=wait_for_completion,
+                            item_origins=batch_item_origins,
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.warning(
+                        "photo observation skipped generation_id=%s", leader_turn.generation_id
+                    )
+                return sanitized_images
+
+            image_loader = learning_loader
+        else:
+
+            async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
+                raw_loaded = await combined_base_loader()
+                return _normalize_and_sanitize_inbound_images(raw_loaded)
+
+            image_loader = sanitized_image_loader
+
+        options = replace(
+            EXTERNAL_TEXT_TURN_OPTIONS,
+            source_context=source_context,
+            presentation_profile=profile,
+            failure_recovery_text=_IMAGE_FAILURE_RECOVERY_TEXT,
+            image_loader=image_loader,
+        )
+        generation_admitted = False
+        try:
+            accepted = await self._conversation.submit_text(
+                batch.session_id,
+                combined_text,
+                options=options,
+                turn_id=leader_turn.turn_id,
+                generation_id=leader_turn.generation_id,
+            )
+            if (
+                accepted.turn_id != leader_turn.turn_id
+                or accepted.generation_id != leader_turn.generation_id
+            ):
+                raise RuntimeError("conversation did not preserve preallocated channel identity")
+            generation_admitted = True
+            updated_leader = await self._repository.set_turn_processing(
+                leader_turn.channel_turn_id, updated_at=datetime.now(UTC)
+            )
+            self._ensure_turn_task(updated_leader, access_token=batch.access_token)
+        except asyncio.CancelledError:
+            if generation_admitted:
+                await self._conversation.cancel(batch.session_id, "channel_ingress_cancelled")
+            await self._set_turn_terminal(
+                leader_turn.channel_turn_id,
+                status=ChannelTurnStatus.CANCELLED,
+                error=_error(
+                    "channel_ingress_cancelled",
+                    "Channel ingress was cancelled before admission completed.",
+                ),
+                completed_at=datetime.now(UTC),
+            )
+            raise
+        except Exception as error:
+            if generation_admitted:
+                await self._conversation.cancel(batch.session_id, "channel_admission_failed")
+            await self._set_turn_terminal(
+                leader_turn.channel_turn_id,
+                status=ChannelTurnStatus.FAILED,
+                error=_error(
+                    "channel_submission_failed",
+                    str(error),
+                ),
+                completed_at=datetime.now(UTC),
+            )
+            raise
+
     def add_turn_terminal_listener(
         self, listener: Callable[[ChannelTurnRecord], Awaitable[None]]
     ) -> None:
@@ -542,6 +790,10 @@ class ExternalChannelService:
                     logger.exception(
                         "turn terminal listener failed for turn %s", turn.channel_turn_id
                     )
+        # Successful completion already has a durable delivery-plan event.
+        # Notify local listeners without mislabelling it as a failure event.
+        if turn.status is ChannelTurnStatus.COMPLETED:
+            return
         now = datetime.now(UTC)
         event_type = (
             "channel.turn_cancelled"
@@ -587,6 +839,12 @@ class ExternalChannelService:
             completed_at=completed_at,
         )
         await self._notify_turn_terminal(record)
+        members = await self._repository.list_burst_members(channel_turn_id)
+        for member in members:
+            if member.member_channel_turn_id != channel_turn_id:
+                mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                if mem_turn is not None:
+                    await self._notify_turn_terminal(mem_turn)
         return record
 
     async def _admit_ingress(
@@ -596,6 +854,7 @@ class ExternalChannelService:
         access_token: str,
         supersede_inflight: bool = False,
         image_fingerprint: str | None = None,
+        burst_intake: bool = False,
     ) -> tuple[ChannelConnectionRecord, ChannelBindingRecord, ChannelTurnRecord, bool]:
         """Persist a unique channel turn without serializing model preparation.
 
@@ -645,48 +904,94 @@ class ExternalChannelService:
                 )
 
             if supersede_inflight:
+                await self._burst_coordinator.cancel_pending_burst(
+                    binding.binding_id, reason="superseded_by_new_inbound_message"
+                )
+                await self._burst_coordinator.cancel_active_batch(
+                    binding.binding_id, reason="superseded_by_new_inbound_message"
+                )
                 for previous in await self._repository.list_inflight_turns(message.connection_id):
-                    if (
-                        previous.binding_id == binding.binding_id
-                        and previous.status is ChannelTurnStatus.PROCESSING
-                    ):
+                    if previous.binding_id == binding.binding_id:
+                        if previous.status is ChannelTurnStatus.PROCESSING:
+                            await self.interrupt(
+                                message.connection_id,
+                                previous.channel_turn_id,
+                                access_token=access_token,
+                                reason="superseded_by_new_inbound_message",
+                            )
+                        elif previous.status is ChannelTurnStatus.ACCEPTED:
+                            await self._set_turn_terminal(
+                                previous.channel_turn_id,
+                                status=ChannelTurnStatus.CANCELLED,
+                                error=_error(
+                                    "channel_ingress_cancelled",
+                                    "Superseded by new inbound message while pending.",
+                                ),
+                                completed_at=datetime.now(UTC),
+                            )
+
+            if burst_intake:
+                inflight = await self._repository.list_inflight_turns(message.connection_id)
+                binding_inflight = [t for t in inflight if t.binding_id == binding.binding_id]
+                for previous in binding_inflight:
+                    member = await self._repository.find_burst_leader(previous.channel_turn_id)
+                    live_id = (
+                        member.leader_channel_turn_id
+                        if member is not None
+                        else previous.channel_turn_id
+                    )
+                    if self._burst_coordinator.is_live_burst_turn(live_id):
+                        continue
+                    if previous.status is ChannelTurnStatus.PROCESSING:
                         await self.interrupt(
                             message.connection_id,
                             previous.channel_turn_id,
                             access_token=access_token,
                             reason="superseded_by_new_inbound_message",
                         )
-
-            if await self._repository.has_inflight_turn(binding.binding_id):
-                raise ChannelBusyError(
-                    "this external conversation already has an active generation"
-                )
-            if self._conversation.active_generation_id(binding.session_id) is not None:
-                raise ChannelBusyError("the bound Runtime session is already generating")
+                    elif previous.status is ChannelTurnStatus.ACCEPTED:
+                        await self._set_turn_terminal(
+                            previous.channel_turn_id,
+                            status=ChannelTurnStatus.CANCELLED,
+                            error=_error(
+                                "channel_ingress_cancelled",
+                                "Superseded by new inbound message while pending.",
+                            ),
+                            completed_at=datetime.now(UTC),
+                        )
+            else:
+                if await self._repository.has_inflight_turn(binding.binding_id):
+                    raise ChannelBusyError(
+                        "this external conversation already has an active generation"
+                    )
+                if self._conversation.active_generation_id(binding.session_id) is not None:
+                    raise ChannelBusyError("the bound Runtime session is already generating")
 
             now = datetime.now(UTC)
-            active_plans = await self._repository.list_active_delivery_plans_for_binding(
-                binding.binding_id
-            )
-            for active_plan in active_plans:
-                if active_plan.status in (
-                    ChannelDeliveryStatus.PENDING,
-                    ChannelDeliveryStatus.SENDING,
-                ):
-                    logger.info(
-                        "cancelling unsent tail of active delivery plan: delivery_id=%s reason=%s",
-                        active_plan.delivery_id,
-                        "superseded_by_new_inbound_message",
-                    )
-                    cancel_res = await self._repository.cancel_remaining_delivery_parts(
-                        active_plan.delivery_id,
-                        ChannelDeliveryPartsCancelRequest(
-                            reason="superseded_by_new_inbound_message",
-                            requested_at=now,
-                        ),
-                    )
-                    for ev in cancel_res.persisted_events:
-                        await self._publisher.publish_persisted(ev)
+            if not burst_intake:
+                active_plans = await self._repository.list_active_delivery_plans_for_binding(
+                    binding.binding_id
+                )
+                for active_plan in active_plans:
+                    if active_plan.status in (
+                        ChannelDeliveryStatus.PENDING,
+                        ChannelDeliveryStatus.SENDING,
+                    ):
+                        logger.info(
+                            "cancelling unsent tail of active delivery plan: "
+                            "delivery_id=%s reason=%s",
+                            active_plan.delivery_id,
+                            "superseded_by_new_inbound_message",
+                        )
+                        cancel_res = await self._repository.cancel_remaining_delivery_parts(
+                            active_plan.delivery_id,
+                            ChannelDeliveryPartsCancelRequest(
+                                reason="superseded_by_new_inbound_message",
+                                requested_at=now,
+                            ),
+                        )
+                        for ev in cancel_res.persisted_events:
+                            await self._publisher.publish_persisted(ev)
 
             turn = ChannelTurnRecord(
                 channel_turn_id=uuid4(),
@@ -729,11 +1034,18 @@ class ExternalChannelService:
         if access_token is not None:
             await self._authenticate(connection_id, access_token)
 
-        def matches(event: dict[str, object]) -> bool:
-            return str(event.get("generation_id")) == str(channel_turn_id_generation)
-
         turn = await self._required_turn(connection_id, channel_turn_id)
-        channel_turn_id_generation = turn.generation_id
+        member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
+        effective_generation_id = turn.generation_id
+        if member_rec is not None and member_rec.leader_channel_turn_id != turn.channel_turn_id:
+            leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
+            if leader_turn is not None:
+                effective_generation_id = leader_turn.generation_id
+
+        def matches(event: dict[str, object]) -> bool:
+            gen_id = str(event.get("generation_id"))
+            return gen_id in {str(turn.generation_id), str(effective_generation_id)}
+
         subscription = self._event_hub.subscribe(matches) if wait_seconds > 0 else None
         deadline = asyncio.get_running_loop().time() + wait_seconds
         try:
@@ -789,6 +1101,11 @@ class ExternalChannelService:
                     ChannelTurnStatus.PROCESSING,
                     ChannelTurnStatus.CANCELLING,
                 }:
+                    # Reconcile the durable terminal fact even if a listener was
+                    # missed. This is idempotent and releases any deferred burst.
+                    record = await self._repository.get_turn(turn.channel_turn_id)
+                    if record is not None:
+                        await self._burst_coordinator.on_turn_terminal(record)
                     return
         except asyncio.CancelledError:
             pass
@@ -804,10 +1121,14 @@ class ExternalChannelService:
         reason: str,
     ) -> ChannelTurnCancelReceipt:
         await self._authenticate(connection_id, access_token)
-        turn = await self._sync_turn(await self._required_turn(connection_id, channel_turn_id))
+        member_rec = await self._repository.find_burst_leader(channel_turn_id)
+        target_turn_id = (
+            member_rec.leader_channel_turn_id if member_rec is not None else channel_turn_id
+        )
+        turn = await self._sync_turn(await self._required_turn(connection_id, target_turn_id))
         if turn.status not in {ChannelTurnStatus.ACCEPTED, ChannelTurnStatus.PROCESSING}:
             return ChannelTurnCancelReceipt(
-                channel_turn_id=turn.channel_turn_id,
+                channel_turn_id=channel_turn_id,
                 accepted=False,
                 status=turn.status,
                 revision=turn.revision,
@@ -821,12 +1142,12 @@ class ExternalChannelService:
             await self._sticker_library.cancel_generation(turn.generation_id)
         if self._photo_observer is not None:
             await self._photo_observer.cancel_generation(turn.generation_id)
-        turn = await self._sync_turn(await self._required_turn(connection_id, channel_turn_id))
+        turn = await self._sync_turn(await self._required_turn(connection_id, target_turn_id))
         task = self._turn_tasks.pop(turn.channel_turn_id, None)
         if task is not None:
             task.cancel()
         return ChannelTurnCancelReceipt(
-            channel_turn_id=turn.channel_turn_id,
+            channel_turn_id=channel_turn_id,
             accepted=cancelled,
             status=turn.status,
             revision=turn.revision,
@@ -1323,9 +1644,44 @@ class ExternalChannelService:
                 ChannelTurnStatus.CANCELLING,
             }:
                 return turn
+            member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
+            if member_rec is not None and member_rec.leader_channel_turn_id != turn.channel_turn_id:
+                leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
+                if leader_turn is not None:
+                    await self._sync_turn(leader_turn)
+                refreshed = await self._repository.get_turn(turn.channel_turn_id)
+                return refreshed if refreshed is not None else turn
             generation = await self._conversation_repository.generation_result(turn.generation_id)
             now = datetime.now(UTC)
             if generation is None:
+                if self._burst_coordinator.is_live_burst_turn(turn.channel_turn_id):
+                    return turn
+                members = await self._repository.list_burst_members(turn.channel_turn_id)
+                if members:
+                    result = await self._repository.fail_turn_with_notice(
+                        turn.channel_turn_id,
+                        error=_error(
+                            "burst_interrupted",
+                            "The image burst collection or dispatch was interrupted "
+                            "before generation.",
+                        ),
+                        notice_text=_IMAGE_FAILURE_RECOVERY_TEXT,
+                        delivery_id=uuid4(),
+                        completed_at=now,
+                    )
+                    for event in result.persisted_events:
+                        await self._publisher.publish_persisted(event)
+                    if self._on_wake_scheduler:
+                        self._on_wake_scheduler(turn.connection_id)
+                    await self._notify_turn_terminal(result.turn)
+                    for member in members:
+                        if member.member_channel_turn_id != turn.channel_turn_id:
+                            mem_turn = await self._repository.get_turn(
+                                member.member_channel_turn_id
+                            )
+                            if mem_turn is not None:
+                                await self._notify_turn_terminal(mem_turn)
+                    return result.turn
                 return await self._set_turn_terminal(
                     turn.channel_turn_id,
                     status=ChannelTurnStatus.FAILED,
@@ -1481,6 +1837,13 @@ class ExternalChannelService:
                         await self._publisher.publish_persisted(event)
                 else:
                     await self._emit_delivery_plan_created_event(turn_record, delivery_id, parts)
+                await self._notify_turn_terminal(turn_record)
+                members = await self._repository.list_burst_members(turn.channel_turn_id)
+                for member in members:
+                    if member.member_channel_turn_id != turn.channel_turn_id:
+                        mem_turn = await self._repository.get_turn(member.member_channel_turn_id)
+                        if mem_turn is not None:
+                            await self._notify_turn_terminal(mem_turn)
                 return turn_record
             if generation.state is GenerationState.CANCELLED:
                 return await self._set_turn_terminal(
@@ -1517,6 +1880,14 @@ class ExternalChannelService:
                     for event in result.persisted_events:
                         await self._publisher.publish_persisted(event)
                     await self._notify_turn_terminal(result.turn)
+                    members = await self._repository.list_burst_members(turn.channel_turn_id)
+                    for member in members:
+                        if member.member_channel_turn_id != turn.channel_turn_id:
+                            mem_turn = await self._repository.get_turn(
+                                member.member_channel_turn_id
+                            )
+                            if mem_turn is not None:
+                                await self._notify_turn_terminal(mem_turn)
                     return result.turn
                 return await self._set_turn_terminal(
                     turn.channel_turn_id,

@@ -1,6 +1,6 @@
 # ADR 0038: Bounded semantic photo recall
 
-Status: Accepted design; implementation and isolated Runtime acceptance complete; owner WeChat acceptance pending
+Status: Accepted design; implementation and isolated Runtime acceptance complete; owner real photo WeChat acceptance succeeded on 2026-09-06
 
 ## Context
 

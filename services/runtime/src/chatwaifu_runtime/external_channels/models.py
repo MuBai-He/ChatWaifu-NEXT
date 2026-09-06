@@ -27,7 +27,9 @@ from chatwaifu_runtime.providers.contracts import LlmInputImage
 @dataclass(frozen=True, slots=True)
 class ChannelInboundImageInput:
     source_fingerprint: str
-    load: Callable[[], Awaitable[LlmInputImage]] = field(repr=False, compare=False)
+    load: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] = field(
+        repr=False, compare=False
+    )
 
     def __post_init__(self) -> None:
         raw_fp = cast(object, self.source_fingerprint)
@@ -90,6 +92,16 @@ class ChannelTurnRecord:
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelTurnBurstMemberRecord:
+    burst_id: UUID
+    leader_channel_turn_id: UUID
+    member_channel_turn_id: UUID
+    ordinal: int
+    received_at: datetime
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)

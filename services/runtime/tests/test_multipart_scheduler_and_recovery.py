@@ -7,6 +7,7 @@ and Tail Cancellation (Phase 17.1A).
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -258,6 +259,12 @@ class _FakeWeixin:
     ) -> tuple[bytes, str]:
         del image
         return b"", "image/png"
+
+    async def download_images(
+        self,
+        images: Sequence[WeixinInboundImage],
+    ) -> Sequence[tuple[bytes, str]]:
+        return [await self.download_image(img) for img in images]
 
 
 def _configuration(connection_id: UUID) -> ChannelConnectionConfiguration:

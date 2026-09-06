@@ -111,8 +111,8 @@ class LlmRequest:
     images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
 
     def __post_init__(self) -> None:
-        if len(self.images) > 1:
-            raise ValueError("at most one image is currently supported")
+        if len(self.images) > 4:
+            raise ValueError("at most 4 images are currently supported")
         for image in self.images:
             if not isinstance(image, LlmInputImage):  # pyright: ignore[reportUnnecessaryIsInstance]
                 raise TypeError("images must contain only LlmInputImage instances")

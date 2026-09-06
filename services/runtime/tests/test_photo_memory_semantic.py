@@ -1134,3 +1134,43 @@ async def test_restart_epoch_can_replace_prior_high_generation(test_db: Database
         assert rows[0][0] > 100
     finally:
         await restarted.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancel_on_second", [False, True])
+async def test_four_photo_incremental_batch_preserves_capacity_and_route_fence(
+    test_db: Database, cancel_on_second: bool
+) -> None:
+    repo = SQLitePhotoMemoryRepository(test_db)
+    photos = tuple([await _seed_photo(test_db, repo) for _ in range(4)])
+    provider = FakeNeuralEmbeddingProvider(dim=8)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def block() -> None:
+        target = 2 if cancel_on_second else 1
+        if provider.embed_call_count == target:
+            entered.set()
+            await release.wait()
+
+    provider.pre_embed_callback = block
+    service = PhotoSemanticService(SQLitePhotoSemanticAdapter(test_db), provider)
+    service.start()
+    try:
+        assert service.index_new_photos("local", "ayachi_nene", photos)
+        assert service.active_task_count == 1
+        assert not service.index_new_photos("local", "ayachi_nene", (*photos, photos[0]))
+        await asyncio.wait_for(entered.wait(), 3)
+        tasks = tuple(service._incremental_tasks)
+        if cancel_on_second:
+            service.notify_route_change()
+        else:
+            release.set()
+        await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 3)
+        rows = await test_db.fetchall("SELECT photo_id FROM photo_embeddings")
+        expected = {str(p.photo_id) for p in (photos[:1] if cancel_on_second else photos)}
+        assert {row[0] for row in rows} == expected
+        assert provider.embed_call_count == (2 if cancel_on_second else 4)
+        assert service.active_task_count == 0
+    finally:
+        await service.stop()

@@ -2655,4 +2655,57 @@ source generation and correction history separately from EXIF, participate in sc
 in the gallery, and are removed with photo deletion. Ambiguous or unavailable references are skipped.
 Long-range pronoun resolution and replay of follow-ups arriving before photo retention completes remain
 follow-up work. Independent synthetic live-model association/correction/negative probes and isolated
-Runtime/browser photo-detail acceptance passed; owner WeChat acceptance remains pending.
+Runtime/browser photo-detail acceptance passed. On 2026-09-06, owner real photo acceptance on WeChat
+was verified: a real ice cream photo was saved, the exact user quote `今天上午刚买的` was associated as
+a user annotation, conversational recall answered `今天上午买的`, and after a Runtime restart, a new recall
+query recorded a `photo_reference` and answered correctly. Because chat history remained intact across
+the restart, this verified real multi-turn recall with photo reference recording but did not constitute
+a history-independent memory proof. Animations and Phase 17.4 remain pending.
+
+### Phase 17.3F — Bounded inbound multiple static images within one wire message
+
+Phase 17.3F introduces support for receiving up to 4 static images within a single WeChat wire message under
+[ADR 0040](adr/0040-bounded-inbound-multi-image.md), protecting system safety, memory bounds, and provider
+quotas through conservative product sizing.
+
+Key architecture and invariants:
+
+- **Bounded product sizing (up to 4 images)**: Inbound wire messages parse up to 4 static PNG/JPEG images
+  as an ordered tuple `tuple[WeixinInboundImage, ...]`. This bound is an explicit ChatWaifu product choice
+  to protect latency, memory, and model context limits, not an unverified claim about WeChat native caps.
+  Messages carrying $>4$ images are rejected fail-closed during wire parsing (`too_many_images`).
+- **Resource and aggregate byte bounds**: Decoded images are strictly limited to $\le 5\text{ MiB}$ per image
+  and $\le 20\text{ MiB}$ total aggregate decoded bytes across the whole batch.
+- **Batch download deadline and sequential ordering**: A single 20-second whole-batch download deadline
+  governs all images. Downloads proceed sequentially to preserve chronological ordering and ensure fast,
+  clean response to turn cancellation.
+- **All-or-nothing fail-closed rejection**: If any single image in the batch fails download, decryption,
+  format/dimension checks, or byte limits, the entire batch is rejected. The turn terminates in
+  `ChannelTurnStatus.FAILED` with the durable friendly recovery notice `刚才发来的图片我没看清，能再发一次吗？`,
+  with 0 provider calls, 0 observer calls, and 0 partial assistant responses.
+- **Cross-message independence**: No time-based windowing or merging across separate wire messages.
+  Independent wire messages retain their existing identity, deduplication, and supersession semantics.
+- **Composite batch fingerprinting**: Single-image fingerprint computation is strictly preserved for
+  backward compatibility. Multi-image batches compute a deterministic SHA-256 over a canonical JSON array
+  of private references. Replay with modified or reordered images triggers `ChannelConflictError`.
+- **Observer batch processing**: `PhotoMemoryObserver` and `StickerLibraryService` implement `observe_batch`,
+  spawning exactly one background task per generation to avoid generation-key collision drops. Batch
+  processing runs sequentially with a budget of $N \times 45\text{s}$. An isolated classification failure
+  on one image logs a warning and allows subsequent valid images to persist.
+- **Multi-photo annotation disambiguation**: Disambiguation is model-guided based on prompt guidance, not a
+  deterministic guarantee. Candidate order provided to the model is not attachment order, and ordinal-only
+  references return null. When multiple candidate photos exist in recent context, ambiguous user statements
+  like `这张照片` or `this photo` return `null` to prevent arbitrary attribution to any photo candidate.
+  Explicit references bind via descriptive distinctions.
+- **Bounded native multi-message image burst collection (ADR 0041)**: Handles the owner-observed
+  separate wire messages arriving ~1.0s apart on native multi-photo selection:
+  - `ImageBurstCoordinator` buffers inbound image turns using a 1.5s sliding idle window and a 4.0s hard ceiling.
+  - A wire message containing 4 images or bursts reaching 4 images eager-seal immediately with 0 debounce delay.
+  - Excess images (>4) seal as overflow, delivering the durable failure recovery notice (`刚才发来的图片我没看清，能再发一次吗？`)
+    at their dispatch slot without calling LLMs or cancelling active generations in flight.
+  - Inbound plain text messages (e.g. `"停一下"`) immediately cancel pending bursts and active image generation.
+  - Inbound turns are persisted in `channel_turns` before poll cursors advance; `channel_turn_burst_members`
+    (Migration 28) authoritatively links followers to the leader, with followers mirroring the leader's terminal state.
+  - Original `received_at` timestamps per photo are preserved in `photo_assets` through `PhotoItemOrigin`.
+- **Pending scope**: Multi-photo real WeChat acceptance, animated images (GIF/APNG), and Phase 17.4
+  (shared jokes, usage history, adaptive recall) remain pending.

@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import io
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -65,6 +65,34 @@ class StickerLibraryService:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
+    async def observe_batch(
+        self,
+        source: StickerLearningSource,
+        images: Sequence[LlmInputImage],
+        *,
+        wait_for_completion: Callable[[], Awaitable[bool]],
+    ) -> None:
+        if self._stopping or source.generation_id in self._tasks or not images:
+            return
+        settings = await self.repository.get_settings(source.principal_scope, source.character_id)
+        # No image bytes are saved or classified when learning is disabled.
+        if (
+            not settings.learning_enabled
+            or self._stopping
+            or source.generation_id in self._tasks
+            or len(self._tasks) >= MAX_PENDING_IMAGES
+        ):
+            return
+        if len(images) > 4:
+            return
+        batch = tuple(images)
+        task = asyncio.create_task(
+            self._learn_batch(source, batch, settings.revision, wait_for_completion),
+            name=f"sticker-learning-{source.generation_id}",
+        )
+        self._tasks[source.generation_id] = (source.connection_id, task)
+        task.add_done_callback(lambda _: self._tasks.pop(source.generation_id, None))
+
     async def observe(
         self,
         source: StickerLearningSource,
@@ -72,22 +100,35 @@ class StickerLibraryService:
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
     ) -> None:
-        if self._stopping or source.generation_id in self._tasks:
-            return
-        settings = await self.repository.get_settings(source.principal_scope, source.character_id)
-        # No image bytes are saved or classified when learning is disabled.
-        if (
-            not settings.learning_enabled
-            or self._stopping
-            or len(self._tasks) >= MAX_PENDING_IMAGES
-        ):
-            return
-        task = asyncio.create_task(
-            self._learn(source, image, settings.revision, wait_for_completion),
-            name=f"sticker-learning-{source.generation_id}",
-        )
-        self._tasks[source.generation_id] = (source.connection_id, task)
-        task.add_done_callback(lambda _: self._tasks.pop(source.generation_id, None))
+        await self.observe_batch(source, (image,), wait_for_completion=wait_for_completion)
+
+    async def _learn_batch(
+        self,
+        source: StickerLearningSource,
+        images: tuple[LlmInputImage, ...],
+        revision: int,
+        wait_for_completion: Callable[[], Awaitable[bool]],
+    ) -> None:
+        try:
+            total_budget = len(images) * MAX_LEARNING_SECONDS
+            async with asyncio.timeout(total_budget):
+                for image in images:
+                    if self._stopping:
+                        return
+                    try:
+                        async with asyncio.timeout(MAX_LEARNING_SECONDS):
+                            await self._learn(source, image, revision, wait_for_completion)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        logger.warning(
+                            "sticker learning failed for image in batch generation_id=%s",
+                            source.generation_id,
+                        )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning("sticker learning batch skipped generation_id=%s", source.generation_id)
 
     async def _learn(
         self,

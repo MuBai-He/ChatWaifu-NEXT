@@ -43,12 +43,22 @@ def test_llm_request_images_validation() -> None:
     assert len(req.images) == 1
     assert "png1" not in repr(req)
 
-    with pytest.raises(ValueError, match="at most one image"):
+    # Up to 4 images are supported
+    req4 = LlmRequest(
+        generation_id=uuid4(),
+        user_text="describe",
+        system_prompt="sys",
+        images=(img1, img2, img1, img2),
+    )
+    assert len(req4.images) == 4
+
+    # More than 4 images raises ValueError
+    with pytest.raises(ValueError, match="at most 4 images"):
         LlmRequest(
             generation_id=uuid4(),
             user_text="describe",
             system_prompt="sys",
-            images=(img1, img2),
+            images=(img1, img2, img1, img2, img1),
         )
 
 
@@ -78,6 +88,39 @@ def test_openai_build_messages_with_image() -> None:
     assert image_part["type"] == "image_url"
     expected_b64 = base64.b64encode(raw_bytes).decode("ascii")
     assert image_part["image_url"] == {"url": f"data:image/png;base64,{expected_b64}"}
+
+
+def test_openai_build_messages_with_multiple_images() -> None:
+    raw1 = b"\x89PNG\r\n\x1a\nimage1"
+    raw2 = b"\xff\xd8\xffimage2"
+    raw3 = b"\x89PNG\r\n\x1a\nimage3"
+    img1 = LlmInputImage(data=raw1, mime_type="image/png")
+    img2 = LlmInputImage(data=raw2, mime_type="image/jpeg")
+    img3 = LlmInputImage(data=raw3, mime_type="image/png")
+
+    req = LlmRequest(
+        generation_id=uuid4(),
+        user_text="describe these images in order",
+        system_prompt="sys prompt",
+        images=(img1, img2, img3),
+    )
+    messages = build_messages(req)
+    current_user = messages[-1]
+    assert current_user["role"] == "user"
+    content = cast(list[dict[str, object]], current_user["content"])
+    assert isinstance(content, list)
+    assert len(content) == 4
+    assert content[0] == {"type": "text", "text": "describe these images in order"}
+
+    expected = [
+        ("image/png", base64.b64encode(raw1).decode("ascii")),
+        ("image/jpeg", base64.b64encode(raw2).decode("ascii")),
+        ("image/png", base64.b64encode(raw3).decode("ascii")),
+    ]
+    for idx, (mime, b64) in enumerate(expected):
+        part = content[idx + 1]
+        assert part["type"] == "image_url"
+        assert part["image_url"] == {"url": f"data:{mime};base64,{b64}"}
 
 
 def test_openai_build_messages_without_image_preserves_plain_text() -> None:
