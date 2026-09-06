@@ -1,6 +1,6 @@
 # ADR 0044: Bounded delivery-backed sticker usage history
 
-- Status: Accepted for Phase 17.4B-1 implementation; owner desktop acceptance pending
+- Status: Accepted; native macOS desktop verification completed
 - Date: 2026-09-07
 
 ## Context
@@ -54,3 +54,9 @@ scoped lineage, hash checks and bounded windows. Protocol validation rejects imp
 outcomes and oversized histories. UI tests cover lazy loading, refresh, offline state and stale results
 arriving after deletion. Isolated Runtime/browser acceptance uses a read-only snapshot of retained
 owner delivery facts; it neither operates WeChat nor replaces the running desktop.
+
+On 2026-09-07, the actual macOS development desktop was verified against its live Runtime and
+existing owner database. Native settings displayed the same five image parts (three delivered,
+two cancelled) and local dates; explicit refresh preserved the result. The channel reported
+connected and the Live2D character remained visible with unchanged desktop preferences.
+No WeChat client operation or new test message was used.

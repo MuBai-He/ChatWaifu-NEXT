@@ -2757,7 +2757,7 @@ until QQ integration. This code is outside main and must not be counted as a rel
 
 ### Remaining Phase 17 sequence
 
-1. 17.4B-1: delivery-backed sticker usage history is implemented below; owner desktop acceptance pending.
+1. 17.4B-1: delivery-backed sticker usage history is implemented and verified on the native macOS desktop.
 2. 17.4B-2: bounded adaptive sticker selection based on that history.
 3. Grounded shared-joke/sticker binding (proposed 17.4C; design not yet accepted).
 4. QQ adapter and native media acceptance, then revisit Draft PR #29.
@@ -2777,5 +2777,7 @@ at most 50 visible rows. Deleted assets and reset source turns no longer appear.
 selection change or preference inference is introduced. Adaptive ranking remains 17.4B-2.
 
 Automated checks and isolated Runtime/browser acceptance against a read-only owner-data snapshot
-are recorded in the PR. Native owner desktop acceptance remains pending; the original running
-desktop and WeChat connection are preserved.
+are recorded in the PR. On 2026-09-07, the actual native macOS settings page displayed the five
+retained owner image parts (three delivered, two cancelled), matching dates and refresh results.
+The original Live2D character and desktop preferences remained intact, and the channel reconnected
+after the local Runtime restart. This acceptance required no WeChat client operation or new message.
