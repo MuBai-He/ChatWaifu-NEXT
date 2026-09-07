@@ -25,11 +25,13 @@ const testResultSchema = z
 
 export async function getTtsProviders(
   sessionId: string,
+  signal?: AbortSignal,
 ): Promise<TtsProviderSnapshot[]> {
   return (
     await requestRuntime(
       `/v1/tts/providers?session_id=${encodeURIComponent(sessionId)}`,
       providersResponseSchema,
+      { signal },
     )
   ).items;
 }

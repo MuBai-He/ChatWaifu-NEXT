@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reconnect an already-open desktop settings window when native Runtime restarts with a new
+  address or token; cancel stale reads and preserve settings without replaying mutations.
+
 - Reduce repeated learned stickers among equally suitable choices using recent confirmed deliveries;
   fall back to the original choice if history is unavailable. Fence interrupted channel turns before
   optional reply preparation can publish an old delivery plan.
