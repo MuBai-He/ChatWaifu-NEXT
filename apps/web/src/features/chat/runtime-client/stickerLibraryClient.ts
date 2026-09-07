@@ -2,6 +2,9 @@ import {
   parseStickerLibraryDeleteResult,
   parseStickerLibrarySettings,
   parseStickerLibrarySnapshot,
+  parseStickerUsageHistory,
+  type StickerUsageHistory,
+  type StickerUsageRecord,
   type LearnedSticker,
   type StickerLibraryDeleteResult,
   type StickerLibrarySettings,
@@ -13,6 +16,8 @@ import { requestRuntime, runtimeParser } from "./http";
 import { resolveRuntimeConnection } from "../runtimeEndpoint";
 
 export type {
+  StickerUsageHistory,
+  StickerUsageRecord,
   LearnedSticker,
   StickerLibraryDeleteResult,
   StickerLibrarySettings,
@@ -189,4 +194,16 @@ export async function fetchStickerImageUrl(
       callerSignal.removeEventListener("abort", onCallerAbort);
     }
   }
+}
+
+export async function getStickerUsage(
+  characterId = "default",
+  signal?: AbortSignal,
+): Promise<StickerUsageHistory> {
+  const query = new URLSearchParams({ character_id: characterId });
+  return requestRuntime(
+    `/v1/sticker-library/usage?${query.toString()}`,
+    runtimeParser(parseStickerUsageHistory),
+    { signal },
+  );
 }
