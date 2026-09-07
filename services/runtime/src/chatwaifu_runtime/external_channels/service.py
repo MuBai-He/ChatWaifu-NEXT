@@ -1125,7 +1125,9 @@ class ExternalChannelService:
         target_turn_id = (
             member_rec.leader_channel_turn_id if member_rec is not None else channel_turn_id
         )
-        turn = await self._sync_turn(await self._required_turn(connection_id, target_turn_id))
+        # Establish the durable cancellation fence before waiting for optional
+        # reply preparation (including sticker-history reads) under _sync_turn.
+        turn = await self._required_turn(connection_id, target_turn_id)
         if turn.status not in {ChannelTurnStatus.ACCEPTED, ChannelTurnStatus.PROCESSING}:
             return ChannelTurnCancelReceipt(
                 channel_turn_id=channel_turn_id,
@@ -1137,18 +1139,29 @@ class ExternalChannelService:
         turn = await self._repository.set_turn_cancelling(
             turn.channel_turn_id, updated_at=datetime.now(UTC)
         )
-        cancelled = await self._conversation.cancel(turn.session_id, reason)
+        if turn.status not in {ChannelTurnStatus.CANCELLING, ChannelTurnStatus.CANCELLED}:
+            return ChannelTurnCancelReceipt(
+                channel_turn_id=channel_turn_id,
+                accepted=False,
+                status=turn.status,
+                revision=turn.revision,
+                acknowledged_at=datetime.now(UTC),
+            )
+        task = self._turn_tasks.pop(turn.channel_turn_id, None)
+        if task is not None and task is not asyncio.current_task():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        cancelled = await self._conversation.cancel(
+            turn.session_id, reason, expected_generation_id=turn.generation_id
+        )
         if self._sticker_library is not None:
             await self._sticker_library.cancel_generation(turn.generation_id)
         if self._photo_observer is not None:
             await self._photo_observer.cancel_generation(turn.generation_id)
         turn = await self._sync_turn(await self._required_turn(connection_id, target_turn_id))
-        task = self._turn_tasks.pop(turn.channel_turn_id, None)
-        if task is not None:
-            task.cancel()
         return ChannelTurnCancelReceipt(
             channel_turn_id=channel_turn_id,
-            accepted=cancelled,
+            accepted=cancelled or turn.status is ChannelTurnStatus.CANCELLED,
             status=turn.status,
             revision=turn.revision,
             acknowledged_at=datetime.now(UTC),
@@ -1644,6 +1657,17 @@ class ExternalChannelService:
                 ChannelTurnStatus.CANCELLING,
             }:
                 return turn
+            if turn.status is ChannelTurnStatus.CANCELLING:
+                if self._conversation.active_generation_id(turn.session_id) == turn.generation_id:
+                    # Do not release queued work while the old generation is
+                    # still tearing down. interrupt() joins it before syncing.
+                    return turn
+                return await self._set_turn_terminal(
+                    turn.channel_turn_id,
+                    status=ChannelTurnStatus.CANCELLED,
+                    error=_error("generation_cancelled", "The channel turn was cancelled."),
+                    completed_at=datetime.now(UTC),
+                )
             member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
             if member_rec is not None and member_rec.leader_channel_turn_id != turn.channel_turn_id:
                 leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
@@ -1831,6 +1855,8 @@ class ExternalChannelService:
                 turn_record = (
                     turn_result.turn if isinstance(turn_result, CompleteTurnResult) else turn_result
                 )
+                if turn_record.status is not ChannelTurnStatus.COMPLETED:
+                    return turn_record
                 persisted_events = getattr(turn_result, "persisted_events", ())
                 if persisted_events:
                     for event in persisted_events:
@@ -1853,10 +1879,7 @@ class ExternalChannelService:
                     completed_at=now,
                 )
             if generation.state is GenerationState.FAILED:
-                if (
-                    generation.error_code in {"provider_error", "image_input_error"}
-                    and turn.status is not ChannelTurnStatus.CANCELLING
-                ):
+                if generation.error_code in {"provider_error", "image_input_error"}:
                     result = await self._repository.fail_turn_with_notice(
                         turn.channel_turn_id,
                         error=_error(

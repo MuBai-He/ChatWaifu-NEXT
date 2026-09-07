@@ -215,11 +215,11 @@ class RuntimeContainer:
             photo_annotations=self.photo_annotations,
         )
         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
+        self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)
         self.sticker_library = StickerLibraryService(
-            self.sticker_repository, StickerClassifier(self.providers.llm)
+            self.sticker_repository, StickerClassifier(self.providers.llm), usage=self.sticker_usage
         )
         self.sticker_catalog = PresetStickerCatalog()
-        self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)
         self.external_channels = ExternalChannelService(
             self.external_channel_repository,
             self.conversation_repository,

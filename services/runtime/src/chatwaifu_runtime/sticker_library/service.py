@@ -12,17 +12,21 @@ from uuid import UUID
 
 from chatwaifu_protocol.channels import ChannelImageDeliveryPartPayload
 from chatwaifu_protocol.character import ResponsePlan
+from chatwaifu_protocol.sticker_library import LearnedSticker
 from PIL import Image
 
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
 from chatwaifu_runtime.sticker_library.ports import StickerLibraryRepository
+from chatwaifu_runtime.sticker_library.ranking import least_recently_delivered
 from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, matches_interaction
+from chatwaifu_runtime.sticker_library.usage import StickerUsageRepository
 
 logger = logging.getLogger(__name__)
 MAX_PENDING_IMAGES = 2
 MAX_LEARNING_SECONDS = 45
+USAGE_READ_TIMEOUT_SECONDS = 0.25
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,9 +38,16 @@ class StickerLearningSource:
 
 
 class StickerLibraryService:
-    def __init__(self, repository: StickerLibraryRepository, classifier: StickerClassifier) -> None:
+    def __init__(
+        self,
+        repository: StickerLibraryRepository,
+        classifier: StickerClassifier,
+        *,
+        usage: StickerUsageRepository | None = None,
+    ) -> None:
         self.repository = repository
         self._classifier = classifier
+        self._usage = usage
         self._tasks: dict[UUID, tuple[UUID, asyncio.Task[None]]] = {}
         self._stopping = False
 
@@ -186,6 +197,7 @@ class StickerLibraryService:
         ):
             return None
         snapshot = await self.repository.snapshot(principal_scope, character_id)
+        candidates: list[LearnedSticker] = []
         for item in snapshot.items:
             related = (
                 matches_interaction(item.label, item.description, hints)
@@ -193,10 +205,29 @@ class StickerLibraryService:
                 else plan is not None and item.expression == plan.expression
             )
             if related:
-                return ChannelImageDeliveryPartPayload(
-                    sticker_id=item.sticker_id, sha256=item.sha256, mime_type=item.mime_type
+                candidates.append(item)
+        if not candidates:
+            return None
+        selected = candidates[0]
+        if len(candidates) > 1 and self._usage is not None:
+            try:
+                async with asyncio.timeout(USAGE_READ_TIMEOUT_SECONDS):
+                    history = await self._usage.history(principal_scope, character_id, {}, limit=50)
+                selected = least_recently_delivered(candidates, history)
+                logger.info(
+                    "sticker selection policy=recent_delivery candidates=%d changed=%s",
+                    len(candidates),
+                    selected.sticker_id != candidates[0].sticker_id,
                 )
-        return None
+            except asyncio.CancelledError:
+                raise
+            except TimeoutError:
+                logger.warning("sticker selection fallback reason=history_timeout")
+            except Exception:
+                logger.warning("sticker selection fallback reason=history_unavailable")
+        return ChannelImageDeliveryPartPayload(
+            sticker_id=selected.sticker_id, sha256=selected.sha256, mime_type=selected.mime_type
+        )
 
     async def image_for_delivery(
         self, principal_scope: str, character_id: str, payload: ChannelImageDeliveryPartPayload
