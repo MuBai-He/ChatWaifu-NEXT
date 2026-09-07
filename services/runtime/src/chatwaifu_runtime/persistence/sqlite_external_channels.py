@@ -661,11 +661,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             await cursor.close()
             if row is None:
                 raise KeyError(f"unknown channel turn {channel_turn_id}")
-            allowed_statuses = (
-                ("accepted", "processing")
-                if failure is not None
-                else ("accepted", "processing", "cancelling")
-            )
+            # Both normal output and recovery notices lose to a prior interrupt.
+            # Check in the same transaction that creates delivery parts.
+            allowed_statuses = ("accepted", "processing")
             if row["status"] not in allowed_statuses or row["delivery_id"] is not None:
                 cursor = await connection.execute(
                     _TURN_SELECT + " WHERE t.channel_turn_id = ?", (str(channel_turn_id),)
