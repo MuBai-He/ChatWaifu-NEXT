@@ -24,7 +24,7 @@ describe("cancelled settings bootstrap", () => {
     const controller = new AbortController();
     vi.mocked(getSession).mockImplementation(() => {
       controller.abort();
-      return Promise.reject(controller.signal.reason);
+      return Promise.reject(new DOMException("Cancelled", "AbortError"));
     });
     const storage = {
       getItem: vi.fn().mockReturnValue("saved"),
