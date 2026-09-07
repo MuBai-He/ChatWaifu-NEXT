@@ -22,9 +22,9 @@ describe("cancelled settings bootstrap", () => {
   });
   it("does not create a replacement session when the saved-session read is aborted", async () => {
     const controller = new AbortController();
-    vi.mocked(getSession).mockImplementation(async () => {
+    vi.mocked(getSession).mockImplementation(() => {
       controller.abort();
-      throw controller.signal.reason;
+      return Promise.reject(controller.signal.reason);
     });
     const storage = {
       getItem: vi.fn().mockReturnValue("saved"),
@@ -38,9 +38,9 @@ describe("cancelled settings bootstrap", () => {
   });
   it("does not overwrite storage when a superseded create response arrives", async () => {
     const controller = new AbortController();
-    vi.mocked(createSession).mockImplementation(async () => {
+    vi.mocked(createSession).mockImplementation(() => {
       controller.abort();
-      return { session_id: "stale", state: "ready" } as never;
+      return Promise.resolve({ session_id: "stale", state: "ready" } as never);
     });
     const storage = {
       getItem: vi.fn().mockReturnValue(null),

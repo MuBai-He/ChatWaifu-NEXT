@@ -82,7 +82,9 @@ describe("desktop Runtime endpoint", () => {
     finish(starting);
     await observing;
     expect(receive).toHaveBeenCalledExactlyOnceWith(ready);
-    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
     await runtimeFetchWithConnection(
       await resolveRuntimeConnection(),
@@ -91,9 +93,9 @@ describe("desktop Runtime endpoint", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "http://127.0.0.1:2222/v1/runtime/health",
     );
-    expect(fetchMock.mock.calls[0][1].headers.get("Authorization")).toBe(
-      "Bearer new",
-    );
+    expect(
+      new Headers(fetchMock.mock.calls[0][1]?.headers).get("Authorization"),
+    ).toBe("Bearer new");
     controller.abort();
     expect(nativeMocks.unlisten).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();

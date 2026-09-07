@@ -120,10 +120,12 @@ describe("native settings restart", () => {
       value: {},
     });
     stop = vi.fn();
-    native.listen.mockImplementation((_name, callback) => {
-      listener = callback;
-      return Promise.resolve(stop);
-    });
+    native.listen.mockImplementation(
+      (_name: string, callback: typeof listener) => {
+        listener = callback;
+        return Promise.resolve(stop);
+      },
+    );
     native.invoke.mockResolvedValue(ready);
     vi.mocked(bootstrapRuntimeSession).mockResolvedValue(core as never);
     vi.mocked(getTtsProviders).mockResolvedValue([]);
@@ -137,6 +139,7 @@ describe("native settings restart", () => {
   async function emit(status: Status) {
     await act(async () => {
       listener({ payload: status });
+      await Promise.resolve();
     });
   }
   it("follows starting, circuit open and ready with the new endpoint and clears errors", async () => {
@@ -188,6 +191,7 @@ describe("native settings restart", () => {
     expect(result.current.connection).toBe("connected");
     await act(async () => {
       finish({ ...core, sessionId: "stale" } as never);
+      await Promise.resolve();
     });
     expect(result.current.sessionId).toBe(core.sessionId);
     expect(getTtsProviders).toHaveBeenCalledOnce();
@@ -213,6 +217,7 @@ describe("native settings restart", () => {
     await emit({ ...ready, restart_count: 1 });
     await act(async () => {
       fail(new Error("stale health failure"));
+      await Promise.resolve();
     });
     expect(result.current.connection).toBe("connected");
     expect(result.current.error).toBeNull();
@@ -255,6 +260,7 @@ describe("native settings restart", () => {
     unmount();
     await act(async () => {
       finish(stop);
+      await Promise.resolve();
     });
     expect(stop).toHaveBeenCalledOnce();
     expect(native.invoke).not.toHaveBeenCalled();
