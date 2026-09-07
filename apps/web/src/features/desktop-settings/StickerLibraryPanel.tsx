@@ -8,6 +8,7 @@ import {
   type LearnedSticker,
   type StickerLibrarySnapshot,
 } from "../chat/runtimeClient";
+import { StickerUsagePanel } from "./StickerUsagePanel";
 import { SettingsToggle } from "./SettingsPrimitives";
 
 const EXPRESSION_LABELS: Record<LearnedSticker["expression"], string> = {
@@ -214,8 +215,26 @@ function ScopedStickerLibraryPanel({
     setDeletingId(stickerId);
     setError(null);
     try {
-      await deleteLearnedSticker(stickerId, characterId);
-      if (life.mounted) await loadLibrary();
+      const deleted = await deleteLearnedSticker(stickerId, characterId);
+      if (life.mounted) {
+        // Invalidate history immediately, even if the subsequent snapshot read fails.
+        setSnapshot((previous) => {
+          if (!previous) return previous;
+          const retained = (previous.items ?? []).filter(
+            (item) => item.sticker_id !== stickerId,
+          );
+          return {
+            ...previous,
+            settings: { ...previous.settings, revision: deleted.revision },
+            items: retained,
+            total_bytes: retained.reduce(
+              (total, item) => total + item.byte_size,
+              0,
+            ),
+          };
+        });
+        await loadLibrary();
+      }
     } catch (err: unknown) {
       if (life.mounted && !isAbortError(err))
         setError(getErrorMessage(err, "删除表情失败"));
@@ -271,6 +290,12 @@ function ScopedStickerLibraryPanel({
           {loading ? "正在刷新…" : "刷新"}
         </button>
       </div>
+
+      <StickerUsagePanel
+        characterId={characterId}
+        runtimeOnline={runtimeOnline}
+        refreshToken={snapshot}
+      />
 
       {error ? (
         <div className="sticker-library-error" role="alert">

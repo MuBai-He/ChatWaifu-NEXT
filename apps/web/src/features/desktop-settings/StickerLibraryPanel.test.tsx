@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -15,6 +16,7 @@ vi.mock("../chat/runtimeClient", () => ({
   deleteLearnedSticker: vi.fn(),
   fetchStickerImageUrl: vi.fn(),
   getStickerLibrary: vi.fn(),
+  getStickerUsage: vi.fn(),
   updateStickerLibrarySettings: vi.fn(),
 }));
 
@@ -96,6 +98,60 @@ describe("StickerLibraryPanel", () => {
     expect(
       screen.getByRole("button", { name: "删除表情 摸鱼小猫" }),
     ).toBeTruthy();
+  });
+
+  it("removes deleted usage even when the library refresh fails and an older read arrives late", async () => {
+    const oldHistory = {
+      schema_version: "1.0" as const,
+      scan_limit: 200 as const,
+      has_more: false,
+      items: [
+        {
+          schema_version: "1.0" as const,
+          part_id: "00000000-0000-4000-8000-000000000999",
+          sticker_id: "learned_11111111111111111111111111111111",
+          label: "旧发送记录",
+          origin: "learned" as const,
+          status: "delivered" as const,
+          attempt: 1,
+          created_at: "2026-09-07T01:00:00Z",
+          updated_at: "2026-09-07T01:00:01Z",
+          delivered_at: "2026-09-07T01:00:01Z",
+        },
+      ],
+    };
+    let finishOld!: (value: typeof oldHistory) => void;
+    const pending = new Promise<typeof oldHistory>((resolve) => {
+      finishOld = resolve;
+    });
+    vi.mocked(runtimeClient.getStickerUsage)
+      .mockReturnValueOnce(pending)
+      .mockResolvedValue({
+        ...oldHistory,
+        items: [],
+      });
+    render(<StickerLibraryPanel characterId="default" runtimeOnline />);
+    await screen.findByText("摸鱼小猫");
+    fireEvent.click(screen.getByText("最近表情发送记录"));
+    await waitFor(() =>
+      expect(runtimeClient.getStickerUsage).toHaveBeenCalledTimes(1),
+    );
+    const signal = vi.mocked(runtimeClient.getStickerUsage).mock.calls[0][1];
+    vi.mocked(runtimeClient.getStickerLibrary).mockRejectedValueOnce(
+      new Error("刷新失败"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "删除表情 摸鱼小猫" }));
+    await screen.findByText("暂无可显示的发送记录。");
+    expect(signal?.aborted).toBe(true);
+    expect(screen.getByText("0 / 100")).toBeTruthy();
+    await act(async () => {
+      finishOld(oldHistory);
+      await pending;
+    });
+    expect(screen.queryByText("旧发送记录")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "删除表情 摸鱼小猫" }),
+    ).toBeNull();
   });
 
   it("renders empty state when library has no stickers with conservative copy", async () => {
