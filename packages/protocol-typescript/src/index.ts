@@ -46,6 +46,8 @@ export {
   parseStickerLibrarySettings,
   parseStickerLibrarySettingsUpdate,
   parseStickerLibrarySnapshot,
+  parseStickerUsageRecord,
+  parseStickerUsageHistory,
   parsePhotoMemorySettings,
   parsePhotoMemorySettingsUpdate,
   parseSavedPhoto,

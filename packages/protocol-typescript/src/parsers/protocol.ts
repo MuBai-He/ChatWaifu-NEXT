@@ -42,6 +42,8 @@ import type {
   StickerLibrarySettings,
   StickerLibrarySettingsUpdate,
   StickerLibrarySnapshot,
+  StickerUsageHistory,
+  StickerUsageRecord,
   PhotoMemorySettings,
   PhotoMemorySettingsUpdate,
   SavedPhoto,
@@ -1500,6 +1502,58 @@ const photoMemoryDeleteResultSchema = z
   })
   .passthrough();
 
+const stickerUsageRecordSchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    part_id: z.uuid(),
+    sticker_id: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[a-zA-Z0-9_-]+$/),
+    label: z.string().min(1).max(80),
+    origin: z.enum(["preset", "learned"]),
+    status: z.enum([
+      "pending",
+      "sending",
+      "delivered",
+      "failed",
+      "cancelled",
+      "skipped",
+    ]),
+    attempt: z.number().int().min(0),
+    created_at: z.iso.datetime({ offset: true }),
+    updated_at: z.iso.datetime({ offset: true }),
+    delivered_at: z.iso.datetime({ offset: true }).nullable().default(null),
+  })
+  .passthrough()
+  .refine(
+    (value) =>
+      (value.status === "delivered") === (value.delivered_at !== null) &&
+      (value.status !== "delivered" || value.attempt >= 1),
+    {
+      message:
+        "Delivery status requires delivery timestamp and attempt evidence",
+    },
+  );
+
+const stickerUsageHistorySchema = z
+  .object({
+    schema_version: z.literal("1.0").default("1.0"),
+    items: z.array(stickerUsageRecordSchema).max(50).default([]),
+    scan_limit: z.literal(200).default(200),
+    has_more: z.boolean().default(false),
+  })
+  .passthrough();
+
+export function parseStickerUsageRecord(input: unknown): StickerUsageRecord {
+  return stickerUsageRecordSchema.parse(input) as StickerUsageRecord;
+}
+
+export function parseStickerUsageHistory(input: unknown): StickerUsageHistory {
+  return stickerUsageHistorySchema.parse(input) as StickerUsageHistory;
+}
+
 const stickerLibrarySettingsSchema = z
   .object({
     schema_version: z.literal("1.0").default("1.0"),
@@ -1924,6 +1978,8 @@ export {
   stickerLibrarySettingsSchema,
   stickerLibrarySettingsUpdateSchema,
   stickerLibrarySnapshotSchema,
+  stickerUsageRecordSchema,
+  stickerUsageHistorySchema,
   strongEventEnvelopeSchema,
   structuredErrorSchema,
 };

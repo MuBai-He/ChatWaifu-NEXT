@@ -75,6 +75,8 @@ from chatwaifu_protocol.sticker_library import (
     StickerLibrarySettings,
     StickerLibrarySettingsUpdate,
     StickerLibrarySnapshot,
+    StickerUsageHistory,
+    StickerUsageRecord,
 )
 
 
@@ -141,6 +143,8 @@ class ProtocolCatalog(ProtocolModel):
     learned_sticker: LearnedSticker
     sticker_library_settings: StickerLibrarySettings
     sticker_library_settings_update: StickerLibrarySettingsUpdate
+    sticker_usage_record: StickerUsageRecord
+    sticker_usage_history: StickerUsageHistory
     sticker_library_snapshot: StickerLibrarySnapshot
     sticker_library_delete_result: StickerLibraryDeleteResult
     photo_memory_settings: PhotoMemorySettings
@@ -215,6 +219,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "sticker-library-settings": StickerLibrarySettings,
     "sticker-library-settings-update": StickerLibrarySettingsUpdate,
     "sticker-library-snapshot": StickerLibrarySnapshot,
+    "sticker-usage-record": StickerUsageRecord,
+    "sticker-usage-history": StickerUsageHistory,
     "structured-error": StructuredError,
     "turn-snapshot": TurnSnapshot,
     "video-frame-header": VideoFrameHeader,

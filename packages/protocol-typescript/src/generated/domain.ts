@@ -1262,6 +1262,23 @@ export type Capacity1 = 100
 export type Items1 = LearnedSticker[]
 export type SchemaVersion55 = '1.0'
 export type TotalBytes1 = number
+export type HasMore = boolean
+export type Attempt2 = number
+export type CreatedAt13 = string
+export type DeliveredAt3 = string | null
+export type Label1 = string
+export type Origin1 = 'preset' | 'learned'
+export type PartId3 = string
+export type SchemaVersion56 = '1.0'
+export type Status4 = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled' | 'skipped'
+export type StickerId2 = string
+export type UpdatedAt13 = string
+/**
+ * @maxItems 50
+ */
+export type Items2 = StickerUsageRecord[]
+export type ScanLimit = 200
+export type SchemaVersion57 = '1.0'
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
@@ -1347,6 +1364,8 @@ export interface ProtocolCatalog {
   sticker_library_settings: StickerLibrarySettings
   sticker_library_settings_update: StickerLibrarySettingsUpdate
   sticker_library_snapshot: StickerLibrarySnapshot
+  sticker_usage_history: StickerUsageHistory
+  sticker_usage_record: StickerUsageRecord
   turn: TurnSnapshot
   video_frame: VideoFrameHeader
   [k: string]: unknown
@@ -2799,6 +2818,35 @@ export interface StickerLibrarySnapshot {
   schema_version?: SchemaVersion55
   settings: StickerLibrarySettings
   total_bytes: TotalBytes1
+  [k: string]: unknown
+}
+/**
+ * Up to 50 visible records from the newest 200 retained scoped image parts.
+ *
+ * has_more means the returned view was bounded, not that a pagination cursor
+ * exists or that an all-time count can be derived from this recent window.
+ */
+export interface StickerUsageHistory {
+  has_more?: HasMore
+  items?: Items2
+  scan_limit?: ScanLimit
+  schema_version?: SchemaVersion57
+  [k: string]: unknown
+}
+/**
+ * One retained image part, not a counter of attempts or user preference.
+ */
+export interface StickerUsageRecord {
+  attempt: Attempt2
+  created_at: CreatedAt13
+  delivered_at?: DeliveredAt3
+  label: Label1
+  origin: Origin1
+  part_id: PartId3
+  schema_version?: SchemaVersion56
+  status: Status4
+  sticker_id: StickerId2
+  updated_at: UpdatedAt13
   [k: string]: unknown
 }
 export interface TurnSnapshot {

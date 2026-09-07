@@ -8227,6 +8227,127 @@
       "title": "StickerLibrarySnapshot",
       "type": "object"
     },
+    "StickerUsageHistory": {
+      "description": "Up to 50 visible records from the newest 200 retained scoped image parts.\n\nhas_more means the returned view was bounded, not that a pagination cursor\nexists or that an all-time count can be derived from this recent window.",
+      "properties": {
+        "has_more": {
+          "default": false,
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/StickerUsageRecord"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "scan_limit": {
+          "const": 200,
+          "default": 200,
+          "title": "Scan Limit",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "StickerUsageHistory",
+      "type": "object"
+    },
+    "StickerUsageRecord": {
+      "description": "One retained image part, not a counter of attempts or user preference.",
+      "properties": {
+        "attempt": {
+          "minimum": 0,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "label": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "preset",
+            "learned"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "part_id": {
+          "format": "uuid",
+          "title": "Part Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "sending",
+            "delivered",
+            "failed",
+            "cancelled",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "sticker_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "title": "Sticker Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part_id",
+        "sticker_id",
+        "label",
+        "origin",
+        "status",
+        "attempt",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "StickerUsageRecord",
+      "type": "object"
+    },
     "StructuredError": {
       "properties": {
         "code": {
@@ -9556,6 +9677,12 @@
     "sticker_library_snapshot": {
       "$ref": "#/$defs/StickerLibrarySnapshot"
     },
+    "sticker_usage_history": {
+      "$ref": "#/$defs/StickerUsageHistory"
+    },
+    "sticker_usage_record": {
+      "$ref": "#/$defs/StickerUsageRecord"
+    },
     "turn": {
       "$ref": "#/$defs/TurnSnapshot"
     },
@@ -9624,6 +9751,8 @@
     "learned_sticker",
     "sticker_library_settings",
     "sticker_library_settings_update",
+    "sticker_usage_record",
+    "sticker_usage_history",
     "sticker_library_snapshot",
     "sticker_library_delete_result",
     "photo_memory_settings",
