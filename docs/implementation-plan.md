@@ -2510,7 +2510,8 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
   photos to be available for later conversation and recall.
 - **17.4 — Shared jokes and adaptive recall (in progress):** 17.4A shared-joke association and recall
   were accepted on real WeChat and merged in PR #30. Delivery-backed sticker usage history is
-  implemented in 17.4B-1 below; adaptive selection and sticker binding remain pending.
+  implemented in 17.4B-1 below; bounded learned-sticker repeat avoidance is implemented in
+  17.4B-2 with real-channel acceptance pending. Shared-joke/sticker binding remains pending.
 
 Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
 or the remaining image and sticker capabilities are accepted.
@@ -2746,7 +2747,9 @@ Key architecture and invariants:
   The triggering user event remains the causation ID.
 - **PromptCompiler guidance**: Recalled shared jokes provide natural callback guidance to LLM without mechanical
   explanation and without joke pinning.
-- **Pending scope**: Adaptive sticker ranking, sticker binding, group/multi-principal humor, provider-specific acceptance (including QQ), and animated media remain pending.
+- **Follow-up scope**: Bounded learned-sticker repeat avoidance is implemented in 17.4B-2 below.
+  Sticker binding, group/multi-principal humor, provider-specific acceptance (including QQ), and
+  animated media remain pending.
 
 ### Phase 17.3G — Animated media (draft; integration deferred)
 
@@ -2758,7 +2761,7 @@ until QQ integration. This code is outside main and must not be counted as a rel
 ### Remaining Phase 17 sequence
 
 1. 17.4B-1: delivery-backed sticker usage history is implemented and verified on the native macOS desktop.
-2. 17.4B-2: bounded adaptive sticker selection based on that history.
+2. 17.4B-2: bounded learned-sticker repeat avoidance is implemented below; real-channel acceptance pending.
 3. Grounded shared-joke/sticker binding (proposed 17.4C; design not yet accepted).
 4. QQ adapter and native media acceptance, then revisit Draft PR #29.
 
@@ -2781,3 +2784,19 @@ are recorded in the PR. On 2026-09-07, the actual native macOS settings page dis
 retained owner image parts (three delivered, two cancelled), matching dates and refresh results.
 The original Live2D character and desktop preferences remained intact, and the channel reconnected
 after the local Runtime restart. This acceptance required no WeChat client operation or new message.
+
+### Phase 17.4B-2 — Bounded learned-sticker repeat avoidance
+
+Under [ADR 0045](adr/0045-bounded-sticker-repeat-avoidance.md), retain the existing suitability and
+sending gates, then prefer equivalent learned candidates without recent confirmed delivery; otherwise
+prefer the oldest most-recent delivery. Original order breaks ties. History uses the existing owner,
+character, source and current-asset validation, at most 50 visible learned records from 200 scoped
+image-part candidates. Failures, cancellation and retries do not imply user preferences. One candidate
+requires no history read; errors or a 250 ms read timeout preserve the original choice.
+
+Interruption now persists a cancellation fence before waiting for optional reply preparation. Normal
+and recovery delivery publication both check that fence atomically. A completed model generation
+cannot resurrect a channel reply cancelled before its plan committed. Tests cover cancellation during
+history lookup and rejection of late publication after database reopen, plus scope, ordering and
+Runtime restart. Real-channel acceptance remains pending; no WeChat client was operated for this slice.
+Preset adaptation, preference learning, shared-joke binding and QQ remain separate follow-ups.
