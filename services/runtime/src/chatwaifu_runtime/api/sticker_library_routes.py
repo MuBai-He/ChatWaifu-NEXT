@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import cast
 
 from chatwaifu_protocol.sticker_library import (
@@ -9,12 +10,14 @@ from chatwaifu_protocol.sticker_library import (
     StickerLibrarySettings,
     StickerLibrarySettingsUpdate,
     StickerLibrarySnapshot,
+    StickerUsageHistory,
 )
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.character_kernel.service import USER_SCOPE
 from chatwaifu_runtime.sticker_library.models import StickerLibraryRevisionConflict
+from chatwaifu_runtime.sticker_library.usage import StickerUsagePreset
 
 router = APIRouter(prefix="/v1/sticker-library", tags=["sticker-library"])
 
@@ -97,3 +100,25 @@ async def get_learned_sticker_image(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@router.get("/usage", response_model=StickerUsageHistory)
+async def get_sticker_usage(
+    request: Request,
+    response: Response,
+    character_id: str = Query(default="default"),
+    limit: int = Query(default=50, ge=1, le=50),
+) -> StickerUsageHistory:
+    _assert_supported_character(character_id)
+    container = _container(request)
+    # Local manifest I/O stays off the event loop. No image bytes are loaded.
+    entries = await asyncio.to_thread(container.sticker_catalog.load_manifest)
+    labels = {"kitten_happy": "开心小猫", "kitten_shy": "害羞小猫", "kitten_comfort": "安慰小猫"}
+    presets = {
+        entry.sticker_id: StickerUsagePreset(
+            sha256=entry.sha256, label=labels.get(entry.sticker_id, "预设表情")
+        )
+        for entry in entries
+    }
+    response.headers["Cache-Control"] = "no-store"
+    return await container.sticker_usage.history(USER_SCOPE, character_id, presets, limit=limit)

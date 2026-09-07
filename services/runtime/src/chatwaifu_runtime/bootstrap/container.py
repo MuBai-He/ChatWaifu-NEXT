@@ -43,6 +43,7 @@ from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryR
 from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
+from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
@@ -67,6 +68,7 @@ from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
+from chatwaifu_runtime.sticker_library.usage import StickerUsageRepository
 
 type AsyncCleanup = Callable[[], Awaitable[None]]
 
@@ -217,6 +219,7 @@ class RuntimeContainer:
             self.sticker_repository, StickerClassifier(self.providers.llm)
         )
         self.sticker_catalog = PresetStickerCatalog()
+        self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)
         self.external_channels = ExternalChannelService(
             self.external_channel_repository,
             self.conversation_repository,
