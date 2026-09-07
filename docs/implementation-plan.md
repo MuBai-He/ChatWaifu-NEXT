@@ -2511,7 +2511,7 @@ roadmap. Phase 13.4A remains paused; its lifecycle backlog does not replace the 
 - **17.4 — Shared jokes and adaptive recall (in progress):** 17.4A shared-joke association and recall
   were accepted on real WeChat and merged in PR #30. Delivery-backed sticker usage history is
   implemented in 17.4B-1 below; bounded learned-sticker repeat avoidance is implemented in
-  17.4B-2 with real-channel acceptance pending. Shared-joke/sticker binding remains pending.
+  17.4B-2 with owner WeChat acceptance completed. Shared-joke/sticker binding remains pending.
 
 Completing the owner-direct macOS text slices does not claim group support, other installed platforms,
 or the remaining image and sticker capabilities are accepted.
@@ -2761,7 +2761,7 @@ until QQ integration. This code is outside main and must not be counted as a rel
 ### Remaining Phase 17 sequence
 
 1. 17.4B-1: delivery-backed sticker usage history is implemented and verified on the native macOS desktop.
-2. 17.4B-2: bounded learned-sticker repeat avoidance is implemented below; real-channel acceptance pending.
+2. 17.4B-2: bounded learned-sticker repeat avoidance passed owner WeChat acceptance on 2026-09-07.
 3. Grounded shared-joke/sticker binding (proposed 17.4C; design not yet accepted).
 4. QQ adapter and native media acceptance, then revisit Draft PR #29.
 
@@ -2798,5 +2798,7 @@ Interruption now persists a cancellation fence before waiting for optional reply
 and recovery delivery publication both check that fence atomically. A completed model generation
 cannot resurrect a channel reply cancelled before its plan committed. Tests cover cancellation during
 history lookup and rejection of late publication after database reopen, plus scope, ordering and
-Runtime restart. Real-channel acceptance remains pending; no WeChat client was operated for this slice.
+Runtime restart. Owner WeChat repeat-avoidance acceptance passed on 2026-09-07: two consecutive
+requests received different eligible happy stickers, with two distinct current assets each confirmed
+delivered in one attempt. Codex only inspected Runtime records; it did not operate the WeChat client.
 Preset adaptation, preference learning, shared-joke binding and QQ remain separate follow-ups.

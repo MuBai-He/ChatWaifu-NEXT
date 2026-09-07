@@ -1,6 +1,6 @@
 # ADR 0045: Bounded repeat avoidance for equally eligible learned stickers
 
-- Status: Accepted; real-channel acceptance pending
+- Status: Accepted; owner WeChat repeat-avoidance acceptance completed
 - Date: 2026-09-07
 
 ## Context
@@ -65,4 +65,11 @@ acknowledge their text and image parts, and reconstruct the Runtime between roun
 equivalent choices alternate using durable delivery facts. A stop during history lookup cancels
 the old turn without publishing its image; a late completion after a durable cancel cannot create
 a delivery even after reopening the database. Existing usage deletion/reset and channel delivery
-regressions remain gates. These tests use controlled adapters; owner WeChat acceptance is pending.
+regressions remain gates. Cancellation/restart scenarios use controlled adapters.
+
+On 2026-09-07, the owner confirmed that two consecutive singing requests received different
+eligible happy stickers. Read-only Runtime evidence confirmed two distinct current learned assets,
+each acknowledged as delivered with attempt 1, at 08:51:06 and 08:51:23 Asia/Shanghai. This accepts
+real-channel repeat avoidance; it does not claim a new manual interruption test. Codex did not
+operate the WeChat client. Settings reconnection after a Runtime port change is tracked separately
+in issue #35.
