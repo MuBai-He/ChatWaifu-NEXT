@@ -29,7 +29,8 @@ turn under the same Runtime session ID.
 4. EOF, provider close, stream failure and teardown share one shielded cleanup task. Close has a
    2-second deadline. Cancelling an individual stop waiter does not abandon cleanup, and repeated
    stop calls join the same task. Closing rejects new admission and late provider events. An
-   admission already writing to storage is joined and cancelled through the admission port.
+   admission already writing to storage is retained in an owned task and joined/cancelled through
+   the admission port, even when its caller is cancelled before receiving the committed identity.
 5. Terminal writes use the coordinator's owned generation identities and the existing Runtime
    CAS. `session_closed` is observational: it must not terminate whichever generation happens to
    be active under the Runtime session ID when a delayed old provider close finishes.

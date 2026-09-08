@@ -1207,8 +1207,9 @@ async def test_commit_input_failure_fails_generation_and_idles_session(
         await container.stop()
 
 
+@pytest.mark.parametrize("cancel_admission", [False, True])
 async def test_closing_during_durable_admission_cancels_the_unregistered_turn(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel_admission: bool
 ) -> None:
     container = RuntimeContainer(create_cloud_settings(tmp_path))
     await container.start()
@@ -1240,11 +1241,18 @@ async def test_closing_during_durable_admission_cancels_the_unregistered_turn(
         starting = asyncio.create_task(bridge._handle_user_speaking_started())
         await asyncio.wait_for(admitted.wait(), 1)
         assert bridge.current_identity is None
-        closing = asyncio.create_task(bridge.coordinator.stop())
-        await asyncio.wait_for(flushed.wait(), 1)
-        assert not closing.done(), "closure must join the unfinished admission transaction"
-        release.set()
-        await asyncio.wait_for(asyncio.gather(starting, closing), 2)
+        if cancel_admission:
+            starting.cancel()
+            release.set()
+            with pytest.raises(asyncio.CancelledError):
+                await starting
+        else:
+            closing = asyncio.create_task(bridge.coordinator.stop())
+            await asyncio.wait_for(flushed.wait(), 1)
+            assert not closing.done(), "closure must join the unfinished admission transaction"
+            release.set()
+            await asyncio.wait_for(asyncio.gather(starting, closing), 2)
+        await bridge.cleanup()
         await bridge._handle_user_speaking_started()
         await bridge.cleanup()
 

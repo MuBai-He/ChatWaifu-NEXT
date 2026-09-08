@@ -266,6 +266,7 @@ class CloudRealtimeCoordinator:
         self._end_task: asyncio.Task[None] | None = None
         self._closing = False
         self._admission_lock = asyncio.Lock()
+        self._admission_task: asyncio.Task[VoiceTurnIdentity | None] | None = None
 
     @property
     def is_running(self) -> bool:
@@ -301,12 +302,28 @@ class CloudRealtimeCoordinator:
         async with self._admission_lock:
             if self._closing:
                 return None
-            identity = await admission.begin_utterance(self.session_id)
-            if self._closing:
-                await admission.cancel_utterance(identity, "cloud_session_closed_during_admission")
-                return None
-            self.admit_turn(identity.turn_id, identity.generation_id, identity.utterance_id)
-            return identity
+            self._admission_task = asyncio.create_task(
+                self._perform_admission(admission), name=f"cloud-admission-{self.session_id}"
+            )
+            try:
+                return await asyncio.shield(self._admission_task)
+            except asyncio.CancelledError:
+                # The transaction may already have committed. Preserve its returned
+                # identity and join cancellation through the same session cleanup.
+                await self._end_session("admission_cancelled")
+                raise
+
+    async def _perform_admission(
+        self, admission: RealtimeTurnAdmissionPort
+    ) -> VoiceTurnIdentity | None:
+        if self._closing:
+            return None
+        identity = await admission.begin_utterance(self.session_id)
+        if self._closing:
+            await admission.cancel_utterance(identity, "cloud_session_closed_during_admission")
+            return None
+        self.admit_turn(identity.turn_id, identity.generation_id, identity.utterance_id)
+        return identity
 
     def admit_turn(
         self, turn_id: UUID, generation_id: UUID, utterance_id: UUID | None = None
@@ -379,7 +396,10 @@ class CloudRealtimeCoordinator:
                 await self._media_sink.session_terminated()
         finally:
             try:
-                async with self._admission_lock:
+                try:
+                    if self._admission_task is not None:
+                        await asyncio.shield(self._admission_task)
+                finally:
                     await self.terminate_active_generation(reason=reason, terminal="cancelled")
             finally:
                 try:
