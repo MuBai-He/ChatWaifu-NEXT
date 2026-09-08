@@ -369,6 +369,7 @@ async def test_cancelled_socket_write_seals_connection_and_releases_lock(
         '{"type":"response.created","event_id":"bad","response":{"id":"no-owner"}}',
         "x" * (1_048_576 + 1),
     ],
+    ids=["invalid-json", "non-object", "unowned-response", "oversized-message"],
 )
 async def test_invalid_wire_fails_closed_without_payload_leak(
     connection: tuple[Wire, OpenAIRealtimeSession], raw: str
