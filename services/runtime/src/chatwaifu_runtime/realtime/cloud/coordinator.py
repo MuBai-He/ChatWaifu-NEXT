@@ -16,6 +16,7 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.errors import StructuredError
 
+from chatwaifu_runtime.realtime.admission import RealtimeTurnAdmissionPort
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
     CloudRealtimeSession,
@@ -36,8 +37,10 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     UserTranscriptEvent,
 )
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
+from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
 
 _LOGGER = logging.getLogger(__name__)
+SESSION_CLOSE_TIMEOUT_SECONDS = 2.0
 
 
 class RealtimeDomainSink(Protocol):
@@ -98,6 +101,8 @@ class RealtimeMediaSink(Protocol):
     """Sink for high-frequency normalized audio frames."""
 
     async def handle_audio_frame(self, frame: RealtimeOutputAudioFrame) -> None: ...
+
+    async def session_terminated(self) -> None: ...
 
 
 @dataclass(slots=True)
@@ -235,6 +240,9 @@ class InMemoryMediaSink(RealtimeMediaSink):
     async def handle_audio_frame(self, frame: RealtimeOutputAudioFrame) -> None:
         self.received_frames.append(frame)
 
+    async def session_terminated(self) -> None:
+        pass
+
 
 class CloudRealtimeCoordinator:
     """Coordinates lifecycle, event pumping, and normalization for a cloud realtime session."""
@@ -255,6 +263,10 @@ class CloudRealtimeCoordinator:
         self._media_sink = media_sink
         self._pump_task: asyncio.Task[None] | None = None
         self._is_running: bool = False
+        self._end_task: asyncio.Task[None] | None = None
+        self._closing = False
+        self._admission_lock = asyncio.Lock()
+        self._admission_task: asyncio.Task[VoiceTurnIdentity | None] | None = None
 
     @property
     def is_running(self) -> bool:
@@ -279,15 +291,51 @@ class CloudRealtimeCoordinator:
     def set_media_sink(self, media_sink: RealtimeMediaSink | None) -> None:
         self._media_sink = media_sink
 
+    @property
+    def is_closing(self) -> bool:
+        return self._closing
+
+    async def admit_utterance(
+        self, admission: RealtimeTurnAdmissionPort
+    ) -> VoiceTurnIdentity | None:
+        """Join in-flight admission before closing, including its durable cancellation."""
+        async with self._admission_lock:
+            if self._closing:
+                return None
+            self._admission_task = asyncio.create_task(
+                self._perform_admission(admission), name=f"cloud-admission-{self.session_id}"
+            )
+            try:
+                return await asyncio.shield(self._admission_task)
+            except asyncio.CancelledError:
+                # The transaction may already have committed. Preserve its returned
+                # identity and join cancellation through the same session cleanup.
+                await self._end_session("admission_cancelled")
+                raise
+
+    async def _perform_admission(
+        self, admission: RealtimeTurnAdmissionPort
+    ) -> VoiceTurnIdentity | None:
+        if self._closing:
+            return None
+        identity = await admission.begin_utterance(self.session_id)
+        if self._closing:
+            await admission.cancel_utterance(identity, "cloud_session_closed_during_admission")
+            return None
+        self.admit_turn(identity.turn_id, identity.generation_id, identity.utterance_id)
+        return identity
+
     def admit_turn(
         self, turn_id: UUID, generation_id: UUID, utterance_id: UUID | None = None
     ) -> None:
         """Register turn and generation in mirror when admitted by runtime."""
+        if self._closing:
+            raise RuntimeError("Cannot admit a turn on a closing cloud session")
         self._mirror.register_generation(generation_id, turn_id, utterance_id=utterance_id)
 
     def start(self) -> None:
         """Start background event pump task."""
-        if self._is_running:
+        if self._is_running or self._closing:
             return
         self._is_running = True
         self._pump_task = asyncio.create_task(
@@ -324,21 +372,44 @@ class CloudRealtimeCoordinator:
                     )
 
     async def stop(self) -> None:
-        """Stop background event pump and close underlying session."""
-        await self.terminate_active_generation(reason="coordinator_stopped", terminal="cancelled")
+        """Join one terminal cleanup; a closed provider session cannot be restarted."""
+        await self._end_session("coordinator_stopped")
+
+    async def _end_session(self, reason: str) -> None:
+        self._closing = True
         self._is_running = False
-        if self._pump_task is not None:
-            self._pump_task.cancel()
-            try:
-                await self._pump_task
-            except asyncio.CancelledError:
-                pass
-            self._pump_task = None
+        if self._end_task is None:
+            self._end_task = asyncio.create_task(
+                self._finish_session(reason, asyncio.current_task()),
+                name=f"cloud-session-close-{self.session_id}",
+            )
+        await asyncio.shield(self._end_task)
+
+    async def _finish_session(self, reason: str, initiator: asyncio.Task[object] | None) -> None:
+        # The closing flag fences dispatch/admission before any cleanup awaits.
+        pump = self._pump_task
+        if pump is not None and pump is not initiator:
+            pump.cancel()
+            await asyncio.gather(pump, return_exceptions=True)
         try:
-            await self._session.close()
-        except Exception:
-            _LOGGER.warning("Error closing session in coordinator.stop()", exc_info=True)
-        await self._domain_sink.session_closed(self.session_id, "coordinator_stopped")
+            if self._media_sink is not None:
+                await self._media_sink.session_terminated()
+        finally:
+            try:
+                try:
+                    if self._admission_task is not None:
+                        await asyncio.shield(self._admission_task)
+                finally:
+                    await self.terminate_active_generation(reason=reason, terminal="cancelled")
+            finally:
+                try:
+                    async with asyncio.timeout(SESSION_CLOSE_TIMEOUT_SECONDS):
+                        await self._session.close()
+                except Exception:
+                    _LOGGER.warning(
+                        "Cloud session close failed or timed out session_id=%s", self.session_id
+                    )
+                await self._domain_sink.session_closed(self.session_id, reason)
 
     async def _emit_diagnostic(
         self,
@@ -584,20 +655,28 @@ class CloudRealtimeCoordinator:
         await self._domain_sink.provider_error(self.session_id, structured)
         await self._domain_sink.session_degraded(self.session_id, code)
 
-    async def cancel_generation(self, generation_id: UUID, reason: str = "cancelled") -> None:
+    async def cancel_generation(
+        self, generation_id: UUID, reason: str = "cancelled", *, interrupt_provider: bool = True
+    ) -> None:
         """Cancel a generation, invalidating it in the mirror and interrupting the provider."""
+        if self._mirror.is_tombstoned(generation_id):
+            return
         turn_id = self._mirror.get_turn_id(generation_id)
         self._mirror.cancel_generation(generation_id)
         if turn_id is not None:
             await self._domain_sink.response_cancelled(
                 self.session_id, turn_id, generation_id, reason
             )
-        await self._session.interrupt(generation_id, reason)
+        if interrupt_provider:
+            await self._session.interrupt(generation_id, reason)
 
     async def _pump_loop(self) -> None:
         try:
             async for event in self._session.events():
                 await self.dispatch_event(event)
+                if not self._is_running:
+                    break
+            await self._end_session("provider_eof")
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -616,14 +695,12 @@ class CloudRealtimeCoordinator:
                 error=structured_error,
             )
             await self._domain_sink.provider_error(self.session_id, structured_error)
-            await self._domain_sink.session_closed(self.session_id, "pump_failed")
-            try:
-                await self._session.close()
-            except Exception:
-                pass
+            await self._end_session("pump_failed")
 
     async def dispatch_event(self, event: RealtimeProviderEvent) -> None:
         """Dispatch a single provider event through the mirror and normalizer."""
+        if self._closing:
+            return
         # 0. Session fence: every event must belong to this coordinator session.
         claimed_session = self._event_session_id(event)
         if claimed_session != self.session_id:
@@ -660,12 +737,7 @@ class CloudRealtimeCoordinator:
                 await self._domain_sink.session_degraded(self.session_id, event.reason)
 
             case SessionClosedEvent():
-                self._is_running = False
-                await self.terminate_active_generation(
-                    reason=f"session_closed: {event.reason}",
-                    terminal="cancelled",
-                )
-                await self._domain_sink.session_closed(self.session_id, event.reason)
+                await self._end_session(event.reason)
 
             case InputAudioCommittedEvent():
                 await self._domain_sink.input_audio_committed(self.session_id, event.turn_id)

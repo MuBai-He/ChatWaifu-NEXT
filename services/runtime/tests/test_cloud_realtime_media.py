@@ -26,6 +26,7 @@ from chatwaifu_runtime.realtime.admission import InMemoryTurnAdmission
 from chatwaifu_runtime.realtime.cloud.contracts import (
     AssistantTranscriptEvent,
     OutputAudioEvent,
+    RealtimeInputAudioFrame,
     RealtimeOutputAudioFrame,
     RealtimeSessionOpenRequest,
     RealtimeTranscriptCandidate,
@@ -246,7 +247,7 @@ async def test_fake_provider_script_execution() -> None:
 async def test_barge_in_invalidation_and_late_audio_drop() -> None:
     """User barge-in sequence:
 
-    Runtime Generation invalidation -> Provider interrupt -> InterruptionFrame -> late drop.
+    Runtime generation invalidation -> local playback flush -> provider interrupt -> late drop.
     """
     session_id = uuid4()
     admission = InMemoryTurnAdmission()
@@ -380,9 +381,14 @@ async def test_bounded_input_queue_drops_oldest_on_overflow() -> None:
         f4 = bridge._input_queue.get_nowait()
         f5 = bridge._input_queue.get_nowait()
 
+        assert isinstance(f3, RealtimeInputAudioFrame)
+        assert isinstance(f4, RealtimeInputAudioFrame)
+        assert isinstance(f5, RealtimeInputAudioFrame)
         assert f3.audio == b"chunk-3"
         assert f4.audio == b"chunk-4"
         assert f5.audio == b"chunk-5"
+        for _ in range(3):
+            bridge._input_queue.task_done()
 
     finally:
         await bridge.cleanup()

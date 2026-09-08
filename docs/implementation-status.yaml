@@ -1,6 +1,6 @@
 schema_version: "1.0"
-updated_at: "2026-09-07"
-current_phase: "17.4"
+updated_at: "2026-09-08"
+current_phase: "13.4A"
 next_phase: "17.4C"
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
@@ -467,10 +467,14 @@ phases:
       - Official protocol catalog registers cloud.egress_receipt and cloud.egress_blocked with synchronized Python/TypeScript schemas and contract tests
   - id: 13.4A
     name: cloud-realtime-hardening-and-turn
-    status: paused
+    status: lifecycle_hardening_implemented_real_provider_pending
     evidence:
       - Cloud Realtime foundation (13.0~13.3) is complete and tested on remote CI
-      - Real provider rollout and its lifecycle hardening remain paused while the owner prioritizes the Phase 17 messaging roadmap; completing 17.1C does not resume 13.4A
+      - Owner explicitly resumed Phase 13 on 2026-09-08 before returning to the remaining Phase 17.4C work
+      - Input audio and one generation-scoped commit barrier share a bounded FIFO; local playback flush precedes bounded provider interruption and cancelled old writes are joined before new admission
+      - EOF, stream errors, explicit closure and teardown join one shielded cleanup; late events and new input are sealed, and close cannot cancel a replacement bridge's generation
+      - Controlled transport tests cover queue pressure, pending output handoff, media deadlines and cancelled close waiters; SQLite integration tests cover closure during admission and replacement-session isolation
+      - Real provider adapters, automatic reconnect/context recovery and real microphone/network acceptance remain pending; current Cascade/Nene runtime configuration is unchanged
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending

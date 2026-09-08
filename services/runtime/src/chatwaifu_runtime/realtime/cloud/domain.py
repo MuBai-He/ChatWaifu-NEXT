@@ -158,11 +158,9 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             session_id,
             reason,
         )
-        await self._conversation.terminate_active_generation(
-            session_id,
-            reason=f"session_closed: {reason}",
-            terminal="cancelled",
-        )
+        # The coordinator terminates only generations owned by this provider session.
+        # A delayed close must never cancel a replacement bridge's new generation
+        # merely because both bridges share the same Runtime session_id.
 
     async def input_audio_committed(self, session_id: UUID, turn_id: UUID | None) -> None:
         _LOGGER.debug(

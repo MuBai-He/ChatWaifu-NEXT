@@ -324,7 +324,16 @@ type RealtimeProviderEvent = (
 
 
 class CloudRealtimeSession(Protocol):
-    """Active speech-to-speech session with a cloud provider."""
+    """Active speech-to-speech session with a cloud provider.
+
+    Operations must propagate cancellation and release their socket-write ownership.
+    The Runtime serializes input audio and commit, and joins cancelled input writes
+    before interrupting the old generation. ``interrupt`` must serialize provider
+    cancel/input-clear commands before returning, so subsequent sends cannot append
+    to the previous input buffer. Return does not imply a server acknowledgement.
+    A cancelled or timed-out write may have reached the network; a failed interrupt
+    therefore seals the session instead of admitting another turn on an uncertain buffer.
+    """
 
     session_id: UUID
     lineage: RealtimeSessionLineage
