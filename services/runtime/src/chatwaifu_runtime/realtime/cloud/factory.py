@@ -145,7 +145,10 @@ class RuntimeCloudRealtimeFactory:
                 exc_info=True,
             )
 
-        skills = extract_realtime_skills(self._skills_source)
+        capabilities = await self._backend.capabilities()
+        skills = (
+            extract_realtime_skills(self._skills_source) if capabilities.supports_tool_call else []
+        )
 
         intent = RealtimeSessionIntent(
             session_id=session_id,

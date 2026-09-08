@@ -1781,6 +1781,18 @@ memory context budget
 
 ## 13.2 Adapter 接口
 
+13.4B 交付首个真实 Provider 的服务端接入（[ADR 0047](adr/0047-openai-realtime-adapter.md)）：
+
+- OpenAI Realtime GA WebSocket 握手确认后才发送音频，模型与密钥显式配置。
+- 本地 VAD、按回合流式重采样、commit/response 排序、严格回复/输入转写关联。
+- 抢话与迟到事件隔离、有限缓冲与截止时间、断线收尾、脱敏错误和 usage。
+- 沿用角色/固定记忆上下文与持久化 egress gateway；不广告当前无法执行的 Skills。
+- 真实 loopback WebSocket + Runtime/SQLite 验证；公网模型、麦克风和原生收听仍待验收。
+
+[开发验收说明](testing/openai-realtime.md) 区分自动检查与真实语音验收。
+后续先补播放确认与新连接上下文恢复，再继续工具执行及模式/声线入口；不会把 Provider
+生成完成算作用户已完整听到。Phase 17.4C 保持待办。
+
 实现：
 
 ```text
