@@ -56,9 +56,11 @@ from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
 from chatwaifu_runtime.providers.tts_registry import TTS_PROVIDER_REGISTRATIONS
 from chatwaifu_runtime.realtime.admission import RuntimeRealtimeTurnAdmission
 from chatwaifu_runtime.realtime.cloud.context import CloudEgressGateway
+from chatwaifu_runtime.realtime.cloud.contracts import CloudRealtimeBackend
 from chatwaifu_runtime.realtime.cloud.factory import RuntimeCloudRealtimeFactory
 from chatwaifu_runtime.realtime.cloud.fake import FakeCloudRealtimeBackend
 from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
+from chatwaifu_runtime.realtime.cloud.openai import OpenAIRealtimeBackend
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
@@ -263,19 +265,17 @@ class RuntimeContainer:
             on_trigger=self.resources.touch,
         )
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
-        self.cloud_realtime_backend: FakeCloudRealtimeBackend | None = None
+        self.cloud_realtime_backend: CloudRealtimeBackend | None = None
         self.cloud_egress_gateway: CloudEgressGateway | None = None
         self.realtime_admission: RuntimeRealtimeTurnAdmission | None = None
         self.cloud_realtime_factory: RuntimeCloudRealtimeFactory | None = None
 
         if settings.realtime.connection_mode == "cloud_realtime":
-            if settings.realtime.cloud_backend != "fake":
-                raise ValueError(
-                    f"Unsupported cloud realtime backend: {settings.realtime.cloud_backend}. "
-                    "Phase 13.0-13.3 supports only 'fake'."
-                )
-
-            self.cloud_realtime_backend = FakeCloudRealtimeBackend()
+            self.cloud_realtime_backend = (
+                OpenAIRealtimeBackend(settings.realtime.openai)
+                if settings.realtime.cloud_backend == "openai"
+                else FakeCloudRealtimeBackend()
+            )
             self.cloud_egress_gateway = CloudEgressGateway(
                 policy_mode=settings.privacy.cloud_egress,
                 event_store=self.event_store,

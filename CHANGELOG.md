@@ -2,10 +2,18 @@
 
 ## Unreleased
 
+- Add an opt-in OpenAI Realtime GA server adapter with verified session configuration, streaming
+  PCM conversion, Runtime-owned turn identity, late-transcript correlation, bounded cancellation
+  and sanitized errors. Loopback WebSocket/SQLite acceptance is covered; public cloud voice and
+  native listening acceptance remain pending. See `docs/testing/openai-realtime.md`.
+
+- Consume event-sequence allocation results within one SQLite worker operation so interrupting
+  their delivery cannot strand a write cursor and reject the next event/outbox commit.
+
 - Harden cloud realtime turns: order input commits after queued audio, flush local playback
   before remote interruption, cancel stale input/output handoffs, and bound network operations.
   Close EOF/error sessions once, join in-flight admission, and prevent a delayed old-session
-  close from cancelling a replacement connection's turn. Real provider rollout remains pending.
+  close from cancelling a replacement connection's turn.
 
 - Reconnect an already-open desktop settings window when native Runtime restarts with a new
   address or token; cancel stale reads and preserve settings without replaying mutations.
