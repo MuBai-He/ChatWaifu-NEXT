@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-08"
-current_phase: "13.4A"
-next_phase: "17.4C"
+current_phase: "13.4B"
+next_phase: "13.7"
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -474,7 +474,17 @@ phases:
       - Input audio and one generation-scoped commit barrier share a bounded FIFO; local playback flush precedes bounded provider interruption and cancelled old writes are joined before new admission
       - EOF, stream errors, explicit closure and teardown join one shielded cleanup; late events and new input are sealed, and close cannot cancel a replacement bridge's generation
       - Controlled transport tests cover queue pressure, pending output handoff, media deadlines and cancelled close waiters; SQLite integration tests cover closure during admission and replacement-session isolation
-      - Real provider adapters, automatic reconnect/context recovery and real microphone/network acceptance remain pending; current Cascade/Nene runtime configuration is unchanged
+      - PR 37 merged 6a5a60d on 2026-09-08; the real provider adapter continues in 13.4B, while automatic reconnect/context recovery and real microphone/network acceptance remain pending
+  - id: 13.4B
+    name: openai-realtime-server-adapter
+    status: implemented_public_provider_acceptance_pending
+    evidence:
+      - OpenAI Realtime GA backend is opt-in through explicit Runtime model/key configuration; effective session handshake, local VAD, per-utterance PCM resampling and ordered commits preserve the existing domain contracts
+      - Echoed response metadata and bounded input-item correlation bind events to admitted generations; late transcription survives completion without moving to a newer turn; interrupted replies cannot produce new playback
+      - Socket and correlation limits, write deadlines, owned cleanup, sanitized errors and unavailable-tool filtering are covered by deterministic wire tests
+      - Real loopback WebSocket through RuntimeContainer and SQLite verifies a complete voice turn, late transcription, duplicate suppression, output PCM, mid-response disconnect, durable egress receipt and no persisted PCM; deny, ungranted ask and failed receipt persistence open zero sockets
+      - Local verification passed 1153 Python tests with 46 platform skips, including 46 adapter/wire cases; Ruff, Pyright, Web and desktop UI builds passed. An existing photo timeout wall-clock assertion failed once under concurrent build/type-check load and passed unchanged in isolation and the serial full run
+      - Public OpenAI access, native microphone/listening, playback acknowledgment, automatic reconnect/context recovery, cloud tool execution and mode/voice selection remain pending; the owner's running Cascade/Nene configuration is unchanged, and Phase 17.4C is still queued
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending

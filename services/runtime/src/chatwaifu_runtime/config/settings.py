@@ -131,12 +131,24 @@ class TtsConfig(BaseModel):
         return self.provider or self.default_provider
 
 
+class OpenAIRealtimeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # Explicit opt-in; never borrow a chat-model key or silently select a model.
+    model: str | None = Field(default=None, min_length=1, max_length=200)
+    api_key: SecretStr | None = None
+    voice: str = Field(default="marin", min_length=1, max_length=100)
+    transcription_model: str = Field(default="gpt-4o-mini-transcribe", min_length=1, max_length=200)
+    connect_timeout_seconds: float = Field(default=15, gt=0, le=60)
+
+
 class RealtimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     enabled: bool = True
     connection_mode: Literal["cascade", "cloud_realtime"] = "cascade"
-    cloud_backend: Literal["fake"] | None = None
+    cloud_backend: Literal["fake", "openai"] | None = None
+    openai: OpenAIRealtimeConfig = OpenAIRealtimeConfig()
     input_sample_rate: int = Field(default=16_000, ge=8_000, le=48_000)
     output_sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     vad_confidence: float = Field(default=0.7, ge=0, le=1)
@@ -148,11 +160,14 @@ class RealtimeConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_cloud_backend(self) -> Self:
-        if self.connection_mode == "cloud_realtime" and self.cloud_backend != "fake":
-            raise ValueError(
-                "When connection_mode is 'cloud_realtime', cloud_backend must be "
-                "explicitly set to 'fake' (Phase 13.0-13.3)."
-            )
+        if self.connection_mode == "cloud_realtime":
+            if self.cloud_backend is None:
+                raise ValueError("cloud_backend must be explicitly set to 'fake' or 'openai'")
+            if self.cloud_backend == "openai":
+                if not self.openai.model or not self.openai.model.strip():
+                    raise ValueError("realtime.openai.model must be explicitly configured")
+                if not self.openai.api_key or not self.openai.api_key.get_secret_value().strip():
+                    raise ValueError("realtime.openai.api_key must be configured on the server")
         return self
 
 
@@ -205,10 +220,11 @@ class Settings(BaseSettings):
         return self.storage.database_path or self.data_dir / "chatwaifu.db"
 
     def public_dict(self) -> dict[str, object]:
-        public = self.model_dump(mode="json", exclude={"security", "llm", "stt", "tts"})
+        public = self.model_dump(mode="json", exclude={"security", "llm", "stt", "tts", "realtime"})
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})
+        public["realtime"] = self.realtime.model_dump(mode="json", exclude={"openai": {"api_key"}})
         return public
 
 
