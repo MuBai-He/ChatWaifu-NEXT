@@ -55,6 +55,13 @@ WebSocket passes through the configured Runtime factory and SQLite, including la
 mid-response disconnect, terminal cleanup, egress receipts and absence of stored PCM. Deny, ungranted
 ask and failed audit persistence all produce zero connector calls.
 
+The first Linux CI pass also exposed a shared EventStore cancellation race: the SQLite worker
+could return an unconsumed `UPDATE ... RETURNING` cursor after its caller was cancelled. That
+statement could survive rollback and reject the next commit. Sequence allocation now consumes
+the result within one worker operation. A controlled handoff test reproduces the original error
+while retaining the abandoned result, then verifies cancellation, rollback, sequence reuse and
+the next event/outbox commit. This changes no schema or cancellation policy.
+
 ## Remaining Phase 13 work
 
 - Public OpenAI endpoint, microphone, listening and native avatar acceptance require separately

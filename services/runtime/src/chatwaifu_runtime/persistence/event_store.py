@@ -24,20 +24,23 @@ class EventStore:
     ) -> EventT:
         if event.session_id is None:
             raise ValueError("persisted Runtime events require a session_id")
-        cursor = await connection.execute(
-            """
+        # Consume RETURNING inside one SQLite worker operation. If cancellation
+        # interrupts cursor delivery, an unconsumed write statement can otherwise
+        # survive rollback and make the next transaction's commit fail.
+        rows = list(
+            await connection.execute_fetchall(
+                """
             UPDATE sessions
             SET next_sequence = next_sequence + 1, updated_at = ?
             WHERE session_id = ?
             RETURNING next_sequence - 1
             """,
-            (event.occurred_at.isoformat(), str(event.session_id)),
+                (event.occurred_at.isoformat(), str(event.session_id)),
+            )
         )
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is None:
+        if not rows:
             raise KeyError(f"unknown session {event.session_id}")
-        persisted = event.model_copy(update={"sequence": int(row[0])})
+        persisted = event.model_copy(update={"sequence": int(rows[0][0])})
         envelope_json = persisted.model_dump_json()
         payload = persisted.payload
         payload_json = (
