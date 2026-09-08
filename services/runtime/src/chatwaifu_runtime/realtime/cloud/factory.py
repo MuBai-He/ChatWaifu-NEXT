@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from chatwaifu_runtime.conversation.service import ConversationService
     from chatwaifu_runtime.eventing.hub import EventHub
     from chatwaifu_runtime.memory.service import MemoryService
+    from chatwaifu_runtime.playback.service import PlaybackService
     from chatwaifu_runtime.runtime_skills.registry import SkillRegistry
     from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
     from chatwaifu_runtime.sessions.service import SessionService
@@ -98,6 +99,7 @@ class RuntimeCloudRealtimeFactory:
             SkillRegistry | RuntimeSkillService | Sequence[SkillDefinition] | None
         ) = None,
         event_hub: EventHub | None = None,
+        playback: PlaybackService | None = None,
     ) -> None:
         self._backend = backend
         self._egress_gateway = egress_gateway
@@ -109,6 +111,7 @@ class RuntimeCloudRealtimeFactory:
         self._memory = memory
         self._skills_source = skills_source
         self._event_hub = event_hub
+        self._playback = playback
 
     async def create_bridge(self, session_id: UUID) -> CloudRealtimeMediaBridge:
         """Create and wire an authorized CloudRealtimeMediaBridge for session_id."""
@@ -166,14 +169,22 @@ class RuntimeCloudRealtimeFactory:
 
         domain_sink = RuntimeRealtimeDomainSink(
             self._conversation,
+            playback=self._playback,
             event_hub=self._event_hub,
             backend_id=self._backend.backend_id,
         )
 
-        return CloudRealtimeMediaBridge.create(
+        bridge = CloudRealtimeMediaBridge.create(
             session_id=session_id,
             backend_id=self._backend.backend_id,
             session=cloud_session,
             admission=self._admission,
             domain_sink=domain_sink,
+            playback=self._playback,
         )
+        if self._playback is not None:
+            token = self._playback.register_completion_listener(
+                session_id, bridge.coordinator.playback_completed
+            )
+            bridge.set_completion_listener_token(token)
+        return bridge

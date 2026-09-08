@@ -1,6 +1,6 @@
 schema_version: "1.0"
-updated_at: "2026-09-08"
-current_phase: "13.4B"
+updated_at: "2026-09-09"
+current_phase: "13.4C"
 next_phase: "13.7"
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
@@ -444,7 +444,7 @@ phases:
       - All 5 GitHub Actions CI workflows (Security CI, Web E2E & Boundaries, Web Product CI, Python multi-OS matrix, Desktop Product CI) pass remotely
   - id: 12.5.1
     name: runtime-security-and-concurrency-polish
-    status: completed_and_tested
+    status: implemented_automated_checks_passed_live_acceptance_pending
     evidence:
       - Runtime Capability token generation is strictly separated from admin_token, ensuring an ephemeral 32-byte process-scoped capability token even when admin_token is statically configured
       - WebSocket tickets enforce purpose claims (events vs audio vs admin_events), strict session_id claim binding for both events and audio, and origin binding; Guard rejects duplicate query parameters using parse_qsl() and propagates verified claims via ASGI scope state to eliminate parser differential vulnerabilities
@@ -456,7 +456,7 @@ phases:
       - Security CI documents accurate NLTK CVE-2026-81726 pathsec bypass risks and is backed by static AST inspection tests against banned model-artifact APIs
   - id: 13.3
     name: cloud-realtime-foundation
-    status: completed_and_tested
+    status: implemented_automated_checks_passed_live_acceptance_pending
     evidence:
       - Runtime-owned RealtimeTurnAdmission coordinates speech turn and generation lifecycle for voice interactions, allocating authoritative domain identities before audio frames or provider events are processed and strictly avoiding random UUID fallback in lower layers
       - RuntimeRealtimeDomainSink bridges normalized coordinator events into ConversationService CAS, user/assistant turns, outbox, and character kernel/memory post-turn boundaries
@@ -486,6 +486,21 @@ phases:
       - Local verification passed 1154 Python tests with 46 platform skips, including 46 adapter/wire cases and one new shared EventStore cancellation case; Ruff, Pyright, Web and desktop UI builds passed. An existing photo timeout wall-clock assertion failed once under concurrent build/type-check load and passed unchanged in isolation and the serial full run
       - Linux CI exposed an existing interruption race in EventStore sequence allocation; a controlled handoff reproduced the same SQLite commit error, and consuming RETURNING within one worker operation preserves cancellation, rollback, sequence reuse and the next event/outbox commit without depending on cursor garbage collection
       - Public OpenAI access, native microphone/listening, playback acknowledgment, automatic reconnect/context recovery, cloud tool execution and mode/voice selection remain pending; the owner's running Cascade/Nene configuration is unchanged, and Phase 17.4C is still queued
+  - id: 13.4C
+    name: cloud-playback-confirmation
+    status: implemented_automated_checks_passed_live_acceptance_pending
+    evidence:
+      - Phase 13.4C prerequisite bridges cloud realtime voice output to durable PlaybackService, ConversationService, and SpokenMemoryObserver under ADR 0048
+      - Separates provider production completion (response.done) from client playout completion; media sink flushes audio, finalizes whole-response duration in SQLite, and pushes ordered downstream buffered marker
+      - Order-independent dual-path join in PlaybackService joins duration, transcript (including empty ""), and client playback ACK at-most-once across all three arrival orders
+      - Coordinator and ConversationService own turn lifecycle via CAS transitions, while PlaybackService owns durable playback facts and registers completion listeners to confirm playout
+      - Spoken facts are recorded with playback commits; a repository-backed observer stages extraction, applies stable candidate identities, retries with bounded backoff and reconciles missed wakeups
+      - Interruption flushes downstream playback, tombstones the generation, rejects stale chunks/late ACKs via generation state guards, and discards unplayed whole-response segments without fabricating partial spoken prefixes
+      - Bounded missing-ACK cleanup with injectable clock/events prevents unclosed turns or leaked background tasks on client disconnect
+      - Retains full backward compatibility with Cascade voice mode where generations are completed before playback ACKs arrive
+      - Regression coverage includes delayed transcript joins, long audio deadlines, listener ownership, staged multi-candidate crash recovery, retry backoff, and memory reset during staged work
+      - Native/live desktop microphone capture and public OpenAI network access remain pending/unaccepted; automated verification runs against simulated backends and deterministic fixtures
+      - Phase 13.5 (tool bridge), Phase 13.6 (context sync), and Phase 13.7 (reconnect) remain in the Phase 13 roadmap; Phase 17.4C remains queued
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
@@ -512,7 +527,7 @@ phases:
       - Wire and lifecycle tests pass; the real macOS owner direct-text, bubble rendering, cancellation, crash recovery, and single-text fallback were accepted on 2026-09-05 in PR 15; installed Windows/Linux credential-store acceptance remains pending
   - id: 17.1A
     name: durable-multipart-channel-delivery
-    status: completed_and_tested
+    status: implemented_automated_checks_passed_live_acceptance_pending
     evidence:
       - ADR 0032 defines ChannelDeliveryPlan aggregate root and child ChannelDeliveryPart entities in SQLite
       - Independent ChannelDeliveryScheduler runs in the background decoupled from Weixin polling loop

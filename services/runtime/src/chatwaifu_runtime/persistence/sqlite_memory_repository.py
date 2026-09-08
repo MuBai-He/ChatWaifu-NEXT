@@ -219,6 +219,14 @@ class SQLiteMemoryRepository(MemoryRepository):
         )
         return _record_from_row(dict(row)) if row is not None else None
 
+    async def find_tombstone(self, namespace: str, normalized_text: str) -> MemoryRecord | None:
+        row = await self._database.fetchone(
+            _RECORD_SELECT + " WHERE record.namespace = ? AND record.normalized_text = ? "
+            "AND record.state = 'tombstoned' ORDER BY record.tombstoned_at DESC LIMIT 1",
+            (namespace, normalized_text),
+        )
+        return _record_from_row(dict(row)) if row is not None else None
+
     async def find_identity(
         self, namespace: str, subject_id: str, predicate: str
     ) -> list[MemoryRecord]:
@@ -226,6 +234,17 @@ class SQLiteMemoryRepository(MemoryRepository):
             _RECORD_SELECT + " WHERE record.namespace = ? AND record.subject_id = ? "
             "AND record.predicate = ? AND record.state = 'active' "
             "ORDER BY record.created_at DESC",
+            (namespace, subject_id, predicate),
+        )
+        return [_record_from_row(dict(row)) for row in rows]
+
+    async def find_tombstoned_identity(
+        self, namespace: str, subject_id: str, predicate: str
+    ) -> list[MemoryRecord]:
+        rows = await self._database.fetchall(
+            _RECORD_SELECT + " WHERE record.namespace = ? AND record.subject_id = ? "
+            "AND record.predicate = ? AND record.state = 'tombstoned' "
+            "ORDER BY record.tombstoned_at DESC",
             (namespace, subject_id, predicate),
         )
         return [_record_from_row(dict(row)) for row in rows]
@@ -324,6 +343,111 @@ class SQLiteMemoryRepository(MemoryRepository):
                     ),
                 )
 
+    async def save_proposal_and_record_atomically(
+        self,
+        *,
+        proposal: MemoryProposal,
+        record: MemoryRecord,
+        sources: Sequence[MemorySource],
+        supersede_target: UUID | None = None,
+    ) -> None:
+        if not sources:
+            raise ValueError("memory records require at least one source")
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                INSERT OR IGNORE INTO memory_proposals(
+                    proposal_id, operation, candidate_json, target_memory_id,
+                    evidence_event_ids_json, confidence, rationale, status,
+                    created_at, decided_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(proposal.proposal_id),
+                    proposal.operation,
+                    proposal.candidate.model_dump_json() if proposal.candidate else None,
+                    str(proposal.target_memory_id) if proposal.target_memory_id else None,
+                    json.dumps([str(item) for item in proposal.evidence_event_ids]),
+                    proposal.confidence,
+                    proposal.rationale,
+                    proposal.status,
+                    proposal.created_at.isoformat(),
+                    proposal.decided_at.isoformat() if proposal.decided_at else None,
+                ),
+            )
+            rec_cur = await connection.execute(
+                "SELECT 1 FROM memory_records WHERE memory_id = ?",
+                (str(record.memory_id),),
+            )
+            rec_exists = await rec_cur.fetchone() is not None
+            await rec_cur.close()
+
+            if not rec_exists:
+                if supersede_target is not None:
+                    await connection.execute(
+                        """
+                        UPDATE memory_records SET state = 'superseded', updated_at = ?
+                        WHERE memory_id = ? AND state = 'active'
+                        """,
+                        (record.created_at.isoformat(), str(supersede_target)),
+                    )
+                await connection.execute(
+                    """
+                    INSERT INTO memory_records(
+                        memory_id, namespace, kind, subject_id, predicate, value_json,
+                        text, normalized_text, search_terms, observed_at, valid_from,
+                        valid_to, confidence, importance, sensitivity, state,
+                        supersedes, pinned, created_at, updated_at, origin_proposal_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(record.memory_id),
+                        record.namespace,
+                        record.kind,
+                        record.subject_id,
+                        record.predicate,
+                        json.dumps(record.value, ensure_ascii=False),
+                        record.text,
+                        _normalize(record.text),
+                        _search_terms(record.text),
+                        record.observed_at.isoformat(),
+                        record.valid_from.isoformat() if record.valid_from else None,
+                        record.valid_to.isoformat() if record.valid_to else None,
+                        record.confidence,
+                        record.importance,
+                        record.sensitivity.value,
+                        record.state,
+                        str(record.supersedes) if record.supersedes else None,
+                        int(record.pinned),
+                        record.created_at.isoformat(),
+                        record.updated_at.isoformat(),
+                        str(record.origin_proposal_id) if record.origin_proposal_id else None,
+                    ),
+                )
+                for source in sources:
+                    await connection.execute(
+                        """
+                        INSERT OR IGNORE INTO memory_sources(
+                            source_id, memory_id, source_event_id, session_id,
+                            turn_id, source_kind, created_at, channel_attribution_json
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            str(source.source_id),
+                            str(source.memory_id),
+                            str(source.source_event_id),
+                            str(source.session_id),
+                            str(source.turn_id) if source.turn_id else None,
+                            source.source_kind,
+                            source.created_at.isoformat(),
+                            (
+                                source.channel_attribution.model_dump_json()
+                                if source.channel_attribution is not None
+                                else None
+                            ),
+                        ),
+                    )
+
     async def tombstone(self, memory_id: UUID, changed_at: datetime) -> bool:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
@@ -354,7 +478,7 @@ class SQLiteMemoryRepository(MemoryRepository):
     async def save_proposal(self, proposal: MemoryProposal) -> None:
         await self._execute_write(
             """
-            INSERT INTO memory_proposals(
+            INSERT OR IGNORE INTO memory_proposals(
                 proposal_id, operation, candidate_json, target_memory_id,
                 evidence_event_ids_json, confidence, rationale, status,
                 created_at, decided_at

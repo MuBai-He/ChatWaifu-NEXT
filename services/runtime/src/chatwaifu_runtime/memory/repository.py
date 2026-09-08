@@ -77,7 +77,13 @@ class MemoryRepository(Protocol):
 
     async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None: ...
 
+    async def find_tombstone(self, namespace: str, normalized_text: str) -> MemoryRecord | None: ...
+
     async def find_identity(
+        self, namespace: str, subject_id: str, predicate: str
+    ) -> list[MemoryRecord]: ...
+
+    async def find_tombstoned_identity(
         self, namespace: str, subject_id: str, predicate: str
     ) -> list[MemoryRecord]: ...
 
@@ -90,6 +96,15 @@ class MemoryRepository(Protocol):
         record: MemoryRecord,
         sources: Sequence[MemorySource],
         *,
+        supersede_target: UUID | None = None,
+    ) -> None: ...
+
+    async def save_proposal_and_record_atomically(
+        self,
+        *,
+        proposal: MemoryProposal,
+        record: MemoryRecord,
+        sources: Sequence[MemorySource],
         supersede_target: UUID | None = None,
     ) -> None: ...
 
