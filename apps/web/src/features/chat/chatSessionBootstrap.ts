@@ -35,19 +35,29 @@ export type RuntimeSessionBootstrapResult = Pick<
 
 export async function bootstrapRuntimeSession(
   storage: Pick<Storage, "getItem" | "setItem"> = localStorage,
+  signal?: AbortSignal,
 ): Promise<RuntimeSessionBootstrapResult> {
   const [health, characters] = await Promise.all([
-    getHealth(),
-    getCharacters(),
+    getHealth(signal),
+    getCharacters(signal),
   ]);
+  signal?.throwIfAborted();
   const character = characters[0];
   if (!character) throw new Error("没有安装角色 manifest。");
 
   const saved = storage.getItem(CHAT_SESSION_STORAGE_KEY);
-  let session = saved ? await getSession(saved).catch(() => null) : null;
+  let session = saved
+    ? await getSession(saved, signal).catch(() => {
+        signal?.throwIfAborted();
+        // Preserve existing recovery behavior for an unavailable saved session.
+        return null;
+      })
+    : null;
+  signal?.throwIfAborted();
   if (!session || session.state !== "ready") {
-    session = await createSession(character.character_id);
+    session = await createSession(character.character_id, signal);
   }
+  signal?.throwIfAborted();
   storage.setItem(CHAT_SESSION_STORAGE_KEY, session.session_id);
   return { health, character, sessionId: session.session_id };
 }

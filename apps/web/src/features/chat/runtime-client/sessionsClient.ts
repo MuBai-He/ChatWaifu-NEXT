@@ -28,17 +28,23 @@ const ttsSelectionSchema = z.object({
 
 export async function createSession(
   characterId: string,
+  signal?: AbortSignal,
 ): Promise<SessionSnapshot> {
   return requestRuntime("/v1/sessions", runtimeParser(parseSessionSnapshot), {
+    signal,
     method: "POST",
     body: JSON.stringify({ character_id: characterId }),
   });
 }
 
-export async function getSession(sessionId: string): Promise<SessionSnapshot> {
+export async function getSession(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<SessionSnapshot> {
   return requestRuntime(
     `/v1/sessions/${sessionId}`,
     runtimeParser(parseSessionSnapshot),
+    { signal },
   );
 }
 

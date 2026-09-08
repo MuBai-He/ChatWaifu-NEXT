@@ -12,11 +12,14 @@ const charactersResponseSchema = z.object({
   items: z.array(characterProfileSchema),
 });
 
-export async function getHealth(): Promise<RuntimeHealth> {
-  return requestRuntime("/v1/runtime/health", runtimeHealthSchema);
+export async function getHealth(signal?: AbortSignal): Promise<RuntimeHealth> {
+  return requestRuntime("/v1/runtime/health", runtimeHealthSchema, { signal });
 }
 
-export async function getCharacters(): Promise<CharacterProfile[]> {
-  return (await requestRuntime("/v1/characters", charactersResponseSchema))
-    .items;
+export async function getCharacters(
+  signal?: AbortSignal,
+): Promise<CharacterProfile[]> {
+  return (
+    await requestRuntime("/v1/characters", charactersResponseSchema, { signal })
+  ).items;
 }

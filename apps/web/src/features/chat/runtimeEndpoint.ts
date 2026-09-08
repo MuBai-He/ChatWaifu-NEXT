@@ -22,6 +22,7 @@ const statusEvent = "desktop-runtime-status-changed";
 // leaves the desktop session permanently offline even when native startup later
 // reaches ready. The final 5s is only for delivery of the native ready event.
 export const DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS = 455_000;
+let connectionRevision = 0;
 let cachedConnection: RuntimeConnection | null = null;
 let pendingConnectionResolution: Promise<RuntimeConnection> | null = null;
 
@@ -59,11 +60,13 @@ export async function resolveRuntimeConnection(
   if (!forceRefresh && cachedConnection) return cachedConnection;
   if (!forceRefresh && pendingConnectionResolution)
     return pendingConnectionResolution;
+  const revision = ++connectionRevision;
   const resolution = resolveDesktopRuntimeConnection();
   pendingConnectionResolution = resolution;
   try {
-    cachedConnection = await resolution;
-    return cachedConnection;
+    const connection = await resolution;
+    if (revision === connectionRevision) cachedConnection = connection;
+    return connection;
   } finally {
     if (pendingConnectionResolution === resolution)
       pendingConnectionResolution = null;
@@ -166,9 +169,46 @@ export async function readDesktopRuntimeStatus(): Promise<DesktopRuntimeStatus |
   return invoke<DesktopRuntimeStatus>("get_runtime_status");
 }
 
+/** Observe the native supervisor without acquiring media ownership. Subscribe
+ * before reading its snapshot so a late snapshot cannot undo a newer event. */
+export async function observeDesktopRuntime(
+  onStatus: (status: DesktopRuntimeStatus) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const { listen } = await import("@tauri-apps/api/event");
+  if (signal.aborted) return;
+  let eventRevision = 0;
+  const deliver = (status: DesktopRuntimeStatus) => {
+    if (signal.aborted) return;
+    ++connectionRevision;
+    cachedConnection = null;
+    pendingConnectionResolution = null;
+    cachedConnection = connectionFrom(status);
+    onStatus(status);
+  };
+  const stop = await listen<DesktopRuntimeStatus>(statusEvent, (event) => {
+    ++eventRevision;
+    deliver(event.payload);
+  });
+  if (signal.aborted) {
+    stop();
+    return;
+  }
+  signal.addEventListener("abort", stop, { once: true });
+  const revision = eventRevision;
+  try {
+    const status = await readDesktopRuntimeStatus();
+    if (status && revision === eventRevision) deliver(status);
+  } catch (error) {
+    if (!signal.aborted && revision === eventRevision) throw error;
+  }
+}
+
 export async function restartDesktopRuntime(): Promise<DesktopRuntimeStatus | null> {
   if (!isDesktopHost()) return null;
+  ++connectionRevision;
   cachedConnection = null;
+  pendingConnectionResolution = null;
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DesktopRuntimeStatus>("restart_runtime");
 }
