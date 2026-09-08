@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   acquireWsTicket,
+  observeDesktopRuntime,
+  resolveRuntimeConnection,
   DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS,
   resolveRuntimeUrl,
   runtimeFetchWithConnection,
@@ -56,6 +58,76 @@ describe("desktop Runtime endpoint", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+  });
+
+  it("keeps a newer event when the initial native snapshot arrives late", async () => {
+    let finish!: (status: DesktopRuntimeStatus) => void;
+    nativeMocks.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const controller = new AbortController();
+    const receive = vi.fn();
+    const observing = observeDesktopRuntime(receive, controller.signal);
+    await vi.waitFor(() => expect(nativeMocks.invoke).toHaveBeenCalledOnce());
+    const ready: DesktopRuntimeStatus = {
+      ...starting,
+      state: "ready",
+      runtime_url: "http://127.0.0.1:2222",
+      token: "new",
+    };
+    nativeMocks.statusListener?.({ payload: ready });
+    finish(starting);
+    await observing;
+    expect(receive).toHaveBeenCalledExactlyOnceWith(ready);
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    await runtimeFetchWithConnection(
+      await resolveRuntimeConnection(),
+      "/v1/runtime/health",
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "http://127.0.0.1:2222/v1/runtime/health",
+    );
+    expect(
+      new Headers(fetchMock.mock.calls[0][1]?.headers).get("Authorization"),
+    ).toBe("Bearer new");
+    controller.abort();
+    expect(nativeMocks.unlisten).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not cache an old resolution after a newer refresh completes", async () => {
+    let finish!: (status: DesktopRuntimeStatus) => void;
+    nativeMocks.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const old = resolveRuntimeConnection(true);
+    await vi.waitFor(() => expect(nativeMocks.invoke).toHaveBeenCalledOnce());
+    nativeMocks.invoke.mockResolvedValueOnce({
+      ...starting,
+      state: "ready",
+      runtime_url: "http://127.0.0.1:2222",
+      token: "new",
+    });
+    await resolveRuntimeConnection(true);
+    finish({
+      ...starting,
+      state: "ready",
+      runtime_url: "http://127.0.0.1:1111",
+      token: "old",
+    });
+    await old;
+    expect((await resolveRuntimeConnection()).baseUrl).toBe(
+      "http://127.0.0.1:2222",
+    );
   });
 
   it("waits beyond the native Worker, Runtime, and supervisor startup budgets", () => {
