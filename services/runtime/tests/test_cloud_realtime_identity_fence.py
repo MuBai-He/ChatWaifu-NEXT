@@ -51,9 +51,13 @@ from chatwaifu_runtime.realtime.cloud.coordinator import (
     InMemoryDomainSink,
 )
 from chatwaifu_runtime.realtime.cloud.fake import FakeCloudRealtimeSession
+from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
+from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
 from pipecat.frames.frames import (
+    Frame,
     InputAudioRawFrame,
+    InterruptionFrame,
     StartFrame,
     VADUserStartedSpeakingFrame,
     VADUserStoppedSpeakingFrame,
@@ -988,6 +992,8 @@ async def test_fatal_bridge_refuses_second_admission(tmp_path: Path) -> None:
         assert identity_a is not None
 
         fake_session = bridge.coordinator.session
+        send_task = bridge._send_task
+        assert send_task is not None
         with patch.object(
             fake_session, "send_audio", new=AsyncMock(side_effect=RuntimeError("uplink down"))
         ):
@@ -1012,11 +1018,10 @@ async def test_fatal_bridge_refuses_second_admission(tmp_path: Path) -> None:
         assert gen_rows[0]["state"] == "failed"
 
         # D: the sender loop exited and the queue is drained.
-        send_task = bridge._send_task
-        assert send_task is not None
-        await asyncio.wait_for(asyncio.shield(send_task), timeout=5)
+        await asyncio.wait_for(asyncio.gather(send_task, return_exceptions=True), timeout=5)
         assert send_task.done()
         assert bridge._input_queue.empty()
+        await bridge.cleanup()
     finally:
         await container.stop()
 
@@ -1039,6 +1044,7 @@ async def test_superseded_queued_audio_never_reaches_provider(tmp_path: Path) ->
         gate: asyncio.Event = asyncio.Event()
         entered: asyncio.Event = asyncio.Event()
         sent: list[int] = []
+        cancelled = asyncio.Event()
         calls = 0
 
         async def gated_send(frame: RealtimeInputAudioFrame) -> None:
@@ -1046,7 +1052,10 @@ async def test_superseded_queued_audio_never_reaches_provider(tmp_path: Path) ->
             calls += 1
             if calls == 1:
                 entered.set()
-                await gate.wait()
+                try:
+                    await gate.wait()
+                finally:
+                    cancelled.set()
             sent.append(frame.sequence)
 
         fake_session = bridge.coordinator.session
@@ -1062,7 +1071,9 @@ async def test_superseded_queued_audio_never_reaches_provider(tmp_path: Path) ->
                 InputAudioRawFrame(audio=b"\x02\x00" * 160, sample_rate=16_000, num_channels=1),
                 FrameDirection.DOWNSTREAM,
             )
-            # Barge-in cancels A and admits B; B1 queues behind A2.
+            # A's queued commit must also be removed before B is admitted.
+            await bridge.process_frame(VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+            # Barge-in cancels the in-flight A1 and drains both A2 and its commit.
             await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
             identity_b = bridge.current_identity
             assert identity_b is not None
@@ -1074,8 +1085,12 @@ async def test_superseded_queued_audio_never_reaches_provider(tmp_path: Path) ->
             gate.set()
             await asyncio.wait_for(bridge._input_queue.join(), timeout=5)
 
-        # A1 was already in flight; stale A2 was fenced; live B1 was delivered.
-        assert sent == [1, 3]
+        # Even the blocked A1 cannot resume into B's provider input buffer.
+        assert cancelled.is_set()
+        assert sent == [3]
+        assert isinstance(fake_session, FakeCloudRealtimeSession)
+        assert fake_session.commit_calls == 0
+        await bridge.cleanup()
     finally:
         await container.stop()
 
@@ -1173,6 +1188,7 @@ async def test_commit_input_failure_fails_generation_and_idles_session(
             new=AsyncMock(side_effect=RuntimeError("commit down")),
         ):
             await bridge.process_frame(VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+            await asyncio.wait_for(bridge._input_queue.join(), timeout=5)
 
         gen_row = await container.database.fetchone(
             "SELECT state FROM generations WHERE generation_id = ?",
@@ -1186,7 +1202,144 @@ async def test_commit_input_failure_fails_generation_and_idles_session(
         )
         assert sess_row is not None
         assert sess_row["conversation_state"] == "idle"
+        await bridge.cleanup()
     finally:
+        await container.stop()
+
+
+async def test_closing_during_durable_admission_cancels_the_unregistered_turn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(create_cloud_settings(tmp_path))
+    await container.start()
+    bridge: CloudRealtimeMediaBridge | None = None
+    starting: asyncio.Task[None] | None = None
+    closing: asyncio.Task[None] | None = None
+    release = asyncio.Event()
+    try:
+        session = await container.sessions.create_session("default")
+        assert container.cloud_realtime_factory is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        admission = bridge._admission
+        assert admission is not None
+        original_begin = admission.begin_utterance
+        admitted, flushed = asyncio.Event(), asyncio.Event()
+
+        async def begin(session_id: UUID) -> VoiceTurnIdentity:
+            identity = await original_begin(session_id)
+            admitted.set()  # SQLite generation exists; the mirror has not seen it yet.
+            await release.wait()
+            return identity
+
+        async def push(frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM) -> None:
+            if isinstance(frame, InterruptionFrame):
+                flushed.set()
+
+        monkeypatch.setattr(admission, "begin_utterance", begin)
+        bridge.push_frame = push
+        starting = asyncio.create_task(bridge._handle_user_speaking_started())
+        await asyncio.wait_for(admitted.wait(), 1)
+        assert bridge.current_identity is None
+        closing = asyncio.create_task(bridge.coordinator.stop())
+        await asyncio.wait_for(flushed.wait(), 1)
+        assert not closing.done(), "closure must join the unfinished admission transaction"
+        release.set()
+        await asyncio.wait_for(asyncio.gather(starting, closing), 2)
+        await bridge._handle_user_speaking_started()
+        await bridge.cleanup()
+
+        generations = await container.database.fetchall(
+            "SELECT state FROM generations WHERE session_id = ?", (str(session.session_id),)
+        )
+        assert [row["state"] for row in generations] == ["cancelled"]
+        session_row = await container.database.fetchone(
+            "SELECT conversation_state FROM sessions WHERE session_id = ?",
+            (str(session.session_id),),
+        )
+        assert session_row is not None
+        assert session_row["conversation_state"] == "idle"
+        terminal_events = await container.database.fetchall(
+            "SELECT event_id FROM events "
+            "WHERE session_id = ? AND event_type = 'assistant.generation_cancelled'",
+            (str(session.session_id),),
+        )
+        assert len(terminal_events) == 1
+        assert bridge.current_identity is None
+    finally:
+        release.set()
+        if starting is not None:
+            await asyncio.gather(starting, return_exceptions=True)
+        if closing is not None:
+            await asyncio.gather(closing, return_exceptions=True)
+        if bridge is not None:
+            await bridge.cleanup()
+        await container.stop()
+
+
+async def test_old_session_close_cannot_cancel_replacement_session_turn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(create_cloud_settings(tmp_path))
+    await container.start()
+    bridges: list[CloudRealtimeMediaBridge] = []
+    closing: asyncio.Task[None] | None = None
+    entered, release = asyncio.Event(), asyncio.Event()
+    try:
+        session = await container.sessions.create_session("default")
+        factory = container.cloud_realtime_factory
+        assert factory is not None
+        old = await factory.create_bridge(session.session_id)
+        bridges.append(old)
+        old.push_frame = AsyncMock()
+        await old._handle_user_speaking_started()
+        old_identity = old.current_identity
+        assert old_identity is not None
+        original_close = old.coordinator.session.close
+
+        async def close() -> None:
+            entered.set()
+            await release.wait()
+            await original_close()
+
+        monkeypatch.setattr(old.coordinator.session, "close", close)
+        closing = asyncio.create_task(old.coordinator.stop())
+        await asyncio.wait_for(entered.wait(), 1)
+        new = await factory.create_bridge(session.session_id)
+        bridges.append(new)
+        new.push_frame = AsyncMock()
+        await new._handle_user_speaking_started()
+        new_identity = new.current_identity
+        assert new_identity is not None
+        release.set()
+        await asyncio.wait_for(closing, 1)
+
+        old_result = await container.conversation_repository.generation_result(
+            old_identity.generation_id
+        )
+        new_result = await container.conversation_repository.generation_result(
+            new_identity.generation_id
+        )
+        assert old_result is not None and old_result.state == "cancelled"
+        assert new_result is not None and new_result.state == "running"
+        assert (
+            container.conversation.active_generation_id(session.session_id)
+            == new_identity.generation_id
+        )
+        cancelled = await container.database.fetchall(
+            "SELECT envelope_json FROM events WHERE session_id = ? "
+            "AND event_type = 'assistant.generation_cancelled'",
+            (str(session.session_id),),
+        )
+        assert len(cancelled) == 1
+        assert json.loads(str(cancelled[0]["envelope_json"]))["generation_id"] == str(
+            old_identity.generation_id
+        )
+    finally:
+        release.set()
+        if closing is not None:
+            await asyncio.gather(closing, return_exceptions=True)
+        for bridge in bridges:
+            await bridge.cleanup()
         await container.stop()
 
 

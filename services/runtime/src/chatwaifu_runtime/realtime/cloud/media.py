@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from pipecat.frames.frames import (
@@ -44,6 +45,12 @@ from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
 from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
 
 _LOGGER = logging.getLogger(__name__)
+MEDIA_OPERATION_TIMEOUT_SECONDS = 5.0
+
+
+@dataclass(frozen=True, slots=True)
+class _InputCommit:
+    generation_id: UUID
 
 
 class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
@@ -52,8 +59,8 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
     Invariants enforced:
     1. Input audio is bounded in a queue with oldest-frame drop backpressure.
     2. Raw PCM is never forwarded to domain sinks or EventStore.
-    3. User barge-in sequence: Runtime generation invalidated -> Provider interrupt
-       -> InterruptionFrame downstream -> Late audio dropped.
+    3. User barge-in invalidates Runtime generation and flushes local playback before
+       bounded provider interruption; late audio is dropped.
     4. Teardown of WebRTC pipeline closes provider session.
     """
 
@@ -76,13 +83,20 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._channels: int = channels
         self._input_queue_capacity: int = input_queue_capacity
 
-        self._input_queue: asyncio.Queue[RealtimeInputAudioFrame] = asyncio.Queue(
-            maxsize=input_queue_capacity
+        if input_queue_capacity < 1:
+            raise ValueError("input queue capacity must be positive")
+        # Reserve one slot for the commit barrier; audio pressure cannot evict it.
+        self._input_queue: asyncio.Queue[RealtimeInputAudioFrame | _InputCommit] = asyncio.Queue(
+            maxsize=input_queue_capacity + 1
         )
+        self._commit_generation_id: UUID | None = None
         self._input_sequence: int = 0
         self._input_pts_ms: int = 0
         self._dropped_input_frames: int = 0
         self._send_task: asyncio.Task[None] | None = None
+        self._output_task: asyncio.Task[None] | None = None
+        self._output_lock = asyncio.Lock()
+        self._turn_lock = asyncio.Lock()
         self._started: bool = False
         self._is_torn_down: bool = False
         self._media_failure_reported: bool = False
@@ -173,12 +187,13 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             await self.push_frame(frame, direction)
 
     def _ensure_started(self) -> None:
-        if self._started:
+        if self._is_torn_down or self._fatal_media_failure or self._coordinator.is_closing:
             return
         self._ensure_task_manager()
-        self._started = True
-        self._coordinator.start()
-        if self._send_task is None:
+        if not self._started:
+            self._started = True
+            self._coordinator.start()
+        if self._send_task is None or self._send_task.done():
             self._send_task = self.create_task(
                 self._send_audio_loop(),
                 name=f"cloud-audio-sender-{str(self.session_id)[:8]}",
@@ -186,11 +201,13 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
 
     def _handle_input_audio(self, frame: InputAudioRawFrame) -> None:
         self._ensure_started()
-        if self._fatal_media_failure:
+        if self._fatal_media_failure or self._is_torn_down or self._coordinator.is_closing:
             _LOGGER.debug(
                 "Dropping input audio for session %s: bridge is fatally failed",
                 self.session_id,
             )
+            return
+        if self._commit_generation_id is not None:
             return
         self._input_sequence += 1
 
@@ -214,7 +231,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             is_final=False,
         )
 
-        if self._input_queue.full():
+        if self._input_queue.qsize() >= self._input_queue_capacity:
             try:
                 self._input_queue.get_nowait()
                 self._input_queue.task_done()
@@ -233,11 +250,15 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             self._dropped_input_frames += 1
 
     async def _handle_user_speaking_started(self) -> None:
+        async with self._turn_lock:
+            await self._begin_utterance()
+
+    async def _begin_utterance(self) -> None:
         """Enforce barge-in order:
 
         1. Runtime Generation invalidation (in mirror & domain sink)
-        2. Provider interrupt signal
-        3. Transport output queue cleared (InterruptionFrame)
+        2. Transport output queue cleared (InterruptionFrame)
+        3. Old input drained and provider interrupt call completed within a deadline
         4. Late audio frames discarded by tombstone fence.
         """
         if self._fatal_media_failure:
@@ -247,30 +268,64 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 self.session_id,
             )
             return
+        if self._is_torn_down or self._coordinator.is_closing:
+            return
         active_gen_id = self._coordinator.mirror.active_generation_id
         if active_gen_id is not None:
-            _LOGGER.info(
-                "Barge-in detected: cancelling active generation %s for session %s",
-                active_gen_id,
-                self.session_id,
+            await self._coordinator.cancel_generation(
+                active_gen_id, reason="user_barge_in", interrupt_provider=False
             )
-            await self._coordinator.cancel_generation(active_gen_id, reason="user_barge_in")
-            await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
-
+        if active_gen_id is not None or self._current_identity is not None:
+            # Local playback must stop even when the provider socket is blocked.
+            # Also flush audio buffered after model completion (mirror no longer active).
+            await self._flush_output()
+        await self._cancel_sender()
+        self._drain_input_queue()
+        if active_gen_id is not None:
+            try:
+                async with asyncio.timeout(MEDIA_OPERATION_TIMEOUT_SECONDS):
+                    await self._coordinator.session.interrupt(active_gen_id, "user_barge_in")
+            except Exception as error:
+                await self._fail_active_media_operation("media_interrupt_failed", error)
+                return
+        if self._fatal_media_failure or self._is_torn_down or self._coordinator.is_closing:
+            return
+        self._commit_generation_id = None
         if self._admission is not None:
-            identity = await self._admission.begin_utterance(self.session_id)
+            identity = await self._coordinator.admit_utterance(self._admission)
+            if identity is None:
+                return
             self._current_identity = identity
-            self._coordinator.admit_turn(
-                turn_id=identity.turn_id,
-                generation_id=identity.generation_id,
-                utterance_id=identity.utterance_id,
-            )
             _LOGGER.debug(
                 "Realtime turn admitted via admission port for session %s: gen=%s, turn=%s",
                 self.session_id,
                 identity.generation_id,
                 identity.turn_id,
             )
+
+        self._ensure_started()
+
+    async def _cancel_sender(self) -> None:
+        sender = self._send_task
+        if sender is not None and sender is not asyncio.current_task():
+            sender.cancel()
+            await asyncio.gather(sender, return_exceptions=True)
+            if self._send_task is sender:
+                self._send_task = None
+
+    async def session_terminated(self) -> None:
+        """Seal this bridge on EOF/close/error; reconnect requires a fresh bridge."""
+        self._fatal_media_failure = True
+        self._drain_input_queue()
+        await self._flush_output()
+        await self._cancel_sender()
+
+    async def _flush_output(self) -> None:
+        output = self._output_task
+        if output is not None:
+            output.cancel()
+            await asyncio.gather(output, return_exceptions=True)
+        await self.push_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
 
     def _drain_input_queue(self) -> None:
         """Drop all queued but unsent input frames after a fatal failure."""
@@ -318,7 +373,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             )
         self._drain_input_queue()
         try:
-            await self._coordinator.session.close()
+            await self._coordinator.stop()
         except Exception:
             _LOGGER.debug(
                 "Error closing cloud session %s after media failure",
@@ -328,17 +383,20 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         return True
 
     async def _handle_user_speaking_stopped(self) -> None:
-        try:
-            await self._coordinator.session.commit_input()
-        except Exception as error:
-            _LOGGER.warning(
-                "Error committing input on session %s",
-                self.session_id,
-                exc_info=True,
-            )
-            await self._fail_active_media_operation("media_commit_failed", error)
+        generation_id = self._coordinator.mirror.active_generation_id
+        if (
+            self._fatal_media_failure
+            or self._is_torn_down
+            or self._coordinator.is_closing
+            or generation_id is None
+            or self._commit_generation_id == generation_id
+        ):
+            return
+        self._commit_generation_id = generation_id
+        # Same FIFO as audio: stop notification never overtakes accepted PCM.
+        self._input_queue.put_nowait(_InputCommit(generation_id))
 
-    def _is_frame_sendable(self, frame: RealtimeInputAudioFrame) -> bool:
+    def _is_frame_sendable(self, frame: RealtimeInputAudioFrame | _InputCommit) -> bool:
         """Generation fence for outbound input audio.
 
         Only the currently active, non-tombstoned generation may reach the
@@ -358,7 +416,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 frame.generation_id,
             )
             return False
-        if frame.generation_id != mirror.current_generation_id():
+        if not mirror.is_active(frame.generation_id):
             _LOGGER.debug(
                 "Dropping input audio for superseded generation %s",
                 frame.generation_id,
@@ -375,7 +433,11 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 try:
                     if self._fatal_media_failure or not self._is_frame_sendable(frame):
                         continue
-                    await self._coordinator.session.send_audio(frame)
+                    async with asyncio.timeout(MEDIA_OPERATION_TIMEOUT_SECONDS):
+                        if isinstance(frame, _InputCommit):
+                            await self._coordinator.session.commit_input()
+                        else:
+                            await self._coordinator.session.send_audio(frame)
                 except asyncio.CancelledError:
                     raise
                 except Exception as error:
@@ -384,24 +446,52 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                         self.session_id,
                         exc_info=True,
                     )
-                    if await self._fail_active_media_operation("media_send_failed", error):
+                    code = (
+                        "media_commit_failed"
+                        if isinstance(frame, _InputCommit)
+                        else "media_send_failed"
+                    )
+                    if await self._fail_active_media_operation(code, error):
                         return
                 finally:
                     self._input_queue.task_done()
         except asyncio.CancelledError:
-            pass
+            raise
 
     async def handle_audio_frame(self, frame: RealtimeOutputAudioFrame) -> None:
         """Implement RealtimeMediaSink protocol to route output frames downstream."""
-        if self._coordinator.mirror.is_tombstoned(
-            frame.generation_id
-        ) or not self._coordinator.mirror.is_active(frame.generation_id):
+        async with self._output_lock:
+            if not self._is_output_active(frame):
+                return
+            output = asyncio.create_task(self._push_output(frame), name="cloud-output-handoff")
+            self._output_task = output
+            try:
+                # Cancelling this child at barge-in must not cancel the provider event pump.
+                # Cancellation of the pump itself still propagates through gather.
+                results = await asyncio.gather(output, return_exceptions=True)
+                result = results[0]
+                if isinstance(result, Exception):
+                    raise result
+            finally:
+                if self._output_task is output:
+                    self._output_task = None
+
+    def _is_output_active(self, frame: RealtimeOutputAudioFrame) -> bool:
+        if (
+            self._fatal_media_failure
+            or self._is_torn_down
+            or self._coordinator.is_closing
+            or self._coordinator.mirror.is_tombstoned(frame.generation_id)
+            or not self._coordinator.mirror.is_active(frame.generation_id)
+        ):
             _LOGGER.debug(
                 "Dropping late output audio frame for inactive or tombstoned generation %s",
                 frame.generation_id,
             )
-            return
+            return False
+        return True
 
+    async def _push_output(self, frame: RealtimeOutputAudioFrame) -> None:
         raw_frame = OutputAudioRawFrame(
             audio=frame.audio,
             sample_rate=frame.sample_rate,
@@ -409,18 +499,15 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         )
         await self.push_frame(raw_frame, FrameDirection.DOWNSTREAM)
 
-        if frame.is_final:
+        if frame.is_final and self._is_output_active(frame):
             await self.push_frame(TTSStoppedFrame(), FrameDirection.DOWNSTREAM)
 
     async def _teardown(self) -> None:
-        if self._is_torn_down:
-            return
         self._is_torn_down = True
-        if self._send_task is not None:
-            await self.cancel_task(self._send_task)
-            self._send_task = None
         try:
-            await asyncio.shield(self._coordinator.stop())
+            # stop owns the shielded cleanup, including media queues and sender.
+            # Repeated teardown must join it even if an earlier waiter was cancelled.
+            await self._coordinator.stop()
         except Exception:
             _LOGGER.warning("Error stopping coordinator during teardown", exc_info=True)
 

@@ -58,8 +58,9 @@ and egress audit receipts are eligible for persistent storage.
 When a user barges in or the runtime cancels an ongoing turn:
 
 1. The active `generation_id` is immediately recorded in the local invalidation registry (tombstone).
-2. An `interrupt` signal is dispatched to the provider session.
-3. Media buffers downstream are purged to halt playback immediately.
+2. Pending local output handoff and downstream media buffers are purged to halt playback.
+3. Old input writes are cancelled/joined, unsent input is drained, and an `interrupt` signal
+   is dispatched to the provider within a deadline (see ADR 0046).
 4. Any late-arriving audio frames, transcript deltas/finals, completion events, or tool calls from the
    cancelled generation are intercepted by generation fences and safely discarded. A late event must never
    resurrect a superseded generation.
