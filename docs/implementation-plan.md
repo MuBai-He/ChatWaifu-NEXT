@@ -1764,6 +1764,21 @@ memory context budget
 
 接入云端原生语音模型，同时保持 ChatWaifu 的领域状态、Skills、Memory 和 Avatar 独立。
 
+2026-09-08 按 owner 指示恢复 Phase 13，先完成 13.4A 的回合生命周期加固，再接真实 Provider。
+剩余 Phase 17.4C（共同梗与表情关联）保留，未计为完成。
+
+13.4A 当前交付范围（[ADR 0046](adr/0046-cloud-realtime-turn-lifecycle.md)）：
+
+- 输入音频与结束输入提交共用有界 FIFO；每回合最多提交一次，并为提交保留队列槽位。
+- 抢话先废弃旧 generation、取消本地输出交接并清空播放，再取消旧输入发送、清空旧队列，
+  完成有时限的 Provider interrupt，最后准入新回合。
+- 音频发送、提交和 interrupt 默认限时 5 秒；Provider close 限时 2 秒。超时使当前
+  bridge 终止，不能在输入状态不确定的旧连接上继续准入。
+- EOF、Provider close/error 与 teardown 共享一次收尾；准入中的持久化回合也必须结束。
+  旧 Provider 延迟关闭只能结束其拥有的回合，不能取消替代连接中的新回合。
+- 使用可控阻塞、迟到事件和真实 SQLite 验证；真实云端适配器、重连后上下文恢复、
+  shadow transcript 与麦克风/断网体验验收仍未完成。
+
 ## 13.2 Adapter 接口
 
 实现：
