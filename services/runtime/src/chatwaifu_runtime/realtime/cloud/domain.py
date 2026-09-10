@@ -21,6 +21,7 @@ from chatwaifu_protocol.errors import StructuredError
 
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
+from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.realtime.cloud.contracts import RealtimeUsage
 from chatwaifu_runtime.realtime.cloud.coordinator import RealtimeDomainSink
 
@@ -34,10 +35,12 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
         self,
         conversation: ConversationService,
         *,
+        playback: PlaybackService | None = None,
         event_hub: EventHub | None = None,
         backend_id: str = "cloud_realtime",
     ) -> None:
         self._conversation = conversation
+        self._playback = playback
         self._event_hub = event_hub
         self._backend_id = backend_id
 
@@ -93,14 +96,43 @@ class RuntimeRealtimeDomainSink(RealtimeDomainSink):
             )
 
     async def response_completed(
-        self, session_id: UUID, turn_id: UUID, generation_id: UUID, text: str
+        self,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        *,
+        has_audio: bool | None = None,
+        playback_confirmed: bool = False,
     ) -> None:
-        await self._conversation.complete_realtime_generation(
-            session_id=session_id,
-            turn_id=turn_id,
-            generation_id=generation_id,
-            text=text,
-        )
+        if self._playback is None or playback_confirmed or has_audio is False:
+            await self._conversation.complete_realtime_generation(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                text=text,
+            )
+            return
+
+        if has_audio is None:
+            has_segments = await self._playback.has_active_segments(generation_id)
+            if not has_segments:
+                await self._conversation.complete_realtime_generation(
+                    session_id=session_id,
+                    turn_id=turn_id,
+                    generation_id=generation_id,
+                    text=text,
+                )
+                return
+
+        commit_result = await self._playback.attach_generation_transcript(generation_id, text)
+        if commit_result is not None and commit_result.all_segments_completed:
+            await self._conversation.complete_realtime_generation(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                text=commit_result.spoken_text,
+            )
 
     async def response_cancelled(
         self, session_id: UUID, turn_id: UUID, generation_id: UUID, reason: str

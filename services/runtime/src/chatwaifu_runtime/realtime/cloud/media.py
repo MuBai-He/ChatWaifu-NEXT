@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pipecat.frames.frames import (
     CancelFrame,
@@ -22,6 +22,7 @@ from pipecat.frames.frames import (
     InputAudioRawFrame,
     InterruptionFrame,
     OutputAudioRawFrame,
+    OutputTransportMessageFrame,
     StartFrame,
     TTSStoppedFrame,
     VADUserStartedSpeakingFrame,
@@ -29,6 +30,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
+from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.realtime.admission import RealtimeTurnAdmissionPort
 from chatwaifu_runtime.realtime.cloud.contracts import (
     CloudRealtimeSession,
@@ -43,9 +45,20 @@ from chatwaifu_runtime.realtime.cloud.coordinator import (
 )
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
 from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
+from chatwaifu_runtime.realtime.pipecat.processor import build_playback_marker
 
 _LOGGER = logging.getLogger(__name__)
 MEDIA_OPERATION_TIMEOUT_SECONDS = 5.0
+
+
+@dataclass(slots=True)
+class _OutputSegmentState:
+    segment_id: UUID
+    stream_id: UUID
+    segment_index: int
+    total_audio_bytes: int = 0
+    sample_rate: int = 24_000
+    channels: int = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +83,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         session_id: UUID,
         coordinator: CloudRealtimeCoordinator,
         admission: RealtimeTurnAdmissionPort | None = None,
+        playback: PlaybackService | None = None,
         sample_rate: int = 16_000,
         channels: int = 1,
         input_queue_capacity: int = 100,
@@ -78,6 +92,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self.session_id: UUID = session_id
         self._coordinator: CloudRealtimeCoordinator = coordinator
         self._admission: RealtimeTurnAdmissionPort | None = admission
+        self._playback: PlaybackService | None = playback
         self._current_identity: VoiceTurnIdentity | None = None
         self._sample_rate: int = sample_rate
         self._channels: int = channels
@@ -94,16 +109,22 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._input_pts_ms: int = 0
         self._dropped_input_frames: int = 0
         self._send_task: asyncio.Task[None] | None = None
-        self._output_task: asyncio.Task[None] | None = None
+        self._output_task: asyncio.Task[object] | None = None
         self._output_lock = asyncio.Lock()
         self._turn_lock = asyncio.Lock()
         self._started: bool = False
         self._is_torn_down: bool = False
         self._media_failure_reported: bool = False
         self._fatal_media_failure: bool = False
+        self._completion_listener_token: UUID | None = None
+        self._active_segments: dict[UUID, _OutputSegmentState] = {}
+        self._generation_segment_counts: dict[UUID, int] = {}
 
         # Register self as media sink in coordinator
         self._coordinator.set_media_sink(self)
+
+    def set_completion_listener_token(self, token: UUID) -> None:
+        self._completion_listener_token = token
 
     @classmethod
     def create(
@@ -114,6 +135,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         session: CloudRealtimeSession,
         admission: RealtimeTurnAdmissionPort | None = None,
         domain_sink: RealtimeDomainSink | None = None,
+        playback: PlaybackService | None = None,
         sample_rate: int = 16_000,
         channels: int = 1,
         input_queue_capacity: int = 100,
@@ -134,6 +156,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             session_id=session_id,
             coordinator=coordinator,
             admission=admission,
+            playback=playback,
             sample_rate=sample_rate,
             channels=channels,
             input_queue_capacity=input_queue_capacity,
@@ -321,6 +344,8 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         await self._cancel_sender()
 
     async def _flush_output(self) -> None:
+        self._active_segments.clear()
+        self._generation_segment_counts.clear()
         output = self._output_task
         if output is not None:
             output.cancel()
@@ -476,14 +501,19 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                 if self._output_task is output:
                     self._output_task = None
 
-    def _is_output_active(self, frame: RealtimeOutputAudioFrame) -> bool:
+    def _is_generation_active(self, generation_id: UUID) -> bool:
         if (
             self._fatal_media_failure
             or self._is_torn_down
             or self._coordinator.is_closing
-            or self._coordinator.mirror.is_tombstoned(frame.generation_id)
-            or not self._coordinator.mirror.is_active(frame.generation_id)
+            or self._coordinator.mirror.is_tombstoned(generation_id)
+            or not self._coordinator.mirror.is_active(generation_id)
         ):
+            return False
+        return True
+
+    def _is_output_active(self, frame: RealtimeOutputAudioFrame) -> bool:
+        if not self._is_generation_active(frame.generation_id):
             _LOGGER.debug(
                 "Dropping late output audio frame for inactive or tombstoned generation %s",
                 frame.generation_id,
@@ -492,18 +522,163 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         return True
 
     async def _push_output(self, frame: RealtimeOutputAudioFrame) -> None:
+        seg_state = self._active_segments.get(frame.generation_id)
+        if seg_state is None:
+            stream_id = self._coordinator.mirror.get_audio_stream_id(frame.generation_id) or (
+                self._current_identity.audio_stream_id
+                if self._current_identity
+                and self._current_identity.generation_id == frame.generation_id
+                else None
+            )
+            if stream_id is None:
+                _LOGGER.error(
+                    "Refusing output audio for unadmitted generation %s without stream_id",
+                    frame.generation_id,
+                )
+                return
+            segment_id = uuid4()
+            segment_index = self._generation_segment_counts.get(frame.generation_id, 0)
+            self._generation_segment_counts[frame.generation_id] = segment_index + 1
+            seg_state = _OutputSegmentState(
+                segment_id=segment_id,
+                stream_id=stream_id,
+                segment_index=segment_index,
+                total_audio_bytes=0,
+                sample_rate=frame.sample_rate,
+                channels=frame.channels,
+            )
+            self._active_segments[frame.generation_id] = seg_state
+            if self._playback is not None:
+                await self._playback.register_segment(
+                    session_id=self.session_id,
+                    generation_id=frame.generation_id,
+                    stream_id=stream_id,
+                    segment_id=segment_id,
+                    segment_index=segment_index,
+                    text="",
+                    duration_ms=0,
+                    duration_finalized=False,
+                    transcript_finalized=False,
+                )
+                started_marker = build_playback_marker(
+                    payload={
+                        "stream_id": stream_id,
+                        "segment_id": segment_id,
+                        "duration_ms": 0,
+                    },
+                    generation_id=frame.generation_id,
+                    phase="started",
+                )
+                if started_marker is not None:
+                    await self.push_frame(
+                        OutputTransportMessageFrame(message=started_marker),
+                        FrameDirection.DOWNSTREAM,
+                    )
+        else:
+            if frame.sample_rate != seg_state.sample_rate or frame.channels != seg_state.channels:
+                error = ValueError(
+                    f"Audio format unstable for generation {frame.generation_id}: "
+                    f"expected {seg_state.sample_rate}Hz/{seg_state.channels}ch, "
+                    f"got {frame.sample_rate}Hz/{frame.channels}ch"
+                )
+                await self._fail_active_media_operation("unstable_audio_format", error)
+                raise error
+
         raw_frame = OutputAudioRawFrame(
             audio=frame.audio,
             sample_rate=frame.sample_rate,
             num_channels=frame.channels,
         )
         await self.push_frame(raw_frame, FrameDirection.DOWNSTREAM)
+        seg_state.total_audio_bytes += len(frame.audio)
 
-        if frame.is_final and self._is_output_active(frame):
-            await self.push_frame(TTSStoppedFrame(), FrameDirection.DOWNSTREAM)
+    async def finalize_response_audio(self, generation_id: UUID) -> int | None:
+        """Finalize whole-response audio after all queued PCM of all provider audio items."""
+        async with self._output_lock:
+            if not self._is_generation_active(generation_id):
+                return None
+            seg_state = self._active_segments.get(generation_id)
+            if seg_state is None:
+                return None
+
+            output = asyncio.create_task(
+                self._push_finalization(generation_id),
+                name="cloud-finalize-handoff",
+            )
+            self._output_task = output
+            try:
+                results = await asyncio.gather(output, return_exceptions=True)
+                result = results[0]
+                if isinstance(result, BaseException):
+                    if isinstance(result, asyncio.CancelledError):
+                        return None
+                    raise result
+                return result
+            finally:
+                if self._output_task is output:
+                    self._output_task = None
+
+    async def _push_finalization(self, generation_id: UUID) -> int | None:
+        seg_state = self._active_segments.get(generation_id)
+        if seg_state is None or not self._is_generation_active(generation_id):
+            return None
+
+        bytes_per_sample = 2
+        denom = seg_state.channels * bytes_per_sample * seg_state.sample_rate
+        if denom <= 0:
+            error = ValueError(f"Invalid audio format denominator: {denom}")
+            await self._fail_active_media_operation("invalid_audio_format", error)
+            raise error
+
+        duration_ms = int((seg_state.total_audio_bytes * 1000) / denom)
+        if duration_ms < 0:
+            error = ValueError(f"Calculated negative audio duration: {duration_ms}")
+            await self._fail_active_media_operation("invalid_duration", error)
+            raise error
+
+        if not self._is_generation_active(generation_id):
+            return None
+        await self.push_frame(TTSStoppedFrame(), FrameDirection.DOWNSTREAM)
+
+        if not self._is_generation_active(generation_id):
+            return None
+        if self._playback is not None:
+            # Durably commit final duration in PlaybackService BEFORE sending buffered marker
+            await self._playback.finalize_segment(seg_state.segment_id, duration_ms)
+
+        if not self._is_generation_active(generation_id):
+            return None
+        if self._playback is not None:
+            buffered_marker = build_playback_marker(
+                payload={
+                    "stream_id": seg_state.stream_id,
+                    "segment_id": seg_state.segment_id,
+                    "duration_ms": duration_ms,
+                },
+                generation_id=generation_id,
+                phase="buffered",
+            )
+            if buffered_marker is not None:
+                await self.push_frame(
+                    OutputTransportMessageFrame(message=buffered_marker),
+                    FrameDirection.DOWNSTREAM,
+                )
+
+        self._active_segments.pop(generation_id, None)
+        return duration_ms
+
+    def clear_generation(self, generation_id: UUID) -> None:
+        """Clear generation segment state upon terminal completion."""
+        self._active_segments.pop(generation_id, None)
+        self._generation_segment_counts.pop(generation_id, None)
 
     async def _teardown(self) -> None:
         self._is_torn_down = True
+        if self._playback is not None and self._completion_listener_token is not None:
+            self._playback.unregister_completion_listener(
+                self.session_id, self._completion_listener_token
+            )
+            self._completion_listener_token = None
         try:
             # stop owns the shielded cleanup, including media queues and sender.
             # Repeated teardown must join it even if an earlier waiter was cancelled.

@@ -167,6 +167,224 @@ describe("voice capture gating", () => {
     });
     await client.dispose("session-1");
   });
+
+  it("updates streaming segment duration from buffered marker before ending playout", async () => {
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const receipts: object[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: (receipt) => receipts.push(receipt),
+      onError: vi.fn(),
+    });
+
+    await client.connect("session-1", "mic-a");
+    const channel = (client as unknown as { peer: FakePeer | null }).peer
+      ?.dataChannel;
+    const output = (client as unknown as { output: FakeOutputAudio | null })
+      .output;
+
+    channel?.receive(playbackMarker("started", 0));
+    channel?.receive(playbackMarker("buffered", 1500));
+    if (output) output.currentTime = 0.09;
+    browser.runAnimationFrames();
+    if (output) output.currentTime = 1.7;
+    browser.runAnimationFrames();
+
+    expect(receipts[0]).toMatchObject({ phase: "started", playedPtsMs: 10 });
+    expect(receipts[1]).toMatchObject({
+      phase: "stopped",
+      playedPtsMs: 1500,
+      reason: "ended",
+    });
+    await client.dispose("session-1");
+  });
+
+  it("requires composite identity match (segmentId + streamId + generationId) to buffer segment", async () => {
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const receipts: object[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: (receipt) => receipts.push(receipt),
+      onError: vi.fn(),
+    });
+
+    await client.connect("session-1", "mic-a");
+    const channel = (client as unknown as { peer: FakePeer | null }).peer
+      ?.dataChannel;
+    const output = (client as unknown as { output: FakeOutputAudio | null })
+      .output;
+
+    // Segment started with generation-1, stream-1, segment-1
+    channel?.receive(
+      playbackMarker("started", 1000, {
+        generationId: "generation-1",
+        streamId: "stream-1",
+        segmentId: "segment-1",
+      }),
+    );
+
+    // Mismatched buffered marker with same segmentId but different generationId
+    channel?.receive(
+      playbackMarker("buffered", 2000, {
+        generationId: "generation-2",
+        streamId: "stream-1",
+        segmentId: "segment-1",
+      }),
+    );
+
+    // Playout progresses past 1000ms
+    if (output) output.currentTime = 1.5;
+    browser.runAnimationFrames();
+
+    // Since buffered marker had mismatched generationId, segment-1 was NOT marked serverBuffered,
+    // so it must NOT emit a stopped receipt with reason "ended"
+    const stopped = receipts.find(
+      (r) => (r as { phase: string }).phase === "stopped",
+    );
+    expect(stopped).toBeUndefined();
+
+    // Now send legitimate matching buffered marker
+    channel?.receive(
+      playbackMarker("buffered", 1000, {
+        generationId: "generation-1",
+        streamId: "stream-1",
+        segmentId: "segment-1",
+      }),
+    );
+    browser.runAnimationFrames();
+
+    const endedStopped = receipts.find(
+      (r) =>
+        (r as { phase: string; reason?: string }).phase === "stopped" &&
+        (r as { reason?: string }).reason === "ended",
+    );
+    expect(endedStopped).toBeDefined();
+    await client.dispose("session-1");
+  });
+
+  it("applies legitimate 0-ms duration from buffered marker and emits ended receipt", async () => {
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const receipts: object[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: (receipt) => receipts.push(receipt),
+      onError: vi.fn(),
+    });
+
+    await client.connect("session-1", "mic-a");
+    const channel = (client as unknown as { peer: FakePeer | null }).peer
+      ?.dataChannel;
+    const output = (client as unknown as { output: FakeOutputAudio | null })
+      .output;
+
+    channel?.receive(playbackMarker("started", 500));
+    channel?.receive(playbackMarker("buffered", 0));
+
+    if (output) output.currentTime = 0.15;
+    browser.runAnimationFrames();
+
+    expect(receipts).toContainEqual(
+      expect.objectContaining({
+        phase: "stopped",
+        playedPtsMs: 0,
+        reason: "ended",
+      }),
+    );
+    await client.dispose("session-1");
+  });
+
+  it("adjusts startMediaMs for queued segments when preceding segment duration changes", async () => {
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const receipts: object[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: (receipt) => receipts.push(receipt),
+      onError: vi.fn(),
+    });
+
+    await client.connect("session-1", "mic-a");
+    const channel = (client as unknown as { peer: FakePeer | null }).peer
+      ?.dataChannel;
+    const output = (client as unknown as { output: FakeOutputAudio | null })
+      .output;
+
+    // Queue segment 1 (estimate 500ms)
+    channel?.receive(
+      playbackMarker("started", 500, {
+        generationId: "gen-1",
+        streamId: "stream-1",
+        segmentId: "seg-1",
+      }),
+    );
+    // Queue segment 2 (placed right after segment 1: previousEnd = startMediaMs + 500)
+    channel?.receive(
+      playbackMarker("started", 300, {
+        generationId: "gen-2",
+        streamId: "stream-1",
+        segmentId: "seg-2",
+      }),
+    );
+
+    // Segment 1 buffered arrives with longer duration 1000ms (+500ms delta)
+    channel?.receive(
+      playbackMarker("buffered", 1000, {
+        generationId: "gen-1",
+        streamId: "stream-1",
+        segmentId: "seg-1",
+      }),
+    );
+
+    // Also buffer segment 2
+    channel?.receive(
+      playbackMarker("buffered", 300, {
+        generationId: "gen-2",
+        streamId: "stream-1",
+        segmentId: "seg-2",
+      }),
+    );
+
+    // Advance audio time to 0.7s (700ms). Segment 1 is playing (pts ~580ms).
+    // Segment 2 should NOT have started yet because its startMediaMs was pushed back by 500ms!
+    if (output) output.currentTime = 0.7;
+    browser.runAnimationFrames();
+
+    const seg2StartedBefore = receipts.find(
+      (r) => (r as { segmentId?: string; phase: string }).segmentId === "seg-2",
+    );
+    expect(seg2StartedBefore).toBeUndefined();
+
+    // Advance audio time to 1.5s. Segment 1 should be ended and Segment 2 should be started!
+    if (output) output.currentTime = 1.5;
+    browser.runAnimationFrames();
+
+    const seg1Ended = receipts.find(
+      (r) =>
+        (r as { segmentId?: string; phase: string; reason?: string })
+          .segmentId === "seg-1" &&
+        (r as { phase: string }).phase === "stopped",
+    );
+    expect(seg1Ended).toBeDefined();
+
+    // Next animation frame evaluates newly front-of-queue segment 2
+    browser.runAnimationFrames();
+
+    const seg2Started = receipts.find(
+      (r) =>
+        (r as { segmentId?: string; phase: string }).segmentId === "seg-2" &&
+        (r as { phase: string }).phase === "started",
+    );
+    expect(seg2Started).toBeDefined();
+
+    await client.dispose("session-1");
+  });
 });
 
 function device(deviceId: string, label: string): MediaDeviceInfo {
@@ -259,16 +477,20 @@ function installVoiceBrowserHarness(initialDevices: MediaDeviceInfo[]) {
   };
 }
 
-function playbackMarker(phase: "started" | "buffered"): MessageEvent {
+function playbackMarker(
+  phase: "started" | "buffered",
+  durationMs: number = 1000,
+  ids: { generationId?: string; streamId?: string; segmentId?: string } = {},
+): MessageEvent {
   return new MessageEvent("message", {
     data: JSON.stringify({
       type: "chatwaifu.playback_segment",
       schema_version: "1.0",
       phase,
-      generation_id: "generation-1",
-      stream_id: "stream-1",
-      segment_id: "segment-1",
-      duration_ms: 1000,
+      generation_id: ids.generationId ?? "generation-1",
+      stream_id: ids.streamId ?? "stream-1",
+      segment_id: ids.segmentId ?? "segment-1",
+      duration_ms: durationMs,
     }),
   });
 }

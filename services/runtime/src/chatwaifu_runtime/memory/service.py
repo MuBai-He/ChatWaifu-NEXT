@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
-from uuid import UUID, uuid4
+from typing import Literal, cast
+from uuid import UUID, uuid4, uuid5
 
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.events import GenericCoreEvent
@@ -16,6 +18,7 @@ from chatwaifu_protocol.memory import (
     MemoryProposal,
     MemoryProposalStatus,
     MemoryRecord,
+    MemoryRecordDraft,
     MemorySource,
 )
 
@@ -31,6 +34,7 @@ from chatwaifu_runtime.memory.ports import (
     NullSemanticMemoryIndex,
     NullTemporalMemoryGraph,
     SemanticMemoryIndex,
+    SpokenMemoryRepository,
     TemporalMemoryGraph,
 )
 from chatwaifu_runtime.memory.repository import MemoryEventEvidence, MemoryRepository
@@ -46,6 +50,40 @@ from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 type MemoryItem = MemoryRecord
 logger = logging.getLogger(__name__)
 _PROJECTION_QUEUE_SIZE = 128
+
+
+def serialize_candidates(candidates: Sequence[ExtractedMemoryCandidate]) -> str:
+    data = [
+        {
+            "draft": item.draft.model_dump(mode="json"),
+            "explicit": item.explicit,
+            "rationale": item.rationale,
+            "evidence_event_ids": [str(eid) for eid in item.evidence_event_ids],
+            "auto_commit": item.auto_commit,
+        }
+        for item in candidates
+    ]
+    return json.dumps(data, ensure_ascii=False)
+
+
+def deserialize_candidates(raw_json: str) -> list[ExtractedMemoryCandidate]:
+    data = cast(list[dict[str, object]], json.loads(raw_json))
+    result: list[ExtractedMemoryCandidate] = []
+    for item in data:
+        draft_dict = cast(dict[str, object], item["draft"])
+        evidence_ids = tuple(
+            UUID(str(eid)) for eid in cast(list[object], item.get("evidence_event_ids", []))
+        )
+        result.append(
+            ExtractedMemoryCandidate(
+                draft=MemoryRecordDraft.model_validate(draft_dict),
+                explicit=bool(item.get("explicit", False)),
+                rationale=str(item.get("rationale", "")),
+                evidence_event_ids=evidence_ids,
+                auto_commit=bool(item.get("auto_commit", False)),
+            )
+        )
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +118,7 @@ class MemoryService:
         semantic_index: SemanticMemoryIndex | None = None,
         temporal_graph: TemporalMemoryGraph | None = None,
         models: ModelConfigurationService | None = None,
+        spoken_repository: SpokenMemoryRepository | None = None,
     ) -> None:
         self._repository = repository
         self._publisher = publisher
@@ -88,6 +127,8 @@ class MemoryService:
         self._semantic_index = semantic_index or NullSemanticMemoryIndex()
         self._temporal_graph = temporal_graph or NullTemporalMemoryGraph()
         self._inference = LlmMemoryCandidateExtractor(models) if models else None
+        self._spoken_repository = spoken_repository
+        self._spoken_apply_lock = asyncio.Lock()
         self._retriever = MemoryRetriever(
             repository,
             self._policy,
@@ -102,6 +143,9 @@ class MemoryService:
         self._projection_epoch = 0
         self._scope_epochs: dict[tuple[str, str], int] = {}
         self._projection_stopping = False
+
+    def set_spoken_repository(self, repository: SpokenMemoryRepository) -> None:
+        self._spoken_repository = repository
 
     @property
     def projection_running(self) -> bool:
@@ -536,14 +580,14 @@ class MemoryService:
             )
         return packet
 
-    async def observe_assistant_spoken(
+    async def extract_spoken_candidates(
         self,
-        session_id: UUID,
-        turn_id: UUID,
+        *,
         source_event_id: UUID,
+        session_id: UUID,
         character_id: str,
         spoken_text: str,
-    ) -> list[MemoryProposal]:
+    ) -> list[ExtractedMemoryCandidate]:
         if self._inference is None or not spoken_text.strip():
             return []
         evidence = await self._repository.event_evidence(source_event_id)
@@ -551,29 +595,91 @@ class MemoryService:
             raise ValueError("shared memory requires spoken-text evidence")
         namespaces = _namespaces(character_id)
         related = await self._repository.search_fts(spoken_text, namespaces, limit=12)
+        candidates = await self._inference.extract(
+            f"The user actually heard the character say: {spoken_text}",
+            namespace=namespaces[0],
+            observed_at=evidence.occurred_at,
+            related=[item.record for item in related],
+        )
+        return [
+            item
+            for item in candidates
+            if item.draft.kind in {"episodic.shared_event", "relationship.signal"}
+            and not is_shared_joke_draft(item.draft)
+        ]
+
+    async def apply_spoken_candidates(
+        self,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        source_event_id: UUID,
+        character_id: str,
+        candidates: Sequence[ExtractedMemoryCandidate],
+        start_index: int = 0,
+        on_candidate_applied: Callable[[int], Awaitable[None]] | None = None,
+    ) -> list[MemoryProposal]:
+        async with self._spoken_apply_lock:
+            evidence = await self._repository.event_evidence(source_event_id)
+            if evidence is None:
+                return []
+            if self._spoken_repository is not None and await self._spoken_repository.is_scope_reset(
+                character_id, evidence.occurred_at
+            ):
+                return []
+            proposals: list[MemoryProposal] = []
+            for c_idx in range(start_index, len(candidates)):
+                item = candidates[c_idx]
+                prop_id = uuid5(source_event_id, f"spoken:proposal:{c_idx}")
+                mem_id = uuid5(source_event_id, f"spoken:memory:{c_idx}")
+                src_id = uuid5(source_event_id, f"spoken:source:{c_idx}:{source_event_id}")
+                proposal = await self._process_candidate(
+                    session_id,
+                    turn_id,
+                    source_event_id,
+                    item,
+                    proposal_id_override=prop_id,
+                    memory_id_override=mem_id,
+                    source_id_override=src_id,
+                )
+                proposals.append(proposal)
+                if on_candidate_applied is not None:
+                    await on_candidate_applied(c_idx)
+            return proposals
+
+    async def observe_assistant_spoken(
+        self,
+        session_id: UUID,
+        turn_id: UUID,
+        source_event_id: UUID,
+        character_id: str,
+        spoken_text: str,
+        *,
+        raise_on_error: bool = False,
+    ) -> list[MemoryProposal]:
         try:
-            candidates = await self._inference.extract(
-                f"The user actually heard the character say: {spoken_text}",
-                namespace=namespaces[0],
-                observed_at=evidence.occurred_at,
-                related=[item.record for item in related],
+            candidates = await self.extract_spoken_candidates(
+                source_event_id=source_event_id,
+                session_id=session_id,
+                character_id=character_id,
+                spoken_text=spoken_text,
             )
         except Exception as error:
             logger.warning(
                 "shared memory extraction provider failed",
                 extra={"source_event_id": str(source_event_id), "error": type(error).__name__},
             )
+            if raise_on_error:
+                raise
             return []
-        durable = [
-            item
-            for item in candidates
-            if item.draft.kind in {"episodic.shared_event", "relationship.signal"}
-            and not is_shared_joke_draft(item.draft)
-        ]
-        return [
-            await self._process_candidate(session_id, turn_id, source_event_id, item)
-            for item in durable
-        ]
+
+        return await self.apply_spoken_candidates(
+            session_id=session_id,
+            turn_id=turn_id,
+            source_event_id=source_event_id,
+            character_id=character_id,
+            candidates=candidates,
+        )
 
     async def list(
         self,
@@ -597,13 +703,18 @@ class MemoryService:
         return await self._repository.list_sources(memory_id)
 
     async def clear_all(self) -> int:
-        await self._invalidate_all_projections()
-        records = await self._repository.list_records(include_tombstoned=True, limit=500)
-        removed = await self._repository.clear_all()
-        for record in records:
-            await self._semantic_index.delete(record.memory_id)
-            await self._temporal_graph.delete(record.memory_id)
-        return removed
+        async with self._spoken_apply_lock:
+            now = datetime.now(UTC)
+            if self._spoken_repository is not None:
+                await self._spoken_repository.record_scope_reset("__all__", now)
+                await self._spoken_repository.clear_all_facts()
+            await self._invalidate_all_projections()
+            records = await self._repository.list_records(include_tombstoned=True, limit=500)
+            removed = await self._repository.clear_all()
+            for record in records:
+                await self._semantic_index.delete(record.memory_id)
+                await self._temporal_graph.delete(record.memory_id)
+            return removed
 
     async def clear_scope(self, character_id: str, user_scope: str = "local") -> int:
         """Clear durable memory for one character/user pair and its pending projections."""
@@ -616,8 +727,13 @@ class MemoryService:
     async def prepare_scope_reset(self, character_id: str, user_scope: str) -> str:
         """Fence stale background projections before an atomic reset transaction."""
 
-        await self._invalidate_scope_projections(character_id, user_scope)
-        return character_memory_namespace(character_id, user_scope)
+        async with self._spoken_apply_lock:
+            now = datetime.now(UTC)
+            if self._spoken_repository is not None:
+                await self._spoken_repository.record_scope_reset(character_id, now)
+                await self._spoken_repository.clear_scope_facts(character_id)
+            await self._invalidate_scope_projections(character_id, user_scope)
+            return character_memory_namespace(character_id, user_scope)
 
     async def finalize_scope_reset(self, memory_ids: tuple[UUID, ...] | list[UUID]) -> None:
         """Remove replaceable indexes after the durable truth transaction commits."""
@@ -720,20 +836,55 @@ class MemoryService:
         extracted: ExtractedMemoryCandidate,
         *,
         target_override: UUID | None = None,
+        proposal_id_override: UUID | None = None,
+        memory_id_override: UUID | None = None,
+        source_id_override: UUID | None = None,
     ) -> MemoryProposal:
         now = datetime.now(UTC)
         draft = extracted.draft
         evidence_ids = extracted.evidence_event_ids or (source_event_id,)
+
+        if proposal_id_override is not None:
+            existing = await self._repository.get_proposal(proposal_id_override)
+            if existing is not None:
+                if existing.status == "accepted" and memory_id_override is not None:
+                    rec = await self._repository.get(memory_id_override)
+                    if rec is None:
+                        await self._commit_proposal(
+                            session_id,
+                            existing,
+                            memory_id_override=memory_id_override,
+                            source_id_override=source_id_override,
+                        )
+                return existing
+
         exact = await self._repository.find_exact(draft.namespace, _normalize(draft.text))
         if exact is not None and target_override is None:
             proposal = MemoryProposal(
-                proposal_id=uuid4(),
+                proposal_id=proposal_id_override or uuid4(),
                 operation="ignore",
                 candidate=draft,
                 target_memory_id=exact.memory_id,
                 evidence_event_ids=list(evidence_ids),
                 confidence=extracted.draft.confidence,
                 rationale="duplicate active memory",
+                status="ignored",
+                created_at=now,
+                decided_at=now,
+            )
+            await self._repository.save_proposal(proposal)
+            return proposal
+
+        tombstone = await self._repository.find_tombstone(draft.namespace, _normalize(draft.text))
+        if tombstone is not None and target_override is None:
+            proposal = MemoryProposal(
+                proposal_id=proposal_id_override or uuid4(),
+                operation="ignore",
+                candidate=draft,
+                target_memory_id=tombstone.memory_id,
+                evidence_event_ids=list(evidence_ids),
+                confidence=extracted.draft.confidence,
+                rationale="tombstoned memory; respecting forgetting fence",
                 status="ignored",
                 created_at=now,
                 decided_at=now,
@@ -748,7 +899,7 @@ class MemoryService:
             )
             if identities and draft.predicate.startswith("shared_joke."):
                 proposal = MemoryProposal(
-                    proposal_id=uuid4(),
+                    proposal_id=proposal_id_override or uuid4(),
                     operation="ignore",
                     candidate=draft,
                     target_memory_id=identities[0].memory_id,
@@ -761,7 +912,27 @@ class MemoryService:
                 )
                 await self._repository.save_proposal(proposal)
                 return proposal
+            if not identities:
+                tombstoned_identities = await self._repository.find_tombstoned_identity(
+                    draft.namespace, draft.subject_id, draft.predicate
+                )
+                if tombstoned_identities:
+                    proposal = MemoryProposal(
+                        proposal_id=proposal_id_override or uuid4(),
+                        operation="ignore",
+                        candidate=draft,
+                        target_memory_id=tombstoned_identities[0].memory_id,
+                        evidence_event_ids=list(evidence_ids),
+                        confidence=extracted.draft.confidence,
+                        rationale="tombstoned identity; respecting forgetting fence",
+                        status="ignored",
+                        created_at=now,
+                        decided_at=now,
+                    )
+                    await self._repository.save_proposal(proposal)
+                    return proposal
             target = identities[0].memory_id if identities else None
+
         operation: Literal["add", "supersede"] = "supersede" if target else "add"
         decision = self._policy.decide_write(extracted)
         status_by_decision: dict[MemoryWriteDecision, MemoryProposalStatus] = {
@@ -770,8 +941,9 @@ class MemoryService:
             MemoryWriteDecision.REJECT: "ignored",
         }
         status = status_by_decision[decision]
+        proposal_id = proposal_id_override or uuid4()
         proposal = MemoryProposal(
-            proposal_id=uuid4(),
+            proposal_id=proposal_id,
             operation=operation,
             candidate=draft,
             target_memory_id=target,
@@ -782,6 +954,29 @@ class MemoryService:
             created_at=now,
             decided_at=now if status != "pending" else None,
         )
+
+        if decision is MemoryWriteDecision.COMMIT:
+            await self._commit_proposal(
+                session_id,
+                proposal,
+                memory_id_override=memory_id_override,
+                source_id_override=source_id_override,
+            )
+            await self._emit(
+                session_id,
+                turn_id,
+                "memory.proposed",
+                {
+                    "proposal_id": str(proposal.proposal_id),
+                    "operation": proposal.operation,
+                    "status": proposal.status,
+                    "kind": draft.kind,
+                    "sensitivity": draft.sensitivity.value,
+                },
+                causation_id=source_event_id,
+            )
+            return proposal
+
         await self._repository.save_proposal(proposal)
         await self._emit(
             session_id,
@@ -796,11 +991,16 @@ class MemoryService:
             },
             causation_id=source_event_id,
         )
-        if decision is MemoryWriteDecision.COMMIT:
-            await self._commit_proposal(session_id, proposal)
         return proposal
 
-    async def _commit_proposal(self, session_id: UUID, proposal: MemoryProposal) -> MemoryRecord:
+    async def _commit_proposal(
+        self,
+        session_id: UUID,
+        proposal: MemoryProposal,
+        *,
+        memory_id_override: UUID | None = None,
+        source_id_override: UUID | None = None,
+    ) -> MemoryRecord:
         draft = proposal.candidate
         if draft is None:
             raise ValueError("committed proposal requires a candidate")
@@ -813,7 +1013,7 @@ class MemoryService:
             evidence.append(item)
         record = MemoryRecord(
             **draft.model_dump(),
-            memory_id=uuid4(),
+            memory_id=memory_id_override or uuid4(),
             source_event_ids=[item.event_id for item in evidence],
             origin_proposal_id=proposal.proposal_id,
             valid_from=draft.observed_at,
@@ -825,7 +1025,11 @@ class MemoryService:
         )
         sources = [
             MemorySource(
-                source_id=uuid4(),
+                source_id=(
+                    uuid5(source_id_override, str(item.event_id))
+                    if source_id_override is not None
+                    else uuid4()
+                ),
                 memory_id=record.memory_id,
                 source_event_id=item.event_id,
                 session_id=item.session_id,
@@ -844,8 +1048,11 @@ class MemoryService:
             )
             for item in evidence
         ]
-        await self._repository.create_record(
-            record, sources, supersede_target=proposal.target_memory_id
+        await self._repository.save_proposal_and_record_atomically(
+            proposal=proposal,
+            record=record,
+            sources=sources,
+            supersede_target=proposal.target_memory_id,
         )
         try:
             await self._semantic_index.upsert(record)
@@ -854,30 +1061,39 @@ class MemoryService:
                 "memory semantic indexing failed",
                 extra={"memory_id": str(record.memory_id), "error": type(error).__name__},
             )
-        await self._temporal_graph.upsert(record)
+        try:
+            await self._temporal_graph.upsert(record)
+        except Exception as error:
+            logger.warning(
+                "memory temporal graph indexing failed",
+                extra={"memory_id": str(record.memory_id), "error": type(error).__name__},
+            )
         if proposal.target_memory_id:
-            await self._semantic_index.delete(proposal.target_memory_id)
-            await self._temporal_graph.delete(proposal.target_memory_id)
+            try:
+                await self._semantic_index.delete(proposal.target_memory_id)
+                await self._temporal_graph.delete(proposal.target_memory_id)
+            except Exception:
+                pass
             await self._emit(
                 session_id,
-                evidence[0].turn_id,
+                evidence[0].turn_id if evidence else None,
                 "memory.superseded",
                 {
                     "memory_id": str(proposal.target_memory_id),
                     "superseded_by": str(record.memory_id),
                 },
-                causation_id=evidence[0].event_id,
+                causation_id=evidence[0].event_id if evidence else None,
             )
         await self._emit(
             session_id,
-            evidence[0].turn_id,
+            evidence[0].turn_id if evidence else None,
             "memory.committed",
             {
                 "memory_id": str(record.memory_id),
                 "kind": record.kind,
-                "policy": "explicit" if proposal.status == "accepted" else "reviewed",
+                "policy": "explicit",
             },
-            causation_id=evidence[0].event_id,
+            causation_id=evidence[0].event_id if evidence else None,
         )
         return record
 
