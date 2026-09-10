@@ -17,6 +17,7 @@ from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.realtime.cloud import openai as openai_module
 from chatwaifu_runtime.realtime.cloud.context import ConsentRequiredError, PolicyDeniedError
+from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
 from chatwaifu_runtime.realtime.cloud.openai import OpenAIRealtimeBackend, RealtimeSocket
 from chatwaifu_runtime.realtime.cloud.openai_events import object_value
 from pipecat.frames.frames import (
@@ -314,3 +315,170 @@ async def test_real_backend_egress_gate_prevents_even_socket_connect(
         assert connects == 0
     finally:
         await container.stop()
+
+
+async def test_fresh_provider_session_restores_confirmed_turn_and_accepts_new_audio(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wire_updates: list[str] = []
+    wire_audio: list[int] = []
+    sockets: list[ServerConnection] = []
+
+    async def handler(ws: ServerConnection) -> None:
+        sockets.append(ws)
+        number = len(sockets)
+
+        sequence = 0
+
+        async def send(event: dict[str, object]) -> None:
+            nonlocal sequence
+            sequence += 1
+            await ws.send(json.dumps({"event_id": f"wire-{number}-{sequence}", **event}))
+
+        await send({"type": "session.created", "session": {"id": str(number), "type": "realtime"}})
+        async for raw in ws:
+            message = object_value(json.loads(raw))
+            kind = message["type"]
+            if kind == "session.update":
+                payload = object_value(message["session"])
+                wire_updates.append(str(payload.get("instructions", "")))
+                await send({"type": "session.updated", "session": {**payload, "id": str(number)}})
+            elif kind == "input_audio_buffer.append":
+                wire_audio.append(number)
+            elif kind == "input_audio_buffer.commit":
+                await send({"type": "input_audio_buffer.committed", "item_id": f"input-{number}"})
+                await send(
+                    {
+                        "type": "conversation.item.input_audio_transcription.completed",
+                        "item_id": f"input-{number}",
+                        "transcript": f"用户第{number}句",
+                    }
+                )
+            elif kind == "response.create":
+                response_id = f"response-{number}"
+                await send(
+                    {
+                        "type": "response.created",
+                        "response": {
+                            "id": response_id,
+                            "metadata": object_value(message["response"])["metadata"],
+                        },
+                    }
+                )
+                await send(
+                    {
+                        "type": "response.output_audio.delta",
+                        "response_id": response_id,
+                        "delta": base64.b64encode(bytes([number, 0]) * 480).decode(),
+                    }
+                )
+                await send({"type": "response.output_audio.done", "response_id": response_id})
+                await send(
+                    {
+                        "type": "response.output_audio_transcript.done",
+                        "response_id": response_id,
+                        "transcript": f"助手第{number}句",
+                    }
+                )
+                await send(
+                    {
+                        "type": "response.done",
+                        "response": {"id": response_id, "status": "completed"},
+                    }
+                )
+
+    async with serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+
+        async def connector(_url: str, key: str, seconds: float) -> RealtimeSocket:
+            return await openai_module._connect(f"ws://127.0.0.1:{port}", key, seconds)
+
+        container = RuntimeContainer(settings_for(tmp_path))
+        assert isinstance(container.cloud_realtime_backend, OpenAIRealtimeBackend)
+        container.cloud_realtime_backend._connector = connector
+        await container.start()
+        bridges: list[CloudRealtimeMediaBridge] = []
+        try:
+            session = await container.sessions.create_session("default")
+            assert container.cloud_realtime_factory is not None
+            generation_ids = []
+            for number in (1, 2):
+                bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+                bridges.append(bridge)
+                buffered = asyncio.Event()
+                markers: list[dict[str, object]] = []
+                audio: list[bytes] = []
+
+                async def capture(
+                    frame: Frame,
+                    direction: FrameDirection = FrameDirection.DOWNSTREAM,
+                    *,
+                    audio: list[bytes] = audio,
+                    markers: list[dict[str, object]] = markers,
+                    buffered: asyncio.Event = buffered,
+                ) -> None:
+                    if isinstance(frame, OutputAudioRawFrame):
+                        audio.append(frame.audio)
+                    if isinstance(frame, OutputTransportMessageFrame) and isinstance(
+                        frame.message, dict
+                    ):
+                        marker = object_value(frame.message)
+                        if marker.get("phase") == "buffered":
+                            markers.append(marker)
+                            buffered.set()
+
+                monkeypatch.setattr(bridge, "push_frame", capture)
+                if number == 2:
+                    assert "用户第1句" in wire_updates[-1]
+                    assert "助手第1句" in wire_updates[-1]
+                    assert wire_audio == [1, 1]
+                await bridge._handle_user_speaking_started()
+                identity = bridge.current_identity
+                assert identity is not None
+                generation_ids.append(identity.generation_id)
+                bridge._handle_input_audio(
+                    InputAudioRawFrame(audio=b"\x40\x00" * 3200, sample_rate=16000, num_channels=1)
+                )
+                await bridge._handle_user_speaking_stopped()
+                await asyncio.wait_for(buffered.wait(), timeout=3)
+                completed = container.event_hub.subscribe(
+                    lambda event, generation_id=identity.generation_id: (
+                        event.get("event_type") == "assistant.generation_completed"
+                        and event.get("generation_id") == str(generation_id)
+                    )
+                )
+                try:
+                    marker = markers[-1]
+                    await container.playback.acknowledge(
+                        PlaybackAckCommand(
+                            command_id=uuid4(),
+                            session_id=session.session_id,
+                            generation_id=identity.generation_id,
+                            issued_at=datetime.now(UTC),
+                            issuer="web-client",
+                            payload=PlaybackAckPayload(
+                                stream_id=UUID(str(marker["stream_id"])),
+                                segment_id=UUID(str(marker["segment_id"])),
+                                phase="stopped",
+                                played_pts_ms=int(str(marker["duration_ms"])),
+                                buffered_ms=0,
+                                client_clock_ms=100,
+                                transport="webrtc",
+                                reason="ended",
+                            ),
+                        )
+                    )
+                    await asyncio.wait_for(completed.receive(), timeout=3)
+                finally:
+                    container.event_hub.unsubscribe(completed)
+                assert b"".join(audio) == bytes([number, 0]) * 480
+                if number == 1:
+                    await sockets[0].close(code=1011)
+                    await asyncio.wait_for(bridge.closed_event.wait(), timeout=3)
+                await bridge.cleanup()
+            assert len(set(generation_ids)) == 2
+            assert wire_audio == [1, 1, 2, 2]
+        finally:
+            for bridge in bridges:
+                await bridge.cleanup()
+            await container.stop()

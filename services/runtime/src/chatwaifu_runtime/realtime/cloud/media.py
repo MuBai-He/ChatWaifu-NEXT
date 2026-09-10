@@ -116,12 +116,18 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._is_torn_down: bool = False
         self._media_failure_reported: bool = False
         self._fatal_media_failure: bool = False
+        self._closed_event = asyncio.Event()
         self._completion_listener_token: UUID | None = None
         self._active_segments: dict[UUID, _OutputSegmentState] = {}
         self._generation_segment_counts: dict[UUID, int] = {}
 
         # Register self as media sink in coordinator
         self._coordinator.set_media_sink(self)
+
+    @property
+    def closed_event(self) -> asyncio.Event:
+        """Signaled when the cloud session terminates (EOF, error, or close)."""
+        return self._closed_event
 
     def set_completion_listener_token(self, token: UUID) -> None:
         self._completion_listener_token = token
@@ -342,6 +348,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         self._drain_input_queue()
         await self._flush_output()
         await self._cancel_sender()
+        self._closed_event.set()
 
     async def _flush_output(self) -> None:
         self._active_segments.clear()
@@ -674,6 +681,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
 
     async def _teardown(self) -> None:
         self._is_torn_down = True
+        self._closed_event.set()
         if self._playback is not None and self._completion_listener_token is not None:
             self._playback.unregister_completion_listener(
                 self.session_id, self._completion_listener_token

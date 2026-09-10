@@ -1287,6 +1287,49 @@ def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) 
     assert data["transport"] == "pipecat_smallwebrtc"
 
 
+def test_webrtc_delete_endpoints_targeted_and_untargeted(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    created = http.post("/v1/sessions", json={"character_id": "default"})
+    assert created.status_code == 201
+    created_json = cast(dict[str, object], created.json())
+    session_id_str = str(created_json["session_id"])
+    sid = UUID(session_id_str)
+
+    # 1. Untargeted DELETE /v1/sessions/{session_id}/webrtc without pc_id on empty session
+    response_untargeted = client.delete(f"/v1/sessions/{session_id_str}/webrtc")
+    assert response_untargeted.status_code == 200
+    res_json = cast(dict[str, object], response_untargeted.json())
+    assert res_json["session_id"] == session_id_str
+    assert res_json["connections_closed"] == 0
+    assert res_json["pc_id"] is None
+
+    # 2. Targeted DELETE /v1/sessions/{session_id}/webrtc?pc_id=... on non-existent connection
+    response_targeted = client.delete(f"/v1/sessions/{session_id_str}/webrtc?pc_id=pc-target-1")
+    assert response_targeted.status_code == 200
+    res_targeted_json = cast(dict[str, object], response_targeted.json())
+    assert res_targeted_json["session_id"] == session_id_str
+    assert res_targeted_json["connections_closed"] == 0
+    assert res_targeted_json["pc_id"] == "pc-target-1"
+
+    # 3. Targeted DELETE with active connection verified via voice_media
+    app = cast(FastAPI, client.app)
+    container = app.state.container
+    from unittest.mock import AsyncMock
+
+    orig_close = container.voice_media.close_session
+    try:
+        container.voice_media.close_session = AsyncMock(return_value=1)
+        match_del = client.delete(f"/v1/sessions/{session_id_str}/webrtc?pc_id=pc-active-1")
+        assert match_del.status_code == 200
+        match_json = cast(dict[str, object], match_del.json())
+        assert match_json["session_id"] == session_id_str
+        assert match_json["connections_closed"] == 1
+        assert match_json["pc_id"] == "pc-active-1"
+        container.voice_media.close_session.assert_awaited_once_with(sid, pc_id="pc-active-1")
+    finally:
+        container.voice_media.close_session = orig_close
+
+
 def _submit_and_wait(http: RuntimeHttpClient, session_id: str, text: str) -> str:
     accepted = http.post(f"/v1/sessions/{session_id}/turns", json={"text": text})
     assert accepted.status_code == 202

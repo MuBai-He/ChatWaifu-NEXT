@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 
 from chatwaifu_runtime.conversation.models import (
     REDACTED_ASSISTANT_PLACEHOLDER,
+    ConfirmedConversationTurn,
     ConversationHistoryEntry,
     ConversationSourceContext,
     ConversationUserInputContext,
@@ -116,6 +117,89 @@ class SQLiteConversationRepository(ConversationRepository):
             (str(session_id), min(max(limit, 1), 500)),
         )
         return [dict(row) for row in rows]
+
+    async def latest_confirmed_history(
+        self, session_id: UUID, *, limit: int = 16
+    ) -> tuple[ConfirmedConversationTurn, ...]:
+        bounded_limit = min(max(limit, 1), 100)
+        rows = await self._database.fetchall(
+            """
+            SELECT
+                turns.turn_id,
+                turns.role,
+                substr(CASE
+                    WHEN turns.role = 'assistant' AND redaction.generation_id IS NOT NULL THEN ?
+                    WHEN turns.role = 'assistant' THEN g.spoken_text
+                    ELSE turns.committed_text
+                END, 1, 1001) AS presented_text,
+                turns.generation_id,
+                turns.created_at,
+                (redaction.generation_id IS NOT NULL) AS is_redacted
+            FROM turns
+            JOIN sessions AS s
+                ON s.session_id = turns.session_id
+            LEFT JOIN generations AS g
+                ON turns.generation_id = g.generation_id
+            LEFT JOIN photo_context_redactions AS redaction
+                ON turns.role = 'assistant' AND redaction.generation_id = turns.generation_id
+            LEFT JOIN memory_scope_resets AS r
+                ON r.character_id = s.character_id
+            LEFT JOIN memory_scope_resets AS r_all
+                ON r_all.character_id = '__all__'
+            WHERE turns.session_id = ?
+              AND (r.reset_at IS NULL OR turns.created_at > r.reset_at)
+              AND (r_all.reset_at IS NULL OR turns.created_at > r_all.reset_at)
+              AND (
+                  (
+                      turns.role = 'user'
+                      AND turns.committed_text IS NOT NULL
+                      AND trim(turns.committed_text) != ''
+                  )
+                  OR
+                  (
+                      turns.role = 'assistant'
+                      AND g.spoken_text IS NOT NULL
+                      AND trim(g.spoken_text) != ''
+                      AND g.state = 'completed'
+                  )
+              )
+            ORDER BY turns.created_at DESC, turns.turn_id DESC LIMIT ?
+            """,
+            (REDACTED_ASSISTANT_PLACEHOLDER, str(session_id), bounded_limit),
+        )
+        items: list[ConfirmedConversationTurn] = []
+        total_bytes = 0
+        max_total_bytes = 32768
+        for row in rows:
+            text = str(row["presented_text"] or "").strip()
+            if not text:
+                continue
+            role = str(row["role"])
+            if role not in ("user", "assistant"):
+                continue
+            # Trim extreme unbounded entries to prevent runaway memory usage
+            if len(text) > 1000:
+                text = text[:1000] + "..."
+            text_bytes = len(text.encode("utf-8"))
+            if total_bytes + text_bytes > max_total_bytes and items:
+                break
+            total_bytes += text_bytes
+            raw_gen_id = row["generation_id"]
+            raw_created_at = row["created_at"]
+            items.append(
+                ConfirmedConversationTurn(
+                    turn_id=UUID(str(row["turn_id"])),
+                    role="user" if role == "user" else "assistant",
+                    text=text,
+                    generation_id=UUID(str(raw_gen_id)) if raw_gen_id else None,
+                    created_at=(
+                        datetime.fromisoformat(str(raw_created_at)) if raw_created_at else None
+                    ),
+                    is_redacted=bool(row["is_redacted"]),
+                )
+            )
+        items.reverse()
+        return tuple(items)
 
     async def recent_history(
         self, session_id: UUID, current_turn_id: UUID, *, limit: int
