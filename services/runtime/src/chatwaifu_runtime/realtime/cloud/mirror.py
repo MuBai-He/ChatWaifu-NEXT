@@ -30,6 +30,9 @@ class GenerationBinding:
     turn_id: UUID
     provider_response_id: str | None = None
     utterance_id: UUID | None = None
+    audio_stream_id: UUID | None = None
+    has_audio: bool = False
+    provider_response_done: bool = False
     accumulated_delta_text: list[str] = field(default_factory=lambda: list[str]())
     authoritative_final_text: str | None = None
     is_completed: bool = False
@@ -112,6 +115,7 @@ class RealtimeSessionMirror:
         *,
         provider_response_id: str | None = None,
         utterance_id: UUID | None = None,
+        audio_stream_id: UUID | None = None,
     ) -> GenerationBinding:
         """Register a new runtime generation as active."""
         binding = GenerationBinding(
@@ -119,6 +123,7 @@ class RealtimeSessionMirror:
             turn_id=turn_id,
             provider_response_id=provider_response_id,
             utterance_id=utterance_id,
+            audio_stream_id=audio_stream_id,
         )
         self._bindings[generation_id] = binding
         if len(self._bindings) > self._max_bindings:
@@ -135,6 +140,28 @@ class RealtimeSessionMirror:
             if len(self._response_to_generation) > self._max_responses:
                 self._response_to_generation.popitem(last=False)
         return binding
+
+    def get_audio_stream_id(self, generation_id: UUID) -> UUID | None:
+        binding = self._bindings.get(generation_id)
+        return binding.audio_stream_id if binding is not None else None
+
+    def mark_has_audio(self, generation_id: UUID) -> None:
+        binding = self._bindings.get(generation_id)
+        if binding is not None:
+            binding.has_audio = True
+
+    def has_audio(self, generation_id: UUID) -> bool:
+        binding = self._bindings.get(generation_id)
+        return binding.has_audio if binding is not None else False
+
+    def mark_provider_response_done(self, generation_id: UUID) -> None:
+        binding = self._bindings.get(generation_id)
+        if binding is not None:
+            binding.provider_response_done = True
+
+    def is_provider_response_done(self, generation_id: UUID) -> bool:
+        binding = self._bindings.get(generation_id)
+        return binding.provider_response_done if binding is not None else False
 
     def lookup_response_generation(self, provider_response_id: str) -> UUID | None:
         """Return the registered generation for a response id, if still bound."""

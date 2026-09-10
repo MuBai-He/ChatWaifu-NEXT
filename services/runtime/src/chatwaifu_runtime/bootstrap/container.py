@@ -31,6 +31,7 @@ from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
+from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
@@ -42,6 +43,7 @@ from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryR
 from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
+from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
@@ -195,6 +197,15 @@ class RuntimeContainer:
             semantic_service=self.photo_semantic,
             annotations=self.photo_annotations,
         )
+        self.spoken_memory_repository = SQLiteSpokenMemoryRepository(self.database)
+        self.memory.set_spoken_repository(self.spoken_memory_repository)
+        self.spoken_memory_observer = SpokenMemoryObserver(
+            sessions=self.sessions,
+            memory=self.memory,
+            event_hub=self.event_hub,
+            repository=self.spoken_memory_repository,
+            playback=self.playback,
+        )
         self.photo_recall = PhotoRecallService(
             self.photo_repository,
             semantic_service=self.photo_semantic,
@@ -293,6 +304,7 @@ class RuntimeContainer:
                 memory=self.memory,
                 skills_source=self.runtime_skills,
                 event_hub=self.event_hub,
+                playback=self.playback,
             )
             cloud_bridge_factory = self.cloud_realtime_factory.create_bridge
 
@@ -350,6 +362,7 @@ class RuntimeContainer:
                 self.photo_semantic.start()
                 self.photo_annotations.start()
                 self.photo_observer.start()
+                await self.spoken_memory_observer.start()
                 await self.external_channels.start()
                 await self.channel_management.start()
                 await self.resources.start()
@@ -409,6 +422,7 @@ class RuntimeContainer:
             [
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
+                _CleanupStep("spoken_memory_observer", lambda: self.spoken_memory_observer.stop()),
                 _CleanupStep("photo_observer", lambda: self.photo_observer.stop()),
                 _CleanupStep("photo_annotations", lambda: self.photo_annotations.stop()),
                 _CleanupStep("index_rebuild", lambda: self.index_rebuild.stop()),

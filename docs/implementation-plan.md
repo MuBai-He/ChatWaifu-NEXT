@@ -1790,8 +1790,20 @@ memory context budget
 - 真实 loopback WebSocket + Runtime/SQLite 验证；公网模型、麦克风和原生收听仍待验收。
 
 [开发验收说明](testing/openai-realtime.md) 区分自动检查与真实语音验收。
-后续先补播放确认与新连接上下文恢复，再继续工具执行及模式/声线入口；不会把 Provider
+Phase 13.4C 完成云端播放确认前置条件，后续继续新连接上下文恢复（13.7）、工具执行（13.5）及模式/声线入口；不会把 Provider
 生成完成算作用户已完整听到。Phase 17.4C 保持待办。
+
+### 13.4C 播放确认与生命周期闭环（Prerequisite）
+
+13.4C 作为云端语音播放确认前置条件交付（[ADR 0048](adr/0048-cloud-playback-confirmation.md)）：
+
+- **生成完成与播放确认分离**：Provider `response.done` 仅代表服务端音频生产完毕；coordinator 标记生产完成，media sink 刷写音频并持久化整句时长，推送有序的下游 `buffered` 标志。客户端在播放完毕后上报 `/api/v1/playback/ack` 或 WebSocket 播放事件。
+- **生命周期所有权分层**：Coordinator 和 ConversationService 通过 CAS 原子状态机拥有回合与 generation 生命周期；PlaybackService 拥有 SQLite 中的持久化播放事实并通过 listener 回调 coordinator。
+- **整句段落与顺序无关双路 Join**：由于云端实时模型缺乏字级别时间对齐，云端音频采用每 generation 一个整句段落（index 0）；音频时长、文本转写（包括空文本 `""`）与客户端播放 ACK 支持不同到达顺序下的幂等提交。
+- **持久化 Spoken 记忆观察**：移除路由层的即时旁路观察，播放提交事务保存待处理事实，`SpokenMemoryObserver` 通过持久化暂存、稳定候选 ID、失败退避和重启恢复处理记忆，EventHub 仅用于唤醒。
+- **打断隔离与有界未确认清理**：打断立即下发 media flush、作废旧 generation，通过状态守卫拒绝迟到分片与过期 ACK；提供可注入事件的有界超时清理，防止断线造成未闭环回合泄漏。
+- **Cascade 兼容性保留**：`PlaybackService` 提交守卫允许 `generation_state not in {"cancelled", "failed"}`，完全兼容 Cascade 在播放前即标记 `completed` 的生命周期。
+- **待决范围明确**：原生/桌面端直接麦克风采集与公网 OpenAI API 访问仍处于待决（pending/unaccepted）状态；所有自动化测试均在受控本地 fixture 与模拟后端下执行。
 
 实现：
 

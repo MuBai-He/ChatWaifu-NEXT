@@ -384,7 +384,10 @@ export class BrowserVoiceClient {
     if (marker.phase === "started") {
       if (
         this.remotePlayback.some(
-          (segment) => segment.segmentId === marker.segmentId,
+          (segment) =>
+            segment.segmentId === marker.segmentId &&
+            segment.streamId === marker.streamId &&
+            segment.generationId === marker.generationId,
         )
       )
         return;
@@ -406,10 +409,25 @@ export class BrowserVoiceClient {
       this.startPlaybackFrame();
       return;
     }
-    const segment = this.remotePlayback.find(
-      (candidate) => candidate.segmentId === marker.segmentId,
+    const segmentIndex = this.remotePlayback.findIndex(
+      (candidate) =>
+        candidate.segmentId === marker.segmentId &&
+        candidate.streamId === marker.streamId &&
+        candidate.generationId === marker.generationId,
     );
-    if (segment) segment.serverBuffered = true;
+    if (segmentIndex !== -1) {
+      const segment = this.remotePlayback[segmentIndex];
+      segment.serverBuffered = true;
+      if (marker.durationMs >= 0) {
+        const delta = marker.durationMs - segment.durationMs;
+        segment.durationMs = marker.durationMs;
+        if (delta !== 0) {
+          for (let i = segmentIndex + 1; i < this.remotePlayback.length; i++) {
+            this.remotePlayback[i].startMediaMs += delta;
+          }
+        }
+      }
+    }
   }
 
   private startPlaybackFrame(): void {

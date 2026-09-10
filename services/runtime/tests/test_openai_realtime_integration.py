@@ -1,23 +1,31 @@
 """Loopback WebSocket -> cloud adapter -> Runtime/SQLite, without public network."""
-# pyright: reportPrivateUsage=false
+# pyright: reportPrivateUsage=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 
 from __future__ import annotations
 
 import asyncio
 import base64
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
+from chatwaifu_protocol.commands import PlaybackAckCommand, PlaybackAckPayload
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.realtime.cloud import openai as openai_module
 from chatwaifu_runtime.realtime.cloud.context import ConsentRequiredError, PolicyDeniedError
 from chatwaifu_runtime.realtime.cloud.openai import OpenAIRealtimeBackend, RealtimeSocket
 from chatwaifu_runtime.realtime.cloud.openai_events import object_value
-from pipecat.frames.frames import Frame, InputAudioRawFrame, InterruptionFrame, OutputAudioRawFrame
+from pipecat.frames.frames import (
+    Frame,
+    InputAudioRawFrame,
+    InterruptionFrame,
+    OutputAudioRawFrame,
+    OutputTransportMessageFrame,
+)
 from pipecat.processors.frame_processor import FrameDirection
 from websockets.asyncio.server import ServerConnection, serve
 
@@ -146,6 +154,7 @@ async def test_real_websocket_turn_and_late_transcript_persist_once(
             bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
             media: list[bytes] = []
             interruptions: list[InterruptionFrame] = []
+            playback_markers: list[dict[str, object]] = []
 
             async def capture(
                 frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM
@@ -154,6 +163,10 @@ async def test_real_websocket_turn_and_late_transcript_persist_once(
                     media.append(frame.audio)
                 if isinstance(frame, InterruptionFrame):
                     interruptions.append(frame)
+                if isinstance(frame, OutputTransportMessageFrame) and isinstance(
+                    frame.message, dict
+                ):
+                    playback_markers.append(frame.message)
 
             monkeypatch.setattr(bridge, "push_frame", capture)
             final_received = asyncio.Event()
@@ -190,6 +203,35 @@ async def test_real_websocket_turn_and_late_transcript_persist_once(
             )
             await bridge._handle_user_speaking_stopped()
             await asyncio.wait_for(final_received.wait(), 5)
+            if not disconnect:
+                for marker in playback_markers:
+                    if marker.get("phase") == "buffered":
+                        ack = await container.playback.acknowledge(
+                            PlaybackAckCommand(
+                                command_id=uuid4(),
+                                session_id=session.session_id,
+                                generation_id=identity.generation_id,
+                                issued_at=datetime.now(UTC),
+                                issuer="web-client",
+                                payload=PlaybackAckPayload(
+                                    stream_id=UUID(str(marker["stream_id"])),
+                                    segment_id=UUID(str(marker["segment_id"])),
+                                    phase="stopped",
+                                    played_pts_ms=int(str(marker["duration_ms"])),
+                                    buffered_ms=int(str(marker["duration_ms"])),
+                                    client_clock_ms=int(str(marker["duration_ms"])),
+                                    transport="webrtc",
+                                    reason="ended",
+                                ),
+                            )
+                        )
+                        if ack.all_segments_completed and ack.turn_id:
+                            await container.conversation.complete_realtime_generation(
+                                session_id=session.session_id,
+                                turn_id=ack.turn_id,
+                                generation_id=identity.generation_id,
+                                text=ack.spoken_text,
+                            )
             await bridge.coordinator.stop()
             records = await container.database.fetchall(
                 "SELECT event_type, envelope_json FROM events WHERE session_id = ?",

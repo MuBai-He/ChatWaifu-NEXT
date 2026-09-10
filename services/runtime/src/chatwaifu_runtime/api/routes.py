@@ -1000,20 +1000,6 @@ async def acknowledge_playback(
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    if (
-        result.all_segments_completed
-        and result.committed_event_id is not None
-        and result.turn_id is not None
-    ):
-        session = await _container(request).sessions.get_session(session_id)
-        if session is not None:
-            await _container(request).memory.observe_assistant_spoken(
-                session_id,
-                result.turn_id,
-                result.committed_event_id,
-                session.character_id,
-                result.spoken_text,
-            )
     return {
         "command_id": str(result.command_id),
         "segment_id": str(result.segment_id),

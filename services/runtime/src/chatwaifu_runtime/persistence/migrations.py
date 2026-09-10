@@ -1119,4 +1119,44 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON channel_turn_burst_members(burst_id);
         """,
     ),
+    (
+        29,
+        """
+        ALTER TABLE playback_segments
+            ADD COLUMN transcript_finalized INTEGER NOT NULL DEFAULT 1
+            CHECK(transcript_finalized IN (0, 1));
+        ALTER TABLE playback_segments
+            ADD COLUMN spoken_committed INTEGER NOT NULL DEFAULT 0
+            CHECK(spoken_committed IN (0, 1));
+        UPDATE playback_segments SET spoken_committed = 1 WHERE state = 'completed';
+        """,
+    ),
+    (
+        30,
+        """
+        CREATE TABLE spoken_memory_facts (
+            source_event_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            turn_id TEXT NOT NULL,
+            spoken_text TEXT NOT NULL,
+            state TEXT NOT NULL CHECK(state IN ('pending', 'completed', 'failed', 'paused')),
+            staged_candidates_json TEXT,
+            checkpoint_index INTEGER NOT NULL DEFAULT 0,
+            retry_count INTEGER NOT NULL DEFAULT 0,
+            next_retry_at TEXT,
+            last_error TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+        );
+        CREATE INDEX spoken_memory_facts_pending_idx
+            ON spoken_memory_facts(state, next_retry_at, created_at);
+        CREATE INDEX spoken_memory_facts_session_idx
+            ON spoken_memory_facts(session_id);
+
+        CREATE TABLE memory_scope_resets (
+            character_id TEXT PRIMARY KEY,
+            reset_at TEXT NOT NULL
+        );
+        """,
+    ),
 )

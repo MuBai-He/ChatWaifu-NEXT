@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Literal, Protocol
 from uuid import UUID
@@ -71,7 +72,14 @@ class RealtimeDomainSink(Protocol):
     ) -> None: ...
 
     async def response_completed(
-        self, session_id: UUID, turn_id: UUID, generation_id: UUID, text: str
+        self,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        *,
+        has_audio: bool = False,
+        playback_confirmed: bool = False,
     ) -> None: ...
 
     async def response_cancelled(
@@ -101,6 +109,10 @@ class RealtimeMediaSink(Protocol):
     """Sink for high-frequency normalized audio frames."""
 
     async def handle_audio_frame(self, frame: RealtimeOutputAudioFrame) -> None: ...
+
+    async def finalize_response_audio(self, generation_id: UUID) -> int | None: ...
+
+    def clear_generation(self, generation_id: UUID) -> None: ...
 
     async def session_terminated(self) -> None: ...
 
@@ -194,7 +206,14 @@ class InMemoryDomainSink(RealtimeDomainSink):
         )
 
     async def response_completed(
-        self, session_id: UUID, turn_id: UUID, generation_id: UUID, text: str
+        self,
+        session_id: UUID,
+        turn_id: UUID,
+        generation_id: UUID,
+        text: str,
+        *,
+        has_audio: bool = False,
+        playback_confirmed: bool = False,
     ) -> None:
         self.responses_completed.append((session_id, turn_id, generation_id, text))
 
@@ -240,6 +259,12 @@ class InMemoryMediaSink(RealtimeMediaSink):
     async def handle_audio_frame(self, frame: RealtimeOutputAudioFrame) -> None:
         self.received_frames.append(frame)
 
+    async def finalize_response_audio(self, generation_id: UUID) -> int | None:
+        return None
+
+    def clear_generation(self, generation_id: UUID) -> None:
+        pass
+
     async def session_terminated(self) -> None:
         pass
 
@@ -267,6 +292,19 @@ class CloudRealtimeCoordinator:
         self._closing = False
         self._admission_lock = asyncio.Lock()
         self._admission_task: asyncio.Task[VoiceTurnIdentity | None] | None = None
+        self._missing_ack_tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._ack_timeout_seconds: float = 5.0
+        self._injected_ack_timeout_event: asyncio.Event | None = None
+        self._injected_ack_deadline_waiter: Callable[[float], Awaitable[None]] | None = None
+
+    def set_ack_timeout(self, seconds: float) -> None:
+        self._ack_timeout_seconds = seconds
+
+    def inject_ack_timeout_event(self, event: asyncio.Event | None) -> None:
+        self._injected_ack_timeout_event = event
+
+    def inject_ack_deadline_waiter(self, waiter: Callable[[float], Awaitable[None]] | None) -> None:
+        self._injected_ack_deadline_waiter = waiter
 
     @property
     def is_running(self) -> bool:
@@ -322,16 +360,30 @@ class CloudRealtimeCoordinator:
         if self._closing:
             await admission.cancel_utterance(identity, "cloud_session_closed_during_admission")
             return None
-        self.admit_turn(identity.turn_id, identity.generation_id, identity.utterance_id)
+        self.admit_turn(
+            identity.turn_id,
+            identity.generation_id,
+            identity.utterance_id,
+            audio_stream_id=identity.audio_stream_id,
+        )
         return identity
 
     def admit_turn(
-        self, turn_id: UUID, generation_id: UUID, utterance_id: UUID | None = None
+        self,
+        turn_id: UUID,
+        generation_id: UUID,
+        utterance_id: UUID | None = None,
+        audio_stream_id: UUID | None = None,
     ) -> None:
         """Register turn and generation in mirror when admitted by runtime."""
         if self._closing:
             raise RuntimeError("Cannot admit a turn on a closing cloud session")
-        self._mirror.register_generation(generation_id, turn_id, utterance_id=utterance_id)
+        self._mirror.register_generation(
+            generation_id,
+            turn_id,
+            utterance_id=utterance_id,
+            audio_stream_id=audio_stream_id,
+        )
 
     def start(self) -> None:
         """Start background event pump task."""
@@ -352,6 +404,9 @@ class CloudRealtimeCoordinator:
         """Idempotently terminate active generation in mirror and domain sink."""
         active_gen = self._mirror.active_generation_id
         if active_gen is not None:
+            self._cancel_missing_ack_timer(active_gen)
+            if self._media_sink is not None:
+                self._media_sink.clear_generation(active_gen)
             turn_id = self._mirror.get_turn_id(active_gen)
             was_tombstoned = self._mirror.is_tombstoned(active_gen)
             self._mirror.cancel_generation(active_gen)
@@ -371,6 +426,99 @@ class CloudRealtimeCoordinator:
                         reason,
                     )
 
+    def complete_generation(self, generation_id: UUID) -> None:
+        """Mark generation completed in mirror after playback confirmation."""
+        self._cancel_missing_ack_timer(generation_id)
+        self._mirror.complete_generation(generation_id)
+        if self._media_sink is not None:
+            self._media_sink.clear_generation(generation_id)
+
+    async def playback_completed(
+        self, generation_id: UUID, turn_id: UUID | None, spoken_text: str
+    ) -> None:
+        """Handle durable playback confirmation for all segments of a generation."""
+        if (
+            self._closing
+            or self._mirror.is_tombstoned(generation_id)
+            or not self._mirror.is_active(generation_id)
+            or not self._mirror.is_provider_response_done(generation_id)
+        ):
+            _LOGGER.debug(
+                "Dropping playback_completed for generation %s "
+                "(closing=%s, tombstoned=%s, active=%s, done=%s)",
+                generation_id,
+                self._closing,
+                self._mirror.is_tombstoned(generation_id),
+                self._mirror.is_active(generation_id),
+                self._mirror.is_provider_response_done(generation_id),
+            )
+            return
+
+        self._cancel_missing_ack_timer(generation_id)
+        self._mirror.complete_generation(generation_id)
+        if self._media_sink is not None:
+            self._media_sink.clear_generation(generation_id)
+        resolved_turn = turn_id or self._mirror.get_turn_id(generation_id)
+        if resolved_turn is not None:
+            await self._domain_sink.response_completed(
+                self.session_id,
+                resolved_turn,
+                generation_id,
+                spoken_text,
+                has_audio=True,
+                playback_confirmed=True,
+            )
+
+    def _start_missing_ack_timer(
+        self, generation_id: UUID, turn_id: UUID, duration_ms: int | None = None
+    ) -> None:
+        self._cancel_missing_ack_timer(generation_id)
+        task = asyncio.create_task(
+            self._missing_ack_timeout_runner(generation_id, turn_id, duration_ms=duration_ms),
+            name=f"cloud-missing-ack-{str(generation_id)[:8]}",
+        )
+        self._missing_ack_tasks[generation_id] = task
+
+    def _cancel_missing_ack_timer(self, generation_id: UUID) -> None:
+        task = self._missing_ack_tasks.pop(generation_id, None)
+        if task is not None and not task.done():
+            task.cancel()
+
+    async def _missing_ack_timeout_runner(
+        self, generation_id: UUID, turn_id: UUID, duration_ms: int | None = None
+    ) -> None:
+        audio_seconds = (
+            (duration_ms / 1000.0) if (duration_ms is not None and duration_ms > 0) else 0.0
+        )
+        total_timeout = audio_seconds + self._ack_timeout_seconds
+        try:
+            if self._injected_ack_deadline_waiter is not None:
+                await self._injected_ack_deadline_waiter(total_timeout)
+            elif self._injected_ack_timeout_event is not None:
+                await self._injected_ack_timeout_event.wait()
+            else:
+                await asyncio.sleep(total_timeout)
+        except asyncio.CancelledError:
+            return
+        finally:
+            self._missing_ack_tasks.pop(generation_id, None)
+
+        if self._mirror.is_active(generation_id):
+            _LOGGER.warning(
+                "Playback ACK timed out for generation %s (session %s)",
+                generation_id,
+                self.session_id,
+            )
+            self._mirror.cancel_generation(generation_id)
+            if self._media_sink is not None:
+                self._media_sink.clear_generation(generation_id)
+            await self._domain_sink.response_cancelled(
+                self.session_id,
+                turn_id,
+                generation_id,
+                "playback_ack_timeout",
+            )
+
     async def stop(self) -> None:
         """Join one terminal cleanup; a closed provider session cannot be restarted."""
         await self._end_session("coordinator_stopped")
@@ -387,6 +535,16 @@ class CloudRealtimeCoordinator:
 
     async def _finish_session(self, reason: str, initiator: asyncio.Task[object] | None) -> None:
         # The closing flag fences dispatch/admission before any cleanup awaits.
+        ack_tasks = [
+            task
+            for task in self._missing_ack_tasks.values()
+            if not task.done() and task is not initiator
+        ]
+        for task in ack_tasks:
+            task.cancel()
+        if ack_tasks:
+            await asyncio.gather(*ack_tasks, return_exceptions=True)
+        self._missing_ack_tasks.clear()
         pump = self._pump_task
         if pump is not None and pump is not initiator:
             pump.cancel()
@@ -659,6 +817,9 @@ class CloudRealtimeCoordinator:
         self, generation_id: UUID, reason: str = "cancelled", *, interrupt_provider: bool = True
     ) -> None:
         """Cancel a generation, invalidating it in the mirror and interrupting the provider."""
+        self._cancel_missing_ack_timer(generation_id)
+        if self._media_sink is not None:
+            self._media_sink.clear_generation(generation_id)
         if self._mirror.is_tombstoned(generation_id):
             return
         turn_id = self._mirror.get_turn_id(generation_id)
@@ -786,13 +947,17 @@ class CloudRealtimeCoordinator:
                     gen_id is None
                     or self._mirror.is_tombstoned(gen_id)
                     or not self._mirror.is_active(gen_id)
+                    or self._mirror.is_provider_response_done(gen_id)
                 ):
                     _LOGGER.debug(
-                        "Dropping late OutputAudioEvent for inactive or tombstoned generation %s",
+                        "Dropping late OutputAudioEvent for inactive, done, "
+                        "or tombstoned generation %s",
                         gen_id,
                     )
                     return
 
+                if frame.audio:
+                    self._mirror.mark_has_audio(gen_id)
                 if self._media_sink is not None:
                     if frame.generation_id != gen_id:
                         frame = RealtimeOutputAudioFrame(
@@ -817,7 +982,11 @@ class CloudRealtimeCoordinator:
                 if gen_id is None:
                     return
 
-                if self._mirror.is_tombstoned(gen_id) or not self._mirror.is_active(gen_id):
+                if (
+                    self._mirror.is_tombstoned(gen_id)
+                    or not self._mirror.is_active(gen_id)
+                    or self._mirror.is_provider_response_done(gen_id)
+                ):
                     _LOGGER.debug(
                         "Dropping late AssistantTranscriptEvent for generation %s",
                         gen_id,
@@ -917,8 +1086,26 @@ class CloudRealtimeCoordinator:
                     return
 
                 text = self._mirror.get_completed_text(gen_id, event.final_text)
-                self._mirror.complete_generation(gen_id)
-                await self._domain_sink.response_completed(self.session_id, turn_id, gen_id, text)
+                has_audio = self._mirror.has_audio(gen_id)
+                if not has_audio:
+                    self._mirror.complete_generation(gen_id)
+                    await self._domain_sink.response_completed(
+                        self.session_id, turn_id, gen_id, text, has_audio=False
+                    )
+                else:
+                    self._mirror.mark_provider_response_done(gen_id)
+                    duration_ms: int | None = None
+                    if self._media_sink is not None:
+                        duration_ms = await self._media_sink.finalize_response_audio(gen_id)
+                    await self._domain_sink.response_completed(
+                        self.session_id, turn_id, gen_id, text, has_audio=True
+                    )
+                    if (
+                        not self._closing
+                        and not self._mirror.is_tombstoned(gen_id)
+                        and self._mirror.is_active(gen_id)
+                    ):
+                        self._start_missing_ack_timer(gen_id, turn_id, duration_ms=duration_ms)
                 if event.usage is not None:
                     await self._domain_sink.usage_recorded(
                         self.session_id, turn_id, gen_id, event.usage
