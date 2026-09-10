@@ -18,6 +18,7 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.session import GenerationState
 
 from chatwaifu_runtime.conversation.models import (
+    ConfirmedConversationTurn,
     ConversationHistoryEntry,
     ConversationSourceContext,
     ConversationUserInputContext,
@@ -51,6 +52,10 @@ class ConversationRepository(Protocol):
     async def recent_history(
         self, session_id: UUID, current_turn_id: UUID, *, limit: int
     ) -> tuple[ConversationHistoryEntry, ...]: ...
+
+    async def latest_confirmed_history(
+        self, session_id: UUID, *, limit: int = 16
+    ) -> tuple[ConfirmedConversationTurn, ...]: ...
 
     async def prepare_history(
         self, generation_id: UUID, history: tuple[ConversationHistoryEntry, ...]

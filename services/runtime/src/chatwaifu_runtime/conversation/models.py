@@ -114,6 +114,23 @@ class ConversationHistoryEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class ConfirmedConversationTurn:
+    """Typed snapshot of a finalized user turn or confirmed spoken assistant turn.
+
+    Only finalized user text and confirmed spoken assistant text (supported by
+    a durable presentation fact) are eligible. No uncommitted user text,
+    unheard assistant output, tool calls, or raw PCM is ever included.
+    """
+
+    turn_id: UUID
+    role: Literal["user", "assistant"]
+    text: str
+    generation_id: UUID | None = None
+    created_at: datetime | None = None
+    is_redacted: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ConversationTurnOptions:
     """Surface-neutral controls for one submitted conversation turn.
 

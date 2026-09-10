@@ -924,6 +924,10 @@ async def create_webrtc_offer(
             restart_pc=body.restart_pc,
             activation_mode=body.activation_mode,
         )
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except (ConnectionError, TimeoutError) as error:
+        raise HTTPException(status_code=503, detail="语音连接暂时不可用，请稍后重试。") from error
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -940,9 +944,13 @@ async def patch_webrtc_offer(request: Request, body: WebRtcPatchRequest) -> dict
 
 
 @router.delete("/sessions/{session_id}/webrtc")
-async def close_webrtc_session(request: Request, session_id: UUID) -> dict[str, object]:
-    closed = await _container(request).voice_media.close_session(session_id)
-    return {"session_id": str(session_id), "connections_closed": closed}
+async def close_webrtc_session(
+    request: Request,
+    session_id: UUID,
+    pc_id: str | None = Query(default=None),
+) -> dict[str, object]:
+    closed = await _container(request).voice_media.close_session(session_id, pc_id=pc_id)
+    return {"session_id": str(session_id), "connections_closed": closed, "pc_id": pc_id}
 
 
 @router.get("/sessions/{session_id}/events")

@@ -1861,10 +1861,18 @@ Context patch 只发送必要信息：
 
 ## 13.7 Reconnect
 
-- Provider session 断开后不尝试重播旧音频。
-- 新建 Provider session。
-- 从 Runtime snapshot 恢复必要上下文。
-- 用户可继续，必要时退回 Cascade。
+### 13.7A 客户端驱动的新连接重连与上下文恢复（[ADR 0049](adr/0049-cloud-realtime-recovery-and-context-restoration.md)）
+
+- **客户端主导的全量新建连接**：Provider 断开（EOF/错误）或网络故障时，不尝试在运行中的 Pipecat 管道内热替换 bridge；Bridge 触发 `closed_event` 信号通知适配器 watcher 终止 WebRTC 传输，由前端 `BrowserVoiceClient` 驱动全新连接建联流程。
+- **健康连接重连预算重置**：前端采用指数退避重试，连接成功后必须维持 5 秒健康状态（`HEALTHY_THRESHOLD_MS = 5000`）才清零重试计数，限制“建联即断”情况下的连续重试次数；4xx 非瞬态错误立即终止重连。
+- **连接标识隔离与定向拆除（`pc_id`）**：每个 WebRTC 连接分配独立 `pc_id`；浏览器拆除请求携带 `DELETE /sessions/{session_id}/webrtc?pc_id=...`，保留管理端会话级关闭入口，旧连接的延迟拆除不会误杀已建立的新连接；并发 Offer 串行准入，强制等待旧连接清理（超时 2 秒）。
+- **确认对话上下文恢复（`latest_confirmed_history`）**：新 Provider 会话初始化时，仅从 SQLite 恢复已确认的历史对话（`limit=16` 按时间正序）：
+  - 用户消息必须已敲定（`committed_text IS NOT NULL`）。
+  - 助手消息必须已完成播放确认（`state = 'completed' AND spoken_text IS NOT NULL`，遵循 ADR 0048）；排除未完成、未播放或被打断的中间生成。
+  - 应用照片脱敏替换（`photo_context_redactions`）。
+- **不可信对话转义与预算裁减**：历史记录作为 `recent_history` 注入，优先级设为最低的 6（弱于 system 指令、Character Kernel 及安全约束）；内容经 `json.dumps(..., ensure_ascii=False)` 转义并标明为不可信历史，不保证消除提示词注入风险；预算不足时优先裁减历史记录。
+- **Egress 审计与策略闭环**：通过 `CloudEgressGateway` 实施策略裁决与 fail-closed 拦截，记录脱敏审计回执（audit receipts），严禁对话文本或敏感信息写入审计日志。
+- **边界与限制**：Phase 13.7A 仅覆盖客户端驱动的云端新建连接重连与确认上下文恢复，自动化测试已通过，真机麦克风与公网连接验收待进行；本阶段不包含向 Cascade 模式的自动运行时降级回退（automatic fallback），亦不代表整个 Phase 13.7 的全面完成；工具桥接（13.5）与上下文同步（13.6）保持独立排期。
 
 ## 13.8 Voice Identity
 

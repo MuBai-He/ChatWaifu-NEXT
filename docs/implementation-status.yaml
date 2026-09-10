@@ -1,7 +1,7 @@
 schema_version: "1.0"
-updated_at: "2026-09-09"
-current_phase: "13.4C"
-next_phase: "13.7"
+updated_at: "2026-09-10"
+current_phase: "13.7A"
+next_phase: "13.5"
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
@@ -501,6 +501,21 @@ phases:
       - Regression coverage includes delayed transcript joins, long audio deadlines, listener ownership, staged multi-candidate crash recovery, retry backoff, and memory reset during staged work
       - Native/live desktop microphone capture and public OpenAI network access remain pending/unaccepted; automated verification runs against simulated backends and deterministic fixtures
       - Phase 13.5 (tool bridge), Phase 13.6 (context sync), and Phase 13.7 (reconnect) remain in the Phase 13 roadmap; Phase 17.4C remains queued
+  - id: 13.7A
+    name: cloud-realtime-recovery-and-context-restoration
+    status: implemented_automated_checks_passed_live_acceptance_pending
+    evidence:
+      - Phase 13.7A delivers client-driven fresh-connection recovery and confirmed dialogue context restoration under ADR 0049
+      - Provider EOF, socket errors, and bridge termination set closed_event on CloudRealtimeMediaBridge, triggering adapter watcher to tear down the WebRTC transport cleanly without in-pipeline hot-swapping
+      - Browser voice client coordinates bounded reconnection episodes with exponential backoff, requiring 5 seconds of healthy connection before resetting attempt budget to eliminate rapid reconnect loops
+      - WebRTC offer and teardown protocols use unique pc_id correlation; late DELETE requests targeting superseded connections safely release obsolete resources without terminating active replacement connections
+      - PipecatMediaAdapter serializes admission per session with a 2.0-second join timeout to guarantee ordered cleanup of superseded pipeline tasks
+      - latest_confirmed_history reconstructs dialogue context containing only finalized user turns and playback-confirmed assistant turns (state='completed' and spoken_text is non-null under ADR 0048); photo context redactions are sanitized
+      - History turns are injected as JSON-quoted untrusted dialogue at priority 6, subordinated to system instructions and character canon, with budget pruning discarding history turns before character memory
+      - CloudEgressGateway evaluates allow/ask/deny policies, fail-closes on ungranted permissions, and writes durable egress receipts without leaking sensitive conversation transcripts into audit logs
+      - Unit and integration test suites verify EOF teardown, history filtering, photo redactions, concurrent offer joining, targeted pc_id teardown, fail-closed policy, and frontend recovery backoff
+      - Phase 13.7A covers client-driven fresh-connection recovery and confirmed context restoration with automated checks passing; live acceptance remains pending
+      - Automatic runtime fallback to Cascade mode, full Phase 13.7 completion, live microphone capture, real public OpenAI connectivity, cloud tool execution (13.5), and context synchronization (13.6) remain pending or queued
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
