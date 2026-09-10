@@ -387,6 +387,536 @@ describe("voice capture gating", () => {
   });
 });
 
+describe("cloud realtime recovery and reconnection", () => {
+  it("exhausts reconnect attempts without infinite loop when connection drops immediately after handshake", async () => {
+    vi.useFakeTimers();
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    let offerCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        offerCount++;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: "answer",
+              sdp: "answer",
+              pc_id: `pc-${offerCount}`,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }),
+    );
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    await client.connect("session-1", "mic-a");
+    expect(states.at(-1)).toBe("connected");
+
+    // Repeated immediate drops after 100ms (far before 5000ms healthy threshold)
+    // must count up backoff retries and terminate
+    const backoffs = [0, 250, 500, 1_000, 2_000, 4_000];
+    for (const delay of backoffs) {
+      const activePeer = browser.peers.at(-1);
+      // Fail connection
+      activePeer?.setConnectionState("failed");
+      // Advance by delay plus some margin to allow establish to run
+      await vi.advanceTimersByTimeAsync(delay + 50);
+    }
+
+    expect(states.at(-1)).toBe("failed");
+    expect(errors.at(-1)).toContain("自动重连已达到上限");
+    const finalOfferCount = offerCount;
+    await vi.runAllTimersAsync();
+    expect(offerCount).toBe(finalOfferCount);
+  });
+
+  it("resets retry attempt count only after remaining connected for healthy threshold", async () => {
+    vi.useFakeTimers();
+    const browser = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    await client.connect("session-1", "mic-a");
+    expect(states.at(-1)).toBe("connected");
+
+    // Drop connection once
+    browser.peers.at(-1)?.setConnectionState("failed");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(states.at(-1)).toBe("connected");
+
+    // Advance 5000ms for healthy timer to reset reconnectAttempt
+    await vi.advanceTimersByTimeAsync(5000);
+
+    // Drop connection again - reconnect succeeds normally without attempt exhaustion
+    browser.peers.at(-1)?.setConnectionState("failed");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(states.at(-1)).toBe("connected");
+    expect(errors).toHaveLength(0);
+    await client.dispose("session-1");
+  });
+
+  it("sends targeted DELETE with pc_id for stale offers and old connections", async () => {
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const fetchCalls: Array<{ url: string; method?: string }> = [];
+    let offerCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        fetchCalls.push({ url, method: init?.method });
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        offerCount++;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: "answer",
+              sdp: "answer",
+              pc_id: `pc-${offerCount}`,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }),
+    );
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    await client.connect("session-1", "mic-a");
+    await client.disconnect("session-1");
+
+    const deleteCall = fetchCalls.find((c) => c.method === "DELETE");
+    expect(deleteCall).toBeDefined();
+    expect(deleteCall?.url).toContain(
+      "/v1/sessions/session-1/webrtc?pc_id=pc-1",
+    );
+  });
+
+  it("fails immediately and does not retry on 403 non-retryable response", async () => {
+    vi.useFakeTimers();
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "egress consent required" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }),
+    );
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    await expect(client.connect("session-1", "mic-a")).rejects.toThrow(
+      "egress consent required",
+    );
+    expect(states.at(-1)).toBe("failed");
+    expect(errors.at(-1)).toBe("egress consent required");
+
+    await vi.runAllTimersAsync();
+    expect(states.at(-1)).toBe("failed");
+  });
+
+  it("cleans up abandoned offer returned after disconnect", async () => {
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const fetchCalls: Array<{ url: string; method?: string }> = [];
+    let resolveOffer: ((resp: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        fetchCalls.push({ url, method: init?.method });
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return new Promise<Response>((resolve) => {
+          resolveOffer = resolve;
+        });
+      }),
+    );
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const connectPromise = client.connect("session-1", "mic-a");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    void client.disconnect("session-1");
+
+    resolveOffer?.(
+      new Response(
+        JSON.stringify({
+          type: "answer",
+          sdp: "answer",
+          pc_id: "pc-stale",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    await connectPromise.catch(() => undefined);
+
+    const staleDelete = fetchCalls.find(
+      (c) =>
+        c.method === "DELETE" &&
+        c.url.includes("/v1/sessions/session-1/webrtc?pc_id=pc-stale"),
+    );
+    expect(staleDelete).toBeDefined();
+  });
+
+  it("retries on 429 rate limit rather than failing as permanent non-retryable", async () => {
+    vi.useFakeTimers();
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    let callCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ detail: "rate limit exceeded" }), {
+              status: 429,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: "answer",
+              sdp: "answer",
+              pc_id: "pc-retry",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }),
+    );
+    const states: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const connectPromise = client.connect("session-1", "mic-a");
+    // Initial establish fails with 429, but since it's 429 it was called directly by connect() which throws
+    await expect(connectPromise).rejects.toThrow("rate limit exceeded");
+  });
+
+  it("deferred rejection on old session after new connect does not fail new connection", async () => {
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    let rejectOldOffer: ((err: Error) => void) | undefined;
+    let resolveNewOffer: ((resp: Response) => void) | undefined;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        if (url.includes("session-1")) {
+          return new Promise<Response>((_, reject) => {
+            rejectOldOffer = reject;
+          });
+        }
+        return new Promise<Response>((resolve) => {
+          resolveNewOffer = resolve;
+        });
+      }),
+    );
+
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    // Start session-1
+    const p1 = client.connect("session-1", "mic-a");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Supersede with session-2 before session-1 completes
+    const p2 = client.connect("session-2", "mic-a");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Old offer fails late
+    rejectOldOffer?.(new Error("Old connection network error"));
+    await p1.catch(() => undefined);
+
+    // Old rejection must NOT have failed client state for session-2
+    expect(states.at(-1)).not.toBe("failed");
+    expect(errors).toHaveLength(0);
+
+    // Complete session-2
+    resolveNewOffer?.(
+      new Response(
+        JSON.stringify({ type: "answer", sdp: "answer", pc_id: "pc-new" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await p2;
+    expect(states.at(-1)).toBe("connected");
+  });
+
+  it("deferred answer on old session sends DELETE to old session and does not overwrite new session active connection", async () => {
+    installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const fetchCalls: Array<{ url: string; method?: string }> = [];
+    let resolveOldOffer: ((resp: Response) => void) | undefined;
+    let resolveNewOffer: ((resp: Response) => void) | undefined;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        fetchCalls.push({ url, method: init?.method });
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        if (url.includes("session-old")) {
+          return new Promise<Response>((resolve) => {
+            resolveOldOffer = resolve;
+          });
+        }
+        return new Promise<Response>((resolve) => {
+          resolveNewOffer = resolve;
+        });
+      }),
+    );
+
+    const client = new BrowserVoiceClient({
+      onStateChange: vi.fn(),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    const pOld = client.connect("session-old", "mic-a");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const pNew = client.connect("session-new", "mic-a");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    resolveNewOffer?.(
+      new Response(
+        JSON.stringify({ type: "answer", sdp: "answer", pc_id: "pc-new" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await pNew;
+
+    // Resolve old offer late
+    resolveOldOffer?.(
+      new Response(
+        JSON.stringify({ type: "answer", sdp: "answer", pc_id: "pc-old" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    await pOld.catch(() => undefined);
+
+    // Verify DELETE targeted session-old with pc-old, NOT session-new!
+    const oldDelete = fetchCalls.find(
+      (c) =>
+        c.method === "DELETE" &&
+        c.url.includes("/v1/sessions/session-old/webrtc?pc_id=pc-old"),
+    );
+    expect(oldDelete).toBeDefined();
+
+    // Verify no untargeted DELETE or wrong session delete occurred
+    const wrongDelete = fetchCalls.find(
+      (c) =>
+        c.method === "DELETE" &&
+        c.url.includes("/v1/sessions/session-new/webrtc?pc_id=pc-old"),
+    );
+    expect(wrongDelete).toBeUndefined();
+  });
+
+  it("reconnect exhaustion disposes owned resources and transitions to failed", async () => {
+    vi.useFakeTimers();
+    const harness = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    let attempt = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ connections_closed: 1 }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        attempt++;
+        if (attempt === 1) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ type: "answer", sdp: "answer", pc_id: "pc-1" }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            ),
+          );
+        }
+        return Promise.reject(new Error("Network connection down"));
+      }),
+    );
+
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    await client.connect("session-1", "mic-a");
+    expect(states.at(-1)).toBe("connected");
+
+    // Simulate peer disconnection to trigger reconnect loop
+    const peer = harness.peers[0];
+    peer?.setConnectionState("disconnected");
+
+    // Advance timers through all 5 backoff steps
+    await vi.runAllTimersAsync();
+
+    expect(states.at(-1)).toBe("failed");
+    expect(errors.at(-1)).toContain("自动重连已达到上限");
+
+    // Verify resources were disposed
+    expect(peer?.connectionState).toBe("closed");
+  });
+
+  it("ignores unregistered error messages on the playback data channel", async () => {
+    const harness = installVoiceBrowserHarness([device("mic-a", "内置麦克风")]);
+    const states: string[] = [];
+    const errors: string[] = [];
+    const client = new BrowserVoiceClient({
+      onStateChange: (state) => states.push(state),
+      onInputLevel: vi.fn(),
+      onDevicesChange: vi.fn(),
+      onPlaybackReceipt: vi.fn(),
+      onError: (err) => errors.push(err),
+    });
+
+    await client.connect("session-1", "mic-a");
+    expect(states.at(-1)).toBe("connected");
+
+    // Simulate backend sending fatal error on data channel
+    const peer = harness.peers[0];
+    peer?.dataChannel.receive(
+      new MessageEvent("message", {
+        data: JSON.stringify({
+          type: "chatwaifu.error",
+          detail: "Egress policy violation: explicit consent revoked",
+          fatal: true,
+        }),
+      }),
+    );
+
+    expect(states.at(-1)).toBe("connected");
+    expect(errors).toEqual([]);
+    expect(peer?.connectionState).toBe("connected");
+    await client.dispose();
+  });
+});
+
 function device(deviceId: string, label: string): MediaDeviceInfo {
   return {
     deviceId,

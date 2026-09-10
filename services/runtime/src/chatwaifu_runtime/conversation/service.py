@@ -38,6 +38,7 @@ from chatwaifu_runtime.character_kernel.service import (
 )
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
 from chatwaifu_runtime.conversation.models import (
+    ConfirmedConversationTurn,
     ConversationHistoryEntry,
     ConversationSourceContext,
     ConversationTurnOptions,
@@ -828,6 +829,11 @@ class ConversationService:
 
     async def list_messages(self, session_id: UUID, limit: int = 100) -> list[dict[str, object]]:
         return await self._repository.list_messages(session_id, limit=limit)
+
+    async def latest_confirmed_history(
+        self, session_id: UUID, *, limit: int = 16
+    ) -> tuple[ConfirmedConversationTurn, ...]:
+        return await self._repository.latest_confirmed_history(session_id, limit=limit)
 
     async def recovery_state(self, session_id: UUID) -> ConversationRecoveryRecord:
         return await self._repository.recovery_state(session_id)

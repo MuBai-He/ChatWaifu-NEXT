@@ -153,6 +153,21 @@ class RuntimeCloudRealtimeFactory:
             extract_realtime_skills(self._skills_source) if capabilities.supports_tool_call else []
         )
 
+        try:
+            conversation_history = await self._conversation.latest_confirmed_history(
+                session_id, limit=16
+            )
+        except Exception as exc:
+            _LOGGER.error(
+                "Could not obtain confirmed history for session %s: %s; failing closed",
+                session_id,
+                exc,
+                exc_info=True,
+            )
+            raise RuntimeError(
+                f"Failed to load confirmed history for recovery session {session_id}: {exc}"
+            ) from exc
+
         intent = RealtimeSessionIntent(
             session_id=session_id,
             character_id=character_id,
@@ -165,6 +180,7 @@ class RuntimeCloudRealtimeFactory:
             kernel_snapshot=kernel_snapshot,
             memories=memories,
             skills=skills,
+            conversation_history=conversation_history,
         )
 
         domain_sink = RuntimeRealtimeDomainSink(

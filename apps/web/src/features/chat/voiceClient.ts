@@ -1,5 +1,9 @@
 import type { PlaybackAckReceipt } from "./runtimeClient";
-import { runtimeFetch } from "./runtimeEndpoint";
+import {
+  resolveRuntimeConnection,
+  runtimeFetchWithConnection,
+  type RuntimeConnection,
+} from "./runtimeEndpoint";
 
 export type VoiceConnectionState =
   | "unsupported"
@@ -49,6 +53,7 @@ const DISCONNECTED_GRACE_MS = 750;
 const REMOTE_PLAYOUT_LEAD_MS = 80;
 
 export class BrowserVoiceClient {
+  private static readonly HEALTHY_THRESHOLD_MS = 5_000;
   private peer: RTCPeerConnection | null = null;
   private stream: MediaStream | null = null;
   private output: HTMLAudioElement | null = null;
@@ -57,6 +62,7 @@ export class BrowserVoiceClient {
   private meterFrame: number | null = null;
   private playbackFrame: number | null = null;
   private reconnectTimer: number | null = null;
+  private healthyTimer: number | null = null;
   private captureEnabled = false;
   private activationMode: VoiceActivationMode = "push_to_talk";
   private disposed = false;
@@ -64,6 +70,9 @@ export class BrowserVoiceClient {
   private sessionId: string | null = null;
   private requestedDeviceId = "";
   private activeDeviceId = "";
+  private activePcId: string | null = null;
+  private activeRuntime: RuntimeConnection | null = null;
+  private activeSessionId: string | null = null;
   private connectionEpoch = 0;
   private reconnectAttempt = 0;
   private deviceListenerInstalled = false;
@@ -112,12 +121,19 @@ export class BrowserVoiceClient {
     this.requestedDeviceId = deviceId ?? "";
     this.reconnectAttempt = 0;
     this.cancelReconnect();
+    this.cancelHealthyTimer();
     this.installDeviceListener();
+    const currentEpoch = this.connectionEpoch + 1;
     try {
       await this.establish(false);
     } catch (error: unknown) {
+      if (this.connectionEpoch !== currentEpoch || !this.desiredConnected) {
+        return;
+      }
       this.desiredConnected = false;
       await this.teardownConnection(true);
+      if (this.connectionEpoch !== currentEpoch || this.disposed) return;
+      this.removeDeviceListener();
       this.callbacks.onStateChange("failed");
       this.callbacks.onError(voiceErrorMessage(error));
       throw error;
@@ -128,11 +144,13 @@ export class BrowserVoiceClient {
     this.desiredConnected = false;
     this.connectionEpoch += 1;
     this.cancelReconnect();
+    this.cancelHealthyTimer();
     this.removeDeviceListener();
     this.stopRemotePlayback(undefined, "interrupted");
     if (sessionId) this.sessionId = sessionId;
     await this.teardownConnection(true);
-    if (!this.disposed) this.callbacks.onStateChange("disconnected");
+    if (!this.disposed && !this.desiredConnected)
+      this.callbacks.onStateChange("disconnected");
   }
 
   async dispose(sessionId?: string): Promise<void> {
@@ -140,6 +158,7 @@ export class BrowserVoiceClient {
     this.desiredConnected = false;
     this.connectionEpoch += 1;
     this.cancelReconnect();
+    this.cancelHealthyTimer();
     this.removeDeviceListener();
     this.stopRemotePlayback(undefined, "interrupted");
     if (sessionId) this.sessionId = sessionId;
@@ -192,10 +211,16 @@ export class BrowserVoiceClient {
 
   private async establish(reconnecting: boolean): Promise<void> {
     const epoch = ++this.connectionEpoch;
+    const targetSessionId = this.sessionId;
+    if (!targetSessionId) {
+      throw new Error("浏览器语音未指定会话 ID。");
+    }
     await this.teardownConnection(true);
     if (!this.isDesired(epoch)) return;
     this.callbacks.onStateChange(reconnecting ? "reconnecting" : "requesting");
 
+    const runtime = await resolveRuntimeConnection();
+    if (!this.isDesired(epoch)) return;
     const selected = await this.resolveDeviceForConnection(reconnecting);
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -213,11 +238,16 @@ export class BrowserVoiceClient {
     }
 
     this.stream = stream;
+    this.activeRuntime = runtime;
+    this.activeSessionId = targetSessionId;
     const inputTrack = stream.getAudioTracks()[0];
     this.activeDeviceId =
       inputTrack?.getSettings().deviceId ?? selected ?? this.requestedDeviceId;
     inputTrack?.addEventListener("ended", () => {
-      if (this.isDesired(epoch)) this.scheduleReconnect(0, "麦克风设备已断开");
+      if (this.isDesired(epoch)) {
+        this.cancelHealthyTimer();
+        this.triggerReconnect("麦克风设备已断开", 0);
+      }
     });
     this.applyCaptureState();
     this.startInputMeter(stream);
@@ -233,7 +263,10 @@ export class BrowserVoiceClient {
       ordered: true,
     });
     this.dataChannel = dataChannel;
-    dataChannel.onmessage = (event) => this.handleTransportMessage(event.data);
+    dataChannel.onmessage = (event) => {
+      if (this.isDesired(epoch) && peer === this.peer)
+        this.handleTransportMessage(event.data);
+    };
     for (const track of stream.getAudioTracks()) peer.addTrack(track, stream);
     peer.ontrack = (event) => {
       const remoteStream = event.streams[0] ?? new MediaStream([event.track]);
@@ -249,24 +282,41 @@ export class BrowserVoiceClient {
     peer.onconnectionstatechange = () => {
       if (!this.isDesired(epoch) || peer !== this.peer) return;
       if (peer.connectionState === "connected") {
-        this.reconnectAttempt = 0;
         this.cancelReconnect();
         this.callbacks.onStateChange("connected");
+        this.cancelHealthyTimer();
+        this.healthyTimer = window.setTimeout(() => {
+          this.healthyTimer = null;
+          if (
+            this.isDesired(epoch) &&
+            this.peer === peer &&
+            peer.connectionState === "connected"
+          ) {
+            this.reconnectAttempt = 0;
+          }
+        }, BrowserVoiceClient.HEALTHY_THRESHOLD_MS);
       } else if (peer.connectionState === "failed") {
-        this.scheduleReconnect(0, "WebRTC 连接失败");
+        this.cancelHealthyTimer();
+        this.triggerReconnect("WebRTC 连接失败", 0);
       } else if (peer.connectionState === "disconnected") {
-        this.scheduleReconnect(DISCONNECTED_GRACE_MS, "WebRTC 连接中断");
+        this.cancelHealthyTimer();
+        this.triggerReconnect("WebRTC 连接中断", DISCONNECTED_GRACE_MS);
       }
     };
 
     this.callbacks.onStateChange(reconnecting ? "reconnecting" : "connecting");
     await peer.setLocalDescription(await peer.createOffer());
     await waitForIceGathering(peer, 5_000);
-    if (!this.isDesired(epoch)) return;
+    if (!this.isDesired(epoch)) {
+      peer.close();
+      stopStream(stream);
+      return;
+    }
     const local = peer.localDescription;
     if (!local) throw new Error("浏览器没有生成 WebRTC offer。");
-    const response = await runtimeFetch(
-      `/v1/sessions/${this.sessionId}/webrtc/offer`,
+    const response = await runtimeFetchWithConnection(
+      runtime,
+      `/v1/sessions/${targetSessionId}/webrtc/offer`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -281,10 +331,33 @@ export class BrowserVoiceClient {
       const body = (await response.json().catch(() => null)) as {
         detail?: string;
       } | null;
-      throw new Error(body?.detail ?? `WebRTC 连接失败 (${response.status})`);
+      const error = new Error(
+        body?.detail ?? `WebRTC 连接失败 (${response.status})`,
+      );
+      const isTransient = response.status === 429 || response.status === 408;
+      const isPermanent4xx =
+        response.status >= 400 && response.status < 500 && !isTransient;
+      if (isPermanent4xx) {
+        (error as { nonRetryable?: boolean }).nonRetryable = true;
+      }
+      throw error;
     }
-    const answer = (await response.json()) as RTCSessionDescriptionInit;
-    if (!this.isDesired(epoch)) return;
+    const answer = (await response.json()) as RTCSessionDescriptionInit & {
+      pc_id?: string;
+    };
+    if (!this.isDesired(epoch)) {
+      if (answer.pc_id && targetSessionId) {
+        void runtimeFetchWithConnection(
+          runtime,
+          `/v1/sessions/${targetSessionId}/webrtc?pc_id=${encodeURIComponent(answer.pc_id)}`,
+          { method: "DELETE" },
+        ).catch(() => undefined);
+      }
+      peer.close();
+      stopStream(stream);
+      return;
+    }
+    this.activePcId = answer.pc_id ?? null;
     await peer.setRemoteDescription(answer);
     const devices = await this.listInputDevices().catch(() => []);
     if (this.isDesired(epoch))
@@ -304,6 +377,32 @@ export class BrowserVoiceClient {
     return fallback;
   }
 
+  private triggerReconnect(detail: string, initialGraceMs = 0): void {
+    if (
+      !this.desiredConnected ||
+      this.disposed ||
+      this.reconnectTimer !== null
+    ) {
+      return;
+    }
+    if (this.reconnectAttempt >= RECONNECT_BACKOFF_MS.length) {
+      this.desiredConnected = false;
+      this.cancelHealthyTimer();
+      this.cancelReconnect();
+      this.removeDeviceListener();
+      void this.teardownConnection(true);
+      this.callbacks.onStateChange("failed");
+      this.callbacks.onError(`${detail}，自动重连已达到上限，请手动重试。`);
+      return;
+    }
+    const backoff =
+      this.reconnectAttempt === 0
+        ? initialGraceMs
+        : RECONNECT_BACKOFF_MS[this.reconnectAttempt - 1];
+    this.reconnectAttempt += 1;
+    this.scheduleReconnect(backoff ?? 0, detail);
+  }
+
   private scheduleReconnect(delayMs: number, detail: string): void {
     if (!this.desiredConnected || this.disposed || this.reconnectTimer !== null)
       return;
@@ -311,24 +410,30 @@ export class BrowserVoiceClient {
     this.stopRemotePlayback(undefined, "interrupted");
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null;
+      const attemptEpoch = this.connectionEpoch + 1;
       void this.establish(true).catch(async (error: unknown) => {
+        if (
+          this.connectionEpoch !== attemptEpoch ||
+          !this.desiredConnected ||
+          this.disposed
+        ) {
+          return;
+        }
         await this.teardownConnection(true);
-        if (!this.desiredConnected || this.disposed) return;
-        if (isPermissionError(error)) {
+        if (
+          this.connectionEpoch !== attemptEpoch ||
+          !this.desiredConnected ||
+          this.disposed
+        ) {
+          return;
+        }
+        if (isPermissionError(error) || isNonRetryableError(error)) {
           this.desiredConnected = false;
           this.callbacks.onStateChange("failed");
           this.callbacks.onError(voiceErrorMessage(error));
           return;
         }
-        const backoff = RECONNECT_BACKOFF_MS[this.reconnectAttempt];
-        this.reconnectAttempt += 1;
-        if (backoff === undefined) {
-          this.desiredConnected = false;
-          this.callbacks.onStateChange("failed");
-          this.callbacks.onError(`${detail}，自动重连已达到上限，请手动重试。`);
-          return;
-        }
-        this.scheduleReconnect(backoff, detail);
+        this.triggerReconnect(detail, 0);
       });
     }, delayMs);
   }
@@ -337,6 +442,13 @@ export class BrowserVoiceClient {
     if (this.reconnectTimer === null) return;
     window.clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
+  }
+
+  private cancelHealthyTimer(): void {
+    if (this.healthyTimer !== null) {
+      window.clearTimeout(this.healthyTimer);
+      this.healthyTimer = null;
+    }
   }
 
   private installDeviceListener(): void {
@@ -373,9 +485,13 @@ export class BrowserVoiceClient {
         const fallback = devices[0]?.deviceId ?? "";
         this.requestedDeviceId = fallback;
         this.callbacks.onDevicesChange(devices, fallback);
-        this.scheduleReconnect(0, "麦克风设备已断开");
+        this.cancelHealthyTimer();
+        this.triggerReconnect("麦克风设备已断开", 0);
       })
-      .catch(() => this.scheduleReconnect(0, "无法刷新麦克风设备"));
+      .catch(() => {
+        this.cancelHealthyTimer();
+        this.triggerReconnect("无法刷新麦克风设备", 0);
+      });
   };
 
   private handleTransportMessage(data: unknown): void {
@@ -513,6 +629,13 @@ export class BrowserVoiceClient {
   }
 
   private async teardownConnection(notifyRuntime: boolean): Promise<void> {
+    const pcIdToClose = this.activePcId;
+    const targetSessionId = this.activeSessionId;
+    const runtime = this.activeRuntime;
+    this.activePcId = null;
+    this.activeSessionId = null;
+    this.activeRuntime = null;
+    this.cancelHealthyTimer();
     if (this.meterFrame !== null) {
       cancelAnimationFrame(this.meterFrame);
       this.meterFrame = null;
@@ -539,14 +662,15 @@ export class BrowserVoiceClient {
       stopStream(this.stream);
       this.stream = null;
     }
-    if (this.audioContext) {
-      await this.audioContext.close().catch(() => undefined);
-      this.audioContext = null;
-    }
-    if (notifyRuntime && peer && this.sessionId) {
-      await runtimeFetch(`/v1/sessions/${this.sessionId}/webrtc`, {
-        method: "DELETE",
-      }).catch(() => undefined);
+    const audioContext = this.audioContext;
+    this.audioContext = null;
+    if (audioContext) await audioContext.close().catch(() => undefined);
+    if (notifyRuntime && peer && targetSessionId && pcIdToClose && runtime) {
+      await runtimeFetchWithConnection(
+        runtime,
+        `/v1/sessions/${targetSessionId}/webrtc?pc_id=${encodeURIComponent(pcIdToClose)}`,
+        { method: "DELETE" },
+      ).catch(() => undefined);
     }
   }
 }
@@ -642,6 +766,14 @@ function isAbortError(error: unknown): boolean {
 
 function isPermissionError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "NotAllowedError";
+}
+
+function isNonRetryableError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { nonRetryable?: boolean }).nonRetryable === true
+  );
 }
 
 function voiceErrorMessage(error: unknown): string {
