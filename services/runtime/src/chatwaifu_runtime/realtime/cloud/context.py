@@ -45,6 +45,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeSessionIntent,
     RealtimeSessionOpenRequest,
     RealtimeSkillCapability,
+    RealtimeToolDefinition,
 )
 from chatwaifu_runtime.realtime.cloud.coordinator import CloudRealtimeCoordinator
 
@@ -414,6 +415,7 @@ class CloudEgressGateway:
         kernel_snapshot: CharacterKernelSnapshot | None = None,
         memories: Sequence[MemoryRecord] | None = None,
         skills: Sequence[RealtimeSkillCapability] | None = None,
+        tools: Sequence[RealtimeToolDefinition] = (),
         conversation_history: Sequence[ConfirmedConversationTurn] | None = None,
     ) -> CloudRealtimeSession:
         """Enforce policy, build context patch, write durable audit, and open provider session.
@@ -483,9 +485,29 @@ class CloudEgressGateway:
             conversation_history=conversation_history,
         )
 
-        # In ask mode, check that all components are within allowed_component_kinds
+        # Function schemas travel alongside the patch and need the same audit/consent.
+        tools = tuple(tools)
+        tool_bytes = (
+            len(
+                json.dumps(
+                    [
+                        {"name": t.name, "description": t.description, "parameters": t.parameters}
+                        for t in tools
+                    ],
+                    ensure_ascii=False,
+                    allow_nan=False,
+                ).encode("utf-8")
+            )
+            if tools
+            else 0
+        )
+        if len(tools) > 8 or tool_bytes > 32_768:
+            raise ValueError("Cloud tool definitions exceed the connection budget")
+        component_kinds = {c.kind for c in patch.components}
+        if tools:
+            component_kinds.add("skills")
+        # Check actual outbound kinds even when context pruning omitted skills.
         if grant is not None:
-            component_kinds = {c.kind for c in patch.components}
             if not component_kinds.issubset(grant.allowed_component_kinds):
                 await self._record_blocked(
                     session_id=session_id,
@@ -510,10 +532,10 @@ class CloudEgressGateway:
         receipt = EgressReceiptPayload(
             provider_backend_id=backend_id,
             patch_id=patch.patch_id,
-            component_kinds=[c.kind for c in patch.components],
+            component_kinds=sorted(component_kinds),
             memory_record_ids=retained_memory_ids,
-            byte_count=patch.total_bytes,
-            estimated_tokens=patch.estimated_tokens,
+            byte_count=patch.total_bytes + tool_bytes,
+            estimated_tokens=patch.estimated_tokens + (tool_bytes + 3) // 4,
             policy_decision=decision,
             approved_by=approved_by,
             scope=scope,
@@ -555,6 +577,7 @@ class CloudEgressGateway:
             intent=intent,
             context_patch=patch,
             authorization_id=receipt_event.event_id,
+            tools=tuple(tools),
         )
         return await backend.open_session(auth_request)
 
@@ -700,6 +723,134 @@ class CloudEgressGateway:
             if coordinator is not None:
                 await coordinator.domain_sink.provider_error(session_id, error)
             raise
+
+    async def evaluate_and_submit_tool_result(
+        self,
+        session: CloudRealtimeSession,
+        backend_id: str,
+        *,
+        call_id: str,
+        output: str,
+        generation_id: UUID | None = None,
+    ) -> EgressReceiptPayload:
+        """Enforce policy, write durable audit receipt, and submit tool result to provider.
+
+        Fail-closed invariants:
+        1. Deny mode -> raises PolicyDeniedError, zero provider writes.
+        2. Ask mode -> requires scoped grant specifically authorizing 'tool_result';
+           existing startup grants without 'tool_result' fail with ConsentRequiredError;
+           zero provider writes.
+        3. Durable audit write FIRST: If event store audit fails, raises exception;
+           zero provider writes.
+        4. Metadata-only audit: Raw results or args never enter receipt payloads or logs.
+        """
+        session_id = session.session_id
+
+        if self.policy_mode == "deny":
+            await self._record_blocked(
+                session_id=session_id,
+                backend_id=backend_id,
+                decision="deny",
+                reason="Cloud tool result egress denied by policy ('deny')",
+            )
+            raise PolicyDeniedError("Cloud tool result egress denied by policy ('deny')")
+
+        approved_by: str | None = None
+        scope: str | None = None
+        grant: EgressGrant | None = None
+        if self.policy_mode == "ask":
+            grant = self._grants.get(session_id)
+            if (
+                grant is None
+                or grant.backend_id != backend_id
+                or grant.purpose != "cloud_realtime"
+                or grant.expires_at <= datetime.now(UTC)
+                or grant.remaining_uses <= 0
+            ):
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason="Explicit user consent required for cloud tool result egress ('ask')",
+                )
+                raise ConsentRequiredError(
+                    "Explicit user consent required for cloud tool result egress ('ask')"
+                )
+            if "tool_result" not in grant.allowed_component_kinds:
+                await self._record_blocked(
+                    session_id=session_id,
+                    backend_id=backend_id,
+                    decision="consent_required",
+                    reason="Grant does not authorize 'tool_result' component kind",
+                )
+                raise ConsentRequiredError(
+                    "Tool result egress exceeds grant allowed component kinds"
+                )
+            grant.remaining_uses -= 1
+            decision = "ask_approved"
+            approved_by = grant.approved_by
+            scope = f"uses_remaining:{grant.remaining_uses}"
+        else:
+            decision = "allow"
+
+        output_bytes = len(output.encode("utf-8"))
+        receipt = EgressReceiptPayload(
+            provider_backend_id=backend_id,
+            patch_id=uuid4(),
+            component_kinds=["tool_result"],
+            memory_record_ids=[],
+            byte_count=output_bytes,
+            estimated_tokens=(output_bytes + 3) // 4,
+            policy_decision=decision,
+            approved_by=approved_by,
+            scope=scope,
+            occurred_at=datetime.now(UTC),
+        )
+        self.audit_receipts.append(receipt)
+
+        receipt_event = EgressReceiptEvent(
+            event_id=uuid4(),
+            session_id=session_id,
+            occurred_at=datetime.now(UTC),
+            source="cloud_egress_policy",
+            payload=receipt,
+        )
+
+        persisted_receipt = None
+        if self._event_store is None:
+            await self._record_blocked(
+                session_id=session_id,
+                backend_id=backend_id,
+                decision="audit_unavailable",
+                reason="Durable event store is absent; tool result egress cannot be audited",
+            )
+            raise RuntimeError(
+                "Durable event store is absent; tool result egress cannot be audited"
+            )
+
+        try:
+            persisted_receipt = await self._event_store.append(cast(EventModel, receipt_event))
+        except Exception as exc:
+            _LOGGER.error(
+                "Failed to durably persist tool result egress receipt; failing closed: %s",
+                exc,
+            )
+            raise RuntimeError(f"Egress audit persistence failed: {exc}") from exc
+
+        if self._event_hub is not None:
+            try:
+                payload = cast(dict[str, object], receipt_event.model_dump(mode="json"))
+                await self._event_hub.publish(payload)
+            except Exception as exc:
+                _LOGGER.warning("Failed to publish egress receipt to EventHub: %s", exc)
+            else:
+                try:
+                    await self._event_store.mark_published(persisted_receipt.event_id)
+                except Exception as exc:
+                    _LOGGER.warning("Failed to mark egress receipt published: %s", exc)
+
+        await session.submit_tool_result(call_id, output, generation_id=generation_id)
+        return receipt
 
     async def _record_blocked(
         self,

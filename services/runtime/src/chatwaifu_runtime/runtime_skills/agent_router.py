@@ -241,7 +241,8 @@ def _project_candidate(
     )
 
 
-def _safe_object_schema(schema: Mapping[str, JsonValue]) -> bool:
+def is_safe_object_schema(schema: Mapping[str, JsonValue]) -> bool:
+    """Validate that input schema is a safe, bounded JSON object schema."""
     if schema.get("type") != "object":
         return False
     properties = schema.get("properties")
@@ -262,6 +263,93 @@ def _safe_object_schema(schema: Mapping[str, JsonValue]) -> bool:
         elif isinstance(value, list):
             stack.extend((child, depth + 1) for child in value)
     return True
+
+
+_safe_object_schema = is_safe_object_schema
+
+
+def cloud_realtime_eligible(skill: SkillDefinition, capability: SkillCapability) -> bool:
+    """Shared projection/admission policy, rechecked against the current registry."""
+    return (
+        skill.enabled
+        and skill.source == "builtin"
+        and skill.interruptible
+        and not skill.background_allowed
+        and capability.adapter_operation == "invoke"
+        and capability.side_effect is SideEffect.READ
+        and not capability.confirmation_required
+        and capability.timeout_seconds <= 30.0
+    )
+
+
+def project_cloud_realtime_tools(
+    definitions: Iterable[SkillDefinition],
+    *,
+    limit: int = 8,
+    schema_budget_bytes: int = 24_576,
+) -> tuple[ProjectedSkillTool, ...]:
+    """Project only trusted builtin, enabled READ side-effect, no confirmation-required,
+
+    short interactive capabilities for cloud realtime sessions.
+    Do not expose plugin/MCP/write/long-running capabilities.
+    Bounded to max `limit` (<= 8) definitions and `schema_budget_bytes` (<= 24KiB).
+    """
+    bounded_limit = min(max(limit, 0), 8)
+    bounded_budget = min(max(schema_budget_bytes, 0), 24_576)
+    if bounded_limit == 0 or bounded_budget == 0:
+        return ()
+
+    candidates: list[tuple[SkillDefinition, SkillCapability, str, JsonObject, int]] = []
+    for skill in definitions:
+        for capability in skill.capabilities:
+            if not cloud_realtime_eligible(skill, capability):
+                continue
+            schema = deepcopy(capability.input_schema)
+            if not is_safe_object_schema(schema):
+                continue
+            try:
+                encoded_schema = json.dumps(
+                    schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            except (TypeError, ValueError, RecursionError):
+                continue
+            if len(encoded_schema) > MAX_AGENT_TOOL_SCHEMA_BYTES:
+                continue
+            description = _model_description(skill, capability)
+            projected_bytes = len(encoded_schema) + len(description.encode("utf-8"))
+            candidates.append((skill, capability, description, schema, projected_bytes))
+
+    # Deterministic sort order
+    candidates.sort(key=lambda c: (c[0].skill_id, c[1].name))
+
+    selected: list[tuple[SkillDefinition, SkillCapability, str, JsonObject]] = []
+    consumed = 0
+    for skill, capability, description, schema, projected_bytes in candidates:
+        if len(selected) >= bounded_limit:
+            break
+        if projected_bytes > bounded_budget - consumed:
+            continue
+        selected.append((skill, capability, description, schema))
+        consumed += projected_bytes
+
+    if not selected:
+        return ()
+
+    identities = [(s.skill_id, c.name) for s, c, _, _ in selected]
+    names = allocate_tool_names(identities, max_length=64, opaque_prefix="cw")
+
+    return tuple(
+        ProjectedSkillTool(
+            name=name,
+            skill_id=skill.skill_id,
+            capability=capability.name,
+            description=description,
+            input_schema=schema,
+            side_effect=capability.side_effect,
+            confirmation_required=capability.confirmation_required,
+        )
+        for (skill, capability, description, schema), name in zip(selected, names, strict=True)
+    )
 
 
 def _relevance_score(query: str, skill: SkillDefinition, capability: SkillCapability) -> int:

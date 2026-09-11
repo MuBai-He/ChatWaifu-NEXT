@@ -303,6 +303,7 @@ class RuntimeContainer:
                 character_kernel=self.character_kernel,
                 memory=self.memory,
                 skills_source=self.runtime_skills,
+                tools_enabled=settings.realtime.cloud_tools_enabled,
                 event_hub=self.event_hub,
                 playback=self.playback,
             )

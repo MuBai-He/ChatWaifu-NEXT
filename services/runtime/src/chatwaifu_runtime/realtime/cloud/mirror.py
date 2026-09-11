@@ -37,6 +37,8 @@ class GenerationBinding:
     authoritative_final_text: str | None = None
     is_completed: bool = False
     is_cancelled: bool = False
+    continuation_reserved: bool = False
+    continuation_response_id: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
@@ -177,6 +179,18 @@ class RealtimeSessionMirror:
             return mapped
         return None
 
+    def reserve_continuation(self, generation_id: UUID) -> None:
+        """Reserve a continuation response for an active generation."""
+        binding = self._bindings.get(generation_id)
+        if binding is not None:
+            binding.continuation_reserved = True
+
+    def reset_provider_response_done(self, generation_id: UUID) -> None:
+        """Reset response done flag when a continuation round begins."""
+        binding = self._bindings.get(generation_id)
+        if binding is not None:
+            binding.provider_response_done = False
+
     def bind_provider_response(
         self,
         provider_response_id: str,
@@ -187,6 +201,8 @@ class RealtimeSessionMirror:
         Bindings are immutable: rebinding an id that already points at a
         different generation is refused (returns None) instead of silently
         rerouting late events. Rebinding to the same generation is idempotent.
+        Multiple provider responses belong to the same generation ONLY through
+        an explicitly reserved continuation.
         """
         if generation_id is None:
             return None
@@ -199,7 +215,19 @@ class RealtimeSessionMirror:
         if existing is not None and existing != generation_id:
             return None
 
-        binding.provider_response_id = provider_response_id
+        if (
+            binding.provider_response_id is not None
+            and binding.provider_response_id != provider_response_id
+        ):
+            if binding.continuation_response_id == provider_response_id:
+                return binding
+            if not binding.continuation_reserved or binding.continuation_response_id is not None:
+                return None
+            binding.continuation_reserved = False
+            binding.continuation_response_id = provider_response_id
+        else:
+            binding.provider_response_id = provider_response_id
+
         self._response_to_generation[provider_response_id] = generation_id
         if len(self._response_to_generation) > self._max_responses:
             self._response_to_generation.popitem(last=False)

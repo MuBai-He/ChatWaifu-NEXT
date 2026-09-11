@@ -366,6 +366,8 @@ class RuntimeSkillService:
         generation_id: UUID | None = None,
         origin: Literal["manual", "agent", "external_mcp"] = "manual",
         provider_tool_call_id: str | None = None,
+        allow_confirmation: bool = True,
+        require_cloud_readonly: bool = False,
     ) -> SkillRunSnapshot:
         if (
             provider_tool_call_id is not None
@@ -378,6 +380,11 @@ class RuntimeSkillService:
         if not entry.definition.enabled:
             raise ValueError("skill is disabled")
         capability = _capability(entry, invocation.capability)
+        if require_cloud_readonly:
+            from chatwaifu_runtime.runtime_skills.agent_router import cloud_realtime_eligible
+
+            if not cloud_realtime_eligible(entry.definition, capability):
+                raise PermissionError("Capability no longer eligible for cloud read-only execution")
         _validate_schema(capability.input_schema, invocation.arguments, "input")
         if invocation.background and not entry.definition.background_allowed:
             raise ValueError("skill does not allow background execution")
@@ -434,6 +441,15 @@ class RuntimeSkillService:
                 plan=plan,
             )
             if capability.confirmation_required or missing:
+                if not allow_confirmation:
+                    detail = (
+                        "confirmation_required"
+                        if capability.confirmation_required
+                        else f"missing_permissions: {missing}"
+                    )
+                    raise PermissionError(
+                        f"Non-interactive invocation rejected: capability requires {detail}"
+                    )
                 request_id = await self._permissions.create_request(
                     skill_run_id=run_id,
                     principal=principal,
@@ -455,9 +471,11 @@ class RuntimeSkillService:
                 )
             else:
                 self._schedule(run_id)
+            # Admission includes returning its handle. Cancellation during this read
+            # must stop the worker whose ID has not yet reached the caller.
+            return await self.get_run(run_id)
         except BaseException as setup_error:
             await self._compensate_created_run(run_id, setup_error)
-        return await self.get_run(run_id)
 
     async def decide_confirmation(
         self,
@@ -1186,6 +1204,10 @@ class RuntimeSkillService:
 
         self._pending_arguments.pop(run_id, None)
         failures: list[BaseException] = []
+        try:
+            await self._cancel_task_bounded(self._tasks.get(run_id))
+        except BaseException as error:
+            failures.append(error)
         try:
             await self._finish_failed(
                 run_id,

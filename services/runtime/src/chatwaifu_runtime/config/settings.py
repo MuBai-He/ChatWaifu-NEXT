@@ -148,6 +148,7 @@ class RealtimeConfig(BaseModel):
     enabled: bool = True
     connection_mode: Literal["cascade", "cloud_realtime"] = "cascade"
     cloud_backend: Literal["fake", "openai"] | None = None
+    cloud_tools_enabled: bool = False
     openai: OpenAIRealtimeConfig = OpenAIRealtimeConfig()
     input_sample_rate: int = Field(default=16_000, ge=8_000, le=48_000)
     output_sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
