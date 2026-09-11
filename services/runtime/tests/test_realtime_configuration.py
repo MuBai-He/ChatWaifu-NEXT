@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import stat
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -127,8 +128,11 @@ async def test_secret_redaction_in_storage_and_repr(tmp_path: Path) -> None:
         # Secret file has mode 0600
         secret_path = settings.config_dir / "realtime-secrets.json"
         assert secret_path.exists()
-        mode = stat.S_IMODE(secret_path.stat().st_mode)
-        assert mode == 0o600
+        # Windows exposes ACLs rather than POSIX permission bits. Match the
+        # existing AtomicSecretStore tests without skipping redaction checks.
+        if os.name == "posix":
+            mode = stat.S_IMODE(secret_path.stat().st_mode)
+            assert mode == 0o600
 
         # Secret file contains the key mapped by ref
         content = json.loads(secret_path.read_text(encoding="utf-8"))
