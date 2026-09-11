@@ -13,3 +13,4 @@ export * from "./runtime-client/ttsClient";
 export * from "./runtime-client/workerPacksClient";
 export * from "./runtime-client/photoMemoryClient";
 export * from "./runtime-client/indexRebuildClient";
+export * from "./runtime-client/realtimeClient";
