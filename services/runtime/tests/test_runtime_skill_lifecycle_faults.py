@@ -10,7 +10,7 @@ from uuid import UUID
 
 import pytest
 from chatwaifu_protocol.base import JsonObject
-from chatwaifu_protocol.skills import SkillInvocation, SkillRunState
+from chatwaifu_protocol.skills import SkillInvocation, SkillRunSnapshot, SkillRunState
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.runtime_skills import permissions as permission_module
@@ -449,4 +449,57 @@ async def test_expiry_event_failure_does_not_break_pending_confirmation_read(
         terminal = await service.get_run(waiting.skill_run_id)
         assert terminal.state is SkillRunState.EXPIRED
     finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_admission_snapshot_stops_already_scheduled_worker(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    service = container.runtime_skills
+    snapshot_entered = asyncio.Event()
+    worker_started = asyncio.Event()
+    worker_cancelled = asyncio.Event()
+    release = asyncio.Event()
+    captured: list[UUID] = []
+    original_get_run = service.get_run
+    invocation_task: asyncio.Task[object] | None = None
+
+    async def held_worker(_run_id: UUID) -> None:
+        worker_started.set()
+        try:
+            await release.wait()
+        except asyncio.CancelledError:
+            worker_cancelled.set()
+            raise
+
+    async def held_snapshot(run_id: UUID) -> SkillRunSnapshot:
+        if asyncio.current_task() is invocation_task:
+            captured.append(run_id)
+            snapshot_entered.set()
+            await release.wait()
+        return await original_get_run(run_id)
+
+    monkeypatch.setattr(service, "_execute", held_worker)
+    monkeypatch.setattr(service, "get_run", held_snapshot)
+    try:
+        session = await container.sessions.create_session("default")
+        invocation_task = asyncio.create_task(
+            service.invoke(session.session_id, _status_invocation())
+        )
+        await asyncio.wait_for(snapshot_entered.wait(), timeout=2)
+        await asyncio.wait_for(worker_started.wait(), timeout=2)
+        invocation_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await invocation_task
+        assert worker_cancelled.is_set(), "Invocation cancellation left an orphan worker"
+        terminal = await original_get_run(captured[0])
+        assert terminal.state in {SkillRunState.FAILED, SkillRunState.CANCELLED}
+    finally:
+        release.set()
+        if invocation_task is not None:
+            await asyncio.gather(invocation_task, return_exceptions=True)
         await container.stop()

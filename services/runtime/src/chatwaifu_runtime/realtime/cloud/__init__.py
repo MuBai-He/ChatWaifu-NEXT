@@ -29,6 +29,8 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeSessionLineage,
     RealtimeSessionOpenRequest,
     RealtimeSkillCapability,
+    RealtimeToolCall,
+    RealtimeToolDefinition,
     RealtimeTranscriptCandidate,
     RealtimeUsage,
     ResponseCancelledEvent,
@@ -37,6 +39,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     SessionClosedEvent,
     SessionDegradedEvent,
     SessionReadyEvent,
+    ToolCallRequestedEvent,
     UsageRecordedEvent,
     UserTranscriptEvent,
 )
@@ -61,6 +64,7 @@ from chatwaifu_runtime.realtime.cloud.mirror import (
     GenerationBinding,
     RealtimeSessionMirror,
 )
+from chatwaifu_runtime.realtime.cloud.tools import CloudToolBridge
 
 __all__ = [
     "AssistantTranscriptEvent",
@@ -70,6 +74,7 @@ __all__ = [
     "CloudRealtimeCoordinator",
     "CloudRealtimeMediaBridge",
     "CloudRealtimeSession",
+    "CloudToolBridge",
     "ConsentRequiredError",
     "EgressBlockedEvent",
     "EgressBlockedPayload",
@@ -99,6 +104,8 @@ __all__ = [
     "RealtimeSessionMirror",
     "RealtimeSessionOpenRequest",
     "RealtimeSkillCapability",
+    "RealtimeToolCall",
+    "RealtimeToolDefinition",
     "RealtimeTranscriptCandidate",
     "RealtimeUsage",
     "ResponseCancelledEvent",
@@ -109,6 +116,7 @@ __all__ = [
     "SessionClosedEvent",
     "SessionDegradedEvent",
     "SessionReadyEvent",
+    "ToolCallRequestedEvent",
     "UsageRecordedEvent",
     "UserTranscriptEvent",
     "extract_realtime_skills",

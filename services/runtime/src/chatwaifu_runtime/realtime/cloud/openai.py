@@ -99,7 +99,7 @@ class OpenAIRealtimeBackend:
             supported_input_modalities=("audio",),
             supported_output_modalities=("audio",),
             supports_server_vad=False,
-            supports_tool_call=False,
+            supports_tool_call=True,
             max_session_duration_seconds=3600,
         )
 
@@ -209,6 +209,8 @@ class OpenAIRealtimeSession:
             raise OpenAIRealtimeError("openai_realtime_handshake_failed")
         provider_id = string_value(object_value(created.get("session")).get("id"))
         self.lineage = replace(self.lineage, provider_session_id=provider_id)
+        tools_payload = self._wire_tools()
+        tool_choice = "auto" if self._request.tools else "none"
         await self._send(
             {
                 "type": "session.update",
@@ -216,8 +218,8 @@ class OpenAIRealtimeSession:
                     "type": "realtime",
                     "output_modalities": ["audio"],
                     "instructions": self._instructions(self._request.context_patch),
-                    "tools": [],
-                    "tool_choice": "none",
+                    "tools": tools_payload,
+                    "tool_choice": tool_choice,
                     "tracing": None,
                     "audio": {
                         "input": {
@@ -245,10 +247,23 @@ class OpenAIRealtimeSession:
                 return
         raise OpenAIRealtimeError("openai_realtime_handshake_failed")
 
+    def _wire_tools(self) -> list[dict[str, object]]:
+        return [
+            {
+                "type": "function",
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": dict(tool.parameters),
+            }
+            for tool in self._request.tools
+        ]
+
     def _validate_session(self, session: dict[str, object]) -> None:
         audio = object_value(session.get("audio"))
         input_audio = object_value(audio.get("input"))
         output_audio = object_value(audio.get("output"))
+        expected_tools = self._wire_tools()
+        expected_tool_choice = "auto" if self._request.tools else "none"
         if (
             session.get("id") != self.lineage.provider_session_id
             or session.get("type") != "realtime"
@@ -260,8 +275,8 @@ class OpenAIRealtimeSession:
             or object_value(input_audio.get("transcription")).get("model")
             != self._config.transcription_model
             or output_audio.get("voice") != (self._request.intent.voice_id or self._config.voice)
-            or session.get("tools") != []
-            or session.get("tool_choice") != "none"
+            or session.get("tools") != expected_tools
+            or session.get("tool_choice") != expected_tool_choice
         ):
             raise OpenAIRealtimeError("openai_realtime_session_configuration_mismatch")
 
@@ -304,7 +319,9 @@ class OpenAIRealtimeSession:
             if self._input is not None and self._input.done:
                 self._input = None
             if self._input is None:
-                self._input = self._mapper.register(frame.generation_id)
+                self._input = self._mapper.register(
+                    frame.generation_id, tools_exposed=bool(self._request.tools)
+                )
                 self._input_rate = frame.sample_rate
                 self._input_bytes = 0
                 self._resampler = (
@@ -361,9 +378,12 @@ class OpenAIRealtimeSession:
             self._mapper.pending_commits.append(turn.generation_id)
             await self._send({"type": "input_audio_buffer.commit"})
             turn.requested = True
-            await self._send(
-                {"type": "response.create", "response": {"metadata": self._mapper.metadata(turn)}}
-            )
+            response_payload: dict[str, object] = {
+                "metadata": self._mapper.metadata(turn),
+            }
+            if turn.tools_exposed:
+                response_payload["output_modalities"] = ["text"]
+            await self._send({"type": "response.create", "response": response_payload})
 
     async def interrupt(self, generation_id: UUID, reason: str = "user_barge_in") -> None:
         async with self._write_lock:
@@ -374,7 +394,9 @@ class OpenAIRealtimeSession:
             turn.interrupted = True
             if turn.requested and not turn.done:
                 cancel: dict[str, object] = {"type": "response.cancel"}
-                if turn.response_id is not None:
+                if turn.continuation_response_id is not None:
+                    cancel["response_id"] = turn.continuation_response_id
+                elif turn.response_id is not None:
                     cancel["response_id"] = turn.response_id
                 await self._send(cancel, cancel_event=True)
             if self._input is turn:
@@ -388,7 +410,7 @@ class OpenAIRealtimeSession:
         # assistant item from provider history rather than inventing a played offset.
         for turn in self._mapper.turns.values():
             if turn.interrupted:
-                for item_id in turn.output_items - turn.deleted_items:
+                for item_id in list(turn.output_items - turn.deleted_items):
                     turn.deleted_items.add(item_id)
                     await self._send({"type": "conversation.item.delete", "item_id": item_id})
 
@@ -404,8 +426,65 @@ class OpenAIRealtimeSession:
                 self.lineage, revision=self.lineage.revision + 1, updated_at=datetime.now(UTC)
             )
 
-    async def submit_tool_result(self, call_id: str, output: str) -> None:
-        raise OpenAIRealtimeError("openai_realtime_tools_not_enabled")
+    async def submit_tool_result(
+        self, call_id: str, output: str, generation_id: UUID | None = None
+    ) -> None:
+        async with self._write_lock:
+            if self._closed:
+                raise OpenAIRealtimeError("openai_realtime_session_closed")
+            if not self._request.tools:
+                raise OpenAIRealtimeError("openai_realtime_tools_not_enabled")
+            if generation_id is None:
+                raise OpenAIRealtimeError("openai_realtime_missing_response_identity")
+            turn = self._mapper.turns.get(generation_id)
+            if turn is None or turn.interrupted or turn.done:
+                return
+            item_id = f"item_fco_{uuid4().hex[:16]}"
+            turn.output_items.add(item_id)
+            await self._send(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "id": item_id,
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": output,
+                    },
+                }
+            )
+
+    async def request_continuation(
+        self, generation_id: UUID, *, disable_tools: bool = True
+    ) -> None:
+        async with self._write_lock:
+            await self._request_continuation_locked(generation_id, disable_tools=disable_tools)
+
+    async def _request_continuation_locked(
+        self, generation_id: UUID, *, disable_tools: bool = True
+    ) -> None:
+        if self._closed:
+            raise OpenAIRealtimeError("openai_realtime_session_closed")
+        turn = self._mapper.turns.get(generation_id)
+        if turn is None or turn.interrupted or turn.done:
+            return
+        for item_id in tuple(turn.decision_items):
+            if item_id not in turn.deleted_items:
+                turn.deleted_items.add(item_id)
+                await self._send({"type": "conversation.item.delete", "item_id": item_id})
+        self._mapper.reserve_continuation(generation_id)
+        response_payload: dict[str, object] = {
+            "output_modalities": ["audio"],
+            "metadata": self._mapper.metadata(turn),
+        }
+        if disable_tools:
+            response_payload["tools"] = []
+            response_payload["tool_choice"] = "none"
+        await self._send(
+            {
+                "type": "response.create",
+                "response": response_payload,
+            }
+        )
 
     async def _read_wire(self) -> dict[str, object]:
         raw = await self._socket.recv()

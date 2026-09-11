@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.base import JsonObject, JsonValue
+
 
 @dataclass(frozen=True, slots=True)
 class RealtimeCapabilities:
@@ -76,12 +78,22 @@ class RealtimeSessionIntent:
 
 
 @dataclass(frozen=True, slots=True)
+class RealtimeToolDefinition:
+    """Tool definition exposed to a cloud realtime session."""
+
+    name: str
+    description: str
+    parameters: JsonObject = field(default_factory=dict[str, JsonValue])
+
+
+@dataclass(frozen=True, slots=True)
 class AuthorizedRealtimeSessionOpenRequest:
     """Internal policy-authorized request with an egress-audited context patch."""
 
     intent: RealtimeSessionIntent
     context_patch: RealtimeContextPatch
     authorization_id: UUID
+    tools: tuple[RealtimeToolDefinition, ...] = field(default_factory=tuple)
 
     @property
     def session_id(self) -> UUID:
@@ -114,6 +126,7 @@ class RealtimeSessionOpenRequest:
     model: str | None = None
     sample_rate: int = 24_000
     channels: int = 1
+    tools: tuple[RealtimeToolDefinition, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,6 +320,27 @@ class ProviderErrorEvent:
     event_id: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class RealtimeToolCall:
+    """Normalized tool call parsed from provider wire response."""
+
+    call_id: str
+    name: str
+    arguments: JsonObject = field(default_factory=dict[str, JsonValue])
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCallRequestedEvent:
+    """Provider emitted one or more tool calls in a decision round."""
+
+    session_id: UUID
+    generation_id: UUID
+    provider_response_id: str
+    calls: tuple[RealtimeToolCall, ...]
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    event_id: str | None = None
+
+
 type RealtimeProviderEvent = (
     SessionReadyEvent
     | SessionClosedEvent
@@ -318,6 +352,7 @@ type RealtimeProviderEvent = (
     | AssistantTranscriptEvent
     | ResponseCompletedEvent
     | ResponseCancelledEvent
+    | ToolCallRequestedEvent
     | UsageRecordedEvent
     | ProviderErrorEvent
 )
@@ -350,7 +385,13 @@ class CloudRealtimeSession(Protocol):
 
     def events(self) -> AsyncIterator[RealtimeProviderEvent]: ...
 
-    async def submit_tool_result(self, call_id: str, output: str) -> None: ...
+    async def submit_tool_result(
+        self, call_id: str, output: str, generation_id: UUID | None = None
+    ) -> None: ...
+
+    async def request_continuation(
+        self, generation_id: UUID, *, disable_tools: bool = True
+    ) -> None: ...
 
     async def close(self) -> None: ...
 

@@ -30,6 +30,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     RealtimeProviderEvent,
     RealtimeSessionLineage,
     RealtimeSessionOpenRequest,
+    RealtimeToolCall,
     RealtimeTranscriptCandidate,
     RealtimeUsage,
     ResponseCancelledEvent,
@@ -37,6 +38,7 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     ResponseStartedEvent,
     SessionClosedEvent,
     SessionReadyEvent,
+    ToolCallRequestedEvent,
     UserTranscriptEvent,
 )
 
@@ -52,6 +54,7 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         *,
         backend_id: str = "fake_cloud_realtime",
         auto_ready: bool = True,
+        tools_enabled: bool | None = None,
     ) -> None:
         if isinstance(request, AuthorizedRealtimeSessionOpenRequest):
             self.session_id: UUID = request.intent.session_id
@@ -86,6 +89,13 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
             self.context_updates.append(initial_context)
         self.interrupt_calls: list[tuple[UUID, str]] = []
         self.tool_results: list[tuple[str, str]] = []
+        self.continuation_requests: list[tuple[UUID, bool]] = []
+        self._interrupted_generations: set[UUID] = set()
+        self._write_lock = asyncio.Lock()
+        if tools_enabled is not None:
+            self._tools_enabled = tools_enabled
+        else:
+            self._tools_enabled = bool(getattr(request, "tools", ()))
 
         self._is_closed: bool = False
         self._on_audio_frame_hook: Callable[[RealtimeInputAudioFrame], None] | None = None
@@ -141,21 +151,42 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
         )
 
     async def interrupt(self, generation_id: UUID, reason: str = "user_barge_in") -> None:
-        self.interrupt_calls.append((generation_id, reason))
-        self.inject_event(
-            ResponseCancelledEvent(
-                session_id=self.session_id,
-                generation_id=generation_id,
-                provider_response_id=self.lineage.provider_response_id,
-                reason=reason,
+        async with self._write_lock:
+            self._interrupted_generations.add(generation_id)
+            self.interrupt_calls.append((generation_id, reason))
+            self.inject_event(
+                ResponseCancelledEvent(
+                    session_id=self.session_id,
+                    generation_id=generation_id,
+                    provider_response_id=self.lineage.provider_response_id,
+                    reason=reason,
+                )
             )
-        )
 
-    async def submit_tool_result(self, call_id: str, output: str) -> None:
-        self.tool_results.append((call_id, output))
-        raise NotImplementedError(
-            "Tool bridge is not supported in Phase 13.0-13.3. submit_tool_result is unsupported."
-        )
+    async def submit_tool_result(
+        self, call_id: str, output: str, generation_id: UUID | None = None
+    ) -> None:
+        async with self._write_lock:
+            if self._is_closed:
+                raise RuntimeError(f"Session {self.session_id} is closed")
+            if generation_id is not None and generation_id in self._interrupted_generations:
+                return
+            if not self._tools_enabled:
+                raise NotImplementedError(
+                    "Tool bridge is not supported in Phase 13.0-13.3. "
+                    "submit_tool_result is unsupported."
+                )
+            self.tool_results.append((call_id, output))
+
+    async def request_continuation(
+        self, generation_id: UUID, *, disable_tools: bool = True
+    ) -> None:
+        async with self._write_lock:
+            if self._is_closed:
+                raise RuntimeError(f"Session {self.session_id} is closed")
+            if generation_id in self._interrupted_generations:
+                return
+            self.continuation_requests.append((generation_id, disable_tools))
 
     async def receive(self) -> RealtimeProviderEvent:
         if self._is_closed and self._queue.empty():
@@ -358,6 +389,28 @@ class FakeCloudRealtimeSession(CloudRealtimeSession):
             )
         )
 
+    def inject_tool_call(
+        self,
+        calls: tuple[RealtimeToolCall, ...],
+        generation_id: UUID,
+        *,
+        provider_response_id: str | None = None,
+        event_id: str | None = None,
+    ) -> None:
+        self.inject_event(
+            ToolCallRequestedEvent(
+                session_id=self.session_id,
+                generation_id=generation_id,
+                provider_response_id=(
+                    provider_response_id
+                    or self.lineage.provider_response_id
+                    or f"resp_{uuid4().hex[:8]}"
+                ),
+                calls=calls,
+                event_id=event_id,
+            )
+        )
+
     def set_on_audio_frame_hook(
         self,
         hook: Callable[[RealtimeInputAudioFrame], None] | None,
@@ -384,6 +437,7 @@ class FakeCloudRealtimeBackend(CloudRealtimeBackend):
         self.backend_id: str = backend_id
         self._capabilities: RealtimeCapabilities = capabilities or RealtimeCapabilities(
             backend_id=backend_id,
+            supports_tool_call=True,
         )
         self._auto_ready: bool = auto_ready
         self.open_session_calls: list[AuthorizedRealtimeSessionOpenRequest] = []

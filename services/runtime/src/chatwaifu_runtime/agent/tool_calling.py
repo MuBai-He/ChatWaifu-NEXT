@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Literal, Protocol, cast
 from uuid import UUID
@@ -78,6 +78,8 @@ class AgentSkillGateway(Protocol):
         generation_id: UUID | None = None,
         origin: Literal["manual", "agent", "external_mcp"] = "manual",
         provider_tool_call_id: str | None = None,
+        allow_confirmation: bool = True,
+        require_cloud_readonly: bool = False,
     ) -> SkillRunSnapshot: ...
 
     async def wait_for_terminal(self, run_id: UUID) -> SkillRunSnapshot: ...
@@ -290,24 +292,34 @@ class AgentTurnOrchestrator:
             raise
 
 
-async def _cancel_run_safely(skills: AgentSkillGateway, run_id: UUID) -> None:
+async def cancel_skill_run_safely(
+    skills: AgentSkillGateway, run_id: UUID, *, timeout_seconds: float = 2.0
+) -> None:
+    """Shielded, bounded cancellation of a skill run that never swallows parent cancellation."""
     cleanup = asyncio.create_task(skills.cancel(run_id), name=f"cancel-agent-skill:{run_id}")
     try:
-        await asyncio.wait_for(asyncio.shield(cleanup), timeout=2.0)
+        await asyncio.wait_for(asyncio.shield(cleanup), timeout=timeout_seconds)
     except Exception:
         # RuntimeSkillService owns the terminal compare-and-set. This cleanup is
         # best effort during parent cancellation and must never mask interruption.
         cleanup.cancel()
 
 
+_cancel_run_safely = cancel_skill_run_safely
+
+
+def compute_invocation_digest(name: str, arguments: Mapping[str, object]) -> str:
+    """Compute deterministic SHA-256 digest over tool name and canonical arguments."""
+    serialized = json.dumps(arguments, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(f"{name}:{serialized}".encode()).hexdigest()
+
+
 def _invocation_digest(call: LlmToolCall) -> str:
-    serialized = json.dumps(
-        call.arguments, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
-    return hashlib.sha256(f"{call.name}:{serialized}".encode()).hexdigest()
+    return compute_invocation_digest(call.name, call.arguments)
 
 
-def _snapshot_result(call: LlmToolCall, snapshot: SkillRunSnapshot) -> LlmToolResult:
+def format_tool_result_payload(snapshot: SkillRunSnapshot) -> tuple[JsonObject, str | None]:
+    """Format structured payload and optional spoken summary from a skill run snapshot."""
     succeeded = snapshot.state is SkillRunState.SUCCEEDED and snapshot.result is not None
     if succeeded:
         assert snapshot.result is not None
@@ -336,18 +348,19 @@ def _snapshot_result(call: LlmToolCall, snapshot: SkillRunSnapshot) -> LlmToolRe
             },
         }
         summary = None
-    bounded = _bounded_result(payload, summary)
-    return LlmToolResult(
-        call_id=call.call_id,
-        name=call.name,
-        content=bounded,
-        is_error=not succeeded,
-    )
+    return payload, summary
 
 
-def _bounded_result(payload: JsonObject, summary: str | None) -> JsonObject:
+def bounded_tool_result_payload(
+    payload: JsonObject,
+    summary: str | None = None,
+    *,
+    max_bytes: int = MAX_TOOL_RESULT_BYTES,
+    max_summary_chars: int = MAX_TOOL_SUMMARY_CHARACTERS,
+) -> JsonObject:
+    """Bound tool result payload size, truncating oversized content."""
     serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    if len(serialized.encode()) <= MAX_TOOL_RESULT_BYTES:
+    if len(serialized.encode()) <= max_bytes:
         return payload
     return {
         "untrusted": True,
@@ -355,20 +368,39 @@ def _bounded_result(payload: JsonObject, summary: str | None) -> JsonObject:
         "state": payload.get("state"),
         "truncated": True,
         "summary": (summary or "Tool result exceeded the model projection limit")[
-            :MAX_TOOL_SUMMARY_CHARACTERS
+            :max_summary_chars
         ],
     }
+
+
+_bounded_result = bounded_tool_result_payload
+
+
+def error_tool_result_payload(code: str, message: str) -> JsonObject:
+    """Construct normalized error payload for failed or rejected tool calls."""
+    return {
+        "untrusted": True,
+        "ok": False,
+        "state": "failed",
+        "error": {"code": code, "message": message, "retryable": False},
+    }
+
+
+def _snapshot_result(call: LlmToolCall, snapshot: SkillRunSnapshot) -> LlmToolResult:
+    payload, summary = format_tool_result_payload(snapshot)
+    bounded = bounded_tool_result_payload(payload, summary)
+    return LlmToolResult(
+        call_id=call.call_id,
+        name=call.name,
+        content=bounded,
+        is_error=not (snapshot.state is SkillRunState.SUCCEEDED and snapshot.result is not None),
+    )
 
 
 def _error_result(call: LlmToolCall, code: str, message: str) -> LlmToolResult:
     return LlmToolResult(
         call_id=call.call_id,
         name=call.name,
-        content={
-            "untrusted": True,
-            "ok": False,
-            "state": "failed",
-            "error": {"code": code, "message": message, "retryable": False},
-        },
+        content=error_tool_result_payload(code, message),
         is_error=True,
     )

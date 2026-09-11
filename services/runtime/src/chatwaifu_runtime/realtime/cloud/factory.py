@@ -24,9 +24,16 @@ from chatwaifu_runtime.realtime.cloud.context import CloudEgressGateway, Realtim
 from chatwaifu_runtime.realtime.cloud.contracts import (
     CloudRealtimeBackend,
     RealtimeSkillCapability,
+    RealtimeToolDefinition,
 )
 from chatwaifu_runtime.realtime.cloud.domain import RuntimeRealtimeDomainSink
 from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
+from chatwaifu_runtime.realtime.cloud.tools import CloudToolBridge
+from chatwaifu_runtime.runtime_skills.agent_router import (
+    ProjectedSkillTool,
+    project_cloud_realtime_tools,
+)
+from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 
 if TYPE_CHECKING:
     from chatwaifu_protocol.skills import SkillDefinition
@@ -38,7 +45,6 @@ if TYPE_CHECKING:
     from chatwaifu_runtime.memory.service import MemoryService
     from chatwaifu_runtime.playback.service import PlaybackService
     from chatwaifu_runtime.runtime_skills.registry import SkillRegistry
-    from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
     from chatwaifu_runtime.sessions.service import SessionService
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +106,7 @@ class RuntimeCloudRealtimeFactory:
         ) = None,
         event_hub: EventHub | None = None,
         playback: PlaybackService | None = None,
+        tools_enabled: bool = False,
     ) -> None:
         self._backend = backend
         self._egress_gateway = egress_gateway
@@ -112,6 +119,7 @@ class RuntimeCloudRealtimeFactory:
         self._skills_source = skills_source
         self._event_hub = event_hub
         self._playback = playback
+        self._tools_enabled = tools_enabled
 
     async def create_bridge(self, session_id: UUID) -> CloudRealtimeMediaBridge:
         """Create and wire an authorized CloudRealtimeMediaBridge for session_id."""
@@ -149,8 +157,22 @@ class RuntimeCloudRealtimeFactory:
             )
 
         capabilities = await self._backend.capabilities()
-        skills = (
-            extract_realtime_skills(self._skills_source) if capabilities.supports_tool_call else []
+
+        projected_tools: tuple[ProjectedSkillTool, ...] = ()
+        if (
+            self._tools_enabled
+            and capabilities.supports_tool_call
+            and isinstance(self._skills_source, RuntimeSkillService)
+        ):
+            projected_tools = project_cloud_realtime_tools(self._skills_source.list())
+
+        tool_defs = tuple(
+            RealtimeToolDefinition(
+                name=pt.name,
+                description=pt.description,
+                parameters=pt.input_schema,
+            )
+            for pt in projected_tools
         )
 
         try:
@@ -179,7 +201,8 @@ class RuntimeCloudRealtimeFactory:
             character_profile=character_profile,
             kernel_snapshot=kernel_snapshot,
             memories=memories,
-            skills=skills,
+            skills=(),
+            tools=tool_defs,
             conversation_history=conversation_history,
         )
 
@@ -190,6 +213,17 @@ class RuntimeCloudRealtimeFactory:
             backend_id=self._backend.backend_id,
         )
 
+        tool_bridge = None
+        if capabilities.supports_tool_call and isinstance(self._skills_source, RuntimeSkillService):
+            tools_snapshot = {pt.name: pt for pt in projected_tools}
+            tool_bridge = CloudToolBridge(
+                session=cloud_session,
+                skills=self._skills_source,
+                egress_gateway=self._egress_gateway,
+                tools_snapshot=tools_snapshot,
+                backend_id=self._backend.backend_id,
+            )
+
         bridge = CloudRealtimeMediaBridge.create(
             session_id=session_id,
             backend_id=self._backend.backend_id,
@@ -197,6 +231,7 @@ class RuntimeCloudRealtimeFactory:
             admission=self._admission,
             domain_sink=domain_sink,
             playback=self._playback,
+            tool_bridge=tool_bridge,
         )
         if self._playback is not None:
             token = self._playback.register_completion_listener(

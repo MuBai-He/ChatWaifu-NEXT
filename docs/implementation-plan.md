@@ -1839,14 +1839,16 @@ Provider-specific event 不泄漏到 Character、Memory 或 Frontend store。
 
 ## 13.5 Tool Bridge
 
-- Provider tool call 已转入独立 AgentTurnOrchestrator，再经 Skill/Tool Gateway 执行；Provider
-  不持有 MCP 或权限对象。
-- 工具决策轮先缓冲，权限拒绝、过期、取消和失败作为结构化 tool result 回灌；只有禁用
-  tools 的最终角色轮进入字幕与 TTS。
-- SkillRun 持久化 turn/generation/provider call lineage，抢话会取消本轮前台 SkillRun，迟到结果
-  由 CAS 终态和 generation gate 双重丢弃。
-- 长任务返回 job handle，而不是阻塞 realtime socket。
-- 不支持异步 function call 的 Provider 使用前脑确认 + 后脑 job。
+### 13.5A 云端单轮只读工具桥接（[ADR 0050](adr/0050-cloud-realtime-tool-bridge.md)）
+
+- 通过 `realtime.cloud_tools_enabled` 显式开启，默认关闭，保留现有单次响应的流式语音路径。
+- 开启后先进行纯文本工具决策，再请求禁用工具的最终音频响应；决策文本不进入字幕、播放或已确认历史。这会增加一次模型往返。
+- 连接时最多暴露 8 个受信任、可打断、短时运行的内置只读能力；参数 Schema 预算 24 KiB。调用时重新校验当前注册表、权限和参数，不创建人工确认请求。
+- `CloudToolBridge` 独立执行任务，每个 generation 最多一轮、4 次调用；记录 session、turn、generation 和 provider call ID，拒绝重复和参数变更。
+- 工具定义和结果均纳入外发审计；结果需要独立的 `tool_result` 授权，审计持久化后才写入 Provider。写锁内再次检查 generation，阻断取消后的结果。
+- 无工具调用的决策也经过同一个续播预留流程。最终音频收到播放确认后才成为已说出的历史。
+- 本批包含 OpenAI / Fake、本地 WebSocket 与 SQLite 集成测试；公网模型与真机收听仍待验收。
+- 外部 MCP、写入型工具、交互确认、长任务句柄与多轮工具调用留待后续实现。下一步优先 13.6 上下文同步，Phase 17.4C 仍在队列中。
 
 ## 13.6 Context Sync
 
