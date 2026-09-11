@@ -13,7 +13,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from chatwaifu_runtime.realtime.cloud.tools import CloudToolBridge
 
 from pipecat.frames.frames import (
     CancelFrame,
@@ -145,6 +149,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
         sample_rate: int = 16_000,
         channels: int = 1,
         input_queue_capacity: int = 100,
+        tool_bridge: CloudToolBridge | None = None,
     ) -> CloudRealtimeMediaBridge:
         sink = domain_sink or InMemoryDomainSink()
         mirror = RealtimeSessionMirror(
@@ -157,6 +162,7 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
             session=session,
             mirror=mirror,
             domain_sink=sink,
+            tool_bridge=tool_bridge,
         )
         return cls(
             session_id=session_id,

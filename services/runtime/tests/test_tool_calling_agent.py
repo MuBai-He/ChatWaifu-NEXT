@@ -102,6 +102,8 @@ class _Gateway:
         generation_id: UUID | None = None,
         origin: Literal["manual", "agent", "external_mcp"] = "manual",
         provider_tool_call_id: str | None = None,
+        allow_confirmation: bool = True,
+        require_cloud_readonly: bool = False,
     ) -> SkillRunSnapshot:
         self.invocations.append((session_id, invocation, principal))
         return _snapshot(SkillRunState.CREATED, run_id=self.terminal.skill_run_id)

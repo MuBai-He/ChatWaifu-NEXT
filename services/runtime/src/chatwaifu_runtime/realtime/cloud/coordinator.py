@@ -8,10 +8,11 @@ normalization without leaking provider-specific payloads or SDK types into domai
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
@@ -34,11 +35,15 @@ from chatwaifu_runtime.realtime.cloud.contracts import (
     SessionClosedEvent,
     SessionDegradedEvent,
     SessionReadyEvent,
+    ToolCallRequestedEvent,
     UsageRecordedEvent,
     UserTranscriptEvent,
 )
 from chatwaifu_runtime.realtime.cloud.mirror import RealtimeSessionMirror
 from chatwaifu_runtime.realtime.contracts import VoiceTurnIdentity
+
+if TYPE_CHECKING:
+    from chatwaifu_runtime.realtime.cloud.tools import CloudToolBridge
 
 _LOGGER = logging.getLogger(__name__)
 SESSION_CLOSE_TIMEOUT_SECONDS = 2.0
@@ -280,12 +285,16 @@ class CloudRealtimeCoordinator:
         mirror: RealtimeSessionMirror,
         domain_sink: RealtimeDomainSink,
         media_sink: RealtimeMediaSink | None = None,
+        tool_bridge: CloudToolBridge | None = None,
     ) -> None:
         self.session_id: UUID = session_id
         self._session = session
         self._mirror = mirror
         self._domain_sink = domain_sink
         self._media_sink = media_sink
+        self._tool_bridge = tool_bridge
+        if self._tool_bridge is not None:
+            self._tool_bridge.attach(self, mirror)
         self._pump_task: asyncio.Task[None] | None = None
         self._is_running: bool = False
         self._end_task: asyncio.Task[None] | None = None
@@ -296,6 +305,15 @@ class CloudRealtimeCoordinator:
         self._ack_timeout_seconds: float = 5.0
         self._injected_ack_timeout_event: asyncio.Event | None = None
         self._injected_ack_deadline_waiter: Callable[[float], Awaitable[None]] | None = None
+
+    def set_tool_bridge(self, tool_bridge: CloudToolBridge | None) -> None:
+        self._tool_bridge = tool_bridge
+        if self._tool_bridge is not None:
+            self._tool_bridge.attach(self, self._mirror)
+
+    @property
+    def tool_bridge(self) -> CloudToolBridge | None:
+        return self._tool_bridge
 
     def set_ack_timeout(self, seconds: float) -> None:
         self._ack_timeout_seconds = seconds
@@ -410,6 +428,8 @@ class CloudRealtimeCoordinator:
             turn_id = self._mirror.get_turn_id(active_gen)
             was_tombstoned = self._mirror.is_tombstoned(active_gen)
             self._mirror.cancel_generation(active_gen)
+            if self._tool_bridge is not None:
+                await self._tool_bridge.cancel_active_runs(active_gen)
             if not was_tombstoned and turn_id is not None:
                 if terminal == "failed":
                     await self._domain_sink.response_failed(
@@ -560,6 +580,8 @@ class CloudRealtimeCoordinator:
                 finally:
                     await self.terminate_active_generation(reason=reason, terminal="cancelled")
             finally:
+                if self._tool_bridge is not None:
+                    await self._tool_bridge.stop()
                 try:
                     async with asyncio.timeout(SESSION_CLOSE_TIMEOUT_SECONDS):
                         await self._session.close()
@@ -611,6 +633,8 @@ class CloudRealtimeCoordinator:
             case UserTranscriptEvent() | AssistantTranscriptEvent():
                 return event.candidate.session_id
             case ResponseStartedEvent() | ResponseCompletedEvent() | ResponseCancelledEvent():
+                return event.session_id
+            case ToolCallRequestedEvent():
                 return event.session_id
             case OutputAudioEvent():
                 return event.frame.session_id
@@ -820,11 +844,12 @@ class CloudRealtimeCoordinator:
         self._cancel_missing_ack_timer(generation_id)
         if self._media_sink is not None:
             self._media_sink.clear_generation(generation_id)
-        if self._mirror.is_tombstoned(generation_id):
-            return
+        was_tombstoned = self._mirror.is_tombstoned(generation_id)
         turn_id = self._mirror.get_turn_id(generation_id)
         self._mirror.cancel_generation(generation_id)
-        if turn_id is not None:
+        if self._tool_bridge is not None:
+            await self._tool_bridge.cancel_active_runs(generation_id)
+        if not was_tombstoned and turn_id is not None:
             await self._domain_sink.response_cancelled(
                 self.session_id, turn_id, generation_id, reason
             )
@@ -1129,6 +1154,38 @@ class CloudRealtimeCoordinator:
                         self.session_id, turn_id, gen_id, event.reason
                     )
 
+            case ToolCallRequestedEvent():
+                gen_id = await self._resolve_consistent_identities(
+                    event_name="ToolCallRequestedEvent",
+                    generation_id=event.generation_id,
+                    provider_response_id=event.provider_response_id,
+                )
+                if gen_id is None:
+                    return
+
+                if self._mirror.is_tombstoned(gen_id) or not self._mirror.is_active(gen_id):
+                    _LOGGER.debug(
+                        "Dropping ToolCallRequestedEvent for inactive or tombstoned generation %s",
+                        gen_id,
+                    )
+                    return
+
+                turn_id = await self._resolve_candidate_turn(
+                    event_name="ToolCallRequestedEvent", gen_id=gen_id
+                )
+                if turn_id is None:
+                    return
+
+                if self._tool_bridge is None:
+                    await self._emit_diagnostic(
+                        code="tool_bridge_unavailable",
+                        message="Tool calls requested but no tool bridge is configured",
+                        details={"generation_id": str(gen_id)},
+                    )
+                    return
+
+                await self._tool_bridge.handle_tool_calls(event, turn_id=turn_id)
+
             case UsageRecordedEvent():
                 if event.usage.generation_id is None:
                     # Session-level usage carries no generation identity and
@@ -1252,6 +1309,11 @@ class CloudRealtimeCoordinator:
                 return f"resp_comp:{event.generation_id}:{event.provider_response_id}"
             case ResponseCancelledEvent():
                 return f"resp_canc:{event.session_id}:{event.generation_id}:{event.reason}"
+            case ToolCallRequestedEvent():
+                calls_digest = hashlib.sha256(
+                    ":".join(f"{c.call_id}:{c.name}" for c in event.calls).encode()
+                ).hexdigest()
+                return f"tool_req:{event.generation_id}:{event.provider_response_id}:{calls_digest}"
             case UsageRecordedEvent():
                 u = event.usage
                 return (

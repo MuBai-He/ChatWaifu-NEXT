@@ -963,9 +963,13 @@ def test_20_mirror_bounds_collection_sizes() -> None:
     assert len(mirror._bindings) == 3
 
     # 4. Response mappings
-    for i in range(6):
-        mirror.bind_provider_response(f"resp_{i}", generation_id=bindings[-1])
+    for i, gid in enumerate(bindings[-3:]):
+        assert mirror.bind_provider_response(f"decision_{i}", generation_id=gid) is not None
+        mirror.reserve_continuation(gid)
+        assert mirror.bind_provider_response(f"final_{i}", generation_id=gid) is not None
     assert len(mirror._response_to_generation) == 3
+    assert mirror.lookup_response_generation("decision_0") is None
+    assert mirror.lookup_response_generation("final_2") == bindings[-1]
 
 
 async def test_21_late_user_final_transcript_commits_after_assistant_completed(
