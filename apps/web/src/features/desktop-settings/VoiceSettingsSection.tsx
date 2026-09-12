@@ -5,6 +5,7 @@ import {
   resolveProviderSelection,
   saveTtsProviderPreference,
 } from "../chat/ttsProviderPresentation";
+import { RealtimeConfigurationPanel } from "../chat/RealtimeConfigurationPanel";
 import { TtsConfigurationPanel } from "./TtsConfigurationPanel";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
@@ -118,6 +119,8 @@ export function VoiceSettingsSection({
         onProviderIdChange={changeConfiguredProvider}
         onSaved={voice.refreshTtsProviders}
       />
+
+      <RealtimeConfigurationPanel />
 
       <p className="desktop-settings-info">
         麦克风采集和声音播放只由桌宠窗口负责，设置页不会建立第二条媒体链路，因此不会产生重叠语音。

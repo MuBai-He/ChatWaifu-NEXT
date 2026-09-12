@@ -30,8 +30,17 @@ from chatwaifu_runtime.config.settings import RealtimeConfig, SttConfig
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
-from chatwaifu_runtime.realtime.cloud.context import ConsentRequiredError, PolicyDeniedError
+from chatwaifu_runtime.realtime.cloud.context import (
+    CloudEgressGateway,
+    ConsentRequiredError,
+    EgressGrant,
+    PolicyDeniedError,
+)
 from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
+from chatwaifu_runtime.realtime.configuration import (
+    RealtimeConfigurationService,
+    RealtimeConnectionSnapshot,
+)
 from chatwaifu_runtime.realtime.contracts import SttBackend
 from chatwaifu_runtime.realtime.pipecat.processor import VoiceDomainBridgeProcessor
 
@@ -54,6 +63,12 @@ class WebRtcCandidate:
     sdp_mline_index: int
 
 
+@dataclass(slots=True)
+class _PcConnectionSnapshot:
+    snapshot: RealtimeConnectionSnapshot
+    bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None
+
+
 class PipecatMediaAdapter:
     def __init__(
         self,
@@ -69,8 +84,18 @@ class PipecatMediaAdapter:
         activity: ActivityTracker,
         resource_activity: Callable[[], None],
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None,
+        configuration_service: RealtimeConfigurationService | None = None,
+        egress_gateway: CloudEgressGateway | Callable[[], CloudEgressGateway] | None = None,
+        bridge_factory_builder: (
+            Callable[
+                [RealtimeConnectionSnapshot],
+                Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]],
+            ]
+            | None
+        ) = None,
     ) -> None:
         self._config = config
+        self._stt_config = stt_config
         self._stt_language = (
             None if stt_config.language.strip().casefold() == "auto" else stt_config.language
         )
@@ -83,6 +108,9 @@ class PipecatMediaAdapter:
         self._activity = activity
         self._resource_activity = resource_activity
         self._cloud_bridge_factory = cloud_bridge_factory
+        self._configuration_service = configuration_service
+        self._egress_gateway = egress_gateway
+        self._bridge_factory_builder = bridge_factory_builder
         self._handler = SmallWebRTCRequestHandler(connection_mode=ConnectionMode.MULTIPLE)
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._sessions: dict[str, UUID] = {}
@@ -90,6 +118,7 @@ class PipecatMediaAdapter:
         self._admin_lock = asyncio.Lock()
         self._session_lock_users: dict[UUID, int] = {}
         self._prepared_bridges: dict[str, CloudRealtimeMediaBridge] = {}
+        self._pc_snapshots: dict[str, _PcConnectionSnapshot] = {}
         self._cleanup_tasks: set[asyncio.Task[None]] = set()
         self._connections: dict[str, SmallWebRTCConnection] = {}
         self._closing: bool = False
@@ -97,6 +126,85 @@ class PipecatMediaAdapter:
     @property
     def active_connections(self) -> int:
         return sum(not task.done() for task in self._tasks.values())
+
+    def _capture_snapshot(self) -> RealtimeConnectionSnapshot:
+        if self._configuration_service is not None:
+            return self._configuration_service.current_snapshot()
+        api_key_secret = self._config.openai.api_key
+        raw_key = api_key_secret.get_secret_value() if api_key_secret else None
+        return RealtimeConnectionSnapshot(
+            schema_version="1.0",
+            revision=1,
+            connection_mode=self._config.connection_mode,
+            cloud_backend=self._config.cloud_backend or "openai",
+            model=self._config.openai.model or "",
+            voice=self._config.openai.voice,
+            transcription_model=self._config.openai.transcription_model,
+            cloud_tools_enabled=self._config.cloud_tools_enabled,
+            cloud_egress_consent=True,
+            api_key_configured=bool(raw_key),
+            _api_key=raw_key,
+        )
+
+    def _get_egress_gateway(self) -> CloudEgressGateway | None:
+        if callable(self._egress_gateway):
+            return self._egress_gateway()
+        return self._egress_gateway
+
+    def _validate_admission(self, snapshot: RealtimeConnectionSnapshot, session_id: UUID) -> None:
+        if snapshot.connection_mode != "cloud_realtime":
+            return
+        if snapshot.cloud_backend == "openai":
+            if not snapshot.model.strip():
+                raise ValueError("云端语音配置无效，未配置模型。")
+            if not snapshot.api_key or not snapshot.api_key.strip():
+                raise ValueError("云端语音配置无效，未配置 API Key。")
+        if not snapshot.cloud_egress_consent:
+            raise PermissionError("云端语音未获授权，请检查出网设置。")
+        egress_gw = self._get_egress_gateway()
+        if egress_gw is not None:
+            if egress_gw.policy_mode == "deny":
+                raise PermissionError("云端语音未获授权，请检查出网设置。")
+            if egress_gw.policy_mode == "ask":
+                allowed_kinds = {
+                    "safety",
+                    "persona",
+                    "relationship",
+                    "affect",
+                    "memory",
+                    "skills",
+                    "recent_history",
+                }
+                if snapshot.cloud_tools_enabled:
+                    allowed_kinds.add("tool_result")
+                egress_gw.grant_consent(
+                    EgressGrant(
+                        session_id=session_id,
+                        backend_id=snapshot.cloud_backend,
+                        allowed_component_kinds=frozenset(allowed_kinds),
+                    )
+                )
+
+    def _resolve_bridge_factory(
+        self, snapshot: RealtimeConnectionSnapshot
+    ) -> Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None:
+        if snapshot.connection_mode == "cascade":
+            return None
+        bootstrap_key = self._config.openai.api_key
+        bootstrap_matches = (
+            snapshot.connection_mode == self._config.connection_mode
+            and snapshot.cloud_backend == (self._config.cloud_backend or "openai")
+            and snapshot.model == (self._config.openai.model or "")
+            and snapshot.voice == self._config.openai.voice
+            and snapshot.transcription_model == self._config.openai.transcription_model
+            and snapshot.cloud_tools_enabled == self._config.cloud_tools_enabled
+            and snapshot.api_key == (bootstrap_key.get_secret_value() if bootstrap_key else None)
+        )
+        if snapshot.revision == 1 and bootstrap_matches and self._cloud_bridge_factory is not None:
+            return self._cloud_bridge_factory
+        if self._bridge_factory_builder is not None:
+            return self._bridge_factory_builder(snapshot)
+        return self._cloud_bridge_factory
 
     async def _get_session_lock(self, session_id: UUID) -> asyncio.Lock:
         async with self._admin_lock:
@@ -139,12 +247,16 @@ class PipecatMediaAdapter:
             raise TimeoutError("Realtime cleanup has not finished")
         await task
 
-    async def _prepare_cloud_bridge(self, session_id: UUID) -> CloudRealtimeMediaBridge:
-        if self._cloud_bridge_factory is None:
+    async def _prepare_cloud_bridge(
+        self,
+        session_id: UUID,
+        bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None,
+    ) -> CloudRealtimeMediaBridge:
+        if bridge_factory is None:
             raise ValueError("Cloud realtime is not configured")
         try:
             async with asyncio.timeout(15.0):
-                return await self._cloud_bridge_factory(session_id)
+                return await bridge_factory(session_id)
         except (ConsentRequiredError, PolicyDeniedError) as error:
             raise PermissionError("云端语音未获授权，请检查出网设置。") from error
         except Exception as error:
@@ -157,6 +269,9 @@ class PipecatMediaAdapter:
             raise ConnectionError("云端语音暂时无法连接，请稍后重试。") from error
 
     async def offer(self, session_id: UUID, offer: WebRtcOffer) -> dict[str, str]:
+        # Pipecat offer captures ONE immutable config revision before await
+        snapshot = self._capture_snapshot()
+
         session_lock = await self._get_session_lock(session_id)
         try:
             async with session_lock:
@@ -177,6 +292,18 @@ class PipecatMediaAdapter:
                     )
                 else:
                     is_renegotiation = False
+
+                if is_renegotiation:
+                    assert offer.pc_id is not None
+                    pc_record = self._pc_snapshots.get(offer.pc_id)
+                    if pc_record is not None:
+                        snapshot = pc_record.snapshot
+                        bridge_factory = pc_record.bridge_factory
+                    else:
+                        bridge_factory = self._resolve_bridge_factory(snapshot)
+                else:
+                    self._validate_admission(snapshot, session_id)
+                    bridge_factory = self._resolve_bridge_factory(snapshot)
 
                 if not is_renegotiation:
                     # Serialized admission: supersede previous connections for this session
@@ -225,13 +352,16 @@ class PipecatMediaAdapter:
                 created_tasks: list[asyncio.Task[None]] = []
                 created_connections: list[SmallWebRTCConnection] = []
                 prepared: CloudRealtimeMediaBridge | None = None
-                if not is_renegotiation and self._config.connection_mode == "cloud_realtime":
-                    prepared = await self._prepare_cloud_bridge(session_id)
+                if not is_renegotiation and snapshot.connection_mode == "cloud_realtime":
+                    prepared = await self._prepare_cloud_bridge(session_id, bridge_factory)
 
                 async def start_connection(connection: SmallWebRTCConnection) -> None:
                     created_connections.append(connection)
                     if self._closing:
                         raise RuntimeError("Realtime adapter closed during admission")
+                    self._pc_snapshots[connection.pc_id] = _PcConnectionSnapshot(
+                        snapshot=snapshot, bridge_factory=bridge_factory
+                    )
                     if prepared is not None:
                         self._prepared_bridges[connection.pc_id] = prepared
                     if connection.pc_id in self._tasks and not self._tasks[connection.pc_id].done():
@@ -265,6 +395,7 @@ class PipecatMediaAdapter:
                             await self._join_cleanup(prepared.cleanup())
                     finally:
                         for connection in created_connections:
+                            self._pc_snapshots.pop(connection.pc_id, None)
                             await self._join_cleanup(connection.disconnect())
                     raise
         finally:
@@ -329,6 +460,7 @@ class PipecatMediaAdapter:
                 raise TimeoutError("Realtime cleanup tasks are still closing")
         self._tasks.clear()
         self._sessions.clear()
+        self._pc_snapshots.clear()
 
     async def _run_connection(
         self,
@@ -339,6 +471,14 @@ class PipecatMediaAdapter:
         cloud_bridge: CloudRealtimeMediaBridge | None = None
         worker: PipelineWorker | None = None
         watcher_task: asyncio.Task[None] | None = None
+
+        pc_record = self._pc_snapshots.get(connection.pc_id)
+        current_snapshot = pc_record.snapshot if pc_record is not None else self._capture_snapshot()
+        current_bridge_factory = (
+            pc_record.bridge_factory
+            if pc_record is not None
+            else self._resolve_bridge_factory(current_snapshot)
+        )
 
         async def _safe_close_connection() -> None:
             await self._join_cleanup(connection.disconnect())
@@ -366,14 +506,14 @@ class PipecatMediaAdapter:
                     ),
                 )
             )
-            if self._config.connection_mode == "cloud_realtime":
-                if self._cloud_bridge_factory is None:
+            if current_snapshot.connection_mode == "cloud_realtime":
+                if current_bridge_factory is None:
                     raise RuntimeError(
                         "Cloud realtime mode enabled but no cloud_bridge_factory provided"
                     )
                 cloud_bridge = self._prepared_bridges.pop(connection.pc_id, None)
                 if cloud_bridge is None:
-                    cloud_bridge = await self._cloud_bridge_factory(session_id)
+                    cloud_bridge = await current_bridge_factory(session_id)
                 pipeline = Pipeline([transport.input(), vad, cloud_bridge, transport.output()])
             else:
                 bridge = VoiceDomainBridgeProcessor(
@@ -460,6 +600,7 @@ class PipecatMediaAdapter:
                 _LOGGER.error("Realtime connection %s ended: %s", pc_id, type(error).__name__)
         self._tasks.pop(pc_id, None)
         self._sessions.pop(pc_id, None)
+        self._pc_snapshots.pop(pc_id, None)
         bridge = self._prepared_bridges.pop(pc_id, None)
         connection = self._connections.pop(pc_id, None)
         if bridge is not None:
