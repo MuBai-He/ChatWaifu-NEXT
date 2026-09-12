@@ -331,17 +331,21 @@ export function RealtimeConfigurationPanel({
         )}
       </header>
 
-      <div className="realtime-notice-banner" role="note">
-        注意：自然实时语音使用 OpenAI 预设音色，并非宁宁的角色克隆声线。
-      </div>
-
-      {snapshot?.cloud_backend === "fake" && (
-        <div className="realtime-fake-backend-note" role="status">
-          当前环境使用测试模拟后端 (fake)。保存配置时将更新为 OpenAI 后端。
+      {connectionMode === "cloud_realtime" && (
+        <div className="realtime-notice-banner" role="note">
+          OpenAI
+          直接处理声音并生成语音，使用其预设音色。此模式不会使用已配置的角色声线。
         </div>
       )}
 
-      <div className="realtime-fields-grid">
+      {connectionMode === "cloud_realtime" &&
+        snapshot?.cloud_backend === "fake" && (
+          <div className="realtime-fake-backend-note" role="status">
+            当前环境使用测试模拟后端 (fake)。保存配置时将更新为 OpenAI 后端。
+          </div>
+        )}
+
+      <div className="realtime-mode-selector-group">
         <label className="realtime-field realtime-field-wide">
           <span>连接模式</span>
           <select
@@ -356,162 +360,176 @@ export function RealtimeConfigurationPanel({
             <option value="cascade">级联语音（现有角色声线）</option>
             <option value="cloud_realtime">自然实时语音（OpenAI）</option>
           </select>
+          <small>
+            {connectionMode === "cascade"
+              ? "级联模式：语音转文字 → 对话模型回复 → 角色声音朗读。"
+              : "实时模式：语音模型直接听取声音并生成语音。"}
+          </small>
         </label>
+      </div>
 
-        <label className="realtime-field">
-          <span>Realtime 模型</span>
-          <input
-            type="text"
-            aria-label="Realtime 模型"
-            value={model}
-            disabled={disabled}
-            placeholder="输入 Realtime 模型名称"
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => {
-              setModel(e.target.value);
-              markDirty();
-            }}
-          />
-          <small>OpenAI 实时语音模型 ID，未配置模型时无法发起云端连接。</small>
-        </label>
-
-        <label className="realtime-field">
-          <span>Realtime 音色</span>
-          <input
-            type="text"
-            aria-label="Realtime 音色"
-            value={voice}
-            disabled={disabled}
-            placeholder="marin"
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => {
-              setVoice(e.target.value);
-              markDirty();
-            }}
-          />
-          <small>OpenAI 预设实时音色（默认为 marin）。</small>
-        </label>
-
-        <label className="realtime-field">
-          <span>转写模型</span>
-          <input
-            type="text"
-            aria-label="转写模型"
-            value={transcriptionModel}
-            disabled={disabled}
-            placeholder="gpt-4o-mini-transcribe"
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => {
-              setTranscriptionModel(e.target.value);
-              markDirty();
-            }}
-          />
-          <small>用户实时语音转写模型（默认为 gpt-4o-mini-transcribe）。</small>
-        </label>
-
-        <div className="realtime-field">
-          <span>
-            OpenAI API Key
-            {apiKeyConfigured ? (
-              <span className="realtime-badge-configured"> · 已配置</span>
-            ) : (
-              <span className="realtime-badge-missing"> · 未配置</span>
-            )}
-          </span>
-          <input
-            type="password"
-            aria-label="OpenAI API Key"
-            value={apiKey}
-            disabled={disabled || clearApiKey}
-            placeholder={
-              clearApiKey
-                ? "保存后将清除已有密钥"
-                : apiKeyConfigured
-                  ? "留空保持原密钥"
-                  : "输入 OpenAI API Key"
-            }
-            autoComplete="new-password"
-            onChange={(e) => {
-              setApiKey(e.target.value);
-              markDirty();
-            }}
-          />
-          {apiKeyConfigured && (
-            <label className="realtime-checkbox-row realtime-clear-key-row">
+      {connectionMode === "cascade" ? (
+        <div className="realtime-cascade-info" role="status">
+          当前为级联语音模式，沿用已配置的角色声音。无需填写 OpenAI Realtime
+          配置；是否联网取决于语音识别、对话模型和语音合成各自的设置。
+        </div>
+      ) : (
+        <>
+          <div className="realtime-fields-grid">
+            <label className="realtime-field">
+              <span>Realtime 模型</span>
               <input
-                type="checkbox"
-                aria-label="清除已配置的 API Key"
-                checked={clearApiKey}
+                type="text"
+                aria-label="Realtime 模型"
+                value={model}
                 disabled={disabled}
+                placeholder="输入 Realtime 模型名称"
+                autoComplete="off"
+                spellCheck={false}
                 onChange={(e) => {
-                  const checked = e.target.checked;
-                  setClearApiKey(checked);
-                  if (checked) setApiKey("");
+                  setModel(e.target.value);
                   markDirty();
                 }}
               />
-              <span>清除已配置的 API Key</span>
+              <small>
+                OpenAI 实时语音模型 ID，未配置模型时无法发起云端连接。
+              </small>
             </label>
+
+            <label className="realtime-field">
+              <span>Realtime 音色</span>
+              <input
+                type="text"
+                aria-label="Realtime 音色"
+                value={voice}
+                disabled={disabled}
+                placeholder="marin"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => {
+                  setVoice(e.target.value);
+                  markDirty();
+                }}
+              />
+              <small>OpenAI 预设实时音色（默认为 marin）。</small>
+            </label>
+
+            <label className="realtime-field">
+              <span>转写模型</span>
+              <input
+                type="text"
+                aria-label="转写模型"
+                value={transcriptionModel}
+                disabled={disabled}
+                placeholder="gpt-4o-mini-transcribe"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => {
+                  setTranscriptionModel(e.target.value);
+                  markDirty();
+                }}
+              />
+              <small>
+                用户实时语音转写模型（默认为 gpt-4o-mini-transcribe）。
+              </small>
+            </label>
+
+            <div className="realtime-field">
+              <span>
+                OpenAI API Key
+                {apiKeyConfigured ? (
+                  <span className="realtime-badge-configured"> · 已配置</span>
+                ) : (
+                  <span className="realtime-badge-missing"> · 未配置</span>
+                )}
+              </span>
+              <input
+                type="password"
+                aria-label="OpenAI API Key"
+                value={apiKey}
+                disabled={disabled || clearApiKey}
+                placeholder={
+                  clearApiKey
+                    ? "保存后将清除已有密钥"
+                    : apiKeyConfigured
+                      ? "留空保持原密钥"
+                      : "输入 OpenAI API Key"
+                }
+                autoComplete="new-password"
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  markDirty();
+                }}
+              />
+              {apiKeyConfigured && (
+                <label className="realtime-checkbox-row realtime-clear-key-row">
+                  <input
+                    type="checkbox"
+                    aria-label="清除已配置的 API Key"
+                    checked={clearApiKey}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setClearApiKey(checked);
+                      if (checked) setApiKey("");
+                      markDirty();
+                    }}
+                  />
+                  <span>清除已配置的 API Key</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <label className="realtime-checkbox-row">
+            <input
+              type="checkbox"
+              aria-label="允许云端只读工具调用"
+              checked={cloudToolsEnabled}
+              disabled={disabled}
+              onChange={(e) => {
+                setCloudToolsEnabled(e.target.checked);
+                markDirty();
+              }}
+            />
+            <div>
+              <strong>允许云端只读工具调用</strong>
+              <small>
+                在实时语音中仅允许调用内置只读工具（写入或需人工确认的工具将被隔离）。
+              </small>
+            </div>
+          </label>
+
+          <label className="realtime-checkbox-row realtime-consent-row">
+            <input
+              type="checkbox"
+              aria-label="云端数据传输授权"
+              checked={cloudEgressConsent}
+              disabled={disabled}
+              onChange={(e) => {
+                setCloudEgressConsent(e.target.checked);
+                markDirty();
+              }}
+            />
+            <div>
+              <strong>云端数据传输授权</strong>
+              <small>
+                同意将麦克风实时音频、必要的角色与记忆上下文（以及在启用工具时的只读工具执行结果）发送至云端服务商进行实时语音处理。
+              </small>
+            </div>
+          </label>
+
+          {isCloudIncomplete ? (
+            <div className="realtime-incomplete-info" role="status">
+              云端实时语音配置未完成（缺少{missingRequirements.join("、")}
+              ）。仍可保存配置，但在发起语音连接时将阻止接入。
+            </div>
+          ) : (
+            <div className="realtime-complete-info" role="status">
+              必填配置已填写，实际可用性将在连接时验证。
+            </div>
           )}
-        </div>
-      </div>
-
-      <label className="realtime-checkbox-row">
-        <input
-          type="checkbox"
-          aria-label="允许云端只读工具调用"
-          checked={cloudToolsEnabled}
-          disabled={disabled}
-          onChange={(e) => {
-            setCloudToolsEnabled(e.target.checked);
-            markDirty();
-          }}
-        />
-        <div>
-          <strong>允许云端只读工具调用</strong>
-          <small>
-            在实时语音中仅允许调用内置只读工具（写入或需人工确认的工具将被隔离）。
-          </small>
-        </div>
-      </label>
-
-      <label className="realtime-checkbox-row realtime-consent-row">
-        <input
-          type="checkbox"
-          aria-label="云端数据传输授权"
-          checked={cloudEgressConsent}
-          disabled={disabled}
-          onChange={(e) => {
-            setCloudEgressConsent(e.target.checked);
-            markDirty();
-          }}
-        />
-        <div>
-          <strong>云端数据传输授权</strong>
-          <small>
-            同意将麦克风实时音频、必要的角色与记忆上下文（以及在启用工具时的只读工具执行结果）发送至云端服务商进行实时语音处理。
-          </small>
-        </div>
-      </label>
-
-      {connectionMode === "cloud_realtime" ? (
-        isCloudIncomplete ? (
-          <div className="realtime-incomplete-info" role="status">
-            云端实时语音配置未完成（缺少{missingRequirements.join("、")}
-            ）。仍可保存配置，但在发起语音连接时将阻止接入。
-          </div>
-        ) : (
-          <div className="realtime-complete-info" role="status">
-            必填配置已填写，实际可用性将在连接时验证。
-          </div>
-        )
-      ) : (
-        <div className="realtime-cascade-info" role="status">
-          当前为级联语音模式（使用现有角色声线），无需 OpenAI Realtime 配置。
-        </div>
+        </>
       )}
 
       {snapshot && snapshot.active_connections > 0 && (
@@ -522,7 +540,9 @@ export function RealtimeConfigurationPanel({
       )}
 
       <p className="realtime-connection-lifecycle-note">
-        保存的设置（包括云端传输授权）将在下一次发起语音连接时生效，当前通话不受影响。如需立即停止当前通话向云端发送数据，请先挂断。
+        {connectionMode === "cloud_realtime"
+          ? "保存的设置（包括云端传输授权）将在下一次发起语音连接时生效，当前通话不受影响。如需立即停止当前通话向云端发送数据，请先挂断。"
+          : "保存的设置将在下一次发起语音连接时生效，当前通话不受影响。"}
       </p>
 
       {hasConflict && (
