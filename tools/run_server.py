@@ -86,6 +86,12 @@ def systemd_unit(state_dir: Path) -> str:
         str(state_dir),
     )
     command = " ".join(_unit_quote(arg, command=True) for arg in arguments)
+    # WorkingDirectory is a scalar path, unlike ExecStart's quoted word list.
+    # systemd keeps enclosing quotes here and then rejects the path as relative.
+    directory = str(ROOT)
+    if any(char in directory for char in "\n\r\x00"):
+        raise ValueError("service paths must not contain line breaks")
+    directory = directory.replace("%", "%%")
     return (
         "[Unit]\n"
         "Description=ChatWaifu source Runtime\n"
@@ -93,7 +99,7 @@ def systemd_unit(state_dir: Path) -> str:
         "StartLimitBurst=5\n\n"
         "[Service]\n"
         "Type=simple\n"
-        f"WorkingDirectory={_unit_quote(str(ROOT))}\n"
+        f"WorkingDirectory={directory}\n"
         f"ExecStart={command}\n"
         "Restart=on-failure\n"
         "RestartSec=5\n"
