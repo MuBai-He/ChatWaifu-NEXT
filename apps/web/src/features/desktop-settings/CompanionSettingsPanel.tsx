@@ -7,6 +7,7 @@ import {
 } from "../chat/runtimeClient";
 import {
   isDesktopHost,
+  isRemoteRuntime,
   readDesktopRuntimeStatus,
   restartDesktopRuntime,
   type DesktopRuntimeStatus,
@@ -54,7 +55,9 @@ export function CompanionSettingsPanel() {
       try {
         const [status, runtimeHost] = await Promise.all([
           getCompanionStatus(),
-          readDesktopRuntimeStatus(),
+          isRemoteRuntime()
+            ? Promise.resolve(null)
+            : readDesktopRuntimeStatus(),
         ]);
         if (!active) return;
         setSettings(status.settings);
@@ -62,7 +65,7 @@ export function CompanionSettingsPanel() {
         setProactiveToday(status.proactive_today);
         setLastProactiveAt(status.last_proactive_at ?? null);
         setHost(runtimeHost);
-        if (isDesktopHost()) {
+        if (isDesktopHost() && !isRemoteRuntime()) {
           const { listen } = await import("@tauri-apps/api/event");
           unlisten = await listen<DesktopRuntimeStatus>(
             "desktop-runtime-status-changed",

@@ -3,18 +3,20 @@ updated_at: "2026-09-21"
 current_phase: "13.5A"
 next_phase: "13.6"
 server_deployment:
-  status: source_entrypoint_implemented_target_host_acceptance_pending
-  scope: single_owner_source_runtime_with_durable_state_and_systemd_user_service
+  status: remote_thin_client_implemented_target_host_acceptance_pending
+  scope: single_owner_source_server_and_remote_web_desktop_clients_with_server_owned_voice
   evidence:
     - PR 42 Realtime configuration merged as c2433d3 on 2026-09-21; existing targeted Python and Web checks plus both frontend builds passed before merge
     - Source server uses an independent state directory and the existing Runtime lifecycle; no desktop, frontend build, or local model workers are started
     - Local macOS source process accepted authenticated session creation and retained the session and management credential after SIGTERM cleanup and restart; closing stdin did not stop the service, unauthenticated private API returned 401, and a second process could not acquire the same state-directory lease
     - Target Linux service persistence, headless secure credential storage, real model and WeChat receipt remain pending server access
+    - Remote connection gate, native local-start guards, endpoint-scoped sessions, authenticated audio download and server/client ICE configuration implemented; see ADR 0053 and remote-client.md
+    - Chromium forced the WAV fallback after disabling its PCM socket; the audio GET carried Bearer authentication, returned 200 and started Blob playback
+    - Chromium entered the remote UI through the authenticated connection form, negotiated a real loopback WebRTC connection using simulated microphone capture, and closed the peer when switching connections; this does not establish public-network or physical-audio acceptance
   remaining:
     - server_installer
-    - authenticated_remote_web_entry
-    - desktop_remote_runtime_mode
-    - cross_network_realtime_media
+    - target_server_https_and_systemd_acceptance
+    - real_cross_network_voice_and_turn_acceptance
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true

@@ -1,0 +1,75 @@
+.runtime-connection-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #f1f4f8;
+  color: #202d40;
+  pointer-events: auto;
+}
+.runtime-connection-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 460px;
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 12px 44px #22334418;
+}
+.runtime-connection-card h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.runtime-connection-card p {
+  margin: 0;
+  line-height: 1.6;
+}
+.runtime-connection-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.runtime-connection-card input,
+.runtime-connection-card select,
+.runtime-connection-card button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #cad3de;
+  border-radius: 8px;
+  font: inherit;
+  color: #202d40;
+  background: white;
+}
+.runtime-connection-card button[type="submit"] {
+  background: #315b96;
+  color: white;
+  border-color: #315b96;
+}
+.runtime-connection-card [role="alert"] {
+  color: #a42132;
+}
+.runtime-connection-card small {
+  line-height: 1.5;
+  color: #57697d;
+}
+.runtime-connection-switch {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  z-index: 9999;
+  border: 1px solid #cad3de;
+  border-radius: 14px;
+  padding: 5px 10px;
+  background: #fffffff0;
+  color: #314258;
+  font-size: 12px;
+  cursor: pointer;
+  pointer-events: auto;
+}

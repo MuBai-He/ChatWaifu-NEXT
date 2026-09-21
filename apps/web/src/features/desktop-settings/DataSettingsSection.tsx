@@ -1,3 +1,4 @@
+import { isRemoteRuntime } from "../chat/runtimeEndpoint";
 import { useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
 import { MemoryControlCenter } from "../chat/MemoryControlCenter";
@@ -31,7 +32,9 @@ export function DataSettingsSection({
   >();
   const desktopHost = context.desktop?.desktopHost ?? false;
   const workerPackInstallSupported =
-    desktopHost && /Windows/i.test(window.navigator.userAgent);
+    desktopHost &&
+    !isRemoteRuntime() &&
+    /Windows/i.test(window.navigator.userAgent);
 
   const installLocalPack = async () => {
     let archive: string | null;
@@ -112,7 +115,11 @@ export function DataSettingsSection({
 
       <SettingsGroup
         title="Worker Pack 管理"
-        description="本地语音与识别包是可选项，可在首次配置时跳过，之后随时安装"
+        description={
+          isRemoteRuntime()
+            ? "语音与识别模型在服务器上管理，此客户端无需安装模型包。"
+            : "本地语音与识别包是可选项，可在首次配置时跳过，之后随时安装"
+        }
       >
         <div className="worker-pack-action-row">
           <div>

@@ -60,6 +60,8 @@ interface ActivePlayback {
   reusable: boolean;
   item: AudioPlaybackItem;
   lastReportedMs: number;
+  download?: AbortController;
+  releaseUrl?: () => void;
 }
 
 type AudioFactory = (url: string) => PlayableAudio;
@@ -77,6 +79,10 @@ export class GenerationAudioPlayer {
     private readonly createAudio: AudioFactory,
     private readonly callbacks: AudioPlayerCallbacks,
     private readonly maxQueueSize = 32,
+    private readonly loadAudio?: (
+      url: string,
+      signal: AbortSignal,
+    ) => Promise<{ url: string; release: () => void }>,
   ) {}
 
   enqueue(item: AudioPlaybackItem): void {
@@ -105,6 +111,8 @@ export class GenerationAudioPlayer {
     const active = this.active;
     this.active = null;
     if (!active) return;
+    active.download?.abort();
+    active.releaseUrl?.();
     this.callbacks.onPlaybackStop(
       active.item,
       playbackPosition(active.audio, active.item),
@@ -167,10 +175,11 @@ export class GenerationAudioPlayer {
 
     const standby = this.standbyAudio;
     const reusable = standby !== null;
-    const audio = standby ?? this.createAudio(next.url);
+    const source = this.loadAudio ? SILENT_WAV_URL : next.url;
+    const audio = standby ?? this.createAudio(source);
     if (reusable) {
       this.standbyAudio = null;
-      audio.src = next.url;
+      audio.src = source;
       audio.load();
     }
     audio.preload = "auto";
@@ -211,6 +220,29 @@ export class GenerationAudioPlayer {
       this.playNext();
     };
 
+    if (this.loadAudio) {
+      const download = new AbortController();
+      this.active.download = download;
+      void this.loadAudio(next.url, download.signal)
+        .then((loaded) => {
+          if (
+            !this.isCurrent(audio, epoch) ||
+            !this.callbacks.isGenerationActive(next.generationId)
+          ) {
+            loaded.release();
+            if (this.release(audio, epoch)) this.playNext();
+            return;
+          }
+          this.active!.releaseUrl = loaded.release;
+          audio.src = loaded.url;
+          audio.load();
+          return audio.play();
+        })
+        .catch((error: unknown) =>
+          this.handlePlayRejection(audio, epoch, error),
+        );
+      return;
+    }
     let playResult: Promise<void>;
     try {
       playResult = audio.play();
@@ -252,6 +284,8 @@ export class GenerationAudioPlayer {
 
   private release(audio: PlayableAudio, epoch: number): boolean {
     if (!this.isCurrent(audio, epoch)) return false;
+    this.active?.download?.abort();
+    this.active?.releaseUrl?.();
     const reusable = this.active?.reusable ?? false;
     this.active = null;
     this.recycle(audio, reusable);

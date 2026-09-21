@@ -7,6 +7,18 @@ from chatwaifu_protocol.base import JsonObject
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
+class ClientIceServer(BaseModel):
+    urls: list[str]
+    username: str | None = None
+    credential: str | None = Field(default=None, repr=False)
+
+
+class RuntimeClientConfiguration(BaseModel):
+    schema_version: Literal["1.0"] = "1.0"
+    ice_servers: list[ClientIceServer]
+    ice_transport_policy: Literal["all", "relay"] = "all"
+
+
 class CreateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

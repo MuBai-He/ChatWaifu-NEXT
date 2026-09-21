@@ -15,6 +15,8 @@ import type {
   TtsProviderSnapshot,
 } from "./types";
 
+import { runtimeSessionStorageKey } from "./runtimeEndpoint";
+
 export const CHAT_SESSION_STORAGE_KEY = "chatwaifu.next.session_id";
 
 export interface ChatSessionBootstrapResult {
@@ -45,7 +47,8 @@ export async function bootstrapRuntimeSession(
   const character = characters[0];
   if (!character) throw new Error("没有安装角色 manifest。");
 
-  const saved = storage.getItem(CHAT_SESSION_STORAGE_KEY);
+  const storageKey = runtimeSessionStorageKey();
+  const saved = storage.getItem(storageKey);
   let session = saved
     ? await getSession(saved, signal).catch(() => {
         signal?.throwIfAborted();
@@ -58,7 +61,7 @@ export async function bootstrapRuntimeSession(
     session = await createSession(character.character_id, signal);
   }
   signal?.throwIfAborted();
-  storage.setItem(CHAT_SESSION_STORAGE_KEY, session.session_id);
+  storage.setItem(storageKey, session.session_id);
   return { health, character, sessionId: session.session_id };
 }
 

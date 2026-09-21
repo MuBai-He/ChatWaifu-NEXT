@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add explicit remote connection selection for Web and desktop: the native host starts no
+  Runtime or model Worker until local mode is chosen. Remote clients use HTTPS, authenticated
+  HTTP/audio and ticketed WebSockets, with server-provided STUN/TURN configuration for voice.
+  Add frontend-only source commands and a split-deployment guide; target-network voice acceptance
+  remains pending.
+
 - Add a source server entrypoint with a separate durable state directory, create-once private
   configuration and management credentials, and a generated systemd user service. It reuses the
   Runtime lifecycle without desktop supervision, frontend tooling, or model-worker installation.

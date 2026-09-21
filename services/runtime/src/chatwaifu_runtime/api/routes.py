@@ -46,6 +46,7 @@ from chatwaifu_runtime import __version__
 from chatwaifu_runtime.api.guard import WebSocketTicketClaims
 from chatwaifu_runtime.api.models import (
     CharacterInteractionRequest,
+    ClientIceServer,
     CreateSessionRequest,
     ExamplePluginRequest,
     InstallPluginRequest,
@@ -60,6 +61,7 @@ from chatwaifu_runtime.api.models import (
     ModelRoleConfigurationRequest,
     PluginEnabledRequest,
     ResetSessionRequest,
+    RuntimeClientConfiguration,
     RuntimeHealth,
     SessionRecoveryMessage,
     SessionRecoveryResponse,
@@ -935,6 +937,26 @@ async def update_realtime_configuration(
             detail=str(error),
         ) from error
     return updated.to_public_dict(active_connections=container.voice_media.active_connections)
+
+
+@router.get("/runtime/client-configuration")
+async def runtime_client_configuration(
+    request: Request, response: Response
+) -> RuntimeClientConfiguration:
+    """Authenticated, non-cacheable browser ICE settings; provider keys stay server-side."""
+    response.headers["Cache-Control"] = "no-store"
+    config = _container(request).settings.realtime
+    return RuntimeClientConfiguration(
+        ice_servers=[
+            ClientIceServer(
+                urls=server.urls,
+                username=server.username,
+                credential=server.credential.get_secret_value() if server.credential else None,
+            )
+            for server in config.ice_servers
+        ],
+        ice_transport_policy=config.ice_transport_policy,
+    )
 
 
 @router.post("/sessions/{session_id}/webrtc/offer")

@@ -1,3 +1,4 @@
+import { runtimeFetch } from "./runtimeEndpoint";
 import type { PlaybackAckReceipt } from "./runtimeClient";
 import type { TtsStreamMessage } from "./types";
 import {
@@ -251,33 +252,55 @@ export class PlaybackCoordinator {
       (typeof Audio === "undefined" ? null : (url: string) => new Audio(url));
     if (!this.options.enabled || !createAudio) return null;
     if (!this.audioPlayer) {
-      this.audioPlayer = new GenerationAudioPlayer(createAudio, {
-        isGenerationActive: this.options.isGenerationActive,
-        onPlaybackStart: (item, position) => {
-          this.owner = "audio_element";
-          this.options.onLipSyncStart();
-          this.reportElement(item, "started", position);
+      this.audioPlayer = new GenerationAudioPlayer(
+        createAudio,
+        {
+          isGenerationActive: this.options.isGenerationActive,
+          onPlaybackStart: (item, position) => {
+            this.owner = "audio_element";
+            this.options.onLipSyncStart();
+            this.reportElement(item, "started", position);
+          },
+          onPlaybackProgress: (item, position) =>
+            this.reportElement(item, "progress", position),
+          onPlaybackStop: (item, position, reason) => {
+            this.options.onLipSyncStop();
+            this.owner = "idle";
+            this.reportElement(item, "stopped", position, reason);
+          },
+          onQueueCleared: (item) =>
+            this.reportElement(
+              item,
+              "queue_cleared",
+              {
+                playedPtsMs: 0,
+                bufferedMs: 0,
+                clientClockMs: Math.round(performance.now()),
+              },
+              "queue_cleared",
+            ),
+          onPlaybackError: this.options.onError,
         },
-        onPlaybackProgress: (item, position) =>
-          this.reportElement(item, "progress", position),
-        onPlaybackStop: (item, position, reason) => {
-          this.options.onLipSyncStop();
-          this.owner = "idle";
-          this.reportElement(item, "stopped", position, reason);
-        },
-        onQueueCleared: (item) =>
-          this.reportElement(
-            item,
-            "queue_cleared",
-            {
-              playedPtsMs: 0,
-              bufferedMs: 0,
-              clientClockMs: Math.round(performance.now()),
+        32,
+        this.options.createAudio
+          ? undefined
+          : async (url, signal) => {
+              const response = await runtimeFetch(url, {
+                signal,
+                cache: "no-store",
+                redirect: "error",
+              });
+              if (!response.ok)
+                throw new Error(`语音下载失败（${response.status}）`);
+              const blob = await response.blob();
+              signal.throwIfAborted();
+              const objectUrl = URL.createObjectURL(blob);
+              return {
+                url: objectUrl,
+                release: () => URL.revokeObjectURL(objectUrl),
+              };
             },
-            "queue_cleared",
-          ),
-        onPlaybackError: this.options.onError,
-      });
+      );
     }
     return this.audioPlayer;
   }

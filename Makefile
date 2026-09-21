@@ -2,7 +2,14 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
-.PHONY: server-setup server server-unit
+.PHONY: client-setup client server-setup server server-unit
+
+# Thin browser client: no Python, Runtime, Rust or model Worker setup.
+client-setup:
+	pnpm install --frozen-lockfile
+
+client:
+	pnpm --filter @chatwaifu/web dev:web
 
 server-setup:
 	$(UV) sync --locked --all-packages --no-dev
