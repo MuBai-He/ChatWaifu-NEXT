@@ -65,6 +65,10 @@ interface ActivePlayback {
 }
 
 type AudioFactory = (url: string) => PlayableAudio;
+export type AudioAssetLoader = (
+  url: string,
+  signal: AbortSignal,
+) => Promise<{ url: string; release: () => void }>;
 
 export class GenerationAudioPlayer {
   private readonly queue: AudioPlaybackItem[] = [];
@@ -79,10 +83,7 @@ export class GenerationAudioPlayer {
     private readonly createAudio: AudioFactory,
     private readonly callbacks: AudioPlayerCallbacks,
     private readonly maxQueueSize = 32,
-    private readonly loadAudio?: (
-      url: string,
-      signal: AbortSignal,
-    ) => Promise<{ url: string; release: () => void }>,
+    private readonly loadAudio?: AudioAssetLoader,
   ) {}
 
   enqueue(item: AudioPlaybackItem): void {

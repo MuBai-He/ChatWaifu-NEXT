@@ -1,9 +1,9 @@
-import { runtimeFetch } from "./runtimeEndpoint";
 import type { PlaybackAckReceipt } from "./runtimeClient";
 import type { TtsStreamMessage } from "./types";
 import {
   GenerationAudioPlayer,
   type AudioPlaybackItem,
+  type AudioAssetLoader,
   type PlaybackPosition,
   type PlaybackStopReason,
   type PlayableAudio,
@@ -27,6 +27,7 @@ interface PlaybackCoordinatorOptions {
   onLipSyncStart: () => void;
   onLipSyncStop: () => void;
   createAudio?: (url: string) => PlayableAudio;
+  loadAudio?: AudioAssetLoader;
   createAudioContext?: () => AudioContext;
   streamFallbackGraceMs?: number;
   streamStallMs?: number;
@@ -282,24 +283,7 @@ export class PlaybackCoordinator {
           onPlaybackError: this.options.onError,
         },
         32,
-        this.options.createAudio
-          ? undefined
-          : async (url, signal) => {
-              const response = await runtimeFetch(url, {
-                signal,
-                cache: "no-store",
-                redirect: "error",
-              });
-              if (!response.ok)
-                throw new Error(`语音下载失败（${response.status}）`);
-              const blob = await response.blob();
-              signal.throwIfAborted();
-              const objectUrl = URL.createObjectURL(blob);
-              return {
-                url: objectUrl,
-                release: () => URL.revokeObjectURL(objectUrl),
-              };
-            },
+        this.options.loadAudio,
       );
     }
     return this.audioPlayer;

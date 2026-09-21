@@ -334,3 +334,20 @@ function connectionFrom(
     restartCount: status.restart_count,
   };
 }
+
+/** Fetch private WAV assets without putting access credentials in media URLs. */
+export async function loadRuntimeAudio(
+  url: string,
+  signal: AbortSignal,
+): Promise<{ url: string; release: () => void }> {
+  const response = await runtimeFetch(url, {
+    signal,
+    cache: "no-store",
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error(`语音下载失败（${response.status}）`);
+  const blob = await response.blob();
+  signal.throwIfAborted();
+  const objectUrl = URL.createObjectURL(blob);
+  return { url: objectUrl, release: () => URL.revokeObjectURL(objectUrl) };
+}
