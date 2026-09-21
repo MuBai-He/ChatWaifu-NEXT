@@ -15,8 +15,13 @@ impl ClientConnection {
     pub fn validate(&self) -> Result<(), String> {
         if let Self::Remote { base_url, token } = self {
             let url = tauri::Url::parse(base_url).map_err(|_| "服务器地址无效")?;
-            let loopback = url.host_str() == Some("127.0.0.1");
-            if !(url.scheme() == "https" || (url.scheme() == "http" && loopback))
+            let local_address = url.host_str().is_some_and(|host| {
+                host == "127.0.0.1"
+                    || host
+                        .parse::<std::net::Ipv4Addr>()
+                        .is_ok_and(|ip| ip.is_private())
+            });
+            if !(url.scheme() == "https" || (url.scheme() == "http" && local_address))
                 || !url.username().is_empty()
                 || url.password().is_some()
                 || url.query().is_some()
@@ -25,7 +30,7 @@ impl ClientConnection {
                 || token.trim().len() < 32
             {
                 return Err(
-                    "请使用 HTTPS 服务器根地址和至少 32 字符的访问令牌；本机隧道可使用 HTTP。"
+                    "请使用 HTTPS 或局域网 IP 的 HTTP 根地址，并填写至少 32 字符的访问令牌。"
                         .into(),
                 );
             }

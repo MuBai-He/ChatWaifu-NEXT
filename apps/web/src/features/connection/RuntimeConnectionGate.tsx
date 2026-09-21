@@ -32,9 +32,16 @@ const browserKey = "chatwaifu.client.connection";
 
 function validateRemote(address: string, token: string): ClientConnection {
   const url = new URL(address.trim());
-  const loopback = url.hostname === "127.0.0.1";
+  const octets = url.hostname.split(".").map(Number);
+  const privateIpv4 =
+    octets.length === 4 &&
+    octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255) &&
+    (octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168));
+  const localAddress = url.hostname === "127.0.0.1" || privateIpv4;
   if (
-    !(url.protocol === "https:" || (url.protocol === "http:" && loopback)) ||
+    !(url.protocol === "https:" || (url.protocol === "http:" && localAddress)) ||
     url.username ||
     url.password ||
     url.search ||
@@ -42,7 +49,7 @@ function validateRemote(address: string, token: string): ClientConnection {
     url.pathname !== "/"
   ) {
     throw new Error(
-      "请填写 HTTPS 服务器根地址。本机 SSH 隧道可使用 http://127.0.0.1:端口。",
+      "请填写 HTTPS 或局域网 IP 的 HTTP 根地址，例如 http://192.168.1.103:18780。",
     );
   }
   if (token.trim().length < 32)
@@ -330,7 +337,7 @@ export function RuntimeConnectionGate({
                   <input
                     type="url"
                     required
-                    placeholder="https://你的服务器地址"
+                    placeholder="http://192.168.1.103:18780"
                     autoComplete="url"
                     value={address}
                     disabled={busy}

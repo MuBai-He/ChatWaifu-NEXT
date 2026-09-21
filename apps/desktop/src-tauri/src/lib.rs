@@ -819,8 +819,15 @@ mod connection_tests {
     }
 
     #[test]
-    fn remote_endpoint_accepts_tls_and_loopback_but_rejects_insecure_and_embedded_credentials() {
-        for address in ["https://runtime.example", "http://127.0.0.1:8765"] {
+    fn remote_endpoint_accepts_tls_and_lan_but_rejects_public_http_and_embedded_credentials() {
+        for address in [
+            "https://runtime.example",
+            "http://127.0.0.1:8765",
+            "http://192.168.1.103:18780",
+            "http://10.0.0.2:8765",
+            "http://172.16.0.1:8765",
+            "http://172.31.255.254:8765",
+        ] {
             assert!(
                 ClientConnection::Remote {
                     base_url: address.into(),
@@ -832,6 +839,11 @@ mod connection_tests {
         }
         for address in [
             "http://runtime.example",
+            "http://8.8.8.8",
+            "http://172.15.255.254",
+            "http://172.32.0.1",
+            "http://192.169.0.1",
+            "http://192.168.1.103.example",
             "https://user:pass@runtime.example",
             "https://runtime.example/v1",
             "https://runtime.example?token=x",
