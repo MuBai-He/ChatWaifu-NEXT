@@ -35,7 +35,11 @@ Callers reread durable state; retrying a stale ticket cannot apply the batch twi
 ## Consequences and alternatives
 
 This is a cache, not a second calendar or transcript store. The Runtime is not yet wired to
-these classes. Account lifecycle, credential cleanup, authorized cache reads, recurrence
+these classes. Account service and retryable credential cleanup now exist, including session-derived
+scope and asynchronous secret-file I/O that finishes before propagating cancellation. Startup
+reconciliation requires a dedicated secret file; never prune a shared provider store. OAuth
+coordination must validate state, PKCE, expiry and transport before calling connect_authorized.
+Runtime lifecycle wiring, authorized cache reads, recurrence
 expansion, HTTP contracts and native consent remain Stage A work. Partial-page commits were
 rejected because advancing a cursor without all events silently loses changes. Deleting the
 account row outright was rejected because it loses crash-recovery secret-cleanup references.

@@ -8,12 +8,32 @@ import aiosqlite
 
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.personal_assistant.google_calendar import Calendar, EventSync
-from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError, SyncTicket
+from chatwaifu_runtime.personal_assistant.repository import (
+    AccountRecord,
+    AssistantAccessError,
+    SyncTicket,
+)
 
 
 class SQLiteAssistantRepository:
     def __init__(self, database: Database) -> None:
         self._database = database
+
+    async def session_owner(self, session_id: str) -> str:
+        row = await self._database.fetchone(
+            "SELECT user_scope FROM sessions WHERE session_id=?",
+            (session_id,),
+        )
+        if row is None or row["user_scope"] != "local":
+            raise AssistantAccessError("personal_account_requires_owner")
+        return "local"
+
+    async def accounts(self) -> tuple[AccountRecord, ...]:
+        # Internal lifecycle inventory, never expose secret references over HTTP.
+        rows = await self._database.fetchall(
+            "SELECT account_id,status,secret_ref FROM assistant_accounts WHERE owner_scope='local'"
+        )
+        return tuple(AccountRecord(row[0], row[1], row[2]) for row in rows)
 
     @staticmethod
     def _owner(owner: str) -> None:

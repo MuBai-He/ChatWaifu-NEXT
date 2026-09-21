@@ -19,7 +19,18 @@ class SyncTicket:
     sync_token: str | None = field(repr=False)
 
 
+@dataclass(frozen=True, slots=True)
+class AccountRecord:
+    account_id: str
+    status: str
+    secret_ref: str = field(repr=False)
+
+
 class AssistantRepository(Protocol):
+    async def session_owner(self, session_id: str) -> str: ...
+
+    async def accounts(self) -> tuple[AccountRecord, ...]: ...
+
     async def connect(self, owner: str, account_id: str, secret_ref: str) -> None: ...
 
     async def add_calendar(self, owner: str, account_id: str, calendar: Calendar) -> None: ...
