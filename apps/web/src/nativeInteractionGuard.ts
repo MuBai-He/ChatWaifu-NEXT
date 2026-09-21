@@ -2,7 +2,7 @@ export const NATIVE_INTERACTION_GUARD_NOTIFICATION =
   "chatwaifu:native-interaction-guard";
 
 export type NativeInteractionGuardSource =
-  "skill-confirmation" | "avatar-gesture" | "push-to-talk";
+  "skill-confirmation" | "avatar-gesture" | "push-to-talk" | "dialog";
 
 export type NativeInteractionGuardNotification = {
   active: boolean;

@@ -1,3 +1,4 @@
+import { isRemoteRuntime } from "./runtimeEndpoint";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
 import { ProductIcon } from "../../components/ProductIcon";
@@ -133,7 +134,11 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               <BrandMark />
             </span>
             <span className="vn-brand-copy">
-              <small>LOCAL CHARACTER STORY</small>
+              <small>
+                {isRemoteRuntime()
+                  ? "CONNECTED CHARACTER STORY"
+                  : "LOCAL CHARACTER STORY"}
+              </small>
               <strong>
                 ChatWaifu <em>NEXT</em>
               </strong>
@@ -142,7 +147,11 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
           <div className={"vn-runtime " + connection}>
             <i />
             <span>
-              {connection === "connected" ? "LOCAL LINK" : connection}
+              {connection === "connected"
+                ? isRemoteRuntime()
+                  ? "REMOTE LINK"
+                  : "LOCAL LINK"
+                : connection}
             </span>
             <small>{health?.providers.tts ?? "voice offline"}</small>
           </div>

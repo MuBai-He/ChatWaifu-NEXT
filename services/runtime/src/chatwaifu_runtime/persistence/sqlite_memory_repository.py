@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
+import aiosqlite
 from chatwaifu_protocol.memory import (
     MemoryChannelAttribution,
     MemoryProposal,
@@ -44,6 +45,14 @@ _OWNER_PRINCIPAL_SCOPE = "local"
 class SQLiteMemoryRepository(MemoryRepository):
     def __init__(self, database: Database) -> None:
         self._database = database
+
+    async def session_scope(self, session_id: UUID) -> tuple[str, str]:
+        row = await self._database.fetchone(
+            "SELECT character_id, user_scope FROM sessions WHERE session_id = ?", (str(session_id),)
+        )
+        if row is None:
+            raise KeyError("unknown memory session")
+        return str(row["character_id"]), str(row["user_scope"])
 
     async def event_exists(self, event_id: UUID) -> bool:
         return (
@@ -170,11 +179,8 @@ class SQLiteMemoryRepository(MemoryRepository):
             if channel_attribution is None:
                 if user_channel_attribution is not None:
                     return None
-            elif (
-                user_channel_attribution is None
-                or channel_attribution.chat_type != "direct"
-                or channel_attribution.principal_scope != _OWNER_PRINCIPAL_SCOPE
-                or not _same_channel_route(channel_attribution, user_channel_attribution)
+            elif user_channel_attribution is None or not _same_channel_route(
+                channel_attribution, user_channel_attribution
             ):
                 return None
         elif event_type == "channel.delivery_plan_completed":
@@ -343,6 +349,25 @@ class SQLiteMemoryRepository(MemoryRepository):
                     ),
                 )
 
+    async def _assert_current_sources(
+        self, connection: aiosqlite.Connection, sources: Sequence[MemorySource]
+    ) -> None:
+        for source in sources:
+            cursor = await connection.execute(
+                """
+                SELECT 1 FROM events e JOIN sessions s ON s.session_id = e.session_id
+                JOIN memory_scope_resets r ON
+                    (r.character_id = s.character_id AND r.user_scope = s.user_scope)
+                    OR r.character_id = '__all__'
+                WHERE e.event_id = ? AND e.occurred_at <= r.reset_at LIMIT 1
+                """,
+                (str(source.source_event_id),),
+            )
+            stale = await cursor.fetchone()
+            await cursor.close()
+            if stale is not None:
+                raise ValueError("memory evidence predates scope reset")
+
     async def save_proposal_and_record_atomically(
         self,
         *,
@@ -354,6 +379,7 @@ class SQLiteMemoryRepository(MemoryRepository):
         if not sources:
             raise ValueError("memory records require at least one source")
         async with self._database.transaction() as connection:
+            await self._assert_current_sources(connection, sources)
             await connection.execute(
                 """
                 INSERT OR IGNORE INTO memory_proposals(
@@ -529,6 +555,7 @@ class SQLiteMemoryRepository(MemoryRepository):
         if not sources:
             raise ValueError("memory records require at least one source")
         async with self._database.transaction() as connection:
+            await self._assert_current_sources(connection, sources)
             cursor = await connection.execute(
                 """
                 UPDATE memory_proposals SET status = 'accepted', decided_at = ?
@@ -607,15 +634,28 @@ class SQLiteMemoryRepository(MemoryRepository):
             return True
 
     async def list_proposals(
-        self, *, status: str | None = None, limit: int = 100
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+        namespaces: Sequence[str] | None = None,
     ) -> list[MemoryProposal]:
-        where = " WHERE status = ?" if status else ""
-        parameters: tuple[object, ...] = (
-            (status, min(max(limit, 1), 200)) if status else (min(max(limit, 1), 200),)
-        )
+        clauses = ["status = ?"] if status else []
+        parameters: list[object] = [status] if status else []
+        if namespaces is not None:
+            if not namespaces:
+                return []
+            clauses.append(
+                "json_extract(candidate_json, '$.namespace') IN ("
+                + ",".join("?" for _ in namespaces)
+                + ")"
+            )
+            parameters.extend(namespaces)
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        parameters.append(min(max(limit, 1), 200))
         rows = await self._database.fetchall(
             f"SELECT * FROM memory_proposals{where} ORDER BY created_at DESC LIMIT ?",
-            parameters,
+            tuple(parameters),
         )
         return [_proposal_from_row(dict(row)) for row in rows]
 
@@ -627,6 +667,7 @@ class SQLiteMemoryRepository(MemoryRepository):
         kind: str | None = None,
         sensitivity: str | None = None,
         limit: int = 200,
+        namespaces: Sequence[str] | None = None,
     ) -> list[MemoryRecord]:
         clauses = [] if include_tombstoned else ["record.state = 'active'"]
         parameters: list[object] = []
@@ -638,6 +679,11 @@ class SQLiteMemoryRepository(MemoryRepository):
             if value is not None:
                 clauses.append(f"{column} = ?")
                 parameters.append(value)
+        if namespaces is not None:
+            if not namespaces:
+                return []
+            clauses.append("record.namespace IN (" + ",".join("?" for _ in namespaces) + ")")
+            parameters.extend(namespaces)
         where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
         parameters.append(min(max(limit, 1), 500))
         rows = await self._database.fetchall(

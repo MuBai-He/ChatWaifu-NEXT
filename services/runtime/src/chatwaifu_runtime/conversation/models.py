@@ -39,6 +39,7 @@ class ConversationSourceContext:
     received_at: datetime | None = None
     conversation_label: str | None = None
     sender_display_name: str | None = None
+    audience_ids: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -52,6 +53,7 @@ class ConversationSourceContext:
             "received_at": self.received_at.isoformat() if self.received_at is not None else None,
             "conversation_label": self.conversation_label,
             "sender_display_name": self.sender_display_name,
+            "audience_ids": list(self.audience_ids),
         }
 
     def to_json(self) -> str:
@@ -67,6 +69,9 @@ class ConversationSourceContext:
         if chat_type not in {"direct", "group"}:
             raise ValueError("unsupported conversation chat type")
         return cls(
+            audience_ids=tuple(
+                str(item) for item in cast(list[object], payload.get("audience_ids", []))
+            ),
             provider_id=str(payload["provider_id"]),
             connection_id=UUID(str(payload["connection_id"])),
             account_key=(

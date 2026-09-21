@@ -615,7 +615,10 @@ async def test_native_bubbles_render_without_separator_lines_but_persist_lossles
                 ),
             )
         )
-        await asyncio.wait_for(completed.receive(), timeout=5)
+        # This checks completed delivery, not a five-second latency SLA. Native
+        # Windows CI may spend longer in the real SQLite admission/projection
+        # transactions. Keep the event synchronization and a bounded watchdog.
+        await asyncio.wait_for(completed.receive(), timeout=30)
         assert [message["text"] for message in transport.sent_messages] == list(paragraphs)
         turn = await container.external_channel_repository.find_turn_by_external_message(
             connection_id, "paragraph-message"

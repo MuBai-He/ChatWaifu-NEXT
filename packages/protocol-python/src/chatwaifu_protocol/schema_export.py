@@ -57,7 +57,13 @@ from chatwaifu_protocol.photo_memory import (
     PhotoMemorySnapshot,
     SavedPhoto,
 )
-from chatwaifu_protocol.session import GenerationSnapshot, SessionSnapshot, TurnSnapshot
+from chatwaifu_protocol.session import (
+    GenerationSnapshot,
+    ParticipantSnapshot,
+    SceneSnapshot,
+    SessionSnapshot,
+    TurnSnapshot,
+)
 from chatwaifu_protocol.skills import (
     McpCapabilitySnapshot,
     McpConnectionConfiguration,
@@ -90,6 +96,8 @@ class ProtocolCatalog(ProtocolModel):
     conversation_interruption: ConversationInterruption
     audio_frame: AudioFrameHeader
     video_frame: VideoFrameHeader
+    participant: ParticipantSnapshot
+    scene: SceneSnapshot
     session: SessionSnapshot
     turn: TurnSnapshot
     generation: GenerationSnapshot
@@ -211,6 +219,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "response-plan": ResponsePlan,
     "saved-photo": SavedPhoto,
     "session-snapshot": SessionSnapshot,
+    "participant-snapshot": ParticipantSnapshot,
+    "scene-snapshot": SceneSnapshot,
     "skill-definition": SkillDefinition,
     "skill-invocation": SkillInvocation,
     "skill-result": SkillResult,

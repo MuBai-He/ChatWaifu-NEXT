@@ -27,6 +27,33 @@ const statusEvent = "desktop-runtime-status-changed";
 // leaves the desktop session permanently offline even when native startup later
 // reaches ready. The final 5s is only for delivery of the native ready event.
 export const DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS = 455_000;
+let remoteConnection: RuntimeConnection | null = null;
+export function setRemoteRuntimeConnection(
+  connection: RuntimeConnection | null,
+): void {
+  remoteConnection = connection;
+  cachedConnection = connection;
+  pendingConnectionResolution = null;
+  ++connectionRevision;
+}
+export function isRemoteRuntime(): boolean {
+  return remoteConnection !== null;
+}
+export function runtimeSessionStorageKey(): string {
+  return remoteConnection
+    ? `chatwaifu.next.session_id:${remoteConnection.baseUrl}`
+    : "chatwaifu.next.session_id";
+}
+function remoteStatus(): DesktopRuntimeStatus {
+  return {
+    state: "ready",
+    runtime_url: remoteConnection!.baseUrl,
+    token: remoteConnection!.token,
+    workers: [],
+    restart_count: 0,
+    detail: "已选择远程服务器；此设备只运行客户端。",
+  };
+}
 let connectionRevision = 0;
 let cachedConnection: RuntimeConnection | null = null;
 let pendingConnectionResolution: Promise<RuntimeConnection> | null = null;
@@ -55,6 +82,7 @@ function resolveBrowserToken(): string | null {
 export async function resolveRuntimeConnection(
   forceRefresh = false,
 ): Promise<RuntimeConnection> {
+  if (remoteConnection) return remoteConnection;
   if (!isDesktopHost()) {
     return {
       baseUrl: browserRuntimeUrl,
@@ -170,6 +198,7 @@ export async function acquireWsTicket(
 
 export async function readDesktopRuntimeStatus(): Promise<DesktopRuntimeStatus | null> {
   if (!isDesktopHost()) return null;
+  if (remoteConnection) return remoteStatus();
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DesktopRuntimeStatus>("get_runtime_status");
 }
@@ -180,6 +209,11 @@ export async function observeDesktopRuntime(
   onStatus: (status: DesktopRuntimeStatus) => void,
   signal: AbortSignal,
 ): Promise<void> {
+  if (signal.aborted) return;
+  if (remoteConnection) {
+    onStatus(remoteStatus());
+    return;
+  }
   const { listen } = await import("@tauri-apps/api/event");
   if (signal.aborted) return;
   let eventRevision = 0;
@@ -211,6 +245,8 @@ export async function observeDesktopRuntime(
 
 export async function restartDesktopRuntime(): Promise<DesktopRuntimeStatus | null> {
   if (!isDesktopHost()) return null;
+  if (remoteConnection)
+    throw new Error("远程服务由服务器管理，请使用服务器上的服务管理命令。");
   ++connectionRevision;
   cachedConnection = null;
   pendingConnectionResolution = null;
@@ -297,4 +333,21 @@ function connectionFrom(
     token: status.token ?? null,
     restartCount: status.restart_count,
   };
+}
+
+/** Fetch private WAV assets without putting access credentials in media URLs. */
+export async function loadRuntimeAudio(
+  url: string,
+  signal: AbortSignal,
+): Promise<{ url: string; release: () => void }> {
+  const response = await runtimeFetch(url, {
+    signal,
+    cache: "no-store",
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error(`语音下载失败（${response.status}）`);
+  const blob = await response.blob();
+  signal.throwIfAborted();
+  const objectUrl = URL.createObjectURL(blob);
+  return { url: objectUrl, release: () => URL.revokeObjectURL(objectUrl) };
 }

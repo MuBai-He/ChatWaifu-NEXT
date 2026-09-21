@@ -45,12 +45,14 @@ export function MemoryControlCenter({
   const refresh = async (
     filters: { kind?: string; sensitivity?: string } = {},
   ) => {
+    if (!sessionId) return;
     const [nextRecords, nextProposals] = await Promise.all([
       getMemoryRecords({
+        sessionId,
         kind: (filters.kind ?? kind) || undefined,
         sensitivity: (filters.sensitivity ?? sensitivity) || undefined,
       }),
-      getMemoryProposals(),
+      getMemoryProposals("pending", sessionId),
     ]);
     setRecords(nextRecords);
     setProposals(nextProposals);
@@ -101,7 +103,7 @@ export function MemoryControlCenter({
       return;
     }
     await act(`sources:${memoryId}`, async () => {
-      const items = await getMemorySources(memoryId);
+      const items = await getMemorySources(memoryId, sessionId);
       setSources((current) => ({ ...current, [memoryId]: items }));
     });
   };

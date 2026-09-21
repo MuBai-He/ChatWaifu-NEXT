@@ -30,6 +30,13 @@
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/session-snapshot.schema.json",
   "properties": {
+    "audience_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Audience Ids",
+      "type": "array"
+    },
     "character_id": {
       "title": "Character Id",
       "type": "string"
@@ -42,10 +49,36 @@
       "title": "Created At",
       "type": "string"
     },
+    "participant_id": {
+      "default": "local",
+      "title": "Participant Id",
+      "type": "string"
+    },
     "revision": {
       "minimum": 0,
       "title": "Revision",
       "type": "integer"
+    },
+    "scene_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scene Id"
+    },
+    "scene_kind": {
+      "default": "private",
+      "enum": [
+        "private",
+        "shared"
+      ],
+      "title": "Scene Kind",
+      "type": "string"
     },
     "session_id": {
       "format": "uuid",
@@ -58,6 +91,11 @@
     "updated_at": {
       "format": "date-time",
       "title": "Updated At",
+      "type": "string"
+    },
+    "user_scope": {
+      "default": "local",
+      "title": "User Scope",
       "type": "string"
     }
   },
