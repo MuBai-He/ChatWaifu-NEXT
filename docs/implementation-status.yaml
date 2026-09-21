@@ -2,14 +2,15 @@ schema_version: "1.0"
 updated_at: "2026-09-21"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_account_service_not_wired_to_runtime
+  status: stage_a_runtime_status_and_internal_oauth_native_ui_pending
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
     - Migration 33 and owner-private repository implement atomic cache/cursor commits and revision fencing; 7 repository checks and 14 existing database/migration checks passed, 1 Windows-specific check skipped on macOS
     - Account service derives owner from stored sessions and implements credential refresh and revocation recovery; repository/account checks now total 11, including async secret-write cancellation; Google adapter 13 checks passed
+    - Runtime configuration and lifecycle wired; internal OAuth adds state/session/PKCE/expiry/cancel; repository/account/OAuth checks total 13 and status HTTP checks 2 passed with normal exit
+    - Full lifecycle suite reports passing assertions but hangs at process exit, reproduced on unchanged baseline; not recorded as a fully passing command
   remaining:
-    - runtime_configuration_and_lifecycle_wiring
     - native_pkce_callback_and_protected_authorization_handoff
     - calendar_selection_query_ui_and_runtime_skill_registration
     - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes

@@ -1,10 +1,13 @@
 """Real SQLite boundaries for calendar synchronization and account revocation."""
 
 import asyncio
+import base64
+import hashlib
 import sqlite3
 import threading
 from collections.abc import AsyncIterator
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -22,6 +25,7 @@ from chatwaifu_runtime.personal_assistant.google_calendar import (
     GoogleCalendarAdapter,
     OAuthTokens,
 )
+from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
 from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
 
 
@@ -280,3 +284,89 @@ async def test_cancelled_secret_write_finishes_before_returning(tmp_path: Path) 
         assert raw.get("token") == "rotated"
     finally:
         release.set()
+
+
+async def test_oauth_session_binding_pkce_and_replay(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner1", "local")
+    await add_session(db, "owner2", "local")
+    exchanges: list[dict[str, list[str]]] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        exchanges.append(parse_qs(request.content.decode()))
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "access",
+                "refresh_token": "refresh",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "scope": READ_SCOPE,
+            },
+        )
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    client = GoogleClient("desktop-client")
+    service = GoogleAccountService(
+        repo, AsyncSecretStore(AtomicSecretStore(tmp_path / "tokens")), adapter, client
+    )
+    oauth = GoogleOAuthCoordinator(repo, adapter, service, client)
+    try:
+        with pytest.raises(AssistantAccessError, match="invalid_oauth_callback"):
+            await oauth.begin("owner1", "http://evil.example/oauth/google")
+        flow = await oauth.begin("owner1", "http://127.0.0.1:55555/oauth/google")
+        with pytest.raises(AssistantAccessError, match="oauth_flow_invalid"):
+            await oauth.complete("owner2", flow.state, "code")
+        assert not exchanges
+        result = await oauth.complete("owner1", flow.state, "code")
+        assert result.status == "connected"
+        challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(exchanges[0]["code_verifier"][0].encode()).digest()
+            )
+            .rstrip(b"=")
+            .decode()
+        )
+        query = parse_qs(urlsplit(flow.authorization_url).query)
+        assert query["code_challenge"] == [challenge]
+        assert query["code_challenge_method"] == ["S256"]
+        with pytest.raises(AssistantAccessError, match="oauth_flow_invalid"):
+            await oauth.complete("owner1", flow.state, "code")
+        assert len(exchanges) == 1
+    finally:
+        await oauth.close()
+        await adapter.close()
+
+
+async def test_oauth_cancel_stops_inflight_exchange(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner", "local")
+    entered = asyncio.Event()
+
+    async def handle(_: httpx.Request) -> httpx.Response:
+        entered.set()
+        await asyncio.Future[None]()
+        raise AssertionError("cancelled exchange continued")
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    client = GoogleClient("desktop-client")
+    service = GoogleAccountService(
+        repo, AsyncSecretStore(AtomicSecretStore(tmp_path / "tokens")), adapter, client
+    )
+    oauth = GoogleOAuthCoordinator(repo, adapter, service, client)
+    flow = await oauth.begin("owner", "http://127.0.0.1:55555/oauth/google")
+    task = asyncio.create_task(oauth.complete("owner", flow.state, "code"))
+    try:
+        await asyncio.wait_for(entered.wait(), 1)
+        await oauth.cancel("owner", flow.state)
+        assert task.cancelled()
+        assert len(await repo.accounts()) == 1  # only the fixture's existing account
+    finally:
+        await oauth.close()
+        await adapter.close()
