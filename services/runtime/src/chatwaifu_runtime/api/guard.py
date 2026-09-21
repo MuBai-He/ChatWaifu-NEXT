@@ -331,13 +331,8 @@ class LocalClientGuardMiddleware:
 
         if scope["type"] == "http":
             path = scope.get("path", "")
-            method = scope.get("method", "GET")
 
             if path in EXEMPT_HTTP_PATHS:
-                await self.app(scope, receive, send)
-                return
-
-            if method == "GET" and path.startswith("/v1/audio/") and path.endswith(".wav"):
                 await self.app(scope, receive, send)
                 return
 

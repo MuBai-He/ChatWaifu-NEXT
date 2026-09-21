@@ -1,3 +1,4 @@
+import { isRemoteRuntime } from "../chat/runtimeEndpoint";
 import { useState } from "react";
 
 import { ProductIcon } from "../../components/ProductIcon";
@@ -168,7 +169,7 @@ export function DesktopSettingsPage() {
       </section>
 
       <DesktopOnboardingDialog
-        open={onboardingOpen}
+        open={onboardingOpen && !isRemoteRuntime()}
         onDefer={() => setOnboardingOpen(false)}
         onComplete={() => {
           completeDesktopOnboarding();

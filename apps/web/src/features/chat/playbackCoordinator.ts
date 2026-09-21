@@ -3,6 +3,7 @@ import type { TtsStreamMessage } from "./types";
 import {
   GenerationAudioPlayer,
   type AudioPlaybackItem,
+  type AudioAssetLoader,
   type PlaybackPosition,
   type PlaybackStopReason,
   type PlayableAudio,
@@ -26,6 +27,7 @@ interface PlaybackCoordinatorOptions {
   onLipSyncStart: () => void;
   onLipSyncStop: () => void;
   createAudio?: (url: string) => PlayableAudio;
+  loadAudio?: AudioAssetLoader;
   createAudioContext?: () => AudioContext;
   streamFallbackGraceMs?: number;
   streamStallMs?: number;
@@ -251,33 +253,38 @@ export class PlaybackCoordinator {
       (typeof Audio === "undefined" ? null : (url: string) => new Audio(url));
     if (!this.options.enabled || !createAudio) return null;
     if (!this.audioPlayer) {
-      this.audioPlayer = new GenerationAudioPlayer(createAudio, {
-        isGenerationActive: this.options.isGenerationActive,
-        onPlaybackStart: (item, position) => {
-          this.owner = "audio_element";
-          this.options.onLipSyncStart();
-          this.reportElement(item, "started", position);
+      this.audioPlayer = new GenerationAudioPlayer(
+        createAudio,
+        {
+          isGenerationActive: this.options.isGenerationActive,
+          onPlaybackStart: (item, position) => {
+            this.owner = "audio_element";
+            this.options.onLipSyncStart();
+            this.reportElement(item, "started", position);
+          },
+          onPlaybackProgress: (item, position) =>
+            this.reportElement(item, "progress", position),
+          onPlaybackStop: (item, position, reason) => {
+            this.options.onLipSyncStop();
+            this.owner = "idle";
+            this.reportElement(item, "stopped", position, reason);
+          },
+          onQueueCleared: (item) =>
+            this.reportElement(
+              item,
+              "queue_cleared",
+              {
+                playedPtsMs: 0,
+                bufferedMs: 0,
+                clientClockMs: Math.round(performance.now()),
+              },
+              "queue_cleared",
+            ),
+          onPlaybackError: this.options.onError,
         },
-        onPlaybackProgress: (item, position) =>
-          this.reportElement(item, "progress", position),
-        onPlaybackStop: (item, position, reason) => {
-          this.options.onLipSyncStop();
-          this.owner = "idle";
-          this.reportElement(item, "stopped", position, reason);
-        },
-        onQueueCleared: (item) =>
-          this.reportElement(
-            item,
-            "queue_cleared",
-            {
-              playedPtsMs: 0,
-              bufferedMs: 0,
-              clientClockMs: Math.round(performance.now()),
-            },
-            "queue_cleared",
-          ),
-        onPlaybackError: this.options.onError,
-      });
+        32,
+        this.options.loadAudio,
+      );
     }
     return this.audioPlayer;
   }

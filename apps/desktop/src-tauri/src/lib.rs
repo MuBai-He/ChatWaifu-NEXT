@@ -1,5 +1,6 @@
 //! Thin Tauri host for ChatWaifu's desktop-pet and control-center surfaces.
 
+mod client_connection;
 mod runtime_health;
 mod sidecar;
 
@@ -17,6 +18,7 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 
+use client_connection::ClientConnection;
 use runtime_health::RuntimeStatus;
 use sidecar::{RuntimeHost, WorkerPackInstallResult};
 
@@ -73,6 +75,7 @@ struct DesktopState {
     preferences: Mutex<DesktopPreferences>,
     interaction_region_active: Mutex<bool>,
     runtime: RuntimeHost,
+    connection: Mutex<Option<ClientConnection>>,
 }
 
 #[tauri::command]
@@ -200,7 +203,45 @@ async fn set_avatar_overlay_interaction_region_active(
 }
 
 #[tauri::command]
+fn get_client_connection(
+    state: State<'_, DesktopState>,
+) -> Result<Option<ClientConnection>, String> {
+    Ok(state
+        .connection
+        .lock()
+        .map_err(|_| "连接设置锁不可用")?
+        .clone())
+}
+
+#[tauri::command]
+fn set_client_connection(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    connection: ClientConnection,
+) -> Result<(), String> {
+    connection.validate()?;
+    let mut current = state.connection.lock().map_err(|_| "连接设置锁不可用")?;
+    client_connection::save(&app, &connection)?;
+    state.runtime.shutdown_and_wait();
+    *current = Some(connection);
+    // Every surface reloads, releasing microphones, playback and old sessions.
+    app.emit("client-connection-changed", ())
+        .map_err(window_error)
+}
+
+fn require_local_connection(
+    state: &DesktopState,
+) -> Result<MutexGuard<'_, Option<ClientConnection>>, String> {
+    let connection = state.connection.lock().map_err(|_| "连接设置锁不可用")?;
+    if !matches!(*connection, Some(ClientConnection::Local)) {
+        return Err("当前客户端未选择本地模式，不启动本地 Runtime 或 Worker。".into());
+    }
+    Ok(connection)
+}
+
+#[tauri::command]
 fn start_runtime(app: AppHandle, state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    let _connection = require_local_connection(&state)?;
     state.runtime.ensure_started(app)
 }
 
@@ -211,6 +252,7 @@ fn stop_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String>
 
 #[tauri::command]
 fn restart_runtime(state: State<'_, DesktopState>) -> Result<RuntimeStatus, String> {
+    let _connection = require_local_connection(&state)?;
     state.runtime.restart()
 }
 
@@ -221,8 +263,9 @@ async fn install_worker_pack(
 ) -> Result<WorkerPackInstallResult, String> {
     let worker_app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        worker_app
-            .state::<DesktopState>()
+        let state = worker_app.state::<DesktopState>();
+        let _connection = require_local_connection(&state)?;
+        state
             .runtime
             .install_worker_pack(worker_app.clone(), archive_path)
     })
@@ -253,10 +296,27 @@ pub fn run() {
             restore_preferences(app.handle())?;
             build_tray(app)?;
             let state = app.state::<DesktopState>();
-            state
-                .runtime
-                .ensure_started(app.handle().clone())
-                .map_err(std::io::Error::other)?;
+            // The UI chooses local or remote before any Runtime/Worker may start.
+            *state
+                .connection
+                .lock()
+                .map_err(|_| std::io::Error::other("连接设置锁不可用"))? =
+                client_connection::load(app.handle()).unwrap_or_else(|error| {
+                    eprintln!("{error}");
+                    None
+                });
+            if state
+                .connection
+                .lock()
+                .map_err(|_| std::io::Error::other("连接设置锁不可用"))?
+                .is_none()
+            {
+                // A migrated click-through preference must not hide first-run connection controls.
+                if let Some(window) = app.get_webview_window(AVATAR_OVERLAY_LABEL) {
+                    window.set_ignore_cursor_events(false)?;
+                    window.show()?;
+                }
+            }
             Ok(())
         })
         .on_window_event(handle_window_event)
@@ -273,6 +333,8 @@ pub fn run() {
             restart_runtime,
             install_worker_pack,
             get_runtime_status,
+            get_client_connection,
+            set_client_connection,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build ChatWaifu desktop host");
@@ -339,7 +401,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
                 }
             }
             "restart-runtime" => {
-                if let Err(error) = app.state::<DesktopState>().runtime.restart() {
+                if let Err(error) = crate::restart_runtime(app.state::<DesktopState>()) {
                     eprintln!("desktop tray Runtime restart failed: {error}");
                 }
             }
@@ -736,5 +798,52 @@ mod tests {
             .unwrap();
 
         assert_eq!(overlay["backgroundThrottling"], "disabled");
+    }
+}
+
+#[cfg(test)]
+mod connection_tests {
+    use super::*;
+
+    #[test]
+    fn only_explicit_local_choice_allows_sidecar_operations() {
+        let state = DesktopState::default();
+        assert!(require_local_connection(&state).is_err());
+        *state.connection.lock().unwrap() = Some(ClientConnection::Remote {
+            base_url: "https://runtime.example".into(),
+            token: "x".repeat(32),
+        });
+        assert!(require_local_connection(&state).is_err());
+        *state.connection.lock().unwrap() = Some(ClientConnection::Local);
+        assert!(require_local_connection(&state).is_ok());
+    }
+
+    #[test]
+    fn remote_endpoint_accepts_tls_and_loopback_but_rejects_insecure_and_embedded_credentials() {
+        for address in ["https://runtime.example", "http://127.0.0.1:8765"] {
+            assert!(
+                ClientConnection::Remote {
+                    base_url: address.into(),
+                    token: "x".repeat(32)
+                }
+                .validate()
+                .is_ok()
+            );
+        }
+        for address in [
+            "http://runtime.example",
+            "https://user:pass@runtime.example",
+            "https://runtime.example/v1",
+            "https://runtime.example?token=x",
+        ] {
+            assert!(
+                ClientConnection::Remote {
+                    base_url: address.into(),
+                    token: "x".repeat(32)
+                }
+                .validate()
+                .is_err()
+            );
+        }
     }
 }

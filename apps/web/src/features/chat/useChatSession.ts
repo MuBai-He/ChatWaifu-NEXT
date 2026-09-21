@@ -13,7 +13,7 @@ import {
   sendCharacterInteraction,
 } from "./runtimeClient";
 import { audioPayloadSchema } from "./runtime-client/contracts";
-import { runtimeAssetUrl } from "./runtimeEndpoint";
+import { loadRuntimeAudio, runtimeAssetUrl } from "./runtimeEndpoint";
 import { RuntimeSocketClient } from "./runtimeSocketClient";
 import { StreamingTextProjector } from "./streamingTextProjector";
 import type { SubtitlePlaybackProgress } from "./subtitlePlayback";
@@ -114,6 +114,7 @@ export function useChatSession({
     if (!playbackCoordinator.current && sessionId) {
       playbackCoordinator.current = new PlaybackCoordinator({
         enabled: playbackEnabled,
+        loadAudio: loadRuntimeAudio,
         isGenerationActive: (generationId) =>
           generationId === activeGeneration.current,
         sendReceipt: (receipt) => acknowledgePlayback(sessionId, receipt),

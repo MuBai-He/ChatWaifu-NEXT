@@ -4,8 +4,8 @@
   "version": "0.2.0",
   "identifier": "local.chatwaifu.next",
   "build": {
-    "beforeBuildCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web build:desktop",
-    "beforeDevCommand": "uv run python ../../tools/run_pnpm.py --filter @chatwaifu/web exec vite --mode desktop --host 127.0.0.1 --port 5173 --strictPort",
+    "beforeBuildCommand": "pnpm --filter @chatwaifu/web build:desktop",
+    "beforeDevCommand": "pnpm --filter @chatwaifu/web exec vite --mode desktop --host 127.0.0.1 --port 5173 --strictPort",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../../web/dist/desktop"
   },
@@ -36,7 +36,7 @@
     ],
     "security": {
       "capabilities": ["desktop-pet"],
-      "csp": "default-src 'self' customprotocol: asset: http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' asset: data: blob: http://127.0.0.1:*; media-src 'self' blob: http://127.0.0.1:*; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
+      "csp": "default-src 'self' customprotocol: asset: http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:* https: wss:; img-src 'self' asset: data: blob: http://127.0.0.1:*; media-src 'self' blob: data: http://127.0.0.1:* https:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
     }
   },
   "bundle": {
