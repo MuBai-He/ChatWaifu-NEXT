@@ -12,6 +12,8 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from chatwaifu_runtime.config.mcp_policy import private_mcp_origin
+
 
 def _resource_root() -> Path:
     """Resolve immutable product resources for source and frozen runtimes."""
@@ -61,7 +63,14 @@ class SecurityConfig(BaseModel):
     windows_appcontainer_launcher: Path | None = None
     allowed_hosts: list[str] = Field(default_factory=list)
     allowed_origins: list[str] = Field(default_factory=list)
+    mcp_private_origins: tuple[str, ...] = Field(default=(), max_length=32)
     auth_enabled: bool = True
+
+    @model_validator(mode="after")
+    def validate_mcp_private_origins(self) -> Self:
+        for origin in self.mcp_private_origins:
+            private_mcp_origin(origin)
+        return self
 
 
 class LlmConfig(BaseModel):

@@ -174,6 +174,7 @@ class RuntimeContainer:
             self.stt.kind,
             __version__,
             sandbox_launcher=sandbox_launcher,
+            mcp_private_origins=settings.security.mcp_private_origins,
         )
         self.agent = AgentTurnOrchestrator(
             self.providers.llm,
