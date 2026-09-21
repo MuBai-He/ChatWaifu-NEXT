@@ -27,6 +27,6 @@ mcp_private_origins = ["http://192.168.10.216:8123"]
 
 ## 验证记录
 
-2026-09-22：已有 MCP 网络检查共 18 项通过，包括真实回环 SSE/Streamable HTTP 通信、DNS 固定、TLS 和新增的精确私网来源/拒绝越界场景；修改代码的 Ruff 与 Pyright 通过。真实 HA 工具发现和设备控制待网络与授权完成。
+2026-09-22：已有 MCP 网络检查共 20 项通过，包括真实回环 SSE/Streamable HTTP 通信、DNS 固定、TLS 和新增的精确私网来源/拒绝越界场景；修改代码的 Ruff 与 Pyright 通过。真实 HA 工具发现和设备控制待网络与授权完成。
 
 官方文档：[MCP Server](https://www.home-assistant.io/integrations/mcp_server/)。

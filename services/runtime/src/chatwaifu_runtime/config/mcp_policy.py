@@ -13,11 +13,11 @@ def private_mcp_origin(value: str) -> tuple[str, str, int]:
     try:
         parsed = urlsplit(value)
         address = IPv4Address(parsed.hostname or "")
-        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        port = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
         valid = (
             parsed.scheme in {"http", "https"}
             and parsed.path in {"", "/"}
-            and not parsed.username
+            and parsed.username is None
             and parsed.password is None
             and not parsed.query
             and not parsed.fragment

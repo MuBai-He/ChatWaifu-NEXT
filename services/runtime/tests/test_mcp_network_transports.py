@@ -193,6 +193,8 @@ async def test_operator_lan_origin_is_exact_and_still_requires_connection_opt_in
     "origin",
     [
         "http://169.254.169.254",
+        "http://192.168.1.2:0",
+        "http://@192.168.1.2",
         "http://0.0.0.0",
         "http://8.8.8.8",
         "http://ha.local:8123",
