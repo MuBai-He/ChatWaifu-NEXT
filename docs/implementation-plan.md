@@ -1876,6 +1876,18 @@ Context patch 只发送必要信息：
 - **Egress 审计与策略闭环**：通过 `CloudEgressGateway` 实施策略裁决与 fail-closed 拦截，记录脱敏审计回执（audit receipts），严禁对话文本或敏感信息写入审计日志。
 - **边界与限制**：Phase 13.7A 仅覆盖客户端驱动的云端新建连接重连与确认上下文恢复，自动化测试已通过，真机麦克风与公网连接验收待进行；本阶段不包含向 Cascade 模式的自动运行时降级回退（automatic fallback），亦不代表整个 Phase 13.7 的全面完成；工具桥接（13.5）与上下文同步（13.6）保持独立排期。
 
+## 13.8A Realtime Configuration Vertical (CAS, Local Secrets, Dynamic Admission)
+
+实现运行时主权 Realtime 配置垂直切片（ADR 0051）：
+
+- **配置持久化与 CAS 乐观并发控制**：SQLite Migration 31 新增 `realtime_configurations` 表；`PUT /v1/realtime/configuration` 要求携带 `expected_revision`，版本过期返回 HTTP 409 Conflict。
+- **本地写独占凭据存储（Write-Only Secrets）**：API Key 仅存放于本地文件 `.local/config/realtime-secrets.json`（权限 `0600`，由 `AtomicSecretStore` 原子替换与后置修剪）；SQLite、GET 接口、事件、日志及异常 `__repr__` 严禁出现明文 Key。
+- **422 验证报错脱敏**：Realtime 配置路由返回固定安全错误，不回显输入、任意字段名称或自定义校验信息。
+- **动态准入与重协商冻结**：`PipecatMediaAdapter.offer()` 在首个 `await` 前捕获不可变快照；存量连接按 `pc_id` 冻结原有快照与 Bridge 工厂跨 SDP 重协商生效，新连接立即拾取最新配置，无需重启桌面端进程。
+- **非完整配置允许保存与安全准入**：允许保存空模型或未填 Key 的草稿配置；但连接准入阶段对缺失项返回明确、安全的 HTTP 400/403 提示。
+- **出网策略（Egress Policy）集成**：deny 模式阻断；ask 模式且勾选 UI 同意时授予 `backend_id='openai'` 作用域凭证（启用工具时附加 `tool_result`）；未授权或 consent=false 零出网写入。
+- **边界与限制**：Phase 13.8A 交付后端与 Web/桌面共享设置面板；隔离 Runtime 的保存、刷新、清除及重启验收通过；真机麦克风与公网实时连接验收待进行。
+
 ## 13.8 Voice Identity
 
 UI 明确显示：

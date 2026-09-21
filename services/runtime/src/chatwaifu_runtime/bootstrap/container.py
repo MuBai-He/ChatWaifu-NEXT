@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
+from pydantic import SecretStr
+
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
 from chatwaifu_runtime.api.guard import WebSocketTicketStore
@@ -19,7 +21,7 @@ from chatwaifu_runtime.companion.activity import ActivityTracker
 from chatwaifu_runtime.companion.ambient import AmbientCompanionService
 from chatwaifu_runtime.companion.resources import ResourceLifecycleService
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
-from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.config.settings import OpenAIRealtimeConfig, Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -62,7 +64,11 @@ from chatwaifu_runtime.realtime.cloud.contracts import CloudRealtimeBackend
 from chatwaifu_runtime.realtime.cloud.factory import RuntimeCloudRealtimeFactory
 from chatwaifu_runtime.realtime.cloud.fake import FakeCloudRealtimeBackend
 from chatwaifu_runtime.realtime.cloud.media import CloudRealtimeMediaBridge
-from chatwaifu_runtime.realtime.cloud.openai import OpenAIRealtimeBackend
+from chatwaifu_runtime.realtime.cloud.openai import OpenAIRealtimeBackend, SocketConnector
+from chatwaifu_runtime.realtime.configuration import (
+    RealtimeConfigurationService,
+    RealtimeConnectionSnapshot,
+)
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
@@ -280,19 +286,24 @@ class RuntimeContainer:
         self.cloud_egress_gateway: CloudEgressGateway | None = None
         self.realtime_admission: RuntimeRealtimeTurnAdmission | None = None
         self.cloud_realtime_factory: RuntimeCloudRealtimeFactory | None = None
+        self.cloud_backend_connector: SocketConnector | None = None
+        self.realtime_configuration = RealtimeConfigurationService(
+            self.database,
+            settings,
+        )
 
         if settings.realtime.connection_mode == "cloud_realtime":
-            self.cloud_realtime_backend = (
-                OpenAIRealtimeBackend(settings.realtime.openai)
-                if settings.realtime.cloud_backend == "openai"
-                else FakeCloudRealtimeBackend()
-            )
             self.cloud_egress_gateway = CloudEgressGateway(
                 policy_mode=settings.privacy.cloud_egress,
                 event_store=self.event_store,
                 event_hub=self.event_hub,
             )
             self.realtime_admission = RuntimeRealtimeTurnAdmission(self.conversation)
+            self.cloud_realtime_backend = (
+                OpenAIRealtimeBackend(settings.realtime.openai)
+                if settings.realtime.cloud_backend == "openai"
+                else FakeCloudRealtimeBackend()
+            )
             self.cloud_realtime_factory = RuntimeCloudRealtimeFactory(
                 backend=self.cloud_realtime_backend,
                 egress_gateway=self.cloud_egress_gateway,
@@ -322,6 +333,9 @@ class RuntimeContainer:
                 activity=self.activity,
                 resource_activity=self.resources.touch,
                 cloud_bridge_factory=cloud_bridge_factory,
+                configuration_service=self.realtime_configuration,
+                egress_gateway=self._get_or_create_egress_gateway,
+                bridge_factory_builder=self._build_cloud_bridge_factory_for_snapshot,
             )
         )
         self._state = "new"
@@ -354,6 +368,7 @@ class RuntimeContainer:
                 await self.companion_settings.start()
                 await self.model_configurations.start()
                 await self.tts_configurations.start()
+                await self.realtime_configuration.start()
                 await self.providers.tts.refresh_capabilities()
 
                 await self.memory.start()
@@ -440,6 +455,63 @@ class RuntimeContainer:
             ]
         )
         return steps
+
+    def _create_cloud_backend_for_snapshot(
+        self, snapshot: RealtimeConnectionSnapshot
+    ) -> CloudRealtimeBackend:
+        if snapshot.cloud_backend == "fake":
+            return FakeCloudRealtimeBackend()
+        connector: SocketConnector | None = cast(
+            SocketConnector | None,
+            getattr(self.cloud_realtime_backend, "_connector", None)
+            or getattr(self, "cloud_backend_connector", None),
+        )
+        api_key_secret = SecretStr(snapshot.api_key) if snapshot.api_key else None
+        openai_config = OpenAIRealtimeConfig(
+            model=snapshot.model or None,
+            api_key=api_key_secret,
+            voice=snapshot.voice,
+            transcription_model=snapshot.transcription_model,
+        )
+        if connector is not None:
+            return OpenAIRealtimeBackend(openai_config, connector=connector)
+        return OpenAIRealtimeBackend(openai_config)
+
+    def _get_or_create_egress_gateway(self) -> CloudEgressGateway:
+        if self.cloud_egress_gateway is None:
+            self.cloud_egress_gateway = CloudEgressGateway(
+                policy_mode=self.settings.privacy.cloud_egress,
+                event_store=self.event_store,
+                event_hub=self.event_hub,
+            )
+        return self.cloud_egress_gateway
+
+    def _get_or_create_realtime_admission(self) -> RuntimeRealtimeTurnAdmission:
+        if self.realtime_admission is None:
+            self.realtime_admission = RuntimeRealtimeTurnAdmission(self.conversation)
+        return self.realtime_admission
+
+    def _build_cloud_bridge_factory_for_snapshot(
+        self, snapshot: RealtimeConnectionSnapshot
+    ) -> Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]]:
+        backend = self._create_cloud_backend_for_snapshot(snapshot)
+        gateway = self._get_or_create_egress_gateway()
+        admission = self._get_or_create_realtime_admission()
+        factory = RuntimeCloudRealtimeFactory(
+            backend=backend,
+            egress_gateway=gateway,
+            conversation=self.conversation,
+            sessions=self.sessions,
+            admission=admission,
+            characters=self.characters,
+            character_kernel=self.character_kernel,
+            memory=self.memory,
+            skills_source=self.runtime_skills,
+            tools_enabled=snapshot.cloud_tools_enabled,
+            event_hub=self.event_hub,
+            playback=self.playback,
+        )
+        return factory.create_bridge
 
 
 async def _drain_cleanup_steps(

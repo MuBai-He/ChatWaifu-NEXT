@@ -14,7 +14,12 @@ export interface RuntimeConnection {
   restartCount?: number;
 }
 
-const browserRuntimeUrl = "http://127.0.0.1:8765";
+const configuredBrowserRuntimeUrl = (
+  import.meta as unknown as { env?: { VITE_RUNTIME_URL?: string } }
+).env?.VITE_RUNTIME_URL;
+const browserRuntimeUrl =
+  configuredBrowserRuntimeUrl?.trim().replace(/\/+$/, "") ||
+  "http://127.0.0.1:8765";
 const statusEvent = "desktop-runtime-status-changed";
 // Keep this beyond the native supervisor's complete bounded startup window:
 // 300s for selected Worker Packs, 120s for the Runtime server, and 30s of

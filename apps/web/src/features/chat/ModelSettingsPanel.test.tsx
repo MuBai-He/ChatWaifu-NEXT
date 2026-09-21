@@ -294,9 +294,11 @@ describe("ModelSettingsPanel", () => {
     fireEvent.change(embeddingModel, { target: { value: "model-b" } });
     fireEvent.click(saveButton!);
     await screen.findByRole("dialog");
-    fireEvent.keyDown(screen.getByRole("button", { name: "稍后" }), {
-      key: "Escape",
-    });
+    const dismissButton = screen.getByRole("button", { name: "稍后" });
+    // The dialog's effect installs keyboard handling and transfers focus.
+    // DOM insertion alone does not establish that the modal is interactive.
+    await waitFor(() => expect(document.activeElement).toBe(dismissButton));
+    fireEvent.keyDown(dismissButton, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();
   });

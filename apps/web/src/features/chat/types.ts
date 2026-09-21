@@ -23,6 +23,10 @@ export type {
   TtsConfigurationUiField,
   TtsProviderPresentation,
   TtsStreamMessage,
+  RealtimeConnectionMode,
+  RealtimeCloudBackend,
+  RealtimeConfigurationSnapshot,
+  RealtimeConfigurationUpdate,
 } from "./runtime-client/contracts";
 export type {
   DomainRebuildStatus,

@@ -4,8 +4,11 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
 from chatwaifu_runtime.api.photo_memory_routes import router as photo_memory_router
@@ -73,6 +76,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="ChatWaifu NEXT Runtime", version="0.1.0", lifespan=lifespan)
     app.state.container = container
     app.state.mcp_server = mcp_server
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        if _request.url.path != "/v1/realtime/configuration":
+            return await request_validation_exception_handler(_request, exc)
+        # Both error locations and custom messages can contain submitted text.
+        # Return a fixed message rather than serializing any validation payload.
+        return JSONResponse(
+            status_code=422, content={"detail": "实时语音配置格式无效，请检查输入。"}
+        )
+
+    _ = validation_exception_handler
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(
