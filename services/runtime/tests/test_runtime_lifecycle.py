@@ -11,9 +11,47 @@ from chatwaifu_runtime.bootstrap.container import (
     RuntimeContainer,
     RuntimeLifecycleError,
 )
-from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.config.settings import PersonalAssistantConfig, Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.main import create_app
+from fastapi.testclient import TestClient
+
+
+def test_assistant_status_is_disabled_and_has_no_authorization_entry(client: TestClient) -> None:
+    response = client.get("/v1/personal-assistant/status")
+    assert response.status_code == 200
+    assert response.json() == {
+        "schema_version": "1.0",
+        "state": "disabled",
+        "authorization_available": False,
+    }
+    assert client.post("/v1/personal-assistant/oauth/complete", json={}).status_code == 404
+    assert (
+        client.get(
+            "/v1/personal-assistant/status", headers={"Authorization": "Bearer wrong"}
+        ).status_code
+        == 401
+    )
+
+
+def test_assistant_enabled_without_credentials_reports_unconfigured(
+    runtime_settings: Settings,
+) -> None:
+    settings = runtime_settings.model_copy(
+        update={
+            "personal_assistant": PersonalAssistantConfig(enabled=True),
+        }
+    )
+    app = create_app(settings)
+    with TestClient(
+        app,
+        headers={
+            "Authorization": f"Bearer {app.state.container.capability_token}",
+        },
+    ) as client:
+        response = client.get("/v1/personal-assistant/status")
+        assert response.json()["state"] == "unconfigured"
+        assert response.json()["authorization_available"] is False
 
 
 @pytest.mark.asyncio

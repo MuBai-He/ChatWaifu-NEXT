@@ -219,6 +219,14 @@ class SttConfig(BaseModel):
     timeout_seconds: float = Field(default=60.0, gt=0, le=300)
 
 
+class PersonalAssistantConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enabled: bool = False
+    google_client_id: str = ""
+    google_client_secret: SecretStr | None = None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -237,6 +245,7 @@ class Settings(BaseSettings):
     storage: StorageConfig = StorageConfig()
     privacy: PrivacyConfig = PrivacyConfig()
     security: SecurityConfig = SecurityConfig()
+    personal_assistant: PersonalAssistantConfig = PersonalAssistantConfig()
     llm: LlmConfig = LlmConfig()
     tts: TtsConfig = TtsConfig()
     realtime: RealtimeConfig = RealtimeConfig()
