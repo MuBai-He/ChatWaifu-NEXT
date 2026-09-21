@@ -129,11 +129,14 @@ export function DesktopSettingsPage() {
           <div className="desktop-settings-runtime-summary">
             <i className={context.runtime.connection} />
             <div>
-              <strong>{connectionLabel(context.runtime.connection)}</strong>
+              <strong>
+                {connectionLabel(context.runtime.connection, isRemoteRuntime())}
+              </strong>
               <small>
                 {connectionDetail(
                   context.runtime.connection,
                   context.runtime.health?.version,
+                  isRemoteRuntime(),
                 )}
               </small>
             </div>
@@ -153,7 +156,7 @@ export function DesktopSettingsPage() {
             <i />
             {context.runtime.connection === "connected"
               ? "运行正常"
-              : connectionLabel(context.runtime.connection)}
+              : connectionLabel(context.runtime.connection, isRemoteRuntime())}
           </span>
         </header>
 

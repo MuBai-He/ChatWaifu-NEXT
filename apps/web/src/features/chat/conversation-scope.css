@@ -65,3 +65,67 @@
   justify-content: flex-end;
   gap: 12px;
 }
+.conversation-scope-dialog {
+  background: #f8f4f8;
+  border: 1px solid #dcd0df;
+}
+.conversation-scope-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.conversation-scope-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.conversation-scope-dialog button {
+  border: 1px solid #d9cbdc;
+  border-radius: 8px;
+  background: #fff9fd;
+  color: #6f4f75;
+}
+.conversation-scope-dialog button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.conversation-scope-heading button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+}
+.conversation-scope-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.conversation-scope-fields:disabled {
+  opacity: 0.65;
+}
+.conversation-scope-dialog select,
+.conversation-scope-dialog input:not([type="checkbox"]) {
+  min-height: 40px;
+  border: 1px solid #dbcedd;
+  border-radius: 8px;
+  color: #514354;
+  background: #fffafd;
+}
+.conversation-scope-dialog :focus-visible {
+  outline: 2px solid #a66f95;
+  outline-offset: 3px;
+}
+.conversation-scope-dialog [role="alert"] {
+  padding: 10px;
+  border-radius: 8px;
+  color: #9b425e;
+  background: #f5e4eb;
+  overflow-wrap: anywhere;
+}
+.conversation-scope-dialog footer {
+  margin-top: 20px;
+}

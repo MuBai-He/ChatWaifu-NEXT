@@ -47,34 +47,42 @@ export function scopedSessionStorageKey(scope: ConversationScope) {
     ? base
     : `${base}:${scope.participant_id}:${scope.scene_id ?? "private"}`;
 }
-export async function getParticipants() {
+export async function getParticipants(signal?: AbortSignal) {
   return (
     await requestRuntime(
       "/v1/participants",
       z.object({ items: z.array(participantSchema) }),
+      { signal },
     )
   ).items;
 }
-export async function getScenes() {
+export async function getScenes(signal?: AbortSignal) {
   return (
     await requestRuntime(
       "/v1/scenes",
       z.object({ items: z.array(sceneSchema) }),
+      { signal },
     )
   ).items;
 }
-export async function createParticipant(display_name: string) {
+export async function createParticipant(
+  display_name: string,
+  signal?: AbortSignal,
+) {
   return requestRuntime("/v1/participants", participantSchema, {
     method: "POST",
+    signal,
     body: JSON.stringify({ display_name }),
   });
 }
 export async function createScene(
   display_name: string,
   participant_ids: string[],
+  signal?: AbortSignal,
 ) {
   return requestRuntime("/v1/scenes", sceneSchema, {
     method: "POST",
+    signal,
     body: JSON.stringify({ display_name, participant_ids }),
   });
 }

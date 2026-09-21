@@ -352,3 +352,24 @@
     transition: none;
   }
 }
+.runtime-connection-content {
+  display: contents;
+}
+.runtime-connection-card {
+  position: relative;
+}
+.connection-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #b59ab330;
+  border-radius: 9px;
+  color: #cdbbd0;
+  background: #ffffff08;
+  cursor: pointer;
+}

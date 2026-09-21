@@ -1541,3 +1541,38 @@
     grid-template-columns: 1fr;
   }
 }
+.desktop-settings-connection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+.desktop-settings-connection-row > span {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+.desktop-settings-connection-row strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.desktop-settings-connection-row small {
+  color: var(--settings-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.desktop-settings-connection-row button {
+  flex-shrink: 0;
+  padding: 9px 15px;
+  border: 1px solid #d6c5d7;
+  border-radius: 9px;
+  color: #845981;
+  background: #fff9fd;
+  font-size: 12px;
+  cursor: pointer;
+}
+.desktop-settings-connection-row button:focus-visible {
+  outline: 2px solid #a66f95;
+  outline-offset: 3px;
+}

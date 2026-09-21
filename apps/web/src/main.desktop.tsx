@@ -13,7 +13,7 @@ mountProduct({
   product: "desktop",
   surface,
   children: (
-    <RuntimeConnectionGate>
+    <RuntimeConnectionGate showSwitch={false}>
       <DesktopProductApp surface={surface} />
     </RuntimeConnectionGate>
   ),

@@ -11,7 +11,7 @@ export function DesktopProductApp({
   surface = resolveDesktopSurface(),
 }: DesktopProductAppProps) {
   return (
-    <ConversationScopeGate>
+    <ConversationScopeGate showSwitch={false}>
       {surface === "desktop-settings" ? (
         <DesktopSettingsPage />
       ) : (
