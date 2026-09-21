@@ -1,5 +1,16 @@
 import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import {
+  ArrowRight,
+  Check,
+  Cloud,
+  Eye,
+  EyeOff,
+  Laptop,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
+import { BrandMark } from "../../components/BrandMark";
+import {
   isDesktopHost,
   runtimeFetchWithConnection,
   setRemoteRuntimeConnection,
@@ -51,6 +62,7 @@ export function RuntimeConnectionGate({ children }: { children: ReactNode }) {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,62 +191,137 @@ export function RuntimeConnectionGate({ children }: { children: ReactNode }) {
         className="runtime-connection-card"
         onSubmit={(event) => void connect(event)}
       >
-        <h1>连接 ChatWaifu</h1>
-        <p>角色和对话在服务器上持续运行。此设备负责显示、麦克风和声音播放。</p>
-        <label>
-          运行方式
-          <select
-            value={mode}
-            disabled={busy}
-            onChange={(event) =>
-              setMode(event.target.value as "local" | "remote")
-            }
-          >
-            <option value="remote">连接远程服务器 · 轻量客户端</option>
-            <option value="local">
-              {isDesktopHost() ? "在这台设备上运行后端" : "连接本机开发后端"}
-            </option>
-          </select>
-        </label>
+        <header className="connection-brand">
+          <span className="connection-brand-icon">
+            <BrandMark />
+          </span>
+          <span>
+            ChatWaifu<small>你的桌面陪伴</small>
+          </span>
+        </header>
+        <div className="connection-heading">
+          <h1>{active ? "换一种连接方式" : "从这里开始"}</h1>
+          <p>选择运行方式，让陪伴来到桌面。</p>
+        </div>
+        <fieldset className="connection-modes" disabled={busy}>
+          <legend>运行方式</legend>
+          {(
+            [
+              {
+                value: "local",
+                title: "本机运行",
+                detail: "服务在这台设备上",
+                icon: Laptop,
+              },
+              {
+                value: "remote",
+                title: "连接服务器",
+                detail: "只运行轻量桌宠",
+                icon: Cloud,
+              },
+            ] as const
+          ).map(({ value, title, detail, icon: Icon }) => (
+            <label className="connection-mode" key={value}>
+              <input
+                type="radio"
+                name="connection-mode"
+                value={value}
+                checked={mode === value}
+                onChange={() => {
+                  setMode(value);
+                  setError("");
+                }}
+              />
+              <span className="connection-mode-content">
+                <Icon size={21} strokeWidth={1.6} aria-hidden="true" />
+                <span className="connection-mode-check" aria-hidden="true">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                <strong>{title}</strong>
+                <small>{detail}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
         {mode === "remote" && (
-          <>
-            <label>
+          <div className="connection-fields">
+            <label className="connection-field">
               服务器地址
               <input
                 type="url"
                 required
-                placeholder="https://api.example.com"
+                placeholder="https://你的服务器地址"
                 autoComplete="url"
                 value={address}
                 disabled={busy}
                 onChange={(event) => setAddress(event.target.value)}
               />
             </label>
-            <label>
-              访问令牌
-              <input
-                type="password"
-                required
-                autoComplete="off"
-                value={token}
-                disabled={busy}
-                onChange={(event) => setToken(event.target.value)}
-              />
+            <label className="connection-field">
+              <span>
+                访问令牌 <small>由服务器提供</small>
+              </span>
+              <span className="connection-secret">
+                <input
+                  type={showToken ? "text" : "password"}
+                  required
+                  autoComplete="off"
+                  placeholder="粘贴访问令牌"
+                  value={token}
+                  disabled={busy}
+                  onChange={(event) => setToken(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="connection-reveal"
+                  aria-label={showToken ? "隐藏令牌" : "显示令牌"}
+                  aria-pressed={showToken}
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </span>
             </label>
-            <small>
+          </div>
+        )}
+        {mode === "local" && (
+          <div className="connection-local-note">
+            <Laptop size={24} strokeWidth={1.5} aria-hidden="true" />
+            <strong>
+              {isDesktopHost() ? "在本机开启陪伴" : "连接本机开发服务"}
+            </strong>
+            <p>
               {isDesktopHost()
-                ? "连接信息保存在此设备的用户配置目录。"
-                : "地址会记住，令牌只保留在当前浏览器会话中。语音需要 HTTPS 页面或 localhost。"}
-            </small>
-          </>
+                ? "界面与后端一起运行，使用这台设备上的模型和服务配置。"
+                : "请先启动本机后端，再进入界面。"}
+            </p>
+          </div>
         )}
         {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={busy}>
-          {busy ? "正在验证连接…" : "连接"}
+        <button className="connection-submit" type="submit" disabled={busy}>
+          {busy ? "正在连接…" : mode === "remote" ? "连接并进入" : "启动并进入"}
+          {busy ? (
+            <LoaderCircle
+              className="connection-spinner"
+              size={17}
+              aria-hidden="true"
+            />
+          ) : (
+            <ArrowRight size={17} aria-hidden="true" />
+          )}
         </button>
+        <p className="connection-footnote">
+          <ShieldCheck size={14} aria-hidden="true" />
+          {mode === "local"
+            ? "随时可以切换为远程连接"
+            : isDesktopHost()
+              ? "连接信息仅保存在这台设备"
+              : "令牌仅保留在当前浏览器会话"}
+        </p>
         {active && (
           <button
             type="button"
+            className="connection-back"
             disabled={busy}
             onClick={() => setEditing(false)}
           >
