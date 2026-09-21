@@ -108,6 +108,7 @@ class RuntimeSkillService:
         stt_provider: str,
         version: str,
         sandbox_launcher: SandboxLauncher | None = None,
+        mcp_private_origins: tuple[str, ...] = (),
     ) -> None:
         self._root = root
         self._repository = repository
@@ -128,7 +129,7 @@ class RuntimeSkillService:
         launcher = sandbox_launcher or RuntimeSandboxLauncher()
         self._sandbox_launcher = launcher
         self._mcp = McpStdioAdapter(launcher)
-        mcp_transport = McpClientTransport(launcher)
+        mcp_transport = McpClientTransport(launcher, private_origins=mcp_private_origins)
         self._mcp_connections = McpConnectionManager(repository, data_dir, mcp_transport)
         self._mcp_connection_adapter = McpConnectionAdapter(mcp_transport)
         self._tasks: dict[UUID, asyncio.Task[None]] = {}

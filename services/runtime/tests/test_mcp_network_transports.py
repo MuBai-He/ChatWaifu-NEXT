@@ -170,6 +170,45 @@ async def test_private_and_metadata_dns_answers_are_rejected(
 
 
 @pytest.mark.asyncio
+async def test_operator_lan_origin_is_exact_and_still_requires_connection_opt_in() -> None:
+    policy = ("http://192.168.10.216:8123",)
+    endpoint = await validate_mcp_url(
+        "http://192.168.10.216:8123/api/mcp", allow_remote=True, private_origins=policy
+    )
+    assert endpoint.addresses == (ipaddress.IPv4Address("192.168.10.216"),)
+    for target, opt_in in [
+        ("http://192.168.10.216:8123/api/mcp", False),
+        ("http://192.168.10.217:8123/api/mcp", True),
+        ("http://192.168.10.216:8124/api/mcp", True),
+        ("https://192.168.10.216:8123/api/mcp", True),
+        ("http://169.254.169.254/latest/meta-data", True),
+    ]:
+        with pytest.raises(SkillExecutionError):
+            await validate_mcp_url(target, allow_remote=opt_in, private_origins=policy)
+    with pytest.raises(SkillExecutionError):
+        await validate_mcp_url("http://192.168.10.216:8123/api/mcp", allow_remote=True)
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://169.254.169.254",
+        "http://0.0.0.0",
+        "http://8.8.8.8",
+        "http://ha.local:8123",
+        "http://192.168.1.2:8123/api/mcp",
+        "http://user:secret@192.168.1.2",
+        "http://192.168.1.2?token=x",
+    ],
+)
+def test_operator_lan_policy_rejects_broad_or_credential_bearing_origins(origin: str) -> None:
+    from chatwaifu_runtime.config.settings import SecurityConfig
+
+    with pytest.raises(ValueError):
+        SecurityConfig(mcp_private_origins=(origin,))
+
+
+@pytest.mark.asyncio
 async def test_pinned_transport_preserves_host_sni_and_certificate_verification() -> None:
     endpoint = ValidatedMcpEndpoint(
         hostname="mcp.example.test",

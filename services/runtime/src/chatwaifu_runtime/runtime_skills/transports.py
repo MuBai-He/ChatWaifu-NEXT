@@ -120,8 +120,14 @@ def mcp_connection_sandbox_subject_id(connection_id: UUID | str) -> str:
 
 
 class McpClientTransport:
-    def __init__(self, sandbox_launcher: SandboxLauncher | None = None) -> None:
+    def __init__(
+        self,
+        sandbox_launcher: SandboxLauncher | None = None,
+        *,
+        private_origins: tuple[str, ...] = (),
+    ) -> None:
         self._sandbox = sandbox_launcher or NoopSandboxLauncher()
+        self._private_origins = private_origins
 
     def connection_sandbox_backend(
         self,
@@ -195,6 +201,7 @@ class McpClientTransport:
             config.url,
             allow_remote=config.allow_remote,
             timeout_seconds=config.timeout_seconds,
+            private_origins=self._private_origins,
         )
         headers = {"Authorization": f"Bearer {bearer_token}"} if bearer_token else None
         timeout = httpx2.Timeout(config.timeout_seconds, read=config.timeout_seconds)
@@ -287,6 +294,7 @@ async def validate_mcp_url(
     *,
     allow_remote: bool,
     timeout_seconds: float = 5,
+    private_origins: tuple[str, ...] = (),
 ) -> ValidatedMcpEndpoint:
     """Validate an MCP origin and return the exact addresses its transport may use.
 
@@ -330,7 +338,12 @@ async def validate_mcp_url(
                 addresses.append(address)
     if not addresses:
         raise SkillExecutionError("mcp_dns_failed", "MCP hostname resolved to no addresses")
-    if any(_forbidden_address(address) for address in addresses):
+    from chatwaifu_runtime.config.mcp_policy import private_mcp_origin
+
+    allowed_lan_origin = (parsed.scheme, hostname, port) in {
+        private_mcp_origin(origin) for origin in private_origins
+    }
+    if any(_forbidden_address(address) for address in addresses) and not allowed_lan_origin:
         raise SkillExecutionError(
             "remote_mcp_forbidden",
             "MCP URL resolved to a private, metadata/link-local, reserved, or otherwise "
