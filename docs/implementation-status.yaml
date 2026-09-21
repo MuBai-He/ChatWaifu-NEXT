@@ -1,6 +1,17 @@
 schema_version: "1.0"
 updated_at: "2026-09-21"
 current_phase: "13.6"
+personal_assistant:
+  status: stage_a_adapter_only_not_connected
+  evidence:
+    - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
+    - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
+  remaining:
+    - owner_private_account_service_and_transaction_repository
+    - native_pkce_callback_and_protected_authorization_handoff
+    - calendar_selection_query_ui_and_runtime_skill_registration
+    - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes
+    - real_google_apple_and_home_assistant_acceptance
 next_phase: "17.4C"
 server_deployment:
   status: remote_thin_client_implemented_target_host_acceptance_pending
