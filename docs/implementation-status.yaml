@@ -2,12 +2,13 @@ schema_version: "1.0"
 updated_at: "2026-09-21"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_adapter_only_not_connected
+  status: stage_a_adapter_and_repository_not_connected
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
+    - Migration 33 and owner-private repository implement atomic cache/cursor commits and revision fencing; 7 repository checks and 14 existing database/migration checks passed, 1 Windows-specific check skipped on macOS
   remaining:
-    - owner_private_account_service_and_transaction_repository
+    - owner_private_account_service_and_secret_cleanup
     - native_pkce_callback_and_protected_authorization_handoff
     - calendar_selection_query_ui_and_runtime_skill_registration
     - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes

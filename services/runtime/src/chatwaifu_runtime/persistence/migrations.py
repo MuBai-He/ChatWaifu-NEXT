@@ -1218,4 +1218,37 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         DROP TABLE legacy_memory_scope_resets;
         """,
     ),
+    (
+        33,
+        """
+        CREATE TABLE assistant_accounts (
+            account_id TEXT PRIMARY KEY,
+            owner_scope TEXT NOT NULL CHECK(owner_scope = 'local'),
+            status TEXT NOT NULL CHECK(status IN ('connected', 'revoked')),
+            secret_ref TEXT NOT NULL UNIQUE,
+            revision INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE assistant_calendars (
+            account_id TEXT NOT NULL REFERENCES assistant_accounts(account_id),
+            calendar_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            timezone TEXT,
+            access_role TEXT NOT NULL,
+            selected INTEGER NOT NULL DEFAULT 0 CHECK(selected IN (0, 1)),
+            revision INTEGER NOT NULL DEFAULT 0,
+            sync_token TEXT,
+            synced_at TEXT,
+            PRIMARY KEY(account_id, calendar_id)
+        );
+        CREATE TABLE assistant_events (
+            account_id TEXT NOT NULL,
+            calendar_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            PRIMARY KEY(account_id, calendar_id, event_id),
+            FOREIGN KEY(account_id, calendar_id)
+                REFERENCES assistant_calendars(account_id, calendar_id) ON DELETE CASCADE
+        );
+        """,
+    ),
 )
