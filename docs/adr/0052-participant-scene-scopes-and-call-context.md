@@ -44,6 +44,11 @@ a failed deletion does not hide recoverable history. Sibling history before the
 watermark is excluded from display/recovery/prompt context, while unrelated scopes
 remain intact. Existing session-owned audio deletion semantics remain unchanged.
 
+Offline database salvage preserves the participant/scene registries and scoped
+reset watermarks alongside existing session scope columns. If a session row is
+missing in a database with additional participants or scenes, salvage stops with
+an ownership error rather than reconstructing it as an owner-private session.
+
 ## P13.6 boundary
 
 The cloud factory constructs the initial context and registers a callback executed
