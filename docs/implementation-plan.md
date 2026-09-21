@@ -1848,7 +1848,7 @@ Provider-specific event 不泄漏到 Character、Memory 或 Frontend store。
 - 工具定义和结果均纳入外发审计；结果需要独立的 `tool_result` 授权，审计持久化后才写入 Provider。写锁内再次检查 generation，阻断取消后的结果。
 - 无工具调用的决策也经过同一个续播预留流程。最终音频收到播放确认后才成为已说出的历史。
 - 本批包含 OpenAI / Fake、本地 WebSocket 与 SQLite 集成测试；公网模型与真机收听仍待验收。
-- 外部 MCP、写入型工具、交互确认、长任务句柄与多轮工具调用留待后续实现。下一步优先 13.6 上下文同步，Phase 17.4C 仍在队列中。
+- 外部 MCP、写入型工具、交互确认、长任务句柄与多轮工具调用留待后续实现。13.6 上下文同步见下一节；Phase 17.4C 仍在队列中。
 
 ## 13.6 Context Sync
 
@@ -1860,6 +1860,14 @@ Context patch 只发送必要信息：
 - active skill context。
 
 每次 patch 记录 egress event。
+
+2026-09-21 实现（[ADR 0052](adr/0052-participant-scene-scopes-and-call-context.md)）：
+
+- 新增参与者、不可变共享场景与 Web/桌面选择入口；私聊按参与者隔离，共享场景不会合并成员私聊记忆。
+- 会话范围贯穿记忆管理/提取/来源、关系状态、历史恢复、重置和语音；保留已有 owner/local 数据。
+- 云端通话每轮提交前，从 Runtime 权威状态刷新上下文；已确认的上一轮转录用于记忆召回，内容不变时不重复发送。
+- 所有更新复用 egress 审计、敏感性过滤和预算；删除、重置和范围切换结束旧 provider session，重连时重建上下文。
+- 本地 API、SQLite 与 Fake/loopback 验证不替代公网 provider、真机麦克风和多机器验收。
 
 ## 13.7 Reconnect
 
@@ -1874,7 +1882,7 @@ Context patch 只发送必要信息：
   - 应用照片脱敏替换（`photo_context_redactions`）。
 - **不可信对话转义与预算裁减**：历史记录作为 `recent_history` 注入，优先级设为最低的 6（弱于 system 指令、Character Kernel 及安全约束）；内容经 `json.dumps(..., ensure_ascii=False)` 转义并标明为不可信历史，不保证消除提示词注入风险；预算不足时优先裁减历史记录。
 - **Egress 审计与策略闭环**：通过 `CloudEgressGateway` 实施策略裁决与 fail-closed 拦截，记录脱敏审计回执（audit receipts），严禁对话文本或敏感信息写入审计日志。
-- **边界与限制**：Phase 13.7A 仅覆盖客户端驱动的云端新建连接重连与确认上下文恢复，自动化测试已通过，真机麦克风与公网连接验收待进行；本阶段不包含向 Cascade 模式的自动运行时降级回退（automatic fallback），亦不代表整个 Phase 13.7 的全面完成；工具桥接（13.5）与上下文同步（13.6）保持独立排期。
+- **边界与限制**：Phase 13.7A 仅覆盖客户端驱动的云端新建连接重连与确认上下文恢复，自动化测试已通过，真机麦克风与公网连接验收待进行；本阶段不包含向 Cascade 模式的自动运行时降级回退（automatic fallback），亦不代表整个 Phase 13.7 的全面完成；工具桥接（13.5）与上下文同步（13.6）见各自实现记录。
 
 ## 13.8A Realtime Configuration Vertical (CAS, Local Secrets, Dynamic Admission)
 

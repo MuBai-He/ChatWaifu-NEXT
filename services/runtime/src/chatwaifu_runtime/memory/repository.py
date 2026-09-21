@@ -67,6 +67,8 @@ class PrecedingAssistantEvidence:
 
 
 class MemoryRepository(Protocol):
+    async def session_scope(self, session_id: UUID) -> tuple[str, str]: ...
+
     async def event_exists(self, event_id: UUID) -> bool: ...
 
     async def event_evidence(self, event_id: UUID) -> MemoryEventEvidence | None: ...
@@ -133,7 +135,11 @@ class MemoryRepository(Protocol):
     ) -> bool: ...
 
     async def list_proposals(
-        self, *, status: str | None = None, limit: int = 100
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+        namespaces: Sequence[str] | None = None,
     ) -> list[MemoryProposal]: ...
 
     async def list_records(
@@ -144,6 +150,7 @@ class MemoryRepository(Protocol):
         kind: str | None = None,
         sensitivity: str | None = None,
         limit: int = 200,
+        namespaces: Sequence[str] | None = None,
     ) -> list[MemoryRecord]: ...
 
     async def list_sources(self, memory_id: UUID) -> list[MemorySource]: ...

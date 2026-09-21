@@ -269,7 +269,7 @@ export function useChatSession({
             generationId,
             payloadText(event.payload.text),
           );
-          void getMemory()
+          void getMemory(event.session_id)
             .then(setMemories)
             .catch(() => undefined);
           setAvatarState("idle");

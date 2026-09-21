@@ -7,10 +7,25 @@ from chatwaifu_protocol.base import JsonObject
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
+class CreateParticipantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=80)
+
+
+class CreateSceneRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=120)
+    participant_ids: list[str] = Field(min_length=2, max_length=32)
+
+
 class CreateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     character_id: str = Field(default="default", min_length=1, max_length=128)
+    participant_id: str = Field(default="local", min_length=1, max_length=128)
+    scene_id: str | None = Field(default=None, max_length=128)
 
 
 class RuntimeHealth(BaseModel):

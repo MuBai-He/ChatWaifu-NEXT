@@ -109,3 +109,5 @@ class RuntimeSkillRepository(
     Protocol,
 ):
     """Composition-root convenience port for the complete Runtime Skills domain."""
+
+    async def session_user_scope(self, session_id: UUID) -> str: ...

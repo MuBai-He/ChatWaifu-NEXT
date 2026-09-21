@@ -10,6 +10,10 @@ import {
 } from "@chatwaifu/protocol";
 
 import { requestRuntime, runtimeParser } from "./http";
+import {
+  readConversationScope,
+  scopedSessionStorageKey,
+} from "../conversationScope";
 import { resolveRuntimeConnection } from "../runtimeEndpoint";
 
 export type {
@@ -26,11 +30,22 @@ const photoMemoryDeleteResultParser = runtimeParser(
   parsePhotoMemoryDeleteResult,
 );
 
+async function photoQuery(characterId: string): Promise<URLSearchParams> {
+  const query = new URLSearchParams({ character_id: characterId });
+  const scope = await readConversationScope();
+  if (scope.participant_id !== "local" || scope.scene_id) {
+    const sessionId = localStorage.getItem(scopedSessionStorageKey(scope));
+    if (!sessionId) throw new Error("请等待当前场景连接后再打开照片记忆");
+    query.set("session_id", sessionId);
+  }
+  return query;
+}
+
 export async function getPhotoMemory(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemorySnapshot> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory?${query.toString()}`,
     photoMemorySnapshotParser,
@@ -43,7 +58,7 @@ export async function updatePhotoMemorySettings(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemorySettings> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory/settings?${query.toString()}`,
     photoMemorySettingsParser,
@@ -60,7 +75,7 @@ export async function deleteSavedPhoto(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemoryDeleteResult> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory/${encodeURIComponent(photoId)}?${query.toString()}`,
     photoMemoryDeleteResultParser,
@@ -103,6 +118,8 @@ export async function fetchPhotoImageUrl(
     throw callerSignal.reason ?? new DOMException("Aborted", "AbortError");
   }
 
+  const query = await photoQuery(characterId);
+  callerSignal?.throwIfAborted();
   const controller = new AbortController();
   let timedOut = false;
 
@@ -118,7 +135,6 @@ export async function fetchPhotoImageUrl(
     );
   }, timeoutMs);
 
-  const query = new URLSearchParams({ character_id: characterId });
   const url = `${connection.baseUrl}/v1/photo-memory/${encodeURIComponent(photoId)}/image?${query.toString()}`;
 
   const headers: Record<string, string> = {};

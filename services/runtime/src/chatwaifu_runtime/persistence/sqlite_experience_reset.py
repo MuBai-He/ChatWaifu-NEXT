@@ -103,15 +103,17 @@ class SQLiteExperienceResetRepository(ExperienceResetRepository):
                 "DELETE FROM ambient_actions WHERE session_id = ?", (str(session_id),)
             )
             await connection.execute(
-                "DELETE FROM spoken_memory_facts WHERE session_id = ?", (str(session_id),)
+                "DELETE FROM spoken_memory_facts WHERE session_id IN "
+                "(SELECT session_id FROM sessions WHERE character_id = ? AND user_scope = ?)",
+                (character_id, user_scope),
             )
             await connection.execute(
                 """
-                INSERT INTO memory_scope_resets(character_id, reset_at)
-                VALUES (?, ?)
-                ON CONFLICT(character_id) DO UPDATE SET reset_at = excluded.reset_at
+                INSERT INTO memory_scope_resets(character_id, user_scope, reset_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(character_id, user_scope) DO UPDATE SET reset_at = excluded.reset_at
                 """,
-                (character_id, updated_at.isoformat()),
+                (character_id, user_scope, updated_at.isoformat()),
             )
             await connection.execute(
                 """

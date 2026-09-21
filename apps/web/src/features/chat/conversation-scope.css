@@ -1,0 +1,67 @@
+.conversation-scope-content {
+  display: contents;
+}
+.conversation-scope-trigger {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 80;
+  border: 1px solid #c9c3d8;
+  border-radius: 18px;
+  background: #fffc;
+  color: #362f48;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.conversation-scope-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  background: #18142477;
+  padding: 20px;
+}
+.conversation-scope-dialog {
+  width: min(480px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  background: #fff;
+  color: #302a3a;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 20px 80px #0004;
+}
+.conversation-scope-dialog h2 {
+  margin: 0 0 12px;
+}
+.conversation-scope-dialog p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.conversation-scope-dialog label {
+  display: block;
+  margin: 12px 0;
+}
+.conversation-scope-dialog select,
+.conversation-scope-dialog input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  box-sizing: border-box;
+}
+.conversation-scope-dialog details {
+  margin: 16px 0;
+}
+.conversation-scope-dialog button {
+  padding: 7px 14px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.conversation-scope-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
