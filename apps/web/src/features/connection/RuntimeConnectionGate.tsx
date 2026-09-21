@@ -12,7 +12,7 @@ const browserKey = "chatwaifu.client.connection";
 
 function validateRemote(address: string, token: string): ClientConnection {
   const url = new URL(address.trim());
-  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const loopback = url.hostname === "127.0.0.1";
   if (
     !(url.protocol === "https:" || (url.protocol === "http:" && loopback)) ||
     url.username ||

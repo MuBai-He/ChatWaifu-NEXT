@@ -41,7 +41,7 @@ allowed_origins = ["https://chat.example.com"]
 
 HTTP 请求使用 Bearer；事件和音频流 WebSocket 使用已有的短时、用途与会话绑定 ticket；WAV 回复通过认证下载并使用临时 Blob URL 播放，打断或结束时释放。健康接口仍是公开的就绪探针。
 
-没有域名时可先使用 SSH 隧道，把本机端口转发到服务器，再填 `http://127.0.0.1:8765`。HTTP 例外只允许回环地址。**SSH 的 TCP 转发只解决 API 与 WebSocket，不会自动转发 WebRTC 媒体。**
+没有域名时可先使用 SSH 隧道，把本机端口转发到服务器，再填 `http://127.0.0.1:8765`。HTTP 例外只允许 `127.0.0.1`，与原生客户端网络策略保持一致。**SSH 的 TCP 转发只解决 API 与 WebSocket，不会自动转发 WebRTC 媒体。**
 
 ## 远程语音
 

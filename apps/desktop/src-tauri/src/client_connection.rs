@@ -15,10 +15,7 @@ impl ClientConnection {
     pub fn validate(&self) -> Result<(), String> {
         if let Self::Remote { base_url, token } = self {
             let url = tauri::Url::parse(base_url).map_err(|_| "服务器地址无效")?;
-            let loopback = matches!(
-                url.host_str(),
-                Some("localhost" | "127.0.0.1" | "[::1]" | "::1")
-            );
+            let loopback = url.host_str() == Some("127.0.0.1");
             if !(url.scheme() == "https" || (url.scheme() == "http" && loopback))
                 || !url.username().is_empty()
                 || url.password().is_some()
