@@ -41,6 +41,9 @@ type SqlValue = int | float | str | bytes | None
 # This is deliberately an allowlist rather than "all non-transient tables".
 # Order also documents the intended dependency order for insertion.
 DURABLE_TABLES: tuple[str, ...] = (
+    "participants",
+    "conversation_scenes",
+    "memory_scope_resets",
     "turns",
     "generations",
     "skill_plugins",
@@ -1169,6 +1172,13 @@ def _recover_sessions(
             if row.get("session_id") == session_id or row.get("source_session_id") == session_id
         ]
         created_at, updated_at = _time_bounds(related)
+        # A missing row no longer implies owner-private conversation. Without
+        # the authoritative row, a multi-participant database is ambiguous;
+        # never relabel guest/scene history as owner history during salvage.
+        if snapshots["conversation_scenes"].rows or any(
+            row["participant_id"] != "local" for row in snapshots["participants"].dictionaries()
+        ):
+            raise RecoveryError("missing session has ambiguous participant/scene ownership")
         values: dict[str, SqlValue] = {
             "session_id": session_id,
             "character_id": _infer_session_character(session_id, snapshots)
@@ -1179,6 +1189,11 @@ def _recover_sessions(
             "next_sequence": recovered_next,
             "created_at": created_at,
             "updated_at": updated_at,
+            "participant_id": "local",
+            "scene_id": None,
+            "scene_kind": "private",
+            "audience_json": '["local"]',
+            "user_scope": "local",
         }
         output.append(tuple(values[column] for column in columns))
         reconstructed += 1
@@ -1428,6 +1443,7 @@ def _write_recovered_rows(
         connection.execute("BEGIN IMMEDIATE")
         connection.execute("PRAGMA defer_foreign_keys=ON")
         connection.execute("DELETE FROM companion_settings")
+        connection.execute("DELETE FROM participants")
         _insert_snapshot(connection, "sessions", sessions)
         _insert_snapshot(connection, "events", events)
         for table in DURABLE_TABLES:

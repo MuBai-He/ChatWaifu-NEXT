@@ -47,6 +47,8 @@ from chatwaifu_runtime.api.guard import WebSocketTicketClaims
 from chatwaifu_runtime.api.models import (
     CharacterInteractionRequest,
     ClientIceServer,
+    CreateParticipantRequest,
+    CreateSceneRequest,
     CreateSessionRequest,
     ExamplePluginRequest,
     InstallPluginRequest,
@@ -706,12 +708,46 @@ async def test_model_configuration(request: Request, role: ModelRole) -> dict[st
     return {"role": role, **result}
 
 
+@router.get("/participants")
+async def list_participants(request: Request) -> dict[str, object]:
+    items = await _container(request).sessions.list_participants()
+    return {"items": [item.model_dump(mode="json") for item in items]}
+
+
+@router.post("/participants", status_code=201)
+async def create_participant(request: Request, body: CreateParticipantRequest) -> dict[str, object]:
+    return (await _container(request).sessions.create_participant(body.display_name)).model_dump(
+        mode="json"
+    )
+
+
+@router.get("/scenes")
+async def list_scenes(request: Request) -> dict[str, object]:
+    items = await _container(request).sessions.list_scenes()
+    return {"items": [item.model_dump(mode="json") for item in items]}
+
+
+@router.post("/scenes", status_code=201)
+async def create_scene(request: Request, body: CreateSceneRequest) -> dict[str, object]:
+    try:
+        return (
+            await _container(request).sessions.create_scene(body.display_name, body.participant_ids)
+        ).model_dump(mode="json")
+    except (KeyError, ValueError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)
 async def create_session(request: Request, body: CreateSessionRequest) -> dict[str, object]:
     container = _container(request)
     if container.characters.get(body.character_id) is None:
         raise HTTPException(status_code=404, detail="character not found")
-    snapshot = await container.sessions.create_session(body.character_id)
+    try:
+        snapshot = await container.sessions.create_session(
+            body.character_id, participant_id=body.participant_id, scene_id=body.scene_id
+        )
+    except (KeyError, ValueError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     container.activity.touch(snapshot.session_id)
     container.resources.touch()
     container.providers.tts.bind_session(snapshot.session_id)
@@ -747,7 +783,9 @@ async def read_character_state(request: Request, session_id: UUID) -> dict[str, 
     session = await container.sessions.get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="session not found")
-    snapshot = await container.character_kernel.snapshot(session.character_id)
+    snapshot = await container.character_kernel.snapshot(
+        session.character_id, user_scope=session.user_scope
+    )
     return snapshot.model_dump(mode="json")
 
 
@@ -1153,8 +1191,15 @@ async def read_memory(
     namespace: str | None = Query(default=None, max_length=256),
     kind: str | None = Query(default=None, max_length=64),
     sensitivity: str | None = Query(default=None, max_length=32),
+    session_id: UUID | None = None,
 ) -> dict[str, object]:
+    if (
+        session_id is not None
+        and await _container(request).sessions.get_session(session_id) is None
+    ):
+        raise HTTPException(status_code=404, detail="session not found")
     items = await _container(request).memory.list(
+        session_id=session_id,
         include_tombstoned=include_tombstoned,
         namespace=namespace,
         kind=kind,
@@ -1170,9 +1215,18 @@ async def read_memory(
 
 @router.get("/memory/proposals")
 async def read_memory_proposals(
-    request: Request, status_filter: str | None = Query(default=None, alias="status")
+    request: Request,
+    status_filter: str | None = Query(default=None, alias="status"),
+    session_id: UUID | None = None,
 ) -> dict[str, object]:
-    items = await _container(request).memory.list_proposals(status=status_filter)
+    if (
+        session_id is not None
+        and await _container(request).sessions.get_session(session_id) is None
+    ):
+        raise HTTPException(status_code=404, detail="session not found")
+    items = await _container(request).memory.list_proposals(
+        status=status_filter, session_id=session_id
+    )
     return {
         "items": [item.model_dump(mode="json") for item in items],
         "count": len(items),
@@ -1200,8 +1254,13 @@ async def decide_memory_proposal(
 
 
 @router.get("/memory/{memory_id}/sources")
-async def read_memory_sources(request: Request, memory_id: UUID) -> dict[str, object]:
-    items = await _container(request).memory.list_sources(memory_id)
+async def read_memory_sources(
+    request: Request, memory_id: UUID, session_id: UUID | None = None
+) -> dict[str, object]:
+    try:
+        items = await _container(request).memory.list_sources(memory_id, session_id=session_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="memory not found") from error
     return {
         "items": [item.model_dump(mode="json") for item in items],
         "count": len(items),
@@ -1240,7 +1299,10 @@ async def set_memory_pinned(
 
 @router.delete("/sessions/{session_id}/memory/{memory_id}")
 async def forget_memory(request: Request, session_id: UUID, memory_id: UUID) -> dict[str, object]:
-    changed = await _container(request).memory.forget(session_id, memory_id)
+    try:
+        changed = await _container(request).memory.forget(session_id, memory_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="memory not found") from error
     if not changed:
         raise HTTPException(status_code=404, detail="active memory not found")
     return {"memory_id": str(memory_id), "state": "tombstoned"}

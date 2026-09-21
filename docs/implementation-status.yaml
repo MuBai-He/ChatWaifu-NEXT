@@ -1,7 +1,7 @@
 schema_version: "1.0"
 updated_at: "2026-09-21"
-current_phase: "13.5A"
-next_phase: "13.6"
+current_phase: "13.6"
+next_phase: "17.4C"
 server_deployment:
   status: remote_thin_client_implemented_target_host_acceptance_pending
   scope: single_owner_source_server_and_remote_web_desktop_clients_with_server_owned_voice
@@ -514,7 +514,7 @@ phases:
       - Bounded missing-ACK cleanup with injectable clock/events prevents unclosed turns or leaked background tasks on client disconnect
       - Retains full backward compatibility with Cascade voice mode where generations are completed before playback ACKs arrive
       - Regression coverage includes delayed transcript joins, long audio deadlines, listener ownership, staged multi-candidate crash recovery, retry backoff, and memory reset during staged work
-      - Phase 13.5A (tool bridge) is implemented with automated checks passing; Phase 13.5B+ (MCP/write), Phase 13.6 (context sync), and Phase 17.4C remain queued
+      - Phase 13.5A (tool bridge) is implemented with automated checks passing; Phase 13.5B+ (MCP/write) and Phase 17.4C remain queued; Phase 13.6 is implemented under ADR 0052
   - id: 13.5A
     name: cloud-realtime-tool-bridge
     status: implemented_automated_checks_passed_live_acceptance_pending
@@ -529,6 +529,18 @@ phases:
       - Final turn continuation reserves generation response mapping, sets tools=[] and tool_choice="none", and verifies SQLite 4-way lineage (session_id, turn_id, generation_id, provider_tool_call_id)
       - Automated integration tests cover loopback WebSocket, permission denials, unknown tools, oversized arguments, and result size truncation
       - Phase 13.5A covers single-round cloud tool bridge with automated tests passing; external MCP plugins, write side-effects, interactive confirmation, multi-round tools, and live OpenAI acceptance remain pending
+  - id: 13.6
+    name: participant-scene-isolation-and-call-context-sync
+    status: implemented_automated_checks_passed_live_acceptance_pending
+    evidence:
+      - ADR 0052 defines operator versus participant identity and immutable private/shared audience scopes; migration 32 preserves owner data
+      - Shared Web and desktop selector creates participants/scenes and closes old media before changing scope
+      - Memory reads, writes, proposals, provenance, relationships, history, projection and reset use persisted scope; private memories are never unioned into shared scenes
+      - Each cloud input commit refreshes scoped Runtime context through CloudEgressGateway; content hashes suppress duplicates and durable receipts precede updates
+      - Deletion, supersession and reset revoke retained provider contexts; cancellation and connection-opening races are fenced
+      - Local verification passed 1066 Runtime/Python protocol tests with 11 Windows-only skips, 283 Web tests and 36 TypeScript protocol tests; Ruff, Pyright, ESLint and Web/desktop builds passed
+      - Isolated browser acceptance created a visitor, saved a private memory, switched to a shared scene and observed an empty scene Memory Center
+      - Public provider, native microphone/listening and multi-machine acceptance remain pending
   - id: 13.7A
     name: cloud-realtime-recovery-and-context-restoration
     status: implemented_automated_checks_passed_live_acceptance_pending
@@ -543,7 +555,7 @@ phases:
       - CloudEgressGateway evaluates allow/ask/deny policies, fail-closes on ungranted permissions, and writes durable egress receipts without leaking sensitive conversation transcripts into audit logs
       - Unit and integration test suites verify EOF teardown, history filtering, photo redactions, concurrent offer joining, targeted pc_id teardown, fail-closed policy, and frontend recovery backoff
       - Phase 13.7A covers client-driven fresh-connection recovery and confirmed context restoration with automated checks passing; live acceptance remains pending
-      - Automatic runtime fallback to Cascade mode, full Phase 13.7 completion, live microphone capture, real public OpenAI connectivity, Phase 13.5B+ (MCP/write tools), and context synchronization (13.6) remain pending or queued
+      - Automatic runtime fallback to Cascade mode, full Phase 13.7 completion, live microphone capture, real public OpenAI connectivity, and Phase 13.5B+ (MCP/write tools) remain pending or queued; context synchronization (13.6) is implemented
   - id: 13.8A
     name: realtime-configuration-vertical
     status: implemented_automated_checks_passed_live_acceptance_pending
@@ -558,7 +570,7 @@ phases:
       - Connection admission strictly validates model, api_key, and egress consent for cloud_realtime mode, mapping violations to actionable HTTP 400/403 responses while allowing partial saved configurations
       - CloudEgressGateway enforces deny policy fail-closed and registers scoped session consent for backend_id='openai' with tool_result permissions in ask mode
       - Unit and integration test suites in test_realtime_configuration.py verify contract compliance, CAS conflicts, secret redaction, 422 input stripping, restart persistence, fault injection, loopback wire handshake, and cascade switching
-      - Phase 13.8A includes shared Web and desktop configuration UI, stale request cancellation, conflict reload, secret clearing, and next-connection activation; isolated browser save/refresh and Runtime restart acceptance passed; context synchronization (13.6), P17 expansion, physical microphone and public OpenAI acceptance remain pending
+      - Phase 13.8A includes shared Web and desktop configuration UI, stale request cancellation, conflict reload, secret clearing, and next-connection activation; isolated browser save/refresh and Runtime restart acceptance passed; P17 expansion, physical microphone and public OpenAI acceptance remain pending; context synchronization (13.6) is implemented
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending

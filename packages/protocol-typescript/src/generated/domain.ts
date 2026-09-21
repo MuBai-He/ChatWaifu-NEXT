@@ -1036,13 +1036,16 @@ export type EstimatedRamMb = number | null
 export type EstimatedVramMb = number | null
 export type ExclusiveGpu = boolean
 export type StoresInput = boolean
+export type CreatedAt10 = string
+export type DisplayName = string
+export type ParticipantId = string
 export type DecidedAt1 = string
 export type DecidedBy = string
 export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason6 = string | null
 export type RequestId = string
 export type Capability = string
-export type CreatedAt10 = string
+export type CreatedAt11 = string
 export type ExpiresAt1 = string | null
 export type GrantId = string
 export type Permission = string
@@ -1180,14 +1183,27 @@ export type FallbackChain = string[]
 export type ModelId1 = string
 export type ProviderId5 = string
 export type ReasonCodes = string[]
+export type CreatedAt12 = string
+export type DisplayName1 = string
+/**
+ * @minItems 2
+ * @maxItems 32
+ */
+export type ParticipantIds = [string, string, ...string[]]
+export type SceneId = string
+export type AudienceIds = string[]
 export type CharacterId5 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt11 = string
+export type CreatedAt13 = string
+export type ParticipantId1 = string
 export type Revision7 = number
+export type SceneId1 = string | null
+export type SceneKind = 'private' | 'shared'
 export type SessionId26 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
 export type UpdatedAt11 = string
+export type UserScope1 = string
 export type BackgroundAllowed = boolean
 export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
 export type AdapterTool = string | null
@@ -1220,7 +1236,7 @@ export type UiCards = JsonObject[]
 export type Capability3 = string
 export type CompletedAt2 = string | null
 export type ConfirmationRequestId = string | null
-export type CreatedAt12 = string
+export type CreatedAt14 = string
 export type GenerationId26 = string | null
 export type McpConnectionId1 = string | null
 export type Origin = 'manual' | 'agent' | 'external_mcp'
@@ -1264,7 +1280,7 @@ export type SchemaVersion55 = '1.0'
 export type TotalBytes1 = number
 export type HasMore = boolean
 export type Attempt2 = number
-export type CreatedAt13 = string
+export type CreatedAt15 = string
 export type DeliveredAt3 = string | null
 export type Label1 = string
 export type Origin1 = 'preset' | 'learned'
@@ -1342,6 +1358,7 @@ export interface ProtocolCatalog {
   memory_proposal: MemoryProposal
   memory_source: MemorySource
   model: ModelManifest
+  participant: ParticipantSnapshot
   permission_decision: PermissionDecision
   permission_grant: PermissionGrant
   permission_request: PermissionRequest
@@ -1355,6 +1372,7 @@ export interface ProtocolCatalog {
   response_plan: ResponsePlan
   route: RouteDecision
   saved_photo: SavedPhoto
+  scene: SceneSnapshot
   session: SessionSnapshot
   skill: SkillDefinition
   skill_invocation: SkillInvocation
@@ -2546,6 +2564,12 @@ export interface ModelResourceProfile {
   exclusive_gpu?: ExclusiveGpu
   [k: string]: unknown
 }
+export interface ParticipantSnapshot {
+  created_at: CreatedAt10
+  display_name: DisplayName
+  participant_id: ParticipantId
+  [k: string]: unknown
+}
 export interface PermissionDecision {
   decided_at: DecidedAt1
   decided_by: DecidedBy
@@ -2556,7 +2580,7 @@ export interface PermissionDecision {
 }
 export interface PermissionGrant {
   capability: Capability
-  created_at: CreatedAt10
+  created_at: CreatedAt11
   expires_at?: ExpiresAt1
   grant_id: GrantId
   permission: Permission
@@ -2708,14 +2732,26 @@ export interface RouteDecision {
   reason_codes?: ReasonCodes
   [k: string]: unknown
 }
+export interface SceneSnapshot {
+  created_at: CreatedAt12
+  display_name: DisplayName1
+  participant_ids: ParticipantIds
+  scene_id: SceneId
+  [k: string]: unknown
+}
 export interface SessionSnapshot {
+  audience_ids?: AudienceIds
   character_id: CharacterId5
   conversation_state: ConversationState
-  created_at: CreatedAt11
+  created_at: CreatedAt13
+  participant_id?: ParticipantId1
   revision: Revision7
+  scene_id?: SceneId1
+  scene_kind?: SceneKind
   session_id: SessionId26
   state: SessionState
   updated_at: UpdatedAt11
+  user_scope?: UserScope1
   [k: string]: unknown
 }
 export interface SkillDefinition {
@@ -2775,7 +2811,7 @@ export interface SkillRunSnapshot {
   capability: Capability3
   completed_at?: CompletedAt2
   confirmation_request_id?: ConfirmationRequestId
-  created_at: CreatedAt12
+  created_at: CreatedAt14
   error?: StructuredError | null
   generation_id?: GenerationId26
   mcp_connection_id?: McpConnectionId1
@@ -2838,7 +2874,7 @@ export interface StickerUsageHistory {
  */
 export interface StickerUsageRecord {
   attempt: Attempt2
-  created_at: CreatedAt13
+  created_at: CreatedAt15
   delivered_at?: DeliveredAt3
   label: Label1
   origin: Origin1

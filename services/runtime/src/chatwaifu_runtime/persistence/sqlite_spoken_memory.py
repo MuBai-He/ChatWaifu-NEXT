@@ -213,7 +213,8 @@ class SQLiteSpokenMemoryRepository(SpokenMemoryRepository):
             SELECT e.event_id, e.session_id, e.occurred_at, e.envelope_json, e.payload_json
             FROM events e
             JOIN sessions s ON s.session_id = e.session_id
-            LEFT JOIN memory_scope_resets r ON r.character_id = s.character_id
+            LEFT JOIN memory_scope_resets r
+                ON r.character_id = s.character_id AND r.user_scope = s.user_scope
             LEFT JOIN memory_scope_resets r_all ON r_all.character_id = '__all__'
             WHERE e.event_type = 'assistant.spoken_text_committed'
               AND (r.reset_at IS NULL OR e.occurred_at > r.reset_at)
@@ -260,26 +261,29 @@ class SQLiteSpokenMemoryRepository(SpokenMemoryRepository):
                 await cursor.close()
         return count
 
-    async def record_scope_reset(self, character_id: str, reset_at: datetime) -> None:
+    async def record_scope_reset(
+        self, character_id: str, reset_at: datetime, user_scope: str = "local"
+    ) -> None:
         async with self._database.transaction() as connection:
             await connection.execute(
                 """
-                INSERT INTO memory_scope_resets(character_id, reset_at)
-                VALUES (?, ?)
-                ON CONFLICT(character_id) DO UPDATE SET reset_at = excluded.reset_at
+                INSERT INTO memory_scope_resets(character_id, user_scope, reset_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(character_id, user_scope) DO UPDATE SET reset_at = excluded.reset_at
                 """,
-                (character_id, reset_at.isoformat()),
+                (character_id, user_scope, reset_at.isoformat()),
             )
 
-    async def clear_scope_facts(self, character_id: str) -> int:
+    async def clear_scope_facts(self, character_id: str, user_scope: str = "local") -> int:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
                 """
                 DELETE FROM spoken_memory_facts
-                WHERE session_id IN (SELECT session_id FROM sessions WHERE character_id = ?)
+                WHERE session_id IN (SELECT session_id FROM sessions
+                    WHERE character_id = ? AND user_scope = ?)
                   AND state != 'completed'
                 """,
-                (character_id,),
+                (character_id, user_scope),
             )
             deleted = cursor.rowcount
             await cursor.close()
@@ -294,15 +298,17 @@ class SQLiteSpokenMemoryRepository(SpokenMemoryRepository):
             await cursor.close()
             return max(0, deleted)
 
-    async def is_scope_reset(self, character_id: str, occurred_at: datetime) -> bool:
+    async def is_scope_reset(
+        self, character_id: str, occurred_at: datetime, user_scope: str = "local"
+    ) -> bool:
         ts = occurred_at.isoformat()
         row = await self._database.fetchone(
             """
             SELECT 1 FROM memory_scope_resets
-            WHERE (character_id = ? OR character_id = '__all__')
+            WHERE ((character_id = ? AND user_scope = ?) OR character_id = '__all__')
               AND reset_at >= ?
             LIMIT 1
             """,
-            (character_id, ts),
+            (character_id, user_scope, ts),
         )
         return row is not None

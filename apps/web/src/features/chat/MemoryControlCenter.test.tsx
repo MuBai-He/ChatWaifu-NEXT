@@ -108,6 +108,7 @@ describe("MemoryControlCenter", () => {
     await waitFor(() =>
       expect(runtimeClient.getMemorySources).toHaveBeenCalledWith(
         record.memory_id,
+        "00000000-0000-4000-8000-000000000501",
       ),
     );
   });

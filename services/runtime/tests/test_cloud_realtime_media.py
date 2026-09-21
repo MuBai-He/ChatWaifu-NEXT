@@ -508,3 +508,37 @@ def test_pipecat_media_adapter_connection_mode_configuration() -> None:
     )
     assert adapter_cloud._config.connection_mode == "cloud_realtime"
     assert adapter_cloud._cloud_bridge_factory is mock_factory
+
+
+async def test_cancelled_generation_cannot_commit_after_context_sync() -> None:
+    session_id = uuid4()
+    cloud = FakeCloudRealtimeSession(
+        RealtimeSessionOpenRequest(session_id=session_id, character_id="default")
+    )
+    bridge = CloudRealtimeMediaBridge.create(
+        session_id=session_id,
+        backend_id=cloud.backend_id,
+        session=cloud,
+        admission=InMemoryTurnAdmission(),
+        domain_sink=InMemoryDomainSink(),
+    )
+    bridge.push_frame = FrameCollector().push_frame  # type: ignore[assignment]
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def sync() -> None:
+        entered.set()
+        await release.wait()
+
+    bridge.coordinator.set_context_sync(sync, lambda: None)
+    try:
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        await bridge.process_frame(VADUserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        await asyncio.wait_for(entered.wait(), timeout=2)
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        release.set()
+        await asyncio.wait_for(bridge._input_queue.join(), timeout=2)
+        assert cloud.commit_calls == 0
+    finally:
+        release.set()
+        await bridge.cleanup()

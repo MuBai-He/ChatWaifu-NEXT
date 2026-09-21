@@ -101,6 +101,10 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
         assert session is not None
         assert session["character_id"] == "ayachi_nene"
         assert session["next_sequence"] == 8
+        assert session["participant_id"] == session["user_scope"] == "local"
+        assert session["scene_id"] is None
+        assert session["scene_kind"] == "private"
+        assert json.loads(session["audience_json"]) == ["local"]
         assert _count(connection, "turns") == 1
         assert _count(connection, "generations") == 1
         assert _count(connection, "events") == 1
@@ -115,6 +119,38 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
             assert _count(connection, table) == 0
     finally:
         connection.close()
+
+
+@pytest.mark.parametrize("shared", [False, True])
+@pytest.mark.parametrize("delete_session", [False, True])
+def test_recovery_preserves_scopes_or_refuses_ambiguous_missing_session(
+    tmp_path: Path, shared: bool, delete_session: bool
+) -> None:
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    _seed_source(source, shared=shared, delete_session=delete_session)
+    if delete_session:
+        with pytest.raises(recovery.RecoveryError, match="ambiguous participant/scene ownership"):
+            recovery.recover_runtime_database(
+                source, target, tmp_path / "backup", runtime_stopped=True
+            )
+        assert not target.exists()
+        return
+
+    recovery.recover_runtime_database(source, target, tmp_path / "backup", runtime_stopped=True)
+    with sqlite3.connect(source) as original, sqlite3.connect(target) as restored:
+        for table in (
+            "sessions",
+            "participants",
+            "conversation_scenes",
+            "memory_scope_resets",
+            "memory_records",
+            "character_states",
+        ):
+            assert restored.execute(f"SELECT * FROM {table} ORDER BY 1").fetchall() == (
+                original.execute(f"SELECT * FROM {table} ORDER BY 1").fetchall()
+            )
+        assert restored.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
 def test_recovery_refuses_existing_target_without_creating_backup(tmp_path: Path) -> None:
@@ -871,11 +907,28 @@ def test_allowlist_explicitly_excludes_operational_and_projection_tables() -> No
     assert "schema_migrations" not in copied
 
 
-def _seed_source(path: Path, *, delete_session: bool = False) -> None:
+def _seed_source(path: Path, *, delete_session: bool = False, shared: bool | None = None) -> None:
     connection = sqlite3.connect(path)
     try:
         recovery._create_current_schema(connection)  # pyright: ignore[reportPrivateUsage]
         connection.execute("PRAGMA foreign_keys=ON")
+        participant_id = "local" if shared is None else "guest-1"
+        scene_id = "scene-1" if shared else None
+        scope = "local" if shared is None else "scene:scene-1" if shared else "participant:guest-1"
+        audience = ["local", participant_id] if shared else [participant_id]
+        if shared is not None:
+            connection.execute(
+                "INSERT INTO participants VALUES (?, 'Guest', ?)", (participant_id, NOW)
+            )
+            if shared:
+                connection.execute(
+                    "INSERT INTO conversation_scenes VALUES (?, 'Shared', ?, ?)",
+                    (scene_id, json.dumps(audience), NOW),
+                )
+            connection.executemany(
+                "INSERT INTO memory_scope_resets VALUES ('ayachi_nene', ?, ?)",
+                [("local", NOW), (scope, NOW)],
+            )
         payload = {"text": "请记住我喜欢抹茶。"}
         envelope = {
             "event_id": EVENT_ID,
@@ -896,10 +949,20 @@ def _seed_source(path: Path, *, delete_session: bool = False) -> None:
             """
             INSERT INTO sessions(
                 session_id, character_id, state, conversation_state, revision,
-                next_sequence, created_at, updated_at
-            ) VALUES (?, 'ayachi_nene', 'ready', 'idle', 3, 8, ?, ?)
+                next_sequence, created_at, updated_at,
+                participant_id, scene_id, scene_kind, audience_json, user_scope
+            ) VALUES (?, 'ayachi_nene', 'ready', 'idle', 3, 8, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (SESSION_ID, NOW, NOW),
+            (
+                SESSION_ID,
+                NOW,
+                NOW,
+                participant_id,
+                scene_id,
+                "shared" if shared else "private",
+                json.dumps(audience),
+                scope,
+            ),
         )
         connection.execute(
             """
@@ -960,12 +1023,12 @@ def _seed_source(path: Path, *, delete_session: bool = False) -> None:
                 confidence, importance, sensitivity, state, supersedes, pinned,
                 created_at, updated_at, tombstoned_at
             ) VALUES (
-                ?, 'character/ayachi_nene/user/local', 'semantic.preference', 'user',
+                ?, ?, 'semantic.preference', 'user',
                 'likes', '"matcha"', '用户喜欢抹茶', '用户喜欢抹茶', '喜欢 抹茶 matcha',
                 ?, NULL, NULL, 0.95, 0.8, 'private', 'active', NULL, 1, ?, ?, NULL
             )
             """,
-            (MEMORY_ID, NOW, NOW, NOW),
+            (MEMORY_ID, f"character/ayachi_nene/user/{scope}", NOW, NOW, NOW),
         )
         connection.execute(
             """
@@ -1015,9 +1078,9 @@ def _seed_source(path: Path, *, delete_session: bool = False) -> None:
             INSERT INTO character_states(
                 character_id, user_scope, valence, arousal, energy, attention,
                 embarrassment, tension, revision, updated_at
-            ) VALUES ('ayachi_nene', 'local', 0, 0.5, 0.5, 0.5, 0, 0, 1, ?)
+            ) VALUES ('ayachi_nene', ?, 0, 0.5, 0.5, 0.5, 0, 0, 1, ?)
             """,
-            (NOW,),
+            (scope, NOW),
         )
         connection.execute(
             """

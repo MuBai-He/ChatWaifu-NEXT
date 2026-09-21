@@ -504,6 +504,11 @@ const sessionSnapshotSchema = z
   .object({
     session_id: uuid,
     character_id: z.string().min(1),
+    participant_id: z.string().min(1).default("local"),
+    scene_id: z.string().nullable().default(null),
+    scene_kind: z.enum(["private", "shared"]).default("private"),
+    audience_ids: z.array(z.string()).min(1).default(["local"]),
+    user_scope: z.string().min(1).default("local"),
     state: z.enum([
       "created",
       "connecting",

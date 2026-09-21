@@ -1,3 +1,4 @@
+import { ConversationScopeGate } from "../../features/chat/ConversationScopeGate";
 import { AvatarLabPage } from "../../features/avatar-lab/AvatarLabPage";
 import { ChatDemoPage } from "../../features/chat/ChatDemoPage";
 import { resolveWebSurface, type WebSurface } from "./webSurface";
@@ -9,5 +10,11 @@ interface WebProductAppProps {
 export function WebProductApp({
   surface = resolveWebSurface(window.location.pathname),
 }: WebProductAppProps) {
-  return surface === "avatar-lab" ? <AvatarLabPage /> : <ChatDemoPage />;
+  return surface === "avatar-lab" ? (
+    <AvatarLabPage />
+  ) : (
+    <ConversationScopeGate>
+      <ChatDemoPage />
+    </ConversationScopeGate>
+  );
 }

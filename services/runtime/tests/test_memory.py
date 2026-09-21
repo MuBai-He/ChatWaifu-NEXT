@@ -424,3 +424,96 @@ def _proposals(http: RuntimeHttpClient, status: str) -> list[dict[str, object]]:
         list[dict[str, object]],
         cast(dict[str, object], http.get(f"/v1/memory/proposals?status={status}").json())["items"],
     )
+
+
+def test_participant_scene_memory_and_management_isolation(client: TestClient) -> None:
+    http = cast(RuntimeHttpClient, client)
+    owner = _create_session(http)
+    alice = client.post("/v1/participants", json={"display_name": "Alice"}).json()["participant_id"]
+    bob = client.post("/v1/participants", json={"display_name": "Bob"}).json()["participant_id"]
+    private_a = client.post("/v1/sessions", json={"participant_id": alice}).json()["session_id"]
+    private_b = client.post("/v1/sessions", json={"participant_id": bob}).json()["session_id"]
+    scene = client.post(
+        "/v1/scenes", json={"display_name": "朋友聚会", "participant_ids": [alice, bob]}
+    ).json()["scene_id"]
+    shared_a = client.post(
+        "/v1/sessions", json={"participant_id": alice, "scene_id": scene}
+    ).json()["session_id"]
+    shared_b = client.post("/v1/sessions", json={"participant_id": bob, "scene_id": scene}).json()[
+        "session_id"
+    ]
+    assert client.post("/v1/sessions", json={"scene_id": scene}).status_code == 422
+    assert (
+        client.post(
+            "/v1/sessions", json={"participant_id": alice, "user_scope": "local"}
+        ).status_code
+        == 422
+    )
+    for session, text in [
+        (owner, "请记住:我喜欢咖啡"),
+        (private_a, "请记住:我喜欢蓝色"),
+        (shared_a, "请记住:我们喜欢爬山"),
+    ]:
+        _submit_and_wait(http, session, text)
+
+    def memories(session: str) -> list[dict[str, Any]]:
+        return client.get(f"/v1/memory?session_id={session}").json()["items"]
+
+    a_memory = memories(private_a)[0]
+    assert memories(private_b) == []
+    assert all(
+        "蓝色" not in item["text"] and "咖啡" not in item["text"] for item in memories(shared_b)
+    )
+    assert memories(shared_a) == memories(shared_b)
+    continued_a = client.post("/v1/sessions", json={"participant_id": alice}).json()["session_id"]
+    assert memories(continued_a) == memories(private_a)
+    assert (
+        client.get("/v1/memory").json()["items"][0]["namespace"] == "character/default/user/local"
+    )
+    for method, suffix, body in [
+        ("patch", "", {"text": "changed"}),
+        ("put", "/pinned", {"pinned": True}),
+    ]:
+        assert (
+            getattr(client, method)(
+                f"/v1/sessions/{private_b}/memory/{a_memory['memory_id']}{suffix}", json=body
+            ).status_code
+            == 404
+        )
+    assert (
+        client.delete(f"/v1/sessions/{private_b}/memory/{a_memory['memory_id']}").status_code == 404
+    )
+    assert (
+        client.get(f"/v1/memory/{a_memory['memory_id']}/sources?session_id={shared_b}").status_code
+        == 404
+    )
+    _submit_and_wait(http, private_a, "我喜欢紫色")
+    proposals = client.get(f"/v1/memory/proposals?session_id={private_a}&status=pending").json()[
+        "items"
+    ]
+    assert proposals
+    assert (
+        client.post(
+            f"/v1/sessions/{private_b}/memory/proposals/{proposals[0]['proposal_id']}/decision",
+            json={"decision": "reject"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.put(
+            "/v1/photo-memory/settings", json={"retention_enabled": True, "expected_revision": 0}
+        ).status_code
+        == 200
+    )
+    photo_settings = client.get(f"/v1/photo-memory?session_id={private_a}").json()["settings"]
+    assert photo_settings["retention_enabled"] is False
+    a_state = client.get(f"/v1/sessions/{private_a}/character-state").json()
+    b_state = client.get(f"/v1/sessions/{private_b}/character-state").json()
+    assert a_state["user_scope"] != b_state["user_scope"]
+    assert a_state["revision"] > b_state["revision"]
+    assert (
+        client.post(f"/v1/sessions/{continued_a}/reset", json={"confirm": True}).status_code == 200
+    )
+    assert memories(private_a) == []
+    assert memories(owner) and memories(shared_b)
+    assert client.get(f"/v1/sessions/{private_a}/recovery").json()["messages"] == []
