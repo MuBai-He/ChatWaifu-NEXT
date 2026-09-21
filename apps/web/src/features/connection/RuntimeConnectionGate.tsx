@@ -187,6 +187,13 @@ export function RuntimeConnectionGate({ children }: { children: ReactNode }) {
     );
   return (
     <div className="runtime-connection-screen">
+      {isDesktopHost() && (
+        <div
+          className="connection-window-grip"
+          data-tauri-drag-region
+          aria-hidden="true"
+        />
+      )}
       <form
         className="runtime-connection-card"
         onSubmit={(event) => void connect(event)}
