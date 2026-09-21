@@ -2,14 +2,26 @@
 
 import asyncio
 import sqlite3
+import threading
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import httpx
 import pytest
 from chatwaifu_runtime.config.settings import StorageConfig
+from chatwaifu_runtime.persistence.async_secret_store import AsyncSecretStore
+from chatwaifu_runtime.persistence.atomic_secret_store import AtomicSecretStore
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
-from chatwaifu_runtime.personal_assistant.google_calendar import Calendar, CalendarEvent, EventSync
+from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService, GoogleClient
+from chatwaifu_runtime.personal_assistant.google_calendar import (
+    READ_SCOPE,
+    Calendar,
+    CalendarEvent,
+    EventSync,
+    GoogleCalendarAdapter,
+    OAuthTokens,
+)
 from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
 
 
@@ -115,3 +127,156 @@ async def test_discovery_does_not_select_and_foreign_scope_cannot_access(
         await repo.begin_sync("guest", "account", "calendar")
     with pytest.raises(AssistantAccessError, match="requires_owner"):
         await repo.revoke("shared:room", "account")
+
+
+async def add_session(db: Database, session_id: str, scope: str) -> None:
+    await db.execute(
+        "INSERT INTO sessions(session_id,character_id,state,conversation_state,created_at,"
+        "updated_at,user_scope) VALUES (?,'character','idle','idle','now','now',?)",
+        (session_id, scope),
+    )
+
+
+async def test_account_service_rejects_guest_and_retries_remote_revoke_after_restart(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner", "local")
+    await add_session(db, "guest", "guest")
+    calls = 0
+
+    def handle(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(503) if calls == 1 else httpx.Response(200)
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    secrets = AtomicSecretStore(tmp_path / "assistant-secrets.json")
+    service = GoogleAccountService(repo, AsyncSecretStore(secrets), adapter, GoogleClient("client"))
+    tokens = OAuthTokens("access", "refresh", 3600, (READ_SCOPE,))
+    try:
+        with pytest.raises(AssistantAccessError):
+            await service.connect_authorized("guest", tokens)
+        with pytest.raises(AssistantAccessError):
+            await service.status("missing-session")
+        account = await service.connect_authorized("owner", tokens)
+        reference = f"google:{account.account_id}"
+        assert not await service.disconnect("owner", account.account_id)
+        assert secrets.get(reference) is not None
+        assert any(
+            a.status == "revoked" and a.account_id == account.account_id
+            for a in await service.status("owner")
+        )
+        # A new service instance recovers cleanup from durable references.
+        restarted = GoogleAccountService(
+            repo, AsyncSecretStore(secrets), adapter, GoogleClient("client")
+        )
+        secrets.set("orphan-before-db-commit", "unreferenced")
+        await restarted.reconcile()
+        assert secrets.get(reference) is None
+        assert secrets.get("orphan-before-db-commit") is None
+        assert calls == 2
+    finally:
+        await adapter.close()
+
+
+async def test_disconnect_while_refreshing_keeps_rotated_token_for_cleanup(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner", "local")
+    refreshing = asyncio.Event()
+    release = asyncio.Event()
+    revoked_bodies: list[bytes] = []
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/token":
+            refreshing.set()
+            await release.wait()
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": "new-access",
+                    "refresh_token": "rotated",
+                    "token_type": "Bearer",
+                    "expires_in": 3600,
+                },
+            )
+        if request.url.path == "/revoke":
+            revoked_bodies.append(request.content)
+            return httpx.Response(200)
+        raise AssertionError("revoked account must not query Google")
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    secrets = AtomicSecretStore(tmp_path / "assistant-secrets.json")
+    service = GoogleAccountService(repo, AsyncSecretStore(secrets), adapter, GoogleClient("client"))
+    account = await service.connect_authorized(
+        "owner", OAuthTokens("a", "old", 3600, (READ_SCOPE,))
+    )
+    task = asyncio.create_task(service.discover("owner", account.account_id))
+    try:
+        await asyncio.wait_for(refreshing.wait(), 1)
+        # The same durable step that disconnect performs before waiting for its lock.
+        await repo.revoke("local", account.account_id)
+        release.set()
+        with pytest.raises(AssistantAccessError, match="account_not_connected"):
+            await task
+        assert await service.disconnect("owner", account.account_id)
+        assert revoked_bodies == [b"token=rotated"]
+        assert secrets.get(f"google:{account.account_id}") is None
+    finally:
+        release.set()
+        task.cancel()
+        await adapter.close()
+
+
+async def test_already_revoked_provider_token_completes_cleanup(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner", "local")
+    adapter = GoogleCalendarAdapter(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                400,
+                json={"error": "invalid_token"},
+            )
+        )
+    )
+    secrets = AtomicSecretStore(tmp_path / "assistant-secrets.json")
+    service = GoogleAccountService(repo, AsyncSecretStore(secrets), adapter, GoogleClient("client"))
+    try:
+        account = await service.connect_authorized(
+            "owner", OAuthTokens("a", "old", 3600, (READ_SCOPE,))
+        )
+        assert await service.disconnect("owner", account.account_id)
+        assert secrets.get(f"google:{account.account_id}") is None
+    finally:
+        await adapter.close()
+
+
+async def test_cancelled_secret_write_finishes_before_returning(tmp_path: Path) -> None:
+    started = threading.Event()
+    release = threading.Event()
+
+    class BlockingStore(AtomicSecretStore):
+        def set(self, name: str, value: str | None) -> None:
+            started.set()
+            if not release.wait(5):
+                raise TimeoutError("test did not release secret write")
+            super().set(name, value)
+
+    raw = BlockingStore(tmp_path / "secrets.json")
+    task = asyncio.create_task(AsyncSecretStore(raw).set("token", "rotated"))
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        task.cancel()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert raw.get("token") == "rotated"
+    finally:
+        release.set()

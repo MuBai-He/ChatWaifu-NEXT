@@ -334,14 +334,16 @@ class GoogleCalendarAdapter:
                             410: "sync_expired",
                             429: "rate_limited",
                         }.get(status, "provider_unavailable" if status >= 500 else "provider_error")
-                        if status == 400 and url == TOKEN_URL:
+                        if status == 400 and url in (TOKEN_URL, REVOKE_URL):
                             try:
                                 failure: object = json.loads(content)
                             except (ValueError, UnicodeError):
                                 failure = None
                             if isinstance(failure, dict):
                                 reason = cast(dict[str, object], failure).get("error")
-                                if reason == "invalid_grant":
+                                if url == REVOKE_URL and reason == "invalid_token":
+                                    code = "token_already_revoked"
+                                elif reason == "invalid_grant":
                                     code = "authorization_expired"
                                 elif reason == "invalid_client":
                                     code = "client_configuration_invalid"
