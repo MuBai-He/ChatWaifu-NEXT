@@ -381,3 +381,54 @@ export const audioPayloadSchema = z
   .passthrough();
 
 export type AudioPayload = z.infer<typeof audioPayloadSchema>;
+
+export const realtimeConnectionModeSchema = z.enum([
+  "cascade",
+  "cloud_realtime",
+]);
+export type RealtimeConnectionMode = z.infer<
+  typeof realtimeConnectionModeSchema
+>;
+
+export const realtimeCloudBackendSchema = z.enum(["openai", "fake"]);
+export type RealtimeCloudBackend = z.infer<typeof realtimeCloudBackendSchema>;
+
+export const realtimeConfigurationSnapshotSchema = z
+  .object({
+    schema_version: z.literal("1.0"),
+    revision: z.number().int().nonnegative(),
+    connection_mode: realtimeConnectionModeSchema,
+    cloud_backend: realtimeCloudBackendSchema,
+    model: z.string(),
+    voice: z.string(),
+    transcription_model: z.string(),
+    cloud_tools_enabled: z.boolean(),
+    cloud_egress_consent: z.boolean(),
+    api_key_configured: z.boolean(),
+    active_connections: z.number().int().nonnegative(),
+  })
+  .passthrough();
+
+export type RealtimeConfigurationSnapshot = z.infer<
+  typeof realtimeConfigurationSnapshotSchema
+>;
+
+export const realtimeConfigurationUpdateSchema = z
+  .object({
+    schema_version: z.literal("1.0"),
+    expected_revision: z.number().int().nonnegative(),
+    connection_mode: realtimeConnectionModeSchema,
+    cloud_backend: z.literal("openai"),
+    model: z.string(),
+    voice: z.string(),
+    transcription_model: z.string(),
+    cloud_tools_enabled: z.boolean(),
+    cloud_egress_consent: z.boolean(),
+    api_key: z.string().nullable().optional(),
+    clear_api_key: z.boolean().optional(),
+  })
+  .passthrough();
+
+export type RealtimeConfigurationUpdate = z.infer<
+  typeof realtimeConfigurationUpdateSchema
+>;

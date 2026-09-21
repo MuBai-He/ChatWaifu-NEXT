@@ -79,6 +79,12 @@ from chatwaifu_runtime.external_channels.service import (
     ExternalChannelError,
 )
 from chatwaifu_runtime.providers.model_config import MODEL_ROLES, ModelRole, ModelRoleConfig
+from chatwaifu_runtime.realtime.configuration import (
+    RealtimeConfigurationError,
+    RealtimeConfigurationResponse,
+    RealtimeConfigurationUpdateRequest,
+    RealtimeRevisionConflictError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -901,6 +907,34 @@ async def select_tts_provider(
         "session_id": str(session_id),
         "provider_id": selected,
     }
+
+
+@router.get("/realtime/configuration", response_model=RealtimeConfigurationResponse)
+async def get_realtime_configuration(request: Request) -> dict[str, object]:
+    container = _container(request)
+    snapshot = container.realtime_configuration.current_snapshot()
+    return snapshot.to_public_dict(active_connections=container.voice_media.active_connections)
+
+
+@router.put("/realtime/configuration", response_model=RealtimeConfigurationResponse)
+async def update_realtime_configuration(
+    request: Request,
+    body: RealtimeConfigurationUpdateRequest,
+) -> dict[str, object]:
+    container = _container(request)
+    try:
+        updated = await container.realtime_configuration.update_configuration(body)
+    except RealtimeRevisionConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except RealtimeConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+    return updated.to_public_dict(active_connections=container.voice_media.active_connections)
 
 
 @router.post("/sessions/{session_id}/webrtc/offer")

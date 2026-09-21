@@ -1159,4 +1159,23 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        31,
+        """
+        CREATE TABLE realtime_configurations (
+            id TEXT PRIMARY KEY,
+            schema_version TEXT NOT NULL,
+            revision INTEGER NOT NULL,
+            connection_mode TEXT NOT NULL CHECK(connection_mode IN ('cascade', 'cloud_realtime')),
+            cloud_backend TEXT NOT NULL,
+            model TEXT NOT NULL,
+            voice TEXT NOT NULL,
+            transcription_model TEXT NOT NULL,
+            cloud_tools_enabled INTEGER NOT NULL CHECK(cloud_tools_enabled IN (0, 1)),
+            cloud_egress_consent INTEGER NOT NULL CHECK(cloud_egress_consent IN (0, 1)),
+            secret_key_ref TEXT,
+            updated_at TEXT NOT NULL
+        );
+        """,
+    ),
 )

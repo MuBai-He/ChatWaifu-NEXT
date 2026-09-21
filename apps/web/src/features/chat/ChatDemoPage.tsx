@@ -3,6 +3,7 @@ import { BrandMark } from "../../components/BrandMark";
 import { ProductIcon } from "../../components/ProductIcon";
 import { MemoryControlCenter } from "./MemoryControlCenter";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
+import { RealtimeConfigurationPanel } from "./RealtimeConfigurationPanel";
 import { SkillConfirmationPrompt } from "./SkillConfirmationPrompt";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import {
@@ -352,6 +353,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               </small>
             </div>
             <ModelSettingsPanel sessionId={sessionId} />
+            <RealtimeConfigurationPanel />
           </aside>
         ) : null}
 

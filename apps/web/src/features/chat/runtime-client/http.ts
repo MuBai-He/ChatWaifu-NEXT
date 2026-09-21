@@ -25,6 +25,16 @@ export interface RuntimeRequestInit extends RequestInit {
   timeoutMs?: number;
 }
 
+export class RuntimeRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "RuntimeRequestError";
+  }
+}
+
 export async function requestRuntime<Result>(
   path: string,
   parser: RuntimeResponseParser<Result>,
@@ -116,10 +126,11 @@ async function performRuntimeRequest<Result>(
   const payload = await readJson(response);
   if (!response.ok) {
     const detail = runtimeErrorSchema.safeParse(payload);
-    throw new Error(
+    throw new RuntimeRequestError(
       detail.success && detail.data.detail
         ? detail.data.detail
         : `Runtime request failed (${response.status})`,
+      response.status,
     );
   }
   try {

@@ -1,0 +1,491 @@
+.realtime-configuration-panel {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.desktop-settings-page .realtime-configuration-panel {
+  max-width: 820px;
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid rgb(255 255 255 / 76%);
+  border-radius: 16px;
+  background: var(--settings-card, #fff);
+  color: var(--settings-text, #29242d);
+  box-shadow: 0 9px 28px rgb(59 42 61 / 6%);
+}
+
+.realtime-configuration-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.realtime-configuration-panel > header h2 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.realtime-configuration-panel > header p {
+  margin: 4px 0 0;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.4;
+}
+
+.desktop-settings-page .realtime-configuration-panel > header p {
+  color: var(--settings-muted, #77707d);
+}
+
+.realtime-badge-fake {
+  font-size: 0.62rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.desktop-settings-page .realtime-badge-fake {
+  background: rgb(245 158 11 / 12%);
+  color: #b45309;
+  border-color: rgb(245 158 11 / 28%);
+}
+
+.realtime-notice-banner {
+  font-size: 0.65rem;
+  line-height: 1.45;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  color: #e9d5ff;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-notice-banner {
+  background: rgb(139 92 246 / 8%);
+  border-color: rgb(139 92 246 / 20%);
+  color: #6d28d9;
+}
+
+.realtime-fake-backend-note {
+  font-size: 0.65rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-fake-backend-note {
+  background: rgb(245 158 11 / 8%);
+  border-color: rgb(245 158 11 / 20%);
+  color: #92400e;
+}
+
+.realtime-mode-selector-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.realtime-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+@container (max-width: 480px) {
+  .realtime-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .realtime-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.realtime-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-width: 0;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.desktop-settings-page .realtime-field {
+  color: var(--settings-muted, #77707d);
+}
+
+.realtime-field > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.realtime-field input,
+.realtime-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  outline: none;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.68rem;
+}
+
+.desktop-settings-page .realtime-field input,
+.desktop-settings-page .realtime-field select {
+  border: 1px solid rgb(86 67 91 / 14%);
+  background: rgb(255 255 255 / 82%);
+  color: var(--settings-text, #29242d);
+}
+
+.realtime-field input:focus,
+.realtime-field select:focus {
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+}
+
+.realtime-field small {
+  font-size: 0.58rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+}
+
+.desktop-settings-page .realtime-field small {
+  color: #8c7f8a;
+}
+
+.realtime-field-wide {
+  width: 100%;
+}
+
+.realtime-badge-configured {
+  color: #4ade80;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.desktop-settings-page .realtime-badge-configured {
+  color: #16a34a;
+}
+
+.realtime-badge-missing {
+  color: #f87171;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.desktop-settings-page .realtime-badge-missing {
+  color: #dc2626;
+}
+
+.realtime-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.realtime-checkbox-row input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.realtime-checkbox-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.realtime-checkbox-row strong {
+  font-size: 0.68rem;
+}
+
+.realtime-checkbox-row small {
+  font-size: 0.58rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+}
+
+.desktop-settings-page .realtime-checkbox-row small {
+  color: #8c7f8a;
+}
+
+.realtime-consent-row {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.desktop-settings-page .realtime-consent-row {
+  background: rgb(245 242 245 / 60%);
+  border-color: rgb(86 67 91 / 10%);
+}
+
+.realtime-clear-key-row {
+  margin-top: 4px;
+}
+
+.realtime-incomplete-info {
+  font-size: 0.64rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+  line-height: 1.4;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-incomplete-info {
+  background: rgb(245 158 11 / 8%);
+  border-color: rgb(245 158 11 / 20%);
+  color: #92400e;
+}
+
+.realtime-complete-info {
+  font-size: 0.64rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #86efac;
+  line-height: 1.4;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-complete-info {
+  background: rgb(34 197 94 / 8%);
+  border-color: rgb(34 197 94 / 20%);
+  color: #166534;
+}
+
+.realtime-cascade-info {
+  font-size: 0.64rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-cascade-info {
+  background: rgb(245 242 245 / 60%);
+  border-color: rgb(86 67 91 / 10%);
+  color: var(--settings-muted, #77707d);
+}
+
+.realtime-active-connections-notice {
+  font-size: 0.64rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-active-connections-notice {
+  background: rgb(59 130 246 / 8%);
+  border-color: rgb(59 130 246 / 20%);
+  color: #1e40af;
+}
+
+.realtime-connection-lifecycle-note {
+  margin: 0;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-connection-lifecycle-note {
+  color: #8c7f8a;
+}
+
+.realtime-notice {
+  font-size: 0.65rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.realtime-notice-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.desktop-settings-page .realtime-notice-error {
+  background: rgb(239 68 68 / 8%);
+  border-color: rgb(239 68 68 / 20%);
+  color: #b91c1c;
+}
+
+.realtime-notice-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.desktop-settings-page .realtime-notice-success {
+  background: rgb(34 197 94 / 8%);
+  border-color: rgb(34 197 94 / 20%);
+  color: #166534;
+}
+
+.realtime-notice-info {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.desktop-settings-page .realtime-notice-info {
+  background: rgb(59 130 246 / 8%);
+  border-color: rgb(59 130 246 / 20%);
+  color: #1d4ed8;
+}
+
+.realtime-conflict-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.desktop-settings-page .realtime-conflict-box {
+  background: rgb(239 68 68 / 8%);
+  border-color: rgb(239 68 68 / 20%);
+  color: #b91c1c;
+}
+
+.realtime-conflict-box span {
+  font-size: 0.65rem;
+}
+
+.realtime-reload-button {
+  padding: 6px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 7px;
+  background: rgba(239, 68, 68, 0.2);
+  color: inherit;
+  font-size: 0.65rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.realtime-reload-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.realtime-configuration-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.realtime-save-button {
+  padding: 8px 18px;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 9px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+}
+
+.desktop-settings-page .realtime-save-button {
+  border: 0;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+}
+
+.realtime-save-button:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.realtime-save-button:disabled,
+.realtime-reload-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.realtime-loading-state,
+.realtime-error-state {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.desktop-settings-page .realtime-loading-state,
+.desktop-settings-page .realtime-error-state {
+  color: var(--settings-muted, #77707d);
+}

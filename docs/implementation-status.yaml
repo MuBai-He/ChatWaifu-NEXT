@@ -529,6 +529,21 @@ phases:
       - Unit and integration test suites verify EOF teardown, history filtering, photo redactions, concurrent offer joining, targeted pc_id teardown, fail-closed policy, and frontend recovery backoff
       - Phase 13.7A covers client-driven fresh-connection recovery and confirmed context restoration with automated checks passing; live acceptance remains pending
       - Automatic runtime fallback to Cascade mode, full Phase 13.7 completion, live microphone capture, real public OpenAI connectivity, Phase 13.5B+ (MCP/write tools), and context synchronization (13.6) remain pending or queued
+  - id: 13.8A
+    name: realtime-configuration-vertical
+    status: implemented_automated_checks_passed_live_acceptance_pending
+    evidence:
+      - Phase 13.8A delivers runtime-owned realtime configuration vertical, optimistic concurrency control (CAS), write-only local secret management, and dynamic WebRTC connection admission under ADR 0051
+      - Migration 31 adds realtime_configurations SQLite table tracking schema_version, revision, connection_mode, cloud_backend, model, voice, transcription_model, cloud_tools_enabled, cloud_egress_consent, and secret_key_ref
+      - AtomicSecretStore persists local provider API keys at .local/config/realtime-secrets.json (mode 0600) with write-before-CAS and post-commit prune semantics; corrupted files fail closed without overwriting
+      - GET /v1/realtime/configuration exposes schema 1.0 configuration metadata and active_connections while guaranteeing zero secret leaks (api_key_configured boolean only); raw keys are excluded from SQLite, events, logs, and exception representations
+      - PUT /v1/realtime/configuration enforces expected_revision verification, returning HTTP 409 Conflict on stale revisions; explicit clear_api_key prevents key resurrection from environment or initial settings across restart
+      - Realtime configuration HTTP 422 errors use a fixed safe message without raw inputs, arbitrary field names, or custom validation messages
+      - PipecatMediaAdapter captures an immutable RealtimeConnectionSnapshot before await; existing connection renegotiations freeze original snapshot and bridge factory per pc_id, while new connections pick up updated configuration revisions without desktop restart
+      - Connection admission strictly validates model, api_key, and egress consent for cloud_realtime mode, mapping violations to actionable HTTP 400/403 responses while allowing partial saved configurations
+      - CloudEgressGateway enforces deny policy fail-closed and registers scoped session consent for backend_id='openai' with tool_result permissions in ask mode
+      - Unit and integration test suites in test_realtime_configuration.py verify contract compliance, CAS conflicts, secret redaction, 422 input stripping, restart persistence, fault injection, loopback wire handshake, and cascade switching
+      - Phase 13.8A includes shared Web and desktop configuration UI, stale request cancellation, conflict reload, secret clearing, and next-connection activation; isolated browser save/refresh and Runtime restart acceptance passed; context synchronization (13.6), P17 expansion, physical microphone and public OpenAI acceptance remain pending
   - id: 15
     name: proactive-behavior-and-ambient
     status: idle_check_in_vertical_slice_implemented_other_event_sources_pending
