@@ -1,16 +1,37 @@
 .runtime-connection-screen {
   position: fixed;
-  inset: 0;
+  inset: 12px;
   z-index: 10000;
   display: grid;
   overflow: auto;
   place-items: center;
-  padding: 28px;
-  color: #332b38;
+  padding: 28px 24px;
+  border: 1px solid #a78aa444;
+  border-radius: 4px 30px 4px 30px;
+  color: #eee5ef;
   background:
-    radial-gradient(ellipse at 100% 0%, #e9d6e5 0, transparent 55%),
-    radial-gradient(ellipse at 0% 100%, #e5deed 0, transparent 55%), #f8f5f7;
+    radial-gradient(ellipse at 100% 0%, #76507825, transparent 58%),
+    radial-gradient(ellipse at 0% 100%, #51466d20, transparent 55%),
+    linear-gradient(155deg, #231b29f5, #151119fa);
+  box-shadow: inset 0 0 70px #09070d50;
   pointer-events: auto;
+}
+.runtime-connection-screen::before {
+  content: "";
+  position: fixed;
+  inset: 21px;
+  z-index: -1;
+  border: 1px solid #b7a3b62b;
+  border-radius: 2px 23px 2px 23px;
+  pointer-events: none;
+}
+.connection-window-grip {
+  position: fixed;
+  top: 13px;
+  right: 42px;
+  left: 23px;
+  height: 21px;
+  cursor: grab;
 }
 .runtime-connection-card {
   display: grid;
@@ -32,7 +53,7 @@
   gap: 3px;
 }
 .connection-brand small {
-  color: #8a7b8b;
+  color: #b2a1b5;
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.12em;
@@ -42,10 +63,10 @@
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid #ffffff90;
+  border: 1px solid #d9afcb40;
   border-radius: 13px;
-  background: linear-gradient(140deg, #b7759e, #744972);
-  box-shadow: 0 5px 14px #76446c20;
+  background: linear-gradient(140deg, #956087, #593758);
+  box-shadow: 0 5px 14px #00000030;
 }
 .connection-brand-icon img {
   width: 32px;
@@ -60,7 +81,7 @@
 }
 .connection-heading p {
   margin: 0;
-  color: #857889;
+  color: #b6a6b9;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -96,10 +117,10 @@
   display: grid;
   gap: 5px;
   padding: 15px;
-  border: 1px solid #ddd3de;
+  border: 1px solid #b59ab330;
   border-radius: 14px;
-  color: #8f8294;
-  background: #ffffff60;
+  color: #b5a1b9;
+  background: #ffffff04;
   transition:
     background 150ms,
     border-color 150ms,
@@ -109,12 +130,12 @@
   margin-bottom: 6px;
 }
 .connection-mode-content strong {
-  color: #514454;
+  color: #ded1e1;
   font-size: 13px;
   font-weight: 600;
 }
 .connection-mode-content small {
-  color: #8a7d8d;
+  color: #ad9cb2;
   font-size: 10px;
   white-space: nowrap;
 }
@@ -126,32 +147,32 @@
   place-items: center;
   width: 16px;
   height: 16px;
-  border: 1px solid #d4c9d7;
+  border: 1px solid #a58ea155;
   border-radius: 50%;
 }
 .connection-mode-check svg {
   opacity: 0;
 }
 .connection-mode > input:checked + span {
-  color: #93567f;
-  border-color: #b888a6;
-  background: #fff9fd;
-  box-shadow: 0 3px 12px #85567609;
+  color: #e0b1d1;
+  border-color: #ac7e9b;
+  background: #74486a30;
+  box-shadow: 0 3px 12px #120c1810;
 }
 .connection-mode > input:checked + span .connection-mode-check {
   color: white;
-  border-color: #a56f94;
-  background: #a56f94;
+  border-color: #996487;
+  background: #996487;
 }
 .connection-mode > input:checked + span .connection-mode-check svg {
   opacity: 1;
 }
 .connection-mode > input:focus-visible + span {
-  outline: 2px solid #a66f95;
+  outline: 2px solid #c99abb;
   outline-offset: 3px;
 }
 .connection-mode:hover > span {
-  border-color: #b888a6;
+  border-color: #ac7e9b;
 }
 .connection-fields {
   display: grid;
@@ -161,33 +182,33 @@
   display: grid;
   gap: 8px;
   font-size: 12px;
-  color: #5a4c5e;
+  color: #cdbbd0;
 }
 .connection-field > span > small {
   margin-left: 6px;
-  color: #9c8e9e;
+  color: #aa96ae;
   font-size: 10px;
 }
 .connection-field input {
   width: 100%;
   height: 44px;
   padding: 11px 13px;
-  border: 1px solid #dfd5e0;
+  border: 1px solid #b59ab334;
   border-radius: 10px;
   outline: none;
-  color: #46394b;
-  background: #ffffffa8;
+  color: #ece0ef;
+  background: #0d0a1380;
   font-size: 12px;
   transition:
     border-color 150ms,
     box-shadow 150ms;
 }
 .connection-field input::placeholder {
-  color: #ac9ead;
+  color: #928298;
 }
 .connection-field input:focus {
-  border-color: #b888a6;
-  box-shadow: 0 0 0 3px #b888a615;
+  border-color: #ac7e9b;
+  box-shadow: 0 0 0 3px #b888a61f;
 }
 .connection-secret {
   position: relative;
@@ -206,7 +227,7 @@
   place-items: center;
   border: 0;
   border-radius: 10px;
-  color: #9a899d;
+  color: #b2a0b8;
   background: transparent;
   cursor: pointer;
 }
@@ -216,7 +237,7 @@
   justify-items: start;
   gap: 10px;
   min-height: 149px;
-  color: #8d6387;
+  color: #cea7c7;
 }
 .connection-local-note strong {
   font-size: 14px;
@@ -225,7 +246,7 @@
 .connection-local-note p {
   max-width: 290px;
   margin: 0;
-  color: #8a7d8d;
+  color: #ad9cb2;
   font-size: 12px;
   line-height: 1.8;
 }
@@ -236,11 +257,11 @@
   gap: 12px;
   width: 100%;
   height: 45px;
-  border: 1px solid #825177;
+  border: 1px solid #bd8cac55;
   border-radius: 11px;
   color: #fff8fd;
-  background: linear-gradient(105deg, #a56d91, #7d517b);
-  box-shadow: 0 5px 15px #86527b20;
+  background: linear-gradient(105deg, #824f76, #613d60);
+  box-shadow: 0 5px 15px #00000035;
   font-size: 13px;
   font-weight: 550;
   cursor: pointer;
@@ -249,7 +270,7 @@
   filter: brightness(1.06);
 }
 .runtime-connection-card button:focus-visible {
-  outline: 2px solid #a66f95;
+  outline: 2px solid #c99abb;
   outline-offset: 3px;
 }
 .runtime-connection-card button:disabled,
@@ -261,8 +282,8 @@
   margin: 0;
   padding: 10px 12px;
   border-radius: 9px;
-  color: #a04e64;
-  background: #f9e9ee;
+  color: #efb3c3;
+  background: #8d3e5328;
   font-size: 12px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -273,7 +294,7 @@
   align-items: center;
   gap: 6px;
   margin: -9px 0 0;
-  color: #9c8e9e;
+  color: #aa96ae;
   font-size: 10px;
   line-height: 1.5;
 }
@@ -281,7 +302,7 @@
   justify-self: center;
   padding: 4px;
   border: 0;
-  color: #87728e;
+  color: #c3a5c9;
   background: transparent;
   font-size: 12px;
   cursor: pointer;
