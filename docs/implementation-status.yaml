@@ -1,7 +1,20 @@
 schema_version: "1.0"
-updated_at: "2026-09-11"
+updated_at: "2026-09-21"
 current_phase: "13.5A"
 next_phase: "13.6"
+server_deployment:
+  status: source_entrypoint_implemented_target_host_acceptance_pending
+  scope: single_owner_source_runtime_with_durable_state_and_systemd_user_service
+  evidence:
+    - PR 42 Realtime configuration merged as c2433d3 on 2026-09-21; existing targeted Python and Web checks plus both frontend builds passed before merge
+    - Source server uses an independent state directory and the existing Runtime lifecycle; no desktop, frontend build, or local model workers are started
+    - Local macOS source process accepted authenticated session creation and retained the session and management credential after SIGTERM cleanup and restart; closing stdin did not stop the service, unauthenticated private API returned 401, and a second process could not acquire the same state-directory lease
+    - Target Linux service persistence, headless secure credential storage, real model and WeChat receipt remain pending server access
+  remaining:
+    - server_installer
+    - authenticated_remote_web_entry
+    - desktop_remote_runtime_mode
+    - cross_network_realtime_media
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true

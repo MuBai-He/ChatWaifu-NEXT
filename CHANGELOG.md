@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add a source server entrypoint with a separate durable state directory, create-once private
+  configuration and management credentials, and a generated systemd user service. It reuses the
+  Runtime lifecycle without desktop supervision, frontend tooling, or model-worker installation.
+  Target Linux deployment and native WeChat credential-store acceptance remain pending.
+
 - Add an opt-in OpenAI Realtime GA server adapter with verified session configuration, streaming
   PCM conversion, Runtime-owned turn identity, late-transcript correlation, bounded cancellation
   and sanitized errors. Loopback WebSocket/SQLite acceptance is covered; public cloud voice and

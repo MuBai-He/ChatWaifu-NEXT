@@ -2,6 +2,18 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
+.PHONY: server-setup server server-unit
+
+server-setup:
+	$(UV) sync --locked --all-packages --no-dev
+	$(UV) run --locked --no-dev python tools/run_server.py init $(SERVER_ARGS)
+
+server:
+	$(UV) run --locked --no-dev python tools/run_server.py run $(SERVER_ARGS)
+
+server-unit:
+	@$(UV) run --locked --no-dev python tools/run_server.py systemd-unit $(SERVER_ARGS)
+
 .PHONY: bootstrap demo desktop build-web build-desktop-ui build-desktop-host build-macos-owner-package dev-docs build-docs preview-docs publish-docs verify-release format format-check lint typecheck generate-protocol check-generated test test-contract test-e2e test-avatar test-runtime setup-nltk-data setup-stt-worker setup-tts-worker setup-neural-tts-workers setup-live2d-framework setup-live2d-vendor build-live2d-bridge check-live2d-vendor dev-runtime dev-web dev-avatar-lab dev-desktop clean
 
 bootstrap:
