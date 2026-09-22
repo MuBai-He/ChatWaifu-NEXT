@@ -64,3 +64,17 @@ The feature is enabled without Google client credentials. Live authenticated
 This verifies deployment/status only, not Google consent, synchronization or queries.
 The desktop distinguishes an old backend's 404 from missing configuration and
 network/auth failures, provides a bounded status request and manual refresh.
+
+## Calendar selection and live query
+
+After OAuth, refresh accounts in desktop settings, discover an account's calendars,
+explicitly select permitted calendars, then query the next seven days. The server
+accepts timezone-aware windows up to 31 days and 1000 results. Google expands
+recurring instances; these reads do not advance the incremental sync cursor.
+The service rejects non-owner sessions and unselected calendars and discards late
+results after selection/account revision changes. Responses identify live Google
+results; failed queries do not render cached events as current.
+
+The LAN server includes `/calendars`, `/calendars/selection` and `/events` routes.
+Without OAuth configuration they return `personal_assistant_not_configured`;
+Google consent, actual event rendering and dialog Skill integration remain pending.

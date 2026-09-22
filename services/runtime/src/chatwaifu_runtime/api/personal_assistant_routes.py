@@ -1,5 +1,7 @@
 """Authenticated assistant status and direct-TLS-only OAuth handoff."""
 
+from dataclasses import asdict
+from datetime import datetime, timedelta
 from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -8,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, SecretStr
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService
 from chatwaifu_runtime.personal_assistant.google_calendar import GoogleCalendarError
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
 from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
@@ -135,3 +138,72 @@ async def assistant_accounts(request: Request, session_id: UUID) -> list[Account
     except AssistantAccessError:
         raise HTTPException(403, "personal_account_requires_owner") from None
     return [AccountStatusResponse(account_id=a.account_id, status=a.status) for a in accounts]
+
+
+class CalendarRequest(BaseModel):
+    session_id: UUID
+    account_id: UUID
+    calendar_id: str = Field(min_length=1, max_length=2048)
+    selected: bool
+
+
+def _accounts_service(request: Request) -> GoogleAccountService:
+    container: RuntimeContainer = request.app.state.container
+    service = container.personal_assistant.accounts
+    if service is None:
+        raise HTTPException(409, "personal_assistant_not_configured")
+    return service
+
+
+@router.get("/calendars")
+async def calendars(request: Request, session_id: UUID, account_id: UUID, discover: bool = False):
+    service = _accounts_service(request)
+    try:
+        if discover:
+            await service.discover(str(session_id), str(account_id))
+        return {
+            "items": [
+                asdict(item) for item in await service.calendars(str(session_id), str(account_id))
+            ]
+        }
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
+
+
+@router.put("/calendars/selection")
+async def select_calendar(request: Request, body: CalendarRequest):
+    try:
+        await _accounts_service(request).select(
+            str(body.session_id), str(body.account_id), body.calendar_id, body.selected
+        )
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    return {"selected": body.selected}
+
+
+@router.get("/events")
+async def query_events(
+    request: Request,
+    session_id: UUID,
+    account_id: UUID,
+    calendar_id: str,
+    start: datetime,
+    end: datetime,
+):
+    if (
+        start.utcoffset() is None
+        or end.utcoffset() is None
+        or not timedelta(0) < end - start <= timedelta(days=31)
+    ):
+        raise HTTPException(422, "query_requires_timezone_and_maximum_31_days")
+    try:
+        events = await _accounts_service(request).query(
+            str(session_id), str(account_id), calendar_id, start, end
+        )
+        return {"items": [asdict(event) for event in events], "source": "google_live"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
