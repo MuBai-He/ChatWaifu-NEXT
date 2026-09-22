@@ -506,7 +506,14 @@ fn restore_preferences(app: &AppHandle) -> tauri::Result<()> {
         window.set_position(Position::Physical(PhysicalPosition::new(x, y)))?;
     }
     if let (Some(width), Some(height)) = (preferences.overlay_width, preferences.overlay_height) {
-        window.set_size(Size::Physical(PhysicalSize::new(width, height)))?;
+        // Resize events are physical pixels; configured minimums are logical.
+        // Old 1x display preferences must not create a half-size Retina viewport.
+        let minimum =
+            tauri::LogicalSize::new(320.0, 480.0).to_physical::<u32>(window.scale_factor()?);
+        window.set_size(Size::Physical(PhysicalSize::new(
+            width.max(minimum.width),
+            height.max(minimum.height),
+        )))?;
     }
     if preferences.overlay_visible {
         window.show()?;
