@@ -52,3 +52,15 @@ registration. OAuth consent, native interaction and real Google data remain unve
 Validation: Rust compilation and two native URL/socket checks passed; desktop build and TypeScript
 checks passed; three status/transport/validation HTTP checks passed. These do not establish actual
 Mac browser consent, native visual acceptance, direct TLS deployment, or real Google acceptance.
+
+## 2026-09-22 LAN status deployment
+
+The existing LAN server now includes the assistant lifecycle, migration 33 and
+status/OAuth routes. Source integration and a consistent SQLite backup were saved
+under `chatwaifu-server/backups/assistant-status-20260922` before the update.
+The feature is enabled without Google client credentials. Live authenticated
+`/v1/personal-assistant/status` returns HTTP 200 with `state=unconfigured` and
+`authorization_available=false`; runtime health and channel listing remain 200.
+This verifies deployment/status only, not Google consent, synchronization or queries.
+The desktop distinguishes an old backend's 404 from missing configuration and
+network/auth failures, provides a bounded status request and manual refresh.

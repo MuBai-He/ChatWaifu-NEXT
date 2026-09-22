@@ -49,6 +49,8 @@ export function PersonalAssistantSettingsSection({
 }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [message, setMessage] = useState("");
+  const [statusError, setStatusError] = useState("");
+  const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
   const active = useRef<Flow | null>(null);
   const revision = useRef({ value: 0 });
@@ -65,15 +67,47 @@ export function PersonalAssistantSettingsSection({
           connection,
           "/v1/personal-assistant/status",
           {
-            signal: controller.signal,
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(10000),
+            ]),
           },
         );
         if (!response.ok)
-          throw new Error("无法读取个人助理状态，请检查服务器连接。");
+          throw new Error(
+            response.status === 404
+              ? "服务器版本尚未包含个人助理，请先更新后端。当前聊天连接不受影响。"
+              : response.status === 401 || response.status === 403
+                ? "无权读取个人助理状态，请检查访问令牌。"
+                : `个人助理服务暂时不可用（${response.status}），请重试。`,
+          );
         const data = (await response.json()) as Status;
-        if (!disposed) setStatus(data);
-      } catch {
-        if (!disposed) setMessage("无法读取个人助理状态，请检查服务器连接。");
+        if (
+          !data ||
+          !["disabled", "unconfigured", "ready", "cleanup_failed"].includes(
+            data.state,
+          ) ||
+          typeof data.authorization_available !== "boolean"
+        )
+          throw new Error(
+            "服务器返回了无法识别的个人助理状态，请检查后端版本。",
+          );
+        if (!disposed) {
+          setStatus(data);
+          setStatusError("");
+        }
+      } catch (error) {
+        if (!disposed) {
+          setStatus(null);
+          setStatusError(
+            error instanceof TypeError ||
+              (error instanceof DOMException && error.name === "TimeoutError")
+              ? "个人助理状态读取失败或超时，请检查网络后重试。"
+              : error instanceof Error
+                ? error.message
+                : "无法读取个人助理状态，请重试。",
+          );
+        }
       }
     })();
     return () => {
@@ -84,7 +118,7 @@ export function PersonalAssistantSettingsSection({
       active.current = null;
       setBusy(false);
     };
-  }, [sessionId]);
+  }, [sessionId, refresh, context.runtime.connection]);
 
   async function connect() {
     if (!sessionId || busy || !isDesktopHost()) return;
@@ -170,17 +204,19 @@ export function PersonalAssistantSettingsSection({
     }
   }
 
-  const description = !status
-    ? "正在读取服务器状态…"
-    : status.state === "disabled"
-      ? "服务器尚未启用个人助理。"
-      : status.state === "unconfigured"
-        ? "服务器尚未配置 Google OAuth 客户端。"
-        : status.state === "cleanup_failed"
-          ? "账号清理遇到问题，请检查服务器状态。"
-          : !status.authorization_available
-            ? "连接账号前，需要配置支持授权的 HTTPS 服务器地址。"
-            : "沿用你的 Google 日历，只申请读取权限。";
+  const description = statusError
+    ? statusError
+    : !status
+      ? "正在读取服务器状态…"
+      : status.state === "disabled"
+        ? "服务器尚未启用个人助理。"
+        : status.state === "unconfigured"
+          ? "服务器尚未配置 Google OAuth 客户端。"
+          : status.state === "cleanup_failed"
+            ? "账号清理遇到问题，请检查服务器状态。"
+            : !status.authorization_available
+              ? "连接账号前，需要配置支持授权的 HTTPS 服务器地址。"
+              : "沿用你的 Google 日历，只申请读取权限。";
 
   return (
     <>
@@ -190,6 +226,14 @@ export function PersonalAssistantSettingsSection({
         description="连接已有日历与提醒事项，逐步接入桌宠提醒。"
       />
       <SettingsGroup title="Google 日历" description={description}>
+        {statusError && (
+          <button
+            type="button"
+            onClick={() => setRefresh((value) => value + 1)}
+          >
+            重新读取状态
+          </button>
+        )}
         <div className="desktop-settings-connection-row">
           <span>
             <strong>Google 账号</strong>
@@ -210,6 +254,7 @@ export function PersonalAssistantSettingsSection({
             <button
               onClick={() => void connect()}
               disabled={
+                !!statusError ||
                 !status?.authorization_available ||
                 !sessionId ||
                 !isDesktopHost()
