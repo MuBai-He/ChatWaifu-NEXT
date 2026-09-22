@@ -53,6 +53,7 @@ from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemor
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
+from chatwaifu_runtime.personal_assistant.skill import CalendarReadSkill
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
@@ -183,6 +184,7 @@ class RuntimeContainer:
             __version__,
             sandbox_launcher=sandbox_launcher,
             mcp_private_origins=settings.security.mcp_private_origins,
+            session_builtin_handlers={"calendar_read": CalendarReadSkill(self.personal_assistant)},
         )
         self.agent = AgentTurnOrchestrator(
             self.providers.llm,

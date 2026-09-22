@@ -78,3 +78,25 @@ results; failed queries do not render cached events as current.
 The LAN server includes `/calendars`, `/calendars/selection` and `/events` routes.
 Without OAuth configuration they return `personal_assistant_not_configured`;
 Google consent, actual event rendering and dialog Skill integration remain pending.
+
+## Operator prerequisites for first Google connection
+
+1. In Google Cloud, select/create a project and enable Google Calendar API.
+2. Configure Google Auth Platform branding and audience. A personal Gmail app
+   uses External; in Testing add the signing-in account as a test user.
+3. Create an OAuth client of type Desktop app and download its JSON. Give the
+   operator the local file path rather than pasting secrets into chat. The Runtime
+   uses the downloaded installed.client_id/client_secret; never commit the JSON.
+4. Provide a client-trusted HTTPS Runtime origin. Current OAuth admission requires
+   end-to-end TLS to Runtime, no forwarded headers; ordinary nginx TLS termination
+   with forwarded headers is not yet supported. Existing LAN HTTP chatting can
+   continue independently. Certificate trust/login steps require user participation.
+5. Sign in via the native system-browser flow, select permitted calendars, then
+   grant calendar.read when asked by the Runtime Skill permission prompt.
+
+Google testing-mode refresh tokens for external applications with calendar scopes
+can expire after seven days; testing is suitable for initial acceptance, not a
+promise of unattended permanent authorization. Broader publishing/verification is
+separate from creating a desktop OAuth client.
+
+calendar.read 查询工具已注册，10 项工具边界/路由检查通过，Ruff/Pyright 和前端构建通过。agy High 完成只读审查。服务器补丁曾因旧版参数上下文错位导致短暂启动失败，已修正参数位置并重新编译；恢复后健康接口 200，技能列表显示 calendar.read enabled。尚无 Google 实账号调用验收。

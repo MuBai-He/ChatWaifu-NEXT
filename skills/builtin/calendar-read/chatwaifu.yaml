@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "calendar.read",
+    "version": "1.0.0",
+    "name": "个人日历查询",
+    "description": "查询主人已有 Google 日历的日程、会议和安排。Read selected Google calendar events for a specified time window.",
+    "capabilities": [
+      {
+        "name": "query",
+        "description": "查询今天、明天或本周的日程安排；必须给出带时区的起止时间，最多31天。",
+        "input_schema": {
+          "type": "object",
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object",
+          "required": [
+            "source",
+            "events"
+          ],
+          "properties": {
+            "source": {
+              "type": "string",
+              "const": "google_live"
+            },
+            "events": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "side_effect": "read",
+        "required_permissions": [
+          "calendar.read"
+        ],
+        "confirmation_required": false,
+        "timeout_seconds": 120
+      }
+    ],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {
+    "kind": "builtin",
+    "handler": "calendar_read"
+  }
+}
