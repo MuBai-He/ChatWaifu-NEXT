@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { bootstrapRuntimeSession } from "../chat/chatSessionBootstrap";
 import { getHealth, getTtsProviders } from "../chat/runtimeClient";
+import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { useSettingsRuntime } from "./useSettingsRuntime";
 
 vi.mock("../chat/chatSessionBootstrap", () => ({
@@ -33,6 +34,7 @@ vi.mock("../chat/useChatAvatar", () => ({
 
 describe("useSettingsRuntime", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(bootstrapRuntimeSession).mockResolvedValue({
       health: { version: "test", providers: {} },
       character: { character_id: "ayachi_nene", display_name: "绫地宁宁" },
@@ -51,6 +53,35 @@ describe("useSettingsRuntime", () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("retries initial network failure but stops on invalid credentials", async () => {
+    vi.useFakeTimers();
+    vi.mocked(bootstrapRuntimeSession).mockRejectedValueOnce(
+      new TypeError("Load failed"),
+    );
+    const { result, unmount } = renderHook(() => useSettingsRuntime());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.error).toContain("自动重连");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(result.current.connection).toBe("connected");
+    vi.mocked(bootstrapRuntimeSession).mockRejectedValueOnce(
+      new RuntimeRequestError("Unauthorized", 401),
+    );
+    await act(async () => {
+      result.current.reconnect();
+    });
+    const calls = vi.mocked(bootstrapRuntimeSession).mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(bootstrapRuntimeSession).toHaveBeenCalledTimes(calls);
+    expect(result.current.error).toContain("访问令牌");
+    unmount();
   });
 
   it("bootstraps settings without creating media transports", async () => {
@@ -88,7 +119,12 @@ describe("useSettingsRuntime", () => {
     });
 
     expect(result.current.connection).toBe("offline");
-    expect(result.current.error).toBe("runtime stopped");
+    expect(result.current.error).toContain("自动重连");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(result.current.connection).toBe("connected");
+    expect(result.current.error).toBeNull();
     vi.useRealTimers();
   });
 });
