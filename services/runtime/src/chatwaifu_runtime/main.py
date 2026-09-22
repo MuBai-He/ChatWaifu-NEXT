@@ -82,6 +82,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validation_exception_handler(
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        if _request.url.path.startswith("/v1/personal-assistant/oauth/"):
+            return JSONResponse(status_code=422, content={"detail": "授权请求格式无效"})
         if _request.url.path != "/v1/realtime/configuration":
             return await request_validation_exception_handler(_request, exc)
         # Both error locations and custom messages can contain submitted text.

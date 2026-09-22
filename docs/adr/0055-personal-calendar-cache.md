@@ -34,15 +34,20 @@ Callers reread durable state; retrying a stale ticket cannot apply the batch twi
 
 ## Consequences and alternatives
 
-This is a cache, not a second calendar or transcript store. The Runtime is not yet wired to
-these classes. Account service and retryable credential cleanup now exist, including session-derived
+This is a cache, not a second calendar or transcript store. The Runtime now owns
+these classes under a default-disabled feature. Account service and retryable credential cleanup now exist, including session-derived
 scope and asynchronous secret-file I/O that finishes before propagating cancellation. Startup
 reconciliation requires a dedicated secret file; never prune a shared provider store. OAuth
 coordination must validate state, PKCE, expiry and transport before calling connect_authorized.
-Runtime lifecycle wiring, authorized cache reads, recurrence
-expansion, HTTP contracts and native consent remain Stage A work. Partial-page commits were
+Native callback and connection UI plus direct-TLS-only handoff are implemented; authorized cache
+reads, recurrence expansion, calendar selection UI and actual native consent remain Stage A work. Partial-page commits were
 rejected because advancing a cursor without all events silently loses changes. Deleting the
 account row outright was rejected because it loses crash-recovery secret-cleanup references.
 
 Validation: seven real-SQLite race/rollback/restart checks pass; existing database/migration
 checks pass (14, one Windows-specific skip on macOS). This is not live Google acceptance.
+
+Authorization handoff initially admits only the configured HTTPS origin directly at the Runtime,
+with forwarded headers rejected; ordinary LAN chat remains unchanged. A trusted reverse-proxy
+transport contract is deliberately deferred rather than inferred from a loopback peer. Mac system
+browser authorization is supported in code; other desktop platforms return an unsupported error.
