@@ -27,6 +27,9 @@ from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkClient
 from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
+from chatwaifu_runtime.external_channels.encrypted_credentials import (
+    EncryptedFileChannelCredentialStore,
+)
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.service import ExternalChannelService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
@@ -260,7 +263,14 @@ class RuntimeContainer:
         self.channel_management = ChannelManagementService(
             self.external_channels,
             self.external_channel_repository,
-            KeyringChannelCredentialStore(),
+            (
+                EncryptedFileChannelCredentialStore(
+                    settings.data_dir / "channel-vault",
+                    settings.config_dir / "channel-vault-key",
+                )
+                if settings.channel_credential_backend == "encrypted_file"
+                else KeyringChannelCredentialStore()
+            ),
             WeixinILinkClient(),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,

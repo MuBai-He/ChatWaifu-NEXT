@@ -27,6 +27,28 @@ describe("runtime HTTP client", () => {
     vi.unstubAllGlobals();
   });
 
+  it("explains an unavailable channel credential store without exposing server details", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: {
+              error: {
+                code: "channel_secure_store_unavailable",
+                message: "private backend detail",
+              },
+            },
+          }),
+          { status: 503 },
+        ),
+      ),
+    );
+    await expect(
+      requestRuntime("/v1/channel-auth-sessions", { parse: (value) => value }),
+    ).rejects.toThrow("运行后端的设备尚未配置或解锁安全凭据库");
+  });
+
   it("aborts a hung request after its bounded timeout", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn(
