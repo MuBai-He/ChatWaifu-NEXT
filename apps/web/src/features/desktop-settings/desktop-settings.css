@@ -1576,3 +1576,73 @@
   outline: 2px solid #a66f95;
   outline-offset: 3px;
 }
+
+.personal-assistant-settings .desktop-settings-group > div > p,
+.personal-assistant-settings p[role="status"] {
+  margin: 0;
+  padding: 12px 20px;
+  color: var(--settings-muted);
+  font-size: 12px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.personal-assistant-settings .desktop-settings-group p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--settings-muted);
+}
+.personal-assistant-settings .desktop-settings-group button {
+  padding: 9px 14px;
+  border: 1px solid #d6c5d7;
+  border-radius: 9px;
+  color: #845981;
+  background: #fff9fd;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.personal-assistant-settings button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.personal-assistant-settings button:focus-visible {
+  outline: 2px solid #a66f95;
+  outline-offset: 3px;
+}
+.personal-calendar-panel {
+  padding: 16px 20px 20px;
+  border-top: 1px solid rgb(134 92 122 / 10%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.personal-calendar-panel > button {
+  align-self: flex-start;
+}
+.personal-calendar-panel p {
+  margin: 0;
+}
+.personal-calendar-panel .desktop-settings-connection-row {
+  padding: 12px 0;
+  flex-wrap: wrap;
+}
+.personal-calendar-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.personal-calendar-panel input {
+  accent-color: #845981;
+}
+.personal-calendar-panel ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.personal-calendar-panel ul:empty {
+  display: none;
+}

@@ -53,6 +53,7 @@ export function PersonalAssistantSettingsSection({
   const [statusError, setStatusError] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [accountRevision, setAccountRevision] = useState(0);
   const active = useRef<Flow | null>(null);
   const revision = useRef({ value: 0 });
   const sessionId = context.sessionId;
@@ -172,6 +173,7 @@ export function PersonalAssistantSettingsSection({
         },
       );
       if (flow.cancelled) return;
+      setMessage("浏览器授权已返回，服务器正在连接 Google 完成账号绑定…");
       const completed = await runtimeFetchWithConnection(
         connection,
         "/v1/personal-assistant/oauth/complete",
@@ -186,15 +188,33 @@ export function PersonalAssistantSettingsSection({
           signal: AbortSignal.timeout(30000),
         },
       );
-      if (!completed.ok)
-        throw new Error("授权未完成，请重试；不会自动重放授权码。");
+      if (!completed.ok) {
+        const failure: unknown = await completed.json().catch(() => null);
+        const detail =
+          failure && typeof failure === "object" && "detail" in failure
+            ? failure.detail
+            : null;
+        throw new Error(
+          detail === "transport_error"
+            ? "浏览器授权已返回，但服务器无法连接 Google。请检查服务器出网或 VPN，恢复后重新授权。"
+            : "服务器未能完成授权，请重新连接账号；不会自动重放授权码。",
+        );
+      }
       succeeded = true;
-      if (!flow.cancelled)
-        setMessage("Google 账号已连接。请刷新账号并选择允许查询的日历。");
+      if (!flow.cancelled) {
+        setAccountRevision((value) => value + 1);
+        setMessage("Google 账号已连接。请读取日历并选择允许查询的范围。");
+      }
     } catch (error) {
       if (!flow?.cancelled && current === revision.current.value)
         setMessage(
-          error instanceof Error ? error.message : "授权未完成或已取消。",
+          error instanceof DOMException && error.name === "TimeoutError"
+            ? "等待服务器完成授权超时。请先刷新账号确认结果；若未连接，检查服务器网络后重新授权。"
+            : error instanceof Error
+              ? error.message
+              : typeof error === "string"
+                ? error
+                : "授权未完成或已取消。",
         );
     } finally {
       if (flow && !succeeded) await cancelFlow(flow);
@@ -220,7 +240,7 @@ export function PersonalAssistantSettingsSection({
               : "沿用你的 Google 日历，只申请读取权限。";
 
   return (
-    <>
+    <div className="personal-assistant-settings">
       <SettingsSectionIntro
         icon="companion"
         title="个人助理"
@@ -267,7 +287,10 @@ export function PersonalAssistantSettingsSection({
         </div>
         {message && <p role="status">{message}</p>}
         {status?.state === "ready" && !statusError && sessionId && (
-          <PersonalCalendarPanel key={sessionId} sessionId={sessionId} />
+          <PersonalCalendarPanel
+            key={`${sessionId}:${accountRevision}`}
+            sessionId={sessionId}
+          />
         )}
       </SettingsGroup>
       <SettingsGroup
@@ -276,6 +299,6 @@ export function PersonalAssistantSettingsSection({
       >
         <p>现有日历和提醒事项不会迁移到新的服务。</p>
       </SettingsGroup>
-    </>
+    </div>
   );
 }

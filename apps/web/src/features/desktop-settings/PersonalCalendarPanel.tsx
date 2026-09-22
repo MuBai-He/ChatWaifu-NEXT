@@ -170,7 +170,7 @@ export function PersonalCalendarPanel({ sessionId }: { sessionId: string }) {
     }
   }
   return (
-    <section aria-label="已连接的日历">
+    <section className="personal-calendar-panel" aria-label="已连接的日历">
       <button disabled={busy} onClick={() => setRefresh((v) => v + 1)}>
         刷新账号
       </button>
