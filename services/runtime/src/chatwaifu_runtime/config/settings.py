@@ -263,6 +263,7 @@ class Settings(BaseSettings):
     skills_dir: Path = PROJECT_ROOT / "skills"
     runtime: RuntimeConfig = RuntimeConfig()
     storage: StorageConfig = StorageConfig()
+    channel_credential_backend: Literal["keyring", "encrypted_file"] = "keyring"
     privacy: PrivacyConfig = PrivacyConfig()
     security: SecurityConfig = SecurityConfig()
     personal_assistant: PersonalAssistantConfig = PersonalAssistantConfig()

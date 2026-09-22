@@ -16,7 +16,11 @@ export function runtimeParser<Result>(
 }
 
 const runtimeErrorSchema = z
-  .object({ detail: z.string().optional() })
+  .object({
+    detail: z
+      .union([z.string(), z.object({ error: z.object({ code: z.string() }) })])
+      .optional(),
+  })
   .passthrough();
 
 export const mutationReceiptSchema = z.object({}).passthrough();
@@ -126,12 +130,15 @@ async function performRuntimeRequest<Result>(
   const payload = await readJson(response);
   if (!response.ok) {
     const detail = runtimeErrorSchema.safeParse(payload);
-    throw new RuntimeRequestError(
-      detail.success && detail.data.detail
-        ? detail.data.detail
-        : `Runtime request failed (${response.status})`,
-      response.status,
-    );
+    const value = detail.success ? detail.data.detail : undefined;
+    let message = `Runtime request failed (${response.status})`;
+    if (typeof value === "string") message = value;
+    else if (value?.error.code === "channel_secure_store_unavailable")
+      message =
+        "运行后端的设备尚未配置或解锁安全凭据库，暂时无法绑定微信。请先配置后端凭据库，再重试。";
+    else if (value?.error.code === "channel_provider_unavailable")
+      message = "微信授权服务暂时不可用，请稍后重试。";
+    throw new RuntimeRequestError(message, response.status);
   }
   try {
     return parser.parse(payload);
