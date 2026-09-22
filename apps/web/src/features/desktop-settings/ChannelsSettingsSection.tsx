@@ -50,9 +50,12 @@ export function ChannelsSettingsSection({
   }, [authorization]);
 
   useEffect(() => {
+    if (!runtimeOnline) return;
     const controller = new AbortController();
     void getChannelConnections(controller.signal)
       .then((items) => {
+        if (controller.signal.aborted) return;
+        setNotice(null);
         setConnection(
           items.find(
             (item) =>
@@ -69,7 +72,7 @@ export function ChannelsSettingsSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [runtimeOnline]);
 
   const authSessionId = authorization?.auth_session_id ?? null;
   useEffect(() => {
@@ -270,7 +273,7 @@ export function ChannelsSettingsSection({
             </span>
             <h3>让宁宁也能在微信里陪你聊天</h3>
             <p>
-              点击后会生成一次性二维码。扫码确认后，这台电脑会自动接收并回复你的微信消息。
+              点击后会生成一次性二维码。扫码确认后，运行后端的设备会自动接收并回复你的微信消息。
             </p>
             <button
               className="channels-settings-primary-action"

@@ -1,3 +1,4 @@
+import { RuntimeRequestError } from "./runtime-client/http";
 import type { DomainEvent } from "@chatwaifu/protocol";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
@@ -321,25 +322,60 @@ export function useChatSession({
 
   useEffect(() => {
     let disposed = false;
-    void bootstrapChatSession()
-      .then((result) => {
-        if (disposed) return;
-        setHealth(result.health);
-        setCharacter(result.character);
-        setSessionId(result.sessionId);
-        setEventCursor(result.eventCursor);
-        setMemories(result.memories);
-        setTtsProviders(result.ttsProviders);
-        setTtsProviderId(result.ttsProviderId);
-        dispatch({ type: "bootstrap", messages: result.messages });
-      })
-      .catch((runtimeError: unknown) => {
-        if (disposed) return;
-        setConnection("offline");
-        setError(message(runtimeError, "Runtime 不可用"));
-      });
+    let attempt = 0;
+    let timer: number | undefined;
+    let controller = new AbortController();
+    let ready = false;
+    const connect = () => {
+      if (disposed || ready) return;
+      window.clearTimeout(timer);
+      controller.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+      setConnection("connecting");
+      void bootstrapChatSession(localStorage, signal)
+        .then((result) => {
+          if (disposed || signal.aborted) return;
+          ready = true;
+          setError(null);
+          setHealth(result.health);
+          setCharacter(result.character);
+          setSessionId(result.sessionId);
+          setEventCursor(result.eventCursor);
+          setMemories(result.memories);
+          setTtsProviders(result.ttsProviders);
+          setTtsProviderId(result.ttsProviderId);
+          dispatch({ type: "bootstrap", messages: result.messages });
+        })
+        .catch((runtimeError: unknown) => {
+          if (disposed || signal.aborted) return;
+          setConnection("offline");
+          if (
+            runtimeError instanceof RuntimeRequestError &&
+            runtimeError.status >= 400 &&
+            runtimeError.status < 500 &&
+            runtimeError.status !== 408 &&
+            runtimeError.status !== 429
+          ) {
+            setError(
+              runtimeError.status === 401 || runtimeError.status === 403
+                ? "访问令牌无效或权限不足，请检查连接设置。"
+                : runtimeError.message,
+            );
+            return;
+          }
+          const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt++, 5));
+          setError(`连接中断，${delay / 1000} 秒后自动重连。`);
+          timer = window.setTimeout(connect, delay);
+        });
+    };
+    connect();
+    window.addEventListener("online", connect);
     return () => {
       disposed = true;
+      controller.abort();
+      window.clearTimeout(timer);
+      window.removeEventListener("online", connect);
     };
   }, [setError]);
 

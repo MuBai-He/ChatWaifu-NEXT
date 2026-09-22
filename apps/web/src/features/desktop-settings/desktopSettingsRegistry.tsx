@@ -7,6 +7,7 @@ import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { ModelsSettingsSection } from "./ModelsSettingsSection";
 import { defineSettingsRegistry } from "./settingsRegistry";
 import { VoiceSettingsSection } from "./VoiceSettingsSection";
+import { PersonalAssistantSettingsSection } from "./PersonalAssistantSettingsSection";
 
 export const desktopSettingsRegistry =
   defineSettingsRegistry<DesktopSettingsContext>()([
@@ -58,6 +59,13 @@ export const desktopSettingsRegistry =
       description: "记忆与扩展",
       icon: "data",
       component: DataSettingsSection,
+    },
+    {
+      id: "personal-assistant",
+      label: "个人助理",
+      description: "日历、提醒与任务",
+      icon: "companion",
+      component: PersonalAssistantSettingsSection,
     },
   ]);
 

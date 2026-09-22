@@ -7,10 +7,13 @@ from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 from typing import Literal, Self, cast
+from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from chatwaifu_runtime.config.mcp_policy import private_mcp_origin
 
 
 def _resource_root() -> Path:
@@ -61,7 +64,14 @@ class SecurityConfig(BaseModel):
     windows_appcontainer_launcher: Path | None = None
     allowed_hosts: list[str] = Field(default_factory=list)
     allowed_origins: list[str] = Field(default_factory=list)
+    mcp_private_origins: tuple[str, ...] = Field(default=(), max_length=32)
     auth_enabled: bool = True
+
+    @model_validator(mode="after")
+    def validate_mcp_private_origins(self) -> Self:
+        for origin in self.mcp_private_origins:
+            private_mcp_origin(origin)
+        return self
 
 
 class LlmConfig(BaseModel):
@@ -210,6 +220,33 @@ class SttConfig(BaseModel):
     timeout_seconds: float = Field(default=60.0, gt=0, le=300)
 
 
+class PersonalAssistantConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enabled: bool = False
+    google_client_id: str = ""
+    google_client_secret: SecretStr | None = None
+    google_oauth_https_origin: str | None = None
+
+    @model_validator(mode="after")
+    def validate_oauth_origin(self) -> Self:
+        value = self.google_oauth_https_origin
+        if value is not None:
+            parsed = urlsplit(value)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.port == 0
+            ):
+                raise ValueError("Google OAuth origin must be an exact HTTPS origin without path")
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -226,8 +263,10 @@ class Settings(BaseSettings):
     skills_dir: Path = PROJECT_ROOT / "skills"
     runtime: RuntimeConfig = RuntimeConfig()
     storage: StorageConfig = StorageConfig()
+    channel_credential_backend: Literal["keyring", "encrypted_file"] = "keyring"
     privacy: PrivacyConfig = PrivacyConfig()
     security: SecurityConfig = SecurityConfig()
+    personal_assistant: PersonalAssistantConfig = PersonalAssistantConfig()
     llm: LlmConfig = LlmConfig()
     tts: TtsConfig = TtsConfig()
     realtime: RealtimeConfig = RealtimeConfig()

@@ -1,3 +1,4 @@
+import { RuntimeRequestError } from "./runtime-client/http";
 import {
   createSession,
   getCharacters,
@@ -54,10 +55,11 @@ export async function bootstrapRuntimeSession(
   const sessionKey = scopedSessionStorageKey(scope);
   const saved = storage.getItem(sessionKey);
   let session = saved
-    ? await getSession(saved, signal).catch(() => {
+    ? await getSession(saved, signal).catch((error: unknown) => {
         signal?.throwIfAborted();
-        // Preserve existing recovery behavior for an unavailable saved session.
-        return null;
+        if (error instanceof RuntimeRequestError && error.status === 404)
+          return null;
+        throw error;
       })
     : null;
   signal?.throwIfAborted();
@@ -76,13 +78,14 @@ export async function bootstrapRuntimeSession(
 
 export async function bootstrapChatSession(
   storage: Pick<Storage, "getItem" | "setItem"> = localStorage,
+  signal?: AbortSignal,
 ): Promise<ChatSessionBootstrapResult> {
-  const core = await bootstrapRuntimeSession(storage);
+  const core = await bootstrapRuntimeSession(storage, signal);
 
   const [recovery, memories, ttsProviders] = await Promise.all([
-    getSessionRecovery(core.sessionId),
-    getMemory(core.sessionId),
-    getTtsProviders(core.sessionId).catch(() => []),
+    getSessionRecovery(core.sessionId, signal),
+    getMemory(core.sessionId, signal),
+    getTtsProviders(core.sessionId, signal).catch(() => []),
   ]);
   return {
     ...core,

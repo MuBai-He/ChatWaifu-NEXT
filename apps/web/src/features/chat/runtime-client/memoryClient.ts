@@ -30,6 +30,7 @@ const memorySourcesResponse = runtimeParser(
 
 export async function getMemory(
   sessionId?: string | null,
+  signal?: AbortSignal,
 ): Promise<MemoryItem[]> {
   return requestRuntime(
     `/v1/memory${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`,
@@ -37,6 +38,7 @@ export async function getMemory(
       const payload = z.object({ items: z.array(z.unknown()) }).parse(input);
       return payload.items.map((item) => parseMemoryRecord(item) as MemoryItem);
     }),
+    { signal },
   );
 }
 

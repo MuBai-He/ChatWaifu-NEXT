@@ -14,6 +14,7 @@ import type {
   RuntimeHealth,
   TtsProviderSnapshot,
 } from "../chat/types";
+import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { useChatAvatar } from "../chat/useChatAvatar";
 
 /**
@@ -23,6 +24,7 @@ import { useChatAvatar } from "../chat/useChatAvatar";
  */
 export function useSettingsRuntime() {
   const avatar = useChatAvatar();
+  const reconnectRef = useRef<() => void>(() => {});
   const activeRead = useRef<AbortController | null>(null);
   const [health, setHealth] = useState<RuntimeHealth | null>(null);
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
@@ -40,13 +42,39 @@ export function useSettingsRuntime() {
     const lifetime = new AbortController();
     let timer: number | undefined;
     let identity: string | null = null;
+    let retryTimer: number | undefined;
+    let failures = 0;
     const invalidate = () => {
       activeRead.current?.abort();
       activeRead.current = null;
+      window.clearTimeout(retryTimer);
+      retryTimer = undefined;
       window.clearInterval(timer);
       timer = undefined;
     };
+    const recover = (error: unknown) => {
+      invalidate();
+      setConnection("offline");
+      if (
+        error instanceof RuntimeRequestError &&
+        error.status >= 400 &&
+        error.status < 500 &&
+        error.status !== 408 &&
+        error.status !== 429
+      ) {
+        setError(
+          error.status === 401 || error.status === 403
+            ? "访问令牌无效或权限不足，请检查连接设置。"
+            : error.message,
+        );
+        return;
+      }
+      const delay = Math.min(30_000, 1_000 * 2 ** Math.min(failures++, 5));
+      setError(`连接中断，${delay / 1000} 秒后自动重连。`);
+      retryTimer = window.setTimeout(connect, delay);
+    };
     const connect = () => {
+      if (lifetime.signal.aborted) return;
       invalidate();
       const controller = new AbortController();
       activeRead.current = controller;
@@ -74,6 +102,7 @@ export function useSettingsRuntime() {
               providers[0]?.provider_id ??
               "",
           );
+          failures = 0;
           setConnection("connected");
           setError(null);
           // Only one health read at a time; all reads belong to this boot.
@@ -90,8 +119,7 @@ export function useSettingsRuntime() {
               })
               .catch((healthError: unknown) => {
                 if (signal.aborted) return;
-                setConnection("offline");
-                setError(message(healthError, "Runtime 连接已中断"));
+                recover(healthError);
               })
               .finally(() => {
                 refreshing = false;
@@ -99,11 +127,17 @@ export function useSettingsRuntime() {
           }, 5_000);
         } catch (loadError: unknown) {
           if (signal.aborted) return;
-          setConnection("offline");
-          setError(message(loadError, "Runtime 不可用"));
+          recover(loadError);
         }
       })();
     };
+    const retry = () => {
+      if (isDesktopHost() && identity === null) return;
+      failures = 0;
+      connect();
+    };
+    reconnectRef.current = retry;
+    window.addEventListener("online", retry);
     if (isDesktopHost()) {
       void observeDesktopRuntime((status) => {
         if (status.state === "ready") {
@@ -141,6 +175,8 @@ export function useSettingsRuntime() {
       connect();
     }
     return () => {
+      window.removeEventListener("online", retry);
+      reconnectRef.current = () => {};
       lifetime.abort();
       invalidate();
     };
@@ -225,6 +261,7 @@ export function useSettingsRuntime() {
     character,
     sessionId,
     connection,
+    reconnect: () => reconnectRef.current(),
     error,
     resetting,
     ttsProviders,

@@ -1,5 +1,7 @@
 # Source server profile. The launcher creates a private editable copy in its state directory.
 environment = "server"
+# Explicit server storage; desktop profiles retain the OS keyring.
+channel_credential_backend = "encrypted_file"
 
 [runtime]
 host = "127.0.0.1"

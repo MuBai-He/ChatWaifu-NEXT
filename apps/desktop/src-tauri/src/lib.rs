@@ -1,6 +1,7 @@
 //! Thin Tauri host for ChatWaifu's desktop-pet and control-center surfaces.
 
 mod client_connection;
+mod google_oauth;
 mod runtime_health;
 mod sidecar;
 
@@ -292,6 +293,7 @@ pub fn run() {
             }
         }))
         .manage(DesktopState::default())
+        .manage(google_oauth::OAuthState::default())
         .setup(|app| {
             restore_preferences(app.handle())?;
             build_tray(app)?;
@@ -321,6 +323,9 @@ pub fn run() {
         })
         .on_window_event(handle_window_event)
         .invoke_handler(tauri::generate_handler![
+            google_oauth::prepare_google_oauth,
+            google_oauth::receive_google_oauth,
+            google_oauth::cancel_google_oauth,
             show_control_center,
             get_desktop_preferences,
             set_avatar_overlay_always_on_top,
@@ -340,6 +345,7 @@ pub fn run() {
         .expect("failed to build ChatWaifu desktop host");
     app.run(|handle, event| {
         if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
+            handle.state::<google_oauth::OAuthState>().cancel_all();
             handle.state::<DesktopState>().runtime.shutdown_and_wait();
         }
     });
@@ -417,6 +423,12 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
 
 fn handle_window_event(window: &Window, event: &WindowEvent) {
     if window.label() == CONTROL_CENTER_LABEL {
+        if matches!(
+            event,
+            WindowEvent::CloseRequested { .. } | WindowEvent::Destroyed
+        ) {
+            window.state::<google_oauth::OAuthState>().cancel_all();
+        }
         match event {
             WindowEvent::Focused(true) => {
                 if let Err(error) = window.set_always_on_top(true) {
@@ -494,7 +506,14 @@ fn restore_preferences(app: &AppHandle) -> tauri::Result<()> {
         window.set_position(Position::Physical(PhysicalPosition::new(x, y)))?;
     }
     if let (Some(width), Some(height)) = (preferences.overlay_width, preferences.overlay_height) {
-        window.set_size(Size::Physical(PhysicalSize::new(width, height)))?;
+        // Resize events are physical pixels; configured minimums are logical.
+        // Old 1x display preferences must not create a half-size Retina viewport.
+        let minimum =
+            tauri::LogicalSize::new(320.0, 480.0).to_physical::<u32>(window.scale_factor()?);
+        window.set_size(Size::Physical(PhysicalSize::new(
+            width.max(minimum.width),
+            height.max(minimum.height),
+        )))?;
     }
     if preferences.overlay_visible {
         window.show()?;

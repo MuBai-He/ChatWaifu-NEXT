@@ -166,6 +166,11 @@ export function DesktopSettingsPage() {
           {context.runtime.error || desktop.error ? (
             <p className="desktop-settings-error" role="alert">
               {desktop.error ?? context.runtime.error}
+              {runtime.connection === "offline" && (
+                <button type="button" onClick={runtime.reconnect}>
+                  立即重连
+                </button>
+              )}
             </p>
           ) : null}
         </div>

@@ -40,6 +40,7 @@ from chatwaifu_runtime.runtime_skills.adapters import (
     BuiltinAdapter,
     McpConnectionAdapter,
     McpStdioAdapter,
+    SessionBuiltinHandler,
 )
 from chatwaifu_runtime.runtime_skills.audit import (
     confirmation_argument_preview,
@@ -108,6 +109,8 @@ class RuntimeSkillService:
         stt_provider: str,
         version: str,
         sandbox_launcher: SandboxLauncher | None = None,
+        mcp_private_origins: tuple[str, ...] = (),
+        session_builtin_handlers: dict[str, SessionBuiltinHandler] | None = None,
     ) -> None:
         self._root = root
         self._repository = repository
@@ -125,10 +128,12 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
         self._builtin.register("runtime_status", self._runtime_status)
+        for name, handler in (session_builtin_handlers or {}).items():
+            self._builtin.register_session(name, handler)
         launcher = sandbox_launcher or RuntimeSandboxLauncher()
         self._sandbox_launcher = launcher
         self._mcp = McpStdioAdapter(launcher)
-        mcp_transport = McpClientTransport(launcher)
+        mcp_transport = McpClientTransport(launcher, private_origins=mcp_private_origins)
         self._mcp_connections = McpConnectionManager(repository, data_dir, mcp_transport)
         self._mcp_connection_adapter = McpConnectionAdapter(mcp_transport)
         self._tasks: dict[UUID, asyncio.Task[None]] = {}
@@ -978,7 +983,7 @@ class RuntimeSkillService:
             )
             if plan.adapter_kind == "builtin":
                 data = await asyncio.wait_for(
-                    self._builtin.invoke(plan.adapter_target, arguments),
+                    self._builtin.invoke(plan.adapter_target, arguments, str(session_id)),
                     timeout=capability.timeout_seconds,
                 )
             elif plan.adapter_kind == "mcp":
