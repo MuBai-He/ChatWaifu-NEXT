@@ -62,10 +62,12 @@ export async function getMessages(
 
 export async function getSessionRecovery(
   sessionId: string,
+  signal?: AbortSignal,
 ): Promise<z.infer<typeof sessionRecoverySchema>> {
   return requestRuntime(
     `/v1/sessions/${sessionId}/recovery`,
     sessionRecoverySchema,
+    { signal },
   );
 }
 

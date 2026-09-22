@@ -50,9 +50,12 @@ export function ChannelsSettingsSection({
   }, [authorization]);
 
   useEffect(() => {
+    if (!runtimeOnline) return;
     const controller = new AbortController();
     void getChannelConnections(controller.signal)
       .then((items) => {
+        if (controller.signal.aborted) return;
+        setNotice(null);
         setConnection(
           items.find(
             (item) =>
@@ -69,7 +72,7 @@ export function ChannelsSettingsSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [runtimeOnline]);
 
   const authSessionId = authorization?.auth_session_id ?? null;
   useEffect(() => {
