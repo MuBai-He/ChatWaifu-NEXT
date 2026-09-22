@@ -1,6 +1,6 @@
 # Personal assistant development status
 
-Google Stage A is not yet ready for end-user authorization. No real account has been connected.
+Google Stage A is ready for the first user-operated Mac authorization attempt on the configured HTTPS deployment. No real account has been connected or accepted.
 
 The Runtime owns the Google adapter, account service, OAuth coordinator and startup secret
 cleanup. The feature defaults off. The following server configuration enables the subsystem;
@@ -11,11 +11,11 @@ without a client ID it reports `unconfigured` and makes no Google requests:
 enabled = true
 ```
 
-The future Desktop OAuth client is configured server-side with `google_client_id` and optional
+The Desktop OAuth client is configured server-side with `google_client_id` and optional
 `google_client_secret` (a protected configuration value). Corresponding environment overrides
 are `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_ID` and
 `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_SECRET`. Never put secrets in Vite variables.
-Do not configure credentials just to test the currently incomplete UI.
+The desktop provides authorization, calendar selection and read-only query controls.
 
 Authenticated `GET /v1/personal-assistant/status` reports the state and whether this
 connection admits authorization. `ready` means configured, not connected or accepted.
@@ -27,7 +27,7 @@ OAuth begin/complete/cancel endpoints now exist, but require a configured exact
 `X-Forwarded-*` headers are rejected even if the ASGI server interpreted them. TLS-terminating
 reverse proxies and bare LAN HTTP are not admitted by this initial implementation. Do not
 change the existing deployment or bypass certificate validation merely to enable OAuth.
-A verified HTTPS deployment and user-owned Google client setup remain integration work.
+The deployment recorded below now has verified HTTPS and a user-provided Desktop OAuth client.
 
 The desktop control center now has a personal assistant section with missing-configuration
 and transport explanations, an account connection action, and cancellation. The Mac host
@@ -46,8 +46,7 @@ The dedicated `config_dir/personal-assistant-secrets.json` is never shared with 
 secrets. Startup reconciliation is asynchronous; shutdown waits for its cancellation and closes
 the HTTP adapter. A cleanup exception is reported as `cleanup_failed` without echoing secrets.
 
-Next: control-center calendar selection/query UI, bounded recurring-instance queries, and Runtime Skill
-registration. OAuth consent, native interaction and real Google data remain unverified.
+Calendar selection/query UI, bounded recurring-instance queries and Runtime Skill registration are implemented. OAuth consent, native interaction and real Google data remain unverified.
 
 Validation: Rust compilation and two native URL/socket checks passed; desktop build and TypeScript
 checks passed; three status/transport/validation HTTP checks passed. These do not establish actual
@@ -77,7 +76,7 @@ results; failed queries do not render cached events as current.
 
 The LAN server includes `/calendars`, `/calendars/selection` and `/events` routes.
 Without OAuth configuration they return `personal_assistant_not_configured`;
-Google consent, actual event rendering and dialog Skill integration remain pending.
+Google consent, actual event rendering and real dialog Skill execution remain pending.
 
 ## Operator prerequisites for first Google connection
 
@@ -100,3 +99,21 @@ promise of unattended permanent authorization. Broader publishing/verification i
 separate from creating a desktop OAuth client.
 
 calendar.read 查询工具已注册，10 项工具边界/路由检查通过，Ruff/Pyright 和前端构建通过。agy High 完成只读审查。服务器补丁曾因旧版参数上下文错位导致短暂启动失败，已修正参数位置并重新编译；恢复后健康接口 200，技能列表显示 calendar.read enabled。尚无 Google 实账号调用验收。
+
+## 2026-09-22 HTTPS deployment
+
+The server now uses `https://mubai.website:18443`, with a user-provided Desktop
+OAuth client stored in a private server environment file. Runtime terminates TLS;
+a systemd socket forwards TCP without decrypting it. See source-server.md for
+launcher settings. Authenticated health and assistant status return 200, with
+`state=ready` and `authorization_available=true`. Unauthenticated assistant status
+returns 401. Certificate verification passed through the domain and direct LAN
+routing. The existing LAN HTTP entry still returns healthy status, but correctly
+reports `authorization_available=false`.
+
+In the Mac desktop connection settings use the HTTPS origin and the existing
+access token. Open Personal Assistant, connect an account in the system browser,
+then discover/select calendars and query the next seven days. The user must
+complete Google login/consent; these deployment checks do not verify real calendar
+access, permission prompts, or voice queries. Google Cloud API enablement and test
+user configuration still need confirmation during that first login.

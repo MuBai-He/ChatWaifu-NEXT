@@ -138,3 +138,29 @@ channel_credential_backend = "encrypted_file"
 重试，需检查连接配置。卸载或切换连接会取消请求和重试计时器。
 已建立的桌宠事件/音频连接继续使用原有 socket 恢复机制。
 渠道页在恢复连接后重新读取列表；不会自动重放发送消息或扫码绑定等写操作。
+
+### Runtime 直接终止 TLS
+
+源码启动器支持成对设置环境变量 `CHATWAIFU_SERVER_TLS_CERT`（PEM 完整证书链）
+和 `CHATWAIFU_SERVER_TLS_KEY`（PEM 私钥）。只设置一个会拒绝启动；均不设置
+仍使用 HTTP。启动器禁用 uvicorn 的代理头解释，避免把转发头当作真实 TLS。
+证书和密钥路径可通过 systemd drop-in 的 `Environment=` 配置，目录 0700、
+文件 0600；不得提交密钥或含密钥的压缩包。
+
+当前服务器 Runtime 在 `127.0.0.1:8765` 终止 TLS，用户级 systemd socket
+监听 `0.0.0.0:18443`，通过 `systemd-socket-proxyd 127.0.0.1:8765`
+透传加密 TCP。公网入口为 `https://mubai.website:18443`，不需要 443。
+`security.allowed_hosts` 包含域名，个人助理的 `google_oauth_https_origin`
+与该入口完全一致。OAuth 环境文件仅由 Runtime 用户读取。
+
+旧 LAN nginx 的 `/v1/` 上游改为 `https://127.0.0.1:8765`，开启
+`proxy_ssl_server_name on`、`proxy_ssl_name mubai.website`、
+`proxy_ssl_verify on`、`proxy_ssl_verify_depth 3`，并使用系统 CA 文件
+`/etc/ssl/certs/ca-certificates.crt`。不要关闭证书校验来解决上游 502。
+旧 HTTP 入口用于普通连接，Google 授权应使用新的 HTTPS 入口。
+
+2026-09-22 已验证域名 TLS 信任链、鉴权状态接口、旧 LAN 健康接口。
+现有证书有效期截至 2026-11-29；目前是手工安装，不代表已配置自动续期。
+续期时替换状态目录 `tls/fullchain.pem` 与 `tls/privkey.key`，保留权限，
+重启 `chatwaifu-runtime.service`，再验证 HTTPS 和 LAN 代理。首次配置前的
+备份位于服务器 `chatwaifu-server/backups/https-20260922/`。

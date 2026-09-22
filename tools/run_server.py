@@ -148,11 +148,18 @@ def run(state_dir: Path) -> None:
     configure_logging(settings.log_level)
     print(f"Server state: {state_dir}", file=sys.stderr)
     print(f"Access credential: {state_dir / 'server.env'} (not printed)", file=sys.stderr)
+    tls_cert = os.environ.get("CHATWAIFU_SERVER_TLS_CERT")
+    tls_key = os.environ.get("CHATWAIFU_SERVER_TLS_KEY")
+    if bool(tls_cert) != bool(tls_key):
+        raise SystemExit("Both server TLS certificate and key paths are required.")
     uvicorn.run(
         create_app(settings),
         host=settings.runtime.host,
         port=settings.runtime.port,
         log_config=None,
+        proxy_headers=False,
+        ssl_certfile=tls_cert,
+        ssl_keyfile=tls_key,
     )
 
 
