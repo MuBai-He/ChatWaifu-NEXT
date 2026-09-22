@@ -17,11 +17,24 @@ are `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_ID` and
 `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_SECRET`. Never put secrets in Vite variables.
 Do not configure credentials just to test the currently incomplete UI.
 
-Authenticated `GET /v1/personal-assistant/status` returns versioned status and
-`authorization_available: false`. `ready` means configured, not connected or accepted.
+Authenticated `GET /v1/personal-assistant/status` reports the state and whether this
+connection admits authorization. `ready` means configured, not connected or accepted.
 `GET /v1/personal-assistant/accounts?session_id=<uuid>` returns only account ID/status after
-validating the persisted owner session. There are deliberately no OAuth HTTP completion routes
-yet. Bare LAN HTTP must not become an authorization-code handoff through spoofable proxy headers.
+validating the persisted owner session.
+
+OAuth begin/complete/cancel endpoints now exist, but require a configured exact
+`google_oauth_https_origin` and **direct HTTPS to the Runtime**. All `Forwarded` and
+`X-Forwarded-*` headers are rejected even if the ASGI server interpreted them. TLS-terminating
+reverse proxies and bare LAN HTTP are not admitted by this initial implementation. Do not
+change the existing deployment or bypass certificate validation merely to enable OAuth.
+A verified HTTPS deployment and user-owned Google client setup remain integration work.
+
+The desktop control center now has a personal assistant section with missing-configuration
+and transport explanations, an account connection action, and cancellation. The Mac host
+opens only Google's system-browser authorization URL, binds an ephemeral IPv4 loopback
+listener, validates callback state, caps request size and wait time, and closes the listener
+on cancellation, window close, or app exit. Windows/Linux system-browser launch is currently
+unsupported and returns a clear error. No local Python server is added to the thin client.
 
 Internal OAuth coordination uses server-generated state and PKCE S256, a five-minute lifetime,
 a bound session and an exact `http://127.0.0.1:<port>/oauth/google` native callback. Pending and
@@ -33,6 +46,9 @@ The dedicated `config_dir/personal-assistant-secrets.json` is never shared with 
 secrets. Startup reconciliation is asynchronous; shutdown waits for its cancellation and closes
 the HTTP adapter. A cleanup exception is reported as `cleanup_failed` without echoing secrets.
 
-Next: native temporary callback listener, trusted transport admission for authorization HTTP,
-control-center calendar selection/query UI, bounded recurring-instance queries, and Runtime Skill
+Next: control-center calendar selection/query UI, bounded recurring-instance queries, and Runtime Skill
 registration. OAuth consent, native interaction and real Google data remain unverified.
+
+Validation: Rust compilation and two native URL/socket checks passed; desktop build and TypeScript
+checks passed; three status/transport/validation HTTP checks passed. These do not establish actual
+Mac browser consent, native visual acceptance, direct TLS deployment, or real Google acceptance.

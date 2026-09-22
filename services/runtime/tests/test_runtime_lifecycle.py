@@ -17,7 +17,7 @@ from chatwaifu_runtime.main import create_app
 from fastapi.testclient import TestClient
 
 
-def test_assistant_status_is_disabled_and_has_no_authorization_entry(client: TestClient) -> None:
+def test_assistant_status_is_disabled_and_denies_insecure_authorization(client: TestClient) -> None:
     response = client.get("/v1/personal-assistant/status")
     assert response.status_code == 200
     assert response.json() == {
@@ -25,7 +25,20 @@ def test_assistant_status_is_disabled_and_has_no_authorization_entry(client: Tes
         "state": "disabled",
         "authorization_available": False,
     }
-    assert client.post("/v1/personal-assistant/oauth/complete", json={}).status_code == 404
+    rejected = client.post("/v1/personal-assistant/oauth/complete", json={"code": "secret"})
+    assert rejected.status_code == 422
+    assert "secret" not in rejected.text
+    assert (
+        client.post(
+            "/v1/personal-assistant/oauth/begin",
+            json={
+                "session_id": str(uuid4()),
+                "redirect_uri": "http://127.0.0.1:55555/oauth/google",
+            },
+            headers={"x-forwarded-proto": "https"},
+        ).status_code
+        == 403
+    )
     assert (
         client.get(
             "/v1/personal-assistant/status", headers={"Authorization": "Bearer wrong"}
@@ -52,6 +65,42 @@ def test_assistant_enabled_without_credentials_reports_unconfigured(
         response = client.get("/v1/personal-assistant/status")
         assert response.json()["state"] == "unconfigured"
         assert response.json()["authorization_available"] is False
+
+
+def test_oauth_admission_requires_exact_direct_https(runtime_settings: Settings) -> None:
+    settings = runtime_settings.model_copy(
+        update={
+            "personal_assistant": PersonalAssistantConfig(
+                enabled=True,
+                google_client_id="fixture",
+                google_oauth_https_origin="https://TESTSERVER:443",
+            )
+        }
+    )
+    app = create_app(settings)
+    with TestClient(
+        app,
+        base_url="https://testserver",
+        headers={
+            "Authorization": f"Bearer {app.state.container.capability_token}",
+        },
+    ) as client:
+        assert client.get("/v1/personal-assistant/status").json()["authorization_available"] is True
+        assert (
+            client.get(
+                "/v1/personal-assistant/status",
+                headers={
+                    "X-Forwarded-Proto": "https",
+                },
+            ).json()["authorization_available"]
+            is False
+        )
+        assert (
+            client.get("http://testserver/v1/personal-assistant/status").json()[
+                "authorization_available"
+            ]
+            is False
+        )
 
 
 @pytest.mark.asyncio

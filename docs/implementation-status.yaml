@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-09-21"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_runtime_status_and_internal_oauth_native_ui_pending
+  status: stage_a_native_oauth_connection_ui_calendar_queries_pending
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
@@ -10,8 +10,9 @@ personal_assistant:
     - Account service derives owner from stored sessions and implements credential refresh and revocation recovery; repository/account checks now total 11, including async secret-write cancellation; Google adapter 13 checks passed
     - Runtime configuration and lifecycle wired; internal OAuth adds state/session/PKCE/expiry/cancel; repository/account/OAuth checks total 13 and status HTTP checks 2 passed with normal exit
     - Full lifecycle suite reports passing assertions but hangs at process exit, reproduced on unchanged baseline; not recorded as a fully passing command
+    - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed; no live Google or native visual acceptance
   remaining:
-    - native_pkce_callback_and_protected_authorization_handoff
+    - real_native_google_consent_and_direct_https_deployment_acceptance
     - calendar_selection_query_ui_and_runtime_skill_registration
     - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes
     - real_google_apple_and_home_assistant_acceptance

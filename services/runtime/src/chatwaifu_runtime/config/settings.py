@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 from typing import Literal, Self, cast
+from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
@@ -225,6 +226,25 @@ class PersonalAssistantConfig(BaseModel):
     enabled: bool = False
     google_client_id: str = ""
     google_client_secret: SecretStr | None = None
+    google_oauth_https_origin: str | None = None
+
+    @model_validator(mode="after")
+    def validate_oauth_origin(self) -> Self:
+        value = self.google_oauth_https_origin
+        if value is not None:
+            parsed = urlsplit(value)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.port == 0
+            ):
+                raise ValueError("Google OAuth origin must be an exact HTTPS origin without path")
+        return self
 
 
 class Settings(BaseSettings):
