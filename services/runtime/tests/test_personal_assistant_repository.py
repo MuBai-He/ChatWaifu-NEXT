@@ -370,3 +370,54 @@ async def test_oauth_cancel_stops_inflight_exchange(
     finally:
         await oauth.close()
         await adapter.close()
+
+
+async def test_calendar_selection_is_explicit_and_owner_only(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    _, repo = store
+    await repo.add_calendar("local", "account", Calendar("new", "New", "UTC", "reader"))
+    items = await repo.calendars("local", "account")
+    assert {item.calendar.id: item.selected for item in items} == {"calendar": True, "new": False}
+    with pytest.raises(AssistantAccessError):
+        await repo.calendars("shared", "account")
+    await repo.revoke("local", "account")
+    with pytest.raises(AssistantAccessError):
+        await repo.calendars("local", "account")
+
+
+async def test_query_discards_results_after_deselection(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock
+
+    _, repo = store
+    monkeypatch.setattr(repo, "session_owner", AsyncMock(return_value="local"))
+    adapter = GoogleCalendarAdapter()
+    service = GoogleAccountService(
+        repo,
+        AsyncSecretStore(AtomicSecretStore(tmp_path / "secrets")),
+        adapter,
+        GoogleClient("fixture", None),
+    )
+    monkeypatch.setattr(service, "_access", AsyncMock(return_value="access"))
+
+    async def late(*args: object) -> tuple[CalendarEvent, ...]:
+        await repo.select("local", "account", "calendar", False)
+        return ()
+
+    monkeypatch.setattr(adapter, "events_between", late)
+    try:
+        with pytest.raises(AssistantAccessError, match="calendar_not_selected"):
+            await service.query(
+                "session",
+                "account",
+                "calendar",
+                datetime(2026, 9, 22, tzinfo=UTC),
+                datetime(2026, 9, 29, tzinfo=UTC),
+            )
+    finally:
+        await adapter.close()

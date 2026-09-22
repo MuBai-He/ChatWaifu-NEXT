@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Protocol
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from chatwaifu_runtime.personal_assistant.google_calendar import (
     READ_SCOPE,
     Calendar,
+    CalendarEvent,
     GoogleCalendarAdapter,
     GoogleCalendarError,
     OAuthTokens,
@@ -25,6 +27,7 @@ from chatwaifu_runtime.personal_assistant.repository import (
     AccountRecord,
     AssistantAccessError,
     AssistantRepository,
+    CalendarSelection,
 )
 
 
@@ -100,6 +103,30 @@ class GoogleAccountService:
             for calendar in calendars:
                 await self._repository.add_calendar(owner, account_id, calendar)
             return calendars
+
+    async def calendars(self, session_id: str, account_id: str) -> tuple[CalendarSelection, ...]:
+        owner = await self._repository.session_owner(session_id)
+        return await self._repository.calendars(owner, account_id)
+
+    async def query(
+        self,
+        session_id: str,
+        account_id: str,
+        calendar_id: str,
+        start: datetime,
+        end: datetime,
+    ) -> tuple[CalendarEvent, ...]:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            ticket = await self._repository.begin_sync(owner, account_id, calendar_id)
+            access = await self._access(account_id)
+            events = await self._adapter.events_between(access, calendar_id, start, end)
+            # Deselection/revocation can race the network read; discard late data.
+            current = await self._repository.begin_sync(owner, account_id, calendar_id)
+            if current != ticket:
+                raise AssistantAccessError("calendar_changed_during_query")
+            await self._repository.session_owner(session_id)
+            return events
 
     async def select(
         self, session_id: str, account_id: str, calendar_id: str, selected: bool

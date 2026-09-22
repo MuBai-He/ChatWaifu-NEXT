@@ -225,3 +225,28 @@ async def test_failed_full_resync_returns_no_partial_result_and_stops_retrying()
         assert count == 2
     finally:
         await adapter.close()
+
+
+async def test_window_query_expands_recurring_events_without_sync_cursor() -> None:
+    from datetime import UTC, datetime
+
+    requests: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"items": [{"id": "deleted", "status": "cancelled"}]})
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    try:
+        start, end = datetime(2026, 9, 22, tzinfo=UTC), datetime(2026, 9, 29, tzinfo=UTC)
+        assert await adapter.events_between("access", "calendar", start, end) == ()
+        assert requests[0].url.params["singleEvents"] == "true"
+        assert requests[0].url.params["timeMin"] == start.isoformat()
+        assert "syncToken" not in requests[0].url.params
+        with pytest.raises(GoogleCalendarError, match="invalid_query_window"):
+            await adapter.events_between(
+                "access", "calendar", start, datetime(2027, 1, 1, tzinfo=UTC)
+            )
+        assert len(requests) == 1
+    finally:
+        await adapter.close()

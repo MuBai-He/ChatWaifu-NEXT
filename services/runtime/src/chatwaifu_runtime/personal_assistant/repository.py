@@ -26,7 +26,15 @@ class AccountRecord:
     secret_ref: str = field(repr=False)
 
 
+@dataclass(frozen=True, slots=True)
+class CalendarSelection:
+    calendar: Calendar
+    selected: bool
+
+
 class AssistantRepository(Protocol):
+    async def calendars(self, owner: str, account_id: str) -> tuple[CalendarSelection, ...]: ...
+
     async def session_owner(self, session_id: str) -> str: ...
 
     async def accounts(self) -> tuple[AccountRecord, ...]: ...

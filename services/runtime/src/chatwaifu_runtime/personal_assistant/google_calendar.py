@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Literal, cast
 from urllib.parse import quote
 
@@ -234,6 +234,41 @@ class GoogleCalendarAdapter:
             raise GoogleCalendarError("invalid_response") from None
         return tuple(Calendar(c.id, c.summary, c.timeZone, c.accessRole) for c in entries)
 
+    async def events_between(
+        self, access_token: str, calendar_id: str, start: datetime, end: datetime
+    ) -> tuple[CalendarEvent, ...]:
+        if (
+            not calendar_id
+            or len(calendar_id) > 2048
+            or start.utcoffset() is None
+            or end.utcoffset() is None
+            or not timedelta(0) < end - start <= timedelta(days=31)
+        ):
+            raise GoogleCalendarError("invalid_query_window")
+        # Google expands recurrence with its own timezone/DST and exception rules.
+        # This independent bounded query never changes the incremental sync cursor.
+        items, _ = await self._pages(
+            f"{API}/calendars/{quote(calendar_id, safe='')}/events",
+            access_token,
+            {
+                "singleEvents": "true",
+                "showDeleted": "false",
+                "orderBy": "startTime",
+                "timeMin": start.isoformat(),
+                "timeMax": end.isoformat(),
+                "maxResults": "250",
+            },
+            max_items=1000,
+        )
+        try:
+            return tuple(
+                event
+                for item in items
+                if (event := _Event.model_validate(item).domain()).status != "cancelled"
+            )
+        except ValidationError:
+            raise GoogleCalendarError("invalid_response") from None
+
     async def sync_events(
         self,
         access_token: str,
@@ -272,6 +307,8 @@ class GoogleCalendarAdapter:
         url: str,
         token: str,
         params: dict[str, str],
+        *,
+        max_items: int = MAX_ITEMS,
     ) -> tuple[list[dict[str, object]], str | None]:
         items: list[dict[str, object]] = []
         seen: set[str] = set()
@@ -289,7 +326,7 @@ class GoogleCalendarAdapter:
                     except ValidationError:
                         raise GoogleCalendarError("invalid_response") from None
                     items.extend(page.items)
-                    if len(items) > MAX_ITEMS:
+                    if len(items) > max_items:
                         raise GoogleCalendarError("sync_limit_exceeded")
                     if page.nextPageToken is None:
                         return items, page.nextSyncToken

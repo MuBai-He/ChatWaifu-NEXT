@@ -11,6 +11,7 @@ from chatwaifu_runtime.personal_assistant.google_calendar import Calendar, Event
 from chatwaifu_runtime.personal_assistant.repository import (
     AccountRecord,
     AssistantAccessError,
+    CalendarSelection,
     SyncTicket,
 )
 
@@ -76,6 +77,18 @@ class SQLiteAssistantRepository:
                 "revision=assistant_calendars.revision+1",
                 (account_id, calendar.id, calendar.title, calendar.timezone, calendar.access_role),
             )
+
+    async def calendars(self, owner: str, account_id: str) -> tuple[CalendarSelection, ...]:
+        self._owner(owner)
+        async with self._database.transaction() as connection:
+            await self._account(connection, account_id)
+            async with connection.execute(
+                "SELECT calendar_id,title,timezone,access_role,selected FROM assistant_calendars "
+                "WHERE account_id=? ORDER BY title,calendar_id",
+                (account_id,),
+            ) as cursor:
+                rows = await cursor.fetchall()
+        return tuple(CalendarSelection(Calendar(r[0], r[1], r[2], r[3]), bool(r[4])) for r in rows)
 
     async def select(self, owner: str, account_id: str, calendar_id: str, selected: bool) -> None:
         self._owner(owner)

@@ -7,6 +7,7 @@ import {
   type RuntimeConnection,
 } from "../chat/runtimeEndpoint";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import { PersonalCalendarPanel } from "./PersonalCalendarPanel";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 
 type Status = { state: string; authorization_available: boolean };
@@ -189,7 +190,7 @@ export function PersonalAssistantSettingsSection({
         throw new Error("授权未完成，请重试；不会自动重放授权码。");
       succeeded = true;
       if (!flow.cancelled)
-        setMessage("Google 账号已连接。日历选择与查询界面正在接入。");
+        setMessage("Google 账号已连接。请刷新账号并选择允许查询的日历。");
     } catch (error) {
       if (!flow?.cancelled && current === revision.current.value)
         setMessage(
@@ -265,6 +266,9 @@ export function PersonalAssistantSettingsSection({
           )}
         </div>
         {message && <p role="status">{message}</p>}
+        {status?.state === "ready" && !statusError && sessionId && (
+          <PersonalCalendarPanel key={sessionId} sessionId={sessionId} />
+        )}
       </SettingsGroup>
       <SettingsGroup
         title="提醒事项与定时任务"
