@@ -117,3 +117,20 @@ then discover/select calendars and query the next seven days. The user must
 complete Google login/consent; these deployment checks do not verify real calendar
 access, permission prompts, or voice queries. Google Cloud API enablement and test
 user configuration still need confirmation during that first login.
+
+### Authorization returned but no account connected
+
+The native loopback page only acknowledges receipt of Google's browser callback;
+the server must still reach `oauth2.googleapis.com` to exchange the code and
+Google Calendar APIs to read calendars. On 2026-09-22 direct server probes to
+both Google endpoints timed out, while the inbound HTTPS Runtime remained usable.
+This is an outbound connectivity issue; a successful browser redirect is not an
+account acceptance result. The adapter sets `trust_env=False`, so setting shell
+`HTTPS_PROXY` alone does not route it. A working server VPN/TUN route or a future
+explicit adapter proxy configuration is required. Do not replay an old OAuth code.
+
+The desktop now announces the server exchange phase, explains `transport_error`
+and request timeouts, and refreshes accounts after successful completion. Personal
+assistant controls and notices use scoped settings styles. Desktop build/typecheck
+and targeted ESLint passed; visual acceptance and real authorization after network
+repair remain pending.
