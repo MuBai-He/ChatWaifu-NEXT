@@ -15,7 +15,7 @@
   background:
     radial-gradient(ellipse at 100% 0%, #76507825, transparent 58%),
     radial-gradient(ellipse at 0% 100%, #51466d20, transparent 55%),
-    linear-gradient(155deg, #231b29f5, #151119fa);
+    linear-gradient(155deg, #231b29, #151119);
   box-shadow: inset 0 0 70px #09070d50;
   pointer-events: auto;
 }
@@ -338,16 +338,39 @@
 }
 @media (max-width: 360px), (max-height: 590px) {
   .runtime-connection-screen {
-    padding: 20px;
+    padding: 16px 20px;
   }
   .runtime-connection-card {
-    gap: 17px;
+    gap: 8px;
   }
   .connection-heading h1 {
     font-size: 25px;
   }
+  .connection-brand-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .connection-heading h1 {
+    margin-bottom: 4px;
+  }
   .connection-mode-content {
-    padding: 12px;
+    gap: 3px;
+    padding: 10px;
+  }
+  .connection-mode-content > svg {
+    margin-bottom: 2px;
+  }
+  .connection-fields {
+    gap: 10px;
+  }
+  .connection-field {
+    gap: 6px;
+  }
+  .connection-footnote {
+    margin-top: 0;
+  }
+  .connection-local-note {
+    min-height: 120px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
