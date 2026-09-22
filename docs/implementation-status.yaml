@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-09-21"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_calendar_settings_queries_implemented_skill_and_live_acceptance_pending
+  status: stage_a_calendar_settings_and_skill_implemented_live_acceptance_pending
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
@@ -13,7 +13,7 @@ personal_assistant:
     - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed; no live Google or native visual acceptance
   remaining:
     - real_native_google_consent_and_direct_https_deployment_acceptance
-    - calendar_runtime_skill_registration_and_live_ui_acceptance
+    - calendar_runtime_skill_live_conversation_and_ui_acceptance
     - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes
     - real_google_apple_and_home_assistant_acceptance
 next_phase: "17.4C"
