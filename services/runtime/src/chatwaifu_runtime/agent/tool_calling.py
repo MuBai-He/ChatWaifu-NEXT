@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Literal, Protocol, cast
 from uuid import UUID
 
-from chatwaifu_protocol.base import JsonObject, JsonValue
+from chatwaifu_protocol.base import JsonObject, JsonValue, SideEffect
 from chatwaifu_protocol.skills import SkillInvocation, SkillRunSnapshot, SkillRunState
 
 from chatwaifu_runtime.providers.contracts import (
@@ -45,6 +46,10 @@ tool provenance when the user asks where externally retrieved facts came from.
 </runtime_tool_policy>
 """
 
+_READ_FOLLOWUP = re.compile(
+    r"(?:没有|没|不是|还有).{0,64}(?:吗|么|？|\?)|(?:重新|再)(?:查|看)|(?:确定|真的)(?:吗|么|？|\?)"
+)
+
 
 class ProjectedAgentTool(Protocol):
     """Structural boundary implemented by the Runtime Skill router."""
@@ -57,6 +62,9 @@ class ProjectedAgentTool(Protocol):
 
     @property
     def input_schema(self) -> JsonObject: ...
+
+    @property
+    def side_effect(self) -> SideEffect: ...
 
     def to_invocation(self, arguments: JsonObject) -> SkillInvocation: ...
 
@@ -122,11 +130,17 @@ class AgentTurnOrchestrator:
         ensure_current: Callable[[], None],
         allow_tools: bool = True,
     ) -> AsyncIterator[str]:
-        projections = (
-            self._router.select(request.user_text)
-            if allow_tools and self._llm.supports_tool_calling
-            else ()
-        )
+        projections = ()
+        if allow_tools and self._llm.supports_tool_calling:
+            projections = self._router.select(request.user_text)
+            previous = request.routing_previous_user_text
+            if not projections and previous and _READ_FOLLOWUP.search(request.user_text):
+                # Restore only the previous local user's subject for a short
+                # correction. Never reuse an earlier write capability here.
+                contextual = self._router.select(f"{previous[:240]}\n{request.user_text[:240]}")
+                projections = tuple(
+                    tool for tool in contextual if tool.side_effect is SideEffect.READ
+                )
         if not projections:
             async for text in self._stream_text_only(request, ensure_current):
                 yield text

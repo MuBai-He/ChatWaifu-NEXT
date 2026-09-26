@@ -6,14 +6,14 @@ import asyncio
 import sys
 from collections.abc import AsyncIterator
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
 import pytest
-from chatwaifu_protocol.base import JsonObject, JsonValue
+from chatwaifu_protocol.base import JsonObject, JsonValue, SideEffect
 from chatwaifu_protocol.skills import (
     McpConnectionConfiguration,
     SkillInvocation,
@@ -24,6 +24,11 @@ from chatwaifu_protocol.skills import (
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator, ProjectedAgentTool
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.conversation.models import (
+    ConversationHistoryEntry,
+    ConversationSourceContext,
+)
+from chatwaifu_runtime.conversation.service import _previous_local_user_text
 from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,
@@ -45,6 +50,7 @@ class _Projection:
     name: str = "runtime_status_read"
     description: str = "Read Runtime status"
     input_schema: JsonObject = field(default_factory=lambda: {"type": "object"})
+    side_effect: SideEffect = SideEffect.READ
 
     def to_invocation(self, arguments: JsonObject) -> SkillInvocation:
         return SkillInvocation(skill_id="runtime.status", capability="read", arguments=arguments)
@@ -60,6 +66,14 @@ class _Router:
     ) -> tuple[ProjectedAgentTool, ...]:
         self.queries.append(query)
         return self.projections[:limit]
+
+
+class _TopicRouter(_Router):
+    def select(
+        self, query: str, *, limit: int = 8, schema_budget_bytes: int = 24_576
+    ) -> tuple[ProjectedAgentTool, ...]:
+        self.queries.append(query)
+        return self.projections[:limit] if "日程" in query else ()
 
 
 class _ScriptedLlm:
@@ -189,6 +203,59 @@ async def test_no_relevant_tools_preserves_incremental_text_streaming() -> None:
     assert chunks == ["你", "好"]
     assert not gateway.invocations
     assert llm.requests[0].tools == ()
+
+
+@pytest.mark.asyncio
+async def test_immediate_calendar_correction_routes_previous_subject_as_read_only() -> None:
+    call = LlmToolCall(call_id="calendar", name="runtime_status_read", arguments={})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("找到了测试日程。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    router = _TopicRouter((_Projection(),))
+    request = replace(
+        _request("没有一个叫测试的吗"),
+        routing_previous_user_text="看下我的日程有什么",
+    )
+
+    assert await _collect(AgentTurnOrchestrator(llm, gateway, router), request, uuid4()) == [
+        "找到了测试日程。"
+    ]
+    assert router.queries == [
+        "没有一个叫测试的吗",
+        "看下我的日程有什么\n没有一个叫测试的吗",
+    ]
+    assert len(gateway.invocations) == 1
+
+    plain = _ScriptedLlm([(LlmTextDelta("普通回复"), LlmResponseCompleted("stop"))])
+    write_router = _TopicRouter((_Projection(side_effect=SideEffect.WRITE),))
+    assert await _collect(
+        AgentTurnOrchestrator(plain, gateway, write_router), request, uuid4()
+    ) == ["普通回复"]
+    assert len(gateway.invocations) == 1
+
+
+def test_routing_context_uses_only_previous_local_exchange() -> None:
+    local = (
+        ConversationHistoryEntry("user", "看下我的日程有什么"),
+        ConversationHistoryEntry("assistant", "今天没有日程。"),
+    )
+    assert _previous_local_user_text(local, None) == "看下我的日程有什么"
+    external = ConversationSourceContext(
+        provider_id="wechat",
+        connection_id=uuid4(),
+        account_key=None,
+        principal_scope="local",
+        chat_type="direct",
+        conversation_key="chat",
+        sender_key="owner",
+    )
+    assert _previous_local_user_text(local, external) is None
+    interrupted = (*local, ConversationHistoryEntry("user", "other", source_context=external))
+    assert _previous_local_user_text(interrupted, None) is None
 
 
 @pytest.mark.asyncio

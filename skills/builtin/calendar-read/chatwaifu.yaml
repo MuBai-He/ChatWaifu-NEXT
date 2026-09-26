@@ -3,27 +3,27 @@
   "instructions": "SKILL.md",
   "definition": {
     "skill_id": "calendar.read",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "name": "个人日历查询",
     "description": "查询主人已有 Google 日历的日程、会议和安排。Read selected Google calendar events for a specified time window.",
     "capabilities": [
       {
         "name": "query",
-        "description": "查询今天、明天或本周的日程安排；必须给出带时区的起止时间，最多31天。",
+        "description": "查询已选日历。无明确日期时不填参数，服务器按日历时区查询从今天零点起的未来七天；今天、明天、本周等用 period；用户明确给出绝对日期时用 start_date/end_date。不要自行换算 UTC 日期。",
         "input_schema": {
           "type": "object",
-          "required": [
-            "start",
-            "end"
-          ],
           "properties": {
-            "start": {
+            "period": {
               "type": "string",
-              "format": "date-time"
+              "enum": ["today", "tomorrow", "yesterday", "this_week", "next_week", "next_7_days"]
             },
-            "end": {
+            "start_date": {
               "type": "string",
-              "format": "date-time"
+              "format": "date"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date"
             }
           },
           "additionalProperties": false
@@ -32,12 +32,18 @@
           "type": "object",
           "required": [
             "source",
+            "windows",
             "events"
           ],
           "properties": {
             "source": {
               "type": "string",
               "const": "google_live"
+            },
+            "windows": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {"type": "object"}
             },
             "events": {
               "type": "array",

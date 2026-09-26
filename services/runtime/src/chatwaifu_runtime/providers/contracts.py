@@ -104,6 +104,9 @@ class LlmRequest:
     character_name: str = "ChatWaifu"
     context: tuple[tuple[str, str], ...] = ()
     history: tuple[tuple[str, str], ...] = ()
+    # Trusted same-session user turn for routing an immediate read-only follow-up.
+    # This is never taken from cross-surface history or model output.
+    routing_previous_user_text: str | None = None
     recalled_memory_texts: tuple[str, ...] = ()
     trigger: Literal["user", "proactive"] = "user"
     tools: tuple[LlmToolDefinition, ...] = ()

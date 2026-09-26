@@ -1,6 +1,6 @@
 # Personal assistant development status
 
-Google Stage A is ready for the first user-operated Mac authorization attempt on the configured HTTPS deployment. No real account has been connected or accepted.
+Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI and authenticated event API returned the existing event `测试`; conversation lookup still needs re-acceptance after the 2026-09-27 repair below.
 
 The Runtime owns the Google adapter, account service, OAuth coordinator and startup secret
 cleanup. The feature defaults off. The following server configuration enables the subsystem;
@@ -46,11 +46,12 @@ The dedicated `config_dir/personal-assistant-secrets.json` is never shared with 
 secrets. Startup reconciliation is asynchronous; shutdown waits for its cancellation and closes
 the HTTP adapter. A cleanup exception is reported as `cleanup_failed` without echoing secrets.
 
-Calendar selection/query UI, bounded recurring-instance queries and Runtime Skill registration are implemented. OAuth consent, native interaction and real Google data remain unverified.
+Calendar selection/query UI, bounded recurring-instance queries and Runtime Skill registration are implemented. Google connection and an existing event have been observed; dialog lookup is tracked separately below.
 
 Validation: Rust compilation and two native URL/socket checks passed; desktop build and TypeScript
-checks passed; three status/transport/validation HTTP checks passed. These do not establish actual
-Mac browser consent, native visual acceptance, direct TLS deployment, or real Google acceptance.
+checks passed; three status/transport/validation HTTP checks passed. Those earlier checks
+alone did not establish Mac browser consent, native visual acceptance, direct TLS
+deployment, or real Google acceptance; later evidence is recorded below.
 
 ## 2026-09-22 LAN status deployment
 
@@ -75,8 +76,7 @@ results after selection/account revision changes. Responses identify live Google
 results; failed queries do not render cached events as current.
 
 The LAN server includes `/calendars`, `/calendars/selection` and `/events` routes.
-Without OAuth configuration they return `personal_assistant_not_configured`;
-Google consent, actual event rendering and real dialog Skill execution remain pending.
+Without OAuth configuration they return `personal_assistant_not_configured`.
 
 ## Operator prerequisites for first Google connection
 
@@ -113,10 +113,9 @@ reports `authorization_available=false`.
 
 In the Mac desktop connection settings use the HTTPS origin and the existing
 access token. Open Personal Assistant, connect an account in the system browser,
-then discover/select calendars and query the next seven days. The user must
-complete Google login/consent; these deployment checks do not verify real calendar
-access, permission prompts, or voice queries. Google Cloud API enablement and test
-user configuration still need confirmation during that first login.
+then discover/select calendars and query the next seven days. The user later
+completed Google login and selected a calendar. These deployment checks alone
+did not verify real calendar access, permission prompts, or voice queries.
 
 ### Authorization returned but no account connected
 
@@ -134,3 +133,28 @@ and request timeouts, and refreshes accounts after successful completion. Person
 assistant controls and notices use scoped settings styles. Desktop build/typecheck
 and targeted ESLint passed; visual acceptance and real authorization after network
 repair remain pending.
+
+## 2026-09-27 dialog calendar mismatch
+
+The selected calendar contains `测试` at 06:00–07:00 Asia/Shanghai on September 27.
+The authenticated event API returned it for the calendar's local day, but returned
+no events for 00:00–24:00 UTC on September 27. The first desktop question did run
+`calendar.read` and received an empty result; its exact tool arguments were audit
+redacted, so the UTC window is a plausible cause, not a recovered fact. The
+follow-up “没有一个叫测试的吗” did not run the calendar tool at all.
+
+The Runtime Skill now accepts a relative period or explicit calendar dates from
+the model and calculates each selected Google calendar's timezone-aware window on
+the server. An unqualified query defaults to seven local calendar days starting
+at today's midnight. The model-facing schema no longer asks the model to invent
+UTC start/end timestamps; a missing calendar timezone fails explicitly instead
+of silently querying a UTC day. An immediate local desktop correction can offer the
+previous turn's read-only tool topic again; write tools are excluded. Selection,
+owner scope, permissions, bounded query limits and stale-result fences remain in
+force. The scoped server files were backed up in
+`chatwaifu-server/backups/calendar-window-20260927`, deployed, syntax checked,
+and restarted. Authenticated HTTPS health returned 200; the skill registry
+reported `calendar.read` version 1.1.0 enabled. A fresh spoken/chat acceptance
+remains separate. A direct invocation in the existing authorized session returned
+one event, including `测试`, from an `Asia/Shanghai` window. Do not infer live
+dialog success from this direct Skill call.
