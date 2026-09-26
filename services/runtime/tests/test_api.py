@@ -1274,8 +1274,11 @@ def test_character_and_manifest_driven_runtime_status_skill(client: TestClient) 
     assert "system_prompt" not in profile
 
     skills = cast(dict[str, object], http.get("/v1/skills").json())
-    skill = cast(list[dict[str, object]], skills["items"])[0]
-    assert skill["skill_id"] == "runtime.status"
+    skill = next(
+        item
+        for item in cast(list[dict[str, object]], skills["items"])
+        if item["skill_id"] == "runtime.status"
+    )
     capability = cast(list[dict[str, object]], skill["capabilities"])[0]
     assert capability["side_effect"] == "read"
     assert capability["confirmation_required"] is False

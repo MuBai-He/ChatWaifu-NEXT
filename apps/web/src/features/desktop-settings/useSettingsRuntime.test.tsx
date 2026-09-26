@@ -72,7 +72,7 @@ describe("useSettingsRuntime", () => {
     vi.mocked(bootstrapRuntimeSession).mockRejectedValueOnce(
       new RuntimeRequestError("Unauthorized", 401),
     );
-    await act(async () => {
+    act(() => {
       result.current.reconnect();
     });
     const calls = vi.mocked(bootstrapRuntimeSession).mock.calls.length;
