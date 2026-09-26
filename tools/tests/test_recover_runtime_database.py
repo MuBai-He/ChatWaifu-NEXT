@@ -8,6 +8,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -69,7 +70,7 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
     target = tmp_path / "chatwaifu-recovered.db"
     backup = tmp_path / "source-backup"
     _seed_source(source, delete_session=True)
-    with sqlite3.connect(source) as original:
+    with closing(sqlite3.connect(source)) as original, original:
         original.execute(
             "INSERT INTO assistant_accounts VALUES (?, 'local', 'connected', ?, 1)",
             ("owner-google", "assistant-secret-ref"),
