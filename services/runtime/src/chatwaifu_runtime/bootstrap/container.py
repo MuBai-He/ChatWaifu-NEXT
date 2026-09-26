@@ -27,6 +27,9 @@ from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkClient
 from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
+from chatwaifu_runtime.external_channels.encrypted_credentials import (
+    EncryptedFileChannelCredentialStore,
+)
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.service import ExternalChannelService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
@@ -42,12 +45,15 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
+from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
 from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_photo_semantic import SQLitePhotoSemanticAdapter
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
+from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
+from chatwaifu_runtime.personal_assistant.skill import CalendarReadSkill
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
@@ -111,6 +117,9 @@ class RuntimeContainer:
         )
         self.ws_ticket_store = WebSocketTicketStore()
         self.database = Database(settings.database_path, settings.storage)
+        self.personal_assistant = PersonalAssistantIntegration(
+            settings, SQLiteAssistantRepository(self.database)
+        )
         self.event_hub = EventHub(settings.runtime.event_queue_size)
         self.event_store = EventStore(self.database)
         self.event_publisher = EventPublisher(self.event_store, self.event_hub)
@@ -174,6 +183,8 @@ class RuntimeContainer:
             self.stt.kind,
             __version__,
             sandbox_launcher=sandbox_launcher,
+            mcp_private_origins=settings.security.mcp_private_origins,
+            session_builtin_handlers={"calendar_read": CalendarReadSkill(self.personal_assistant)},
         )
         self.agent = AgentTurnOrchestrator(
             self.providers.llm,
@@ -254,7 +265,14 @@ class RuntimeContainer:
         self.channel_management = ChannelManagementService(
             self.external_channels,
             self.external_channel_repository,
-            KeyringChannelCredentialStore(),
+            (
+                EncryptedFileChannelCredentialStore(
+                    settings.data_dir / "channel-vault",
+                    settings.config_dir / "channel-vault-key",
+                )
+                if settings.channel_credential_backend == "encrypted_file"
+                else KeyringChannelCredentialStore()
+            ),
             WeixinILinkClient(),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
@@ -361,6 +379,7 @@ class RuntimeContainer:
                 self.audio_assets.start()
 
                 await self.database.open()
+                await self.personal_assistant.start()
                 self.audio_assets.recover_staged_removals(
                     await self.experience_reset_repository.all_audio_asset_ids()
                 )
@@ -427,6 +446,7 @@ class RuntimeContainer:
 
     def _shutdown_steps(self) -> list[_CleanupStep]:
         steps = [
+            _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),

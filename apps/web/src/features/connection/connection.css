@@ -3,8 +3,11 @@
   inset: 12px;
   z-index: 10000;
   display: grid;
-  overflow: auto;
-  place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-items: start;
+  justify-items: center;
   padding: 28px 24px;
   border: 1px solid #a78aa444;
   border-radius: 4px 30px 4px 30px;
@@ -12,7 +15,7 @@
   background:
     radial-gradient(ellipse at 100% 0%, #76507825, transparent 58%),
     radial-gradient(ellipse at 0% 100%, #51466d20, transparent 55%),
-    linear-gradient(155deg, #231b29f5, #151119fa);
+    linear-gradient(155deg, #231b29, #151119);
   box-shadow: inset 0 0 70px #09070d50;
   pointer-events: auto;
 }
@@ -38,6 +41,7 @@
   gap: 22px;
   width: 100%;
   max-width: 364px;
+  min-width: 0;
   margin: auto;
 }
 .connection-brand {
@@ -50,6 +54,8 @@
 }
 .connection-brand > span:last-child {
   display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 3px;
 }
 .connection-brand small {
@@ -59,6 +65,7 @@
   letter-spacing: 0.12em;
 }
 .connection-brand-icon {
+  flex-shrink: 0;
   display: grid;
   width: 42px;
   height: 42px;
@@ -137,7 +144,7 @@
 .connection-mode-content small {
   color: #ad9cb2;
   font-size: 10px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .connection-mode-check {
   position: absolute;
@@ -331,16 +338,39 @@
 }
 @media (max-width: 360px), (max-height: 590px) {
   .runtime-connection-screen {
-    padding: 20px;
+    padding: 16px 20px;
   }
   .runtime-connection-card {
-    gap: 17px;
+    gap: 8px;
   }
   .connection-heading h1 {
     font-size: 25px;
   }
+  .connection-brand-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .connection-heading h1 {
+    margin-bottom: 4px;
+  }
   .connection-mode-content {
-    padding: 12px;
+    gap: 3px;
+    padding: 10px;
+  }
+  .connection-mode-content > svg {
+    margin-bottom: 2px;
+  }
+  .connection-fields {
+    gap: 10px;
+  }
+  .connection-field {
+    gap: 6px;
+  }
+  .connection-footnote {
+    margin-top: 0;
+  }
+  .connection-local-note {
+    min-height: 120px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -100,3 +100,67 @@ macOS 可以使用相同源码入口前台运行；此处的后台服务流程�
 此阶段的完成范围是源码启动、状态持久化和服务管理入口。目标 Linux 上的 systemd、退出 SSH 后常驻、重启恢复、真实模型和微信消息处理仍需服务器到位后的现场验收。
 
 2026-09-21 本地 macOS 实际进程验证：在独立临时状态目录启动，关闭 stdin 后继续提供服务；未认证私有请求返回 401；创建的会话和管理凭据在 SIGTERM 正常清理及重启后保留；另一进程不能同时获取同一状态目录的锁。源码初始化与 unit 生成命令已执行，日志和 unit 未包含生成的凭据。
+
+### 微信绑定返回 503
+
+若 `/v1/channel-auth-sessions` 返回 `channel_secure_store_unavailable`，
+表示运行后端的设备没有可用或已解锁的系统凭据库，并非客户端连接失败。
+当前渠道凭据适配器依赖 OS keyring；无桌面 Linux 上的
+`keyring.backends.fail.Keyring` 不可用于保存微信授权。
+桌面端默认继续使用系统 keyring。无桌面 Linux 服务器可在 `runtime.toml` 的
+顶层（第一个 `[section]` 前）显式设置：
+
+```toml
+channel_credential_backend = "encrypted_file"
+```
+
+新的源码服务器配置默认启用此选项；已有配置不会自动覆盖。重启 Runtime
+后会初始化 `config/channel-vault-key/master.key` 和
+`data/channel-vault/credentials.fernet`。目录必须由 Runtime 用户拥有且为
+0700，文件为 0600。不要配置明文 keyring fallback，也不要删除密钥尝试修复
+错误。密钥丢失、文件损坏或权限不符会拒绝读写，保留已有数据。
+
+将密钥与密文分开备份；仅复制数据库不包含渠道授权。服务器账户/root 能
+读取密钥并解密，此方案不防御主机账户失陷。扫码仍需用户在微信确认。
+先确认二维码可以生成，再验收扫码收发及服务器重启后的恢复。客户端 Mac
+钥匙串不会自动成为远程服务器的凭据库。见 ADR 0056。
+
+2026-09-22 局域网服务器已启用该后端：Linux 临时凭据读写/删除通过，生产
+目录与文件权限通过；Runtime 重启后原密钥和密文保持不变且仍可读取。
+微信授权接口重启前后均返回 201/pending，二维码内容非空；验证会话已取消。
+用户扫码绑定、实际消息收发及已绑定凭据的重启恢复仍需实机验收。
+
+### 客户端网络恢复
+
+桌宠首次加载及设置页首次连接/健康检查失败后，按 1、2、4、8、16、30 秒
+退避重试（之后最多每 30 秒一次）；网络恢复事件触发立即尝试。
+设置页错误提示提供“立即重连”。401/403 等不可重试客户端错误停止定时
+重试，需检查连接配置。卸载或切换连接会取消请求和重试计时器。
+已建立的桌宠事件/音频连接继续使用原有 socket 恢复机制。
+渠道页在恢复连接后重新读取列表；不会自动重放发送消息或扫码绑定等写操作。
+
+### Runtime 直接终止 TLS
+
+源码启动器支持成对设置环境变量 `CHATWAIFU_SERVER_TLS_CERT`（PEM 完整证书链）
+和 `CHATWAIFU_SERVER_TLS_KEY`（PEM 私钥）。只设置一个会拒绝启动；均不设置
+仍使用 HTTP。启动器禁用 uvicorn 的代理头解释，避免把转发头当作真实 TLS。
+证书和密钥路径可通过 systemd drop-in 的 `Environment=` 配置，目录 0700、
+文件 0600；不得提交密钥或含密钥的压缩包。
+
+当前服务器 Runtime 在 `127.0.0.1:8765` 终止 TLS，用户级 systemd socket
+监听 `0.0.0.0:18443`，通过 `systemd-socket-proxyd 127.0.0.1:8765`
+透传加密 TCP。公网入口为 `https://mubai.website:18443`，不需要 443。
+`security.allowed_hosts` 包含域名，个人助理的 `google_oauth_https_origin`
+与该入口完全一致。OAuth 环境文件仅由 Runtime 用户读取。
+
+旧 LAN nginx 的 `/v1/` 上游改为 `https://127.0.0.1:8765`，开启
+`proxy_ssl_server_name on`、`proxy_ssl_name mubai.website`、
+`proxy_ssl_verify on`、`proxy_ssl_verify_depth 3`，并使用系统 CA 文件
+`/etc/ssl/certs/ca-certificates.crt`。不要关闭证书校验来解决上游 502。
+旧 HTTP 入口用于普通连接，Google 授权应使用新的 HTTPS 入口。
+
+2026-09-22 已验证域名 TLS 信任链、鉴权状态接口、旧 LAN 健康接口。
+现有证书有效期截至 2026-11-29；目前是手工安装，不代表已配置自动续期。
+续期时替换状态目录 `tls/fullchain.pem` 与 `tls/privkey.key`，保留权限，
+重启 `chatwaifu-runtime.service`，再验证 HTTPS 和 LAN 代理。首次配置前的
+备份位于服务器 `chatwaifu-server/backups/https-20260922/`。

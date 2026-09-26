@@ -26,6 +26,7 @@ dependencies = [
   "python-dotenv>=1.1,<2",
   "pyyaml>=6.0.2,<7",
   "structlog>=25,<27",
+  "tzdata>=2025.2; sys_platform == 'win32'",
   "soxr>=1,<2",
   "uvicorn[standard]>=0.35,<1",
   "websockets>=17,<18",

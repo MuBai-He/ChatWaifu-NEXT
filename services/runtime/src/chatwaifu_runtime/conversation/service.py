@@ -1094,6 +1094,9 @@ class ConversationService:
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,
+                routing_previous_user_text=_previous_local_user_text(
+                    history, options.source_context
+                ),
                 recalled_memory_texts=compilation.recalled_memory_texts,
                 trigger=trigger,
                 images=loaded_images,
@@ -1448,6 +1451,25 @@ class ConversationService:
     def _is_current(self, accepted: GenerationAccepted) -> bool:
         active = self._active.get(accepted.session_id)
         return active is not None and active.generation_id == accepted.generation_id
+
+
+def _previous_local_user_text(
+    history: tuple[ConversationHistoryEntry, ...],
+    source_context: ConversationSourceContext | None,
+) -> str | None:
+    # Cross-surface history may contain other participants. It must never
+    # determine which private capability an owner desktop follow-up can see.
+    if source_context is not None:
+        return None
+    if (
+        len(history) < 2
+        or history[-2].source_context is not None
+        or history[-1].source_context is not None
+        or history[-2].role != "user"
+        or history[-1].role != "assistant"
+    ):
+        return None
+    return history[-2].text
 
 
 def _voice_style_instruction(plan: ResponsePlan) -> str:

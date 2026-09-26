@@ -742,14 +742,14 @@ async def test_bounded_cancel_prevents_late_adapter_success_from_resurrecting_ru
         cancellation_swallowed = asyncio.Event()
         original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
 
-        async def stubborn_invoke(name: str, arguments: JsonObject) -> JsonObject:
+        async def stubborn_invoke(name: str, arguments: JsonObject, session_id: str) -> JsonObject:
             adapter_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
                 cancellation_swallowed.set()
             await release_adapter.wait()
-            return await original_invoke(name, arguments)
+            return await original_invoke(name, arguments, session_id)
 
         monkeypatch.setattr(
             service._builtin,  # pyright: ignore[reportPrivateUsage]
@@ -797,10 +797,10 @@ async def test_wait_for_terminal_observes_both_future_and_already_committed_tran
         adapter_started = asyncio.Event()
         original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
 
-        async def delayed_invoke(name: str, arguments: JsonObject) -> JsonObject:
+        async def delayed_invoke(name: str, arguments: JsonObject, session_id: str) -> JsonObject:
             adapter_started.set()
             await release_adapter.wait()
-            return await original_invoke(name, arguments)
+            return await original_invoke(name, arguments, session_id)
 
         monkeypatch.setattr(
             service._builtin,  # pyright: ignore[reportPrivateUsage]
