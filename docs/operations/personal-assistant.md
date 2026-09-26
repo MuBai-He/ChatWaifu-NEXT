@@ -1,6 +1,6 @@
 # Personal assistant development status
 
-Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI and authenticated event API returned the existing event `测试`; conversation lookup still needs re-acceptance after the 2026-09-27 repair below.
+Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
 The Runtime owns the Google adapter, account service, OAuth coordinator and startup secret
 cleanup. The feature defaults off. The following server configuration enables the subsystem;
@@ -154,7 +154,7 @@ owner scope, permissions, bounded query limits and stale-result fences remain in
 force. The scoped server files were backed up in
 `chatwaifu-server/backups/calendar-window-20260927`, deployed, syntax checked,
 and restarted. Authenticated HTTPS health returned 200; the skill registry
-reported `calendar.read` version 1.1.0 enabled. A fresh spoken/chat acceptance
-remains separate. A direct invocation in the existing authorized session returned
-one event, including `测试`, from an `Asia/Shanghai` window. Do not infer live
-dialog success from this direct Skill call.
+reported `calendar.read` version 1.1.0 enabled. A direct invocation in the
+existing authorized session returned one event, including `测试`, from an
+`Asia/Shanghai` window. The user subsequently reported that the desktop-pet dialog
+succeeded; exact phrasing and long-term behavior were not independently captured.
