@@ -11,9 +11,12 @@ const surface = resolveWebSurface(window.location.pathname);
 mountProduct({
   product: "web",
   surface,
-  children: (
-    <RuntimeConnectionGate>
+  children:
+    surface === "avatar-lab" ? (
       <WebProductApp surface={surface} />
-    </RuntimeConnectionGate>
-  ),
+    ) : (
+      <RuntimeConnectionGate>
+        <WebProductApp surface={surface} />
+      </RuntimeConnectionGate>
+    ),
 });
