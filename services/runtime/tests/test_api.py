@@ -6,7 +6,6 @@ import os
 import shutil
 import sqlite3
 import threading
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -486,27 +485,10 @@ def test_text_turn_streams_persists_and_serves_audio(client: TestClient) -> None
     assert accepted.status_code == 202
     generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
 
-    events: list[dict[str, object]] = []
-    deadline = time.monotonic() + 2
-    while time.monotonic() < deadline:
-        response = http.get(f"/v1/sessions/{session_id}/events")
-        events = cast(list[dict[str, object]], cast(dict[str, object], response.json())["items"])
-        generation_events = [
-            item for item in events if str(item.get("generation_id")) == generation_id
-        ]
-        generation_completed = any(
-            item["event_type"] == "assistant.generation_completed" for item in generation_events
-        )
-        avatar_idle = any(
-            item["event_type"] == "avatar.cue_emitted"
-            and cast(dict[str, object], cast(dict[str, object], item["payload"])["cue"]).get("name")
-            == "idle"
-            for item in generation_events
-        )
-        if generation_completed and avatar_idle:
-            break
-        time.sleep(0.01)
-
+    generation = wait_for_generation_terminal(client, UUID(generation_id))
+    assert generation.state.value == "completed"
+    response = http.get(f"/v1/sessions/{session_id}/events")
+    events = cast(list[dict[str, object]], cast(dict[str, object], response.json())["items"])
     generation_events = [item for item in events if str(item.get("generation_id")) == generation_id]
     completed = next(
         item for item in generation_events if item["event_type"] == "assistant.generation_completed"
