@@ -35,13 +35,18 @@ function validateRemote(address: string, token: string): ClientConnection {
   const octets = url.hostname.split(".").map(Number);
   const privateIpv4 =
     octets.length === 4 &&
-    octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255) &&
+    octets.every(
+      (octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255,
+    ) &&
     (octets[0] === 10 ||
       (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
       (octets[0] === 192 && octets[1] === 168));
   const localAddress = url.hostname === "127.0.0.1" || privateIpv4;
   if (
-    !(url.protocol === "https:" || (url.protocol === "http:" && localAddress)) ||
+    !(
+      url.protocol === "https:" ||
+      (url.protocol === "http:" && localAddress)
+    ) ||
     url.username ||
     url.password ||
     url.search ||
