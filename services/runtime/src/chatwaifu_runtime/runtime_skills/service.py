@@ -374,6 +374,10 @@ class RuntimeSkillService:
             and len(provider_tool_call_id) > MAX_PROVIDER_TOOL_CALL_ID_CHARACTERS
         ):
             raise ValueError("provider tool call id exceeded the size limit")
+        if await self._repository.session_user_scope(session_id) != "local":
+            raise ValueError(
+                "Owner skill permissions are not available in participant or shared scenes"
+            )
         entry = self._registry.get(invocation.skill_id)
         if entry is None:
             raise KeyError("skill not found")

@@ -213,7 +213,9 @@ class SpokenMemoryObserver:
             return
 
         # Check privacy reset fence: do not resurrect cleared character memory
-        if await self._repository.is_scope_reset(session.character_id, fact.created_at):
+        if await self._repository.is_scope_reset(
+            session.character_id, fact.created_at, session.user_scope
+        ):
             _LOGGER.info(
                 "Skipping spoken memory fact %s for reset character %s",
                 fact.source_event_id,

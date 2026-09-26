@@ -346,6 +346,7 @@ class SQLitePhotoMemoryRepository:
                   AND g.session_id = t.session_id
                   AND g.turn_id = t.turn_id
                   AND s.character_id = c.character_id
+                  AND s.user_scope = c.principal_scope
                   AND u.role = 'user'
                   AND u.session_id = t.session_id
                   AND (
@@ -663,8 +664,9 @@ class SQLitePhotoMemoryRepository:
                        json_extract(u.source_context_json, '$.chat_type') = 'direct')
                   AND s.character_id = ?
                   AND r.generation_id IS NULL
-                  AND COALESCE(json_extract(u.source_context_json, '$.principal_scope'), 'local') =
-                      ?
+                  AND s.user_scope = ?
+                  AND (u.source_context_json IS NULL OR
+                       json_extract(u.source_context_json, '$.principal_scope') = s.user_scope)
                 """,
                 (str(generation_id), character_id, scope),
             )
@@ -790,7 +792,7 @@ class SQLitePhotoMemoryRepository:
         async with self._database.transaction() as conn:
             cursor = await conn.execute(
                 """SELECT g.session_id, g.turn_id, t.committed_text, t.created_at,
-                          t.source_context_json, s.character_id
+                          t.source_context_json, s.character_id, s.user_scope
                    FROM generations g JOIN turns t ON t.turn_id=g.turn_id
                    JOIN sessions s ON s.session_id=g.session_id
                    WHERE g.generation_id=? AND g.state='completed' AND t.role='user'
@@ -805,7 +807,9 @@ class SQLitePhotoMemoryRepository:
             source = json.loads(row["source_context_json"]) if row["source_context_json"] else None
             if source and source.get("chat_type") != "direct":
                 return None
-            scope = source.get("principal_scope", "local") if source else "local"
+            scope = str(row["user_scope"])
+            if source and source.get("principal_scope", "local") != scope:
+                return None
             settings = await self._ensure_settings(conn, scope, row["character_id"])
             if not settings["retention_enabled"]:
                 return None
@@ -868,10 +872,10 @@ class SQLitePhotoMemoryRepository:
                    JOIN turns t ON t.turn_id=g.turn_id AND t.session_id=g.session_id
                    JOIN sessions s ON s.session_id=g.session_id
                    WHERE g.generation_id=? AND g.state='completed' AND t.role='user'
-                     AND s.character_id=? AND NOT EXISTS
+                     AND s.character_id=? AND s.user_scope=? AND NOT EXISTS
                        (SELECT 1 FROM photo_context_redactions
                         WHERE generation_id=g.generation_id)""",
-                (str(context.generation_id), context.character_id),
+                (str(context.generation_id), context.character_id, context.scope),
             )
             source = await cursor.fetchone()
             if source is None or source["committed_text"] != context.text:

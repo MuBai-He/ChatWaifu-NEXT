@@ -51,6 +51,30 @@ class FakeAudio implements PlayableAudio {
 }
 
 describe("GenerationAudioPlayer", () => {
+  it("aborts an interrupted download and releases a late Blob without playing it", async () => {
+    let complete!: (value: { url: string; release: () => void }) => void;
+    let signal: AbortSignal | undefined;
+    const release = vi.fn();
+    const harness = createHarness(
+      () => "generation-1",
+      (_url, incomingSignal) => {
+        signal = incomingSignal;
+        return new Promise((resolve) => {
+          complete = resolve;
+        });
+      },
+    );
+    harness.player.enqueue(playbackItem("generation-1", "/private.wav"));
+    harness.player.stop();
+    expect(signal?.aborted).toBe(true);
+    complete({ url: "blob:late", release });
+    await flushPromises();
+    expect(release).toHaveBeenCalledOnce();
+    expect(harness.starts).toEqual([]);
+    expect(harness.errors).toEqual([]);
+    harness.player.dispose();
+  });
+
   it("keeps a stale play rejection from releasing the new audio", async () => {
     let activeGeneration = "generation-1";
     const harness = createHarness(() => activeGeneration);
@@ -202,7 +226,10 @@ describe("GenerationAudioPlayer", () => {
   });
 });
 
-function createHarness(activeGeneration: () => string) {
+function createHarness(
+  activeGeneration: () => string,
+  loadAudio?: ConstructorParameters<typeof GenerationAudioPlayer>[3],
+) {
   const audios: FakeAudio[] = [];
   const errors: string[] = [];
   const starts: Array<{
@@ -239,6 +266,8 @@ function createHarness(activeGeneration: () => string) {
       onQueueCleared: (item) => cleared.push(item),
       onPlaybackError: (message) => errors.push(message),
     },
+    32,
+    loadAudio,
   );
   return {
     player,

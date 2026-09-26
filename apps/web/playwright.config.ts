@@ -26,6 +26,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
+      // E2E runs against the deterministic local Runtime and must bypass the
+      // first-launch connection chooser before asserting product screens.
+      VITE_RUNTIME_URL: process.env.VITE_RUNTIME_URL || "http://127.0.0.1:8765",
       VITE_RUNTIME_TOKEN:
         process.env.VITE_RUNTIME_TOKEN ||
         process.env.CHATWAIFU_SECURITY__ADMIN_TOKEN ||

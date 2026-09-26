@@ -12,6 +12,14 @@ from chatwaifu_runtime.runtime_skills.repository import Record
 
 
 class SQLiteRuntimeSkillRepository:
+    async def session_user_scope(self, session_id: UUID) -> str:
+        row = await self._database.fetchone(
+            "SELECT user_scope FROM sessions WHERE session_id = ?", (str(session_id),)
+        )
+        if row is None:
+            raise KeyError("session not found")
+        return str(row["user_scope"])
+
     def __init__(self, database: Database) -> None:
         self._database = database
 

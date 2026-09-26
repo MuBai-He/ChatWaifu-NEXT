@@ -1,6 +1,7 @@
 """Session, turn, and assistant generation state snapshots."""
 
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field
@@ -41,6 +42,11 @@ class GenerationState(StrEnum):
 class SessionSnapshot(ProtocolModel):
     session_id: UUID
     character_id: str
+    participant_id: str = "local"
+    scene_id: str | None = None
+    scene_kind: Literal["private", "shared"] = "private"
+    audience_ids: list[str] = Field(default_factory=lambda: ["local"])
+    user_scope: str = "local"
     state: SessionState
     conversation_state: ConversationState
     revision: int = Field(ge=0)
@@ -66,3 +72,16 @@ class GenerationSnapshot(ProtocolModel):
     started_at: AwareDatetime | None = None
     completed_at: AwareDatetime | None = None
     invalidated_at: AwareDatetime | None = None
+
+
+class ParticipantSnapshot(ProtocolModel):
+    participant_id: str
+    display_name: str = Field(min_length=1, max_length=80)
+    created_at: AwareDatetime
+
+
+class SceneSnapshot(ProtocolModel):
+    scene_id: str
+    display_name: str = Field(min_length=1, max_length=120)
+    participant_ids: list[str] = Field(min_length=2, max_length=32)
+    created_at: AwareDatetime

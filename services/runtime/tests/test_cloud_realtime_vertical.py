@@ -868,7 +868,12 @@ def test_18_no_bypass_outside_egress_gateway() -> None:
                     if not is_gateway_call:
                         violating_open.append(f"{rel_path}:{node.lineno}")
                 elif node.func.attr == "update_context":
-                    violating_update.append(f"{rel_path}:{node.lineno}")
+                    is_gateway_call = (
+                        isinstance(node.func.value, ast.Attribute)
+                        and node.func.value.attr == "_egress_gateway"
+                    )
+                    if not is_gateway_call:
+                        violating_update.append(f"{rel_path}:{node.lineno}")
 
     assert not violating_open, f"Unauthorized open_session calls outside Gateway: {violating_open}"
     assert not violating_update, (
@@ -1077,4 +1082,69 @@ async def test_21_late_user_final_transcript_commits_after_assistant_completed(
         user_envelope = json.loads(str(user_events[0]["envelope_json"]))
         assert user_envelope.get("turn_id") == str(turn_id)
     finally:
+        await container.stop()
+
+
+async def test_scoped_call_context_sync_is_audited_deduplicated_and_revoked(tmp_path: Path) -> None:
+    import asyncio
+    from typing import cast
+
+    container = RuntimeContainer(create_cloud_settings(tmp_path))
+    await container.start()
+    bridge = None
+    try:
+        participant = await container.sessions.create_participant("访客")
+        session = await container.sessions.create_session(
+            "default", participant_id=participant.participant_id
+        )
+        assert container.cloud_realtime_factory is not None
+        assert container.cloud_egress_gateway is not None
+        bridge = await container.cloud_realtime_factory.create_bridge(session.session_id)
+        await bridge.process_frame(StartFrame(), FrameDirection.DOWNSTREAM)
+        cloud = cast(FakeCloudRealtimeSession, bridge.coordinator.session)
+        before = len(cloud.context_updates)
+        await bridge.coordinator.synchronize_context()
+        assert len(cloud.context_updates) == before
+        await bridge.process_frame(VADUserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        identity = bridge.current_identity
+        assert identity is not None
+        await bridge.coordinator.dispatch_event(
+            UserTranscriptEvent(
+                candidate=RealtimeTranscriptCandidate(
+                    session_id=session.session_id,
+                    generation_id=identity.generation_id,
+                    role="user",
+                    text="请记住:我喜欢蓝色",
+                    phase="final",
+                )
+            )
+        )
+        await asyncio.wait_for(container.memory._projection_queue.join(), timeout=3)
+        memories = await container.memory.list(session_id=session.session_id)
+        assert memories and all(
+            record.namespace.endswith(session.user_scope) for record in memories
+        )
+        await bridge.coordinator.synchronize_context()
+        assert len(cloud.context_updates) == before + 1
+        patch = cloud.context_updates[-1]
+        assert "蓝色" in " ".join(component.text for component in patch.components)
+        receipt = container.cloud_egress_gateway.audit_receipts[-1]
+        assert receipt.patch_id == patch.patch_id
+        rows = await container.database.fetchall(
+            "SELECT envelope_json FROM events WHERE session_id = ? "
+            "AND event_type = 'cloud.egress_receipt'",
+            (str(session.session_id),),
+        )
+        # The same audit receipt is durable before provider update; no plaintext memory in receipts.
+        assert rows and str(patch.patch_id) in str(rows[-1]["envelope_json"])
+        assert "蓝色" not in str(rows[-1]["envelope_json"])
+        await bridge.coordinator.synchronize_context()
+        assert len(cloud.context_updates) == before + 1
+        await container.memory.forget(session.session_id, memories[0].memory_id)
+        assert cloud.is_closed and bridge.coordinator.is_closing
+        with pytest.raises(RuntimeError, match="closing"):
+            await bridge.coordinator.synchronize_context()
+    finally:
+        if bridge is not None:
+            await bridge.coordinator.stop()
         await container.stop()

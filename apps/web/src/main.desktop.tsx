@@ -1,3 +1,4 @@
+import { RuntimeConnectionGate } from "./features/connection/RuntimeConnectionGate";
 import "./index.css";
 import "./features/chat/skill-confirmation-prompt.css";
 import "./features/desktop-pet/desktop-pet.css";
@@ -11,5 +12,9 @@ const surface = resolveDesktopSurface();
 mountProduct({
   product: "desktop",
   surface,
-  children: <DesktopProductApp surface={surface} />,
+  children: (
+    <RuntimeConnectionGate showSwitch={false}>
+      <DesktopProductApp surface={surface} />
+    </RuntimeConnectionGate>
+  ),
 });

@@ -473,6 +473,9 @@ class CloudRealtimeMediaBridge(FrameProcessor, RealtimeMediaSink):
                         continue
                     async with asyncio.timeout(MEDIA_OPERATION_TIMEOUT_SECONDS):
                         if isinstance(frame, _InputCommit):
+                            await self._coordinator.synchronize_context()
+                            if not self._is_frame_sendable(frame) or self._coordinator.is_closing:
+                                continue
                             await self._coordinator.session.commit_input()
                         else:
                             await self._coordinator.session.send_audio(frame)

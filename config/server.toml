@@ -1,0 +1,25 @@
+# Source server profile. The launcher creates a private editable copy in its state directory.
+environment = "server"
+
+[runtime]
+host = "127.0.0.1"
+port = 8765
+
+[privacy]
+cloud_egress = "ask"
+
+[llm]
+# Demo permits an offline first start. Configure a real model before channel use.
+provider = "demo"
+model = "chatwaifu-demo"
+
+[tts]
+# No local model workers are started by the server launcher.
+# Fake TTS is only the existing diagnostic fallback, not a character voice.
+provider = "fake"
+
+[stt]
+provider = "disabled"
+
+[realtime]
+enabled = false

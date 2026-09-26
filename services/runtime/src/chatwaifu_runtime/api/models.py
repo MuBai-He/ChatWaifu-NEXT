@@ -7,10 +7,37 @@ from chatwaifu_protocol.base import JsonObject
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
+class ClientIceServer(BaseModel):
+    urls: list[str]
+    username: str | None = None
+    credential: str | None = Field(default=None, repr=False)
+
+
+class RuntimeClientConfiguration(BaseModel):
+    schema_version: Literal["1.0"] = "1.0"
+    ice_servers: list[ClientIceServer]
+    ice_transport_policy: Literal["all", "relay"] = "all"
+
+
+class CreateParticipantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=80)
+
+
+class CreateSceneRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    display_name: str = Field(min_length=1, max_length=120)
+    participant_ids: list[str] = Field(min_length=2, max_length=32)
+
+
 class CreateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     character_id: str = Field(default="default", min_length=1, max_length=128)
+    participant_id: str = Field(default="local", min_length=1, max_length=128)
+    scene_id: str | None = Field(default=None, max_length=128)
 
 
 class RuntimeHealth(BaseModel):

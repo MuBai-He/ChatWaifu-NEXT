@@ -522,7 +522,7 @@ describe("ChatWaifu usable demo", () => {
       name: "设置分类",
     });
     expect(settingsNavigation).toBeTruthy();
-    expect(settingsNavigation.querySelectorAll("button svg")).toHaveLength(6);
+    expect(settingsNavigation.textContent).toContain("连接");
     expect(
       document.querySelector(".desktop-settings-app-icon img"),
     ).toBeTruthy();

@@ -6057,6 +6057,32 @@
       "title": "ModelResourceProfile",
       "type": "object"
     },
+    "ParticipantSnapshot": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "display_name",
+        "created_at"
+      ],
+      "title": "ParticipantSnapshot",
+      "type": "object"
+    },
     "PermissionDecision": {
       "properties": {
         "decided_at": {
@@ -7306,6 +7332,42 @@
       "title": "SavedPhoto",
       "type": "object"
     },
+    "SceneSnapshot": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "participant_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 2,
+          "title": "Participant Ids",
+          "type": "array"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_id",
+        "display_name",
+        "participant_ids",
+        "created_at"
+      ],
+      "title": "SceneSnapshot",
+      "type": "object"
+    },
     "SessionCreatedEvent": {
       "properties": {
         "causation_id": {
@@ -7458,6 +7520,13 @@
     },
     "SessionSnapshot": {
       "properties": {
+        "audience_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Audience Ids",
+          "type": "array"
+        },
         "character_id": {
           "title": "Character Id",
           "type": "string"
@@ -7470,10 +7539,36 @@
           "title": "Created At",
           "type": "string"
         },
+        "participant_id": {
+          "default": "local",
+          "title": "Participant Id",
+          "type": "string"
+        },
         "revision": {
           "minimum": 0,
           "title": "Revision",
           "type": "integer"
+        },
+        "scene_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Id"
+        },
+        "scene_kind": {
+          "default": "private",
+          "enum": [
+            "private",
+            "shared"
+          ],
+          "title": "Scene Kind",
+          "type": "string"
         },
         "session_id": {
           "format": "uuid",
@@ -7486,6 +7581,11 @@
         "updated_at": {
           "format": "date-time",
           "title": "Updated At",
+          "type": "string"
+        },
+        "user_scope": {
+          "default": "local",
+          "title": "User Scope",
           "type": "string"
         }
       },
@@ -9611,6 +9711,9 @@
     "model": {
       "$ref": "#/$defs/ModelManifest"
     },
+    "participant": {
+      "$ref": "#/$defs/ParticipantSnapshot"
+    },
     "permission_decision": {
       "$ref": "#/$defs/PermissionDecision"
     },
@@ -9649,6 +9752,9 @@
     },
     "saved_photo": {
       "$ref": "#/$defs/SavedPhoto"
+    },
+    "scene": {
+      "$ref": "#/$defs/SceneSnapshot"
     },
     "session": {
       "$ref": "#/$defs/SessionSnapshot"
@@ -9698,6 +9804,8 @@
     "conversation_interruption",
     "audio_frame",
     "video_frame",
+    "participant",
+    "scene",
     "session",
     "turn",
     "generation",

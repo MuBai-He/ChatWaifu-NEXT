@@ -12,7 +12,6 @@ from chatwaifu_protocol.photo_memory import (
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
-from chatwaifu_runtime.character_kernel.service import USER_SCOPE
 from chatwaifu_runtime.photo_memory.models import PhotoMemoryRevisionConflict
 
 router = APIRouter(prefix="/v1/photo-memory", tags=["photo-memory"])
@@ -24,13 +23,23 @@ def _container(request: Request, character_id: str) -> RuntimeContainer:
     return cast(RuntimeContainer, request.app.state.container)
 
 
+async def _scope(container: RuntimeContainer, character_id: str, session_id: UUID | None) -> str:
+    if session_id is None:
+        return "local"
+    session = await container.sessions.get_session(session_id)
+    if session is None or session.character_id != character_id:
+        raise HTTPException(404, "Session not found.")
+    return session.user_scope
+
+
 @router.get("", response_model=PhotoMemorySnapshot)
 @router.get("/", response_model=PhotoMemorySnapshot, include_in_schema=False)
 async def snapshot(
-    request: Request, character_id: str = Query(default="default")
+    request: Request, character_id: str = Query(default="default"), session_id: UUID | None = None
 ) -> PhotoMemorySnapshot:
     container = _container(request, character_id)
-    return await container.photo_repository.snapshot(USER_SCOPE, character_id)
+    scope = await _scope(container, character_id, session_id)
+    return await container.photo_repository.snapshot(scope, character_id)
 
 
 @router.put("/settings", response_model=PhotoMemorySettings)
@@ -38,11 +47,13 @@ async def settings(
     request: Request,
     payload: PhotoMemorySettingsUpdate,
     character_id: str = Query(default="default"),
+    session_id: UUID | None = None,
 ) -> PhotoMemorySettings:
     container = _container(request, character_id)
+    scope = await _scope(container, character_id, session_id)
     try:
         return await container.photo_repository.update_settings(
-            USER_SCOPE,
+            scope,
             character_id,
             retention_enabled=payload.retention_enabled,
             expected_revision=payload.expected_revision,
@@ -53,10 +64,14 @@ async def settings(
 
 @router.get("/{photo_id}/image")
 async def image(
-    request: Request, photo_id: UUID, character_id: str = Query(default="default")
+    request: Request,
+    photo_id: UUID,
+    character_id: str = Query(default="default"),
+    session_id: UUID | None = None,
 ) -> Response:
     container = _container(request, character_id)
-    asset = await container.photo_repository.get_image(USER_SCOPE, character_id, photo_id)
+    scope = await _scope(container, character_id, session_id)
+    asset = await container.photo_repository.get_image(scope, character_id, photo_id)
     if asset is None:
         raise HTTPException(404, "Photo not found.")
     return Response(
@@ -68,10 +83,14 @@ async def image(
 
 @router.delete("/{photo_id}", response_model=PhotoMemoryDeleteResult)
 async def delete(
-    request: Request, photo_id: UUID, character_id: str = Query(default="default")
+    request: Request,
+    photo_id: UUID,
+    character_id: str = Query(default="default"),
+    session_id: UUID | None = None,
 ) -> PhotoMemoryDeleteResult:
     container = _container(request, character_id)
-    deletion = await container.photo_repository.delete(USER_SCOPE, character_id, photo_id)
+    scope = await _scope(container, character_id, session_id)
+    deletion = await container.photo_repository.delete(scope, character_id, photo_id)
     for affected in deletion.affected_generations:
         await container.conversation.cancel(
             affected.session_id,

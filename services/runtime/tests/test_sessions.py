@@ -49,3 +49,49 @@ async def test_session_transition_expected_revision_cas(runtime_settings: Settin
         assert recovering.state == SessionState.RECOVERING
     finally:
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_scope_migration_preserves_populated_owner_database(
+    runtime_settings: Settings,
+) -> None:
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    from chatwaifu_runtime.persistence.database import Database
+    from chatwaifu_runtime.persistence.migrations import MIGRATIONS
+
+    legacy = Database(
+        runtime_settings.database_path,
+        runtime_settings.storage,
+        migrations=tuple(item for item in MIGRATIONS if item[0] <= 31),
+    )
+    await legacy.open()
+    session_id, now = str(uuid4()), datetime.now(UTC).isoformat()
+    async with legacy.transaction() as connection:
+        await connection.execute(
+            "INSERT INTO sessions(session_id, character_id, state, conversation_state, "
+            "created_at, updated_at) VALUES (?, 'default', 'ready', 'idle', ?, ?)",
+            (session_id, now, now),
+        )
+        await connection.execute(
+            "INSERT INTO memory_scope_resets(character_id, reset_at) VALUES ('default', ?)", (now,)
+        )
+    await legacy.close()
+    database = Database(runtime_settings.database_path, runtime_settings.storage)
+    await database.open()
+    try:
+        row = await database.fetchone("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
+        assert row is not None and row["participant_id"] == row["user_scope"] == "local"
+        assert row["audience_json"] == '["local"]'
+        reset = await database.fetchone(
+            "SELECT * FROM memory_scope_resets WHERE character_id = 'default'"
+        )
+        assert reset is not None and reset["user_scope"] == "local" and reset["reset_at"] == now
+        with pytest.raises(Exception, match="scope is immutable"):
+            async with database.transaction() as connection:
+                await connection.execute(
+                    "UPDATE sessions SET user_scope = 'forged' WHERE session_id = ?", (session_id,)
+                )
+    finally:
+        await database.close()

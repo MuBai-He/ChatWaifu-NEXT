@@ -240,6 +240,10 @@ async def _seed_source_chain(
         {"connection_id": conn_id, "principal_scope": scope, "chat_type": "direct"}
     )
 
+    columns = {row["name"] for row in await db.fetchall("PRAGMA table_info(sessions)")}
+    scoped = "user_scope" in columns
+    scope_column = ", user_scope" if scoped else ""
+    scope_placeholder = ", ?" if scoped else ""
     async with db.transaction() as conn:
         await conn.execute(
             """
@@ -251,12 +255,13 @@ async def _seed_source_chain(
             (conn_id, character_id, scope, now, now),
         )
         await conn.execute(
-            """
+            f"""
             INSERT INTO sessions (
                 session_id, character_id, state, conversation_state, created_at, updated_at
-            ) VALUES (?, ?, 'active', 'ready', ?, ?)
+                {scope_column}
+            ) VALUES (?, ?, 'active', 'ready', ?, ?{scope_placeholder})
             """,
-            (session_id, character_id, now, now),
+            (session_id, character_id, now, now) + ((scope,) if scoped else ()),
         )
         await conn.execute(
             """

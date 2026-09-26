@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   acquireWsTicket,
+  setRemoteRuntimeConnection,
+  restartDesktopRuntime,
+  runtimeSessionStorageKey,
   observeDesktopRuntime,
   resolveRuntimeConnection,
   DESKTOP_RUNTIME_RESOLUTION_TIMEOUT_MS,
@@ -55,9 +58,31 @@ describe("desktop Runtime endpoint", () => {
   });
 
   afterEach(() => {
+    setRemoteRuntimeConnection(null);
     vi.useRealTimers();
     vi.clearAllMocks();
     Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+  });
+
+  it("connects a remote desktop without invoking the native supervisor", async () => {
+    const connection = {
+      baseUrl: "https://runtime.example",
+      token: "remote-secret",
+    };
+    setRemoteRuntimeConnection(connection);
+    expect(await resolveRuntimeConnection(true)).toEqual(connection);
+    expect(runtimeWebSocketUrlFromConnection(connection)).toBe(
+      "wss://runtime.example",
+    );
+    expect(runtimeSessionStorageKey()).toContain("https://runtime.example");
+    const receive = vi.fn();
+    await observeDesktopRuntime(receive, new AbortController().signal);
+    expect(receive).toHaveBeenCalledWith(
+      expect.objectContaining({ state: "ready", workers: [] }),
+    );
+    await expect(restartDesktopRuntime()).rejects.toThrow("远程服务");
+    expect(nativeMocks.invoke).not.toHaveBeenCalled();
+    expect(nativeMocks.listen).not.toHaveBeenCalled();
   });
 
   it("keeps a newer event when the initial native snapshot arrives late", async () => {

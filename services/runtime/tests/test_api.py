@@ -987,7 +987,7 @@ def test_reset_is_scoped_across_sessions_characters_users_and_audio(
         )
         assert (
             cast(dict[str, object], http.get(f"/v1/sessions/{sibling_id}/messages").json())["count"]
-            == 2
+            == 0
         )
         assert (
             cast(dict[str, object], http.get(f"/v1/sessions/{other_id}/messages").json())["count"]
@@ -1007,7 +1007,12 @@ def test_reset_is_scoped_across_sessions_characters_users_and_audio(
         )
         namespaces = {str(memory["namespace"]) for memory in memories}
         assert "character/default/user/local" not in namespaces
-        assert "character/default/user/other-user" in namespaces
+        assert "character/default/user/other-user" not in namespaces
+        with sqlite3.connect(settings.database_path) as connection:
+            assert connection.execute(
+                "SELECT COUNT(*) FROM memory_records WHERE memory_id = ?",
+                (other_user_memory_id,),
+            ).fetchone() == (1,)
         assert "character/alternate/user/local" in namespaces
         other_state_after = cast(
             dict[str, object],

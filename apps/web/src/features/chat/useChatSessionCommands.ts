@@ -154,8 +154,8 @@ export function useChatSessionCommands({
   ]);
 
   const refreshMemories = useCallback(async () => {
-    onMemories(await getMemory());
-  }, [onMemories]);
+    onMemories(await getMemory(sessionId));
+  }, [onMemories, sessionId]);
 
   return {
     send,

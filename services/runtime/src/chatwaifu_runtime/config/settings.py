@@ -142,6 +142,23 @@ class OpenAIRealtimeConfig(BaseModel):
     connect_timeout_seconds: float = Field(default=15, gt=0, le=60)
 
 
+class IceServerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    urls: list[str] = Field(min_length=1, max_length=8)
+    username: str | None = None
+    credential: SecretStr | None = None
+
+    @model_validator(mode="after")
+    def validate_urls(self) -> Self:
+        if any(not url.startswith(("stun:", "stuns:", "turn:", "turns:")) for url in self.urls):
+            raise ValueError("ICE URLs must use stun, stuns, turn or turns")
+        if any(url.startswith(("turn:", "turns:")) for url in self.urls):
+            if not self.username or not self.credential or not self.credential.get_secret_value():
+                raise ValueError("TURN requires username and credential")
+        return self
+
+
 class RealtimeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -158,9 +175,17 @@ class RealtimeConfig(BaseModel):
     pre_roll_ms: int = Field(default=320, ge=0, le=2_000)
     max_utterance_seconds: int = Field(default=30, ge=1, le=120)
     echo_enabled: bool = False
+    ice_servers: list[IceServerConfig] = Field(default_factory=lambda: [], max_length=8)
+    ice_transport_policy: Literal["all", "relay"] = "all"
 
     @model_validator(mode="after")
     def validate_cloud_backend(self) -> Self:
+        if self.ice_transport_policy == "relay" and not any(
+            url.startswith(("turn:", "turns:"))
+            for server in self.ice_servers
+            for url in server.urls
+        ):
+            raise ValueError("relay policy requires a TURN server")
         if self.connection_mode == "cloud_realtime":
             if self.cloud_backend is None:
                 raise ValueError("cloud_backend must be explicitly set to 'fake' or 'openai'")
@@ -225,7 +250,9 @@ class Settings(BaseSettings):
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})
-        public["realtime"] = self.realtime.model_dump(mode="json", exclude={"openai": {"api_key"}})
+        public["realtime"] = self.realtime.model_dump(
+            mode="json", exclude={"openai": {"api_key"}, "ice_servers": {"__all__": {"credential"}}}
+        )
         return public
 
 

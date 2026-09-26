@@ -89,10 +89,11 @@ async def _seed_source_chain(
         await conn.execute(
             """
             INSERT INTO sessions (
-                session_id, character_id, state, conversation_state, created_at, updated_at
-            ) VALUES (?, ?, ?, 'ready', ?, ?)
+                session_id, character_id, state, conversation_state,
+                created_at, updated_at, user_scope
+            ) VALUES (?, ?, ?, 'ready', ?, ?, ?)
             """,
-            (session_id, character_id, session_state, now, now),
+            (session_id, character_id, session_state, now, now, scope),
         )
         await conn.execute(
             """

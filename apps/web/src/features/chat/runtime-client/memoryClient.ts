@@ -28,9 +28,11 @@ const memorySourcesResponse = runtimeParser(
   },
 );
 
-export async function getMemory(): Promise<MemoryItem[]> {
+export async function getMemory(
+  sessionId?: string | null,
+): Promise<MemoryItem[]> {
   return requestRuntime(
-    "/v1/memory",
+    `/v1/memory${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`,
     runtimeParser((input) => {
       const payload = z.object({ items: z.array(z.unknown()) }).parse(input);
       return payload.items.map((item) => parseMemoryRecord(item) as MemoryItem);
@@ -39,11 +41,13 @@ export async function getMemory(): Promise<MemoryItem[]> {
 }
 
 export async function getMemoryRecords(filters?: {
+  sessionId?: string | null;
   includeTombstoned?: boolean;
   kind?: string;
   sensitivity?: string;
 }): Promise<MemoryItem[]> {
   const query = new URLSearchParams();
+  if (filters?.sessionId) query.set("session_id", filters.sessionId);
   if (filters?.includeTombstoned) query.set("include_tombstoned", "true");
   if (filters?.kind) query.set("kind", filters.kind);
   if (filters?.sensitivity) query.set("sensitivity", filters.sensitivity);
@@ -53,9 +57,10 @@ export async function getMemoryRecords(filters?: {
 
 export async function getMemoryProposals(
   status = "pending",
+  sessionId?: string | null,
 ): Promise<MemoryProposal[]> {
   return requestRuntime(
-    `/v1/memory/proposals?status=${encodeURIComponent(status)}`,
+    `/v1/memory/proposals?status=${encodeURIComponent(status)}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`,
     memoryProposalsResponse,
   );
 }
@@ -74,9 +79,10 @@ export async function decideMemoryProposal(
 
 export async function getMemorySources(
   memoryId: string,
+  sessionId?: string | null,
 ): Promise<MemorySource[]> {
   return requestRuntime(
-    `/v1/memory/${memoryId}/sources`,
+    `/v1/memory/${memoryId}/sources${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`,
     memorySourcesResponse,
   );
 }

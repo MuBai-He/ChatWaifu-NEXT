@@ -50,19 +50,29 @@ class CharacterKernelService:
         self._characters = characters
         self._publisher = publisher
 
-    async def snapshot(self, character_id: str) -> CharacterKernelSnapshot:
+    async def _session_scope(self, session_id: UUID, character_id: str) -> str:
+        row = await self._database.fetchone(
+            "SELECT character_id, user_scope FROM sessions WHERE session_id = ?", (str(session_id),)
+        )
+        if row is None or row["character_id"] != character_id:
+            raise KeyError("unknown character session")
+        return str(row["user_scope"])
+
+    async def snapshot(
+        self, character_id: str, *, user_scope: str = USER_SCOPE
+    ) -> CharacterKernelSnapshot:
         character = self._require_character(character_id)
         async with self._database.transaction() as connection:
             cursor_affect = await connection.execute(
                 "SELECT * FROM character_states WHERE character_id = ? AND user_scope = ?",
-                (character_id, USER_SCOPE),
+                (character_id, user_scope),
             )
             affect_row = await cursor_affect.fetchone()
             await cursor_affect.close()
 
             cursor_rel = await connection.execute(
                 "SELECT * FROM relationship_states WHERE character_id = ? AND user_scope = ?",
-                (character_id, USER_SCOPE),
+                (character_id, user_scope),
             )
             relationship_row = await cursor_rel.fetchone()
             await cursor_rel.close()
@@ -84,19 +94,19 @@ class CharacterKernelService:
                     c1 = await connection.execute(
                         "UPDATE character_states SET revision = ? "
                         "WHERE character_id = ? AND user_scope = ?",
-                        (target_revision, character_id, USER_SCOPE),
+                        (target_revision, character_id, user_scope),
                     )
                     await c1.close()
                     c2 = await connection.execute(
                         "UPDATE relationship_states SET revision = ? "
                         "WHERE character_id = ? AND user_scope = ?",
-                        (target_revision, character_id, USER_SCOPE),
+                        (target_revision, character_id, user_scope),
                     )
                     await c2.close()
 
                     cursor_affect = await connection.execute(
                         "SELECT * FROM character_states WHERE character_id = ? AND user_scope = ?",
-                        (character_id, USER_SCOPE),
+                        (character_id, user_scope),
                     )
                     affect_row = await cursor_affect.fetchone()
                     await cursor_affect.close()
@@ -104,14 +114,14 @@ class CharacterKernelService:
                     cursor_rel = await connection.execute(
                         "SELECT * FROM relationship_states "
                         "WHERE character_id = ? AND user_scope = ?",
-                        (character_id, USER_SCOPE),
+                        (character_id, user_scope),
                     )
                     relationship_row = await cursor_rel.fetchone()
                     await cursor_rel.close()
 
         now = datetime.now(UTC)
         if affect_row is None or relationship_row is None:
-            return await self._initialize(character, now)
+            return await self._initialize(character, now, user_scope=user_scope)
         affect = _decay_affect(
             AffectState(
                 valence=float(affect_row["valence"]),
@@ -142,7 +152,7 @@ class CharacterKernelService:
         )
         return CharacterKernelSnapshot(
             character_id=character_id,
-            user_scope=USER_SCOPE,
+            user_scope=user_scope,
             revision=max(int(affect_row["revision"]), int(relationship_row["revision"])),
             affect=affect,
             relationship=relationship,
@@ -157,21 +167,27 @@ class CharacterKernelService:
         character_id: str,
         text: str,
     ) -> TurnCharacterContext:
+        user_scope = await self._session_scope(session_id, character_id)
         character = self._require_character(character_id)
         signal = _classify(text)
 
         for _ in range(5):
-            previous = await self.snapshot(character_id)
+            previous = await self.snapshot(character_id, user_scope=user_scope)
             now = datetime.now(UTC)
             affect = _reduce_affect(previous.affect, signal, now)
             relationship = _reduce_relationship(previous.relationship, signal, character, now)
             revision = previous.revision + 1
             if await self._persist_cas(
-                character_id, affect, relationship, previous.revision, revision
+                character_id,
+                affect,
+                relationship,
+                previous.revision,
+                revision,
+                user_scope=user_scope,
             ):
                 snapshot = CharacterKernelSnapshot(
                     character_id=character_id,
-                    user_scope=USER_SCOPE,
+                    user_scope=user_scope,
                     revision=revision,
                     affect=affect,
                     relationship=relationship,
@@ -211,8 +227,9 @@ class CharacterKernelService:
         kind: Literal["avatar_touch"],
         region: str,
     ) -> CharacterKernelSnapshot:
+        user_scope = await self._session_scope(session_id, character_id)
         for _ in range(5):
-            previous = await self.snapshot(character_id)
+            previous = await self.snapshot(character_id, user_scope=user_scope)
             now = datetime.now(UTC)
             affect = previous.affect.model_copy(
                 update={
@@ -231,11 +248,16 @@ class CharacterKernelService:
             )
             revision = previous.revision + 1
             if await self._persist_cas(
-                character_id, affect, relationship, previous.revision, revision
+                character_id,
+                affect,
+                relationship,
+                previous.revision,
+                revision,
+                user_scope=user_scope,
             ):
                 snapshot = CharacterKernelSnapshot(
                     character_id=character_id,
-                    user_scope=USER_SCOPE,
+                    user_scope=user_scope,
                     revision=revision,
                     affect=affect,
                     relationship=relationship,
@@ -274,9 +296,10 @@ class CharacterKernelService:
         generation_id: UUID,
         character_id: str,
     ) -> TurnCharacterContext:
+        user_scope = await self._session_scope(session_id, character_id)
         """Plan an ambient turn without treating it as user relationship evidence."""
 
-        snapshot = await self.snapshot(character_id)
+        snapshot = await self.snapshot(character_id, user_scope=user_scope)
         plan = ResponsePlan(
             intent="curious",
             tone="gentle",
@@ -321,7 +344,7 @@ class CharacterKernelService:
         return changed
 
     async def _initialize(
-        self, character: CharacterProfile, now: datetime
+        self, character: CharacterProfile, now: datetime, *, user_scope: str = USER_SCOPE
     ) -> CharacterKernelSnapshot:
         initial = character.relationship_policy.get("initial", {})
         affect = AffectState(updated_at=now)
@@ -332,10 +355,10 @@ class CharacterKernelService:
             comfort=float(initial.get("comfort", 0.2)),
             updated_at=now,
         )
-        await self._persist(character.character_id, affect, relationship, 0)
+        await self._persist(character.character_id, affect, relationship, 0, user_scope=user_scope)
         return CharacterKernelSnapshot(
             character_id=character.character_id,
-            user_scope=USER_SCOPE,
+            user_scope=user_scope,
             revision=0,
             affect=affect,
             relationship=relationship,
@@ -348,6 +371,8 @@ class CharacterKernelService:
         relationship: RelationshipState,
         expected_revision: int,
         new_revision: int,
+        *,
+        user_scope: str = USER_SCOPE,
     ) -> bool:
         try:
             async with self._database.transaction() as connection:
@@ -368,7 +393,7 @@ class CharacterKernelService:
                         new_revision,
                         affect.updated_at.isoformat(),
                         character_id,
-                        USER_SCOPE,
+                        user_scope,
                         expected_revision,
                     ),
                 )
@@ -394,7 +419,7 @@ class CharacterKernelService:
                         new_revision,
                         relationship.updated_at.isoformat(),
                         character_id,
-                        USER_SCOPE,
+                        user_scope,
                         expected_revision,
                     ),
                 )
@@ -413,6 +438,8 @@ class CharacterKernelService:
         affect: AffectState,
         relationship: RelationshipState,
         revision: int,
+        *,
+        user_scope: str = USER_SCOPE,
     ) -> None:
         where_affect = (
             "WHERE character_states.revision <= excluded.revision"
@@ -440,7 +467,7 @@ class CharacterKernelService:
                 """,
                 (
                     character_id,
-                    USER_SCOPE,
+                    user_scope,
                     affect.valence,
                     affect.arousal,
                     affect.energy,
@@ -469,7 +496,7 @@ class CharacterKernelService:
                 """,
                 (
                     character_id,
-                    USER_SCOPE,
+                    user_scope,
                     relationship.familiarity,
                     relationship.trust,
                     relationship.affinity,

@@ -213,8 +213,8 @@ export function useSettingsRuntime() {
   }, [avatar, resetting, sessionId]);
 
   const refreshMemories = useCallback(async () => {
-    await getMemory();
-  }, []);
+    if (sessionId) await getMemory(sessionId);
+  }, [sessionId]);
 
   return {
     canvasRef: avatar.canvasRef,
