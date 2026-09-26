@@ -28,7 +28,9 @@ from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
 )
-from chatwaifu_runtime.conversation.service import _previous_local_user_text
+from chatwaifu_runtime.conversation.service import (
+    _previous_local_user_text,  # pyright: ignore[reportPrivateUsage]
+)
 from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,

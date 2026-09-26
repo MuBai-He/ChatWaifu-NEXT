@@ -27,10 +27,10 @@ pub struct OAuthState(Arc<Mutex<Option<Flow>>>);
 
 impl OAuthState {
     pub fn cancel_all(&self) {
-        if let Ok(mut slot) = self.0.lock() {
-            if let Some(flow) = slot.take() {
-                let _ = flow.cancel.send(1);
-            }
+        if let Ok(mut slot) = self.0.lock()
+            && let Some(flow) = slot.take()
+        {
+            let _ = flow.cancel.send(1);
         }
     }
 }
@@ -88,10 +88,11 @@ pub async fn prepare_google_oauth(
         tokio::select! {
             _ = cancelled.changed() => {},
             _ = tokio::time::sleep(Duration::from_secs(300)) => {
-                if let Ok(mut slot) = shared.lock() {
-                    if slot.as_ref().is_some_and(|f| f.id == expires_id) {
-                        if let Some(flow) = slot.take() { let _ = flow.cancel.send(2); }
-                    }
+                if let Ok(mut slot) = shared.lock()
+                    && slot.as_ref().is_some_and(|f| f.id == expires_id)
+                    && let Some(flow) = slot.take()
+                {
+                    let _ = flow.cancel.send(2);
                 }
             }
         }
@@ -112,10 +113,10 @@ pub fn cancel_google_oauth(
         return Err("请在桌宠设置中操作".into());
     }
     let mut slot = state.0.lock().map_err(|_| "授权状态不可用")?;
-    if slot.as_ref().is_some_and(|flow| flow.id == flow_id) {
-        if let Some(flow) = slot.take() {
-            let _ = flow.cancel.send(1);
-        }
+    if slot.as_ref().is_some_and(|flow| flow.id == flow_id)
+        && let Some(flow) = slot.take()
+    {
+        let _ = flow.cancel.send(1);
     }
     Ok(())
 }
@@ -238,10 +239,10 @@ pub async fn receive_google_oauth(
                 result.unwrap_or_else(|_| Err("授权已超时，请重试".into())),
         }
     }.await;
-    if let Ok(mut slot) = state.0.lock() {
-        if slot.as_ref().is_some_and(|f| f.id == flow_id) {
-            slot.take();
-        }
+    if let Ok(mut slot) = state.0.lock()
+        && slot.as_ref().is_some_and(|f| f.id == flow_id)
+    {
+        slot.take();
     }
     outcome
 }

@@ -1,3 +1,6 @@
+# This adapter is POSIX-only but imported on Windows for package discovery.
+# Windows typing stubs omit the intentional os/fcntl operations below.
+# pyright: reportAttributeAccessIssue=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 """Explicit POSIX server credential adapter; never an automatic keyring fallback."""
 
 from __future__ import annotations

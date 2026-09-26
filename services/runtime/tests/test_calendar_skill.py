@@ -13,7 +13,7 @@ from chatwaifu_runtime.personal_assistant.repository import AssistantRepository
 from chatwaifu_runtime.personal_assistant.skill import (
     CalendarQuery,
     CalendarReadSkill,
-    _calendar_window,
+    _calendar_window,  # pyright: ignore[reportPrivateUsage]
 )
 from chatwaifu_runtime.runtime_skills.adapters import BuiltinAdapter
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
@@ -47,8 +47,10 @@ def test_calendar_manifest_declares_permission_and_read_only() -> None:
     assert cap.required_permissions == ["calendar.read"]
     assert cap.side_effect.value == "read"
     assert cap.input_schema["additionalProperties"] is False
-    assert "start" not in cap.input_schema["properties"]
-    assert "period" in cap.input_schema["properties"]
+    properties = cap.input_schema["properties"]
+    assert isinstance(properties, dict)
+    assert "start" not in properties
+    assert "period" in properties
 
 
 def test_calendar_period_uses_selected_calendar_day_across_utc_midnight() -> None:

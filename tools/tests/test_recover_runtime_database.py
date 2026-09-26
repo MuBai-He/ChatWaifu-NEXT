@@ -69,6 +69,19 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
     target = tmp_path / "chatwaifu-recovered.db"
     backup = tmp_path / "source-backup"
     _seed_source(source, delete_session=True)
+    with sqlite3.connect(source) as original:
+        original.execute(
+            "INSERT INTO assistant_accounts VALUES (?, 'local', 'connected', ?, 1)",
+            ("owner-google", "assistant-secret-ref"),
+        )
+        original.execute(
+            "INSERT INTO assistant_calendars VALUES (?, ?, ?, ?, ?, 1, 2, ?, ?)",
+            ("owner-google", "primary", "工作", "Asia/Shanghai", "owner", "cursor", NOW),
+        )
+        original.execute(
+            "INSERT INTO assistant_events VALUES (?, ?, ?, ?)",
+            ("owner-google", "primary", "event-1", json.dumps({"summary": "测试"})),
+        )
     source_digest = _sha256(source)
 
     report = recovery.recover_runtime_database(
@@ -115,6 +128,19 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
         assert _count(connection, "memory_records_fts") == 1
         assert _count(connection, "memory_items") == 0
         assert _count(connection, "memory_embeddings") == 0
+        assert tuple(
+            connection.execute(
+                "SELECT status, secret_ref FROM assistant_accounts "
+                "WHERE account_id = 'owner-google'"
+            ).fetchone()
+        ) == ("connected", "assistant-secret-ref")
+        assert tuple(
+            connection.execute(
+                "SELECT selected, sync_token FROM assistant_calendars "
+                "WHERE account_id = 'owner-google'"
+            ).fetchone()
+        ) == (1, "cursor")
+        assert _count(connection, "assistant_events") == 1
         for table in recovery.TRANSIENT_TABLES:
             assert _count(connection, table) == 0
     finally:

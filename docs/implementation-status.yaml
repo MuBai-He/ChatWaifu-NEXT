@@ -1,37 +1,39 @@
 schema_version: "1.0"
-updated_at: "2026-09-21"
+updated_at: "2026-09-27"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_calendar_settings_and_skill_implemented_live_acceptance_pending
+  status: stage_a_google_read_user_confirmed_other_integrations_pending
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
-    - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22; no live account acceptance
+    - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22
     - Migration 33 and owner-private repository implement atomic cache/cursor commits and revision fencing; 7 repository checks and 14 existing database/migration checks passed, 1 Windows-specific check skipped on macOS
     - Account service derives owner from stored sessions and implements credential refresh and revocation recovery; repository/account checks now total 11, including async secret-write cancellation; Google adapter 13 checks passed
     - Runtime configuration and lifecycle wired; internal OAuth adds state/session/PKCE/expiry/cancel; repository/account/OAuth checks total 13 and status HTTP checks 2 passed with normal exit
     - Full lifecycle suite reports passing assertions but hangs at process exit, reproduced on unchanged baseline; not recorded as a fully passing command
-    - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed; no live Google or native visual acceptance
+    - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed
+    - User completed Google authorization and selected a calendar on direct HTTPS; authenticated event API and calendar.read 1.1.0 returned the existing event 测试 in Asia/Shanghai, and the user confirmed desktop-pet dialog access on 2026-09-27
+    - Offline recovery now retains account secret references, selected calendars, sync cursors and event cache together; targeted recovery/calendar/tool checks passed with 36 passed and 22 Windows-only skips on macOS
   remaining:
-    - real_native_google_consent_and_direct_https_deployment_acceptance
-    - calendar_runtime_skill_live_conversation_and_ui_acceptance
+    - google_revocation_refresh_and_long_term_stability_acceptance
     - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes
-    - real_google_apple_and_home_assistant_acceptance
+    - real_apple_and_home_assistant_acceptance
 next_phase: "17.4C"
 server_deployment:
-  status: remote_thin_client_implemented_target_host_acceptance_pending
+  status: linux_source_server_https_and_remote_client_running_further_acceptance_pending
   scope: single_owner_source_server_and_remote_web_desktop_clients_with_server_owned_voice
   evidence:
     - PR 42 Realtime configuration merged as c2433d3 on 2026-09-21; existing targeted Python and Web checks plus both frontend builds passed before merge
     - Source server uses an independent state directory and the existing Runtime lifecycle; no desktop, frontend build, or local model workers are started
     - Local macOS source process accepted authenticated session creation and retained the session and management credential after SIGTERM cleanup and restart; closing stdin did not stop the service, unauthenticated private API returned 401, and a second process could not acquire the same state-directory lease
-    - Target Linux service persistence, headless secure credential storage, real model and WeChat receipt remain pending server access
+    - Target Linux user systemd Runtime is running with directly verified HTTPS at mubai.website:18443; the existing LAN HTTP entry still passes health checks
+    - Headless encrypted-file channel credentials and QR creation survived Runtime restart; actual WeChat binding and message receipt remain unverified
     - Remote connection gate, native local-start guards, endpoint-scoped sessions, authenticated audio download and server/client ICE configuration implemented; see ADR 0053 and remote-client.md
     - Chromium forced the WAV fallback after disabling its PCM socket; the audio GET carried Bearer authentication, returned 200 and started Blob playback
     - Chromium entered the remote UI through the authenticated connection form, negotiated a real loopback WebRTC connection using simulated microphone capture, and closed the peer when switching connections; this does not establish public-network or physical-audio acceptance
   remaining:
     - server_installer
-    - target_server_https_and_systemd_acceptance
     - real_cross_network_voice_and_turn_acceptance
+    - wechat_binding_and_message_receipt_acceptance
 phase_2_entry_allowed: true
 phase_3_entry_allowed: true
 continuous_demo_delivery_authorized: true
