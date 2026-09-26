@@ -18,19 +18,35 @@ from chatwaifu_runtime.runtime_skills.transports import (
     enforce_mcp_json_payload_limit,
 )
 
+SessionBuiltinHandler = Callable[[str, JsonObject], Awaitable[JsonObject]]
+
 BuiltinHandler = Callable[[JsonObject], Awaitable[JsonObject]]
 
 
 class BuiltinAdapter:
     def __init__(self) -> None:
         self._handlers: dict[str, BuiltinHandler] = {}
+        self._session_handlers: dict[str, SessionBuiltinHandler] = {}
 
     def register(self, name: str, handler: BuiltinHandler) -> None:
-        if name in self._handlers:
+        if name in self._handlers or name in self._session_handlers:
             raise ValueError(f"duplicate builtin skill handler: {name}")
         self._handlers[name] = handler
 
-    async def invoke(self, name: str, arguments: JsonObject) -> JsonObject:
+    def register_session(self, name: str, handler: SessionBuiltinHandler) -> None:
+        if name in self._handlers or name in self._session_handlers:
+            raise ValueError(f"duplicate builtin skill handler: {name}")
+        self._session_handlers[name] = handler
+
+    async def invoke(
+        self, name: str, arguments: JsonObject, session_id: str | None = None
+    ) -> JsonObject:
+        if name in self._session_handlers:
+            if session_id is None:
+                raise SkillExecutionError(
+                    "session_required", "A trusted Runtime session is required"
+                )
+            return await self._session_handlers[name](session_id, arguments)
         handler = self._handlers.get(name)
         if handler is None:
             raise SkillExecutionError("adapter_not_found", f"Builtin handler is missing: {name}")
