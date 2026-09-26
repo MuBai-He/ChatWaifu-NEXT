@@ -166,10 +166,10 @@ async def test_noninterruptible_cancel_cas_cannot_cross_created_to_running_race(
             await release_cancel_cas.wait()
             return await original_mark_cancelling(run_id, now, allow_running=allow_running)
 
-        async def delayed_status(name: str, arguments: JsonObject) -> JsonObject:
+        async def delayed_status(name: str, arguments: JsonObject, session_id: str) -> JsonObject:
             adapter_started.set()
             await release_adapter.wait()
-            return await original_invoke(name, arguments)
+            return await original_invoke(name, arguments, session_id)
 
         monkeypatch.setattr(repository, "mark_run_running", paused_running)
         monkeypatch.setattr(repository, "mark_run_cancelling", paused_cancel)
@@ -210,7 +210,7 @@ async def test_cancel_cas_commit_then_cancellation_still_converges(
         service = container.runtime_skills
         adapter_started = asyncio.Event()
 
-        async def delayed_status(_: str, __: JsonObject) -> JsonObject:
+        async def delayed_status(_: str, __: JsonObject, ___: str) -> JsonObject:
             adapter_started.set()
             await release_adapter.wait()
             return {"ignored": True}
@@ -255,14 +255,14 @@ async def test_cancelled_run_never_emits_late_tool_completion(
         cancellation_swallowed = asyncio.Event()
         original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
 
-        async def stubborn_status(name: str, arguments: JsonObject) -> JsonObject:
+        async def stubborn_status(name: str, arguments: JsonObject, session_id: str) -> JsonObject:
             adapter_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
                 cancellation_swallowed.set()
             await release_adapter.wait()
-            return await original_invoke(name, arguments)
+            return await original_invoke(name, arguments, session_id)
 
         monkeypatch.setattr(service._builtin, "invoke", stubborn_status)  # pyright: ignore[reportPrivateUsage]
         subscription = container.event_hub.subscribe(
@@ -382,7 +382,7 @@ async def test_stop_is_bounded_and_terminalizes_task_that_ignores_cancellation(
         service = container.runtime_skills
         adapter_started = asyncio.Event()
 
-        async def stubborn_status(_: str, __: JsonObject) -> JsonObject:
+        async def stubborn_status(_: str, __: JsonObject, ___: str) -> JsonObject:
             adapter_started.set()
             while not release_adapter.is_set():
                 try:
