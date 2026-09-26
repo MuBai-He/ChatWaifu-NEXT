@@ -1,0 +1,38 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/scene-snapshot.schema.json",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "display_name": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "participant_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 2,
+      "title": "Participant Ids",
+      "type": "array"
+    },
+    "scene_id": {
+      "title": "Scene Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "scene_id",
+    "display_name",
+    "participant_ids",
+    "created_at"
+  ],
+  "title": "SceneSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

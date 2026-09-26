@@ -63,6 +63,11 @@ Web 与桌宠不是同一个页面套皮。它们从 `apps/web/src/main.web.tsx`
 
 ## 快速体验
 
+仅运行服务器后端可使用 `make server-setup` 和 `make server`，无需桌面与前端构建环境。
+Linux 常驻服务、持久数据和配置方式见[源码服务端指南](docs/operations/source-server.md)。
+仅运行轻量前端可用 `make client-setup`、`make client`，然后填写服务器地址与令牌。
+桌面远程模式、独立静态部署和语音网络配置见[前后端分离指南](docs/operations/remote-client.md)。
+
 ### 1. 先把界面跑起来（不需要模型）
 
 需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22/npm、Rust/cargo 和 GNU Make。

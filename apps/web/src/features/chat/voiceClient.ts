@@ -1,6 +1,8 @@
+import { z } from "zod";
 import type { PlaybackAckReceipt } from "./runtimeClient";
 import {
   resolveRuntimeConnection,
+  isRemoteRuntime,
   runtimeFetchWithConnection,
   type RuntimeConnection,
 } from "./runtimeEndpoint";
@@ -47,6 +49,18 @@ export interface PlaybackMarker {
   segmentId: string;
   durationMs: number;
 }
+
+const iceConfigurationSchema = z.object({
+  schema_version: z.literal("1.0"),
+  ice_servers: z.array(
+    z.object({
+      urls: z.array(z.string()),
+      username: z.string().nullable().optional(),
+      credential: z.string().nullable().optional(),
+    }),
+  ),
+  ice_transport_policy: z.enum(["all", "relay"]),
+});
 
 const RECONNECT_BACKOFF_MS = [250, 500, 1_000, 2_000, 4_000] as const;
 const DISCONNECTED_GRACE_MS = 750;
@@ -221,6 +235,26 @@ export class BrowserVoiceClient {
 
     const runtime = await resolveRuntimeConnection();
     if (!this.isDesired(epoch)) return;
+    let iceConfiguration: RTCConfiguration = { iceServers: [] };
+    if (isRemoteRuntime()) {
+      const response = await runtimeFetchWithConnection(
+        runtime,
+        "/v1/runtime/client-configuration",
+        { signal: AbortSignal.timeout(10_000), cache: "no-store" },
+      );
+      if (!response.ok)
+        throw new Error(`无法读取服务器语音连接配置（${response.status}）。`);
+      const config = iceConfigurationSchema.parse(await response.json());
+      iceConfiguration = {
+        iceServers: config.ice_servers.map((server) => ({
+          urls: server.urls,
+          username: server.username ?? undefined,
+          credential: server.credential ?? undefined,
+        })),
+        iceTransportPolicy: config.ice_transport_policy,
+      };
+    }
+    if (!this.isDesired(epoch)) return;
     const selected = await this.resolveDeviceForConnection(reconnecting);
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -257,7 +291,7 @@ export class BrowserVoiceClient {
     output.setAttribute("playsinline", "true");
     this.output = output;
 
-    const peer = new RTCPeerConnection({ iceServers: [] });
+    const peer = new RTCPeerConnection(iceConfiguration);
     this.peer = peer;
     const dataChannel = peer.createDataChannel("chatwaifu-runtime", {
       ordered: true,
@@ -306,7 +340,7 @@ export class BrowserVoiceClient {
 
     this.callbacks.onStateChange(reconnecting ? "reconnecting" : "connecting");
     await peer.setLocalDescription(await peer.createOffer());
-    await waitForIceGathering(peer, 5_000);
+    await waitForIceGathering(peer, isRemoteRuntime() ? 15_000 : 5_000);
     if (!this.isDesired(epoch)) {
       peer.close();
       stopStream(stream);

@@ -12,7 +12,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.transports.base_transport import TransportParams
-from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
+from pipecat.transports.smallwebrtc.connection import IceServer, SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.request_handler import (
     ConnectionMode,
     IceCandidate,
@@ -111,7 +111,17 @@ class PipecatMediaAdapter:
         self._configuration_service = configuration_service
         self._egress_gateway = egress_gateway
         self._bridge_factory_builder = bridge_factory_builder
-        self._handler = SmallWebRTCRequestHandler(connection_mode=ConnectionMode.MULTIPLE)
+        self._handler = SmallWebRTCRequestHandler(
+            connection_mode=ConnectionMode.MULTIPLE,
+            ice_servers=[
+                IceServer(
+                    urls=server.urls,
+                    username=server.username,
+                    credential=server.credential.get_secret_value() if server.credential else None,
+                )
+                for server in config.ice_servers
+            ],
+        )
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._sessions: dict[str, UUID] = {}
         self._session_locks: dict[UUID, asyncio.Lock] = {}

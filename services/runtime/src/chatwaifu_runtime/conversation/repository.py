@@ -152,6 +152,7 @@ class ConversationRepository(Protocol):
         backend_kind: str,
         occurred_at: datetime,
         generation_event: AssistantGenerationStartedEvent,
+        source_context: ConversationSourceContext | None = None,
     ) -> AssistantGenerationStartedEvent: ...
 
     async def commit_realtime_user_transcript(

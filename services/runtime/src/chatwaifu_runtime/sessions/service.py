@@ -1,12 +1,20 @@
 """Table-driven session lifecycle backed by SQLite and domain events."""
 
+import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.events import GenericCoreEvent, SessionCreatedEvent, SessionCreatedPayload
-from chatwaifu_protocol.session import ConversationState, SessionSnapshot, SessionState
+from chatwaifu_protocol.session import (
+    ConversationState,
+    ParticipantSnapshot,
+    SceneSnapshot,
+    SessionSnapshot,
+    SessionState,
+)
 
+from chatwaifu_runtime.conversation.models import ConversationSourceContext
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
@@ -42,7 +50,97 @@ class SessionService:
         self._event_store = event_store
         self._event_hub = event_hub
 
-    async def create_session(self, character_id: str) -> SessionSnapshot:
+    async def source_context(self, session_id: UUID) -> ConversationSourceContext | None:
+        session = await self.get_session(session_id)
+        if session is None:
+            raise KeyError("session not found")
+        if session.user_scope == "local":
+            return None
+        names = {p.participant_id: p.display_name for p in await self.list_participants()}
+        scene = next((s for s in await self.list_scenes() if s.scene_id == session.scene_id), None)
+        return ConversationSourceContext(
+            provider_id="runtime",
+            connection_id=session.session_id,
+            account_key=None,
+            principal_scope=session.user_scope,
+            chat_type="group" if scene else "direct",
+            conversation_key=session.scene_id or session.participant_id,
+            sender_key=session.participant_id,
+            sender_display_name=names[session.participant_id],
+            conversation_label=scene.display_name if scene else names[session.participant_id],
+            audience_ids=tuple(session.audience_ids),
+        )
+
+    async def list_participants(self) -> list[ParticipantSnapshot]:
+        rows = await self._database.fetchall(
+            "SELECT * FROM participants ORDER BY created_at, participant_id"
+        )
+        return [ParticipantSnapshot.model_validate(dict(row)) for row in rows]
+
+    async def create_participant(self, display_name: str) -> ParticipantSnapshot:
+        participant = ParticipantSnapshot(
+            participant_id=str(uuid4()),
+            display_name=display_name.strip(),
+            created_at=datetime.now(UTC),
+        )
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                "INSERT INTO participants VALUES (?, ?, ?)",
+                (
+                    participant.participant_id,
+                    participant.display_name,
+                    participant.created_at.isoformat(),
+                ),
+            )
+        return participant
+
+    async def list_scenes(self) -> list[SceneSnapshot]:
+        rows = await self._database.fetchall(
+            "SELECT * FROM conversation_scenes ORDER BY created_at, scene_id"
+        )
+        return [
+            SceneSnapshot(
+                scene_id=row["scene_id"],
+                display_name=row["display_name"],
+                participant_ids=json.loads(row["participant_ids_json"]),
+                created_at=row["created_at"],
+            )
+            for row in rows
+        ]
+
+    async def create_scene(self, display_name: str, participant_ids: list[str]) -> SceneSnapshot:
+        ids = sorted(set(participant_ids))
+        known = {p.participant_id for p in await self.list_participants()}
+        if not set(ids).issubset(known):
+            raise ValueError("unknown scene participant")
+        scene = SceneSnapshot(
+            scene_id=str(uuid4()),
+            display_name=display_name.strip(),
+            participant_ids=ids,
+            created_at=datetime.now(UTC),
+        )
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                "INSERT INTO conversation_scenes VALUES (?, ?, ?, ?)",
+                (scene.scene_id, scene.display_name, json.dumps(ids), scene.created_at.isoformat()),
+            )
+        return scene
+
+    async def create_session(
+        self, character_id: str, *, participant_id: str = "local", scene_id: str | None = None
+    ) -> SessionSnapshot:
+        if participant_id not in {p.participant_id for p in await self.list_participants()}:
+            raise ValueError("unknown participant")
+        audience = [participant_id]
+        scope = "local" if participant_id == "local" else f"participant:{participant_id}"
+        kind = "private"
+        if scene_id is not None:
+            scene = next((s for s in await self.list_scenes() if s.scene_id == scene_id), None)
+            if scene is None or participant_id not in scene.participant_ids:
+                raise ValueError("participant is not in the selected scene")
+            audience = scene.participant_ids
+            scope = f"scene:{scene_id}"
+            kind = "shared"
         session_id = uuid4()
         now = datetime.now(UTC)
         async with self._database.transaction() as connection:
@@ -50,8 +148,9 @@ class SessionService:
                 """
                 INSERT INTO sessions(
                     session_id, character_id, state, conversation_state,
-                    revision, next_sequence, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 0, 1, ?, ?)
+                    revision, next_sequence, created_at, updated_at,
+                    participant_id, scene_id, scene_kind, audience_json, user_scope
+                ) VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(session_id),
@@ -60,6 +159,11 @@ class SessionService:
                     ConversationState.IDLE.value,
                     now.isoformat(),
                     now.isoformat(),
+                    participant_id,
+                    scene_id,
+                    kind,
+                    json.dumps(audience),
+                    scope,
                 ),
             )
             event = await self._event_store.append_in_transaction(
@@ -75,6 +179,11 @@ class SessionService:
             )
         await self._publish(event.model_dump(mode="json"))
         return SessionSnapshot(
+            participant_id=participant_id,
+            scene_id=scene_id,
+            scene_kind="shared" if scene_id else "private",
+            audience_ids=audience,
+            user_scope=scope,
             session_id=session_id,
             character_id=character_id,
             state=SessionState.READY,
@@ -90,14 +199,14 @@ class SessionService:
         )
         if row is None:
             return None
-        return SessionSnapshot.model_validate(dict(row))
+        return _session_snapshot(dict(row))
 
     async def list_ready_sessions(self) -> tuple[SessionSnapshot, ...]:
         rows = await self._database.fetchall(
             "SELECT * FROM sessions WHERE state = ? ORDER BY updated_at DESC",
             (SessionState.READY.value,),
         )
-        return tuple(SessionSnapshot.model_validate(dict(row)) for row in rows)
+        return tuple(_session_snapshot(dict(row)) for row in rows)
 
     async def transition_session(
         self,
@@ -173,3 +282,8 @@ class SessionService:
         event_id = event.get("event_id")
         if event_id is not None:
             await self._event_store.mark_published(str(event_id))
+
+
+def _session_snapshot(row: dict[str, object]) -> SessionSnapshot:
+    row["audience_ids"] = json.loads(str(row.pop("audience_json")))
+    return SessionSnapshot.model_validate(row)

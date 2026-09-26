@@ -1,0 +1,11 @@
+# Replace both domains and the frontend directory. Point DNS at this server first.
+api.example.com {
+    reverse_proxy 127.0.0.1:8765
+}
+
+chat.example.com {
+    root * /srv/chatwaifu-web
+    encode zstd gzip
+    try_files {path} /index.html
+    file_server
+}

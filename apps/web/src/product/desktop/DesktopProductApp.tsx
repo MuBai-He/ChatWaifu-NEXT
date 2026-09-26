@@ -1,3 +1,4 @@
+import { ConversationScopeGate } from "../../features/chat/ConversationScopeGate";
 import { DesktopPetPage } from "../../features/desktop-pet/DesktopPetPage";
 import { DesktopSettingsPage } from "../../features/desktop-settings/DesktopSettingsPage";
 import { resolveDesktopSurface, type DesktopSurface } from "./desktopSurface";
@@ -9,9 +10,13 @@ interface DesktopProductAppProps {
 export function DesktopProductApp({
   surface = resolveDesktopSurface(),
 }: DesktopProductAppProps) {
-  return surface === "desktop-settings" ? (
-    <DesktopSettingsPage />
-  ) : (
-    <DesktopPetPage />
+  return (
+    <ConversationScopeGate showSwitch={false}>
+      {surface === "desktop-settings" ? (
+        <DesktopSettingsPage />
+      ) : (
+        <DesktopPetPage />
+      )}
+    </ConversationScopeGate>
   );
 }

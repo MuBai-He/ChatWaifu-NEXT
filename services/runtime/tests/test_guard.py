@@ -504,3 +504,21 @@ def test_vulnerable_nltk_apis_not_referenced() -> None:
                 pytest.fail(f"Banned NLTK API '{node.id}' referenced in {py_path}")
             if isinstance(node, ast.Attribute) and node.attr in banned:
                 pytest.fail(f"Banned NLTK API '{node.attr}' referenced in {py_path}")
+
+
+def test_remote_client_configuration_and_audio_require_auth(guard_settings: Settings) -> None:
+    app = create_app(guard_settings)
+    with TestClient(app) as client:
+        assert client.get("/v1/runtime/client-configuration").status_code == 401
+        assert client.get("/v1/audio/00000000-0000-4000-8000-000000000001.wav").status_code == 401
+        response = client.get(
+            "/v1/runtime/client-configuration",
+            headers={"Authorization": f"Bearer {app.state.container.capability_token}"},
+        )
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json() == {
+            "schema_version": "1.0",
+            "ice_servers": [],
+            "ice_transport_policy": "all",
+        }

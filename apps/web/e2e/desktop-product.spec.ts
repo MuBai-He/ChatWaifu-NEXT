@@ -40,8 +40,10 @@ test("desktop settings is an app-like control surface without chat ownership", a
   ).toBeVisible();
   await expect(page.locator(".desktop-settings-app-icon img")).toBeVisible();
   await expect(
-    page.locator(".desktop-settings-sidebar nav svg.lucide"),
-  ).toHaveCount(6);
+    page
+      .getByRole("navigation", { name: "设置分类" })
+      .getByRole("button", { name: /连接/ }),
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Conversation" })).toHaveCount(
     0,

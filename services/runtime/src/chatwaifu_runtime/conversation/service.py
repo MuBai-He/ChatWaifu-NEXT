@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID, uuid4
@@ -32,7 +32,6 @@ from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import (
-    USER_SCOPE,
     CharacterKernelService,
     TurnCharacterContext,
 )
@@ -203,6 +202,7 @@ class ConversationService:
                 backend_kind=backend_kind,
                 occurred_at=now,
                 generation_event=generation_event,
+                source_context=await self._sessions.source_context(session_id),
             )
             self._active[session_id] = _ActiveGeneration(
                 generation_id=generation_id,
@@ -263,7 +263,9 @@ class ConversationService:
                 extra={"session_id": str(session_id), "generation_id": str(generation_id)},
             )
         session = await self._sessions.get_session(session_id)
-        character_id = session.character_id if session else "default"
+        if session is None:
+            raise KeyError("realtime session disappeared")
+        character_id = session.character_id
         try:
             await self._character_kernel.observe_user_turn(
                 session_id=session_id,
@@ -407,7 +409,7 @@ class ConversationService:
             accepted,
             output=text,
             emit_avatar=False,
-            source_context=None,
+            source_context=await self._sessions.source_context(session_id),
         )
         current = self._active.get(accepted.session_id)
         if current and current.generation_id == accepted.generation_id:
@@ -570,6 +572,17 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
+            if (
+                options.source_context is not None
+                and options.source_context.principal_scope != session.user_scope
+            ):
+                raise ValueError("input source does not match session scope")
+            if session.user_scope != "local":
+                options = replace(
+                    options,
+                    source_context=await self._sessions.source_context(session_id),
+                    allow_tools=False,
+                )
             accepted, events = await self._commit_user_turn(
                 session_id,
                 normalized,
@@ -730,19 +743,24 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
-            await self.cancel(session_id, "session_data_reset")
-            self._active.pop(session_id, None)
+            for active_session in await self._sessions.list_ready_sessions():
+                if (active_session.character_id, active_session.user_scope) == (
+                    session.character_id,
+                    session.user_scope,
+                ):
+                    await self.cancel(active_session.session_id, "session_data_reset")
+                    self._active.pop(active_session.session_id, None)
             now = datetime.now(UTC)
             audio_asset_ids = await self._reset_repository.audio_asset_ids(session_id)
             staged_audio = self._audio_assets.stage_remove(audio_asset_ids)
             try:
                 memory_namespace = await self._memory.prepare_scope_reset(
-                    session.character_id, USER_SCOPE
+                    session.character_id, session.user_scope, persist_reset=False
                 )
                 reset = await self._reset_repository.reset(
                     session_id,
                     character_id=session.character_id,
-                    user_scope=USER_SCOPE,
+                    user_scope=session.user_scope,
                     memory_namespace=memory_namespace,
                     updated_at=now,
                     reset_event=GenericCoreEvent(
@@ -754,7 +772,7 @@ class ConversationService:
                         privacy=PrivacyLevel.PRIVATE,
                         payload={
                             "character_id": session.character_id,
-                            "user_scope": USER_SCOPE,
+                            "user_scope": session.user_scope,
                             "conversation": "current_session",
                             "audio": "current_session",
                             "memory": "current_character_user",
@@ -798,7 +816,7 @@ class ConversationService:
             return SessionDataReset(
                 session_id=session_id,
                 character_id=session.character_id,
-                user_scope=USER_SCOPE,
+                user_scope=session.user_scope,
                 turns_deleted=reset.turns_deleted,
                 events_deleted=reset.events_deleted,
                 memories_deleted=len(reset.memory_ids),
@@ -1009,14 +1027,9 @@ class ConversationService:
                 and trigger == "user"
                 and options.image_loader is None
             ):
-                # This release supports the local owner/default character only.
-                source = options.source_context
-                if character.character_id == "default" and (
-                    source is None
-                    or (source.principal_scope == USER_SCOPE and source.chat_type == "direct")
-                ):
+                if character.character_id == "default":
                     photo_recall = await self._photo_recall.recall(
-                        USER_SCOPE,
+                        character_context.snapshot.user_scope,
                         character.character_id,
                         user_text,
                         generation_id=accepted.generation_id,

@@ -1311,7 +1311,7 @@ async def test_repeated_same_cue_dedupes_not_supersede(
     database: Database, event_store: EventStore, repository: SQLiteMemoryRepository
 ) -> None:
     session_id = uuid4()
-    await _create_session(database, session_id)
+    await _create_session(database, session_id, character_id="default")
     e1 = await _create_event(database, session_id)
     now = datetime.now(UTC)
 
@@ -1384,7 +1384,7 @@ async def test_forget_and_tombstone_subsequent_recall(
     database: Database, event_store: EventStore, repository: SQLiteMemoryRepository
 ) -> None:
     session_id = uuid4()
-    await _create_session(database, session_id)
+    await _create_session(database, session_id, character_id="default")
     e = await _create_event(database, session_id)
     now = datetime.now(UTC)
 

@@ -1122,6 +1122,11 @@ async def test_cloud_realtime_factory_fails_closed_on_history_db_error() -> None
     mock_session_obj = MagicMock()
     mock_session_obj.character_id = "default"
     mock_sessions.get_session = AsyncMock(return_value=mock_session_obj)
+    mock_sessions.source_context = AsyncMock(return_value=None)
+    mock_session_obj.user_scope = "local"
+    mock_memory = MagicMock()
+    mock_memory.namespaces_for_session = AsyncMock(return_value=["character/default/user/local"])
+    mock_memory.context_revision.return_value = (0, 0)
 
     mock_conv = MagicMock()
     mock_conv.latest_confirmed_history = AsyncMock(
@@ -1142,7 +1147,7 @@ async def test_cloud_realtime_factory_fails_closed_on_history_db_error() -> None
         admission=MagicMock(),
         characters=MagicMock(),
         character_kernel=MagicMock(),
-        memory=MagicMock(),
+        memory=mock_memory,
     )
 
     with pytest.raises(RuntimeError, match="Failed to load confirmed history for recovery session"):

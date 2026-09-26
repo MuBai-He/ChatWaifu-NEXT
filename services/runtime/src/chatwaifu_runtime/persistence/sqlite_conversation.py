@@ -55,6 +55,14 @@ class SQLiteConversationRepository(ConversationRepository):
                 FROM turns
                 WHERE session_id = ? AND committed_text IS NOT NULL
                     AND role IN ('user', 'assistant')
+                AND NOT EXISTS (
+                    SELECT 1 FROM sessions scope_session JOIN memory_scope_resets scope_reset
+                    ON ((scope_reset.character_id = scope_session.character_id
+                        AND scope_reset.user_scope = scope_session.user_scope)
+                        OR scope_reset.character_id = '__all__')
+                    WHERE scope_session.session_id = turns.session_id
+                        AND turns.created_at <= scope_reset.reset_at
+                )
                 ORDER BY created_at ASC LIMIT 500
                 """,
                 (str(session_id),),
@@ -112,6 +120,14 @@ class SQLiteConversationRepository(ConversationRepository):
             FROM turns
             WHERE session_id = ? AND committed_text IS NOT NULL
                 AND role IN ('user', 'assistant')
+                AND NOT EXISTS (
+                    SELECT 1 FROM sessions scope_session JOIN memory_scope_resets scope_reset
+                    ON ((scope_reset.character_id = scope_session.character_id
+                        AND scope_reset.user_scope = scope_session.user_scope)
+                        OR scope_reset.character_id = '__all__')
+                    WHERE scope_session.session_id = turns.session_id
+                        AND turns.created_at <= scope_reset.reset_at
+                )
             ORDER BY created_at ASC LIMIT ?
             """,
             (str(session_id), min(max(limit, 1), 500)),
@@ -143,7 +159,7 @@ class SQLiteConversationRepository(ConversationRepository):
             LEFT JOIN photo_context_redactions AS redaction
                 ON turns.role = 'assistant' AND redaction.generation_id = turns.generation_id
             LEFT JOIN memory_scope_resets AS r
-                ON r.character_id = s.character_id
+                ON r.character_id = s.character_id AND r.user_scope = s.user_scope
             LEFT JOIN memory_scope_resets AS r_all
                 ON r_all.character_id = '__all__'
             WHERE turns.session_id = ?
@@ -221,6 +237,14 @@ class SQLiteConversationRepository(ConversationRepository):
                 ON turns.role = 'assistant' AND redaction.generation_id = turns.generation_id
             WHERE turns.session_id = ? AND turns.turn_id != ? AND turns.committed_text IS NOT NULL
                 AND turns.role IN ('user', 'assistant')
+                AND NOT EXISTS (
+                    SELECT 1 FROM sessions scope_session JOIN memory_scope_resets scope_reset
+                    ON ((scope_reset.character_id = scope_session.character_id
+                        AND scope_reset.user_scope = scope_session.user_scope)
+                        OR scope_reset.character_id = '__all__')
+                    WHERE scope_session.session_id = turns.session_id
+                        AND turns.created_at <= scope_reset.reset_at
+                )
             ORDER BY turns.created_at DESC LIMIT ?
             """,
             (REDACTED_ASSISTANT_PLACEHOLDER, str(session_id), str(current_turn_id), limit),
@@ -251,12 +275,21 @@ class SQLiteConversationRepository(ConversationRepository):
               ON turn.role = 'assistant' AND redaction.generation_id = turn.generation_id
             WHERE turn.session_id != ?
               AND source_session.character_id = current_session.character_id
+              AND source_session.user_scope = current_session.user_scope
               AND turn.source_context_json IS NOT NULL
               AND COALESCE(
                     json_extract(turn.source_context_json, '$.principal_scope'),
                     'local'
-                  ) = ?
+                  ) = current_session.user_scope
               AND turn.committed_text IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM sessions scope_session JOIN memory_scope_resets scope_reset
+                    ON ((scope_reset.character_id = scope_session.character_id
+                        AND scope_reset.user_scope = scope_session.user_scope)
+                        OR scope_reset.character_id = '__all__')
+                    WHERE scope_session.session_id = turn.session_id
+                        AND turn.created_at <= scope_reset.reset_at
+                )
               AND turn.role IN ('user', 'assistant')
             ORDER BY turn.committed_at DESC, turn.created_at DESC
             LIMIT ?
@@ -265,7 +298,6 @@ class SQLiteConversationRepository(ConversationRepository):
                 REDACTED_ASSISTANT_PLACEHOLDER,
                 str(session_id),
                 str(session_id),
-                _LOCAL_OWNER_SCOPE,
                 min(12, limit),
             ),
         )
@@ -486,6 +518,7 @@ class SQLiteConversationRepository(ConversationRepository):
         backend_kind: str,
         occurred_at: datetime,
         generation_event: AssistantGenerationStartedEvent,
+        source_context: ConversationSourceContext | None = None,
     ) -> AssistantGenerationStartedEvent:
         async with self._database.transaction() as connection:
             await connection.execute(
@@ -493,9 +526,14 @@ class SQLiteConversationRepository(ConversationRepository):
                 INSERT INTO turns(
                     turn_id, session_id, role, committed_text, committed_at, created_at,
                     source_context_json
-                ) VALUES (?, ?, 'user', NULL, NULL, ?, NULL)
+                ) VALUES (?, ?, 'user', NULL, NULL, ?, ?)
                 """,
-                (str(turn_id), str(session_id), occurred_at.isoformat()),
+                (
+                    str(turn_id),
+                    str(session_id),
+                    occurred_at.isoformat(),
+                    source_context.to_json() if source_context else None,
+                ),
             )
             await connection.execute(
                 """

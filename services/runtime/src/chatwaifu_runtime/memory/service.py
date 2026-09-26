@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Literal, cast
 from uuid import UUID, uuid4, uuid5
@@ -140,9 +140,40 @@ class MemoryService:
         )
         self._projection_worker: asyncio.Task[None] | None = None
         self._active_projection: _ActiveProjection | None = None
+        self._context_epoch = 0
+        self._namespace_epochs: dict[str, int] = {}
         self._projection_epoch = 0
         self._scope_epochs: dict[tuple[str, str], int] = {}
         self._projection_stopping = False
+        self._context_consumers: dict[
+            UUID, tuple[frozenset[str], Callable[[], Awaitable[None]]]
+        ] = {}
+
+    def register_context_consumer(
+        self, namespaces: Sequence[str], revoke: Callable[[], Awaitable[None]]
+    ) -> Callable[[], None]:
+        """Revoke retained provider context synchronously before destructive memory edits."""
+        token = uuid4()
+        self._context_consumers[token] = (frozenset(namespaces), revoke)
+
+        def unregister() -> None:
+            self._context_consumers.pop(token, None)
+
+        return unregister
+
+    def context_revision(self, namespaces: Sequence[str]) -> tuple[int, ...]:
+        return (self._context_epoch, *(self._namespace_epochs.get(ns, 0) for ns in namespaces))
+
+    async def _revoke_context(self, namespaces: Sequence[str] | None = None) -> None:
+        if namespaces is None:
+            self._context_epoch += 1
+        else:
+            for namespace in namespaces:
+                self._namespace_epochs[namespace] = self._namespace_epochs.get(namespace, 0) + 1
+        for token, (owned, revoke) in tuple(self._context_consumers.items()):
+            if namespaces is None or owned.intersection(namespaces):
+                await revoke()
+                self._context_consumers.pop(token, None)
 
     def set_spoken_repository(self, repository: SpokenMemoryRepository) -> None:
         self._spoken_repository = repository
@@ -151,6 +182,18 @@ class MemoryService:
     def projection_running(self) -> bool:
         worker = self._projection_worker
         return worker is not None and not worker.done()
+
+    async def namespaces_for_session(
+        self, session_id: UUID, character_id: str | None = None
+    ) -> list[str]:
+        actual_character, user_scope = await self._repository.session_scope(session_id)
+        if character_id is not None and actual_character != character_id:
+            raise ValueError("memory session character mismatch")
+        return _namespaces(actual_character, user_scope)
+
+    async def _assert_visible(self, session_id: UUID, namespace: str) -> None:
+        if namespace not in await self.namespaces_for_session(session_id):
+            raise KeyError("memory is outside the current conversation scope")
 
     async def start(self) -> None:
         if self._projection_worker is not None and not self._projection_worker.done():
@@ -177,6 +220,10 @@ class MemoryService:
                 self._projection_queue.task_done()
 
     async def enqueue_user_turn(self, observation: UserTurnMemoryObservation) -> bool:
+        character_id, scope = await self._repository.session_scope(observation.session_id)
+        if character_id != observation.character_id:
+            raise ValueError("memory observation character mismatch")
+        observation = replace(observation, user_scope=scope)
         worker = self._projection_worker
         if worker is None or worker.done():
             raise RuntimeError("memory projection worker is not running")
@@ -225,7 +272,7 @@ class MemoryService:
         if not await self._repository.event_exists(source_event_id):
             raise ValueError("memory source event does not exist")
         command = self.parse_explicit_command(text)
-        namespaces = _namespaces(character_id)
+        namespaces = await self.namespaces_for_session(session_id, character_id)
         if command is not None and command.operation == "forget":
             await self.forget_matching(
                 session_id,
@@ -325,6 +372,9 @@ class MemoryService:
         proposal = await self._repository.get_proposal(proposal_id)
         if proposal is None:
             raise KeyError(f"unknown memory proposal {proposal_id}")
+        if proposal.candidate is None:
+            raise KeyError("proposal has no visible candidate")
+        await self._assert_visible(session_id, proposal.candidate.namespace)
         if proposal.status != "pending":
             raise RuntimeError(f"memory proposal is already {proposal.status}")
         now = datetime.now(UTC)
@@ -342,8 +392,6 @@ class MemoryService:
                 {"proposal_id": str(proposal_id), "decision": "rejected"},
             )
             return rejected_proposal
-        if proposal.candidate is None:
-            raise RuntimeError("accepted memory proposal has no candidate")
         extracted = ExtractedMemoryCandidate(
             draft=proposal.candidate,
             explicit=True,
@@ -353,11 +401,18 @@ class MemoryService:
             raise RuntimeError("memory proposal is not permitted by policy")
 
         draft = proposal.candidate
+        if proposal.target_memory_id is not None:
+            target = await self._repository.get(proposal.target_memory_id)
+            if target is None:
+                raise KeyError("memory target not found")
+            await self._assert_visible(session_id, target.namespace)
+            await self._revoke_context([target.namespace])
         evidence: list[MemoryEventEvidence] = []
         for event_id in proposal.evidence_event_ids:
             item = await self._repository.event_evidence(event_id)
             if item is None:
                 raise ValueError(f"memory evidence event does not exist: {event_id}")
+            await self._assert_visible(item.session_id, draft.namespace)
             evidence.append(item)
         record = MemoryRecord(
             **draft.model_dump(),
@@ -449,6 +504,8 @@ class MemoryService:
         current = await self._repository.get(memory_id)
         if current is None or current.state != "active":
             raise KeyError(f"active memory not found: {memory_id}")
+        await self._assert_visible(session_id, current.namespace)
+        await self._revoke_context([current.namespace])
         management_event = await self._emit(
             session_id,
             None,
@@ -495,6 +552,10 @@ class MemoryService:
         return corrected
 
     async def set_pinned(self, session_id: UUID, memory_id: UUID, pinned: bool) -> MemoryRecord:
+        current = await self._repository.get(memory_id)
+        if current is None:
+            raise KeyError("memory not found")
+        await self._assert_visible(session_id, current.namespace)
         record = await self._repository.set_pinned(memory_id, pinned, datetime.now(UTC))
         if record is None:
             raise KeyError(f"active memory not found: {memory_id}")
@@ -514,6 +575,11 @@ class MemoryService:
         turn_id: UUID | None = None,
         causation_id: UUID | None = None,
     ) -> bool:
+        record = await self._repository.get(memory_id)
+        if record is None:
+            return False
+        await self._assert_visible(session_id, record.namespace)
+        await self._revoke_context([record.namespace])
         changed = await self._repository.tombstone(memory_id, datetime.now(UTC))
         if changed:
             await self._semantic_index.delete(memory_id)
@@ -557,7 +623,9 @@ class MemoryService:
         token_budget: int = 700,
     ) -> MemoryContextPacket:
         packet = await self._retriever.retrieve_context(
-            query, _namespaces(character_id), token_budget=token_budget
+            query,
+            await self.namespaces_for_session(session_id, character_id),
+            token_budget=token_budget,
         )
         excerpts = (
             packet.pinned_facts
@@ -593,7 +661,7 @@ class MemoryService:
         evidence = await self._repository.event_evidence(source_event_id)
         if evidence is None or evidence.event_type != "assistant.spoken_text_committed":
             raise ValueError("shared memory requires spoken-text evidence")
-        namespaces = _namespaces(character_id)
+        namespaces = await self.namespaces_for_session(session_id, character_id)
         related = await self._repository.search_fts(spoken_text, namespaces, limit=12)
         candidates = await self._inference.extract(
             f"The user actually heard the character say: {spoken_text}",
@@ -624,12 +692,15 @@ class MemoryService:
             if evidence is None:
                 return []
             if self._spoken_repository is not None and await self._spoken_repository.is_scope_reset(
-                character_id, evidence.occurred_at
+                character_id,
+                evidence.occurred_at,
+                (await self._repository.session_scope(session_id))[1],
             ):
                 return []
             proposals: list[MemoryProposal] = []
             for c_idx in range(start_index, len(candidates)):
                 item = candidates[c_idx]
+                await self._assert_visible(session_id, item.draft.namespace)
                 prop_id = uuid5(source_event_id, f"spoken:proposal:{c_idx}")
                 mem_id = uuid5(source_event_id, f"spoken:memory:{c_idx}")
                 src_id = uuid5(source_event_id, f"spoken:source:{c_idx}:{source_event_id}")
@@ -688,21 +759,60 @@ class MemoryService:
         namespace: str | None = None,
         kind: str | None = None,
         sensitivity: str | None = None,
+        session_id: UUID | None = None,
     ) -> list[MemoryRecord]:
-        return await self._repository.list_records(
+        allowed = await self.namespaces_for_session(session_id) if session_id else None
+        records = await self._repository.list_records(
             include_tombstoned=include_tombstoned,
             namespace=namespace,
             kind=kind,
             sensitivity=sensitivity,
+            namespaces=allowed,
         )
+        return [
+            record
+            for record in records
+            if (
+                record.namespace in allowed
+                if allowed is not None
+                else self._is_owner_namespace(record.namespace)
+            )
+        ]
 
-    async def list_proposals(self, *, status: str | None = None) -> list[MemoryProposal]:
-        return await self._repository.list_proposals(status=status)
+    @staticmethod
+    def _is_owner_namespace(namespace: str) -> bool:
+        return namespace == "user/local/global" or namespace.endswith("/user/local")
 
-    async def list_sources(self, memory_id: UUID) -> list[MemorySource]:
+    async def list_proposals(
+        self, *, status: str | None = None, session_id: UUID | None = None
+    ) -> list[MemoryProposal]:
+        allowed = await self.namespaces_for_session(session_id) if session_id else None
+        proposals = await self._repository.list_proposals(status=status, namespaces=allowed)
+        return [
+            p
+            for p in proposals
+            if p.candidate is not None
+            and (
+                p.candidate.namespace in allowed
+                if allowed is not None
+                else self._is_owner_namespace(p.candidate.namespace)
+            )
+        ]
+
+    async def list_sources(
+        self, memory_id: UUID, *, session_id: UUID | None = None
+    ) -> list[MemorySource]:
+        record = await self._repository.get(memory_id)
+        if record is None:
+            raise KeyError("memory not found")
+        if session_id is not None:
+            await self._assert_visible(session_id, record.namespace)
+        elif not self._is_owner_namespace(record.namespace):
+            raise KeyError("memory not found")
         return await self._repository.list_sources(memory_id)
 
     async def clear_all(self) -> int:
+        await self._revoke_context()
         async with self._spoken_apply_lock:
             now = datetime.now(UTC)
             if self._spoken_repository is not None:
@@ -724,14 +834,17 @@ class MemoryService:
         await self.finalize_scope_reset(removed)
         return len(removed)
 
-    async def prepare_scope_reset(self, character_id: str, user_scope: str) -> str:
+    async def prepare_scope_reset(
+        self, character_id: str, user_scope: str, *, persist_reset: bool = True
+    ) -> str:
         """Fence stale background projections before an atomic reset transaction."""
 
+        await self._revoke_context(_namespaces(character_id, user_scope))
         async with self._spoken_apply_lock:
             now = datetime.now(UTC)
-            if self._spoken_repository is not None:
-                await self._spoken_repository.record_scope_reset(character_id, now)
-                await self._spoken_repository.clear_scope_facts(character_id)
+            if persist_reset and self._spoken_repository is not None:
+                await self._spoken_repository.record_scope_reset(character_id, now, user_scope)
+                await self._spoken_repository.clear_scope_facts(character_id, user_scope)
             await self._invalidate_scope_projections(character_id, user_scope)
             return character_memory_namespace(character_id, user_scope)
 
@@ -842,6 +955,7 @@ class MemoryService:
     ) -> MemoryProposal:
         now = datetime.now(UTC)
         draft = extracted.draft
+        await self._assert_visible(session_id, draft.namespace)
         evidence_ids = extracted.evidence_event_ids or (source_event_id,)
 
         if proposal_id_override is not None:
@@ -1004,12 +1118,20 @@ class MemoryService:
         draft = proposal.candidate
         if draft is None:
             raise ValueError("committed proposal requires a candidate")
+        await self._assert_visible(session_id, draft.namespace)
+        if proposal.target_memory_id is not None:
+            target = await self._repository.get(proposal.target_memory_id)
+            if target is None:
+                raise KeyError("memory target not found")
+            await self._assert_visible(session_id, target.namespace)
+            await self._revoke_context([target.namespace])
         now = datetime.now(UTC)
         evidence: list[MemoryEventEvidence] = []
         for event_id in proposal.evidence_event_ids:
             item = await self._repository.event_evidence(event_id)
             if item is None:
                 raise ValueError(f"memory evidence event does not exist: {event_id}")
+            await self._assert_visible(item.session_id, draft.namespace)
             evidence.append(item)
         record = MemoryRecord(
             **draft.model_dump(),
@@ -1135,8 +1257,8 @@ def _normalize(content: str) -> str:
     return " ".join(content.casefold().split())
 
 
-def _namespaces(character_id: str) -> list[str]:
-    return [character_memory_namespace(character_id, "local"), "user/local/global"]
+def _namespaces(character_id: str, user_scope: str = "local") -> list[str]:
+    return [character_memory_namespace(character_id, user_scope), f"user/{user_scope}/global"]
 
 
 def character_memory_namespace(character_id: str, user_scope: str) -> str:

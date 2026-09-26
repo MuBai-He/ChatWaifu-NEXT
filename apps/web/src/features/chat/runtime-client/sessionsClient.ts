@@ -29,11 +29,12 @@ const ttsSelectionSchema = z.object({
 export async function createSession(
   characterId: string,
   signal?: AbortSignal,
+  scope?: { participant_id: string; scene_id: string | null },
 ): Promise<SessionSnapshot> {
   return requestRuntime("/v1/sessions", runtimeParser(parseSessionSnapshot), {
     signal,
     method: "POST",
-    body: JSON.stringify({ character_id: characterId }),
+    body: JSON.stringify({ character_id: characterId, ...scope }),
   });
 }
 

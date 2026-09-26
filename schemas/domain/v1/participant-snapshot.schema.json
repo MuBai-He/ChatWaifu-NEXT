@@ -1,0 +1,28 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/participant-snapshot.schema.json",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "display_name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "participant_id": {
+      "title": "Participant Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "participant_id",
+    "display_name",
+    "created_at"
+  ],
+  "title": "ParticipantSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

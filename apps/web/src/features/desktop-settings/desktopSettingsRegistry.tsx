@@ -1,3 +1,4 @@
+import { ConnectionSettingsSection } from "./ConnectionSettingsSection";
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
 import { ChannelsSettingsSection } from "./ChannelsSettingsSection";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
@@ -9,6 +10,13 @@ import { VoiceSettingsSection } from "./VoiceSettingsSection";
 
 export const desktopSettingsRegistry =
   defineSettingsRegistry<DesktopSettingsContext>()([
+    {
+      id: "connection",
+      label: "连接",
+      description: "运行方式与对话范围",
+      icon: "models",
+      component: ConnectionSettingsSection,
+    },
     {
       id: "appearance",
       label: "桌宠",

@@ -299,12 +299,26 @@ class CloudRealtimeCoordinator:
         self._is_running: bool = False
         self._end_task: asyncio.Task[None] | None = None
         self._closing = False
+        self._context_sync: Callable[[], Awaitable[None]] | None = None
+        self._context_cleanup: Callable[[], None] | None = None
         self._admission_lock = asyncio.Lock()
         self._admission_task: asyncio.Task[VoiceTurnIdentity | None] | None = None
         self._missing_ack_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._ack_timeout_seconds: float = 5.0
         self._injected_ack_timeout_event: asyncio.Event | None = None
         self._injected_ack_deadline_waiter: Callable[[float], Awaitable[None]] | None = None
+
+    def set_context_sync(
+        self, sync: Callable[[], Awaitable[None]], cleanup: Callable[[], None]
+    ) -> None:
+        self._context_sync = sync
+        self._context_cleanup = cleanup
+
+    async def synchronize_context(self) -> None:
+        if self._closing:
+            raise RuntimeError("cloud context session is closing")
+        if self._context_sync is not None:
+            await self._context_sync()
 
     def set_tool_bridge(self, tool_bridge: CloudToolBridge | None) -> None:
         self._tool_bridge = tool_bridge
@@ -546,6 +560,9 @@ class CloudRealtimeCoordinator:
     async def _end_session(self, reason: str) -> None:
         self._closing = True
         self._is_running = False
+        if self._context_cleanup is not None:
+            self._context_cleanup()
+            self._context_cleanup = None
         if self._end_task is None:
             self._end_task = asyncio.create_task(
                 self._finish_session(reason, asyncio.current_task()),

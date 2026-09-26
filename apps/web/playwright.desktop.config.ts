@@ -22,5 +22,12 @@ export default defineConfig({
     url: "http://127.0.0.1:4173/desktop-pet",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      VITE_RUNTIME_URL: process.env.VITE_RUNTIME_URL || "http://127.0.0.1:8765",
+      VITE_RUNTIME_TOKEN:
+        process.env.VITE_RUNTIME_TOKEN ||
+        process.env.CHATWAIFU_SECURITY__ADMIN_TOKEN ||
+        "",
+    },
   },
 });

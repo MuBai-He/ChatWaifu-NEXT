@@ -15,6 +15,11 @@ import type {
   TtsProviderSnapshot,
 } from "./types";
 
+import {
+  readConversationScope,
+  scopedSessionStorageKey,
+} from "./conversationScope";
+
 export const CHAT_SESSION_STORAGE_KEY = "chatwaifu.next.session_id";
 
 export interface ChatSessionBootstrapResult {
@@ -45,7 +50,9 @@ export async function bootstrapRuntimeSession(
   const character = characters[0];
   if (!character) throw new Error("没有安装角色 manifest。");
 
-  const saved = storage.getItem(CHAT_SESSION_STORAGE_KEY);
+  const scope = await readConversationScope(storage);
+  const sessionKey = scopedSessionStorageKey(scope);
+  const saved = storage.getItem(sessionKey);
   let session = saved
     ? await getSession(saved, signal).catch(() => {
         signal?.throwIfAborted();
@@ -54,11 +61,16 @@ export async function bootstrapRuntimeSession(
       })
     : null;
   signal?.throwIfAborted();
-  if (!session || session.state !== "ready") {
-    session = await createSession(character.character_id, signal);
+  if (
+    !session ||
+    session.state !== "ready" ||
+    session.participant_id !== scope.participant_id ||
+    session.scene_id !== scope.scene_id
+  ) {
+    session = await createSession(character.character_id, signal, scope);
   }
   signal?.throwIfAborted();
-  storage.setItem(CHAT_SESSION_STORAGE_KEY, session.session_id);
+  storage.setItem(sessionKey, session.session_id);
   return { health, character, sessionId: session.session_id };
 }
 
@@ -69,7 +81,7 @@ export async function bootstrapChatSession(
 
   const [recovery, memories, ttsProviders] = await Promise.all([
     getSessionRecovery(core.sessionId),
-    getMemory(),
+    getMemory(core.sessionId),
     getTtsProviders(core.sessionId).catch(() => []),
   ]);
   return {

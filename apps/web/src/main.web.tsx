@@ -1,3 +1,4 @@
+import { RuntimeConnectionGate } from "./features/connection/RuntimeConnectionGate";
 import "./index.css";
 import "./features/chat/chat-demo.css";
 import "./features/chat/skill-confirmation-prompt.css";
@@ -10,5 +11,12 @@ const surface = resolveWebSurface(window.location.pathname);
 mountProduct({
   product: "web",
   surface,
-  children: <WebProductApp surface={surface} />,
+  children:
+    surface === "avatar-lab" ? (
+      <WebProductApp surface={surface} />
+    ) : (
+      <RuntimeConnectionGate>
+        <WebProductApp surface={surface} />
+      </RuntimeConnectionGate>
+    ),
 });

@@ -1178,4 +1178,44 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        32,
+        """
+        CREATE TABLE participants (
+            participant_id TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        INSERT INTO participants VALUES
+            ('local', '主人', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
+        CREATE TABLE conversation_scenes (
+            scene_id TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            participant_ids_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        ALTER TABLE sessions ADD COLUMN participant_id TEXT NOT NULL DEFAULT 'local';
+        ALTER TABLE sessions ADD COLUMN scene_id TEXT REFERENCES conversation_scenes(scene_id);
+        ALTER TABLE sessions ADD COLUMN scene_kind TEXT NOT NULL DEFAULT 'private';
+        ALTER TABLE sessions ADD COLUMN audience_json TEXT NOT NULL DEFAULT '["local"]';
+        ALTER TABLE sessions ADD COLUMN user_scope TEXT NOT NULL DEFAULT 'local';
+        CREATE INDEX sessions_scope_idx ON sessions(character_id, user_scope);
+        CREATE TRIGGER sessions_scope_immutable
+        BEFORE UPDATE OF participant_id, scene_id, scene_kind, audience_json, user_scope ON sessions
+        WHEN NEW.participant_id IS NOT OLD.participant_id OR NEW.scene_id IS NOT OLD.scene_id
+          OR NEW.scene_kind IS NOT OLD.scene_kind OR NEW.audience_json IS NOT OLD.audience_json
+          OR NEW.user_scope IS NOT OLD.user_scope
+        BEGIN SELECT RAISE(ABORT, 'session conversation scope is immutable'); END;
+        ALTER TABLE memory_scope_resets RENAME TO legacy_memory_scope_resets;
+        CREATE TABLE memory_scope_resets (
+            character_id TEXT NOT NULL,
+            user_scope TEXT NOT NULL DEFAULT 'local',
+            reset_at TEXT NOT NULL,
+            PRIMARY KEY(character_id, user_scope)
+        );
+        INSERT INTO memory_scope_resets
+            SELECT character_id, 'local', reset_at FROM legacy_memory_scope_resets;
+        DROP TABLE legacy_memory_scope_resets;
+        """,
+    ),
 )
