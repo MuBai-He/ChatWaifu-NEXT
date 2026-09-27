@@ -11,8 +11,8 @@
 验收步骤见 `docs/operations/apple-and-reminders.md`。后端已在常驻 Linux 服务器部署迁移 34，
 HTTPS organizer 接口返回 200，Google 账号连接保持正常；当前一台配对设备在线，
 选中了 10 个日历和 1 个提醒事项列表。服务器记录三次成功的 Apple 日历读取，
-分别返回 3、3、7 项；尚无持久任务或 Apple 写入记录。新版桌面代码在 PR #46，
-提醒事项读写、原应用回读及闹钟响铃仍待实机验收。
+分别返回 3、3、7 项。2026-09-28 用户确认首次提醒、五分钟贪睡及重启恢复正常；
+Apple 写入与原应用回读仍待验收。新版桌面代码在 PR #46；统一事项与通知的讨论提案见 `unified-agenda.md`。
 下列阶段 A 检查数字是此前阶段记录；本切片验证记录以运维文档和 PR 为准。
 
 阶段 A 当前进度：已实现独立 Google REST 适配器（`personal_assistant/google_calendar.py`），

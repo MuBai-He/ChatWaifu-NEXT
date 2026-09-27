@@ -1,3 +1,4 @@
+import { AlarmClock, Bell, Clock3 } from "lucide-react";
 import { readConversationScope } from "../chat/conversationScope";
 import { useEffect, useRef, useState } from "react";
 import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
@@ -236,19 +237,36 @@ export function AssistantDelivery() {
       data-native-interactive="true"
     >
       {deliveries.map((d) => (
-        <div key={d.delivery_id}>
-          <strong>
-            {d.kind === "alarm" ? "闹钟" : "提醒"} · {d.title}
-          </strong>
-          <div>
-            <button onClick={() => void acknowledge(d, "stop")}>关闭</button>
+        <section className="assistant-alert-card" key={d.delivery_id}>
+          <header className="assistant-alert-heading">
+            <span className="assistant-alert-icon" aria-hidden="true">
+              {d.kind === "alarm" ? (
+                <AlarmClock size={19} />
+              ) : (
+                <Bell size={19} />
+              )}
+            </span>
+            <div>
+              <span className="assistant-alert-kind">
+                {d.kind === "alarm" ? "闹钟" : "提醒"}
+              </span>
+              <strong>{d.title}</strong>
+            </div>
+          </header>
+          <div className="assistant-alert-actions">
+            <button
+              className="assistant-alert-stop"
+              onClick={() => void acknowledge(d, "stop")}
+            >
+              关闭
+            </button>
             <button onClick={() => void acknowledge(d, "snooze")}>
-              5 分钟后提醒
+              <Clock3 size={14} aria-hidden="true" />5 分钟后提醒
             </button>
           </div>
-        </div>
+        </section>
       ))}
-      {error && <small>{error}</small>}
+      {error && <small className="assistant-alert-error">{error}</small>}
     </aside>
   );
 }

@@ -229,37 +229,104 @@
     padding: 8px 4px;
   }
 }
-.assistant-alert button {
-  border: 1px solid #cfb5d1;
-  border-radius: 9px;
-  padding: 8px 12px;
-  color: #82537f;
-  background: #fffbff;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
 .assistant-alert {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 48px;
+  inset: 48px 12px auto;
   z-index: 100;
-  padding: 14px;
-  border: 1px solid #cfb5d1;
-  border-radius: 16px;
-  background: #faf4fc;
-  color: #392a3e;
-  box-shadow: 0 6px 25px #36203933;
+  width: min(360px, calc(100% - 24px));
+  box-sizing: border-box;
+  margin-inline: auto;
+  border: 1px solid rgb(164 129 158 / 30%);
+  border-radius: 18px;
+  background: #fbf8fc;
+  color: #392e3d;
+  box-shadow:
+    0 10px 30px rgb(51 28 53 / 17%),
+    0 2px 7px rgb(51 28 53 / 7%);
+  font-family: inherit;
   font-size: 13px;
   pointer-events: auto;
   max-height: calc(100% - 80px);
   overflow: auto;
 }
-.assistant-alert > div {
+.assistant-alert-card {
+  padding: 17px;
   display: grid;
-  gap: 10px;
+  gap: 15px;
+}
+.assistant-alert-card + .assistant-alert-card {
+  border-top: 1px solid #e9dfeb;
+}
+.assistant-alert-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.assistant-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #efe4f0;
+  color: #8a5883;
+}
+.assistant-alert-heading > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.assistant-alert-kind {
+  font-size: 10px;
+  color: #8b7a90;
+  letter-spacing: 0.08em;
+}
+.assistant-alert-heading strong {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.assistant-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .assistant-alert button {
-  margin: 0 8px 8px 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid #e2d4e4;
+  border-radius: 9px;
+  background: transparent;
+  color: #785172;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.assistant-alert button.assistant-alert-stop {
+  min-width: 64px;
+  background: #895781;
+  border-color: #895781;
+  color: #fff;
+}
+.assistant-alert button:hover {
+  filter: brightness(0.96);
+}
+.assistant-alert button:focus-visible {
+  outline: 2px solid #aa7ba1;
+  outline-offset: 2px;
+}
+.assistant-alert-error {
+  display: block;
+  margin: 0 17px 15px;
+  color: #98565f;
+  font-size: 11px;
+  line-height: 1.6;
 }

@@ -74,7 +74,7 @@ describe("desktop reminder delivery ownership", () => {
   it("stops ringing immediately when the user closes, even if acknowledgement fails", async () => {
     render(<AssistantDelivery />);
     await act(() => vi.advanceTimersByTimeAsync(3100));
-    expect(screen.getByText("闹钟 · 喝水")).toBeTruthy();
+    expect(screen.getByText("喝水")).toBeTruthy();
     expect(vi.mocked(deviceCall).mock.calls.some((c) => c[1] === "sound")).toBe(
       true,
     );
@@ -98,7 +98,7 @@ describe("desktop reminder delivery ownership", () => {
     );
     render(<AssistantDelivery />);
     await act(() => vi.advanceTimersByTimeAsync(6100));
-    expect(screen.getByText("闹钟 · 喝水")).toBeTruthy();
+    expect(screen.getByText("喝水")).toBeTruthy();
     expect(
       vi
         .mocked(deviceCall)
@@ -110,7 +110,7 @@ describe("desktop reminder delivery ownership", () => {
     await act(() => vi.advanceTimersByTimeAsync(3100));
     deliveries = [];
     await act(() => vi.advanceTimersByTimeAsync(2100));
-    expect(screen.queryByText("闹钟 · 喝水")).toBeNull();
+    expect(screen.queryByText("喝水")).toBeNull();
     view.unmount();
     vi.mocked(deviceCall).mockClear();
     await act(() => vi.advanceTimersByTimeAsync(10000));
