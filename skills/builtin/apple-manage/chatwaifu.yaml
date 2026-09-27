@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "apple.manage",
+    "version": "1.0.0",
+    "name": "管理 Apple 日历和提醒事项",
+    "description": "创建、更新、完成或删除 Apple 日历和提醒事项；仅限已选列表，修改须先读取 item_id/modified，返回等待设备，不等于保存成功。",
+    "capabilities": [
+      {
+        "name": "execute",
+        "description": "创建、更新、完成或删除 Apple 日历和提醒事项；仅限已选列表，修改须先读取 item_id/modified，返回等待设备，不等于保存成功。",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "device_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "resource": {
+              "enum": [
+                "calendar",
+                "reminder"
+              ]
+            },
+            "calendar_id": {
+              "type": "string"
+            },
+            "action": {
+              "enum": [
+                "create",
+                "update",
+                "complete",
+                "delete"
+              ]
+            },
+            "item_id": {
+              "type": "string"
+            },
+            "expected_modified": {
+              "type": "number"
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "device_id",
+            "resource",
+            "calendar_id",
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output_schema": {
+          "type": "object"
+        },
+        "side_effect": "write",
+        "required_permissions": [
+          "apple.manage"
+        ],
+        "confirmation_required": true,
+        "timeout_seconds": 30
+      }
+    ],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {
+    "kind": "builtin",
+    "handler": "apple_manage"
+  }
+}

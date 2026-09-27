@@ -1,5 +1,6 @@
 //! Thin Tauri host for ChatWaifu's desktop-pet and control-center surfaces.
 
+mod assistant_device;
 mod client_connection;
 mod google_oauth;
 mod runtime_health;
@@ -294,6 +295,8 @@ pub fn run() {
         }))
         .manage(DesktopState::default())
         .manage(google_oauth::OAuthState::default())
+        .manage(assistant_device::AssistantDeviceState::default())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             restore_preferences(app.handle())?;
             build_tray(app)?;
@@ -323,6 +326,7 @@ pub fn run() {
         })
         .on_window_event(handle_window_event)
         .invoke_handler(tauri::generate_handler![
+            assistant_device::assistant_device,
             google_oauth::prepare_google_oauth,
             google_oauth::receive_google_oauth,
             google_oauth::cancel_google_oauth,

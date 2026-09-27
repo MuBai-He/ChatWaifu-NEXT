@@ -39,6 +39,7 @@ from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
@@ -53,6 +54,7 @@ from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemor
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
+from chatwaifu_runtime.personal_assistant.organizer_skill import OrganizerSkill
 from chatwaifu_runtime.personal_assistant.skill import CalendarReadSkill
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.classifier import PhotoClassifier
@@ -118,7 +120,7 @@ class RuntimeContainer:
         self.ws_ticket_store = WebSocketTicketStore()
         self.database = Database(settings.database_path, settings.storage)
         self.personal_assistant = PersonalAssistantIntegration(
-            settings, SQLiteAssistantRepository(self.database)
+            settings, SQLiteAssistantRepository(self.database), SQLiteTaskRepository(self.database)
         )
         self.event_hub = EventHub(settings.runtime.event_queue_size)
         self.event_store = EventStore(self.database)
@@ -184,7 +186,20 @@ class RuntimeContainer:
             __version__,
             sandbox_launcher=sandbox_launcher,
             mcp_private_origins=settings.security.mcp_private_origins,
-            session_builtin_handlers={"calendar_read": CalendarReadSkill(self.personal_assistant)},
+            session_builtin_handlers={
+                "calendar_read": CalendarReadSkill(self.personal_assistant),
+                **{
+                    name: OrganizerSkill(self.personal_assistant, name)
+                    for name in (
+                        "organizer_read",
+                        "schedule_create",
+                        "schedule_change",
+                        "schedule_update",
+                        "apple_read",
+                        "apple_manage",
+                    )
+                },
+            },
         )
         self.agent = AgentTurnOrchestrator(
             self.providers.llm,

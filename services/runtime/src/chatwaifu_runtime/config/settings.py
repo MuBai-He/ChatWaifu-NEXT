@@ -227,6 +227,7 @@ class PersonalAssistantConfig(BaseModel):
     google_client_id: str = ""
     google_client_secret: SecretStr | None = None
     google_oauth_https_origin: str | None = None
+    device_allow_direct_loopback: bool = False
 
     @model_validator(mode="after")
     def validate_oauth_origin(self) -> Self:
