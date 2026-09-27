@@ -1,93 +1,68 @@
 {
   "schema_version": "1.0",
   "instructions": "SKILL.md",
-  "definition": {
-    "skill_id": "schedule.update",
-    "version": "1.0.0",
-    "name": "修改提醒或闹钟",
-    "description": "修改现有持久提醒、定时任务和闹钟的时间、标题、重复或目标设备。先用 organizer.read 读取完整任务及 revision。",
-    "capabilities": [
-      {
-        "name": "execute",
-        "description": "修改现有持久提醒、定时任务和闹钟的时间、标题、重复或目标设备。先用 organizer.read 读取完整任务及 revision。",
-        "input_schema": {
-          "type": "object",
-          "properties": {
-            "task": {
-              "type": "object",
-              "properties": {
-                "device_id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "title": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
-                },
-                "kind": {
-                  "enum": [
-                    "reminder",
-                    "alarm"
-                  ]
-                },
-                "due_at": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "timezone": {
-                  "type": "string"
-                },
-                "repeat": {
-                  "enum": [
-                    "none",
-                    "daily",
-                    "weekdays"
-                  ]
-                },
-                "request_id": {
-                  "type": "string",
-                  "format": "uuid"
-                }
+  "definition":
+    {
+      "skill_id": "schedule.update",
+      "version": "1.0.0",
+      "name": "修改提醒或闹钟",
+      "description": "修改现有持久提醒、定时任务和闹钟的时间、标题、重复或目标设备。先用 organizer.read 读取完整任务及 revision。",
+      "capabilities":
+        [
+          {
+            "name": "execute",
+            "description": "修改现有持久提醒、定时任务和闹钟的时间、标题、重复或目标设备。先用 organizer.read 读取完整任务及 revision。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "task":
+                      {
+                        "type": "object",
+                        "properties":
+                          {
+                            "device_id": { "type": "string", "format": "uuid" },
+                            "title":
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200,
+                              },
+                            "kind": { "enum": ["reminder", "alarm"] },
+                            "due_at":
+                              { "type": "string", "format": "date-time" },
+                            "timezone": { "type": "string" },
+                            "repeat": { "enum": ["none", "daily", "weekdays"] },
+                            "request_id":
+                              { "type": "string", "format": "uuid" },
+                          },
+                        "required":
+                          [
+                            "device_id",
+                            "title",
+                            "due_at",
+                            "timezone",
+                            "kind",
+                            "repeat",
+                            "request_id",
+                          ],
+                        "additionalProperties": false,
+                      },
+                    "expected_revision": { "type": "integer", "minimum": 0 },
+                  },
+                "required": ["task", "expected_revision"],
+                "additionalProperties": false,
               },
-              "required": [
-                "device_id",
-                "title",
-                "due_at",
-                "timezone",
-                "kind",
-                "repeat",
-                "request_id"
-              ],
-              "additionalProperties": false
-            },
-            "expected_revision": {
-              "type": "integer",
-              "minimum": 0
-            }
+            "output_schema": { "type": "object" },
+            "side_effect": "write",
+            "required_permissions": ["schedule.update"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
           },
-          "required": [
-            "task",
-            "expected_revision"
-          ],
-          "additionalProperties": false
-        },
-        "output_schema": {
-          "type": "object"
-        },
-        "side_effect": "write",
-        "required_permissions": [
-          "schedule.update"
         ],
-        "confirmation_required": true,
-        "timeout_seconds": 30
-      }
-    ],
-    "interruptible": true,
-    "background_allowed": false
-  },
-  "adapter": {
-    "kind": "builtin",
-    "handler": "schedule_update"
-  }
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "schedule_update" },
 }
