@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "schedule.change",
+      "version": "1.0.0",
+      "name": "调整定时提醒或闹钟",
+      "description": "暂停、恢复或取消已存在的提醒、闹钟或任务。先查询真实 task_id。",
+      "capabilities":
+        [
+          {
+            "name": "execute",
+            "description": "暂停、恢复或取消已存在的提醒、闹钟或任务。先查询真实 task_id。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "task_id": { "type": "string", "format": "uuid" },
+                    "action": { "enum": ["pause", "resume", "cancel"] },
+                  },
+                "required": ["task_id", "action"],
+                "additionalProperties": false,
+              },
+            "output_schema": { "type": "object" },
+            "side_effect": "write",
+            "required_permissions": ["schedule.change"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "schedule_change" },
+}

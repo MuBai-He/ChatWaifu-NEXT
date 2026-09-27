@@ -9,6 +9,14 @@
     <key>NSAllowsLocalNetworking</key>
     <true/>
   </dict>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>在你选择的 Apple 日历中查询和管理日程。</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>在你选择的 Apple 日历中查询和管理日程。</string>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>在你选择的 Apple 提醒事项列表中查询和管理待办。</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>在你选择的 Apple 提醒事项列表中查询和管理待办。</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>用于在本机采集你的声音，与角色进行实时语音对话。</string>
 </dict>

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "apple.read",
+      "version": "1.0.0",
+      "name": "读取 Apple 日历和提醒事项",
+      "description": "读取指定 Mac 的已选 Apple 日历或提醒事项列表。先用 organizer.read 取得设备和列表ID。返回排队凭据，随后 organizer.read 查询真实结果。",
+      "capabilities":
+        [
+          {
+            "name": "execute",
+            "description": "读取指定 Mac 的已选 Apple 日历或提醒事项列表。先用 organizer.read 取得设备和列表ID。返回排队凭据，随后 organizer.read 查询真实结果。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "device_id": { "type": "string", "format": "uuid" },
+                    "resource": { "enum": ["calendar", "reminder"] },
+                    "calendar_id": { "type": "string" },
+                    "action": { "const": "list" },
+                    "start": { "type": "string", "format": "date-time" },
+                    "end": { "type": "string", "format": "date-time" },
+                  },
+                "required": ["device_id", "resource", "calendar_id", "action"],
+                "additionalProperties": false,
+              },
+            "output_schema": { "type": "object" },
+            "side_effect": "read",
+            "required_permissions": ["apple.read"],
+            "confirmation_required": false,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "apple_read" },
+}

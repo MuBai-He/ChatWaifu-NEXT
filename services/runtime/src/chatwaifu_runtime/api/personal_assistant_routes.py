@@ -1,19 +1,22 @@
 """Authenticated assistant status and direct-TLS-only OAuth handoff."""
 
+import json
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
+from chatwaifu_protocol.base import JsonObject
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService
 from chatwaifu_runtime.personal_assistant.google_calendar import GoogleCalendarError
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
 from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
+from chatwaifu_runtime.personal_assistant.tasks import AppleOperation, TaskInput, TaskService
 
 router = APIRouter(prefix="/v1/personal-assistant", tags=["personal-assistant"])
 
@@ -207,3 +210,214 @@ async def query_events(
         raise HTTPException(403, str(error)) from None
     except GoogleCalendarError as error:
         raise HTTPException(502, error.code) from None
+
+
+# Task/device APIs share Runtime authentication. Device secrets are an additional,
+# revocable capability, not a replacement for the Runtime bearer token.
+
+
+class OwnerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+
+
+class PairRequest(OwnerRequest):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class SourceSelection(BaseModel):
+    id: str = Field(min_length=1, max_length=512)
+    title: str = Field(max_length=200)
+    resource: Literal["calendar", "reminder"]
+    writable: bool
+
+
+class DeviceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    device_id: UUID
+    secret: SecretStr = Field(min_length=32, max_length=128)
+
+
+class DevicePoll(DeviceRequest):
+    source_revision: int = Field(default=0, ge=0)
+    sources: list[SourceSelection] = Field(
+        default_factory=lambda: list[SourceSelection](), max_length=50
+    )
+
+
+class DeviceAck(DeviceRequest):
+    item_id: UUID
+    action: Literal["presented", "stop", "snooze", "result"]
+    result: JsonObject = Field(default_factory=lambda: dict())
+
+
+class CreateTaskRequest(OwnerRequest):
+    task: TaskInput
+
+
+class ReviseTaskRequest(CreateTaskRequest):
+    expected_revision: int = Field(ge=0)
+
+
+class ChangeTaskRequest(OwnerRequest):
+    action: Literal["pause", "resume", "cancel"]
+
+
+class CreateOperationRequest(OwnerRequest):
+    operation: AppleOperation
+
+
+def _task_service(request: Request) -> TaskService:
+    service = request.app.state.container.personal_assistant.tasks
+    if service is None:
+        raise HTTPException(409, "personal_assistant_disabled")
+    return service
+
+
+def _device_transport(request: Request) -> None:
+    # Uvicorn disables proxy_headers. Never trust a proxy's loopback peer alone.
+    forwarded = any(
+        k in ("forwarded", "x-real-ip") or k.startswith("x-forwarded-") for k in request.headers
+    )
+    loopback = (
+        request.app.state.container.settings.personal_assistant.device_allow_direct_loopback
+        and request.client is not None
+        and request.client.host in ("127.0.0.1", "::1")
+        and request.url.hostname in ("127.0.0.1", "localhost", "::1")
+    )
+    if forwarded or not (request.url.scheme == "https" or loopback):
+        raise HTTPException(403, "device_pairing_requires_https_or_direct_loopback")
+
+
+async def _owner_tasks(request: Request, session_id: UUID) -> TaskService:
+    service = _task_service(request)
+    try:
+        await service.owner(str(session_id))
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    return service
+
+
+def _task_error(error: ValueError) -> HTTPException:
+    return HTTPException(403 if isinstance(error, AssistantAccessError) else 409, str(error))
+
+
+@router.get("/organizer")
+async def organizer(request: Request, session_id: UUID):
+    service = await _owner_tasks(request, session_id)
+    return {
+        "schema_version": "1.0",
+        "devices": await service.repository.devices(),
+        "tasks": await service.repository.tasks(),
+        "operations": await service.repository.operations(),
+        "scheduler_error": service.last_error,
+        "history": await service.repository.history(),
+    }
+
+
+@router.post("/devices")
+async def pair_device(request: Request, body: PairRequest):
+    _device_transport(request)
+    service = await _owner_tasks(request, body.session_id)
+    return await service.repository.pair(body.name)
+
+
+@router.post("/devices/{device_id}/revoke")
+async def revoke_device(request: Request, device_id: UUID, body: OwnerRequest):
+    service = await _owner_tasks(request, body.session_id)
+    await service.repository.revoke(str(device_id))
+    return {"revoked": True}
+
+
+@router.post("/devices/poll")
+async def poll_device(request: Request, body: DevicePoll):
+    _device_transport(request)
+    try:
+        return await _task_service(request).repository.poll(
+            str(body.device_id),
+            body.secret.get_secret_value(),
+            [s.model_dump() for s in body.sources],
+            datetime.now(UTC).timestamp(),
+            source_revision=body.source_revision,
+        )
+    except ValueError as error:
+        raise _task_error(error) from None
+
+
+@router.post("/devices/ack")
+async def ack_device(request: Request, body: DeviceAck):
+    _device_transport(request)
+    if len(json.dumps(body.result)) > 128_000:
+        raise HTTPException(413, "device_result_too_large")
+    try:
+        await _task_service(request).repository.acknowledge(
+            str(body.device_id),
+            body.secret.get_secret_value(),
+            str(body.item_id),
+            body.action,
+            body.result,
+            datetime.now(UTC).timestamp(),
+        )
+    except ValueError as error:
+        raise _task_error(error) from None
+    return {"accepted": True}
+
+
+@router.post("/tasks")
+async def create_task(request: Request, body: CreateTaskRequest):
+    service = await _owner_tasks(request, body.session_id)
+    try:
+        return await service.repository.create_task(body.task, datetime.now(UTC).timestamp())
+    except ValueError as error:
+        raise _task_error(error) from None
+
+
+@router.post("/tasks/{task_id}")
+async def change_task(request: Request, task_id: UUID, body: ChangeTaskRequest):
+    service = await _owner_tasks(request, body.session_id)
+    try:
+        await service.repository.change_task(
+            str(task_id), body.action, datetime.now(UTC).timestamp()
+        )
+    except ValueError as error:
+        raise _task_error(error) from None
+    return {"accepted": True}
+
+
+@router.post("/apple/operations")
+async def create_apple_operation(request: Request, body: CreateOperationRequest):
+    service = await _owner_tasks(request, body.session_id)
+    try:
+        return await service.repository.enqueue(body.operation, datetime.now(UTC).timestamp())
+    except ValueError as error:
+        raise _task_error(error) from None
+
+
+@router.post("/devices/sources")
+async def update_device_sources(request: Request, body: DevicePoll):
+    _device_transport(request)
+    try:
+        return await _task_service(request).repository.poll(
+            str(body.device_id),
+            body.secret.get_secret_value(),
+            [source.model_dump() for source in body.sources],
+            datetime.now(UTC).timestamp(),
+            deliver=False,
+            source_revision=body.source_revision,
+        )
+    except ValueError as error:
+        raise _task_error(error) from None
+
+
+@router.post("/tasks/{task_id}/replace")
+async def revise_task(request: Request, task_id: UUID, body: ReviseTaskRequest):
+    service = await _owner_tasks(request, body.session_id)
+    if task_id != body.task.request_id:
+        raise HTTPException(422, "task_id_mismatch")
+    try:
+        await service.repository.revise_task(
+            body.task, body.expected_revision, datetime.now(UTC).timestamp()
+        )
+    except ValueError as error:
+        raise _task_error(error) from None
+    return {"accepted": True}

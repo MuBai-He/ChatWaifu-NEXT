@@ -1,3 +1,4 @@
+import { OrganizerPanel } from "../personal-assistant/OrganizerPanel";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -295,9 +296,13 @@ export function PersonalAssistantSettingsSection({
       </SettingsGroup>
       <SettingsGroup
         title="提醒事项与定时任务"
-        description="Apple 提醒事项、定时提醒和闹钟尚在开发中。"
+        description="连接 Apple 日历和提醒事项，管理服务器上的持久任务。"
       >
-        <p>现有日历和提醒事项不会迁移到新的服务。</p>
+        {sessionId ? (
+          <OrganizerPanel key={sessionId} sessionId={sessionId} />
+        ) : (
+          <p>请先连接服务器。</p>
+        )}
       </SettingsGroup>
     </div>
   );

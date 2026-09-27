@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "schedule.create",
+      "version": "1.0.0",
+      "name": "创建定时提醒或闹钟",
+      "description": "为指定桌宠设备创建持久提醒或闹钟。先用 organizer.read 取得真实设备 ID 和服务器当前时间；明确时间后创建。",
+      "capabilities":
+        [
+          {
+            "name": "execute",
+            "description": "为指定桌宠设备创建持久提醒或闹钟。先用 organizer.read 取得真实设备 ID 和服务器当前时间；明确时间后创建。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "device_id": { "type": "string", "format": "uuid" },
+                    "title":
+                      { "type": "string", "minLength": 1, "maxLength": 200 },
+                    "kind": { "enum": ["reminder", "alarm"] },
+                    "due_at": { "type": "string", "format": "date-time" },
+                    "timezone": { "type": "string" },
+                    "repeat": { "enum": ["none", "daily", "weekdays"] },
+                  },
+                "required":
+                  [
+                    "device_id",
+                    "title",
+                    "due_at",
+                    "timezone",
+                    "kind",
+                    "repeat",
+                  ],
+                "additionalProperties": false,
+              },
+            "output_schema": { "type": "object" },
+            "side_effect": "write",
+            "required_permissions": ["schedule.create"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "schedule_create" },
+}
