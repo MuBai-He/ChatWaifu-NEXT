@@ -415,7 +415,9 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
             (item) => item.operation_id === read.id,
           );
           if (operation?.state !== "succeeded") continue;
-          for (const item of operation.result.items ?? []) {
+          for (const [index, item] of (
+            operation.result.items ?? []
+          ).entries()) {
             const when = item.start ?? item.due ?? null;
             if (
               read.resource === "reminder" &&
@@ -423,7 +425,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
             )
               continue;
             fresh.push({
-              key: `apple:${read.id}:${item.id}`,
+              key: `apple:${read.id}:${item.id}:${item.start ?? item.due ?? "undated"}:${index}`,
               type: read.resource === "calendar" ? "日程" : "待办",
               title: item.title,
               when: when === null ? null : when * 1000,
@@ -483,6 +485,12 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
       [...entries].sort((a, b) => (a.when ?? Infinity) - (b.when ?? Infinity)),
     [entries],
   );
+  const applePending = appleReads.some(({ id }) => {
+    const state = organizer?.operations.find(
+      (item) => item.operation_id === id,
+    )?.state;
+    return !state || state === "queued" || state === "leased";
+  });
   const defaultTarget = defaults.find((item) => item.kind === createKind);
   async function createItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -594,6 +602,11 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
           {notice}
         </p>
       )}
+      {applePending && (
+        <p role="status" className="agenda-overview-notice">
+          Apple 日历与提醒事项仍在从配对设备读取，列表会继续更新。
+        </p>
+      )}
       {!!organizer?.history?.length && (
         <section className="agenda-inbox" aria-label="未处理提醒">
           <div className="agenda-inbox-heading">
@@ -656,7 +669,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
                 <span>{item.type}</span>
               </article>
             ))
-          : !loading && <p>这个范围内暂无已读取的安排。</p>}
+          : !loading && !applePending && <p>这个范围内暂无已读取的安排。</p>}
       </div>
       <form
         className="agenda-overview-create"

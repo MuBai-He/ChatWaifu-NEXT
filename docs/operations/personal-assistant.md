@@ -66,6 +66,13 @@ and reminders due beyond the active day range, matching Google Tasks behavior.
 Frontend typecheck, lint and desktop bundle passed. The user refreshed the
 running desktop's next-seven-days overview and confirmed that unfinished Apple
 Reminders appear without flooding the view with completed items.
+The owner also confirmed a recurring `bcz` event appearing after the paired Mac's
+calendar query completed. The event belonged to the Apple “个人” calendar; the
+device returned seven occurrences in the seven-day window. The overview now shows
+an explicit pending state while Apple reads complete, instead of presenting the
+initial Google/local-only list as if all sources had finished.
+EventKit gives these recurring occurrences the same calendar item ID, so the
+overview also keys each rendered occurrence by its start time and list position.
 
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
