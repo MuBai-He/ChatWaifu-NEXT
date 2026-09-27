@@ -58,5 +58,7 @@ HTTPS socket/proxy，完整备份状态目录与被替换代码；先在数据�
 - PR #46 提交 `23cf1a2` 的全部 CI 通过，包括 Windows Python 检查。
 - HTTPS health、个人助理 status、owner organizer 与 accounts 均返回 200。
 - organizer 调度器无错误；原 Google 账号仍为 connected；未认证 organizer 返回 401。
-- 尚未配对真实设备、授予 Apple 权限、操作 Apple 数据或验收通知响铃。
+- 2026-09-27 后续观察：一台真实桌宠设备在线，已选 10 个日历与 1 个提醒事项列表；
+  三次 Apple 日历读取操作成功，分别返回 3、3、7 项。尚无持久任务、Apple 写入或
+  提醒事项读取记录；系统授权细节、原 Apple 应用回读和通知响铃仍需用户确认。
 - 这次是服务器部署；PR 仍未合并。已有新版桌面端可重新打开设置继续配对。
