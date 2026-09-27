@@ -94,7 +94,7 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
       : null;
     if (rev !== epoch.current.value) return;
     setData(result);
-    setDestinations(defaults.items);
+    setDestinations(Array.isArray(defaults?.items) ? defaults.items : []);
     setObservedAt(Date.now() / 1000);
     setBinding(local);
     setTarget((old) =>
