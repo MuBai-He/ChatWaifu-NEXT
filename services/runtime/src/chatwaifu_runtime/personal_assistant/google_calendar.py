@@ -1,4 +1,4 @@
-"""Read-only Google boundary; no persistence, account permissions or UI policy here.
+"""Google Calendar boundary; no persistence, account permissions or UI policy here.
 
 Callers must authorize the owner and selected calendar before calling this adapter.
 Sync returns a complete batch, never partial pages. A repository must atomically
@@ -18,6 +18,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 READ_SCOPE = "https://www.googleapis.com/auth/calendar.readonly"
+WRITE_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 API = "https://www.googleapis.com/calendar/v3"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
@@ -50,6 +51,7 @@ class Calendar:
     title: str
     timezone: str | None
     access_role: str
+    primary: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +72,7 @@ class CalendarEvent:
     recurrence: tuple[str, ...]
     recurring_event_id: str | None
     original_start: EventTime | None
+    event_type: str = "default"
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +99,7 @@ class _Calendar(_WireModel):
     summary: str = ""
     timeZone: str | None = None
     accessRole: str
+    primary: bool = False
 
 
 class _Time(_WireModel):
@@ -127,6 +131,7 @@ class _Event(_WireModel):
     recurrence: list[str] = Field(default_factory=list)
     recurringEventId: str | None = None
     originalStartTime: _Time | None = None
+    eventType: str = "default"
 
     def domain(self) -> CalendarEvent:
         # Deleted entries can contain only id + status; retain these tombstones.
@@ -142,6 +147,7 @@ class _Event(_WireModel):
             tuple(self.recurrence),
             self.recurringEventId,
             self.originalStartTime.domain() if self.originalStartTime else None,
+            self.eventType,
         )
 
 
@@ -232,7 +238,9 @@ class GoogleCalendarAdapter:
             entries = [_Calendar.model_validate(item) for item in items]
         except ValidationError:
             raise GoogleCalendarError("invalid_response") from None
-        return tuple(Calendar(c.id, c.summary, c.timeZone, c.accessRole) for c in entries)
+        return tuple(
+            Calendar(c.id, c.summary, c.timeZone, c.accessRole, c.primary) for c in entries
+        )
 
     async def events_between(
         self, access_token: str, calendar_id: str, start: datetime, end: datetime
@@ -266,6 +274,64 @@ class GoogleCalendarAdapter:
                 for item in items
                 if (event := _Event.model_validate(item).domain()).status != "cancelled"
             )
+        except ValidationError:
+            raise GoogleCalendarError("invalid_response") from None
+
+    async def create_event(
+        self, access_token: str, calendar_id: str, event_id: str, payload: dict[str, object]
+    ) -> CalendarEvent:
+        url = self._event_url(calendar_id)
+        raw = await self._request(
+            "POST", url, token=access_token, json_body={"id": event_id, **payload}
+        )
+        return self._event(raw)
+
+    async def get_event(self, access_token: str, calendar_id: str, event_id: str) -> CalendarEvent:
+        raw = await self._request(
+            "GET",
+            f"{self._event_url(calendar_id)}/{quote(event_id, safe='')}",
+            token=access_token,
+        )
+        return self._event(raw)
+
+    async def update_event(
+        self,
+        access_token: str,
+        calendar_id: str,
+        event_id: str,
+        payload: dict[str, object],
+        etag: str,
+    ) -> CalendarEvent:
+        raw = await self._request(
+            "PATCH",
+            f"{self._event_url(calendar_id)}/{quote(event_id, safe='')}",
+            token=access_token,
+            json_body=payload,
+            if_match=etag,
+        )
+        return self._event(raw)
+
+    async def delete_event(
+        self, access_token: str, calendar_id: str, event_id: str, etag: str
+    ) -> None:
+        await self._request(
+            "DELETE",
+            f"{self._event_url(calendar_id)}/{quote(event_id, safe='')}",
+            token=access_token,
+            if_match=etag,
+            empty=True,
+        )
+
+    @staticmethod
+    def _event_url(calendar_id: str) -> str:
+        if not calendar_id or len(calendar_id) > 2048:
+            raise GoogleCalendarError("invalid_calendar")
+        return f"{API}/calendars/{quote(calendar_id, safe='')}/events"
+
+    @staticmethod
+    def _event(raw: dict[str, object]) -> CalendarEvent:
+        try:
+            return _Event.model_validate(raw).domain()
         except ValidationError:
             raise GoogleCalendarError("invalid_response") from None
 
@@ -347,15 +413,23 @@ class GoogleCalendarAdapter:
         data: dict[str, str] | None = None,
         params: dict[str, str] | None = None,
         empty: bool = False,
+        json_body: dict[str, object] | None = None,
+        if_match: str | None = None,
     ) -> dict[str, object]:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        if if_match is not None:
+            if not if_match or len(if_match) > 256 or "\r" in if_match or "\n" in if_match:
+                raise GoogleCalendarError("invalid_etag")
+            headers["If-Match"] = if_match
         try:
             async with asyncio.timeout(20):
                 async with self._client.stream(
                     method,
                     url,
                     data=data,
+                    json=json_body,
                     params=params,
-                    headers={"Authorization": f"Bearer {token}"} if token else {},
+                    headers=headers,
                 ) as response:
                     status = response.status_code
                     content = bytearray()
@@ -363,12 +437,15 @@ class GoogleCalendarAdapter:
                         content.extend(chunk)
                         if len(content) > MAX_RESPONSE_BYTES:
                             raise GoogleCalendarError("response_too_large")
-                    if status != 200:
+                    if status not in (200, 201, 204):
                         code = {
                             400: "invalid_request",
                             401: "authorization_expired",
                             403: "access_denied",
+                            404: "item_not_found",
+                            409: "item_already_exists",
                             410: "sync_expired",
+                            412: "item_changed_refresh_before_editing",
                             429: "rate_limited",
                         }.get(status, "provider_unavailable" if status >= 500 else "provider_error")
                         if status == 400 and url in (TOKEN_URL, REVOKE_URL):

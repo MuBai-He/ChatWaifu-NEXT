@@ -53,6 +53,21 @@ def test_calendar_manifest_declares_permission_and_read_only() -> None:
     assert "period" in properties
 
 
+def test_account_owned_agenda_manifests_keep_read_and_write_permissions_separate() -> None:
+    root = Path(__file__).resolve().parents[3] / "skills/builtin"
+    registry = SkillRegistry(root)
+    registry.reload([])
+    write = registry.get("agenda.manage")
+    read = registry.get("google-tasks.read")
+    assert write is not None and read is not None
+    assert write.definition.capabilities[0].side_effect.value == "write"
+    assert write.definition.capabilities[0].confirmation_required
+    assert write.definition.capabilities[0].required_permissions == ["agenda.manage"]
+    assert read.definition.capabilities[0].side_effect.value == "read"
+    assert not read.definition.capabilities[0].confirmation_required
+    assert read.definition.capabilities[0].required_permissions == ["google-tasks.read"]
+
+
 def test_calendar_period_uses_selected_calendar_day_across_utc_midnight() -> None:
     # At 06:08 in Shanghai, a 06:00 event is still ongoing; querying the
     # UTC date's midnight would incorrectly omit it.

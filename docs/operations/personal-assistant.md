@@ -1,5 +1,33 @@
 # Personal assistant development status
 
+## Unified agenda candidate (2026-09-28, not deployed)
+
+The `mubai/unified-agenda` branch extends the merged read-only Google and Apple
+features. It adds a combined today/next 7 days/next 30 days panel, Google Calendar
+event and Google Tasks list/item read/write routes, a persisted default calendar
+and task-list destination, and confirmation-gated agenda management. Runtime
+migration 35 adds task-list selections, write destinations and a display label for
+multiple Google accounts. Existing accounts and selections remain in place.
+
+Before testing with a real Google account, enable the **Google Tasks API** in the
+same Google Cloud project. In the desktop Personal Assistant panel, use **Upgrade
+this account** on the existing read-only account, sign into the *same* Google
+account and grant Calendar event write and Tasks scopes. The server compares the
+primary calendar identity before replacing its stored refresh token. If consent
+fails or the account differs, the old account stays connected with its prior
+capabilities. Select a calendar and a task list explicitly, then mark writable
+targets as defaults. Test in a disposable calendar/list and verify each create,
+edit, complete and delete in the corresponding Google application. Do not retry
+an uncertain write before checking the source. Google Tasks due dates have no
+time-of-day; timed ringing still uses the ChatWaifu task/alarm scheduler.
+
+Apple sources continue to require the paired Mac, EventKit permissions and online
+device receipts. Revoking the device or deselecting its source clears the matching
+default write destination. `queued` means the device has not confirmed the write.
+No real Google write, Apple write from the new combined panel, or notification
+inbox acceptance is claimed by code-only checks. The server deployment described
+later in this document predates this branch until an explicit update.
+
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
 The Runtime owns the Google adapter, account service, OAuth coordinator and startup secret

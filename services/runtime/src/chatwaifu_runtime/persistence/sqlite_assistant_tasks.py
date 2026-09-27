@@ -54,6 +54,10 @@ class SQLiteTaskRepository:
     async def revoke(self, device_id: str) -> None:
         async with self.db.transaction() as c:
             await c.execute(
+                "DELETE FROM assistant_write_destinations WHERE provider='apple' AND device_id=?",
+                (device_id,),
+            )
+            await c.execute(
                 "UPDATE assistant_devices SET revoked=1,secret_hash='',sources_json='[]' "
                 "WHERE device_id=?",
                 (device_id,),
@@ -266,7 +270,21 @@ class SQLiteTaskRepository:
                 sources = json.loads(old["sources_json"])
                 source_revision = old["source_revision"]
             allowed = {(s["resource"], s["id"]) for s in sources}
+            writable = {(s["resource"], s["id"]) for s in sources if s["writable"]}
             if json.loads(old["sources_json"]) != sources:
+                async with c.execute(
+                    "SELECT kind,collection_id FROM assistant_write_destinations "
+                    "WHERE provider='apple' AND device_id=?",
+                    (device_id,),
+                ) as cursor:
+                    defaults = await cursor.fetchall()
+                for destination in defaults:
+                    if (destination["kind"], destination["collection_id"]) not in writable:
+                        await c.execute(
+                            "DELETE FROM assistant_write_destinations WHERE kind=? "
+                            "AND provider='apple' AND device_id=?",
+                            (destination["kind"], device_id),
+                        )
                 async with c.execute(
                     "SELECT operation_id,payload_json,state FROM assistant_operations "
                     "WHERE device_id=?",

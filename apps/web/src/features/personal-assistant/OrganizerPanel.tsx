@@ -18,6 +18,7 @@ import {
   type AppleSource,
   type DeviceBinding,
   type Organizer,
+  type WriteDestination,
 } from "./organizer";
 import "./organizer.css";
 
@@ -53,6 +54,7 @@ const localDate = (seconds: number) => {
 export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   const [page, setPage] = useState<"tasks" | "apple" | "devices">("tasks");
   const [data, setData] = useState<Organizer>(empty);
+  const [destinations, setDestinations] = useState<WriteDestination[]>([]);
   const [binding, setBinding] = useState<DeviceBinding | null>(null);
   const [sources, setSources] = useState<AppleSource[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -82,11 +84,16 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
       undefined,
       connection,
     );
+    const defaults = await organizerRequest<{items: WriteDestination[]}>(
+      `/destinations?session_id=${encodeURIComponent(sessionId)}`,
+      undefined, connection,
+    ).catch(() => ({items: [] as WriteDestination[]}));
     const local = isDesktopHost()
       ? await deviceCall<DeviceBinding | null>(connection.baseUrl, "load")
       : null;
     if (rev !== epoch.current.value) return;
     setData(result);
+    setDestinations(defaults.items);
     setObservedAt(Date.now() / 1000);
     setBinding(local);
     setTarget((old) =>
@@ -124,6 +131,15 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   const source = selectedDevice?.sources.find(
     (s) => `${s.resource}:${s.id}` === sourceKey,
   );
+  const setDefaultApple = () => run(async () => {
+    if (!source || !target || !source.writable) throw new Error("请先选择可写的 Apple 列表。");
+    const c = await resolveRuntimeConnection();
+    await organizerRequest("/destinations", {
+      session_id: sessionId, kind: source.resource, provider: "apple",
+      collection_id: source.id, device_id: target,
+    }, c, undefined, "PUT");
+    setMessage(source.resource === "calendar" ? "已设为默认写入日历。" : "已设为默认待办列表。");
+  });
   const operation = data.operations.find((o) => o.operation_id === operationId);
   const pair = () =>
     run(async () => {
@@ -610,6 +626,11 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
         >
           {source?.resource === "calendar" ? "读取未来 7 天" : "读取列表"}
         </button>
+        {source?.writable && <button disabled={busy} onClick={() => void setDefaultApple()}>
+          {destinations.some((d) => d.kind === source.resource && d.provider === "apple" &&
+            d.collection_id === source.id && d.device_id === target)
+            ? "默认写入位置 ✓" : "设为默认写入位置"}
+        </button>}
         {source?.writable && (
           <form
             key={`${sourceKey}:${editing?.id ?? "new"}`}

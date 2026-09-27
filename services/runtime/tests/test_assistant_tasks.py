@@ -9,8 +9,15 @@ import pytest
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
-from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
-from chatwaifu_runtime.personal_assistant.tasks import AppleOperation, TaskInput, next_due
+from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
+from chatwaifu_runtime.personal_assistant.agenda import AgendaService
+from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError, WriteDestination
+from chatwaifu_runtime.personal_assistant.tasks import (
+    AppleOperation,
+    TaskInput,
+    TaskService,
+    next_due,
+)
 
 
 @pytest.fixture
@@ -246,6 +253,55 @@ async def test_source_revision_and_deselection_clear_cached_results(
     await repo.poll(device["device_id"], device["secret"], sources, 4, source_revision=1)
     assert (await repo.devices())[0]["sources"] == []
     assert (await repo.operations())[0]["result"] == {}
+
+
+async def test_apple_default_write_target_follows_device_source_revocation(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    db, repo = tasks
+    defaults = SQLiteAssistantRepository(db)
+    device = await repo.pair("mac")
+    source = {"id": "list", "resource": "reminder", "title": "Tasks", "writable": True}
+    await repo.poll(device["device_id"], device["secret"], [source], 0, source_revision=1)
+    destination = WriteDestination("reminder", "apple", None, "list", device["device_id"])
+    await defaults.set_destination("local", destination)
+    await repo.poll(device["device_id"], device["secret"], [], 1, source_revision=2)
+    assert await defaults.destinations("local") == ()
+    await defaults.set_destination("local", destination)
+    await repo.poll(
+        device["device_id"], device["secret"], [{**source, "writable": False}], 2, source_revision=3
+    )
+    assert await defaults.destinations("local") == ()
+    await defaults.set_destination("local", destination)
+    await repo.revoke(device["device_id"])
+    assert await defaults.destinations("local") == ()
+
+
+async def test_unified_agenda_queues_to_selected_apple_account(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    db, repo = tasks
+    await db.execute(
+        "INSERT INTO sessions(session_id,character_id,state,conversation_state,created_at,"
+        "updated_at,user_scope) VALUES ('owner','character','idle','idle','now','now','local')"
+    )
+    account = SQLiteAssistantRepository(db)
+    device = await repo.pair("mac")
+    source = {"id": "list", "resource": "reminder", "title": "Tasks", "writable": True}
+    await repo.poll(device["device_id"], device["secret"], [source], 0)
+    await account.set_destination(
+        "local", WriteDestination("reminder", "apple", None, "list", device["device_id"])
+    )
+    agenda = AgendaService(account, None, TaskService(account, repo))
+    request_id = uuid4()
+    result = await agenda.create("owner", "reminder", request_id, "买牛奶")
+    assert result["state"] == "queued" and result["provider"] == "apple"
+    operations = (
+        await repo.poll(
+            device["device_id"], device["secret"], [source], datetime.now(UTC).timestamp()
+        )
+    )["operations"]
+    assert len(operations) == 1 and operations[0]["request_id"] == str(request_id)
 
 
 async def test_snooze_retry_is_idempotent_and_cancelled_task_cannot_resume(

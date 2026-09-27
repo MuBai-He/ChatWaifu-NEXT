@@ -11,6 +11,13 @@ export interface AppleSource {
   resource: "calendar" | "reminder";
   writable: boolean;
 }
+export interface WriteDestination {
+  kind: "calendar" | "reminder";
+  provider: "google" | "apple";
+  account_id: string | null;
+  collection_id: string;
+  device_id: string | null;
+}
 export interface DeviceBinding {
   device_id: string;
   secret: string;
@@ -80,13 +87,14 @@ export async function organizerRequest<T>(
   body?: unknown,
   connection?: RuntimeConnection,
   signal?: AbortSignal,
+  method?: "GET" | "POST" | "PUT",
 ): Promise<T> {
   const c = connection ?? (await resolveRuntimeConnection());
   const response = await runtimeFetchWithConnection(
     c,
     `/v1/personal-assistant${path}`,
     {
-      method: body === undefined ? "GET" : "POST",
+      method: method ?? (body === undefined ? "GET" : "POST"),
       headers:
         body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),

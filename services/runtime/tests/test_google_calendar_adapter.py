@@ -1,6 +1,7 @@
 """Google wire failure boundaries; these do not establish real account acceptance."""
 
 import asyncio
+from datetime import date
 from urllib.parse import parse_qs
 
 import httpx
@@ -9,6 +10,7 @@ from chatwaifu_runtime.personal_assistant.google_calendar import (
     GoogleCalendarAdapter,
     GoogleCalendarError,
 )
+from chatwaifu_runtime.personal_assistant.google_tasks import GoogleTasksAdapter
 
 
 async def test_expired_delta_discards_partial_pages_and_returns_full_snapshot() -> None:
@@ -248,5 +250,91 @@ async def test_window_query_expands_recurring_events_without_sync_cursor() -> No
                 "access", "calendar", start, datetime(2027, 1, 1, tzinfo=UTC)
             )
         assert len(requests) == 1
+    finally:
+        await adapter.close()
+
+
+async def test_calendar_write_uses_client_id_and_etag_and_rejects_stale_edit() -> None:
+    requests: list[httpx.Request] = []
+    event = {
+        "id": "abcd1234",
+        "status": "confirmed",
+        "summary": "会议",
+        "etag": '"v1"',
+        "start": {"dateTime": "2026-09-28T10:00:00+08:00"},
+        "end": {"dateTime": "2026-09-28T11:00:00+08:00"},
+    }
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.method == "PATCH":
+            return httpx.Response(412, text="secret provider body")
+        if request.method == "DELETE":
+            return httpx.Response(204)
+        return httpx.Response(200, json=event)
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    try:
+        item = await adapter.create_event(
+            "token",
+            "me@example.com",
+            "abcd1234",
+            {
+                "summary": "会议",
+                "start": event["start"],
+                "end": event["end"],
+            },
+        )
+        assert item.id == "abcd1234" and item.etag == '"v1"'
+        assert b"me%40example.com" in requests[0].url.raw_path
+        assert b'"id":"abcd1234"' in requests[0].content
+        with pytest.raises(GoogleCalendarError, match="item_changed_refresh_before_editing"):
+            await adapter.update_event(
+                "token", "me@example.com", item.id, {"summary": "新标题"}, '"v1"'
+            )
+        assert requests[1].headers["If-Match"] == '"v1"'
+        await adapter.delete_event("token", "me@example.com", item.id, '"v1"')
+        assert requests[2].headers["If-Match"] == '"v1"'
+    finally:
+        await adapter.close()
+
+
+async def test_google_tasks_pages_date_only_and_stale_write() -> None:
+    requests: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.method == "PATCH":
+            return httpx.Response(412)
+        if request.method == "DELETE":
+            return httpx.Response(204)
+        if request.method == "POST":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "task",
+                    "title": "买牛奶",
+                    "due": "2026-09-29T00:00:00.000Z",
+                    "etag": '"t1"',
+                },
+            )
+        if request.url.params.get("pageToken") == "next":
+            return httpx.Response(200, json={"items": [{"id": "second", "title": "后续"}]})
+        return httpx.Response(
+            200, json={"items": [{"id": "first", "title": "已有"}], "nextPageToken": "next"}
+        )
+
+    adapter = GoogleTasksAdapter(transport=httpx.MockTransport(handle))
+    try:
+        items = await adapter.tasks("token", "a/b")
+        assert [item.id for item in items] == ["first", "second"]
+        created = await adapter.create("token", "a/b", "买牛奶", None, date(2026, 9, 29))
+        assert created.due == date(2026, 9, 29)
+        assert b"a%2Fb" in requests[0].url.raw_path
+        assert b"2026-09-29T00:00:00.000Z" in requests[2].content
+        with pytest.raises(GoogleCalendarError, match="item_changed_refresh_before_editing"):
+            await adapter.update("token", "a/b", "task", {"title": "更新"}, '"t1"')
+        assert requests[3].headers["If-Match"] == '"t1"'
+        await adapter.delete("token", "a/b", "task", '"t1"')
     finally:
         await adapter.close()

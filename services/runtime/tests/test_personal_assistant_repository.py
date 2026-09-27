@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import hashlib
+import json
 import sqlite3
 import threading
 from collections.abc import AsyncIterator
@@ -17,16 +18,19 @@ from chatwaifu_runtime.persistence.atomic_secret_store import AtomicSecretStore
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
 from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService, GoogleClient
+from chatwaifu_runtime.personal_assistant.agenda import AgendaService
 from chatwaifu_runtime.personal_assistant.google_calendar import (
     READ_SCOPE,
+    WRITE_SCOPE,
     Calendar,
     CalendarEvent,
     EventSync,
     GoogleCalendarAdapter,
     OAuthTokens,
 )
+from chatwaifu_runtime.personal_assistant.google_tasks import TASKS_SCOPE, TaskList
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
-from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
+from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError, WriteDestination
 
 
 @pytest.fixture
@@ -65,6 +69,97 @@ async def test_competing_batches_only_commit_once(
     assert len(await db.fetchall("SELECT * FROM assistant_events")) == 1
     winner = await repo.begin_sync("local", "account", "calendar")
     assert winner.sync_token in {"first", "second"}
+
+
+async def test_write_destination_is_owner_private_and_cleared_on_account_revoke(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    db, repo = store
+    destination = WriteDestination("calendar", "google", "account", "calendar", None)
+    with pytest.raises(AssistantAccessError):
+        await repo.set_destination("guest", destination)
+    await repo.set_destination("local", destination)
+    await db.close()
+    await db.open()
+    assert await repo.destinations("local") == (destination,)
+    await repo.revoke("local", "account")
+    assert await repo.destinations("local") == ()
+
+
+async def test_tasklist_selection_and_default_are_cleared_together(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    _, repo = store
+    await repo.add_tasklist("local", "account", TaskList("list", "私人待办"))
+    assert not (await repo.tasklists("local", "account"))[0].selected
+    await repo.select_tasklist("local", "account", "list", True)
+    await repo.set_destination(
+        "local", WriteDestination("reminder", "google", "account", "list", None)
+    )
+    await repo.select_tasklist("local", "account", "list", False)
+    assert await repo.destinations("local") == ()
+    assert not (await repo.tasklists("local", "account"))[0].selected
+
+
+async def test_old_readonly_google_account_can_still_read_but_cannot_write(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    db, repo = store
+    await add_session(db, "owner", "local")
+    secrets = AtomicSecretStore(tmp_path / "legacy-secret.json")
+    secrets.set(
+        "secret-reference-only", json.dumps({"refresh_token": "old", "scopes": [READ_SCOPE]})
+    )
+    methods: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        methods.append(request.method)
+        if request.url.path == "/token":
+            return httpx.Response(
+                200, json={"access_token": "access", "expires_in": 3600, "token_type": "Bearer"}
+            )
+        return httpx.Response(200, json={"items": []})
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    service = GoogleAccountService(repo, AsyncSecretStore(secrets), adapter, GoogleClient("client"))
+    try:
+        status = await service.status("owner")
+        assert status[0].account_id == "account" and not status[0].calendar_write
+        start = datetime(2026, 9, 28, tzinfo=UTC)
+        assert (
+            await service.query("owner", "account", "calendar", start, start + timedelta(days=1))
+            == ()
+        )
+        with pytest.raises(AssistantAccessError, match="google_write_consent_required"):
+            await service.create_event(
+                "owner",
+                "account",
+                "calendar",
+                "abcd1234",
+                "新事件",
+                start,
+                start + timedelta(hours=1),
+            )
+        assert "POST" in methods  # OAuth refresh only, no Calendar event write.
+        assert "GET" in methods
+        assert methods.count("POST") == 2
+    finally:
+        await adapter.close()
+
+
+async def test_agenda_refuses_local_fallback_without_a_default(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    from uuid import uuid4
+
+    db, repo = store
+    await add_session(db, "owner", "local")
+    agenda = AgendaService(repo, None, None)
+    with pytest.raises(AssistantAccessError, match="write_destination_required"):
+        await agenda.create("owner", "reminder", uuid4(), "买牛奶")
 
 
 @pytest.mark.parametrize("mutation", ["revoke", "deselect", "reselect"])
@@ -304,7 +399,7 @@ async def test_oauth_session_binding_pkce_and_replay(
                 "refresh_token": "refresh",
                 "token_type": "Bearer",
                 "expires_in": 3600,
-                "scope": READ_SCOPE,
+                "scope": " ".join((READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE)),
             },
         )
 
@@ -331,11 +426,82 @@ async def test_oauth_session_binding_pkce_and_replay(
             .decode()
         )
         query = parse_qs(urlsplit(flow.authorization_url).query)
+        assert set(query["scope"][0].split()) == {READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE}
         assert query["code_challenge"] == [challenge]
         assert query["code_challenge_method"] == ["S256"]
         with pytest.raises(AssistantAccessError, match="oauth_flow_invalid"):
             await oauth.complete("owner1", flow.state, "code")
         assert len(exchanges) == 1
+    finally:
+        await oauth.close()
+        await adapter.close()
+
+
+@pytest.mark.parametrize("same_account", [True, False])
+async def test_google_scope_upgrade_requires_same_primary_account(
+    store: tuple[Database, SQLiteAssistantRepository],
+    tmp_path: Path,
+    same_account: bool,
+) -> None:
+    db, repo = store
+    await add_session(db, "owner", "local")
+    secrets = AtomicSecretStore(tmp_path / "upgrade.json")
+    secrets.set(
+        "secret-reference-only", json.dumps({"refresh_token": "old", "scopes": [READ_SCOPE]})
+    )
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/token":
+            if b"grant_type=refresh_token" in request.content:
+                return httpx.Response(
+                    200,
+                    json={"access_token": "old-access", "token_type": "Bearer", "expires_in": 3600},
+                )
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": "new-access",
+                    "refresh_token": "new-refresh",
+                    "token_type": "Bearer",
+                    "expires_in": 3600,
+                    "scope": " ".join((READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE)),
+                },
+            )
+        assert request.url.path == "/calendar/v3/users/me/calendarList"
+        identity = "owner@example.com"
+        if not same_account and request.headers["Authorization"] == "Bearer new-access":
+            identity = "different@example.com"
+        return httpx.Response(
+            200,
+            json={
+                "items": [
+                    {"id": identity, "summary": identity, "accessRole": "owner", "primary": True}
+                ]
+            },
+        )
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    service = GoogleAccountService(repo, AsyncSecretStore(secrets), adapter, GoogleClient("client"))
+    oauth = GoogleOAuthCoordinator(repo, adapter, service, GoogleClient("client"))
+    try:
+        flow = await oauth.begin("owner", "http://127.0.0.1:55555/oauth/google", "account")
+        if same_account:
+            upgraded = await oauth.complete("owner", flow.state, "code")
+            assert upgraded.account_id == "account"
+            assert (await service.status("owner"))[0].tasks_write
+            assert (
+                json.loads(secrets.get("secret-reference-only") or "{}")["refresh_token"]
+                == "new-refresh"
+            )
+        else:
+            with pytest.raises(AssistantAccessError, match="google_upgrade_account_mismatch"):
+                await oauth.complete("owner", flow.state, "code")
+            assert not (await service.status("owner"))[0].calendar_write
+            assert (
+                json.loads(secrets.get("secret-reference-only") or "{}")["refresh_token"] == "old"
+            )
+        assert len(await repo.accounts()) == 1
+        assert (await repo.calendars("local", "account"))[0].selected
     finally:
         await oauth.close()
         await adapter.close()

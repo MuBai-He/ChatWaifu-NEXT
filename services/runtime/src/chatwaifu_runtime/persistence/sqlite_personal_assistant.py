@@ -8,11 +8,14 @@ import aiosqlite
 
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.personal_assistant.google_calendar import Calendar, EventSync
+from chatwaifu_runtime.personal_assistant.google_tasks import TaskList
 from chatwaifu_runtime.personal_assistant.repository import (
     AccountRecord,
     AssistantAccessError,
     CalendarSelection,
     SyncTicket,
+    TaskListSelection,
+    WriteDestination,
 )
 
 
@@ -32,14 +35,86 @@ class SQLiteAssistantRepository:
     async def accounts(self) -> tuple[AccountRecord, ...]:
         # Internal lifecycle inventory, never expose secret references over HTTP.
         rows = await self._database.fetchall(
-            "SELECT account_id,status,secret_ref FROM assistant_accounts WHERE owner_scope='local'"
+            "SELECT account_id,status,secret_ref,display_label FROM assistant_accounts "
+            "WHERE owner_scope='local'"
         )
-        return tuple(AccountRecord(row[0], row[1], row[2]) for row in rows)
+        return tuple(AccountRecord(row[0], row[1], row[2], row[3]) for row in rows)
 
     @staticmethod
     def _owner(owner: str) -> None:
         if owner != "local":
             raise AssistantAccessError("personal_account_requires_owner")
+
+    async def destinations(self, owner: str) -> tuple[WriteDestination, ...]:
+        self._owner(owner)
+        rows = await self._database.fetchall(
+            "SELECT kind,provider,account_id,collection_id,device_id "
+            "FROM assistant_write_destinations ORDER BY kind"
+        )
+        return tuple(WriteDestination(*row) for row in rows)
+
+    async def set_destination(self, owner: str, destination: WriteDestination) -> None:
+        self._owner(owner)
+        if destination.kind not in {"calendar", "reminder"} or destination.provider not in {
+            "google",
+            "apple",
+        }:
+            raise AssistantAccessError("invalid_destination")
+        await self._database.execute(
+            "INSERT INTO assistant_write_destinations "
+            "(kind,provider,account_id,collection_id,device_id) VALUES (?,?,?,?,?) "
+            "ON CONFLICT(kind) DO UPDATE SET provider=excluded.provider,"
+            "account_id=excluded.account_id,collection_id=excluded.collection_id,"
+            "device_id=excluded.device_id",
+            (
+                destination.kind,
+                destination.provider,
+                destination.account_id,
+                destination.collection_id,
+                destination.device_id,
+            ),
+        )
+
+    async def tasklists(self, owner: str, account_id: str) -> tuple[TaskListSelection, ...]:
+        self._owner(owner)
+        async with self._database.transaction() as connection:
+            await self._account(connection, account_id)
+            async with connection.execute(
+                "SELECT list_id,title,selected FROM assistant_tasklists "
+                "WHERE account_id=? ORDER BY title,list_id",
+                (account_id,),
+            ) as cursor:
+                rows = await cursor.fetchall()
+        return tuple(TaskListSelection(TaskList(r[0], r[1]), bool(r[2])) for r in rows)
+
+    async def add_tasklist(self, owner: str, account_id: str, tasklist: TaskList) -> None:
+        self._owner(owner)
+        async with self._database.transaction() as connection:
+            await self._account(connection, account_id)
+            await connection.execute(
+                "INSERT INTO assistant_tasklists(account_id,list_id,title) VALUES (?,?,?) "
+                "ON CONFLICT(account_id,list_id) DO UPDATE SET title=excluded.title",
+                (account_id, tasklist.id, tasklist.title),
+            )
+
+    async def select_tasklist(
+        self, owner: str, account_id: str, list_id: str, selected: bool
+    ) -> None:
+        self._owner(owner)
+        async with self._database.transaction() as connection:
+            await self._account(connection, account_id)
+            async with connection.execute(
+                "UPDATE assistant_tasklists SET selected=? WHERE account_id=? AND list_id=?",
+                (int(selected), account_id, list_id),
+            ) as cursor:
+                if cursor.rowcount != 1:
+                    raise AssistantAccessError("tasklist_not_found")
+            if not selected:
+                await connection.execute(
+                    "DELETE FROM assistant_write_destinations WHERE kind='reminder' "
+                    "AND provider='google' AND account_id=? AND collection_id=?",
+                    (account_id, list_id),
+                )
 
     async def _account(self, connection: aiosqlite.Connection, account_id: str) -> aiosqlite.Row:
         async with connection.execute(
@@ -63,6 +138,27 @@ class SQLiteAssistantRepository:
             (account_id, secret_ref),
         )
 
+    async def bump_account_revision(self, owner: str, account_id: str) -> None:
+        self._owner(owner)
+        async with self._database.transaction() as connection:
+            async with connection.execute(
+                "UPDATE assistant_accounts SET revision=revision+1 "
+                "WHERE account_id=? AND owner_scope='local' AND status='connected'",
+                (account_id,),
+            ) as cursor:
+                if cursor.rowcount != 1:
+                    raise AssistantAccessError("account_not_connected")
+
+    async def set_account_label(self, owner: str, account_id: str, label: str) -> None:
+        self._owner(owner)
+        if not label or len(label) > 200:
+            raise AssistantAccessError("invalid_account_label")
+        await self._database.execute(
+            "UPDATE assistant_accounts SET display_label=? WHERE account_id=? "
+            "AND owner_scope='local' AND status='connected'",
+            (label, account_id),
+        )
+
     async def add_calendar(self, owner: str, account_id: str, calendar: Calendar) -> None:
         self._owner(owner)
         async with self._database.transaction() as connection:
@@ -71,11 +167,20 @@ class SQLiteAssistantRepository:
             # metadata invalidates old sync tickets without deleting good data.
             await connection.execute(
                 "INSERT INTO assistant_calendars "
-                "(account_id,calendar_id,title,timezone,access_role) VALUES (?,?,?,?,?) "
+                "(account_id,calendar_id,title,timezone,access_role,is_primary) "
+                "VALUES (?,?,?,?,?,?) "
                 "ON CONFLICT(account_id,calendar_id) DO UPDATE SET "
                 "title=excluded.title,timezone=excluded.timezone,access_role=excluded.access_role,"
+                "is_primary=excluded.is_primary,"
                 "revision=assistant_calendars.revision+1",
-                (account_id, calendar.id, calendar.title, calendar.timezone, calendar.access_role),
+                (
+                    account_id,
+                    calendar.id,
+                    calendar.title,
+                    calendar.timezone,
+                    calendar.access_role,
+                    int(calendar.primary),
+                ),
             )
 
     async def calendars(self, owner: str, account_id: str) -> tuple[CalendarSelection, ...]:
@@ -83,12 +188,16 @@ class SQLiteAssistantRepository:
         async with self._database.transaction() as connection:
             await self._account(connection, account_id)
             async with connection.execute(
-                "SELECT calendar_id,title,timezone,access_role,selected FROM assistant_calendars "
+                "SELECT calendar_id,title,timezone,access_role,selected,is_primary "
+                "FROM assistant_calendars "
                 "WHERE account_id=? ORDER BY title,calendar_id",
                 (account_id,),
             ) as cursor:
                 rows = await cursor.fetchall()
-        return tuple(CalendarSelection(Calendar(r[0], r[1], r[2], r[3]), bool(r[4])) for r in rows)
+        return tuple(
+            CalendarSelection(Calendar(r[0], r[1], r[2], r[3], bool(r[5])), bool(r[4]))
+            for r in rows
+        )
 
     async def select(self, owner: str, account_id: str, calendar_id: str, selected: bool) -> None:
         self._owner(owner)
@@ -105,6 +214,12 @@ class SQLiteAssistantRepository:
                 "DELETE FROM assistant_events WHERE account_id=? AND calendar_id=?",
                 (account_id, calendar_id),
             )
+            if not selected:
+                await connection.execute(
+                    "DELETE FROM assistant_write_destinations WHERE kind='calendar' "
+                    "AND provider='google' AND account_id=? AND collection_id=?",
+                    (account_id, calendar_id),
+                )
 
     async def begin_sync(self, owner: str, account_id: str, calendar_id: str) -> SyncTicket:
         self._owner(owner)
@@ -194,5 +309,12 @@ class SQLiteAssistantRepository:
             )
             await connection.execute(
                 "DELETE FROM assistant_calendars WHERE account_id=?", (account_id,)
+            )
+            await connection.execute(
+                "DELETE FROM assistant_tasklists WHERE account_id=?", (account_id,)
+            )
+            await connection.execute(
+                "DELETE FROM assistant_write_destinations WHERE provider='google' AND account_id=?",
+                (account_id,),
             )
             return str(row["secret_ref"])

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "google-tasks.read",
+    "version": "1.0.0",
+    "name": "读取 Google 待办",
+    "description": "读取主人明确选择的 Google Tasks 列表中的待办与完成状态。",
+    "capabilities": [{
+      "name": "query",
+      "description": "查询已授权并选中的 Google 待办列表，无需参数。结果带 account_id、collection_id、item_id 和 etag，可用于后续确认过的修改。",
+      "input_schema": {"type": "object", "properties": {}, "additionalProperties": false},
+      "output_schema": {
+        "type": "object",
+        "required": ["source", "tasks"],
+        "properties": {
+          "source": {"type": "string", "const": "google_live"},
+          "tasks": {"type": "array", "maxItems": 200, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "side_effect": "read",
+      "required_permissions": ["google-tasks.read"],
+      "confirmation_required": false,
+      "timeout_seconds": 120
+    }],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {"kind": "builtin", "handler": "google_tasks_read"}
+}

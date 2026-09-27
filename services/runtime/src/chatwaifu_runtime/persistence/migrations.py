@@ -1281,4 +1281,28 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        35,
+        """
+        ALTER TABLE assistant_accounts ADD COLUMN display_label TEXT;
+        ALTER TABLE assistant_calendars ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0
+            CHECK(is_primary IN (0, 1));
+        CREATE TABLE assistant_tasklists (
+            account_id TEXT NOT NULL REFERENCES assistant_accounts(account_id),
+            list_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            selected INTEGER NOT NULL DEFAULT 0 CHECK(selected IN (0, 1)),
+            PRIMARY KEY(account_id, list_id)
+        );
+        CREATE TABLE assistant_write_destinations (
+            kind TEXT PRIMARY KEY CHECK(kind IN ('calendar', 'reminder')),
+            provider TEXT NOT NULL CHECK(provider IN ('google', 'apple')),
+            account_id TEXT,
+            collection_id TEXT NOT NULL,
+            device_id TEXT,
+            CHECK((provider='google' AND account_id IS NOT NULL AND device_id IS NULL)
+               OR (provider='apple' AND account_id IS NULL AND device_id IS NOT NULL))
+        );
+        """,
+    ),
 )
