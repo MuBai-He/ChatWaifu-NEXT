@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "organizer.read",
+      "version": "1.0.0",
+      "name": "个人助理任务与设备状态",
+      "description": "查询提醒、闹钟、定时任务、已配对 Apple 设备和已选择的日历列表，读取异步事项操作结果。Alarm reminder task Apple calendar status.",
+      "capabilities":
+        [
+          {
+            "name": "execute",
+            "description": "查询提醒、闹钟、定时任务、已配对 Apple 设备和已选择的日历列表，读取异步事项操作结果。Alarm reminder task Apple calendar status.",
+            "input_schema":
+              {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false,
+              },
+            "output_schema": { "type": "object" },
+            "side_effect": "read",
+            "required_permissions": ["organizer.read"],
+            "confirmation_required": false,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "organizer_read" },
+}

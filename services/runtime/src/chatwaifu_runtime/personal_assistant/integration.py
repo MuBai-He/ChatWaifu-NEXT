@@ -11,11 +11,20 @@ from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService, 
 from chatwaifu_runtime.personal_assistant.google_calendar import GoogleCalendarAdapter
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
 from chatwaifu_runtime.personal_assistant.repository import AssistantRepository
+from chatwaifu_runtime.personal_assistant.tasks import TaskRepository, TaskService
 
 
 class PersonalAssistantIntegration:
-    def __init__(self, settings: Settings, repository: AssistantRepository) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        repository: AssistantRepository,
+        tasks: TaskRepository | None = None,
+    ) -> None:
         config = settings.personal_assistant
+        self.tasks = (
+            TaskService(repository, tasks) if config.enabled and tasks is not None else None
+        )
         self.state: Literal["disabled", "unconfigured", "ready", "cleanup_failed"] = "disabled"
         self.accounts: GoogleAccountService | None = None
         self.oauth: GoogleOAuthCoordinator | None = None
@@ -45,6 +54,8 @@ class PersonalAssistantIntegration:
         self.state = "ready"
 
     async def start(self) -> None:
+        if self.tasks is not None:
+            await self.tasks.start()
         if self.accounts is not None and self._maintenance is None:
             self._maintenance = asyncio.create_task(self._reconcile(), name="assistant-cleanup")
 
@@ -59,6 +70,8 @@ class PersonalAssistantIntegration:
             self.state = "cleanup_failed"
 
     async def close(self) -> None:
+        if self.tasks is not None:
+            await self.tasks.close()
         if self.oauth is not None:
             await self.oauth.close()
         if self._maintenance is not None:

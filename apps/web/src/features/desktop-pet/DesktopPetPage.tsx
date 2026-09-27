@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AssistantDelivery } from "../personal-assistant/AssistantDelivery";
 import { ProductIcon } from "../../components/ProductIcon";
 import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
@@ -201,6 +202,7 @@ export function DesktopPetPage() {
       onPointerMove={pointerPresence.onPointerMove}
       onPointerLeave={pointerPresence.onPointerLeave}
     >
+      <AssistantDelivery />
       <SkillConfirmationPrompt sessionId={sessionId} />
       <button
         className="desktop-pet-avatar"

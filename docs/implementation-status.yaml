@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-09-27"
 current_phase: "13.6"
 personal_assistant:
-  status: stage_a_google_read_user_confirmed_other_integrations_pending
+  status: google_read_user_confirmed_apple_tasks_implemented_pending_device_acceptance
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22
@@ -13,9 +13,12 @@ personal_assistant:
     - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed
     - User completed Google authorization and selected a calendar on direct HTTPS; authenticated event API and calendar.read 1.1.0 returned the existing event 测试 in Asia/Shanghai, and the user confirmed desktop-pet dialog access on 2026-09-27
     - Offline recovery now retains account secret references, selected calendars, sync cursors and event cache together; targeted recovery/calendar/tool checks passed with 36 passed and 22 Windows-only skips on macOS
+    - Apple EventKit bridge and migration 34 durable tasks, paired-device source fencing, desktop delivery and permission-gated organizer Skills implemented on mubai/apple-reminders-tasks; not deployed and real OS acceptance pending
   remaining:
     - google_revocation_refresh_and_long_term_stability_acceptance
-    - google_writes_apple_reminders_durable_tasks_desktop_alarms_cloud_voice_writes
+    - apple_calendar_reminders_native_permission_save_readback_and_icloud_acceptance
+    - durable_task_desktop_alarm_sound_sleep_restart_real_device_acceptance
+    - google_writes_and_cloud_voice_writes
     - real_apple_and_home_assistant_acceptance
 next_phase: "17.4C"
 server_deployment:
