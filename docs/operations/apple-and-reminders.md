@@ -1,7 +1,7 @@
 # Apple 日历、提醒事项与持久闹钟验收
 
 这部分代码需要同时更新 Runtime 和桌面宿主，旧版客户端没有 EventKit 命令。
-本轮没有替用户授权、改动真实日历、部署生产服务器或启动实际闹钟。
+初次代码交付没有替用户授权、改动真实日历或启动实际闹钟。服务器部署进度见下方记录。
 
 ## 启动准备
 
@@ -47,3 +47,16 @@
 - 修改范围 Ruff、Pyright、ESLint、TypeScript 与格式检查通过；desktop 前端构建通过，保留已有分包体积提示。
 - 用隔离假数据实际渲染了设置面板检查布局；这不是桌宠、Apple 数据或服务器部署实机验收。
 - agy Gemini 3.8 Flash High 完成只读设计调查和实际改动审查；主代理独立实现并修复确认的状态／权限问题。
+
+## 2026-09-27 服务器接入记录
+
+用户新版桌面设置页出现 404，确认线上 Runtime 尚无 organizer/device/task 路由。
+已将 PR #46 的 21 个后端与 Skill 文件部署到常驻 Linux Runtime；保留目标服务器
+既有 MCP 配置差异，未更改 TLS、Google 凭据或模型配置。更新前停止 Runtime 与
+HTTPS socket/proxy，完整备份状态目录与被替换代码；先在数据库副本验证迁移，再应用迁移 34。
+
+- PR #46 提交 `23cf1a2` 的全部 CI 通过，包括 Windows Python 检查。
+- HTTPS health、个人助理 status、owner organizer 与 accounts 均返回 200。
+- organizer 调度器无错误；原 Google 账号仍为 connected；未认证 organizer 返回 401。
+- 尚未配对真实设备、授予 Apple 权限、操作 Apple 数据或验收通知响铃。
+- 这次是服务器部署；PR 仍未合并。已有新版桌面端可重新打开设置继续配对。
