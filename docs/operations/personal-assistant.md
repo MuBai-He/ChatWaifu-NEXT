@@ -61,8 +61,10 @@ during Apple acceptance.
 The live device exposed 11 selected Apple sources, with its Reminders list after
 the old overview's first-eight cutoff. The desktop overview now reserves room for
 both calendar and reminder sources and prioritizes any default Apple destinations
-within its eight-source request bound. Frontend typecheck, lint and desktop bundle
-passed; the updated overview still needs visual acceptance in the running desktop.
+within its eight-source request bound. It also excludes completed Apple reminders
+and reminders due beyond the active day range, matching Google Tasks behavior.
+Frontend typecheck, lint and desktop bundle passed; the updated overview still
+needs visual acceptance in the running desktop.
 
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 

@@ -401,6 +401,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!appleReads.length) return;
     let disposed = false;
+    const rangeEnd = windowFor(days).end.getTime();
     const poll = async () => {
       try {
         const current = await organizerRequest<Organizer>(
@@ -416,6 +417,11 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
           if (operation?.state !== "succeeded") continue;
           for (const item of operation.result.items ?? []) {
             const when = item.start ?? item.due ?? null;
+            if (
+              read.resource === "reminder" &&
+              (item.completed || (when !== null && when * 1000 >= rangeEnd))
+            )
+              continue;
             fresh.push({
               key: `apple:${read.id}:${item.id}`,
               type: read.resource === "calendar" ? "日程" : "待办",
@@ -470,7 +476,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
       disposed = true;
       window.clearInterval(timer);
     };
-  }, [appleReads, sessionId]);
+  }, [appleReads, days, sessionId]);
 
   const visible = useMemo(
     () =>
