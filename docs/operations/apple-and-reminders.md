@@ -8,9 +8,10 @@
 1. 更新服务端源码，保留独立的 state/config/data 和凭据文件，备份 SQLite 后启动 Runtime。
    设置 `[personal_assistant] enabled = true`。Google OAuth 是否配置不影响任务调度。
    SQLite 自动应用迁移 34。不要将迁移后的数据库交给旧版 Runtime。
-2. 在本分支运行 `pnpm install --frozen-lockfile`，随后
+2. 先退出旧桌宠进程，再在本分支运行 `pnpm install --frozen-lockfile`，随后
    `pnpm --filter @chatwaifu/desktop dev`。原生 EventKit 需要 macOS 14+ 和 Xcode 命令行工具。
    正式使用应验收带完整 Info.plist 的 `.app`；开发宿主的系统授权可能需要重新确认。
+   这次增加了原生命令，只刷新旧窗口不会加载新功能。
 3. 使用已有的 HTTPS 服务地址和访问令牌连接。任务设备能力不经普通 LAN HTTP 传输；
    本机直连开发需显式设置 `device_allow_direct_loopback = true`；带代理头的请求仍拒绝。
    该选项仅供没有反向代理的本机 Runtime，默认关闭。服务器端不要启用任意代理头解析。
