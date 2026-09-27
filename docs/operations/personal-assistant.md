@@ -63,8 +63,9 @@ the old overview's first-eight cutoff. The desktop overview now reserves room fo
 both calendar and reminder sources and prioritizes any default Apple destinations
 within its eight-source request bound. It also excludes completed Apple reminders
 and reminders due beyond the active day range, matching Google Tasks behavior.
-Frontend typecheck, lint and desktop bundle passed; the updated overview still
-needs visual acceptance in the running desktop.
+Frontend typecheck, lint and desktop bundle passed. The user refreshed the
+running desktop's next-seven-days overview and confirmed that unfinished Apple
+Reminders appear without flooding the view with completed items.
 
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 

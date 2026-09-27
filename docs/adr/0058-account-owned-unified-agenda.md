@@ -1,7 +1,8 @@
 # ADR 0058: Account-owned unified agenda
 
 Status: Implemented for review; Google and Apple provider writes verified through live
-Runtime and EventKit readback on 2026-09-28. Visual application, chat-write and offline
+Runtime and EventKit readback on 2026-09-28. The desktop next-seven-days Apple
+reminder view was user-confirmed. Original provider apps, chat-write and offline
 delivery acceptance remain open.
 
 ## Decision
