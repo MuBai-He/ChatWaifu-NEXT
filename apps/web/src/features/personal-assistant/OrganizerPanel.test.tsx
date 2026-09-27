@@ -65,6 +65,7 @@ it.each(["task", "apple"])(
       });
       button = screen.getByRole("button", { name: "保存任务" });
     } else {
+      fireEvent.click(screen.getByRole("button", { name: "日历与提醒" }));
       fireEvent.change(screen.getByLabelText("已允许的列表"), {
         target: { value: "reminder:list" },
       });

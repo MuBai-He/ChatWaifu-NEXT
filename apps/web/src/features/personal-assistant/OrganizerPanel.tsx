@@ -51,6 +51,7 @@ const localDate = (seconds: number) => {
 };
 
 export function OrganizerPanel({ sessionId }: { sessionId: string }) {
+  const [page, setPage] = useState<"tasks" | "apple" | "devices">("tasks");
   const [data, setData] = useState<Organizer>(empty);
   const [binding, setBinding] = useState<DeviceBinding | null>(null);
   const [sources, setSources] = useState<AppleSource[]>([]);
@@ -263,411 +264,491 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   };
   return (
     <div className="assistant-organizer">
-      <h3>提醒设备</h3>
-      <p>
-        服务器保存任务，桌宠负责提醒。Apple 日历和提醒事项由配对的 Mac
-        读写；手机时钟不在此处控制。
-      </p>
-      <div className="assistant-actions">
-        <button disabled={busy} onClick={() => void run(refresh)}>
+      <div className="assistant-organizer-heading">
+        <div>
+          <h3>日程与提醒</h3>
+          <p>安排日常任务，连接你的 Apple 日历。</p>
+        </div>
+        <button type="button" onClick={() => void run(refresh)} disabled={busy}>
           刷新
         </button>
-        {binding &&
-          !data.devices.some((d) => d.device_id === binding.device_id) && (
+      </div>
+      <nav className="assistant-organizer-nav" aria-label="日程与提醒功能">
+        {(
+          [
+            ["tasks", "定时任务"],
+            ["apple", "日历与提醒"],
+            ["devices", "设备与权限"],
+          ] as const
+        ).map(([id, title]) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={page === id}
+            aria-controls={`organizer-${id}`}
+            onClick={() => setPage(id)}
+          >
+            {title}
+          </button>
+        ))}
+      </nav>
+      {message && (
+        <p className="assistant-feedback" role="status">
+          {message}
+        </p>
+      )}
+      {(error || data.scheduler_error) && (
+        <p className="assistant-feedback assistant-feedback-error" role="alert">
+          {error ?? data.scheduler_error}
+        </p>
+      )}
+      {!data.devices.length && page !== "devices" && (
+        <div className="assistant-empty">
+          <strong>先连接一台桌宠设备</strong>
+          <p>配对后，就能接收提醒和访问 Apple 日历。</p>
+          <button type="button" onClick={() => setPage("devices")}>
+            前往配对
+          </button>
+        </div>
+      )}
+      <section
+        id="organizer-devices"
+        className="assistant-panel"
+        hidden={page !== "devices"}
+      >
+        <h3>提醒设备</h3>
+        <p>在此设备接收提醒，并选择允许访问的 Apple 日历和提醒事项。</p>
+        <div className="assistant-actions">
+          {binding &&
+            !data.devices.some((d) => d.device_id === binding.device_id) && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const c = await resolveRuntimeConnection();
+                    await deviceCall(c.baseUrl, "forget");
+                  })
+                }
+              >
+                清除失效的本地配对
+              </button>
+            )}
+          {!binding && (
+            <button
+              disabled={busy || !isDesktopHost()}
+              onClick={() => void pair()}
+            >
+              配对此设备
+            </button>
+          )}
+          {binding && (
             <button
               disabled={busy}
               onClick={() =>
                 void run(async () => {
                   const c = await resolveRuntimeConnection();
-                  await deviceCall(c.baseUrl, "forget");
+                  await deviceCall(c.baseUrl, "notification_permission");
+                  setMessage("通知权限已请求；实际提醒还会在桌宠中显示。");
                 })
               }
             >
-              清除失效的本地配对
+              允许系统通知
             </button>
           )}
-        {!binding && (
-          <button
-            disabled={busy || !isDesktopHost()}
-            onClick={() => void pair()}
-          >
-            配对此设备
-          </button>
-        )}
-        {binding && (
-          <button
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                const c = await resolveRuntimeConnection();
-                await deviceCall(c.baseUrl, "notification_permission");
-                setMessage("通知权限已请求；实际提醒还会在桌宠中显示。");
-              })
-            }
-          >
-            允许系统通知
-          </button>
-        )}
-      </div>
-      {data.devices.map((d) => (
-        <div className="assistant-actions" key={d.device_id}>
-          <span>
-            {d.name} · {observedAt - d.last_seen < 20 ? "在线" : "离线"}
-          </span>
-          <button
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                if (
-                  !window.confirm(
-                    "撤销此设备会取消发给它的待执行任务，是否继续？",
-                  )
-                )
-                  return;
-                const c = await resolveRuntimeConnection();
-                await organizerRequest(
-                  `/devices/${d.device_id}/revoke`,
-                  { session_id: sessionId },
-                  c,
-                );
-                if (binding?.device_id === d.device_id)
-                  await deviceCall(c.baseUrl, "forget");
-              })
-            }
-          >
-            撤销配对
-          </button>
         </div>
-      ))}
-      {binding && (
-        <>
-          <h3>本机 Apple 权限与访问范围</h3>
-          <div className="assistant-actions">
-            <button disabled={busy} onClick={() => void authorize("calendar")}>
-              授权／读取 Apple 日历
-            </button>
-            <button disabled={busy} onClick={() => void authorize("reminder")}>
-              授权／读取提醒事项列表
+        {data.devices.map((d) => (
+          <div className="assistant-device-row" key={d.device_id}>
+            <span>
+              {d.name} · {observedAt - d.last_seen < 20 ? "在线" : "离线"}
+            </span>
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  if (
+                    !window.confirm(
+                      "撤销此设备会取消发给它的待执行任务，是否继续？",
+                    )
+                  )
+                    return;
+                  const c = await resolveRuntimeConnection();
+                  await organizerRequest(
+                    `/devices/${d.device_id}/revoke`,
+                    { session_id: sessionId },
+                    c,
+                  );
+                  if (binding?.device_id === d.device_id)
+                    await deviceCall(c.baseUrl, "forget");
+                })
+              }
+            >
+              撤销配对
             </button>
           </div>
-          {[
-            ...sources,
-            ...binding.sources.filter(
-              (s) =>
-                !sources.some(
-                  (v) => v.id === s.id && v.resource === s.resource,
-                ),
-            ),
-          ].map((s) => (
-            <label className="assistant-source" key={`${s.resource}:${s.id}`}>
-              <input
-                type="checkbox"
-                disabled={busy}
-                checked={binding.sources.some(
-                  (v) => v.id === s.id && v.resource === s.resource,
-                )}
-                onChange={(e) => void selectSource(s, e.target.checked)}
-              />
-              {s.resource === "calendar" ? "日历" : "提醒事项"} · {s.title}
-              {!s.writable && "（只读）"}
-            </label>
-          ))}
-        </>
-      )}
-      <label>
-        接收提醒／执行操作的设备
-        <select
-          value={target}
-          onChange={(e) => {
-            setTarget(e.target.value);
-            setSourceKey("");
-            setEditing(null);
-            setOperationId("");
-          }}
-        >
-          <option value="">选择设备</option>
-          {data.devices.map((d) => (
-            <option key={d.device_id} value={d.device_id}>
-              {d.name} · {d.device_id.slice(0, 8)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <h3>定时提醒与闹钟</h3>
-      <form key={editingTask?.request_id ?? "new-task"} onSubmit={createTask}>
-        <label className="assistant-wide">
-          提醒内容
-          <input
-            name="title"
-            defaultValue={editingTask?.title ?? ""}
-            maxLength={200}
-            required
-            placeholder="例如：吃药、休息一下"
-          />
-        </label>
-        <label>
-          方式
-          <select name="kind" defaultValue={editingTask?.kind ?? "reminder"}>
-            <option value="reminder">提醒</option>
-            <option value="alarm">闹钟</option>
-          </select>
-        </label>
-        <label>
-          重复
-          <select name="repeat" defaultValue={editingTask?.repeat ?? "none"}>
-            <option value="none">仅一次</option>
-            <option value="daily">每天</option>
-            <option value="weekdays">工作日（周一至周五）</option>
-          </select>
-        </label>
-        <label className="assistant-wide">
-          首次时间（{Intl.DateTimeFormat().resolvedOptions().timeZone}）
-          <input
-            name="due"
-            type="datetime-local"
-            required
-            defaultValue={editingTask ? localDate(editingTask.next_due) : ""}
-          />
-        </label>
-        <button className="assistant-wide" disabled={busy || !target}>
-          {editingTask ? "保存修改" : "保存任务"}
-        </button>
-        {editingTask && (
-          <button type="button" onClick={() => setEditingTask(null)}>
-            取消编辑
-          </button>
-        )}
-      </form>
-      <p>
-        电脑睡眠或关机时不能响铃。闹钟超过 2 分钟、提醒超过 1
-        小时会记为错过；贪睡为 5 分钟。
-      </p>
-      <div className="assistant-list">
-        {data.tasks.map((t) => (
-          <article key={t.request_id}>
-            <strong>{t.title}</strong>
-            <small>
-              {states[t.state] ?? t.state} ·{" "}
-              {new Date(t.next_due * 1000).toLocaleString()} · {t.timezone} ·{" "}
-              {t.repeat === "none"
-                ? "仅一次"
-                : t.repeat === "daily"
-                  ? "每天"
-                  : "工作日"}
-            </small>
-            <div className="assistant-actions">
-              {["active", "paused"].includes(t.state) && (
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    setEditingTask(t);
-                    setTarget(t.device_id);
-                  }}
-                >
-                  修改时间／内容
-                </button>
-              )}
-
-              {["active", "paused"].includes(t.state) && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await organizerRequest(`/tasks/${t.request_id}`, {
-                        session_id: sessionId,
-                        action: t.state === "paused" ? "resume" : "pause",
-                      });
-                    })
-                  }
-                >
-                  {t.state === "paused" ? "恢复" : "暂停"}
-                </button>
-              )}
-              {t.state !== "cancelled" && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await organizerRequest(`/tasks/${t.request_id}`, {
-                        session_id: sessionId,
-                        action: "cancel",
-                      });
-                    })
-                  }
-                >
-                  取消
-                </button>
-              )}
-            </div>
-          </article>
         ))}
-      </div>
-      {data.history?.some((h) => h.state === "missed") && (
-        <p>
-          最近错过 {data.history.filter((h) => h.state === "missed").length}{" "}
-          次提醒／闹钟，已停止补响。
-        </p>
-      )}
-      <h3>Apple 日程与提醒事项</h3>
-      <label>
-        已允许的列表
-        <select
-          value={sourceKey}
-          onChange={(e) => {
-            setSourceKey(e.target.value);
-            setEditing(null);
-            setOperationId("");
-          }}
-        >
-          <option value="">选择列表</option>
-          {selectedDevice?.sources.map((s) => (
-            <option
-              key={`${s.resource}:${s.id}`}
-              value={`${s.resource}:${s.id}`}
-            >
-              {s.resource === "calendar" ? "日历" : "提醒事项"} · {s.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button disabled={busy || !source} onClick={() => void apple("list")}>
-        {source?.resource === "calendar" ? "读取未来 7 天" : "读取列表"}
-      </button>
-      {source?.writable && (
-        <form
-          key={`${sourceKey}:${editing?.id ?? "new"}`}
-          onSubmit={submitApple}
-        >
-          <label className="assistant-wide">
-            {editing ? "编辑标题" : "新事项标题"}
-            <input
-              name="title"
-              required
-              maxLength={200}
-              defaultValue={editing?.title ?? ""}
-            />
-          </label>
-          <label>
-            {source.resource === "calendar" ? "开始时间" : "到期时间（可选）"}
-            <input
-              name="start"
-              type="datetime-local"
-              required={source.resource === "calendar"}
-              defaultValue={
-                editing?.start || editing?.due
-                  ? localDate(editing.start ?? editing.due!)
-                  : ""
-              }
-            />
-          </label>
-          {source.resource === "calendar" && (
-            <label>
-              结束时间
-              <input
-                name="end"
-                type="datetime-local"
-                required
-                defaultValue={editing?.end ? localDate(editing.end) : ""}
-              />
-            </label>
-          )}
-          <button disabled={busy}>{editing ? "保存修改" : "创建事项"}</button>
-          {editing && (
-            <button type="button" onClick={() => setEditing(null)}>
-              取消编辑
-            </button>
-          )}
-        </form>
-      )}
-      {data.operations.length > 0 && (
+        {binding && (
+          <>
+            <h3>Apple 访问权限</h3>
+            <div className="assistant-actions">
+              <button
+                disabled={busy}
+                onClick={() => void authorize("calendar")}
+              >
+                连接 Apple 日历
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => void authorize("reminder")}
+              >
+                连接提醒事项
+              </button>
+            </div>
+            {[
+              ...sources,
+              ...binding.sources.filter(
+                (s) =>
+                  !sources.some(
+                    (v) => v.id === s.id && v.resource === s.resource,
+                  ),
+              ),
+            ].map((s) => (
+              <label className="assistant-source" key={`${s.resource}:${s.id}`}>
+                <input
+                  type="checkbox"
+                  disabled={busy}
+                  checked={binding.sources.some(
+                    (v) => v.id === s.id && v.resource === s.resource,
+                  )}
+                  onChange={(e) => void selectSource(s, e.target.checked)}
+                />
+                {s.resource === "calendar" ? "日历" : "提醒事项"} · {s.title}
+                {!s.writable && "（只读）"}
+              </label>
+            ))}
+          </>
+        )}
+      </section>
+      <div className="assistant-target" hidden={page === "devices"}>
         <label>
-          最近的 Apple 操作
+          使用设备
           <select
-            value={operationId}
+            value={target}
             onChange={(e) => {
-              setOperationId(e.target.value);
+              setTarget(e.target.value);
+              setSourceKey("");
               setEditing(null);
+              setOperationId("");
             }}
           >
-            <option value="">选择操作查看结果</option>
-            {data.operations.map((item) => (
-              <option key={item.operation_id} value={item.operation_id}>
-                {item.operation_id.slice(0, 8)} ·{" "}
-                {states[item.state] ?? item.state}
+            <option value="">选择设备</option>
+            {data.devices.map((d) => (
+              <option key={d.device_id} value={d.device_id}>
+                {d.name}
+                {data.devices.filter((item) => item.name === d.name).length > 1
+                  ? ` · ${d.device_id.slice(0, 8)}`
+                  : ""}
               </option>
             ))}
           </select>
         </label>
-      )}
-      {operation && (
+      </div>
+      <section
+        id="organizer-tasks"
+        className="assistant-panel"
+        hidden={page !== "tasks"}
+      >
+        <h3>定时提醒与闹钟</h3>
+        <form key={editingTask?.request_id ?? "new-task"} onSubmit={createTask}>
+          <label className="assistant-wide">
+            提醒内容
+            <input
+              name="title"
+              defaultValue={editingTask?.title ?? ""}
+              maxLength={200}
+              required
+              placeholder="例如：吃药、休息一下"
+            />
+          </label>
+          <label>
+            方式
+            <select name="kind" defaultValue={editingTask?.kind ?? "reminder"}>
+              <option value="reminder">提醒</option>
+              <option value="alarm">闹钟</option>
+            </select>
+          </label>
+          <label>
+            重复
+            <select name="repeat" defaultValue={editingTask?.repeat ?? "none"}>
+              <option value="none">仅一次</option>
+              <option value="daily">每天</option>
+              <option value="weekdays">工作日（周一至周五）</option>
+            </select>
+          </label>
+          <label className="assistant-wide">
+            首次时间（{Intl.DateTimeFormat().resolvedOptions().timeZone}）
+            <input
+              name="due"
+              type="datetime-local"
+              required
+              defaultValue={editingTask ? localDate(editingTask.next_due) : ""}
+            />
+          </label>
+          <button
+            className="assistant-primary assistant-submit"
+            disabled={busy || !target}
+          >
+            {editingTask ? "保存修改" : "保存任务"}
+          </button>
+          {editingTask && (
+            <button type="button" onClick={() => setEditingTask(null)}>
+              取消编辑
+            </button>
+          )}
+        </form>
+        <p>
+          电脑睡眠或关机时不能响铃。闹钟超过 2 分钟、提醒超过 1
+          小时会记为错过；贪睡为 5 分钟。
+        </p>
         <div className="assistant-list">
-          <p>
-            {states[operation.state] ?? operation.state}
-            {operation.result.error &&
-              ` · ${errorText(operation.result.error)}`}
-          </p>
-          {operation.result.item && (
-            <p>已保存：{operation.result.item.title}</p>
-          )}
-          {operation.result.deleted && <p>已从 Apple 本机数据库删除。</p>}
-          {operation.result.truncated && (
-            <p>仅显示前 200 项，请在 Apple 应用中查看完整列表。</p>
-          )}
-          {operation.result.items?.map((item) => (
-            <article key={`${item.id}:${item.start ?? 0}`}>
-              <strong>
-                {item.completed ? "✓ " : ""}
-                {item.title}
-              </strong>
-              {(item.start || item.due) && (
-                <small>
-                  {new Date((item.start ?? item.due!) * 1000).toLocaleString()}
-                </small>
-              )}
-              {source?.writable && source.id === item.calendar_id && (
-                <div className="assistant-actions">
-                  <button disabled={busy} onClick={() => setEditing(item)}>
-                    编辑
-                  </button>
-                  {source.resource === "reminder" && !item.completed && (
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void apple("complete", {
-                          item_id: item.id,
-                          expected_modified: item.modified,
-                        })
-                      }
-                    >
-                      完成
-                    </button>
-                  )}
+          {data.tasks.map((t) => (
+            <article key={t.request_id}>
+              <strong>{t.title}</strong>
+              <small>
+                {states[t.state] ?? t.state} ·{" "}
+                {new Date(t.next_due * 1000).toLocaleString()} · {t.timezone} ·{" "}
+                {t.repeat === "none"
+                  ? "仅一次"
+                  : t.repeat === "daily"
+                    ? "每天"
+                    : "工作日"}
+              </small>
+              <div className="assistant-actions">
+                {["active", "paused"].includes(t.state) && (
                   <button
                     disabled={busy}
                     onClick={() => {
-                      if (window.confirm(`从 Apple 中删除“${item.title}”？`))
-                        void apple("delete", {
-                          item_id: item.id,
-                          expected_modified: item.modified,
-                        });
+                      setEditingTask(t);
+                      setTarget(t.device_id);
                     }}
                   >
-                    删除
+                    修改时间／内容
                   </button>
-                </div>
-              )}
+                )}
+
+                {["active", "paused"].includes(t.state) && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await organizerRequest(`/tasks/${t.request_id}`, {
+                          session_id: sessionId,
+                          action: t.state === "paused" ? "resume" : "pause",
+                        });
+                      })
+                    }
+                  >
+                    {t.state === "paused" ? "恢复" : "暂停"}
+                  </button>
+                )}
+                {t.state !== "cancelled" && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await organizerRequest(`/tasks/${t.request_id}`, {
+                          session_id: sessionId,
+                          action: "cancel",
+                        });
+                      })
+                    }
+                  >
+                    取消
+                  </button>
+                )}
+              </div>
             </article>
           ))}
         </div>
-      )}
-      <p>
-        只支持普通事项。重复日程、邀请、全天事件等复杂编辑会被拒绝，请在 Apple
-        应用中处理。
-      </p>
-      {message && <p role="status">{message}</p>}
-      {(error || data.scheduler_error) && (
-        <p role="alert">{error ?? data.scheduler_error}</p>
-      )}
+        {data.history?.some((h) => h.state === "missed") && (
+          <p>
+            最近错过 {data.history.filter((h) => h.state === "missed").length}{" "}
+            次提醒／闹钟，已停止补响。
+          </p>
+        )}
+      </section>
+      <section
+        id="organizer-apple"
+        className="assistant-panel"
+        hidden={page !== "apple"}
+      >
+        <h3>Apple 日程与提醒事项</h3>
+        <label>
+          已允许的列表
+          <select
+            value={sourceKey}
+            onChange={(e) => {
+              setSourceKey(e.target.value);
+              setEditing(null);
+              setOperationId("");
+            }}
+          >
+            <option value="">选择列表</option>
+            {selectedDevice?.sources.map((s) => (
+              <option
+                key={`${s.resource}:${s.id}`}
+                value={`${s.resource}:${s.id}`}
+              >
+                {s.resource === "calendar" ? "日历" : "提醒事项"} · {s.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="assistant-primary assistant-submit"
+          disabled={busy || !source}
+          onClick={() => void apple("list")}
+        >
+          {source?.resource === "calendar" ? "读取未来 7 天" : "读取列表"}
+        </button>
+        {source?.writable && (
+          <form
+            key={`${sourceKey}:${editing?.id ?? "new"}`}
+            onSubmit={submitApple}
+          >
+            <label className="assistant-wide">
+              {editing ? "编辑标题" : "新事项标题"}
+              <input
+                name="title"
+                required
+                maxLength={200}
+                defaultValue={editing?.title ?? ""}
+              />
+            </label>
+            <label>
+              {source.resource === "calendar" ? "开始时间" : "到期时间（可选）"}
+              <input
+                name="start"
+                type="datetime-local"
+                required={source.resource === "calendar"}
+                defaultValue={
+                  editing?.start || editing?.due
+                    ? localDate(editing.start ?? editing.due!)
+                    : ""
+                }
+              />
+            </label>
+            {source.resource === "calendar" && (
+              <label>
+                结束时间
+                <input
+                  name="end"
+                  type="datetime-local"
+                  required
+                  defaultValue={editing?.end ? localDate(editing.end) : ""}
+                />
+              </label>
+            )}
+            <button
+              className="assistant-primary assistant-submit"
+              disabled={busy}
+            >
+              {editing ? "保存修改" : "创建事项"}
+            </button>
+            {editing && (
+              <button type="button" onClick={() => setEditing(null)}>
+                取消编辑
+              </button>
+            )}
+          </form>
+        )}
+        {data.operations.length > 0 && (
+          <label>
+            最近的 Apple 操作
+            <select
+              value={operationId}
+              onChange={(e) => {
+                setOperationId(e.target.value);
+                setEditing(null);
+              }}
+            >
+              <option value="">选择操作查看结果</option>
+              {data.operations.map((item) => (
+                <option key={item.operation_id} value={item.operation_id}>
+                  {item.operation_id.slice(0, 8)} ·{" "}
+                  {states[item.state] ?? item.state}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {operation && (
+          <div className="assistant-list">
+            <p>
+              {states[operation.state] ?? operation.state}
+              {operation.result.error &&
+                ` · ${errorText(operation.result.error)}`}
+            </p>
+            {operation.result.item && (
+              <p>已保存：{operation.result.item.title}</p>
+            )}
+            {operation.result.deleted && <p>已从 Apple 本机数据库删除。</p>}
+            {operation.result.truncated && (
+              <p>仅显示前 200 项，请在 Apple 应用中查看完整列表。</p>
+            )}
+            {operation.result.items?.map((item) => (
+              <article key={`${item.id}:${item.start ?? 0}`}>
+                <strong>
+                  {item.completed ? "✓ " : ""}
+                  {item.title}
+                </strong>
+                {(item.start || item.due) && (
+                  <small>
+                    {new Date(
+                      (item.start ?? item.due!) * 1000,
+                    ).toLocaleString()}
+                  </small>
+                )}
+                {source?.writable && source.id === item.calendar_id && (
+                  <div className="assistant-actions">
+                    <button disabled={busy} onClick={() => setEditing(item)}>
+                      编辑
+                    </button>
+                    {source.resource === "reminder" && !item.completed && (
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void apple("complete", {
+                            item_id: item.id,
+                            expected_modified: item.modified,
+                          })
+                        }
+                      >
+                        完成
+                      </button>
+                    )}
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        if (window.confirm(`从 Apple 中删除“${item.title}”？`))
+                          void apple("delete", {
+                            item_id: item.id,
+                            expected_modified: item.modified,
+                          });
+                      }}
+                    >
+                      删除
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+        <p>
+          只支持普通事项。重复日程、邀请、全天事件等复杂编辑会被拒绝，请在 Apple
+          应用中处理。
+        </p>
+      </section>
     </div>
   );
 }
