@@ -154,19 +154,26 @@ export function PersonalAssistantSettingsSection({
           body: JSON.stringify({
             session_id: sessionId,
             redirect_uri: reservation.redirect_uri,
-            ...(upgradeAccountId ? {upgrade_account_id: upgradeAccountId} : {}),
+            ...(upgradeAccountId
+              ? { upgrade_account_id: upgradeAccountId }
+              : {}),
           }),
           signal: AbortSignal.timeout(15000),
         },
       );
       if (!response.ok) {
-        const failure = await response.json().catch(() => null) as {detail?: unknown} | null;
-        const detail = typeof failure?.detail === "string" ? failure.detail : "";
-        throw new Error(detail === "google_primary_calendar_unavailable"
-          ? "无法确认旧账号身份；请先刷新原账号日历，确认服务器能访问 Google。"
-          : detail === "account_not_connected"
-            ? "原账号已断开，请刷新账号列表后重试。"
-            : `无法开始授权${detail ? `：${detail}` : "，请检查服务器 OAuth 和 HTTPS 配置。"}`);
+        const failure = (await response.json().catch(() => null)) as {
+          detail?: unknown;
+        } | null;
+        const detail =
+          typeof failure?.detail === "string" ? failure.detail : "";
+        throw new Error(
+          detail === "google_primary_calendar_unavailable"
+            ? "无法确认旧账号身份；请先刷新原账号日历，确认服务器能访问 Google。"
+            : detail === "account_not_connected"
+              ? "原账号已断开，请刷新账号列表后重试。"
+              : `无法开始授权${detail ? `：${detail}` : "，请检查服务器 OAuth 和 HTTPS 配置。"}`,
+        );
       }
       const authorization = (await response.json()) as {
         state: string;
@@ -213,9 +220,11 @@ export function PersonalAssistantSettingsSection({
       succeeded = true;
       if (!flow.cancelled) {
         setAccountRevision((value) => value + 1);
-        setMessage(upgradeAccountId
-          ? "原 Google 账号权限已升级。请选择待办列表和默认写入位置。"
-          : "Google 账号已连接。请选择允许读取的日历和待办列表，再设置默认写入位置。");
+        setMessage(
+          upgradeAccountId
+            ? "原 Google 账号权限已升级。请选择待办列表和默认写入位置。"
+            : "Google 账号已连接。请选择允许读取的日历和待办列表，再设置默认写入位置。",
+        );
       }
     } catch (error) {
       if (!flow?.cancelled && current === revision.current.value)
@@ -259,7 +268,9 @@ export function PersonalAssistantSettingsSection({
         description="在原账户管理日程与待办，桌宠负责到期提醒。"
       />
       <SettingsGroup title="账户、日程与提醒" description={description}>
-        {sessionId && <AgendaOverview key={`agenda:${sessionId}`} sessionId={sessionId} />}
+        {sessionId && (
+          <AgendaOverview key={`agenda:${sessionId}`} sessionId={sessionId} />
+        )}
         {statusError && (
           <button
             type="button"
@@ -270,52 +281,52 @@ export function PersonalAssistantSettingsSection({
         )}
         <details className="assistant-settings-details">
           <summary>Google 账户与来源设置</summary>
-        <div className="desktop-settings-connection-row">
-          <span>
-            <strong>Google 账号</strong>
-            <small>使用系统浏览器登录，凭据由服务器保存。</small>
-          </span>
-          {busy ? (
-            <button
-              onClick={() => {
-                ++revision.current.value;
-                if (active.current) void cancelFlow(active.current);
-                setMessage("已取消等待；已完成的账号连接不会自动撤销。");
-                setBusy(false);
-              }}
-            >
-              取消授权
-            </button>
-          ) : (
-            <button
-              onClick={() => void connect()}
-              disabled={
-                !!statusError ||
-                !status?.authorization_available ||
-                !sessionId ||
-                !isDesktopHost()
-              }
-            >
-              连接账号
-            </button>
+          <div className="desktop-settings-connection-row">
+            <span>
+              <strong>Google 账号</strong>
+              <small>使用系统浏览器登录，凭据由服务器保存。</small>
+            </span>
+            {busy ? (
+              <button
+                onClick={() => {
+                  ++revision.current.value;
+                  if (active.current) void cancelFlow(active.current);
+                  setMessage("已取消等待；已完成的账号连接不会自动撤销。");
+                  setBusy(false);
+                }}
+              >
+                取消授权
+              </button>
+            ) : (
+              <button
+                onClick={() => void connect()}
+                disabled={
+                  !!statusError ||
+                  !status?.authorization_available ||
+                  !sessionId ||
+                  !isDesktopHost()
+                }
+              >
+                连接账号
+              </button>
+            )}
+          </div>
+          {message && <p role="status">{message}</p>}
+          {status?.state === "ready" && !statusError && sessionId && (
+            <PersonalCalendarPanel
+              key={`${sessionId}:${accountRevision}`}
+              sessionId={sessionId}
+              onUpgrade={(accountId) => void connect(accountId)}
+            />
           )}
-        </div>
-        {message && <p role="status">{message}</p>}
-        {status?.state === "ready" && !statusError && sessionId && (
-          <PersonalCalendarPanel
-            key={`${sessionId}:${accountRevision}`}
-            sessionId={sessionId}
-            onUpgrade={(accountId) => void connect(accountId)}
-          />
-        )}
         </details>
         <details className="assistant-settings-details">
           <summary>Apple 设备与桌宠闹钟</summary>
-        {sessionId ? (
-          <OrganizerPanel key={sessionId} sessionId={sessionId} />
-        ) : (
-          <p>请先连接服务器。</p>
-        )}
+          {sessionId ? (
+            <OrganizerPanel key={sessionId} sessionId={sessionId} />
+          ) : (
+            <p>请先连接服务器。</p>
+          )}
         </details>
       </SettingsGroup>
     </div>
