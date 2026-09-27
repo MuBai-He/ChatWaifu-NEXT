@@ -64,6 +64,15 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   const [editingTask, setEditingTask] = useState<AssistantTask | null>(null);
   const [editing, setEditing] = useState<AppleItem | null>(null);
   const epoch = useRef({ value: 0 });
+  const retryIds = useRef<Record<string, { key: string; id: string }>>({});
+  const retryId = (kind: string, payload: unknown) => {
+    const key = JSON.stringify(payload);
+    const prior = retryIds.current[kind];
+    if (prior?.key === key) return prior.id;
+    const id = crypto.randomUUID();
+    retryIds.current[kind] = { key, id };
+    return id;
+  };
   const refresh = useCallback(async () => {
     const rev = epoch.current.value;
     const connection = await resolveRuntimeConnection();
@@ -185,7 +194,6 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
     const values = new FormData(event.currentTarget);
     void run(async () => {
       const task = {
-        request_id: editingTask?.request_id ?? crypto.randomUUID(),
         device_id: target,
         title: values.get("title"),
         kind: values.get("kind"),
@@ -197,10 +205,14 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
         editingTask ? `/tasks/${editingTask.request_id}/replace` : "/tasks",
         {
           session_id: sessionId,
-          task,
+          task: {
+            ...task,
+            request_id: editingTask?.request_id ?? retryId("task", task),
+          },
           ...(editingTask ? { expected_revision: editingTask.revision } : {}),
         },
       );
+      delete retryIds.current.task;
       setEditingTask(null);
       setMessage(
         "任务已保存到服务器。到期时指定设备需在线；过期闹钟不会补响。",
@@ -212,24 +224,24 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
       if (!source) throw new Error("请先选择 Apple 日历或提醒事项列表。");
       const now = new Date();
       const end = new Date(now.getTime() + 7 * 86400000);
-      const result = await organizerRequest<{ operation_id: string }>(
-        "/apple/operations",
-        {
-          session_id: sessionId,
-          operation: {
-            request_id: crypto.randomUUID(),
-            device_id: target,
-            resource: source.resource,
-            action,
-            calendar_id: source.id,
-            ...(action === "list" && source.resource === "calendar"
-              ? { start: now.toISOString(), end: end.toISOString() }
-              : {}),
-            ...values,
-          },
-        },
-      );
-      setOperationId(result.operation_id);
+      const operation = {
+        device_id: target,
+        resource: source.resource,
+        action,
+        calendar_id: source.id,
+        ...(action === "list" && source.resource === "calendar"
+          ? { start: now.toISOString(), end: end.toISOString() }
+          : {}),
+        ...values,
+      };
+      const id = retryId("apple", operation);
+      // Keep the receipt ID visible even when the enqueue response is lost.
+      setOperationId(id);
+      await organizerRequest("/apple/operations", {
+        session_id: sessionId,
+        operation: { ...operation, request_id: id },
+      });
+      delete retryIds.current.apple;
       setEditing(null);
       setMessage(
         "已发送到配对设备，等待实际执行结果。Apple 云同步由系统负责。",
@@ -567,6 +579,26 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
           )}
         </form>
       )}
+      {data.operations.length > 0 && (
+        <label>
+          最近的 Apple 操作
+          <select
+            value={operationId}
+            onChange={(e) => {
+              setOperationId(e.target.value);
+              setEditing(null);
+            }}
+          >
+            <option value="">选择操作查看结果</option>
+            {data.operations.map((item) => (
+              <option key={item.operation_id} value={item.operation_id}>
+                {item.operation_id.slice(0, 8)} ·{" "}
+                {states[item.state] ?? item.state}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {operation && (
         <div className="assistant-list">
           <p>
@@ -592,7 +624,7 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
                   {new Date((item.start ?? item.due!) * 1000).toLocaleString()}
                 </small>
               )}
-              {source?.writable && (
+              {source?.writable && source.id === item.calendar_id && (
                 <div className="assistant-actions">
                   <button disabled={busy} onClick={() => setEditing(item)}>
                     编辑

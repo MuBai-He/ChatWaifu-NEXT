@@ -390,7 +390,16 @@ async def test_01_loopback_websocket_openai_skill_run_4way_lineage(
                     assert isinstance(tools, list)
                     tools_list = cast(list[object], tools)
                     assert len(tools_list) >= 1
-                    allocated_tool_name = str(object_value(tools_list[0])["name"])
+                    # The catalog grows as integrations are installed; this wire
+                    # fixture intentionally invokes runtime.status, not the first tool.
+                    status_tools = [
+                        object_value(tool)
+                        for tool in tools_list
+                        if "Read the current local Runtime status."
+                        in str(object_value(tool).get("description", ""))
+                    ]
+                    assert len(status_tools) == 1
+                    allocated_tool_name = str(status_tools[0]["name"])
                     await send(
                         {
                             "type": "session.updated",
