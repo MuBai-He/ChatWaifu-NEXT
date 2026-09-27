@@ -1261,7 +1261,8 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             last_seen REAL NOT NULL DEFAULT 0
         );
         CREATE TABLE assistant_tasks (
-            task_id TEXT PRIMARY KEY, device_id TEXT NOT NULL REFERENCES assistant_devices(device_id),
+            task_id TEXT PRIMARY KEY,
+            device_id TEXT NOT NULL REFERENCES assistant_devices(device_id),
             payload_json TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'active', due REAL NOT NULL,
             revision INTEGER NOT NULL DEFAULT 0
         );
@@ -1273,7 +1274,8 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             UNIQUE(task_id,due)
         );
         CREATE TABLE assistant_operations (
-            operation_id TEXT PRIMARY KEY, device_id TEXT NOT NULL REFERENCES assistant_devices(device_id),
+            operation_id TEXT PRIMARY KEY,
+            device_id TEXT NOT NULL REFERENCES assistant_devices(device_id),
             payload_json TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'queued',
             expires REAL NOT NULL, result_json TEXT NOT NULL DEFAULT '{}'
         );
