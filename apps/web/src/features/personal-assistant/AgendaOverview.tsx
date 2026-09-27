@@ -130,6 +130,31 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
   );
   const pendingCreate = useRef<{ key: string; id: string } | null>(null);
   const [uncertainCreate, setUncertainCreate] = useState(false);
+  const [dismissing, setDismissing] = useState<string | null>(null);
+
+  const dismissHistory = async (deliveryId: string) => {
+    setDismissing(deliveryId);
+    try {
+      await organizerRequest(`/organizer/history/${deliveryId}/dismiss`, {
+        session_id: sessionId,
+      });
+      setOrganizer((current) =>
+        current
+          ? {
+              ...current,
+              history: current.history?.filter(
+                (item) => item.delivery_id !== deliveryId,
+              ),
+            }
+          : current,
+      );
+      setNotice("");
+    } catch {
+      setNotice("未能清除这条记录，请恢复连接后重试。");
+    } finally {
+      setDismissing(null);
+    }
+  };
 
   const load = useCallback(
     async (signal: AbortSignal) => {
@@ -534,6 +559,40 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
         <p role="status" className="agenda-overview-notice">
           {notice}
         </p>
+      )}
+      {!!organizer?.history?.length && (
+        <section className="agenda-inbox" aria-label="未处理提醒">
+          <div className="agenda-inbox-heading">
+            <strong>未处理提醒</strong>
+            <small>不会自动补响，也不会修改原日程或待办</small>
+          </div>
+          {organizer.history.slice(0, 10).map((item) => (
+            <article key={item.delivery_id}>
+              <div>
+                <strong>
+                  {item.title || (item.kind === "alarm" ? "闹钟" : "提醒")}
+                </strong>
+                <small>
+                  {item.state === "missed"
+                    ? "设备未确认送达"
+                    : "已展示，未处理"}
+                  {" · "}
+                  {new Date(item.due * 1000).toLocaleString()}
+                </small>
+              </div>
+              <button
+                type="button"
+                disabled={dismissing === item.delivery_id}
+                onClick={() => void dismissHistory(item.delivery_id)}
+              >
+                知道了
+              </button>
+            </article>
+          ))}
+          {organizer.history.length > 10 && (
+            <small>另有 {organizer.history.length - 10} 条，请逐批处理。</small>
+          )}
+        </section>
       )}
       {loading && <p role="status">正在汇总来源…</p>}
       <div className="agenda-overview-list">

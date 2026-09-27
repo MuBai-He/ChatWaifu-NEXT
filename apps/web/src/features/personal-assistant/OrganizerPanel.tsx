@@ -601,12 +601,6 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
             </article>
           ))}
         </div>
-        {data.history?.some((h) => h.state === "missed") && (
-          <p>
-            最近错过 {data.history.filter((h) => h.state === "missed").length}{" "}
-            次提醒／闹钟，已停止补响。
-          </p>
-        )}
       </section>
       <section
         id="organizer-apple"

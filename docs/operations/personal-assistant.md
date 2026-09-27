@@ -197,3 +197,17 @@ reported `calendar.read` version 1.1.0 enabled. A direct invocation in the
 existing authorized session returned one event, including `测试`, from an
 `Asia/Shanghai` window. The user subsequently reported that the desktop-pet dialog
 succeeded; exact phrasing and long-term behavior were not independently captured.
+
+## Unified agenda delivery outcomes
+
+The server keeps the existing two-minute alarm and one-hour reminder delivery
+windows. An occurrence that expires before the paired device confirms display is
+recorded as missed; a displayed occurrence that expires without a stop or snooze
+is recorded as unhandled. Neither is replayed after the window. The desktop
+persists display receipts and retries them on reconnect, including after expiry,
+so a receipt lost during an outage can correct a missed label to unhandled. The
+unified agenda shows these records in an inbox; dismissing one only clears that
+record and does not mutate the source event, task, or recurring reminder rule.
+If stop/snooze acknowledgement fails, the desktop stops ringing locally and asks
+the user to retry while the delivery is active. This action is not yet durably
+queued for replay; expiry leaves an unhandled record that can be dismissed.

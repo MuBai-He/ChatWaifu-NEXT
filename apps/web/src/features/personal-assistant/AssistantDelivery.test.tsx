@@ -93,7 +93,13 @@ describe("desktop reminder delivery ownership", () => {
   it("does not replay a persisted presentation after remount", async () => {
     vi.mocked(deviceCall).mockImplementation(async (_server, action) =>
       action === "load"
-        ? { device_id: "device", secret: "secret", sources: [], results: {} }
+        ? {
+            device_id: "device",
+            secret: "secret",
+            sources: [],
+            results: {},
+            presentation_receipts: [delivery.delivery_id],
+          }
         : { first: false },
     );
     render(<AssistantDelivery />);
@@ -104,6 +110,20 @@ describe("desktop reminder delivery ownership", () => {
         .mocked(deviceCall)
         .mock.calls.some((c) => ["sound", "notify"].includes(c[1])),
     ).toBe(false);
+    expect(
+      vi
+        .mocked(organizerRequest)
+        .mock.calls.some(
+          (c) =>
+            c[0] === "/devices/ack" &&
+            (c[1] as { action?: string } | undefined)?.action === "presented",
+        ),
+    ).toBe(true);
+    expect(
+      vi
+        .mocked(deviceCall)
+        .mock.calls.some((c) => c[1] === "forget_presentation"),
+    ).toBe(true);
   });
   it("clears active sound on server cancellation and cleans up polling on unmount", async () => {
     const view = render(<AssistantDelivery />);

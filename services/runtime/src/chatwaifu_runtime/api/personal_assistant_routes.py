@@ -676,6 +676,16 @@ async def organizer(request: Request, session_id: UUID):
     }
 
 
+@router.post("/organizer/history/{delivery_id}/dismiss")
+async def dismiss_organizer_history(request: Request, delivery_id: UUID, body: OwnerRequest):
+    service = await _owner_tasks(request, body.session_id)
+    try:
+        await service.repository.dismiss_history(str(delivery_id))
+    except ValueError as error:
+        raise _task_error(error) from None
+    return {"dismissed": True}
+
+
 @router.post("/devices")
 async def pair_device(request: Request, body: PairRequest):
     _device_transport(request)

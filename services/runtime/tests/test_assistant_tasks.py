@@ -60,6 +60,44 @@ async def test_restart_idempotence_and_missed_alarm(
     assert not (await repo.poll(device["device_id"], device["secret"], [], 500))["deliveries"]
 
 
+async def test_presented_alarm_expires_as_unhandled_until_dismissed(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    _, repo = tasks
+    device = await repo.pair("desktop")
+    await repo.create_task(task(device["device_id"]), 0)
+    await repo.tick(100)
+    delivery = (await repo.poll(device["device_id"], device["secret"], [], 100))["deliveries"][0]
+    assert delivery["due"] == 100
+    await repo.acknowledge(
+        device["device_id"], device["secret"], delivery["delivery_id"], "presented", {}, 101
+    )
+    await repo.tick(220)
+    history = await repo.history()
+    assert [(item["delivery_id"], item["state"], item["title"]) for item in history] == [
+        (delivery["delivery_id"], "unhandled", "test")
+    ]
+    await repo.dismiss_history(delivery["delivery_id"])
+    await repo.dismiss_history(delivery["delivery_id"])
+    assert await repo.history() == []
+
+
+async def test_late_native_presentation_receipt_corrects_offline_miss(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    _, repo = tasks
+    device = await repo.pair("desktop")
+    await repo.create_task(task(device["device_id"]), 0)
+    await repo.tick(100)
+    delivery = (await repo.poll(device["device_id"], device["secret"], [], 100))["deliveries"][0]
+    await repo.tick(220)
+    assert (await repo.history())[0]["state"] == "missed"
+    await repo.acknowledge(
+        device["device_id"], device["secret"], delivery["delivery_id"], "presented", {}, 230
+    )
+    assert (await repo.history())[0]["state"] == "unhandled"
+
+
 async def test_snooze_and_cancel_fence_late_ack(
     tasks: tuple[Database, SQLiteTaskRepository],
 ) -> None:

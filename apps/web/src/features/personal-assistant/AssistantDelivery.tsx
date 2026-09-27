@@ -83,6 +83,25 @@ export function AssistantDelivery() {
           return;
         }
         active.current = { connection, binding };
+        for (const id of binding.presentation_receipts ?? []) {
+          try {
+            await organizerRequest(
+              "/devices/ack",
+              {
+                device_id: binding.device_id,
+                secret: binding.secret,
+                item_id: id,
+                action: "presented",
+              },
+              connection,
+              abort.signal,
+            );
+          } catch (e) {
+            if (!(e instanceof Error && e.message === "delivery_not_active"))
+              throw e;
+          }
+          await deviceCall(connection.baseUrl, "forget_presentation", id);
+        }
         // Retained results are retried, never the EventKit write itself.
         for (const [id, result] of Object.entries(binding.results)) {
           try {
@@ -148,16 +167,37 @@ export function AssistantDelivery() {
             }).catch(() => {
               setError("系统通知未送达；提醒仍显示在桌宠中。");
             });
-            await organizerRequest(
-              "/devices/ack",
-              {
-                device_id: binding.device_id,
-                secret: binding.secret,
-                item_id: delivery.delivery_id,
-                action: "presented",
-              },
-              connection,
-              abort.signal,
+          }
+          // Native presentation is durable. Retry this idempotent receipt even
+          // when the previous server acknowledgement was lost after a remount.
+          if (
+            !abort.signal.aborted &&
+            !suppressed.current.has(delivery.delivery_id)
+          ) {
+            try {
+              await organizerRequest(
+                "/devices/ack",
+                {
+                  device_id: binding.device_id,
+                  secret: binding.secret,
+                  item_id: delivery.delivery_id,
+                  action: "presented",
+                },
+                connection,
+                abort.signal,
+              );
+            } catch (error) {
+              if (
+                !suppressed.current.has(delivery.delivery_id) ||
+                !(error instanceof Error) ||
+                error.message !== "delivery_not_active"
+              )
+                throw error;
+            }
+            await deviceCall(
+              connection.baseUrl,
+              "forget_presentation",
+              delivery.delivery_id,
             );
           }
         }
@@ -251,6 +291,11 @@ export function AssistantDelivery() {
                 {d.kind === "alarm" ? "闹钟" : "提醒"}
               </span>
               <strong>{d.title}</strong>
+              {Number.isFinite(d.due) && (
+                <small className="assistant-alert-time">
+                  原定 {new Date(d.due * 1000).toLocaleString()}
+                </small>
+              )}
             </div>
           </header>
           <div className="assistant-alert-actions">

@@ -24,6 +24,7 @@ export interface DeviceBinding {
   sources: AppleSource[];
   source_revision: number;
   results: Record<string, Record<string, unknown>>;
+  presentation_receipts?: string[];
 }
 export interface AssistantDevice {
   device_id: string;
@@ -75,10 +76,13 @@ export interface Organizer {
     task_id: string;
     due: number;
     state: string;
+    title: string;
+    kind: "reminder" | "alarm";
   }[];
 }
 export interface Delivery extends AssistantTask {
   delivery_id: string;
+  due: number;
   expires: number;
 }
 
