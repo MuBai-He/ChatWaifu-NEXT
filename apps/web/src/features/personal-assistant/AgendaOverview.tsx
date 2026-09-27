@@ -114,6 +114,35 @@ function formText(form: FormData, name: string) {
   return typeof value === "string" ? value : "";
 }
 
+function appleReadSources(
+  devices: Organizer["devices"],
+  defaults: WriteDestination[],
+) {
+  const available = devices.flatMap((device) =>
+    device.sources.map((source) => ({ device, source })),
+  );
+  const selected: typeof available = [];
+  const add = (entry: (typeof available)[number] | undefined) => {
+    if (entry && selected.length < 8 && !selected.includes(entry))
+      selected.push(entry);
+  };
+  for (const destination of defaults.filter(
+    (item) => item.provider === "apple",
+  ))
+    add(
+      available.find(
+        ({ device, source }) =>
+          device.device_id === destination.device_id &&
+          source.id === destination.collection_id &&
+          source.resource === destination.kind,
+      ),
+    );
+  add(available.find(({ source }) => source.resource === "calendar"));
+  add(available.find(({ source }) => source.resource === "reminder"));
+  for (const entry of available) add(entry);
+  return { selected, total: available.length };
+}
+
 export function AgendaOverview({ sessionId }: { sessionId: string }) {
   const [days, setDays] = useState<1 | 7 | 30>(7);
   const [entries, setEntries] = useState<AgendaEntry[]>([]);
@@ -308,11 +337,12 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
         setNotice("部分来源暂时无法读取；已显示成功返回的事项。");
       }
       if (current) {
-        const selected = current.devices
-          .flatMap((device) =>
-            device.sources.map((source) => ({ device, source })),
-          )
-          .slice(0, 8);
+        const { selected, total } = appleReadSources(
+          current.devices,
+          defaultsResult.status === "fulfilled"
+            ? defaultsResult.value.items
+            : [],
+        );
         const readResults = await Promise.allSettled(
           selected.map(async ({ device, source }) => {
             const id = crypto.randomUUID();
@@ -342,11 +372,9 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
               r.status === "fulfilled" ? [r.value] : [],
             ),
           );
-          if (
-            selected.length < current.devices.flatMap((d) => d.sources).length
-          )
+          if (selected.length < total)
             setNotice(
-              "Apple 来源超过 8 个，本次只读取前 8 个；可在设备设置中调整。",
+              "Apple 来源超过 8 个；本次优先读取默认来源，并兼顾日历与提醒事项。可在设备设置中调整。",
             );
         }
       }

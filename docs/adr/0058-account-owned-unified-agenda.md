@@ -1,6 +1,8 @@
 # ADR 0058: Account-owned unified agenda
 
-Status: Implemented for review; provider consent and real writes pending acceptance.
+Status: Implemented for review; Google and Apple provider writes verified through live
+Runtime and EventKit readback on 2026-09-28. Visual application, chat-write and offline
+delivery acceptance remain open.
 
 ## Decision
 
@@ -37,7 +39,8 @@ aggregation and reports partial source failures rather than calling stale data c
 ## Deferred
 
 External event changes do not yet reconcile associated ChatWaifu reminder rules.
-The common missed/unhandled notification inbox, source identity links, cross-provider
-write transactions, advanced recurring-event edits and live voice acceptance are
-separate follow-up work. Desktop sleep cannot guarantee an alarm without an online
-target device.
+The missed/unhandled notification inbox is implemented, but its offline device
+behavior remains to be accepted on a real device. Source identity links,
+cross-provider write transactions, advanced recurring-event edits and live voice
+acceptance are separate follow-up work. Desktop sleep cannot guarantee an alarm
+without an online target device.
