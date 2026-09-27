@@ -1616,6 +1616,15 @@
   min-width: 0;
   overflow: hidden;
 }
+.personal-assistant-settings .desktop-settings-group > div {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
 .assistant-settings-details > summary {
   padding: 15px 18px;
   color: #5c4760;

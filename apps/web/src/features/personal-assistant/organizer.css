@@ -17,6 +17,7 @@
   background: linear-gradient(145deg, #fff 0%, #faf7fb 100%);
   border: 1px solid #e9e0ea;
   border-radius: 18px;
+  container-type: inline-size;
 }
 .agenda-overview-header,
 .agenda-overview-create-footer {
@@ -116,9 +117,18 @@
 }
 .agenda-overview-create label {
   display: grid;
+  min-width: 0;
   gap: 5px;
   color: #615767;
   font-size: 12px;
+}
+@container (max-width: 680px) {
+  .agenda-overview-create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agenda-overview-create-footer {
+    flex-wrap: wrap;
+  }
 }
 .agenda-overview-create input,
 .agenda-overview-create select {
