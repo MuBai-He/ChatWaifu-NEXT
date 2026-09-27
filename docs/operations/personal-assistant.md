@@ -1,6 +1,6 @@
 # Personal assistant development status
 
-## Unified agenda candidate (2026-09-28, not deployed)
+## Unified agenda candidate (2026-09-28, deployed for acceptance)
 
 The `mubai/unified-agenda` branch extends the merged read-only Google and Apple
 features. It adds a combined today/next 7 days/next 30 days panel, Google Calendar
@@ -25,8 +25,19 @@ Apple sources continue to require the paired Mac, EventKit permissions and onlin
 device receipts. Revoking the device or deselecting its source clears the matching
 default write destination. `queued` means the device has not confirmed the write.
 No real Google write, Apple write from the new combined panel, or notification
-inbox acceptance is claimed by code-only checks. The server deployment described
-later in this document predates this branch until an explicit update.
+inbox acceptance is claimed by code-only checks.
+
+The Linux source service was backed up at
+`/home/mubai/chatwaifu-server/backups/unified-agenda-20260927T172613Z`
+with a consistent SQLite backup before migration. Four older server source files
+for MCP settings/transport were synchronized to the already merged `main` baseline;
+the first restart exposed their mismatch, so the old service was restored before
+reapplying this branch. The final Runtime is active with migration 35, direct TLS
+and the 18443 TCP forwarding socket active. Unauthenticated assistant status gives
+401 with certificate verification passing; authenticated status gives 200/`ready`
+and both new Skills are listed. The single previously connected Google account
+remains connected; there are zero default write destinations until user selection.
+These checks do not establish real provider read/write or a visual desktop result.
 
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
