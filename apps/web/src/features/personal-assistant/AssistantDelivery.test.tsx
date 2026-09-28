@@ -90,6 +90,22 @@ describe("desktop reminder delivery ownership", () => {
       false,
     );
   });
+  it("keeps the delivery actionable when local journaling fails", async () => {
+    vi.mocked(deviceCall).mockImplementation(async (_server, action) => {
+      if (action === "load")
+        return { device_id: "device", secret: "secret", sources: [], results: {} };
+      if (action === "present") return { first: true };
+      if (action === "queue_action") throw new Error("device_save_failed");
+      return {};
+    });
+    render(<AssistantDelivery />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    fireEvent.click(screen.getByText("关闭"));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByText("喝水")).toBeTruthy();
+    expect(screen.getByText(/本机未能保存这次操作/)).toBeTruthy();
+    expect(screen.getByText("关闭").hasAttribute("disabled")).toBe(false);
+  });
   it("does not replay a persisted presentation after remount", async () => {
     vi.mocked(deviceCall).mockImplementation(async (_server, action) =>
       action === "load"
@@ -135,5 +151,157 @@ describe("desktop reminder delivery ownership", () => {
     vi.mocked(deviceCall).mockClear();
     await act(() => vi.advanceTimersByTimeAsync(10000));
     expect(deviceCall).not.toHaveBeenCalled();
+  });
+  it("retries a locally saved snooze after reconnect without presenting it again", async () => {
+    const actions: Record<string, { action: "snooze"; rejected: boolean }> = {};
+    let snoozeAttempts = 0;
+    vi.mocked(deviceCall).mockImplementation(async (_server, action, payload) => {
+      if (action === "load")
+        return {
+          device_id: "device",
+          secret: "secret",
+          sources: [],
+          results: {},
+          actions: { ...actions },
+        };
+      if (action === "present") return { first: true };
+      if (action === "queue_action") {
+        actions[(payload as { id: string }).id] = {
+          action: "snooze",
+          rejected: false,
+        };
+      }
+      if (action === "forget_action") delete actions[payload as string];
+      return {};
+    });
+    vi.mocked(organizerRequest).mockImplementation(async (path, body) => {
+      if (path === "/devices/poll")
+        return { deliveries: snoozeAttempts > 1 ? [] : deliveries, operations: [] };
+      if (
+        path === "/devices/ack" &&
+        (body as { action?: string })?.action === "snooze"
+      ) {
+        snoozeAttempts += 1;
+        if (snoozeAttempts === 1) throw new Error("offline");
+      }
+      return {};
+    });
+    render(<AssistantDelivery />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    fireEvent.click(screen.getByText(/5 分钟后提醒/));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByText(/操作已保存在本机/)).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(2100));
+    expect(snoozeAttempts).toBe(2);
+    expect(actions).toEqual({});
+    expect(screen.queryByText(/操作已保存在本机/)).toBeNull();
+    expect(
+      vi.mocked(deviceCall).mock.calls.filter((call) => call[1] === "notify"),
+    ).toHaveLength(1);
+  });
+  it("journals every simultaneous delivery before exposing either action", async () => {
+    const second = { ...delivery, delivery_id: "b".repeat(36), title: "出门" };
+    deliveries = [delivery, second];
+    const presented = new Set<string>();
+    let finishSecond!: (value: { first: boolean }) => void;
+    vi.mocked(deviceCall).mockImplementation(async (_server, action, payload) => {
+      if (action === "load")
+        return { device_id: "device", secret: "secret", sources: [], results: {} };
+      if (action === "present") {
+        const id = (payload as { id: string }).id;
+        if (id === second.delivery_id) {
+          const value = await new Promise<{ first: boolean }>((resolve) => {
+            finishSecond = resolve;
+          });
+          presented.add(id);
+          return value;
+        }
+        presented.add(id);
+        return { first: true };
+      }
+      if (action === "queue_action" && !presented.has((payload as { id: string }).id))
+        throw new Error("delivery_not_presented");
+      return {};
+    });
+    render(<AssistantDelivery />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(presented.has(delivery.delivery_id)).toBe(true);
+    expect(screen.queryByText("喝水")).toBeNull();
+    expect(screen.queryByText("出门")).toBeNull();
+    await act(async () => finishSecond({ first: true }));
+    expect(screen.getByText("出门")).toBeTruthy();
+    fireEvent.click(screen.getAllByText("关闭")[1]);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(
+      vi.mocked(deviceCall).mock.calls.some(
+        (call) => call[1] === "queue_action" &&
+          (call[2] as { id: string }).id === second.delivery_id,
+      ),
+    ).toBe(true);
+    expect(screen.queryByText(/本机未能保存/)).toBeNull();
+  });
+  it("replays a persisted action after remount but reports an expired snooze", async () => {
+    let rejected = false;
+    vi.mocked(deviceCall).mockImplementation(async (_server, action) => {
+      if (action === "load")
+        return {
+          device_id: "device",
+          secret: "secret",
+          sources: [],
+          results: {},
+          actions: {
+            [delivery.delivery_id]: { action: "snooze", rejected },
+          },
+        };
+      if (action === "reject_action") rejected = true;
+      if (action === "present") return { first: false };
+      return {};
+    });
+    vi.mocked(organizerRequest).mockImplementation(async (path, body) => {
+      if (
+        path === "/devices/ack" &&
+        (body as { action?: string })?.action === "snooze"
+      )
+        throw new Error("delivery_not_active");
+      return path === "/devices/poll"
+        ? { deliveries, operations: [] }
+        : {};
+    });
+    render(<AssistantDelivery />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(rejected).toBe(true);
+    expect(screen.getByText(/贪睡未生效/)).toBeTruthy();
+    expect(
+      vi
+        .mocked(deviceCall)
+        .mock.calls.some((call) => ["sound", "notify"].includes(call[1])),
+    ).toBe(false);
+  });
+  it("stops polling a revoked device while allowing a new pairing to recover", async () => {
+    let deviceId = "revoked-device";
+    let polls = 0;
+    vi.mocked(deviceCall).mockImplementation(async (_server, action) =>
+      action === "load"
+        ? { device_id: deviceId, secret: "secret", sources: [], results: {} }
+        : {},
+    );
+    vi.mocked(organizerRequest).mockImplementation(async (path) => {
+      if (path === "/devices/poll") {
+        polls += 1;
+        if (deviceId === "revoked-device")
+          throw new Error("device_not_authorized");
+        return { deliveries: [], operations: [] };
+      }
+      return {};
+    });
+    render(<AssistantDelivery />);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(screen.getByText(/配对已撤销/)).toBeTruthy();
+    await act(() => vi.advanceTimersByTimeAsync(30000));
+    expect(polls).toBe(1);
+    deviceId = "new-device";
+    await act(() => vi.advanceTimersByTimeAsync(30000));
+    expect(polls).toBe(2);
+    expect(screen.queryByText(/配对已撤销/)).toBeNull();
   });
 });

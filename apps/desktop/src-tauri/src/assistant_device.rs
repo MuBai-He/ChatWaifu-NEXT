@@ -21,6 +21,68 @@ struct Binding {
     presented: Vec<String>,
     #[serde(default)]
     presentation_receipts: Vec<String>,
+    #[serde(default)]
+    actions: BTreeMap<String, DeliveryActionRecord>,
+}
+
+#[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum DeliveryDecision {
+    Stop,
+    Snooze,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct DeliveryActionRecord {
+    action: DeliveryDecision,
+    #[serde(default)]
+    rejected: bool,
+}
+
+fn record_presentation(binding: &mut Binding, id: &str) -> Result<bool, &'static str> {
+    if id.len() != 36 {
+        return Err("invalid_delivery");
+    }
+    if binding.presented.iter().any(|presented| presented == id) {
+        return Ok(false);
+    }
+    if binding.presentation_receipts.len() >= 10_000 {
+        return Err("presentation_receipt_queue_full");
+    }
+    binding.presented.push(id.into());
+    binding.presentation_receipts.push(id.into());
+    if binding.presented.len() > 1000 {
+        binding.presented.remove(0);
+    }
+    Ok(true)
+}
+
+fn queue_action(
+    binding: &mut Binding,
+    id: &str,
+    action: DeliveryDecision,
+) -> Result<(), &'static str> {
+    if id.len() != 36 || !binding.presented.iter().any(|presented| presented == id) {
+        return Err("delivery_not_presented");
+    }
+    if let Some(old) = binding.actions.get(id) {
+        return if old.action == action {
+            Ok(())
+        } else {
+            Err("delivery_action_conflict")
+        };
+    }
+    if binding.actions.len() >= 1000 {
+        return Err("delivery_action_queue_full");
+    }
+    binding.actions.insert(
+        id.into(),
+        DeliveryActionRecord {
+            action,
+            rejected: false,
+        },
+    );
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -115,7 +177,7 @@ fn run(app: AppHandle, call: DeviceCall) -> Result<Value, String> {
             .map_err(|_| "notification_permission_failed".into());
     }
     if call.action == "load" {
-        return Ok(bindings.get(&server).map_or(Value::Null, |b| json!({"device_id":b.device_id,"secret":b.secret,"sources":b.sources,"source_revision":b.source_revision,"results":b.journal,"presentation_receipts":b.presentation_receipts.iter().take(20).collect::<Vec<_>>()})));
+        return Ok(bindings.get(&server).map_or(Value::Null, |b| json!({"device_id":b.device_id,"secret":b.secret,"sources":b.sources,"source_revision":b.source_revision,"results":b.journal,"presentation_receipts":b.presentation_receipts.iter().take(20).collect::<Vec<_>>(),"actions":b.actions})));
     }
     if call.action == "pair" {
         let device_id = call.payload["device_id"]
@@ -179,25 +241,30 @@ fn run(app: AppHandle, call: DeviceCall) -> Result<Value, String> {
                 .collect();
         }
         "present" => {
-            let id = call.payload["id"]
-                .as_str()
-                .filter(|v| v.len() == 36)
-                .ok_or("invalid_delivery")?;
-            let first = !binding.presented.iter().any(|v| v == id);
-            if first {
-                if binding.presentation_receipts.len() >= 10_000 {
-                    return Err("presentation_receipt_queue_full".into());
-                }
-                binding.presented.push(id.into());
-                binding.presentation_receipts.push(id.into());
-                if binding.presented.len() > 1000 {
-                    binding.presented.remove(0);
-                }
-            }
+            let id = call.payload["id"].as_str().ok_or("invalid_delivery")?;
+            let first = record_presentation(binding, id)?;
             if first {
                 save(&app, &bindings)?;
             }
             return Ok(json!({"first": first}));
+        }
+        "queue_action" => {
+            let id = call.payload["id"].as_str().ok_or("invalid_delivery")?;
+            let action: DeliveryDecision = serde_json::from_value(call.payload["action"].clone())
+                .map_err(|_| "invalid_delivery_action")?;
+            queue_action(binding, id, action)?;
+        }
+        "reject_action" => {
+            let id = call.payload.as_str().ok_or("invalid_delivery")?;
+            let record = binding
+                .actions
+                .get_mut(id)
+                .ok_or("delivery_action_missing")?;
+            record.rejected = true;
+        }
+        "forget_action" => {
+            let id = call.payload.as_str().ok_or("invalid_delivery")?;
+            binding.actions.remove(id);
         }
         "notify" => {
             use tauri_plugin_notification::NotificationExt;
@@ -307,7 +374,15 @@ pub async fn assistant_device(
     }
     if matches!(
         call.action.as_str(),
-        "execute" | "present" | "sound" | "notify" | "forget_result" | "forget_presentation"
+        "execute"
+            | "present"
+            | "sound"
+            | "notify"
+            | "forget_result"
+            | "forget_presentation"
+            | "queue_action"
+            | "reject_action"
+            | "forget_action"
     ) && !overlay
     {
         return Err("device_executor_is_overlay_only".into());
@@ -315,4 +390,38 @@ pub async fn assistant_device(
     tauri::async_runtime::spawn_blocking(move || run(app, call))
         .await
         .map_err(|_| "device_worker_failed".to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn queued_action_survives_binding_reload_and_cannot_change_choice() {
+        let id = "d6eea974-cb98-4b95-81f1-36488178b013";
+        let mut binding = Binding::default();
+        assert_eq!(
+            queue_action(&mut binding, id, DeliveryDecision::Snooze),
+            Err("delivery_not_presented")
+        );
+        assert_eq!(record_presentation(&mut binding, id), Ok(true));
+        assert_eq!(record_presentation(&mut binding, id), Ok(false));
+        assert_eq!(binding.presentation_receipts, vec![id]);
+        queue_action(&mut binding, id, DeliveryDecision::Snooze).unwrap();
+        queue_action(&mut binding, id, DeliveryDecision::Snooze).unwrap();
+        assert_eq!(
+            queue_action(&mut binding, id, DeliveryDecision::Stop),
+            Err("delivery_action_conflict")
+        );
+        let restored: Binding =
+            serde_json::from_slice(&serde_json::to_vec(&binding).unwrap()).unwrap();
+        assert_eq!(restored.actions.len(), 1);
+        assert!(matches!(
+            restored.actions.get(id),
+            Some(DeliveryActionRecord {
+                action: DeliveryDecision::Snooze,
+                rejected: false
+            })
+        ));
+    }
 }

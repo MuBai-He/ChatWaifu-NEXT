@@ -82,6 +82,32 @@ async def test_presented_alarm_expires_as_unhandled_until_dismissed(
     assert await repo.history() == []
 
 
+async def test_offline_close_can_clear_unhandled_but_expired_snooze_cannot_replay(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    _, repo = tasks
+    device = await repo.pair("desktop")
+    await repo.create_task(task(device["device_id"]), 0)
+    await repo.tick(100)
+    delivery = (await repo.poll(device["device_id"], device["secret"], [], 100))["deliveries"][0]
+    await repo.acknowledge(
+        device["device_id"], device["secret"], delivery["delivery_id"], "presented", {}, 101
+    )
+    await repo.tick(220)
+    with pytest.raises(ValueError, match="delivery_not_active"):
+        await repo.acknowledge(
+            device["device_id"], device["secret"], delivery["delivery_id"], "snooze", {}, 230
+        )
+    await repo.acknowledge(
+        device["device_id"], device["secret"], delivery["delivery_id"], "stop", {}, 230
+    )
+    await repo.acknowledge(
+        device["device_id"], device["secret"], delivery["delivery_id"], "stop", {}, 231
+    )
+    assert await repo.history() == []
+    assert not (await repo.poll(device["device_id"], device["secret"], [], 231))["deliveries"]
+
+
 async def test_late_native_presentation_receipt_corrects_offline_miss(
     tasks: tuple[Database, SQLiteTaskRepository],
 ) -> None:

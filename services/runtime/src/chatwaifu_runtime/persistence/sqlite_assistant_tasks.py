@@ -425,6 +425,20 @@ class SQLiteTaskRepository:
                         (item_id,),
                     )
                     return
+            if (
+                action == "stop"
+                and row is not None
+                and row["state"] in ("presented", "unhandled")
+                and row["expires"] <= now
+            ):
+                # The device already displayed this occurrence. A late local close
+                # clears its inbox record, but must never schedule a late snooze.
+                await c.execute(
+                    "UPDATE assistant_deliveries SET state='acknowledged',ack_action='stop' "
+                    "WHERE delivery_id=?",
+                    (item_id,),
+                )
+                return
             if row is None or row["state"] not in ("pending", "presented") or row["expires"] <= now:
                 raise ValueError("delivery_not_active")
             if action == "presented":

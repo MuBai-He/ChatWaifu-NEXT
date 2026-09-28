@@ -19,18 +19,52 @@ import "./organizer.css";
 export function AssistantDelivery() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [actions, setActions] = useState<NonNullable<DeviceBinding["actions"]>>(
+    {},
+  );
+  const [busy, setBusy] = useState<Set<string>>(() => new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [revoked, setRevoked] = useState(false);
   const active = useRef<{
     connection: RuntimeConnection;
     binding: DeviceBinding;
   } | null>(null);
   const sounding = useRef(new Map<string, number>());
   const suppressed = useRef(new Set<string>());
+  const clicking = useRef(new Set<string>());
+  const revokedDevice = useRef<string | null>(null);
   const acknowledge = async (item: Delivery, action: "stop" | "snooze") => {
+    if (clicking.current.has(item.delivery_id)) return;
+    clicking.current.add(item.delivery_id);
+    setBusy((old) => new Set(old).add(item.delivery_id));
     // Stop sound immediately even if the network is currently unavailable.
     suppressed.current.add(item.delivery_id);
+    sounding.current.delete(item.delivery_id);
     const current = active.current;
-    if (!current) return;
+    if (!current) {
+      clicking.current.delete(item.delivery_id);
+      setBusy((old) => {
+        const updated = new Set(old);
+        updated.delete(item.delivery_id);
+        return updated;
+      });
+      return;
+    }
+    let queued = false;
     try {
+      await deviceCall(current.connection.baseUrl, "queue_action", {
+        id: item.delivery_id,
+        action,
+      });
+      queued = true;
+      setActionError(null);
+      setActions((old) => ({
+        ...old,
+        [item.delivery_id]: { action, rejected: false },
+      }));
+      setDeliveries((old) =>
+        old.filter((d) => d.delivery_id !== item.delivery_id),
+      );
       await organizerRequest(
         "/devices/ack",
         {
@@ -41,12 +75,46 @@ export function AssistantDelivery() {
         },
         current.connection,
       );
-      setDeliveries((old) =>
-        old.filter((d) => d.delivery_id !== item.delivery_id),
+      await deviceCall(
+        current.connection.baseUrl,
+        "forget_action",
+        item.delivery_id,
       );
+      setActions((old) => {
+        const updated = { ...old };
+        delete updated[item.delivery_id];
+        return updated;
+      });
       setError(null);
-    } catch {
-      setError("声音已停止，服务器尚未确认。请恢复连接后重试关闭或贪睡。");
+    } catch (cause) {
+      if (!queued) {
+        suppressed.current.delete(item.delivery_id);
+        setActionError("本机未能保存这次操作，请重新点击关闭或贪睡。");
+      } else if (
+        cause instanceof Error &&
+        cause.message === "delivery_not_active"
+      ) {
+        await deviceCall(
+          current.connection.baseUrl,
+          "reject_action",
+          item.delivery_id,
+        ).catch(() => undefined);
+        setActions((old) => ({
+          ...old,
+          [item.delivery_id]: { action, rejected: true },
+        }));
+      } else {
+        setError(
+          "声音已停止；操作已保存到本机，会在恢复连接后自动确认。",
+        );
+      }
+    } finally {
+      clicking.current.delete(item.delivery_id);
+      setBusy((old) => {
+        const updated = new Set(old);
+        updated.delete(item.delivery_id);
+        return updated;
+      });
     }
   };
   useEffect(() => {
@@ -61,6 +129,8 @@ export function AssistantDelivery() {
         const scope = await readConversationScope();
         if (scope.participant_id !== "local" || scope.scene_id) {
           setDeliveries([]);
+          setActions({});
+          setActionError(null);
           sounding.current.clear();
           active.current = null;
           return;
@@ -70,6 +140,11 @@ export function AssistantDelivery() {
           setDeliveries([]);
           sounding.current.clear();
           suppressed.current.clear();
+          setActions({});
+          setActionError(null);
+          setRevoked(false);
+          revokedDevice.current = null;
+          active.current = null;
           lastServer = connection.baseUrl;
         }
         const binding = await deviceCall<DeviceBinding | null>(
@@ -80,8 +155,28 @@ export function AssistantDelivery() {
         if (!binding) {
           active.current = null;
           setDeliveries([]);
+          setActions({});
+          setActionError(null);
+          setRevoked(false);
           return;
         }
+        if (revokedDevice.current === binding.device_id) {
+          setRevoked(true);
+          setDeliveries([]);
+          sounding.current.clear();
+          return;
+        }
+        const deviceChanged =
+          active.current !== null &&
+          active.current.binding.device_id !== binding.device_id;
+        if (deviceChanged) {
+          suppressed.current.clear();
+          sounding.current.clear();
+          setActions({});
+          setActionError(null);
+        }
+        revokedDevice.current = null;
+        setRevoked(false);
         active.current = { connection, binding };
         for (const id of binding.presentation_receipts ?? []) {
           try {
@@ -101,6 +196,45 @@ export function AssistantDelivery() {
               throw e;
           }
           await deviceCall(connection.baseUrl, "forget_presentation", id);
+        }
+        const retainedActions = binding.actions ?? {};
+        setActions((old) =>
+          deviceChanged ? retainedActions : { ...old, ...retainedActions },
+        );
+        for (const [id, receipt] of Object.entries(retainedActions)) {
+          suppressed.current.add(id);
+          if (receipt.rejected) continue;
+          try {
+            await organizerRequest(
+              "/devices/ack",
+              {
+                device_id: binding.device_id,
+                secret: binding.secret,
+                item_id: id,
+                action: receipt.action,
+              },
+              connection,
+              abort.signal,
+            );
+          } catch (cause) {
+            if (
+              !(cause instanceof Error) ||
+              cause.message !== "delivery_not_active"
+            )
+              throw cause;
+            await deviceCall(connection.baseUrl, "reject_action", id);
+            setActions((old) => ({
+              ...old,
+              [id]: { ...receipt, rejected: true },
+            }));
+            continue;
+          }
+          await deviceCall(connection.baseUrl, "forget_action", id);
+          setActions((old) => {
+            const updated = { ...old };
+            delete updated[id];
+            return updated;
+          });
         }
         // Retained results are retried, never the EventKit write itself.
         for (const [id, result] of Object.entries(binding.results)) {
@@ -145,20 +279,30 @@ export function AssistantDelivery() {
         );
         if (abort.signal.aborted) return;
         const fresh = result.deliveries.filter(
-          (d) => d.expires * 1000 > Date.now(),
+          (d) =>
+            d.expires * 1000 > Date.now() &&
+            !suppressed.current.has(d.delivery_id),
         );
-        setDeliveries(fresh);
-        sounding.current = new Map(
-          [...sounding.current].filter(([id]) =>
-            fresh.some((d) => d.delivery_id === id),
-          ),
-        );
+        // All cards must have a durable native receipt before any can be
+        // clicked. A slow server ACK for one card must not expose another
+        // card whose local stop/snooze cannot yet be journaled.
+        const presented: { delivery: Delivery; first: boolean }[] = [];
         for (const delivery of fresh) {
           const { first } = await deviceCall<{ first: boolean }>(
             connection.baseUrl,
             "present",
             { id: delivery.delivery_id },
           );
+          presented.push({ delivery, first });
+        }
+        if (abort.signal.aborted) return;
+        setDeliveries(fresh);
+        sounding.current = new Map(
+          [...sounding.current].filter(([id]) =>
+            fresh.some((d) => d.delivery_id === id),
+          ),
+        );
+        for (const { delivery, first } of presented) {
           if (first && !abort.signal.aborted) {
             if (delivery.kind === "alarm")
               sounding.current.set(delivery.delivery_id, delivery.expires);
@@ -168,6 +312,8 @@ export function AssistantDelivery() {
               setError("系统通知未送达；提醒仍显示在桌宠中。");
             });
           }
+        }
+        for (const { delivery } of presented) {
           // Native presentation is durable. Retry this idempotent receipt even
           // when the previous server acknowledgement was lost after a remount.
           if (
@@ -228,15 +374,25 @@ export function AssistantDelivery() {
           );
         }
         failures = 0;
-      } catch {
+        setError(null);
+      } catch (cause) {
         failures += 1;
         sounding.current.clear(); // Network loss cannot keep an un-cancellable alarm ringing.
-        if (!abort.signal.aborted) setError("提醒设备暂时离线，正在重新连接。");
+        if (cause instanceof Error && cause.message === "device_not_authorized") {
+          revokedDevice.current = active.current?.binding.device_id ?? null;
+          setRevoked(true);
+          setDeliveries([]);
+          setError(null);
+        } else if (!abort.signal.aborted) {
+          setError("提醒设备暂时离线，正在重新连接。");
+        }
       } finally {
         if (!abort.signal.aborted)
           timer = setTimeout(
             () => void poll(),
-            Math.min(30000, 2000 * 2 ** Math.min(failures, 4)),
+            revokedDevice.current
+              ? 30000
+              : Math.min(30000, 2000 * 2 ** Math.min(failures, 4)),
           );
       }
     };
@@ -264,12 +420,42 @@ export function AssistantDelivery() {
       active.current = null;
     };
   }, []);
+  const actionCount = Object.keys(actions).length;
   useEffect(
     () =>
-      deliveries.length ? acquireNativeInteractionGuard("dialog") : undefined,
-    [deliveries.length],
+      deliveries.length || actionCount || revoked || actionError
+        ? acquireNativeInteractionGuard("dialog")
+        : undefined,
+    [actionCount, actionError, deliveries.length, revoked],
   );
-  if (!deliveries.length) return null;
+  const pendingCount = revoked ? 0 : Object.values(actions).filter(
+    (record) => !record.rejected,
+  ).length;
+  const rejectedActions = revoked ? [] : Object.entries(actions).filter(
+    ([, record]) => record.rejected,
+  );
+  if (
+    !deliveries.length &&
+    !pendingCount &&
+    !rejectedActions.length &&
+    !revoked &&
+    !actionError
+  )
+    return null;
+  const dismissRejected = async (id: string) => {
+    const current = active.current;
+    if (!current) return;
+    try {
+      await deviceCall(current.connection.baseUrl, "forget_action", id);
+      setActions((old) => {
+        const updated = { ...old };
+        delete updated[id];
+        return updated;
+      });
+    } catch {
+      setError("无法清除本机记录，请稍后重试。");
+    }
+  };
   return (
     <aside
       className="assistant-alert"
@@ -301,16 +487,51 @@ export function AssistantDelivery() {
           <div className="assistant-alert-actions">
             <button
               className="assistant-alert-stop"
+              disabled={busy.has(d.delivery_id)}
               onClick={() => void acknowledge(d, "stop")}
             >
               关闭
             </button>
-            <button onClick={() => void acknowledge(d, "snooze")}>
+            <button
+              disabled={busy.has(d.delivery_id)}
+              onClick={() => void acknowledge(d, "snooze")}
+            >
               <Clock3 size={14} aria-hidden="true" />5 分钟后提醒
             </button>
           </div>
         </section>
       ))}
+      {pendingCount > 0 && (
+        <small className="assistant-alert-error">
+          {pendingCount} 项操作已保存在本机，等待服务器确认。
+        </small>
+      )}
+      {rejectedActions.slice(0, 3).map(([id, record]) => (
+        <section className="assistant-alert-card" key={id}>
+          <strong>
+            {record.action === "snooze"
+              ? "贪睡未生效：这次提醒已过期或取消，请重新设置。"
+              : "关闭未获服务器确认：这次提醒已过期或取消。"}
+          </strong>
+          <button onClick={() => void dismissRejected(id)}>知道了</button>
+        </section>
+      ))}
+      {rejectedActions.length > 3 && (
+        <small className="assistant-alert-error">
+          另有 {rejectedActions.length - 3} 项操作未生效。
+        </small>
+      )}
+      {revoked && (
+        <section className="assistant-alert-card">
+          <strong>此设备配对已撤销，请在桌宠设置中重新配对。</strong>
+        </section>
+      )}
+      {actionError && (
+        <section className="assistant-alert-card">
+          <strong>{actionError}</strong>
+          <button onClick={() => setActionError(null)}>知道了</button>
+        </section>
+      )}
       {error && <small className="assistant-alert-error">{error}</small>}
     </aside>
   );
