@@ -103,12 +103,14 @@ class _ToolRound:
 
 
 class AgentTurnOrchestrator:
-    """Run at most one permissioned tool round before the final spoken reply.
+    """Run a bounded permissioned tool loop before the final spoken reply.
 
     Ordinary chat remains truly streaming because the router returns no tools.
     For a tool-relevant turn, the decision round is buffered so a model cannot
-    speak a speculative preamble before its requested action is authorized. The
-    post-tool answer has tools disabled and streams directly to subtitles/TTS.
+    speak a speculative preamble before its requested action is authorized. A
+    read may lead to another tool call (for example, read an item's ID and etag
+    before updating it). Once a write is attempted, tools are disabled so it
+    cannot be repeated without a new user turn and confirmation.
     """
 
     def __init__(
@@ -161,42 +163,87 @@ class AgentTurnOrchestrator:
             tools=tools,
             tool_exchanges=(),
         )
-        try:
-            decision = await self._collect_tool_round(tool_request, ensure_current)
-        except LlmToolCallingUnavailableError:
-            ensure_current()
-            yield TOOL_UNAVAILABLE_REPLY
-            return
-        if not decision.calls:
-            # A tool-bearing request uses required tool choice. Accepting a
-            # provider's free-form text here could make an external lookup look
-            # successful even though no Runtime Skill ran.
-            ensure_current()
-            yield TOOL_UNAVAILABLE_REPLY
-            return
-        if decision.finish_reason != "tool_calls":
-            raise RuntimeError("LLM emitted tool calls without a tool_calls finish reason")
+        exchanges: tuple[LlmToolExchange, ...] = ()
+        call_count = 0
+        seen: set[str] = set()
+        while True:
+            try:
+                decision = await self._collect_tool_round(tool_request, ensure_current)
+            except LlmToolCallingUnavailableError:
+                ensure_current()
+                yield (
+                    TOOL_UNAVAILABLE_REPLY
+                    if not exchanges
+                    else "已完成查询，但无法继续调用工具。我没有执行后续修改。"
+                )
+                return
+            if not decision.calls:
+                if not exchanges:
+                    # The initial round requires a tool call. Free-form text
+                    # cannot be treated as a verified external action.
+                    ensure_current()
+                    yield TOOL_UNAVAILABLE_REPLY
+                    return
+                if decision.finish_reason == "tool_calls":
+                    raise RuntimeError("LLM did not finish its post-tool response")
+                for text in decision.text_chunks:
+                    ensure_current()
+                    yield text
+                return
+            if decision.finish_reason != "tool_calls":
+                raise RuntimeError("LLM emitted tool calls without a tool_calls finish reason")
 
-        results = await self._execute_calls(
-            session_id=session_id,
-            turn_id=turn_id,
-            generation_id=request.generation_id,
-            calls=tuple(decision.calls),
-            projections=mapped,
-            ensure_current=ensure_current,
-        )
-        exchange = LlmToolExchange(
-            assistant_text="".join(decision.text_chunks),
-            calls=tuple(decision.calls),
-            results=results,
-        )
-        final_request = replace(
-            tool_request,
-            tools=(),
-            tool_exchanges=(exchange,),
-        )
-        async for text in self._stream_text_only(final_request, ensure_current):
-            yield text
+            calls = tuple(decision.calls)
+            if len(calls) > MAX_AGENT_TOOL_CALLS - call_count:
+                ensure_current()
+                yield "本轮工具调用已达到上限，后续操作没有执行。请缩小范围后重试。"
+                return
+            results = await self._execute_calls(
+                session_id=session_id,
+                turn_id=turn_id,
+                generation_id=request.generation_id,
+                calls=calls,
+                projections=mapped,
+                seen=seen,
+                ensure_current=ensure_current,
+            )
+            call_count += len(calls)
+            exchanges += (
+                LlmToolExchange(
+                    assistant_text="".join(decision.text_chunks),
+                    calls=calls,
+                    results=results,
+                ),
+            )
+            if any(
+                mapped.get(call.name) is not None
+                and mapped[call.name].side_effect is not SideEffect.READ
+                for call in calls
+            ):
+                final_request = replace(tool_request, tools=(), tool_exchanges=exchanges)
+                async for text in self._stream_text_only(final_request, ensure_current):
+                    yield text
+                return
+            if call_count >= MAX_AGENT_TOOL_CALLS:
+                final_request = replace(
+                    tool_request,
+                    system_prompt=(
+                        tool_request.system_prompt
+                        + "\nNo further Runtime tools are available this turn. "
+                        "Summarize only completed tool results and say clearly "
+                        "if a requested change was not made."
+                    ),
+                    tools=(),
+                    tool_exchanges=exchanges,
+                )
+                async for text in self._stream_text_only(final_request, ensure_current):
+                    yield text
+                return
+            tool_request = replace(
+                tool_request,
+                tool_choice="auto",
+                tool_exchanges=exchanges,
+            )
 
     async def _stream_text_only(
         self, request: LlmRequest, ensure_current: Callable[[], None]
@@ -233,6 +280,7 @@ class AgentTurnOrchestrator:
         generation_id: UUID,
         calls: tuple[LlmToolCall, ...],
         projections: dict[str, ProjectedAgentTool],
+        seen: set[str],
         ensure_current: Callable[[], None],
     ) -> tuple[LlmToolResult, ...]:
         if len(calls) > MAX_AGENT_TOOL_CALLS:
@@ -246,7 +294,6 @@ class AgentTurnOrchestrator:
             )
 
         results: list[LlmToolResult] = []
-        seen: set[str] = set()
         active_run_id: UUID | None = None
         try:
             for call in calls:

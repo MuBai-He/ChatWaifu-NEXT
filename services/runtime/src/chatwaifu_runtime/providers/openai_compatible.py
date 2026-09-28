@@ -376,7 +376,7 @@ def build_chat_completions_payload(
             }
             for tool in request.tools
         ]
-        payload["tool_choice"] = "required"
+        payload["tool_choice"] = request.tool_choice
     return payload
 
 
