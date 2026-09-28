@@ -47,6 +47,36 @@ describe("interaction diagnostics wire parser", () => {
     expect(detail.selected_memory_ids).toBeNull();
   });
 
+  it("accepts the runtime's 32-character tool digest in a compiled prompt identity", () => {
+    const parsed = parseInteractionTraceDetail({
+      ...detailFixture,
+      prompt_identity: {
+        schema_version: "1.0",
+        identity_hash: "a".repeat(64),
+        character_id: "default",
+        character_package_hash: "b".repeat(64),
+        prompt_template_version: "default-v1",
+        presentation_profile: "default",
+        chat_route: {
+          role: "chat",
+          provider: "demo",
+          model: "chatwaifu-demo",
+          endpoint_digest: "c".repeat(64),
+          context_window: 8192,
+        },
+        memory_summary_route: {
+          role: "memory_summary",
+          provider: "demo",
+          model: "deterministic-summary-v1",
+          endpoint_digest: null,
+          context_window: 8192,
+        },
+        tools_digest: "d".repeat(32),
+      },
+    });
+    expect(parsed.prompt_identity?.tools_digest).toHaveLength(32);
+  });
+
   it("strips unapproved content fields and rejects unbounded pages", () => {
     const parsed = parseInteractionTraceDetail({
       ...detailFixture,

@@ -10,7 +10,7 @@ import {
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { DataClearConfirmationDialog } from "./DataClearConfirmationDialog";
-import { InteractionDiagnosticsPanel } from "./InteractionDiagnosticsPanel";
+import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import {
   installWorkerPackArchive,
   selectWorkerPackArchive,

@@ -2,6 +2,7 @@ import { isRemoteRuntime } from "./runtimeEndpoint";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
 import { ProductIcon } from "../../components/ProductIcon";
+import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import { MemoryControlCenter } from "./MemoryControlCenter";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
 import { RealtimeConfigurationPanel } from "./RealtimeConfigurationPanel";
@@ -62,6 +63,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const [draft, setDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dataRevision, setDataRevision] = useState(0);
   const [avatarFraming, setAvatarFraming] = useState<"bust" | "full">("bust");
   const ttsProviderPreferences = readTtsProviderPreferences(ttsProviders);
   const ttsProviderChoices = buildTtsProviderChoices(
@@ -114,6 +116,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
     if (await resetAll()) {
       setDraft("");
       setHistoryOpen(false);
+      setDataRevision((revision) => revision + 1);
     }
   };
 
@@ -364,6 +367,11 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
             </div>
             <ModelSettingsPanel sessionId={sessionId} />
             <RealtimeConfigurationPanel />
+            <InteractionDiagnosticsPanel
+              key={`${sessionId ?? "no-session"}:${dataRevision}`}
+              sessionId={sessionId}
+              runtimeOnline={connection === "connected"}
+            />
           </aside>
         ) : null}
 

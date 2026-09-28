@@ -351,6 +351,70 @@ async def test_cancelled_generation_keeps_authoritative_state_and_deduplicated_t
 
 
 @pytest.mark.asyncio
+async def test_legacy_prompt_event_and_timeline_cursor_are_explicit(
+    runtime_settings: Settings,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        accepted = await container.conversation.submit_text(session.session_id, "test")
+        active = container.conversation._active[session.session_id]
+        assert active.task is not None
+        await asyncio.wait_for(active.task, 5)
+        await container.database.execute(
+            "UPDATE events SET payload_json = json_remove(payload_json, '$.selected_memory_ids') "
+            "WHERE session_id = ? AND event_type = 'character.prompt_compiled'",
+            (str(session.session_id),),
+        )
+        for _ in range(201):
+            await container.event_publisher.emit(
+                GenericCoreEvent.model_validate(
+                    {
+                        "event_id": uuid4(),
+                        "event_type": "tool.call_failed",
+                        "session_id": session.session_id,
+                        "turn_id": accepted.turn_id,
+                        "generation_id": accepted.generation_id,
+                        "occurred_at": datetime.now(UTC),
+                        "source": "runtime.skills",
+                        "privacy": PrivacyLevel.LOCAL,
+                        "payload": {"status": "failed", "secret": "never-return"},
+                    }
+                )
+            )
+        reader = container.interaction_diagnostics
+        first = await reader.read_interaction(
+            session.session_id,
+            accepted.generation_id,
+            visible_namespaces=[],
+        )
+        assert first is not None
+        assert first.selected_memory_ids is None
+        assert first.prompt_identity is not None
+        assert len(first.timeline) == 200
+        assert first.truncated
+        assert first.next_cursor is not None
+        assert first.next_cursor == first.timeline[-1].sequence
+        second = await reader.read_interaction(
+            session.session_id,
+            accepted.generation_id,
+            visible_namespaces=[],
+            after_sequence=first.next_cursor,
+        )
+        assert second is not None and second.timeline
+        assert second.timeline[0].sequence > first.timeline[-1].sequence
+        assert len({item.sequence for item in [*first.timeline, *second.timeline]}) == (
+            len(first.timeline) + len(second.timeline)
+        )
+        assert not second.truncated
+        assert "never-return" not in first.model_dump_json()
+        assert "never-return" not in second.model_dump_json()
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
 async def test_diagnostic_trace_reads_back_after_runtime_restart(
     runtime_settings: Settings,
 ) -> None:

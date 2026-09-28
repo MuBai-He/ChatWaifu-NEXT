@@ -1,0 +1,89 @@
+.interaction-diagnostics-panel {
+  max-width: 820px;
+  min-width: 0;
+  margin-top: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--settings-line);
+  border-radius: 14px;
+  background: var(--settings-card);
+}
+
+.interaction-diagnostics-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.interaction-diagnostics-panel p,
+.interaction-diagnostics-panel small {
+  color: var(--settings-muted);
+}
+
+.interaction-diagnostics-panel section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--settings-line);
+}
+
+.interaction-diagnostics-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.interaction-diagnostics-panel ul,
+.interaction-diagnostics-panel ol {
+  max-height: 260px;
+  overflow: auto;
+  padding-left: 22px;
+}
+
+.interaction-diagnostics-panel li {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.interaction-diagnostics-panel button {
+  padding: 5px 9px;
+  border: 1px solid var(--settings-line);
+  border-radius: 7px;
+  color: #7a4568;
+  background: rgb(231 205 222 / 42%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.interaction-diagnostics-panel button[aria-pressed="true"] {
+  border-color: #9e698b;
+  background: rgb(231 205 222 / 78%);
+}
+
+.vn-settings-panel .interaction-diagnostics-panel {
+  width: auto;
+  max-width: none;
+  margin: 16px 20px 0;
+  padding: 12px;
+  border-color: rgb(255 224 243 / 25%);
+  color: #fff7fc;
+  background: rgb(255 255 255 / 5%);
+}
+
+.vn-settings-panel .interaction-diagnostics-panel p,
+.vn-settings-panel .interaction-diagnostics-panel small {
+  color: rgb(255 246 252 / 70%);
+}
+
+.vn-settings-panel .interaction-diagnostics-panel section,
+.vn-settings-panel .interaction-diagnostics-panel button {
+  border-color: rgb(255 224 243 / 25%);
+}
+
+.vn-settings-panel .interaction-diagnostics-panel button {
+  color: #fff7fc;
+  background: rgb(255 255 255 / 9%);
+}
+
+.vn-settings-panel .interaction-diagnostics-panel button[aria-pressed="true"] {
+  background: rgb(206 139 181 / 35%);
+}

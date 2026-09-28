@@ -39,7 +39,7 @@ const identity = z.object({
   presentation_profile: z.string(),
   chat_route: route,
   memory_summary_route: route,
-  tools_digest: z.string().length(64),
+  tools_digest: z.string().min(16).max(64),
 });
 
 const budget = z.object({

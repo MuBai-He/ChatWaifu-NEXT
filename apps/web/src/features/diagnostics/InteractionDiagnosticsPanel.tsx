@@ -9,6 +9,7 @@ import {
   getInteractionTraceDetail,
   getInteractionTraces,
 } from "../chat/runtimeClient";
+import "./interaction-diagnostics.css";
 
 const TRIGGER_LABELS: Record<InteractionTraceSummary["trigger"], string> = {
   user: "用户输入",
@@ -129,7 +130,7 @@ export function InteractionDiagnosticsPanel({
           <p>
             按互动查看触发、规划、记忆、工具及实际交付的元数据。历史缺失显示未知。
           </p>
-          <div className="desktop-settings-danger-row">
+          <div className="interaction-diagnostics-actions">
             <label>
               <input
                 type="checkbox"
