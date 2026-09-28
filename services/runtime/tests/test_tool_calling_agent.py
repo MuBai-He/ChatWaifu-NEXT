@@ -285,12 +285,146 @@ async def test_tool_round_executes_through_gateway_and_only_streams_final_reply(
     assert gateway.invocations[0][1].skill_id == "runtime.status"
     assert gateway.invocations[0][2] == "character_agent"
     assert llm.requests[0].tools[0].name == "runtime_status_read"
-    assert llm.requests[1].tools == ()
+    assert llm.requests[1].tools[0].name == "runtime_status_read"
+    assert llm.requests[1].tool_choice == "auto"
     exchange = llm.requests[1].tool_exchanges[0]
     assert exchange.assistant_text == "我先看一下。"
     assert exchange.results[0].call_id == "call_status"
     assert exchange.results[0].is_error is False
     assert exchange.results[0].content["ok"] is True  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_read_then_write_uses_same_bounded_tool_projection_and_stops_after_write() -> None:
+    read = LlmToolCall(call_id="read", name="google_tasks_read", arguments={})
+    write = LlmToolCall(call_id="write", name="agenda_manage", arguments={"action": "update"})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(read), LlmResponseCompleted("tool_calls")),
+            (LlmToolCallRequested(write), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("修改已保存。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data={"ok": True}))
+    router = _Router(
+        (
+            _Projection(name="google_tasks_read"),
+            _Projection(name="agenda_manage", side_effect=SideEffect.WRITE),
+        )
+    )
+
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, router), _request("修改我的待办"), uuid4()
+    ) == ["修改已保存。"]
+    assert [call[1].arguments for call in gateway.invocations] == [
+        {},
+        {"action": "update"},
+    ]
+    assert llm.requests[0].tool_choice == "required"
+    assert llm.requests[1].tool_choice == "auto"
+    assert len(llm.requests[1].tool_exchanges) == 1
+    assert {tool.name for tool in llm.requests[1].tools} == {
+        "google_tasks_read",
+        "agenda_manage",
+    }
+    assert llm.requests[2].tools == ()
+    assert len(llm.requests[2].tool_exchanges) == 2
+
+
+@pytest.mark.asyncio
+async def test_read_then_final_answer_does_not_require_another_tool_call() -> None:
+    llm = _ScriptedLlm(
+        [
+            (
+                LlmToolCallRequested(
+                    LlmToolCall(call_id="read", name="runtime_status_read", arguments={})
+                ),
+                LlmResponseCompleted("tool_calls"),
+            ),
+            (LlmTextDelta("查到了。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        _request("查询状态"),
+        uuid4(),
+    ) == ["查到了。"]
+    assert llm.requests[1].tool_choice == "auto"
+    assert len(gateway.invocations) == 1
+
+
+@pytest.mark.asyncio
+async def test_read_budget_still_allows_a_final_summary() -> None:
+    calls = tuple(
+        LlmToolCall(call_id=f"read_{index}", name="runtime_status_read", arguments={"n": index})
+        for index in range(4)
+    )
+    llm = _ScriptedLlm(
+        [
+            (
+                *tuple(LlmToolCallRequested(call) for call in calls),
+                LlmResponseCompleted("tool_calls"),
+            ),
+            (LlmTextDelta("四项查询已经完成。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        _request("查询四项状态"),
+        uuid4(),
+    ) == ["四项查询已经完成。"]
+    assert len(gateway.invocations) == 4
+    assert llm.requests[1].tools == ()
+    assert len(llm.requests[1].tool_exchanges) == 1
+
+
+@pytest.mark.asyncio
+async def test_followup_read_deduplicates_across_tool_rounds() -> None:
+    calls = (
+        LlmToolCall(call_id="first", name="runtime_status_read", arguments={}),
+        LlmToolCall(call_id="again", name="runtime_status_read", arguments={}),
+    )
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(calls[0]), LlmResponseCompleted("tool_calls")),
+            (LlmToolCallRequested(calls[1]), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("没有再次查询。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        _request("查询状态"),
+        uuid4(),
+    ) == ["没有再次查询。"]
+    assert len(gateway.invocations) == 1
+    duplicate = llm.requests[2].tool_exchanges[1].results[0]
+    assert duplicate.is_error
+    assert duplicate.content["error"]["code"] == "duplicate_tool_call"  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_post_read_truncated_text_is_returned_without_provider_error() -> None:
+    llm = _ScriptedLlm(
+        [
+            (
+                LlmToolCallRequested(
+                    LlmToolCall(call_id="read", name="runtime_status_read", arguments={})
+                ),
+                LlmResponseCompleted("tool_calls"),
+            ),
+            (LlmTextDelta("已查到部分结果"), LlmResponseCompleted("length")),
+        ]
+    )
+    assert await _collect(
+        AgentTurnOrchestrator(
+            llm, _Gateway(_snapshot(SkillRunState.SUCCEEDED)), _Router((_Projection(),))
+        ),
+        _request("查询状态"),
+        uuid4(),
+    ) == ["已查到部分结果"]
 
 
 @pytest.mark.asyncio

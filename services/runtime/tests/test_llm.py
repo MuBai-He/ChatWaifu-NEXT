@@ -257,6 +257,60 @@ async def test_openai_stream_assembles_fragmented_parallel_tool_calls() -> None:
 
 
 @pytest.mark.asyncio
+async def test_openai_followup_allows_another_tool_or_a_final_answer() -> None:
+    observed: list[dict[str, object]] = []
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        observed.append(json.loads(request.content))
+        return _sse_response(
+            {"choices": [{"delta": {"content": "查到了。"}, "finish_reason": "stop"}]}
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="tool-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+    )
+    request = LlmRequest(
+        generation_id=uuid4(),
+        user_text="查完后决定是否修改",
+        system_prompt="test",
+        tools=(
+            LlmToolDefinition(
+                name="google_tasks_read", description="read", input_schema={"type": "object"}
+            ),
+            LlmToolDefinition(
+                name="agenda_manage", description="write", input_schema={"type": "object"}
+            ),
+        ),
+        tool_choice="auto",
+        tool_exchanges=(
+            LlmToolExchange(
+                assistant_text="",
+                calls=(LlmToolCall(call_id="read", name="google_tasks_read", arguments={}),),
+                results=(
+                    LlmToolResult(call_id="read", name="google_tasks_read", content={"ok": True}),
+                ),
+            ),
+        ),
+    )
+
+    assert await _events(provider, request) == [
+        LlmTextDelta("查到了。"),
+        LlmResponseCompleted("stop"),
+    ]
+    assert observed[0]["tool_choice"] == "auto"
+    assert len(cast(list[object], observed[0]["tools"])) == 2
+    messages = cast(list[dict[str, object]], observed[0]["messages"])
+    assert [item["role"] for item in messages[-2:]] == [
+        "assistant",
+        "tool",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_openai_tool_result_transcript_is_sent_back_to_model() -> None:
     observed: list[dict[str, object]] = []
 

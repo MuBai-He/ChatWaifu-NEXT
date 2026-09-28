@@ -110,6 +110,7 @@ class LlmRequest:
     recalled_memory_texts: tuple[str, ...] = ()
     trigger: Literal["user", "proactive"] = "user"
     tools: tuple[LlmToolDefinition, ...] = ()
+    tool_choice: Literal["required", "auto"] = "required"
     tool_exchanges: tuple[LlmToolExchange, ...] = ()
     images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
 
