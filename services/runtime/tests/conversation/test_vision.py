@@ -34,6 +34,7 @@ class _FakeCompilation:
         self.context = ()
         self.history = ()
         self.recalled_memory_texts = ()
+        self.selected_memory_ids = ()
         self.report = PromptBudgetReport(
             model_role="chat",
             budget=1024,
