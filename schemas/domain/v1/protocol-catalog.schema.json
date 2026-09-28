@@ -3688,6 +3688,342 @@
       "title": "ConversationState",
       "type": "string"
     },
+    "DiagnosticDeliveryPart": {
+      "properties": {
+        "attempt": {
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "delivered_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivered At"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "ordinal": {
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "part_id": {
+          "format": "uuid",
+          "title": "Part Id",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part_id",
+        "ordinal",
+        "kind",
+        "required",
+        "status",
+        "attempt"
+      ],
+      "title": "DiagnosticDeliveryPart",
+      "type": "object"
+    },
+    "DiagnosticMemoryReference": {
+      "properties": {
+        "currently_visible": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currently Visible"
+        },
+        "memory_id": {
+          "format": "uuid",
+          "title": "Memory Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "selected_for_prompt": {
+          "default": false,
+          "title": "Selected For Prompt",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "memory_id"
+      ],
+      "title": "DiagnosticMemoryReference",
+      "type": "object"
+    },
+    "DiagnosticPlaybackSegment": {
+      "properties": {
+        "played_pts_ms": {
+          "title": "Played Pts Ms",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "segment_index": {
+          "title": "Segment Index",
+          "type": "integer"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "transport": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transport"
+        }
+      },
+      "required": [
+        "segment_id",
+        "segment_index",
+        "state",
+        "played_pts_ms"
+      ],
+      "title": "DiagnosticPlaybackSegment",
+      "type": "object"
+    },
+    "DiagnosticResponsePlan": {
+      "properties": {
+        "expression": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expression"
+        },
+        "intent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent"
+        },
+        "motion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Motion"
+        },
+        "response_length": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Length"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tone"
+        }
+      },
+      "title": "DiagnosticResponsePlan",
+      "type": "object"
+    },
+    "DiagnosticTimelineItem": {
+      "properties": {
+        "event_type": {
+          "title": "Event Type",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        }
+      },
+      "required": [
+        "sequence",
+        "event_type",
+        "occurred_at"
+      ],
+      "title": "DiagnosticTimelineItem",
+      "type": "object"
+    },
+    "DiagnosticToolCall": {
+      "properties": {
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_call_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Call Id"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DiagnosticToolCall",
+      "type": "object"
+    },
     "EgressBlockedEvent": {
       "properties": {
         "causation_id": {
@@ -4561,6 +4897,268 @@
         "resource.models_woke"
       ],
       "type": "string"
+    },
+    "InteractionTraceDetail": {
+      "properties": {
+        "delivery_parts": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticDeliveryPart"
+          },
+          "title": "Delivery Parts",
+          "type": "array"
+        },
+        "delivery_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivery Status"
+        },
+        "memory_candidates": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticMemoryReference"
+          },
+          "title": "Memory Candidates",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "playback_segments": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticPlaybackSegment"
+          },
+          "title": "Playback Segments",
+          "type": "array"
+        },
+        "prompt_budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptBudgetReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "prompt_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptContextIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "response_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiagnosticResponsePlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selected_memory_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Memory Ids"
+        },
+        "summary": {
+          "$ref": "#/$defs/InteractionTraceSummary"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticTimelineItem"
+          },
+          "maxItems": 200,
+          "title": "Timeline",
+          "type": "array"
+        },
+        "tool_calls": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticToolCall"
+          },
+          "title": "Tool Calls",
+          "type": "array"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "summary"
+      ],
+      "title": "InteractionTraceDetail",
+      "type": "object"
+    },
+    "InteractionTracePage": {
+      "properties": {
+        "has_more": {
+          "default": false,
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/InteractionTraceSummary"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "InteractionTracePage",
+      "type": "object"
+    },
+    "InteractionTraceSummary": {
+      "properties": {
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "generation_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation State"
+        },
+        "interaction_id": {
+          "format": "uuid",
+          "title": "Interaction Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "trigger": {
+          "enum": [
+            "user",
+            "proactive",
+            "ignored_voice",
+            "proactive_deferred"
+          ],
+          "title": "Trigger",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "interaction_id",
+        "session_id",
+        "occurred_at",
+        "trigger"
+      ],
+      "title": "InteractionTraceSummary",
+      "type": "object"
     },
     "InterruptionInitiator": {
       "enum": [
@@ -9842,6 +10440,12 @@
     "generation": {
       "$ref": "#/$defs/GenerationSnapshot"
     },
+    "interaction_trace_detail": {
+      "$ref": "#/$defs/InteractionTraceDetail"
+    },
+    "interaction_trace_page": {
+      "$ref": "#/$defs/InteractionTracePage"
+    },
     "learned_sticker": {
       "$ref": "#/$defs/LearnedSticker"
     },
@@ -9981,6 +10585,8 @@
     "prompt_budget",
     "prompt_context_identity",
     "character_prompt_compiled",
+    "interaction_trace_page",
+    "interaction_trace_detail",
     "channel_authorization_start_request",
     "channel_authorization_verification_request",
     "channel_authorization",

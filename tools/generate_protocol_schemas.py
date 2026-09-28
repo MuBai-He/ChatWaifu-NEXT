@@ -28,6 +28,11 @@ def main() -> None:
     # Python installation ignores editable-install .pth files.
     sys.path.insert(0, str(PROTOCOL_SOURCE))
     from chatwaifu_protocol.channels import ChannelInboundTextMessage
+    from chatwaifu_protocol.diagnostics import (
+        InteractionTraceDetail,
+        InteractionTracePage,
+        InteractionTraceSummary,
+    )
     from chatwaifu_protocol.events import (
         GENERIC_CORE_EVENT_TYPES,
         SessionCreatedEvent,
@@ -37,6 +42,23 @@ def main() -> None:
     from chatwaifu_protocol.schema_export import export_schemas
 
     export_schemas(SCHEMA_DIR)
+    diagnostic_summary = InteractionTraceSummary(
+        interaction_id=UUID("00000000-0000-4000-8000-000000000901"),
+        session_id=UUID("00000000-0000-4000-8000-000000000201"),
+        turn_id=UUID("00000000-0000-4000-8000-000000000902"),
+        generation_id=UUID("00000000-0000-4000-8000-000000000901"),
+        occurred_at=FIXED_TIME,
+        trigger="user",
+        generation_state="completed",
+    )
+    write_json(
+        FIXTURE_DIR / "interaction-trace-page.json",
+        InteractionTracePage(items=[diagnostic_summary]),
+    )
+    write_json(
+        FIXTURE_DIR / "interaction-trace-detail.json",
+        InteractionTraceDetail(summary=diagnostic_summary),
+    )
     write_json(
         FIXTURE_DIR / "python-session-created-event.json",
         SessionCreatedEvent(
