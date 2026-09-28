@@ -43,7 +43,7 @@ class DiagnosticMemoryReference(ProtocolModel):
     schema_version: Literal["1.0"] = "1.0"
     memory_id: UUID
     score: float | None = None
-    selected_for_prompt: bool = False
+    selected_for_prompt: bool | None = None
     currently_visible: bool | None = None
 
 

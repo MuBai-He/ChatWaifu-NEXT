@@ -335,6 +335,18 @@ async def test_cancelled_generation_keeps_authoritative_state_and_deduplicated_t
                     }
                 )
             )
+        mixed_call_id = uuid4()
+        await container.database.execute(
+            "INSERT INTO skill_tool_calls(tool_call_id, skill_run_id, adapter, method, "
+            "request_json, status, started_at, completed_at) "
+            "VALUES (?, ?, 'test', 'read', '{}', 'failed', ?, ?)",
+            (
+                str(mixed_call_id),
+                str(run_id),
+                started.replace(tzinfo=None).isoformat(),
+                completed.isoformat(),
+            ),
+        )
         detail = await container.interaction_diagnostics.read_interaction(
             session.session_id,
             accepted.generation_id,
@@ -342,9 +354,9 @@ async def test_cancelled_generation_keeps_authoritative_state_and_deduplicated_t
         )
         assert detail is not None
         assert detail.summary.generation_state == "cancelled"
-        assert [
-            (call.tool_call_id, call.status, call.duration_ms) for call in detail.tool_calls
-        ] == [(call_id, "failed", 250)]
+        assert {
+            call.tool_call_id: (call.status, call.duration_ms) for call in detail.tool_calls
+        } == {call_id: ("failed", 250), mixed_call_id: ("failed", None)}
         assert "hidden" not in detail.model_dump_json()
     finally:
         await container.stop()
@@ -366,6 +378,21 @@ async def test_legacy_prompt_event_and_timeline_cursor_are_explicit(
             "UPDATE events SET payload_json = json_remove(payload_json, '$.selected_memory_ids') "
             "WHERE session_id = ? AND event_type = 'character.prompt_compiled'",
             (str(session.session_id),),
+        )
+        legacy_candidate = uuid4()
+        await container.event_publisher.emit(
+            GenericCoreEvent.model_validate(
+                {
+                    "event_id": uuid4(),
+                    "event_type": "memory.recalled",
+                    "session_id": session.session_id,
+                    "turn_id": accepted.turn_id,
+                    "occurred_at": datetime.now(UTC),
+                    "source": "runtime.memory",
+                    "privacy": PrivacyLevel.LOCAL,
+                    "payload": {"memory_ids": [str(legacy_candidate)], "scores": [0.9]},
+                }
+            )
         )
         for _ in range(201):
             await container.event_publisher.emit(
@@ -391,6 +418,8 @@ async def test_legacy_prompt_event_and_timeline_cursor_are_explicit(
         )
         assert first is not None
         assert first.selected_memory_ids is None
+        assert first.memory_candidates[0].memory_id == legacy_candidate
+        assert first.memory_candidates[0].selected_for_prompt is None
         assert first.prompt_identity is not None
         assert len(first.timeline) == 200
         assert first.truncated

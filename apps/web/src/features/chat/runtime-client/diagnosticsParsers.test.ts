@@ -78,6 +78,22 @@ describe("interaction diagnostics wire parser", () => {
     expect(parsed.prompt_identity?.chat_route.model).toHaveLength(256);
   });
 
+  it("preserves unknown prompt selection for a legacy recalled memory", () => {
+    const parsed = parseInteractionTraceDetail({
+      ...detailFixture,
+      memory_candidates: [
+        {
+          schema_version: "1.0",
+          memory_id: "00000000-0000-4000-8000-000000000904",
+          score: 0.9,
+          selected_for_prompt: null,
+          currently_visible: true,
+        },
+      ],
+    });
+    expect(parsed.memory_candidates?.[0]?.selected_for_prompt).toBeNull();
+  });
+
   it("strips unapproved content fields and rejects unbounded pages", () => {
     const parsed = parseInteractionTraceDetail({
       ...detailFixture,

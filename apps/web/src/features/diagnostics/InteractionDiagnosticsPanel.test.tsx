@@ -145,4 +145,177 @@ describe("InteractionDiagnosticsPanel", () => {
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "继续读取事件" })).toBeNull();
   });
+
+  it("returns to recent interactions when refreshed from an older page", async () => {
+    const older = { ...page, items: [second], has_more: false };
+    vi.mocked(runtimeClient.getInteractionTraces).mockImplementation(
+      (_session, options) =>
+        Promise.resolve(
+          options?.cursor
+            ? older
+            : { ...page, items: [first], has_more: true, next_cursor: "older" },
+        ),
+    );
+    render(
+      <InteractionDiagnosticsPanel
+        sessionId={first.session_id}
+        runtimeOnline
+      />,
+    );
+    fireEvent.click(screen.getByText("高级诊断：单次互动"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "查看更早互动" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("list", { name: "互动诊断列表" }).textContent,
+      ).toContain("cancelled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "返回最新互动" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("list", { name: "互动诊断列表" }).textContent,
+      ).toContain("completed"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "查看更早互动" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("list", { name: "互动诊断列表" }).textContent,
+      ).toContain("cancelled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "刷新诊断" }));
+    await waitFor(() =>
+      expect(runtimeClient.getInteractionTraces).toHaveBeenLastCalledWith(
+        first.session_id,
+        expect.objectContaining({ cursor: null }),
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "返回最新互动" })).toBeNull();
+  });
+
+  it("keeps earlier timeline events when continuing with a cursor", async () => {
+    vi.mocked(runtimeClient.getInteractionTraceDetail).mockImplementation(
+      (_session, _id, options) =>
+        Promise.resolve({
+          ...detail(first),
+          timeline: [
+            {
+              schema_version: "1.0",
+              sequence: options?.afterSequence ? 3 : 2,
+              event_type: options?.afterSequence
+                ? "tool.call_finished"
+                : "memory.recalled",
+              occurred_at: first.occurred_at,
+              reason: null,
+              status: null,
+            },
+          ],
+          truncated: !options?.afterSequence,
+          next_cursor: options?.afterSequence ? null : 2,
+        }),
+    );
+    render(
+      <InteractionDiagnosticsPanel
+        sessionId={first.session_id}
+        runtimeOnline
+      />,
+    );
+    fireEvent.click(screen.getByText("高级诊断：单次互动"));
+    const list = await screen.findByRole("list", { name: "互动诊断列表" });
+    fireEvent.click(list.querySelectorAll("button")[0]);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "继续读取事件" }),
+    );
+    await screen.findByText(/3 · tool.call_finished/);
+    expect(screen.getByText(/2 · memory.recalled/)).toBeTruthy();
+  });
+
+  it("distinguishes legacy memory selection and queued audio from confirmed playback", async () => {
+    vi.mocked(runtimeClient.getInteractionTraceDetail).mockResolvedValue({
+      ...detail(first),
+      memory_candidates: [
+        {
+          schema_version: "1.0",
+          memory_id: "00000000-0000-4000-8000-000000000904",
+          score: 0.9,
+          selected_for_prompt: null,
+          currently_visible: true,
+        },
+      ],
+      playback_segments: [
+        {
+          schema_version: "1.0",
+          segment_id: "00000000-0000-4000-8000-000000000905",
+          segment_index: 0,
+          state: "queued",
+          played_pts_ms: 0,
+          transport: "audio_element",
+        },
+      ],
+    });
+    render(
+      <InteractionDiagnosticsPanel
+        sessionId={first.session_id}
+        runtimeOnline
+      />,
+    );
+    fireEvent.click(screen.getByText("高级诊断：单次互动"));
+    const list = await screen.findByRole("list", { name: "互动诊断列表" });
+    fireEvent.click(list.querySelectorAll("button")[0]);
+    expect(await screen.findByText(/是否注入未知/)).toBeTruthy();
+    expect(screen.getByText(/播放确认：已排队，尚无客户端确认/)).toBeTruthy();
+    expect(
+      screen.getByText(/分段状态：queued · 尚无客户端播放确认/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/客户端 ACK：queued/)).toBeNull();
+  });
+
+  it("marks an ignored voice event as having no prompt and a playback ACK as progress", async () => {
+    const ignored: InteractionTraceSummary = {
+      ...first,
+      generation_id: null,
+      generation_state: null,
+      trigger: "ignored_voice",
+    };
+    vi.mocked(runtimeClient.getInteractionTraces).mockResolvedValue({
+      ...page,
+      items: [ignored, second],
+    });
+    vi.mocked(runtimeClient.getInteractionTraceDetail).mockImplementation(
+      (_session, id) =>
+        Promise.resolve(
+          id === ignored.interaction_id
+            ? detail(ignored)
+            : {
+                ...detail(second),
+                playback_segments: [
+                  {
+                    schema_version: "1.0",
+                    segment_id: "00000000-0000-4000-8000-000000000905",
+                    segment_index: 0,
+                    state: "playing",
+                    played_pts_ms: 120,
+                    transport: "audio_element",
+                  },
+                ],
+              },
+        ),
+    );
+    render(
+      <InteractionDiagnosticsPanel
+        sessionId={first.session_id}
+        runtimeOnline
+      />,
+    );
+    fireEvent.click(screen.getByText("高级诊断：单次互动"));
+    const list = await screen.findByRole("list", { name: "互动诊断列表" });
+    const buttons = list.querySelectorAll("button");
+    fireEvent.click(buttons[0]);
+    expect(await screen.findByText(/实际选中：未生成提示词/)).toBeTruthy();
+    fireEvent.click(buttons[1]);
+    expect(
+      await screen.findByText(/播放确认：有客户端确认，见分段状态/),
+    ).toBeTruthy();
+    expect(screen.getByText(/客户端确认进度 120 ms/)).toBeTruthy();
+  });
 });

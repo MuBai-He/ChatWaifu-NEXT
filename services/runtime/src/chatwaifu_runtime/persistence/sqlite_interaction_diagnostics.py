@@ -346,7 +346,7 @@ class SQLiteInteractionDiagnosticsReader:
             DiagnosticMemoryReference(
                 memory_id=item,
                 score=recalled.get(item),
-                selected_for_prompt=item in (selected or ()),
+                selected_for_prompt=item in selected if selected is not None else None,
                 currently_visible=item in visible,
             )
             for item in all_ids
@@ -453,6 +453,6 @@ def _duration_ms(started: object, completed: object) -> int | None:
         return None
     try:
         delta = datetime.fromisoformat(str(completed)) - datetime.fromisoformat(str(started))
-    except ValueError:
+    except (TypeError, ValueError):
         return None
     return max(0, round(delta.total_seconds() * 1000))

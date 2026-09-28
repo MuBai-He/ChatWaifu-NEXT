@@ -60,7 +60,7 @@ const memoryReference = z.object({
   schema_version: version,
   memory_id: uuid,
   score: z.number().nullable(),
-  selected_for_prompt: z.boolean(),
+  selected_for_prompt: z.boolean().nullable(),
   currently_visible: z.boolean().nullable(),
 });
 

@@ -59,7 +59,7 @@ export function InteractionDiagnosticsPanel({
     [request, selectedId, afterSequence],
   );
   const [detailState, setDetailState] = useState<{
-    request: object;
+    request: typeof detailRequest;
     detail: InteractionTraceDetail | null;
     error: boolean;
   } | null>(null);
@@ -104,10 +104,28 @@ export function InteractionDiagnosticsPanel({
     ).then(
       (result) => {
         if (!controller.signal.aborted)
-          setDetailState({
-            request: detailRequest,
-            detail: result,
-            error: false,
+          setDetailState((previous) => {
+            const earlier = previous?.detail;
+            const isContinuation =
+              detailRequest.afterSequence > 0 &&
+              previous?.request.request === detailRequest.request &&
+              previous.request.selectedId === detailRequest.selectedId &&
+              earlier?.summary.interaction_id ===
+                result.summary.interaction_id &&
+              earlier.next_cursor === detailRequest.afterSequence;
+            return {
+              request: detailRequest,
+              detail: isContinuation
+                ? {
+                    ...result,
+                    timeline: [
+                      ...(earlier.timeline ?? []),
+                      ...(result.timeline ?? []),
+                    ],
+                  }
+                : result,
+              error: false,
+            };
           });
       },
       () => {
@@ -145,10 +163,27 @@ export function InteractionDiagnosticsPanel({
             </label>
             <button
               type="button"
-              onClick={() => setRefresh((value) => value + 1)}
+              onClick={() => {
+                setCursor(null);
+                setSelectedId(null);
+                setAfterSequence(0);
+                setRefresh((value) => value + 1);
+              }}
             >
               刷新诊断
             </button>
+            {cursor !== null ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCursor(null);
+                  setSelectedId(null);
+                  setAfterSequence(0);
+                }}
+              >
+                返回最新互动
+              </button>
+            ) : null}
           </div>
           {!sessionId || !runtimeOnline ? (
             <p>连接到当前会话后可查看诊断。</p>
@@ -222,16 +257,23 @@ export function InteractionDiagnosticsPanel({
                   <p>
                     记忆候选：{detail.memory_candidates?.length ?? 0}
                     ；实际选中：
-                    {detail.selected_memory_ids === null
-                      ? "未知（旧事件）"
-                      : (detail.selected_memory_ids?.length ?? 0)}
+                    {detail.summary.generation_id === null
+                      ? "未生成提示词"
+                      : detail.selected_memory_ids === null
+                        ? "未知（旧事件）"
+                        : (detail.selected_memory_ids?.length ?? 0)}
                   </p>
                   {detail.memory_candidates?.length ? (
                     <ul aria-label="记忆候选与选中">
                       {detail.memory_candidates.map((item) => (
                         <li key={item.memory_id}>
                           {item.memory_id.slice(0, 8)} ·{" "}
-                          {item.selected_for_prompt ? "已注入" : "仅候选"} ·{" "}
+                          {item.selected_for_prompt === null
+                            ? "是否注入未知"
+                            : item.selected_for_prompt
+                              ? "已注入"
+                              : "仅候选"}{" "}
+                          ·{" "}
                           {item.currently_visible
                             ? "当前可见"
                             : "已删除或不可见"}
@@ -242,10 +284,14 @@ export function InteractionDiagnosticsPanel({
                   ) : null}
                   <p>
                     工具：{detail.tool_calls?.length ?? 0} 次；渠道交付：
-                    {status(detail.delivery_status)}；播放 ACK：
-                    {detail.playback_segments?.length
-                      ? "见分段状态"
-                      : "未知（无历史事实）"}
+                    {status(detail.delivery_status)}；播放确认：
+                    {!detail.playback_segments?.length
+                      ? "未知（无历史事实）"
+                      : detail.playback_segments.every(
+                            (item) => item.state === "queued",
+                          )
+                        ? "已排队，尚无客户端确认"
+                        : "有客户端确认，见分段状态"}
                   </p>
                   {detail.tool_calls?.length ? (
                     <ul aria-label="工具状态">
@@ -273,8 +319,10 @@ export function InteractionDiagnosticsPanel({
                     <ul aria-label="播放分段确认">
                       {detail.playback_segments.map((item) => (
                         <li key={item.segment_id}>
-                          {item.segment_index + 1}. 客户端 ACK：{item.state} ·
-                          进度 {item.played_pts_ms} ms
+                          {item.segment_index + 1}. 分段状态：{item.state} ·{" "}
+                          {item.state === "queued"
+                            ? "尚无客户端播放确认"
+                            : `客户端确认进度 ${item.played_pts_ms} ms`}
                         </li>
                       ))}
                     </ul>

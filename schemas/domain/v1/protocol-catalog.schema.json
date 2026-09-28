@@ -3784,9 +3784,16 @@
           "title": "Score"
         },
         "selected_for_prompt": {
-          "default": false,
-          "title": "Selected For Prompt",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected For Prompt"
         }
       },
       "required": [
