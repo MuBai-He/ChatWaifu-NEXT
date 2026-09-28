@@ -8,7 +8,9 @@ from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.async_secret_store import AsyncSecretStore
 from chatwaifu_runtime.persistence.atomic_secret_store import AtomicSecretStore
 from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService, GoogleClient
+from chatwaifu_runtime.personal_assistant.agenda import AgendaService
 from chatwaifu_runtime.personal_assistant.google_calendar import GoogleCalendarAdapter
+from chatwaifu_runtime.personal_assistant.google_tasks import GoogleTasksAdapter
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
 from chatwaifu_runtime.personal_assistant.repository import AssistantRepository
 from chatwaifu_runtime.personal_assistant.tasks import TaskRepository, TaskService
@@ -29,9 +31,12 @@ class PersonalAssistantIntegration:
         self.accounts: GoogleAccountService | None = None
         self.oauth: GoogleOAuthCoordinator | None = None
         self._adapter: GoogleCalendarAdapter | None = None
+        self._tasks_adapter: GoogleTasksAdapter | None = None
         self._maintenance: asyncio.Task[None] | None = None
+        self.agenda: AgendaService | None = None
         if not config.enabled:
             return
+        self.agenda = AgendaService(repository, None, self.tasks)
         if not config.google_client_id.strip():
             self.state = "unconfigured"
             return
@@ -40,6 +45,7 @@ class PersonalAssistantIntegration:
             config.google_client_secret.get_secret_value() if config.google_client_secret else None,
         )
         self._adapter = GoogleCalendarAdapter()
+        self._tasks_adapter = GoogleTasksAdapter()
         self.accounts = GoogleAccountService(
             repository,
             AsyncSecretStore(
@@ -49,8 +55,10 @@ class PersonalAssistantIntegration:
             ),
             self._adapter,
             client,
+            tasks_adapter=self._tasks_adapter,
         )
         self.oauth = GoogleOAuthCoordinator(repository, self._adapter, self.accounts, client)
+        self.agenda = AgendaService(repository, self.accounts, self.tasks)
         self.state = "ready"
 
     async def start(self) -> None:
@@ -81,3 +89,5 @@ class PersonalAssistantIntegration:
             self._maintenance = None
         if self._adapter is not None:
             await self._adapter.close()
+        if self._tasks_adapter is not None:
+            await self._tasks_adapter.close()

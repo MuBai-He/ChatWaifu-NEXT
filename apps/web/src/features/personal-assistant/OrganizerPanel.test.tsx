@@ -50,6 +50,8 @@ it.each(["task", "apple"])(
           operations: [],
           scheduler_error: null,
         });
+      if (path.startsWith("/destinations"))
+        return Promise.resolve({ items: [] });
       if (++attempts === 1) return Promise.reject(new Error("response lost"));
       return Promise.resolve({});
     });
@@ -80,7 +82,9 @@ it.each(["task", "apple"])(
     await waitFor(() => expect(attempts).toBe(2));
     const payloads = vi
       .mocked(organizerRequest)
-      .mock.calls.filter(([path]) => !path.startsWith("/organizer"))
+      .mock.calls.filter(
+        ([path]) => path === "/tasks" || path === "/apple/operations",
+      )
       .map(([, body]) => body as Record<string, { request_id: string }>);
     const key = kind === "task" ? "task" : "operation";
     expect(payloads[0][key].request_id).toBe(payloads[1][key].request_id);

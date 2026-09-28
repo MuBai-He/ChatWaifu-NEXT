@@ -1,5 +1,79 @@
 # Personal assistant development status
 
+## Unified agenda candidate (2026-09-28, deployed for acceptance)
+
+The `mubai/unified-agenda` branch extends the merged read-only Google and Apple
+features. It adds a combined today/next 7 days/next 30 days panel, Google Calendar
+event and Google Tasks list/item read/write routes, a persisted default calendar
+and task-list destination, and confirmation-gated agenda management. Runtime
+migration 35 adds task-list selections, write destinations and a display label for
+multiple Google accounts. Existing accounts and selections remain in place.
+
+To test with another real Google account, enable the **Google Tasks API** in the
+same Google Cloud project. In the desktop Personal Assistant panel, use **Upgrade
+this account** on the existing read-only account, sign into the _same_ Google
+account and grant Calendar event write and Tasks scopes. The server compares the
+primary calendar identity before replacing its stored refresh token. If consent
+fails or the account differs, the old account stays connected with its prior
+capabilities. Select a calendar and a task list explicitly, then mark writable
+targets as defaults. Test in a disposable calendar/list and verify each create,
+edit, complete and delete in the corresponding Google application. Do not retry
+an uncertain write before checking the source. Google Tasks due dates have no
+time-of-day; timed ringing still uses the ChatWaifu task/alarm scheduler.
+
+Apple sources continue to require the paired Mac, EventKit permissions and online
+device receipts. Revoking the device or deselecting its source clears the matching
+default write destination. `queued` means the device has not confirmed the write.
+Live provider write evidence is recorded below. Visual use of the combined panel,
+chat-originated writes and offline notification inbox behavior still need separate
+acceptance.
+
+The Linux source service was backed up at
+`/home/mubai/chatwaifu-server/backups/unified-agenda-20260927T172613Z`
+with a consistent SQLite backup before migration. Four older server source files
+for MCP settings/transport were synchronized to the already merged `main` baseline;
+the first restart exposed their mismatch, so the old service was restored before
+reapplying this branch. The final Runtime is active with migration 35, direct TLS
+and the 18443 TCP forwarding socket active. Unauthenticated assistant status gives
+401 with certificate verification passing; authenticated status gives 200/`ready`
+and both new Skills are listed. The single previously connected Google account
+remained connected; there were zero default write destinations at deployment before
+the user's later selection. Deployment checks alone did not establish real provider
+read/write or a visual desktop result.
+
+On 2026-09-28, the owner selected Google Calendar and Google Tasks destinations and
+completed expanded OAuth consent. Authenticated HTTPS status reported `ready`; the
+account reported both calendar and Tasks write capability. Unique temporary items
+were created in the selected sources through the live Runtime. Google Calendar and
+Tasks provider queries read back the created and modified items; Tasks completion
+read back as `completed`. Provider deletes succeeded and subsequent queries found
+zero matching test items. A separate create via the unified `/agenda/items` route
+used the default Google Tasks destination, was read back and was deleted.
+
+The paired Mac was online and exposed the user-selected writable Apple “个人”
+calendar and “Reminders” list. Actual EventKit device receipts and list operations
+confirmed create, update and delete in both sources and completion of the test
+reminder. Both sources returned zero matching test items after cleanup. This is
+provider/device readback, not a visual check inside Google Calendar, Google Tasks,
+Apple Calendar or Apple Reminders. The Google default destinations were not changed
+during Apple acceptance.
+
+The live device exposed 11 selected Apple sources, with its Reminders list after
+the old overview's first-eight cutoff. The desktop overview now reserves room for
+both calendar and reminder sources and prioritizes any default Apple destinations
+within its eight-source request bound. It also excludes completed Apple reminders
+and reminders due beyond the active day range, matching Google Tasks behavior.
+Frontend typecheck, lint and desktop bundle passed. The user refreshed the
+running desktop's next-seven-days overview and confirmed that unfinished Apple
+Reminders appear without flooding the view with completed items.
+The owner also confirmed a recurring `bcz` event appearing after the paired Mac's
+calendar query completed. The event belonged to the Apple “个人” calendar; the
+device returned seven occurrences in the seven-day window. The overview now shows
+an explicit pending state while Apple reads complete, instead of presenting the
+initial Google/local-only list as if all sources had finished.
+EventKit gives these recurring occurrences the same calendar item ID, so the
+overview also keys each rendered occurrence by its start time and list position.
+
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
 The Runtime owns the Google adapter, account service, OAuth coordinator and startup secret
@@ -158,3 +232,17 @@ reported `calendar.read` version 1.1.0 enabled. A direct invocation in the
 existing authorized session returned one event, including `测试`, from an
 `Asia/Shanghai` window. The user subsequently reported that the desktop-pet dialog
 succeeded; exact phrasing and long-term behavior were not independently captured.
+
+## Unified agenda delivery outcomes
+
+The server keeps the existing two-minute alarm and one-hour reminder delivery
+windows. An occurrence that expires before the paired device confirms display is
+recorded as missed; a displayed occurrence that expires without a stop or snooze
+is recorded as unhandled. Neither is replayed after the window. The desktop
+persists display receipts and retries them on reconnect, including after expiry,
+so a receipt lost during an outage can correct a missed label to unhandled. The
+unified agenda shows these records in an inbox; dismissing one only clears that
+record and does not mutate the source event, task, or recurring reminder rule.
+If stop/snooze acknowledgement fails, the desktop stops ringing locally and asks
+the user to retry while the delivery is active. This action is not yet durably
+queued for replay; expiry leaves an unhandled record that can be dismissed.

@@ -135,7 +135,15 @@ class CalendarReadSkill:
                         "invalid_query_window", "日期范围超过 31 天，请缩短后再试。"
                     ) from None
                 events = await service.query(session_id, account_id, calendar_id, start, end)
-                results.extend({"calendar": title, "event": asdict(event)} for event in events)
+                results.extend(
+                    {
+                        "account_id": account_id,
+                        "collection_id": calendar_id,
+                        "calendar": title,
+                        "event": asdict(event),
+                    }
+                    for event in events
+                )
                 windows.append(
                     {
                         "calendar": title,

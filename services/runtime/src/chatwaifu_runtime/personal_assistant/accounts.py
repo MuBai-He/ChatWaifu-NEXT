@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol
 from uuid import uuid4
 
@@ -17,17 +17,24 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from chatwaifu_runtime.personal_assistant.google_calendar import (
     READ_SCOPE,
+    WRITE_SCOPE,
     Calendar,
     CalendarEvent,
     GoogleCalendarAdapter,
     GoogleCalendarError,
     OAuthTokens,
 )
+from chatwaifu_runtime.personal_assistant.google_tasks import (
+    TASKS_SCOPE,
+    GoogleTask,
+    GoogleTasksAdapter,
+)
 from chatwaifu_runtime.personal_assistant.repository import (
     AccountRecord,
     AssistantAccessError,
     AssistantRepository,
     CalendarSelection,
+    TaskListSelection,
 )
 
 
@@ -53,6 +60,9 @@ class _Credential(BaseModel):
 class AccountStatus:
     account_id: str
     status: str
+    calendar_write: bool = False
+    tasks_write: bool = False
+    display_label: str | None = None
 
 
 class GoogleAccountService:
@@ -68,11 +78,13 @@ class GoogleAccountService:
         secrets: SecretStore,
         adapter: GoogleCalendarAdapter,
         client: GoogleClient,
+        tasks_adapter: GoogleTasksAdapter | None = None,
     ) -> None:
         self._repository = repository
         self._secrets = secrets
         self._adapter = adapter
         self._client = client
+        self._tasks = tasks_adapter
         self._lock = asyncio.Lock()
 
     async def connect_authorized(self, session_id: str, tokens: OAuthTokens) -> AccountStatus:
@@ -89,11 +101,226 @@ class GoogleAccountService:
             await self._repository.connect(owner, account_id, reference)
             return AccountStatus(account_id, "connected")
 
+    async def primary_identity(self, session_id: str, account_id: str) -> str:
+        await self._repository.session_owner(session_id)
+        async with self._lock:
+            access = await self._access(account_id)
+            calendars = await self._adapter.calendars(access)
+            primary = next((item.id for item in calendars if item.primary), None)
+            if not primary:
+                raise AssistantAccessError("google_primary_calendar_unavailable")
+            return primary
+
+    async def upgrade_authorized(
+        self, session_id: str, account_id: str, expected_primary: str, tokens: OAuthTokens
+    ) -> AccountStatus:
+        owner = await self._repository.session_owner(session_id)
+        if (
+            not tokens.refresh_token
+            or not tokens.scopes
+            or not {READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE}.issubset(tokens.scopes)
+        ):
+            raise AssistantAccessError("google_write_consent_required")
+        async with self._lock:
+            old = await self._connected(account_id)
+            new_calendars = await self._adapter.calendars(tokens.access_token)
+            new_primary = next((item.id for item in new_calendars if item.primary), None)
+            if not new_primary or expected_primary != new_primary:
+                raise AssistantAccessError("google_upgrade_account_mismatch")
+            await self._connected(account_id)
+            await self._secrets.set(
+                old.secret_ref,
+                _Credential(
+                    refresh_token=tokens.refresh_token,
+                    scopes=list(tokens.scopes),
+                ).model_dump_json(),
+            )
+            await self._repository.bump_account_revision(owner, account_id)
+            primary = next(item for item in new_calendars if item.primary)
+            label = (primary.title or primary.id)[:200]
+            await self._repository.set_account_label(owner, account_id, label)
+            return AccountStatus(account_id, "connected", True, True, label)
+
     async def status(self, session_id: str) -> tuple[AccountStatus, ...]:
         await self._repository.session_owner(session_id)
-        return tuple(
-            AccountStatus(a.account_id, a.status) for a in await self._repository.accounts()
-        )
+        result: list[AccountStatus] = []
+        for account in await self._repository.accounts():
+            if account.status != "connected":
+                result.append(
+                    AccountStatus(
+                        account.account_id, account.status, display_label=account.display_label
+                    )
+                )
+                continue
+            try:
+                credential = await self._credential(account.secret_ref)
+            except AssistantAccessError:
+                result.append(
+                    AccountStatus(
+                        account.account_id, account.status, display_label=account.display_label
+                    )
+                )
+                continue
+            result.append(
+                AccountStatus(
+                    account.account_id,
+                    account.status,
+                    WRITE_SCOPE in credential.scopes,
+                    TASKS_SCOPE in credential.scopes,
+                    account.display_label,
+                )
+            )
+        return tuple(result)
+
+    async def create_event(
+        self,
+        session_id: str,
+        account_id: str,
+        calendar_id: str,
+        event_id: str,
+        title: str,
+        start: datetime,
+        end: datetime,
+    ) -> CalendarEvent:
+        if (
+            not title.strip()
+            or len(title) > 200
+            or start.utcoffset() is None
+            or end.utcoffset() is None
+            or end <= start
+        ):
+            raise AssistantAccessError("invalid_event")
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._writable_calendar(owner, account_id, calendar_id)
+            token = await self._access(account_id, WRITE_SCOPE)
+            return await self._adapter.create_event(
+                token,
+                calendar_id,
+                event_id,
+                {
+                    "summary": title.strip(),
+                    "start": {"dateTime": start.isoformat()},
+                    "end": {"dateTime": end.isoformat()},
+                },
+            )
+
+    async def update_event(
+        self,
+        session_id: str,
+        account_id: str,
+        calendar_id: str,
+        event_id: str,
+        etag: str,
+        changes: dict[str, object],
+    ) -> CalendarEvent:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._writable_calendar(owner, account_id, calendar_id)
+            token = await self._access(account_id, WRITE_SCOPE)
+            current = await self._adapter.get_event(token, calendar_id, event_id)
+            if current.recurrence or current.recurring_event_id or current.event_type != "default":
+                raise AssistantAccessError("complex_event_edit_not_supported")
+            return await self._adapter.update_event(token, calendar_id, event_id, changes, etag)
+
+    async def delete_event(
+        self, session_id: str, account_id: str, calendar_id: str, event_id: str, etag: str
+    ) -> None:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._writable_calendar(owner, account_id, calendar_id)
+            token = await self._access(account_id, WRITE_SCOPE)
+            current = await self._adapter.get_event(token, calendar_id, event_id)
+            if current.recurrence or current.recurring_event_id or current.event_type != "default":
+                raise AssistantAccessError("complex_event_edit_not_supported")
+            await self._adapter.delete_event(token, calendar_id, event_id, etag)
+
+    async def _writable_calendar(self, owner: str, account_id: str, calendar_id: str) -> None:
+        selection = await self._repository.calendars(owner, account_id)
+        if not any(
+            item.calendar.id == calendar_id
+            and item.selected
+            and item.calendar.access_role in {"owner", "writer"}
+            for item in selection
+        ):
+            raise AssistantAccessError("calendar_not_selected_or_writable")
+
+    async def tasklists(
+        self, session_id: str, account_id: str, *, discover: bool = False
+    ) -> tuple[TaskListSelection, ...]:
+        owner = await self._repository.session_owner(session_id)
+        if discover:
+            async with self._lock:
+                token = await self._access(account_id, TASKS_SCOPE)
+                for tasklist in await self._task_adapter().lists(token):
+                    await self._repository.add_tasklist(owner, account_id, tasklist)
+        return await self._repository.tasklists(owner, account_id)
+
+    async def select_tasklist(
+        self, session_id: str, account_id: str, list_id: str, selected: bool
+    ) -> None:
+        owner = await self._repository.session_owner(session_id)
+        await self._repository.select_tasklist(owner, account_id, list_id, selected)
+
+    async def tasks(self, session_id: str, account_id: str, list_id: str) -> tuple[GoogleTask, ...]:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._selected_tasklist(owner, account_id, list_id)
+            token = await self._access(account_id, TASKS_SCOPE)
+            return await self._task_adapter().tasks(token, list_id)
+
+    async def create_task(
+        self,
+        session_id: str,
+        account_id: str,
+        list_id: str,
+        title: str,
+        notes: str | None,
+        due: date | None,
+    ) -> GoogleTask:
+        owner = await self._repository.session_owner(session_id)
+        if not title.strip() or len(title) > 200 or (notes is not None and len(notes) > 8192):
+            raise AssistantAccessError("invalid_task")
+        async with self._lock:
+            await self._selected_tasklist(owner, account_id, list_id)
+            token = await self._access(account_id, TASKS_SCOPE)
+            return await self._task_adapter().create(token, list_id, title.strip(), notes, due)
+
+    async def update_task(
+        self,
+        session_id: str,
+        account_id: str,
+        list_id: str,
+        task_id: str,
+        etag: str,
+        changes: dict[str, object],
+    ) -> GoogleTask:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._selected_tasklist(owner, account_id, list_id)
+            token = await self._access(account_id, TASKS_SCOPE)
+            return await self._task_adapter().update(token, list_id, task_id, changes, etag)
+
+    async def delete_task(
+        self, session_id: str, account_id: str, list_id: str, task_id: str, etag: str
+    ) -> None:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._selected_tasklist(owner, account_id, list_id)
+            token = await self._access(account_id, TASKS_SCOPE)
+            await self._task_adapter().delete(token, list_id, task_id, etag)
+
+    def _task_adapter(self) -> GoogleTasksAdapter:
+        if self._tasks is None:
+            raise AssistantAccessError("google_tasks_not_configured")
+        return self._tasks
+
+    async def _selected_tasklist(self, owner: str, account_id: str, list_id: str) -> None:
+        if not any(
+            item.tasklist.id == list_id and item.selected
+            for item in await self._repository.tasklists(owner, account_id)
+        ):
+            raise AssistantAccessError("tasklist_not_selected")
 
     async def discover(self, session_id: str, account_id: str) -> tuple[Calendar, ...]:
         owner = await self._repository.session_owner(session_id)
@@ -102,6 +329,10 @@ class GoogleAccountService:
             calendars = await self._adapter.calendars(access)
             for calendar in calendars:
                 await self._repository.add_calendar(owner, account_id, calendar)
+                if calendar.primary:
+                    await self._repository.set_account_label(
+                        owner, account_id, (calendar.title or calendar.id)[:200]
+                    )
             return calendars
 
     async def calendars(self, session_id: str, account_id: str) -> tuple[CalendarSelection, ...]:
@@ -174,7 +405,7 @@ class GoogleAccountService:
         except ValidationError:
             raise AssistantAccessError("account_credential_invalid") from None
 
-    async def _access(self, account_id: str) -> str:
+    async def _access(self, account_id: str, required_scope: str = READ_SCOPE) -> str:
         account = await self._connected(account_id)
         credential = await self._credential(account.secret_ref)
         try:
@@ -204,6 +435,8 @@ class GoogleAccountService:
         if READ_SCOPE not in scopes:
             await self._repository.revoke("local", account_id)
             raise AssistantAccessError("calendar_read_consent_lost")
+        if required_scope not in scopes:
+            raise AssistantAccessError("google_write_consent_required")
         return tokens.access_token
 
     async def _cleanup(self, reference: str) -> bool:

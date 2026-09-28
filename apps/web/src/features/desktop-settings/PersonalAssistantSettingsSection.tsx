@@ -1,4 +1,5 @@
 import { OrganizerPanel } from "../personal-assistant/OrganizerPanel";
+import { AgendaOverview } from "../personal-assistant/AgendaOverview";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -123,7 +124,7 @@ export function PersonalAssistantSettingsSection({
     };
   }, [sessionId, refresh, context.runtime.connection]);
 
-  async function connect() {
+  async function connect(upgradeAccountId?: string) {
     if (!sessionId || busy || !isDesktopHost()) return;
     setBusy(true);
     setMessage("");
@@ -153,12 +154,27 @@ export function PersonalAssistantSettingsSection({
           body: JSON.stringify({
             session_id: sessionId,
             redirect_uri: reservation.redirect_uri,
+            ...(upgradeAccountId
+              ? { upgrade_account_id: upgradeAccountId }
+              : {}),
           }),
           signal: AbortSignal.timeout(15000),
         },
       );
-      if (!response.ok)
-        throw new Error("无法开始授权，请检查服务器 OAuth 和 HTTPS 配置。");
+      if (!response.ok) {
+        const failure = (await response.json().catch(() => null)) as {
+          detail?: unknown;
+        } | null;
+        const detail =
+          typeof failure?.detail === "string" ? failure.detail : "";
+        throw new Error(
+          detail === "google_primary_calendar_unavailable"
+            ? "无法确认旧账号身份；请先刷新原账号日历，确认服务器能访问 Google。"
+            : detail === "account_not_connected"
+              ? "原账号已断开，请刷新账号列表后重试。"
+              : `无法开始授权${detail ? `：${detail}` : "，请检查服务器 OAuth 和 HTTPS 配置。"}`,
+        );
+      }
       const authorization = (await response.json()) as {
         state: string;
         authorization_url: string;
@@ -204,7 +220,11 @@ export function PersonalAssistantSettingsSection({
       succeeded = true;
       if (!flow.cancelled) {
         setAccountRevision((value) => value + 1);
-        setMessage("Google 账号已连接。请读取日历并选择允许查询的范围。");
+        setMessage(
+          upgradeAccountId
+            ? "原 Google 账号权限已升级。请选择待办列表和默认写入位置。"
+            : "Google 账号已连接。请选择允许读取的日历和待办列表，再设置默认写入位置。",
+        );
       }
     } catch (error) {
       if (!flow?.cancelled && current === revision.current.value)
@@ -238,16 +258,19 @@ export function PersonalAssistantSettingsSection({
             ? "账号清理遇到问题，请检查服务器状态。"
             : !status.authorization_available
               ? "连接账号前，需要配置支持授权的 HTTPS 服务器地址。"
-              : "沿用你的 Google 日历，只申请读取权限。";
+              : "连接现有 Google 日历与 Tasks。新增写入权限需你在浏览器确认。";
 
   return (
     <div className="personal-assistant-settings">
       <SettingsSectionIntro
         icon="companion"
         title="个人助理"
-        description="连接已有日历与提醒事项，逐步接入桌宠提醒。"
+        description="在原账户管理日程与待办，桌宠负责到期提醒。"
       />
-      <SettingsGroup title="Google 日历" description={description}>
+      <SettingsGroup title="账户、日程与提醒" description={description}>
+        {sessionId && (
+          <AgendaOverview key={`agenda:${sessionId}`} sessionId={sessionId} />
+        )}
         {statusError && (
           <button
             type="button"
@@ -256,53 +279,55 @@ export function PersonalAssistantSettingsSection({
             重新读取状态
           </button>
         )}
-        <div className="desktop-settings-connection-row">
-          <span>
-            <strong>Google 账号</strong>
-            <small>使用系统浏览器登录，凭据由服务器保存。</small>
-          </span>
-          {busy ? (
-            <button
-              onClick={() => {
-                ++revision.current.value;
-                if (active.current) void cancelFlow(active.current);
-                setMessage("已取消等待；已完成的账号连接不会自动撤销。");
-                setBusy(false);
-              }}
-            >
-              取消授权
-            </button>
-          ) : (
-            <button
-              onClick={() => void connect()}
-              disabled={
-                !!statusError ||
-                !status?.authorization_available ||
-                !sessionId ||
-                !isDesktopHost()
-              }
-            >
-              连接账号
-            </button>
+        <details className="assistant-settings-details">
+          <summary>Google 账户与来源设置</summary>
+          <div className="desktop-settings-connection-row">
+            <span>
+              <strong>Google 账号</strong>
+              <small>使用系统浏览器登录，凭据由服务器保存。</small>
+            </span>
+            {busy ? (
+              <button
+                onClick={() => {
+                  ++revision.current.value;
+                  if (active.current) void cancelFlow(active.current);
+                  setMessage("已取消等待；已完成的账号连接不会自动撤销。");
+                  setBusy(false);
+                }}
+              >
+                取消授权
+              </button>
+            ) : (
+              <button
+                onClick={() => void connect()}
+                disabled={
+                  !!statusError ||
+                  !status?.authorization_available ||
+                  !sessionId ||
+                  !isDesktopHost()
+                }
+              >
+                连接账号
+              </button>
+            )}
+          </div>
+          {message && <p role="status">{message}</p>}
+          {status?.state === "ready" && !statusError && sessionId && (
+            <PersonalCalendarPanel
+              key={`${sessionId}:${accountRevision}`}
+              sessionId={sessionId}
+              onUpgrade={(accountId) => void connect(accountId)}
+            />
           )}
-        </div>
-        {message && <p role="status">{message}</p>}
-        {status?.state === "ready" && !statusError && sessionId && (
-          <PersonalCalendarPanel
-            key={`${sessionId}:${accountRevision}`}
-            sessionId={sessionId}
-          />
-        )}
-      </SettingsGroup>
-      <SettingsGroup
-        title="提醒事项与定时任务"
-        description="连接 Apple 日历和提醒事项，管理服务器上的持久任务。"
-      >
-        {sessionId ? (
-          <OrganizerPanel key={sessionId} sessionId={sessionId} />
-        ) : (
-          <p>请先连接服务器。</p>
-        )}
+        </details>
+        <details className="assistant-settings-details">
+          <summary>Apple 设备与桌宠闹钟</summary>
+          {sessionId ? (
+            <OrganizerPanel key={sessionId} sessionId={sessionId} />
+          ) : (
+            <p>请先连接服务器。</p>
+          )}
+        </details>
       </SettingsGroup>
     </div>
   );

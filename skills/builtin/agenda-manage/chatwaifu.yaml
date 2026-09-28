@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition": {
+    "skill_id": "agenda.manage",
+    "version": "1.0.0",
+    "name": "管理日程与待办",
+    "description": "按用户选定的默认账户创建日程或待办；凭已读取的来源 ID 和版本修改、完成或删除 Google 事项。",
+    "capabilities": [{
+      "name": "execute",
+      "description": "创建时使用设置中的默认日历或待办列表；Google 修改须传 account_id、collection_id、item_id、etag。Apple 修改请使用 apple.manage。Google Tasks 的 due_date 只有日期，没有具体提醒时刻。",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["create", "update", "complete", "delete"]},
+          "kind": {"type": "string", "enum": ["calendar", "reminder"]},
+          "title": {"type": "string", "maxLength": 200},
+          "start": {"type": "string", "format": "date-time"},
+          "end": {"type": "string", "format": "date-time"},
+          "due_date": {"type": "string", "format": "date"},
+          "due_at": {"type": "string", "format": "date-time"},
+          "notes": {"type": "string", "maxLength": 8192},
+          "account_id": {"type": "string", "format": "uuid"},
+          "collection_id": {"type": "string"},
+          "item_id": {"type": "string"},
+          "etag": {"type": "string"}
+        },
+        "required": ["action", "kind"],
+        "additionalProperties": false
+      },
+      "output_schema": {"type": "object"},
+      "side_effect": "write",
+      "required_permissions": ["agenda.manage"],
+      "confirmation_required": true,
+      "timeout_seconds": 120
+    }],
+    "interruptible": true,
+    "background_allowed": false
+  },
+  "adapter": {"kind": "builtin", "handler": "agenda_manage"}
+}

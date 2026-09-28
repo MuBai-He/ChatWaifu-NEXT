@@ -13,7 +13,12 @@ from chatwaifu_runtime.personal_assistant.accounts import (
     GoogleAccountService,
     GoogleClient,
 )
-from chatwaifu_runtime.personal_assistant.google_calendar import READ_SCOPE, GoogleCalendarAdapter
+from chatwaifu_runtime.personal_assistant.google_calendar import (
+    READ_SCOPE,
+    WRITE_SCOPE,
+    GoogleCalendarAdapter,
+)
+from chatwaifu_runtime.personal_assistant.google_tasks import TASKS_SCOPE
 from chatwaifu_runtime.personal_assistant.repository import (
     AssistantAccessError,
     AssistantRepository,
@@ -33,6 +38,8 @@ class _Pending:
     redirect_uri: str
     verifier: str = field(repr=False)
     expires_at: float
+    upgrade_account_id: str | None = None
+    expected_primary: str | None = None
 
 
 class GoogleOAuthCoordinator:
@@ -68,7 +75,9 @@ class GoogleOAuthCoordinator:
             key: value for key, value in self._pending.items() if value.expires_at > now
         }
 
-    async def begin(self, session_id: str, redirect_uri: str) -> AuthorizationStart:
+    async def begin(
+        self, session_id: str, redirect_uri: str, upgrade_account_id: str | None = None
+    ) -> AuthorizationStart:
         await self._repository.session_owner(session_id)
         # Match the planned native listener exactly; no arbitrary callback target,
         # credentials, DNS aliases, path traversal, fragments or query strings.
@@ -86,12 +95,24 @@ class GoogleOAuthCoordinator:
         self._expire()
         if len(self._pending) + len(self._active) >= 16:
             raise AssistantAccessError("oauth_flow_limit")
+        expected_primary = (
+            await self._accounts.primary_identity(session_id, upgrade_account_id)
+            if upgrade_account_id
+            else None
+        )
         state = secrets.token_urlsafe(32)
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(
             b"="
         )
-        self._pending[state] = _Pending(session_id, redirect_uri, verifier, time.monotonic() + 300)
+        self._pending[state] = _Pending(
+            session_id,
+            redirect_uri,
+            verifier,
+            time.monotonic() + 300,
+            upgrade_account_id,
+            expected_primary,
+        )
         return AuthorizationStart(
             state,
             "https://accounts.google.com/o/oauth2/v2/auth?"
@@ -100,7 +121,7 @@ class GoogleOAuthCoordinator:
                     "client_id": self._client.client_id,
                     "redirect_uri": redirect_uri,
                     "response_type": "code",
-                    "scope": READ_SCOPE,
+                    "scope": " ".join((READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE)),
                     "access_type": "offline",
                     "prompt": "consent",
                     "state": state,
@@ -142,6 +163,15 @@ class GoogleOAuthCoordinator:
                 verifier=pending.verifier,
                 redirect_uri=pending.redirect_uri,
             )
+            if pending.upgrade_account_id is not None:
+                assert pending.expected_primary is not None
+                return await self._accounts.upgrade_authorized(
+                    session_id, pending.upgrade_account_id, pending.expected_primary, tokens
+                )
+            if not tokens.scopes or not {READ_SCOPE, WRITE_SCOPE, TASKS_SCOPE}.issubset(
+                tokens.scopes
+            ):
+                raise AssistantAccessError("google_write_consent_required")
             return await self._accounts.connect_authorized(session_id, tokens)
         finally:
             self._active.pop(state, None)
