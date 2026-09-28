@@ -288,7 +288,11 @@ export function InteractionDiagnosticsPanel({
                     ))}
                   </ol>
                   {detail.truncated ? (
-                    <small>结果已截断，请按游标继续查看。</small>
+                    <small>
+                      {detail.next_cursor === null
+                        ? "部分元数据超过上限，已截断。"
+                        : "事件时间线已截断，请按游标继续查看。"}
+                    </small>
                   ) : null}
                   {detail.next_cursor !== null &&
                   detail.next_cursor !== undefined ? (

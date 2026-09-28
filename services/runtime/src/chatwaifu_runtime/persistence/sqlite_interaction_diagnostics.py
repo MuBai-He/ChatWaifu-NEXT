@@ -272,7 +272,7 @@ class SQLiteInteractionDiagnosticsReader:
                 json_extract(envelope_json, '$.generation_id') = ?
                 OR (json_extract(envelope_json, '$.turn_id') = ?
                     AND json_extract(envelope_json, '$.generation_id') IS NULL)
-            ) ORDER BY sequence ASC LIMIT 500
+            ) ORDER BY sequence ASC LIMIT 501
             """,
             (session_key, generation_key, turn_key),
         )
@@ -281,7 +281,7 @@ class SQLiteInteractionDiagnosticsReader:
         identity: PromptContextIdentity | None = None
         budget: PromptBudgetReport | None = None
         plan: DiagnosticResponsePlan | None = None
-        for item in metadata:
+        for item in metadata[:500]:
             payload = _payload(item["payload_json"])
             if item["event_type"] == "memory.recalled":
                 ids = payload.get("memory_ids")
@@ -438,7 +438,7 @@ class SQLiteInteractionDiagnosticsReader:
             truncated=any(
                 (
                     event_truncated,
-                    len(metadata) == 500,
+                    len(metadata) > 500,
                     len(tool_rows) > 200,
                     len(part_rows) > 200,
                     len(playback_rows) > 200,

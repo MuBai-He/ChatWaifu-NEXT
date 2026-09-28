@@ -124,4 +124,25 @@ describe("InteractionDiagnosticsPanel", () => {
       expect(screen.getByText(/生成：cancelled/)).toBeTruthy(),
     );
   });
+
+  it("does not promise a cursor for bounded non-timeline metadata", async () => {
+    vi.mocked(runtimeClient.getInteractionTraceDetail).mockResolvedValue({
+      ...detail(first),
+      truncated: true,
+      next_cursor: null,
+    });
+    render(
+      <InteractionDiagnosticsPanel
+        sessionId={first.session_id}
+        runtimeOnline
+      />,
+    );
+    fireEvent.click(screen.getByText("高级诊断：单次互动"));
+    const list = await screen.findByRole("list", { name: "互动诊断列表" });
+    fireEvent.click(list.querySelectorAll("button")[0]);
+    expect(
+      await screen.findByText("部分元数据超过上限，已截断。"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "继续读取事件" })).toBeNull();
+  });
 });
