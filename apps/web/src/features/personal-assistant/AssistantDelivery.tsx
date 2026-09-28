@@ -104,9 +104,7 @@ export function AssistantDelivery() {
           [item.delivery_id]: { action, rejected: true },
         }));
       } else {
-        setError(
-          "声音已停止；操作已保存到本机，会在恢复连接后自动确认。",
-        );
+        setError("声音已停止；操作已保存到本机，会在恢复连接后自动确认。");
       }
     } finally {
       clicking.current.delete(item.delivery_id);
@@ -378,7 +376,10 @@ export function AssistantDelivery() {
       } catch (cause) {
         failures += 1;
         sounding.current.clear(); // Network loss cannot keep an un-cancellable alarm ringing.
-        if (cause instanceof Error && cause.message === "device_not_authorized") {
+        if (
+          cause instanceof Error &&
+          cause.message === "device_not_authorized"
+        ) {
           revokedDevice.current = active.current?.binding.device_id ?? null;
           setRevoked(true);
           setDeliveries([]);
@@ -428,12 +429,12 @@ export function AssistantDelivery() {
         : undefined,
     [actionCount, actionError, deliveries.length, revoked],
   );
-  const pendingCount = revoked ? 0 : Object.values(actions).filter(
-    (record) => !record.rejected,
-  ).length;
-  const rejectedActions = revoked ? [] : Object.entries(actions).filter(
-    ([, record]) => record.rejected,
-  );
+  const pendingCount = revoked
+    ? 0
+    : Object.values(actions).filter((record) => !record.rejected).length;
+  const rejectedActions = revoked
+    ? []
+    : Object.entries(actions).filter(([, record]) => record.rejected);
   if (
     !deliveries.length &&
     !pendingCount &&

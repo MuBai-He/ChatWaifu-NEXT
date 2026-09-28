@@ -93,7 +93,12 @@ describe("desktop reminder delivery ownership", () => {
   it("keeps the delivery actionable when local journaling fails", async () => {
     vi.mocked(deviceCall).mockImplementation(async (_server, action) => {
       if (action === "load")
-        return { device_id: "device", secret: "secret", sources: [], results: {} };
+        return {
+          device_id: "device",
+          secret: "secret",
+          sources: [],
+          results: {},
+        };
       if (action === "present") return { first: true };
       if (action === "queue_action") throw new Error("device_save_failed");
       return {};
@@ -155,28 +160,33 @@ describe("desktop reminder delivery ownership", () => {
   it("retries a locally saved snooze after reconnect without presenting it again", async () => {
     const actions: Record<string, { action: "snooze"; rejected: boolean }> = {};
     let snoozeAttempts = 0;
-    vi.mocked(deviceCall).mockImplementation(async (_server, action, payload) => {
-      if (action === "load")
-        return {
-          device_id: "device",
-          secret: "secret",
-          sources: [],
-          results: {},
-          actions: { ...actions },
-        };
-      if (action === "present") return { first: true };
-      if (action === "queue_action") {
-        actions[(payload as { id: string }).id] = {
-          action: "snooze",
-          rejected: false,
-        };
-      }
-      if (action === "forget_action") delete actions[payload as string];
-      return {};
-    });
+    vi.mocked(deviceCall).mockImplementation(
+      async (_server, action, payload) => {
+        if (action === "load")
+          return {
+            device_id: "device",
+            secret: "secret",
+            sources: [],
+            results: {},
+            actions: { ...actions },
+          };
+        if (action === "present") return { first: true };
+        if (action === "queue_action") {
+          actions[(payload as { id: string }).id] = {
+            action: "snooze",
+            rejected: false,
+          };
+        }
+        if (action === "forget_action") delete actions[payload as string];
+        return {};
+      },
+    );
     vi.mocked(organizerRequest).mockImplementation(async (path, body) => {
       if (path === "/devices/poll")
-        return { deliveries: snoozeAttempts > 1 ? [] : deliveries, operations: [] };
+        return {
+          deliveries: snoozeAttempts > 1 ? [] : deliveries,
+          operations: [],
+        };
       if (
         path === "/devices/ack" &&
         (body as { action?: string })?.action === "snooze"
@@ -204,25 +214,35 @@ describe("desktop reminder delivery ownership", () => {
     deliveries = [delivery, second];
     const presented = new Set<string>();
     let finishSecond!: (value: { first: boolean }) => void;
-    vi.mocked(deviceCall).mockImplementation(async (_server, action, payload) => {
-      if (action === "load")
-        return { device_id: "device", secret: "secret", sources: [], results: {} };
-      if (action === "present") {
-        const id = (payload as { id: string }).id;
-        if (id === second.delivery_id) {
-          const value = await new Promise<{ first: boolean }>((resolve) => {
-            finishSecond = resolve;
-          });
+    vi.mocked(deviceCall).mockImplementation(
+      async (_server, action, payload) => {
+        if (action === "load")
+          return {
+            device_id: "device",
+            secret: "secret",
+            sources: [],
+            results: {},
+          };
+        if (action === "present") {
+          const id = (payload as { id: string }).id;
+          if (id === second.delivery_id) {
+            const value = await new Promise<{ first: boolean }>((resolve) => {
+              finishSecond = resolve;
+            });
+            presented.add(id);
+            return value;
+          }
           presented.add(id);
-          return value;
+          return { first: true };
         }
-        presented.add(id);
-        return { first: true };
-      }
-      if (action === "queue_action" && !presented.has((payload as { id: string }).id))
-        throw new Error("delivery_not_presented");
-      return {};
-    });
+        if (
+          action === "queue_action" &&
+          !presented.has((payload as { id: string }).id)
+        )
+          throw new Error("delivery_not_presented");
+        return {};
+      },
+    );
     render(<AssistantDelivery />);
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(presented.has(delivery.delivery_id)).toBe(true);
@@ -233,10 +253,13 @@ describe("desktop reminder delivery ownership", () => {
     fireEvent.click(screen.getAllByText("关闭")[1]);
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(
-      vi.mocked(deviceCall).mock.calls.some(
-        (call) => call[1] === "queue_action" &&
-          (call[2] as { id: string }).id === second.delivery_id,
-      ),
+      vi
+        .mocked(deviceCall)
+        .mock.calls.some(
+          (call) =>
+            call[1] === "queue_action" &&
+            (call[2] as { id: string }).id === second.delivery_id,
+        ),
     ).toBe(true);
     expect(screen.queryByText(/本机未能保存/)).toBeNull();
   });
@@ -263,9 +286,7 @@ describe("desktop reminder delivery ownership", () => {
         (body as { action?: string })?.action === "snooze"
       )
         throw new Error("delivery_not_active");
-      return path === "/devices/poll"
-        ? { deliveries, operations: [] }
-        : {};
+      return path === "/devices/poll" ? { deliveries, operations: [] } : {};
     });
     render(<AssistantDelivery />);
     await act(() => vi.advanceTimersByTimeAsync(0));

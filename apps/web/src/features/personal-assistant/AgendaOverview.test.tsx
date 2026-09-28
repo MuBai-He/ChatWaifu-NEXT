@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/require-await -- mocked transports settle immediately */
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestRuntime } from "../chat/runtime-client/http";
 import { organizerRequest } from "./organizer";
@@ -39,7 +45,13 @@ describe("reminder inbox", () => {
     vi.mocked(organizerRequest).mockImplementation(async (path) =>
       path.startsWith("/organizer/history/")
         ? { dismissed: true }
-        : { devices: [], tasks: [], operations: [], scheduler_error: null, history },
+        : {
+            devices: [],
+            tasks: [],
+            operations: [],
+            scheduler_error: null,
+            history,
+          },
     );
     render(<AgendaOverview sessionId="owner-session" />);
     await waitFor(() => expect(screen.getByText("离线闹钟")).toBeTruthy());

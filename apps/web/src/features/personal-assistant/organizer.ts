@@ -25,10 +25,7 @@ export interface DeviceBinding {
   source_revision: number;
   results: Record<string, Record<string, unknown>>;
   presentation_receipts?: string[];
-  actions?: Record<
-    string,
-    { action: "stop" | "snooze"; rejected: boolean }
-  >;
+  actions?: Record<string, { action: "stop" | "snooze"; rejected: boolean }>;
 }
 export interface AssistantDevice {
   device_id: string;
