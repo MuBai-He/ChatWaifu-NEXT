@@ -53,6 +53,10 @@ from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSki
 from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
+from chatwaifu_runtime.personal_assistant.agenda_skill import (
+    AgendaManageSkill,
+    GoogleTasksReadSkill,
+)
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
 from chatwaifu_runtime.personal_assistant.organizer_skill import OrganizerSkill
 from chatwaifu_runtime.personal_assistant.skill import CalendarReadSkill
@@ -188,6 +192,8 @@ class RuntimeContainer:
             mcp_private_origins=settings.security.mcp_private_origins,
             session_builtin_handlers={
                 "calendar_read": CalendarReadSkill(self.personal_assistant),
+                "agenda_manage": AgendaManageSkill(self.personal_assistant),
+                "google_tasks_read": GoogleTasksReadSkill(self.personal_assistant),
                 **{
                     name: OrganizerSkill(self.personal_assistant, name)
                     for name in (

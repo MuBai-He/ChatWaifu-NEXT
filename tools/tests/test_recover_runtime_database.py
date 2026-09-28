@@ -72,11 +72,13 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
     _seed_source(source, delete_session=True)
     with closing(sqlite3.connect(source)) as original, original:
         original.execute(
-            "INSERT INTO assistant_accounts VALUES (?, 'local', 'connected', ?, 1)",
+            "INSERT INTO assistant_accounts(account_id,owner_scope,status,secret_ref,revision) "
+            "VALUES (?, 'local', 'connected', ?, 1)",
             ("owner-google", "assistant-secret-ref"),
         )
         original.execute(
-            "INSERT INTO assistant_calendars VALUES (?, ?, ?, ?, ?, 1, 2, ?, ?)",
+            "INSERT INTO assistant_calendars(account_id,calendar_id,title,timezone,access_role,"
+            "selected,revision,sync_token,synced_at) VALUES (?, ?, ?, ?, ?, 1, 2, ?, ?)",
             ("owner-google", "primary", "工作", "Asia/Shanghai", "owner", "cursor", NOW),
         )
         original.execute(

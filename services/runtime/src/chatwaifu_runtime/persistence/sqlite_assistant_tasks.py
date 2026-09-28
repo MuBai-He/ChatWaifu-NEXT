@@ -54,6 +54,10 @@ class SQLiteTaskRepository:
     async def revoke(self, device_id: str) -> None:
         async with self.db.transaction() as c:
             await c.execute(
+                "DELETE FROM assistant_write_destinations WHERE provider='apple' AND device_id=?",
+                (device_id,),
+            )
+            await c.execute(
                 "UPDATE assistant_devices SET revoked=1,secret_hash='',sources_json='[]' "
                 "WHERE device_id=?",
                 (device_id,),
@@ -229,7 +233,12 @@ class SQLiteTaskRepository:
                 )
             await c.execute(
                 "UPDATE assistant_deliveries SET state='missed' WHERE expires<=? AND "
-                "state IN ('pending','presented')",
+                "state='pending'",
+                (now,),
+            )
+            await c.execute(
+                "UPDATE assistant_deliveries SET state='unhandled' WHERE expires<=? AND "
+                "state='presented'",
                 (now,),
             )
             # A leased write may already have reached EventKit. Never retry it automatically.
@@ -266,7 +275,21 @@ class SQLiteTaskRepository:
                 sources = json.loads(old["sources_json"])
                 source_revision = old["source_revision"]
             allowed = {(s["resource"], s["id"]) for s in sources}
+            writable = {(s["resource"], s["id"]) for s in sources if s["writable"]}
             if json.loads(old["sources_json"]) != sources:
+                async with c.execute(
+                    "SELECT kind,collection_id FROM assistant_write_destinations "
+                    "WHERE provider='apple' AND device_id=?",
+                    (device_id,),
+                ) as cursor:
+                    defaults = await cursor.fetchall()
+                for destination in defaults:
+                    if (destination["kind"], destination["collection_id"]) not in writable:
+                        await c.execute(
+                            "DELETE FROM assistant_write_destinations WHERE kind=? "
+                            "AND provider='apple' AND device_id=?",
+                            (destination["kind"], device_id),
+                        )
                 async with c.execute(
                     "SELECT operation_id,payload_json,state FROM assistant_operations "
                     "WHERE device_id=?",
@@ -294,7 +317,7 @@ class SQLiteTaskRepository:
             if not deliver:
                 return {"schema_version": "1.0", "updated": True}
             async with c.execute(
-                "SELECT d.delivery_id,d.expires,d.state,t.payload_json FROM "
+                "SELECT d.delivery_id,d.due,d.expires,d.state,t.payload_json FROM "
                 "assistant_deliveries d JOIN assistant_tasks t USING(task_id) WHERE "
                 "d.device_id=? AND d.state IN ('pending','presented') AND d.due<=? AND "
                 "d.expires>? ORDER BY d.due LIMIT 20",
@@ -302,7 +325,13 @@ class SQLiteTaskRepository:
             ) as cursor:
                 rows = await cursor.fetchall()
             deliveries = [
-                {"delivery_id": r[0], "expires": r[1], "state": r[2], **json.loads(r[3])}
+                {
+                    "delivery_id": r[0],
+                    "due": r[1],
+                    "expires": r[2],
+                    "state": r[3],
+                    **json.loads(r[4]),
+                }
                 for r in rows
             ]
             async with c.execute(
@@ -385,6 +414,15 @@ class SQLiteTaskRepository:
                 row = await cursor.fetchone()
             if row is not None and row["state"] == "acknowledged" and row["ack_action"] == action:
                 return
+            if action == "presented" and row is not None:
+                if row["state"] == "unhandled":
+                    return
+                if row["state"] == "missed":
+                    await c.execute(
+                        "UPDATE assistant_deliveries SET state='unhandled' WHERE delivery_id=?",
+                        (item_id,),
+                    )
+                    return
             if row is None or row["state"] not in ("pending", "presented") or row["expires"] <= now:
                 raise ValueError("delivery_not_active")
             if action == "presented":
@@ -456,7 +494,36 @@ class SQLiteTaskRepository:
 
     async def history(self) -> list[dict[str, Any]]:
         rows = await self.db.fetchall(
-            "SELECT delivery_id,task_id,due,state FROM assistant_deliveries ORDER BY "
-            "due DESC LIMIT 50"
+            "SELECT d.delivery_id,d.task_id,d.due,d.state,t.payload_json "
+            "FROM assistant_deliveries d JOIN assistant_tasks t USING(task_id) "
+            "WHERE d.state IN ('missed','unhandled') ORDER BY d.due DESC LIMIT 50"
         )
-        return [{"delivery_id": r[0], "task_id": r[1], "due": r[2], "state": r[3]} for r in rows]
+        items = [(row, TaskInput.model_validate_json(row[4])) for row in rows]
+        return [
+            {
+                "delivery_id": r[0],
+                "task_id": r[1],
+                "due": r[2],
+                "state": r[3],
+                "title": payload.title,
+                "kind": payload.kind,
+            }
+            for r, payload in items
+        ]
+
+    async def dismiss_history(self, delivery_id: str) -> None:
+        async with self.db.transaction() as connection:
+            async with connection.execute(
+                "UPDATE assistant_deliveries SET state='dismissed' WHERE delivery_id=? "
+                "AND state IN ('missed','unhandled')",
+                (delivery_id,),
+            ) as cursor:
+                if cursor.rowcount == 1:
+                    return
+            async with connection.execute(
+                "SELECT state FROM assistant_deliveries WHERE delivery_id=?",
+                (delivery_id,),
+            ) as cursor:
+                row = await cursor.fetchone()
+            if row is None or row[0] != "dismissed":
+                raise ValueError("history_item_not_dismissible")

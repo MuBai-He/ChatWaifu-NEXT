@@ -163,12 +163,35 @@ fn validate_url(value: &str, redirect: &str) -> Result<(tauri::Url, String), Str
         ("redirect_uri", redirect),
         ("response_type", "code"),
         ("code_challenge_method", "S256"),
-        ("scope", "https://www.googleapis.com/auth/calendar.readonly"),
         ("access_type", "offline"),
     ] {
         if params.get(key).map(String::as_str) != Some(expected) {
             return Err("授权参数无效".into());
         }
+    }
+    // Accept only the old read-only request or the current Calendar/Tasks request.
+    // Compare as a set so OAuth scope ordering cannot disable a valid login, while
+    // duplicate or unexpected permissions still fail before opening the browser.
+    let read_scope = "https://www.googleapis.com/auth/calendar.readonly";
+    let requested = params
+        .get("scope")
+        .ok_or("授权参数无效")?
+        .split_whitespace()
+        .collect::<Vec<_>>();
+    let unique = requested
+        .iter()
+        .copied()
+        .collect::<std::collections::HashSet<_>>();
+    let current_scopes = [
+        read_scope,
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/tasks",
+    ];
+    if !((requested.len() == 1 && unique.contains(read_scope))
+        || (requested.len() == current_scopes.len()
+            && current_scopes.iter().all(|scope| unique.contains(scope))))
+    {
+        return Err("授权参数无效".into());
     }
     let expected_state = params
         .get("state")
@@ -325,9 +348,7 @@ async fn receive(listener: &TcpListener, expected: &str) -> Result<CallbackResul
 mod tests {
     use super::*;
 
-    #[test]
-    fn refuses_wrong_host_and_callback() {
-        let redirect = "http://127.0.0.1:55555/oauth/google";
+    fn authorization_url(redirect: &str, scope: &str) -> tauri::Url {
         let mut url = tauri::Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
         url.query_pairs_mut().extend_pairs([
             ("redirect_uri", redirect),
@@ -336,10 +357,42 @@ mod tests {
             ("client_id", "client"),
             ("code_challenge", &"a".repeat(43)),
             ("state", &"s".repeat(43)),
-            ("scope", "https://www.googleapis.com/auth/calendar.readonly"),
+            ("scope", scope),
             ("access_type", "offline"),
         ]);
+        url
+    }
+
+    #[test]
+    fn refuses_wrong_host_and_callback() {
+        let redirect = "http://127.0.0.1:55555/oauth/google";
+        let mut url = authorization_url(
+            redirect,
+            "https://www.googleapis.com/auth/calendar.readonly",
+        );
         assert!(validate_url(url.as_str(), redirect).is_ok());
+        assert!(
+            validate_url(
+                authorization_url(
+                    redirect,
+                    "https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
+                )
+                .as_str(),
+                redirect,
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_url(
+                authorization_url(
+                    redirect,
+                    "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar",
+                )
+                .as_str(),
+                redirect,
+            )
+            .is_err()
+        );
         assert!(validate_url(url.as_str(), "http://127.0.0.1:44444/oauth/google").is_err());
         url.set_host(Some("example.com")).unwrap();
         assert!(validate_url(url.as_str(), redirect).is_err());

@@ -2,20 +2,21 @@
 
 import json
 from dataclasses import asdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.personal_assistant.accounts import GoogleAccountService
+from chatwaifu_runtime.personal_assistant.agenda import AgendaService
 from chatwaifu_runtime.personal_assistant.google_calendar import GoogleCalendarError
 from chatwaifu_runtime.personal_assistant.oauth import GoogleOAuthCoordinator
-from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
+from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError, WriteDestination
 from chatwaifu_runtime.personal_assistant.tasks import AppleOperation, TaskInput, TaskService
 
 router = APIRouter(prefix="/v1/personal-assistant", tags=["personal-assistant"])
@@ -30,11 +31,15 @@ class AssistantStatusResponse(BaseModel):
 class AccountStatusResponse(BaseModel):
     account_id: str
     status: str
+    calendar_write: bool = False
+    tasks_write: bool = False
+    display_label: str | None = None
 
 
 class OAuthBeginRequest(BaseModel):
     session_id: UUID
     redirect_uri: str = Field(max_length=512)
+    upgrade_account_id: UUID | None = None
 
 
 class OAuthFlowRequest(BaseModel):
@@ -98,9 +103,15 @@ async def assistant_status(request: Request) -> AssistantStatusResponse:
 async def oauth_begin(request: Request, body: OAuthBeginRequest) -> OAuthBeginResponse:
     coordinator = _oauth(request)
     try:
-        flow = await coordinator.begin(str(body.session_id), body.redirect_uri)
+        flow = await coordinator.begin(
+            str(body.session_id),
+            body.redirect_uri,
+            str(body.upgrade_account_id) if body.upgrade_account_id else None,
+        )
     except AssistantAccessError as error:
         raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
     return OAuthBeginResponse(
         state=flow.state, authorization_url=flow.authorization_url, expires_in=flow.expires_in
     )
@@ -140,7 +151,7 @@ async def assistant_accounts(request: Request, session_id: UUID) -> list[Account
         accounts = await service.status(str(session_id))
     except AssistantAccessError:
         raise HTTPException(403, "personal_account_requires_owner") from None
-    return [AccountStatusResponse(account_id=a.account_id, status=a.status) for a in accounts]
+    return [AccountStatusResponse(**asdict(a)) for a in accounts]
 
 
 class CalendarRequest(BaseModel):
@@ -210,6 +221,356 @@ async def query_events(
         raise HTTPException(403, str(error)) from None
     except GoogleCalendarError as error:
         raise HTTPException(502, error.code) from None
+
+
+class GoogleOwnerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    account_id: UUID
+
+
+class EventCreateRequest(GoogleOwnerRequest):
+    calendar_id: str = Field(min_length=1, max_length=2048)
+    request_id: UUID
+    title: str = Field(min_length=1, max_length=200)
+    start: AwareDatetime
+    end: AwareDatetime
+
+    @model_validator(mode="after")
+    def valid_window(self):
+        if self.end <= self.start or self.end - self.start > timedelta(days=31):
+            raise ValueError("event_end_must_follow_start")
+        return self
+
+
+class EventMutationRequest(GoogleOwnerRequest):
+    calendar_id: str = Field(min_length=1, max_length=2048)
+    etag: str = Field(min_length=1, max_length=256)
+
+
+class EventUpdateRequest(EventMutationRequest):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    start: AwareDatetime | None = None
+    end: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def valid_change(self):
+        if (self.start is None) != (self.end is None):
+            raise ValueError("event_start_and_end_required_together")
+        if (
+            self.start is not None
+            and self.end is not None
+            and (self.end <= self.start or self.end - self.start > timedelta(days=31))
+        ):
+            raise ValueError("event_end_must_follow_start")
+        if self.title is None and self.start is None:
+            raise ValueError("event_change_required")
+        return self
+
+
+def _google_write_error(error: GoogleCalendarError) -> HTTPException:
+    if error.code == "item_changed_refresh_before_editing":
+        return HTTPException(409, error.code)
+    if error.code == "item_not_found":
+        return HTTPException(404, error.code)
+    if error.code == "item_already_exists":
+        return HTTPException(409, "event_request_already_exists_refresh_before_retry")
+    if error.code == "transport_error" or error.retryable:
+        return HTTPException(502, "write_outcome_uncertain_check_provider_before_retry")
+    return HTTPException(502, error.code)
+
+
+@router.post("/events")
+async def create_google_event(request: Request, body: EventCreateRequest):
+    try:
+        item = await _accounts_service(request).create_event(
+            str(body.session_id),
+            str(body.account_id),
+            body.calendar_id,
+            body.request_id.hex,
+            body.title,
+            body.start,
+            body.end,
+        )
+        return {"item": asdict(item), "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+@router.patch("/events/{event_id}")
+async def update_google_event(request: Request, event_id: str, body: EventUpdateRequest):
+    if not event_id or len(event_id) > 2048:
+        raise HTTPException(422, "invalid_event_id")
+    changes: dict[str, object] = {}
+    if body.title is not None:
+        changes["summary"] = body.title.strip()
+    if body.start is not None and body.end is not None:
+        changes["start"] = {"dateTime": body.start.isoformat()}
+        changes["end"] = {"dateTime": body.end.isoformat()}
+    try:
+        item = await _accounts_service(request).update_event(
+            str(body.session_id),
+            str(body.account_id),
+            body.calendar_id,
+            event_id,
+            body.etag,
+            changes,
+        )
+        return {"item": asdict(item), "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+@router.delete("/events/{event_id}")
+async def delete_google_event(request: Request, event_id: str, body: EventMutationRequest):
+    if not event_id or len(event_id) > 2048:
+        raise HTTPException(422, "invalid_event_id")
+    try:
+        await _accounts_service(request).delete_event(
+            str(body.session_id),
+            str(body.account_id),
+            body.calendar_id,
+            event_id,
+            body.etag,
+        )
+        return {"deleted": True, "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+class GoogleTaskCreateRequest(GoogleOwnerRequest):
+    list_id: str = Field(min_length=1, max_length=2048)
+    title: str = Field(min_length=1, max_length=200)
+    notes: str | None = Field(default=None, max_length=8192)
+    due: date | None = None
+
+
+class GoogleTaskMutationRequest(GoogleOwnerRequest):
+    list_id: str = Field(min_length=1, max_length=2048)
+    etag: str = Field(min_length=1, max_length=256)
+
+
+class GoogleTaskUpdateRequest(GoogleTaskMutationRequest):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    notes: str | None = Field(default=None, max_length=8192)
+    due: date | None = None
+    status: Literal["needsAction", "completed"] | None = None
+
+    @model_validator(mode="after")
+    def valid_change(self):
+        if not self.model_fields_set.intersection({"title", "notes", "due", "status"}):
+            raise ValueError("task_change_required")
+        if ("title" in self.model_fields_set and self.title is None) or (
+            "status" in self.model_fields_set and self.status is None
+        ):
+            raise ValueError("task_title_and_status_cannot_be_null")
+        return self
+
+
+@router.get("/google-tasklists")
+async def google_tasklists(
+    request: Request, session_id: UUID, account_id: UUID, discover: bool = False
+):
+    try:
+        items = await _accounts_service(request).tasklists(
+            str(session_id), str(account_id), discover=discover
+        )
+        return {"items": [asdict(item) for item in items]}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
+
+
+class TaskListSelectionRequest(GoogleOwnerRequest):
+    list_id: str = Field(min_length=1, max_length=2048)
+    selected: bool
+
+
+@router.put("/google-tasklists/selection")
+async def select_google_tasklist(request: Request, body: TaskListSelectionRequest):
+    try:
+        await _accounts_service(request).select_tasklist(
+            str(body.session_id), str(body.account_id), body.list_id, body.selected
+        )
+        return {"selected": body.selected}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+
+
+@router.get("/google-tasks")
+async def google_tasks(request: Request, session_id: UUID, account_id: UUID, list_id: str):
+    try:
+        items = await _accounts_service(request).tasks(str(session_id), str(account_id), list_id)
+        return {"items": [asdict(item) for item in items]}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
+
+
+@router.post("/google-tasks")
+async def create_google_task(request: Request, body: GoogleTaskCreateRequest):
+    try:
+        item = await _accounts_service(request).create_task(
+            str(body.session_id),
+            str(body.account_id),
+            body.list_id,
+            body.title,
+            body.notes,
+            body.due,
+        )
+        return {"item": asdict(item), "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+@router.patch("/google-tasks/{task_id}")
+async def update_google_task(request: Request, task_id: str, body: GoogleTaskUpdateRequest):
+    if not task_id or len(task_id) > 2048:
+        raise HTTPException(422, "invalid_task_id")
+    changes: dict[str, object] = {}
+    for name in ("title", "notes", "status"):
+        if name in body.model_fields_set:
+            changes[name] = getattr(body, name)
+    if "due" in body.model_fields_set:
+        changes["due"] = f"{body.due.isoformat()}T00:00:00.000Z" if body.due else None
+    try:
+        item = await _accounts_service(request).update_task(
+            str(body.session_id),
+            str(body.account_id),
+            body.list_id,
+            task_id,
+            body.etag,
+            changes,
+        )
+        return {"item": asdict(item), "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+@router.delete("/google-tasks/{task_id}")
+async def delete_google_task(request: Request, task_id: str, body: GoogleTaskMutationRequest):
+    if not task_id or len(task_id) > 2048:
+        raise HTTPException(422, "invalid_task_id")
+    try:
+        await _accounts_service(request).delete_task(
+            str(body.session_id),
+            str(body.account_id),
+            body.list_id,
+            task_id,
+            body.etag,
+        )
+        return {"deleted": True, "source": "google"}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
+
+
+def _agenda_service(request: Request) -> AgendaService:
+    service = request.app.state.container.personal_assistant.agenda
+    if service is None:
+        raise HTTPException(409, "personal_assistant_disabled")
+    return service
+
+
+class DestinationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    kind: Literal["calendar", "reminder"]
+    provider: Literal["google", "apple"]
+    account_id: UUID | None = None
+    collection_id: str = Field(min_length=1, max_length=2048)
+    device_id: UUID | None = None
+
+
+@router.get("/destinations")
+async def agenda_destinations(request: Request, session_id: UUID):
+    try:
+        items = await _agenda_service(request).destinations(str(session_id))
+        return {"items": [asdict(item) for item in items]}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+
+
+@router.put("/destinations")
+async def set_agenda_destination(request: Request, body: DestinationRequest):
+    destination = WriteDestination(
+        body.kind,
+        body.provider,
+        str(body.account_id) if body.account_id else None,
+        body.collection_id,
+        str(body.device_id) if body.device_id else None,
+    )
+    try:
+        await _agenda_service(request).set_destination(str(body.session_id), destination)
+        return {"destination": asdict(destination)}
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise HTTPException(502, error.code) from None
+
+
+class AgendaCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    kind: Literal["calendar", "reminder"]
+    request_id: UUID
+    title: str = Field(min_length=1, max_length=200)
+    start: AwareDatetime | None = None
+    end: AwareDatetime | None = None
+    due_date: date | None = None
+    due_at: AwareDatetime | None = None
+    notes: str | None = Field(default=None, max_length=8192)
+
+    @model_validator(mode="after")
+    def valid_shape(self):
+        if self.kind == "calendar":
+            if (
+                self.start is None
+                or self.end is None
+                or self.end <= self.start
+                or self.end - self.start > timedelta(days=31)
+            ):
+                raise ValueError("event_start_and_end_required")
+            if self.due_date is not None or self.due_at is not None:
+                raise ValueError("calendar_cannot_have_task_due")
+        elif self.start is not None or self.end is not None:
+            raise ValueError("reminder_cannot_have_event_window")
+        if self.due_date is not None and self.due_at is not None:
+            raise ValueError("choose_date_or_time")
+        return self
+
+
+@router.post("/agenda/items")
+async def create_agenda_item(request: Request, body: AgendaCreateRequest):
+    try:
+        return await _agenda_service(request).create(
+            str(body.session_id),
+            body.kind,
+            body.request_id,
+            body.title,
+            start=body.start,
+            end=body.end,
+            due_date=body.due_date,
+            due_at=body.due_at,
+            notes=body.notes,
+        )
+    except AssistantAccessError as error:
+        raise HTTPException(403, str(error)) from None
+    except GoogleCalendarError as error:
+        raise _google_write_error(error) from None
 
 
 # Task/device APIs share Runtime authentication. Device secrets are an additional,
@@ -313,6 +674,16 @@ async def organizer(request: Request, session_id: UUID):
         "scheduler_error": service.last_error,
         "history": await service.repository.history(),
     }
+
+
+@router.post("/organizer/history/{delivery_id}/dismiss")
+async def dismiss_organizer_history(request: Request, delivery_id: UUID, body: OwnerRequest):
+    service = await _owner_tasks(request, body.session_id)
+    try:
+        await service.repository.dismiss_history(str(delivery_id))
+    except ValueError as error:
+        raise _task_error(error) from None
+    return {"dismissed": True}
 
 
 @router.post("/devices")

@@ -19,6 +19,8 @@ struct Binding {
     journal: BTreeMap<String, Value>,
     #[serde(default)]
     presented: Vec<String>,
+    #[serde(default)]
+    presentation_receipts: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -113,7 +115,7 @@ fn run(app: AppHandle, call: DeviceCall) -> Result<Value, String> {
             .map_err(|_| "notification_permission_failed".into());
     }
     if call.action == "load" {
-        return Ok(bindings.get(&server).map_or(Value::Null, |b| json!({"device_id":b.device_id,"secret":b.secret,"sources":b.sources,"source_revision":b.source_revision,"results":b.journal})));
+        return Ok(bindings.get(&server).map_or(Value::Null, |b| json!({"device_id":b.device_id,"secret":b.secret,"sources":b.sources,"source_revision":b.source_revision,"results":b.journal,"presentation_receipts":b.presentation_receipts.iter().take(20).collect::<Vec<_>>()})));
     }
     if call.action == "pair" {
         let device_id = call.payload["device_id"]
@@ -183,7 +185,11 @@ fn run(app: AppHandle, call: DeviceCall) -> Result<Value, String> {
                 .ok_or("invalid_delivery")?;
             let first = !binding.presented.iter().any(|v| v == id);
             if first {
+                if binding.presentation_receipts.len() >= 10_000 {
+                    return Err("presentation_receipt_queue_full".into());
+                }
                 binding.presented.push(id.into());
+                binding.presentation_receipts.push(id.into());
                 if binding.presented.len() > 1000 {
                     binding.presented.remove(0);
                 }
@@ -212,6 +218,13 @@ fn run(app: AppHandle, call: DeviceCall) -> Result<Value, String> {
         "forget_result" => {
             if let Some(id) = call.payload.as_str() {
                 binding.journal.remove(id);
+            }
+        }
+        "forget_presentation" => {
+            if let Some(id) = call.payload.as_str() {
+                binding
+                    .presentation_receipts
+                    .retain(|receipt| receipt != id);
             }
         }
         "execute" => {
@@ -294,7 +307,7 @@ pub async fn assistant_device(
     }
     if matches!(
         call.action.as_str(),
-        "execute" | "present" | "sound" | "notify" | "forget_result"
+        "execute" | "present" | "sound" | "notify" | "forget_result" | "forget_presentation"
     ) && !overlay
     {
         return Err("device_executor_is_overlay_only".into());
