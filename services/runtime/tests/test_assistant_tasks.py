@@ -120,6 +120,25 @@ async def test_snooze_and_cancel_fence_late_ack(
     assert not (await repo.poll(device["device_id"], device["secret"], [], 404))["deliveries"]
 
 
+async def test_snoozed_reminder_keeps_one_hour_lateness_window(
+    tasks: tuple[Database, SQLiteTaskRepository],
+) -> None:
+    _, repo = tasks
+    device = await repo.pair("desktop")
+    reminder = task(device["device_id"]).model_copy(update={"kind": "reminder"})
+    await repo.create_task(reminder, 0)
+    await repo.tick(100)
+    original = (await repo.poll(device["device_id"], device["secret"], [], 100))["deliveries"][0]
+    await repo.acknowledge(
+        device["device_id"], device["secret"], original["delivery_id"], "snooze", {}, 101
+    )
+    snoozed = (await repo.poll(device["device_id"], device["secret"], [], 600))["deliveries"][0]
+    assert snoozed["due"] == 401
+    assert snoozed["expires"] == 4001
+    await repo.tick(4001)
+    assert (await repo.history())[0]["state"] == "missed"
+
+
 async def test_no_cross_device_delivery_or_revoked_acks(
     tasks: tuple[Database, SQLiteTaskRepository],
 ) -> None:
