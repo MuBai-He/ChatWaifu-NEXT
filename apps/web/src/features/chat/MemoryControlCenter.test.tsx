@@ -1,5 +1,6 @@
 import type { MemoryProposal, MemorySource } from "@chatwaifu/protocol";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -163,6 +164,40 @@ describe("MemoryControlCenter", () => {
     ).toBe(`#memory-${predecessor.memory_id}`);
     expect(screen.queryByText(forgotten.text)).toBeNull();
     expect(screen.getByText("已忘记的记忆不显示正文")).toBeTruthy();
+  });
+
+  it("ignores an older record request after the history filter changes", async () => {
+    let resolveOld: ((records: MemoryItem[]) => void) | undefined;
+    const oldRequest = new Promise<MemoryItem[]>((resolve) => {
+      resolveOld = resolve;
+    });
+    const revision = {
+      ...record,
+      memory_id: "00000000-0000-4000-8000-000000000113",
+      text: "修订前的偏好",
+      state: "superseded",
+    } as MemoryItem;
+    vi.mocked(runtimeClient.getMemoryRecords).mockImplementation((filters) =>
+      filters?.includeTombstoned
+        ? Promise.resolve([record, revision])
+        : oldRequest,
+    );
+    render(
+      <MemoryControlCenter
+        sessionId="00000000-0000-4000-8000-000000000501"
+        onChanged={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "记忆中心" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "显示修订与遗忘历史" }),
+    );
+    expect(await screen.findByText("修订前的偏好")).toBeTruthy();
+    await act(async () => {
+      resolveOld?.([record]);
+      await oldRequest;
+    });
+    expect(screen.getByText("修订前的偏好")).toBeTruthy();
   });
 
   it("shows friendly channel provenance without exposing routing identifiers", async () => {

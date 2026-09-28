@@ -3,7 +3,7 @@ import type {
   MemoryRecord,
   MemorySource,
 } from "@chatwaifu/protocol";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "./ModalPortal";
 import "./memory-control-center.css";
@@ -42,6 +42,7 @@ export function MemoryControlCenter({
   const [editing, setEditing] = useState<EditState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const requestSequence = useRef(0);
 
   const refresh = async (
     filters: {
@@ -51,6 +52,7 @@ export function MemoryControlCenter({
     } = {},
   ) => {
     if (!sessionId) return;
+    const sequence = ++requestSequence.current;
     const [nextRecords, nextProposals] = await Promise.all([
       getMemoryRecords({
         sessionId,
@@ -60,6 +62,7 @@ export function MemoryControlCenter({
       }),
       getMemoryProposals("pending", sessionId),
     ]);
+    if (sequence !== requestSequence.current) return;
     setRecords(nextRecords);
     setProposals(nextProposals);
   };

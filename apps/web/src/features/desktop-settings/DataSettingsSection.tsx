@@ -91,6 +91,7 @@ export function DataSettingsSection({
           <h2>结构化记忆</h2>
           <p>查看建议、修正事实、确认敏感内容并管理遗忘。</p>
           <MemoryControlCenter
+            key={data.sessionId ?? "no-session"}
             sessionId={data.sessionId}
             onChanged={data.refreshMemories}
           />

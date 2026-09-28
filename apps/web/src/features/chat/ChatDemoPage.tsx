@@ -188,6 +188,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
         <nav className="vn-system-menu" aria-label="游戏菜单">
           <SkillsControlCenter sessionId={sessionId} />
           <MemoryControlCenter
+            key={sessionId ?? "no-session"}
             sessionId={sessionId}
             onChanged={refreshMemories}
           />
