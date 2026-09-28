@@ -47,7 +47,7 @@ describe("interaction diagnostics wire parser", () => {
     expect(detail.selected_memory_ids).toBeNull();
   });
 
-  it("accepts the runtime's 32-character tool digest in a compiled prompt identity", () => {
+  it("accepts the runtime's tool digest and full model ID limits", () => {
     const parsed = parseInteractionTraceDetail({
       ...detailFixture,
       prompt_identity: {
@@ -60,7 +60,7 @@ describe("interaction diagnostics wire parser", () => {
         chat_route: {
           role: "chat",
           provider: "demo",
-          model: "chatwaifu-demo",
+          model: "m".repeat(256),
           endpoint_digest: "c".repeat(64),
           context_window: 8192,
         },
@@ -75,6 +75,7 @@ describe("interaction diagnostics wire parser", () => {
       },
     });
     expect(parsed.prompt_identity?.tools_digest).toHaveLength(32);
+    expect(parsed.prompt_identity?.chat_route.model).toHaveLength(256);
   });
 
   it("strips unapproved content fields and rejects unbounded pages", () => {

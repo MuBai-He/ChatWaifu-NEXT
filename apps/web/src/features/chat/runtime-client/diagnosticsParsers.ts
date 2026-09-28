@@ -25,7 +25,7 @@ const summary = z.object({
 const route = z.object({
   role: code,
   provider: code,
-  model: z.string().max(200),
+  model: z.string().min(1).max(256),
   endpoint_digest: z.string().nullable(),
   context_window: z.number().int().nullable(),
 });
