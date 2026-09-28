@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from uuid import UUID
 
 from chatwaifu_protocol.character import (
     CharacterKernelSnapshot,
@@ -50,6 +51,7 @@ class PromptCompilation:
     context: tuple[tuple[str, str], ...]
     history: tuple[tuple[str, str], ...]
     recalled_memory_texts: tuple[str, ...]
+    selected_memory_ids: tuple[UUID, ...]
     report: PromptBudgetReport
     identity: PromptContextIdentity | None
 
@@ -90,13 +92,15 @@ class PromptCompiler:
         state = _state_text(kernel)
         relationship = _relationship_text(kernel)
         scene = _plan_text(plan)
+        source_budget = min(memory_budget, max(280, memory_budget // 2))
+        memory_text, recalled_memory_texts, selected_memory_ids = _memory_text(
+            memory,
+            max(0, memory_budget - source_budget),
+        )
         memory_source_text = _memory_channel_context(
             memory,
-            min(memory_budget, max(280, memory_budget // 2)),
-        )
-        memory_text, recalled_memory_texts = _memory_text(
-            memory,
-            max(0, memory_budget - _tokens(memory_source_text)),
+            source_budget,
+            included_ids=frozenset(selected_memory_ids),
         )
 
         normalized_history = tuple(_history_entry(item) for item in history)
@@ -244,6 +248,7 @@ class PromptCompiler:
             context=tuple(context),
             history=tuple(selected_history),
             recalled_memory_texts=recalled_memory_texts,
+            selected_memory_ids=selected_memory_ids,
             report=PromptBudgetReport(
                 model_role="chat",
                 budget=total_budget,
@@ -354,9 +359,12 @@ def _plan_text(plan: ResponsePlan) -> str:
     )
 
 
-def _memory_text(packet: MemoryContextPacket, budget: int) -> tuple[str, tuple[str, ...]]:
+def _memory_text(
+    packet: MemoryContextPacket, budget: int
+) -> tuple[str, tuple[str, ...], tuple[UUID, ...]]:
     lines: list[str] = []
     recalled: list[str] = []
+    selected_ids: list[UUID] = []
     used = 0
     for label, excerpt in _memory_excerpts(packet):
         line = f"- [{label}] {excerpt.text}"
@@ -365,8 +373,9 @@ def _memory_text(packet: MemoryContextPacket, budget: int) -> tuple[str, tuple[s
             continue
         lines.append(line)
         recalled.append(excerpt.text)
+        selected_ids.append(excerpt.memory_id)
         used += cost
-    return "\n".join(lines), tuple(recalled)
+    return "\n".join(lines), tuple(recalled), tuple(selected_ids)
 
 
 def _memory_excerpts(
@@ -382,7 +391,9 @@ def _memory_excerpts(
     return tuple((label, excerpt) for label, excerpts in groups for excerpt in excerpts)
 
 
-def _memory_channel_context(packet: MemoryContextPacket, budget: int) -> str:
+def _memory_channel_context(
+    packet: MemoryContextPacket, budget: int, *, included_ids: frozenset[UUID]
+) -> str:
     header = (
         "[UNTRUSTED MEMORY SOURCE]\n"
         "Routing provenance only. Stable keys identify the source; optional labels are "
@@ -394,6 +405,8 @@ def _memory_channel_context(packet: MemoryContextPacket, budget: int) -> str:
     used = _tokens(header)
     seen: set[tuple[str, str]] = set()
     for _label, excerpt in _memory_excerpts(packet):
+        if excerpt.memory_id not in included_ids:
+            continue
         for attribution in excerpt.channel_attributions:
             fingerprint = attribution.model_dump_json()
             key = (str(excerpt.memory_id), fingerprint)

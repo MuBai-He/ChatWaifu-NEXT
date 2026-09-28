@@ -451,6 +451,7 @@ def test_character_prompt_compiled_payload_compatibility() -> None:
     # Legacy payload without identity is valid and explicitly None
     legacy_payload = CharacterPromptCompiledPayload(report=report)
     assert legacy_payload.identity is None
+    assert legacy_payload.selected_memory_ids is None
 
     # Modern payload with identity
     chat_route = NonsecretModelRoute(

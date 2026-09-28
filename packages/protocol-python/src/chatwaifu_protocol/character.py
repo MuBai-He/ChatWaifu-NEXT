@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from typing import Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, Field
 
@@ -164,3 +165,4 @@ class CharacterPromptCompiledPayload(ProtocolModel):
     schema_version: Literal["1.0"] = "1.0"
     report: PromptBudgetReport
     identity: PromptContextIdentity | None = None
+    selected_memory_ids: list[UUID] | None = None

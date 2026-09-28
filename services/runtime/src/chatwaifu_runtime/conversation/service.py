@@ -1155,6 +1155,7 @@ class ConversationService:
                 CharacterPromptCompiledPayload(
                     report=compilation.report,
                     identity=compilation.identity,
+                    selected_memory_ids=list(compilation.selected_memory_ids),
                 ).model_dump(mode="json"),
             )
             loaded_images: tuple[LlmInputImage, ...] = ()

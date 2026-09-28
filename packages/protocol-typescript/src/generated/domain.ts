@@ -486,6 +486,7 @@ export type SceneTokens = number
 export type StateTokens = number
 export type Used = number
 export type SchemaVersion24 = '1.0'
+export type SelectedMemoryIds = string[] | null
 export type OccurredAt = string
 export type PolicyDecision = string
 export type ProviderBackendId = string
@@ -1877,6 +1878,7 @@ export interface CharacterPromptCompiledPayload {
   identity?: PromptContextIdentity | null
   report: PromptBudgetReport
   schema_version?: SchemaVersion24
+  selected_memory_ids?: SelectedMemoryIds
   [k: string]: unknown
 }
 export interface PromptContextIdentity {

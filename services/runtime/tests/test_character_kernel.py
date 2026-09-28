@@ -227,6 +227,53 @@ async def test_prompt_compiler_budgets_durable_memory_source_and_drops_oversized
 
 
 @pytest.mark.asyncio
+async def test_prompt_compiler_reports_only_memory_ids_injected_under_budget() -> None:
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    short_id, dropped_id = uuid4(), uuid4()
+    packet = MemoryContextPacket(
+        relevant_memories=[
+            MemoryExcerpt(
+                memory_id=short_id,
+                text="喜欢蓝色",
+                source_event_ids=[uuid4()],
+                relevance=0.9,
+            ),
+            MemoryExcerpt(
+                memory_id=dropped_id,
+                text="过长事实" * 2_000,
+                source_event_ids=[uuid4()],
+                relevance=0.8,
+            ),
+        ],
+        token_budget_used=100,
+    )
+    result = await compiler.compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=0,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(
+            intent="answer", tone="gentle", expression="neutral", rationale="budget check"
+        ),
+        memory=packet,
+        history=(),
+        user_text="我喜欢什么颜色？",
+    )
+    assert result.selected_memory_ids == (short_id,)
+    assert result.recalled_memory_texts == ("喜欢蓝色",)
+
+
+@pytest.mark.asyncio
 async def test_character_kernel_service_negation_handling(runtime_settings: Settings) -> None:
     from chatwaifu_runtime.character_kernel.service import _classify
 

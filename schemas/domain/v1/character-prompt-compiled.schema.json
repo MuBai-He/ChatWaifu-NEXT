@@ -214,6 +214,22 @@
       "default": "1.0",
       "title": "Schema Version",
       "type": "string"
+    },
+    "selected_memory_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Memory Ids"
     }
   },
   "required": [
