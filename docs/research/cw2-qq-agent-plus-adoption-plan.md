@@ -196,7 +196,7 @@ M/L 表示相对复杂度，不承诺日历工期。首批范围为 **Q01 → Q0
 
 ## 6. 实施时的检查命令
 
-以下为**未来对应代码切片的验收命令**，本次只编写文档，并未执行这些应用测试。
+以下为**对应代码切片的验收命令**。方案初稿制定时未执行应用测试；当前实际运行结果见[实施状态](qq-agent-plus-evidence/implementation-status.md)。
 
 角色与文本表现：
 
@@ -208,7 +208,7 @@ uv run pytest services/runtime/tests/test_character_kernel.py services/runtime/t
 
 ```sh
 uv run pytest services/runtime/tests/test_companion.py services/runtime/tests/test_realtime.py services/runtime/tests/test_external_channels.py services/runtime/tests/test_inbound_multi_image_burst.py services/runtime/tests/test_memory.py
-uv run pytest services/runtime/tests/test_sticker_learning_integration.py services/runtime/tests/test_sticker_usage.py services/runtime/tests/test_sticker_repeat_avoidance.py services/runtime/tests/test_sticker_repeat_delivery.py
+uv run pytest services/runtime/tests/test_sticker_learning_integration.py services/runtime/tests/test_sticker_usage.py services/runtime/tests/test_sticker_repeat_avoidance.py services/runtime/tests/test_sticker_repeat_delivery.py services/runtime/tests/test_sticker_end_to_end.py services/runtime/tests/test_sticker_interaction_selection.py services/runtime/tests/test_learned_sticker_delivery.py services/runtime/tests/test_sticker_delivery_lifecycle.py
 ```
 
 每个切片还要运行新增测试；上述已有用例不能替代 Q03 的切换竞争和 Q04 的 API/UI 集成测试。涉及实时输出时加入取消、迟到输出和播放 ACK 测试。
@@ -237,6 +237,6 @@ make build-desktop-ui
 
 先交付测试工具、场景、A/B 结果和小范围代码，再决定 planner 是否有必要改动。完成报告必须列出实际改动、模型配置、失败样本、成本与未验收项；不修改渠道、数据库结构、头像资产或自动部署。更新全局 implementation-status 时，只登记已实际验收的切片。
 
-本轮产物为此方案。应用实现、真实模型比较和上线验收均仍待执行。
+本节保留方案初稿的交接说明。当前应用实现的已验收范围、真实模型比较与上线验收缺口，以[实施状态](qq-agent-plus-evidence/implementation-status.md)为准。
 
 核对方法：Gemini 3.8 Flash High 提供只读调用链映射，Astra 对照源码和已接受 ADR 决定采纳范围。没有将“缺少 QQAP 同款快照表/URL 刷新器”直接当成 CW2 缺陷：CW2 已有非覆盖式修订和本地表情资产，只有验证暴露真实缺口时才增加机制。
