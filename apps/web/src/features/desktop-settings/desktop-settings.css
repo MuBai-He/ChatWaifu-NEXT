@@ -1054,6 +1054,58 @@
   opacity: 0.48;
 }
 
+.interaction-diagnostics-panel {
+  max-width: 820px;
+  margin-top: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--settings-line);
+  border-radius: 14px;
+  background: var(--settings-card);
+}
+
+.interaction-diagnostics-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.interaction-diagnostics-panel p,
+.interaction-diagnostics-panel small {
+  color: var(--settings-muted);
+}
+
+.interaction-diagnostics-panel section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--settings-line);
+}
+
+.interaction-diagnostics-panel ul,
+.interaction-diagnostics-panel ol {
+  max-height: 260px;
+  overflow: auto;
+  padding-left: 22px;
+}
+
+.interaction-diagnostics-panel li {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.interaction-diagnostics-panel button {
+  padding: 5px 9px;
+  border: 1px solid var(--settings-line);
+  border-radius: 7px;
+  color: #7a4568;
+  background: rgb(231 205 222 / 42%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.interaction-diagnostics-panel button[aria-pressed="true"] {
+  border-color: #9e698b;
+  background: rgb(231 205 222 / 78%);
+}
+
 .desktop-settings-danger-row button {
   display: inline-flex;
   flex: 0 0 auto;

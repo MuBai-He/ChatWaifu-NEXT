@@ -10,6 +10,7 @@ import {
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { DataClearConfirmationDialog } from "./DataClearConfirmationDialog";
+import { InteractionDiagnosticsPanel } from "./InteractionDiagnosticsPanel";
 import {
   installWorkerPackArchive,
   selectWorkerPackArchive,
@@ -25,6 +26,7 @@ export function DataSettingsSection({
 }) {
   const { data } = context;
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [dataRevision, setDataRevision] = useState(0);
   const [integrity, setIntegrity] =
     useState<WorkerPackIntegrityResponse | null>(null);
   const { busy, notice, run, setNotice } = useSettingsOperation<
@@ -81,6 +83,11 @@ export function DataSettingsSection({
       },
     );
   };
+  const resetAndClearCachedViews = async () => {
+    const completed = await context.resetConversationAndMemory();
+    if (completed) setDataRevision((revision) => revision + 1);
+    return completed;
+  };
   return (
     <>
       <div className="desktop-settings-tool-grid">
@@ -91,7 +98,7 @@ export function DataSettingsSection({
           <h2>结构化记忆</h2>
           <p>查看建议、修正事实、确认敏感内容并管理遗忘。</p>
           <MemoryControlCenter
-            key={data.sessionId ?? "no-session"}
+            key={`${data.sessionId ?? "no-session"}:${dataRevision}`}
             sessionId={data.sessionId}
             onChanged={data.refreshMemories}
           />
@@ -113,6 +120,12 @@ export function DataSettingsSection({
           <McpConnectionsPanel sessionId={data.sessionId} />
         </article>
       </div>
+
+      <InteractionDiagnosticsPanel
+        key={`${data.sessionId ?? "no-session"}:${dataRevision}`}
+        sessionId={data.sessionId}
+        runtimeOnline={context.runtime.connection === "connected"}
+      />
 
       <SettingsGroup
         title="Worker Pack 管理"
@@ -210,7 +223,7 @@ export function DataSettingsSection({
         open={confirmingClear}
         busy={data.resetting}
         onCancel={() => setConfirmingClear(false)}
-        onConfirm={context.resetConversationAndMemory}
+        onConfirm={resetAndClearCachedViews}
       />
     </>
   );
