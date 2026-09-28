@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryControlCenter } from "./MemoryControlCenter";
@@ -111,6 +112,57 @@ describe("MemoryControlCenter", () => {
         "00000000-0000-4000-8000-000000000501",
       ),
     );
+  });
+
+  it("shows a revision chain on demand and disables edits to superseded records", async () => {
+    const predecessor = {
+      ...record,
+      memory_id: "00000000-0000-4000-8000-000000000111",
+      text: "旧偏好",
+      state: "superseded",
+    } as MemoryItem;
+    const successor = {
+      ...record,
+      supersedes: predecessor.memory_id,
+    } as MemoryItem;
+    const forgotten = {
+      ...record,
+      memory_id: "00000000-0000-4000-8000-000000000112",
+      text: "已忘记的私密内容",
+      state: "tombstoned",
+    } as MemoryItem;
+    vi.mocked(runtimeClient.getMemoryRecords).mockImplementation((filters) =>
+      Promise.resolve(
+        filters?.includeTombstoned
+          ? [successor, predecessor, forgotten]
+          : [successor],
+      ),
+    );
+    render(
+      <MemoryControlCenter
+        sessionId="00000000-0000-4000-8000-000000000501"
+        onChanged={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "记忆中心" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "显示修订与遗忘历史" }),
+    );
+    const oldText = await screen.findByText("旧偏好");
+    const oldCard = oldText.closest("article");
+    if (!oldCard) throw new Error("superseded memory card missing");
+    expect(
+      within(oldCard)
+        .getByRole("button", { name: "修正" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("link", { name: predecessor.memory_id.slice(0, 8) })
+        .getAttribute("href"),
+    ).toBe(`#memory-${predecessor.memory_id}`);
+    expect(screen.queryByText(forgotten.text)).toBeNull();
+    expect(screen.getByText("已忘记的记忆不显示正文")).toBeTruthy();
   });
 
   it("shows friendly channel provenance without exposing routing identifiers", async () => {
