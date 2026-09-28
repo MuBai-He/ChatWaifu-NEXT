@@ -9,9 +9,12 @@ from datetime import datetime
 from typing import Literal, cast
 from uuid import UUID
 
+from chatwaifu_protocol.character import PromptContextIdentity
 from chatwaifu_protocol.session import GenerationState
 
-from chatwaifu_runtime.providers.contracts import LlmInputImage
+from chatwaifu_runtime.agent.tool_calling import ProjectedAgentTool
+from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider
+from chatwaifu_runtime.providers.model_config import ModelRoleConfig
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
@@ -187,3 +190,14 @@ class SessionDataReset:
     audio_assets_deleted: int
     audio_assets_pending_cleanup: int
     audio_cleanup_complete: bool
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationContextSnapshot:
+    """Immutable per-generation configuration and context snapshot captured at admission."""
+
+    chat_config: ModelRoleConfig
+    memory_summary_config: ModelRoleConfig
+    chat_provider: LlmProvider
+    visible_tools: tuple[ProjectedAgentTool, ...]
+    identity: PromptContextIdentity

@@ -74,6 +74,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
 )
 from PIL import Image
+from provider_test_support import use_recording_provider
 
 
 def _make_test_image_bytes(color: str = "red", width: int = 16, height: int = 16) -> bytes:
@@ -386,7 +387,7 @@ async def _setup_burst_environment(
     await container.start()
 
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     scheduler = ManualBurstScheduler(initial_time)
     container.external_channels.burst_coordinator._scheduler = scheduler

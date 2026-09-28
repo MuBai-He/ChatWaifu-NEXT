@@ -22,6 +22,7 @@ from chatwaifu_runtime.external_channels.models import ChannelTurnRecord
 from chatwaifu_runtime.persistence.sqlite_external_channels import SQLiteExternalChannelRepository
 from chatwaifu_runtime.providers.contracts import LlmRequest, LlmStreamEvent, LlmTextDelta
 from PIL import Image
+from provider_test_support import use_chat_stream_stub
 from test_external_channels import _configuration, _message
 from test_learned_sticker_delivery import _seed_learned_sticker
 from test_sticker_repeat_avoidance import Usage
@@ -200,6 +201,8 @@ async def test_cancelled_turn_is_not_released_before_generation_stops(
             stopped.set()
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", hanging_model)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     try:
         connection_id = uuid4()

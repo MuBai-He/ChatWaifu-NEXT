@@ -15,7 +15,14 @@ from chatwaifu_protocol.channels import (
     ChannelInboundTextMessage,
     ChannelProviderCapabilities,
 )
-from chatwaifu_protocol.character import AffectState, RelationshipState
+from chatwaifu_protocol.character import (
+    AffectState,
+    CharacterPromptCompiledPayload,
+    NonsecretModelRoute,
+    PromptBudgetReport,
+    PromptContextIdentity,
+    RelationshipState,
+)
 from chatwaifu_protocol.events import UserSpeechStartedEvent, UserSpeechStartedPayload
 from chatwaifu_protocol.media import (
     AudioFrameHeader,
@@ -369,3 +376,97 @@ def test_channel_connection_snapshot_revision_starts_at_one() -> None:
             created_at=NOW,
             updated_at=NOW,
         )
+
+
+def test_prompt_context_identity_is_deterministic_and_nonsecret() -> None:
+    chat_route = NonsecretModelRoute(
+        role="chat",
+        provider="openai_compatible",
+        model="gpt-4o-mini",
+        endpoint_digest="772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
+        context_window=16384,
+    )
+    summary_route = NonsecretModelRoute(
+        role="memory_summary",
+        provider="demo",
+        model="deterministic-summary-v1",
+        endpoint_digest=None,
+        context_window=8192,
+    )
+    identity1 = PromptContextIdentity.create(
+        character_id="nene",
+        character_package_hash="a" * 64,
+        prompt_template_version="v1",
+        presentation_profile="instant_message",
+        chat_route=chat_route,
+        memory_summary_route=summary_route,
+        tools_digest="b" * 32,
+    )
+    identity2 = PromptContextIdentity.create(
+        character_id="nene",
+        character_package_hash="a" * 64,
+        prompt_template_version="v1",
+        presentation_profile="instant_message",
+        chat_route=chat_route,
+        memory_summary_route=summary_route,
+        tools_digest="b" * 32,
+    )
+    assert identity1.identity_hash == identity2.identity_hash
+    assert identity1.schema_version == "1.0"
+
+    # Context window change alters identity hash
+    different_route = NonsecretModelRoute(
+        role="chat",
+        provider="openai_compatible",
+        model="gpt-4o-mini",
+        endpoint_digest="772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
+        context_window=32768,
+    )
+    identity_diff = PromptContextIdentity.create(
+        character_id="nene",
+        character_package_hash="a" * 64,
+        prompt_template_version="v1",
+        presentation_profile="instant_message",
+        chat_route=different_route,
+        memory_summary_route=summary_route,
+        tools_digest="b" * 32,
+    )
+    assert identity_diff.identity_hash != identity1.identity_hash
+
+
+def test_character_prompt_compiled_payload_compatibility() -> None:
+    report = PromptBudgetReport(
+        model_role="chat",
+        budget=8192,
+        used=1200,
+        safety_tokens=100,
+        persona_tokens=200,
+        state_tokens=50,
+        relationship_tokens=50,
+        memory_tokens=300,
+        scene_tokens=100,
+        conversation_tokens=400,
+        dropped_history_turns=0,
+    )
+    # Legacy payload without identity is valid and explicitly None
+    legacy_payload = CharacterPromptCompiledPayload(report=report)
+    assert legacy_payload.identity is None
+
+    # Modern payload with identity
+    chat_route = NonsecretModelRoute(
+        role="chat",
+        provider="demo",
+        model="demo-chat",
+        endpoint_digest=None,
+        context_window=8192,
+    )
+    identity = PromptContextIdentity.create(
+        character_id="nene",
+        character_package_hash="c" * 64,
+        chat_route=chat_route,
+        memory_summary_route=chat_route,
+        tools_digest="0" * 32,
+    )
+    modern_payload = CharacterPromptCompiledPayload(report=report, identity=identity)
+    assert modern_payload.identity is not None
+    assert modern_payload.identity.character_id == "nene"

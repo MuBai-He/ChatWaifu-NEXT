@@ -1,0 +1,117 @@
+{
+  "$defs": {
+    "NonsecretModelRoute": {
+      "properties": {
+        "context_window": {
+          "default": 8192,
+          "maximum": 2000000,
+          "minimum": 1024,
+          "title": "Context Window",
+          "type": "integer"
+        },
+        "endpoint_digest": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Digest"
+        },
+        "model": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "provider",
+        "model"
+      ],
+      "title": "NonsecretModelRoute",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/prompt-context-identity.schema.json",
+  "properties": {
+    "character_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Character Id",
+      "type": "string"
+    },
+    "character_package_hash": {
+      "maxLength": 64,
+      "minLength": 16,
+      "title": "Character Package Hash",
+      "type": "string"
+    },
+    "chat_route": {
+      "$ref": "#/$defs/NonsecretModelRoute"
+    },
+    "identity_hash": {
+      "maxLength": 64,
+      "minLength": 16,
+      "title": "Identity Hash",
+      "type": "string"
+    },
+    "memory_summary_route": {
+      "$ref": "#/$defs/NonsecretModelRoute"
+    },
+    "presentation_profile": {
+      "default": "default",
+      "maxLength": 64,
+      "title": "Presentation Profile",
+      "type": "string"
+    },
+    "prompt_template_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Prompt Template Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tools_digest": {
+      "maxLength": 64,
+      "minLength": 16,
+      "title": "Tools Digest",
+      "type": "string"
+    }
+  },
+  "required": [
+    "identity_hash",
+    "character_id",
+    "character_package_hash",
+    "prompt_template_version",
+    "chat_route",
+    "memory_summary_route",
+    "tools_digest"
+  ],
+  "title": "PromptContextIdentity",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

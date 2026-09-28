@@ -33,7 +33,9 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.character import (
     CharacterKernelSnapshot,
+    CharacterPromptCompiledPayload,
     PromptBudgetReport,
+    PromptContextIdentity,
     ResponsePlan,
 )
 from chatwaifu_protocol.commands import CommandModel
@@ -107,6 +109,8 @@ class ProtocolCatalog(ProtocolModel):
     character_kernel: CharacterKernelSnapshot
     response_plan: ResponsePlan
     prompt_budget: PromptBudgetReport
+    prompt_context_identity: PromptContextIdentity
+    character_prompt_compiled: CharacterPromptCompiledPayload
     channel_authorization_start_request: ChannelAuthorizationStartRequest
     channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
     channel_authorization: ChannelAuthorizationSnapshot
@@ -208,6 +212,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "permission-grant": PermissionGrant,
     "permission-request": PermissionRequest,
     "prompt-budget-report": PromptBudgetReport,
+    "prompt-context-identity": PromptContextIdentity,
+    "character-prompt-compiled": CharacterPromptCompiledPayload,
     "photo-memory-settings": PhotoMemorySettings,
     "photo-memory-settings-update": PhotoMemorySettingsUpdate,
     "photo-memory-snapshot": PhotoMemorySnapshot,

@@ -28,6 +28,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmStreamEvent,
     LlmTextDelta,
 )
+from provider_test_support import use_recording_provider
 
 _IMAGE_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -84,7 +85,7 @@ async def test_real_image_admission_dedupe_privacy_and_next_turn(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     loads = 0
     entered = asyncio.Event()
     release = asyncio.Event()
@@ -166,7 +167,7 @@ async def test_new_text_cancels_blocked_image_before_provider(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     entered, cancelled = asyncio.Event(), asyncio.Event()
 
     async def load() -> LlmInputImage:
@@ -352,7 +353,7 @@ async def test_inbound_image_exif_stripped_before_vision_provider(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     conn_id, token = await connect(container)
     msg = message(conn_id, "exif-photo-msg")
 

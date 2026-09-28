@@ -44,7 +44,7 @@ class OpenAiCompatibleLlmProvider:
         *,
         base_url: str,
         model: str,
-        api_key: str | None,
+        api_key: str | Callable[[], str | None] | None,
         timeout_seconds: float,
         transport: httpx2.AsyncBaseTransport | None = None,
         backoff_delays: Sequence[float] = (0.5, 1.5),
@@ -142,8 +142,9 @@ class OpenAiCompatibleLlmProvider:
     ) -> AsyncIterator[LlmStreamEvent]:
         messages = build_messages(request)
         headers = {"Content-Type": "application/json"}
-        if self._api_key:
-            headers["Authorization"] = f"Bearer {self._api_key}"
+        effective_key = self._api_key() if callable(self._api_key) else self._api_key
+        if effective_key:
+            headers["Authorization"] = f"Bearer {effective_key}"
         started_at = monotonic()
         effective_timeout = self._timeout if attempt_timeout is None else attempt_timeout
         if effective_timeout <= 0:

@@ -19,6 +19,7 @@ from chatwaifu_runtime.providers.contracts import (
 )
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
 from PIL import Image
+from provider_test_support import use_recording_provider
 from test_inbound_image_lifecycle import VisionRecorder, connect, message
 
 
@@ -37,8 +38,10 @@ async def test_learning_source_and_revision_fences(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, scenario: str
 ) -> None:
     container = RuntimeContainer(runtime_settings)
-    monkeypatch.setattr(
-        container.agent, "_llm", BlockedVision() if scenario == "cancel" else VisionRecorder()
+    use_recording_provider(
+        monkeypatch,
+        container.model_configurations,
+        BlockedVision() if scenario == "cancel" else VisionRecorder(),
     )
     entered = asyncio.Event()
     release = asyncio.Event()

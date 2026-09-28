@@ -46,6 +46,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmStreamEvent,
     LlmTextDelta,
 )
+from provider_test_support import use_chat_stream_stub
 
 
 def _valid_fingerprint(seed: str = "test") -> str:
@@ -503,6 +504,8 @@ async def test_image_input_error_recovery_notice_survives_restart_and_next_text(
             yield LlmResponseCompleted("stop")
 
         monkeypatch.setattr(recovered.model_configurations.chat, "stream", succeed_next)
+
+        use_chat_stream_stub(monkeypatch, recovered.model_configurations)
         next_message = ChannelInboundTextMessage(
             connection_id=connection_id,
             account_key="bot1",

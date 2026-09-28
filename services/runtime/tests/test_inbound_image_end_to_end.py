@@ -22,6 +22,7 @@ from chatwaifu_runtime.external_channels.credentials import InMemoryChannelCrede
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.models import DeliveryTransitionResult
 from PIL import Image
+from provider_test_support import use_recording_provider
 from test_channel_management import _configuration, _credentials, _FakeWeixin
 from test_inbound_image_lifecycle import VisionRecorder
 
@@ -104,7 +105,7 @@ async def test_native_image_to_reply_and_private_context_cleanup(
         )
         container.channel_management = management
         recorder = VisionRecorder()
-        monkeypatch.setattr(container.agent, "_llm", recorder)
+        use_recording_provider(monkeypatch, container.model_configurations, recorder)
         acknowledged = asyncio.Event()
         original_ack = container.external_channel_repository.acknowledge_delivery_part
         results: list[DeliveryTransitionResult] = []

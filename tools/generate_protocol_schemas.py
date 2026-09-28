@@ -82,6 +82,32 @@ def main() -> None:
             received_at=FIXED_TIME,
         ),
     )
+    from chatwaifu_protocol.character import NonsecretModelRoute, PromptContextIdentity
+
+    write_json(
+        FIXTURE_DIR / "prompt-context-identity.json",
+        PromptContextIdentity.create(
+            character_id="default-character",
+            character_package_hash="0" * 64,
+            prompt_template_version="v1",
+            presentation_profile="instant_message",
+            chat_route=NonsecretModelRoute(
+                role="chat",
+                provider="openai_compatible",
+                model="gpt-4o",
+                endpoint_digest="772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
+                context_window=128000,
+            ),
+            memory_summary_route=NonsecretModelRoute(
+                role="memory_summary",
+                provider="demo",
+                model="deterministic-summary-v1",
+                endpoint_digest=None,
+                context_window=8192,
+            ),
+            tools_digest="1" * 32,
+        ),
+    )
 
 
 if __name__ == "__main__":

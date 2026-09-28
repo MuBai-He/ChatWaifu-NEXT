@@ -1,0 +1,225 @@
+{
+  "$defs": {
+    "NonsecretModelRoute": {
+      "properties": {
+        "context_window": {
+          "default": 8192,
+          "maximum": 2000000,
+          "minimum": 1024,
+          "title": "Context Window",
+          "type": "integer"
+        },
+        "endpoint_digest": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Digest"
+        },
+        "model": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "provider",
+        "model"
+      ],
+      "title": "NonsecretModelRoute",
+      "type": "object"
+    },
+    "PromptBudgetReport": {
+      "properties": {
+        "budget": {
+          "minimum": 1,
+          "title": "Budget",
+          "type": "integer"
+        },
+        "conversation_tokens": {
+          "minimum": 0,
+          "title": "Conversation Tokens",
+          "type": "integer"
+        },
+        "dropped_history_turns": {
+          "minimum": 0,
+          "title": "Dropped History Turns",
+          "type": "integer"
+        },
+        "memory_tokens": {
+          "minimum": 0,
+          "title": "Memory Tokens",
+          "type": "integer"
+        },
+        "model_role": {
+          "enum": [
+            "chat",
+            "memory_extraction",
+            "memory_summary",
+            "embedding"
+          ],
+          "title": "Model Role",
+          "type": "string"
+        },
+        "persona_tokens": {
+          "minimum": 0,
+          "title": "Persona Tokens",
+          "type": "integer"
+        },
+        "relationship_tokens": {
+          "minimum": 0,
+          "title": "Relationship Tokens",
+          "type": "integer"
+        },
+        "safety_tokens": {
+          "minimum": 0,
+          "title": "Safety Tokens",
+          "type": "integer"
+        },
+        "scene_tokens": {
+          "minimum": 0,
+          "title": "Scene Tokens",
+          "type": "integer"
+        },
+        "state_tokens": {
+          "minimum": 0,
+          "title": "State Tokens",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_role",
+        "budget",
+        "used",
+        "safety_tokens",
+        "persona_tokens",
+        "state_tokens",
+        "relationship_tokens",
+        "memory_tokens",
+        "scene_tokens",
+        "conversation_tokens",
+        "dropped_history_turns"
+      ],
+      "title": "PromptBudgetReport",
+      "type": "object"
+    },
+    "PromptContextIdentity": {
+      "properties": {
+        "character_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "character_package_hash": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Character Package Hash",
+          "type": "string"
+        },
+        "chat_route": {
+          "$ref": "#/$defs/NonsecretModelRoute"
+        },
+        "identity_hash": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Identity Hash",
+          "type": "string"
+        },
+        "memory_summary_route": {
+          "$ref": "#/$defs/NonsecretModelRoute"
+        },
+        "presentation_profile": {
+          "default": "default",
+          "maxLength": 64,
+          "title": "Presentation Profile",
+          "type": "string"
+        },
+        "prompt_template_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Prompt Template Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "tools_digest": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Tools Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity_hash",
+        "character_id",
+        "character_package_hash",
+        "prompt_template_version",
+        "chat_route",
+        "memory_summary_route",
+        "tools_digest"
+      ],
+      "title": "PromptContextIdentity",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/character-prompt-compiled.schema.json",
+  "properties": {
+    "identity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PromptContextIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "report": {
+      "$ref": "#/$defs/PromptBudgetReport"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "report"
+  ],
+  "title": "CharacterPromptCompiled",
+  "type": "object",
+  "x-schema-version": "1.0"
+}
