@@ -408,7 +408,9 @@ class SQLiteTaskRepository:
                     )
                 return
             async with c.execute(
-                "SELECT * FROM assistant_deliveries WHERE delivery_id=? AND device_id=?",
+                "SELECT d.*,t.payload_json FROM assistant_deliveries d "
+                "JOIN assistant_tasks t ON t.task_id=d.task_id "
+                "WHERE d.delivery_id=? AND d.device_id=?",
                 (item_id, device_id),
             ) as cursor:
                 row = await cursor.fetchone()
@@ -423,6 +425,20 @@ class SQLiteTaskRepository:
                         (item_id,),
                     )
                     return
+            if (
+                action == "stop"
+                and row is not None
+                and row["state"] in ("presented", "unhandled")
+                and row["expires"] <= now
+            ):
+                # The device already displayed this occurrence. A late local close
+                # clears its inbox record, but must never schedule a late snooze.
+                await c.execute(
+                    "UPDATE assistant_deliveries SET state='acknowledged',ack_action='stop' "
+                    "WHERE delivery_id=?",
+                    (item_id,),
+                )
+                return
             if row is None or row["state"] not in ("pending", "presented") or row["expires"] <= now:
                 raise ValueError("delivery_not_active")
             if action == "presented":
@@ -437,11 +453,20 @@ class SQLiteTaskRepository:
                     (action, item_id),
                 )
                 if action == "snooze":
+                    task = TaskInput.model_validate_json(row["payload_json"])
+                    snoozed_due = now + 300
+                    lateness = 120 if task.kind == "alarm" else 3600
                     await c.execute(
                         "INSERT INTO "
                         "assistant_deliveries(delivery_id,task_id,device_id,due,expires) "
                         "VALUES(?,?,?,?,?)",
-                        (str(uuid4()), row["task_id"], device_id, now + 300, now + 420),
+                        (
+                            str(uuid4()),
+                            row["task_id"],
+                            device_id,
+                            snoozed_due,
+                            snoozed_due + lateness,
+                        ),
                     )
 
     async def enqueue(self, operation: AppleOperation, now: float) -> dict[str, Any]:

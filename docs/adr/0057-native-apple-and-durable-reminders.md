@@ -42,8 +42,16 @@ missed, never replayed on wake. Snooze creates one separate occurrence five minu
 
 Task cancellation/revocation removes active deliveries; late acknowledgements cannot resurrect
 them. Native presentation IDs survive restart, preventing duplicate sounds/notifications after
-UI reload. Network failure stops ongoing sound. The desktop card remains available to close or
-retry snooze. System notifications are best effort and do not establish delivery acceptance.
+UI reload. Network failure stops ongoing sound. After a durable user choice, the desktop card
+is replaced by a pending-confirmation state; if local journaling fails, the card remains available
+to retry. System notifications are best effort and do not establish delivery acceptance.
+
+The desktop host also journals a user's Close or Snooze choice before sending its acknowledgement.
+On reconnect or webview restart it retries the same choice idempotently without replaying sound
+or notification. A close for an already displayed, expired occurrence can clear its unhandled
+inbox record; an expired snooze is rejected rather than scheduling an unexpected late alarm.
+The client keeps rejected choices visible until dismissed. A revoked device stops making
+authenticated poll requests and waits for a new pairing.
 
 ## Scope and limits
 
