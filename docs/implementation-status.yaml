@@ -1,8 +1,8 @@
 schema_version: "1.0"
-updated_at: "2026-09-27"
+updated_at: "2026-09-29"
 current_phase: "13.6"
 personal_assistant:
-  status: google_read_user_confirmed_apple_tasks_implemented_pending_device_acceptance
+  status: unified_agenda_google_apple_provider_writes_and_text_chat_verified_offline_acceptance_pending
   evidence:
     - Google read-only REST adapter implements token exchange/refresh/revocation and bounded complete sync batches with cancellation and 410 recovery
     - 13 Google adapter boundary checks plus targeted Ruff and Pyright passed on 2026-09-22
@@ -13,13 +13,16 @@ personal_assistant:
     - Mac native callback and connection UI implemented; Rust check and 2 socket/URL tests, desktop build/types/lint and 3 HTTP admission checks passed
     - User completed Google authorization and selected a calendar on direct HTTPS; authenticated event API and calendar.read 1.1.0 returned the existing event 测试 in Asia/Shanghai, and the user confirmed desktop-pet dialog access on 2026-09-27
     - Offline recovery now retains account secret references, selected calendars, sync cursors and event cache together; targeted recovery/calendar/tool checks passed with 36 passed and 22 Windows-only skips on macOS
-    - Apple EventKit bridge and migration 34 durable tasks, paired-device source fencing, desktop delivery and permission-gated organizer Skills implemented on mubai/apple-reminders-tasks; not deployed and real OS acceptance pending
+    - PR 46 merged; paired Mac EventKit source operations created, read, updated and deleted temporary items in the selected Apple calendar and Reminders list, with final zero-residual readback; the owner confirmed first reminder, five-minute snooze and restart recovery
+    - PR 47 merged with green checks; Google Calendar and Google Tasks provider write/readback/delete and selected Apple source CRUD completed with temporary items; unfinished Apple Reminders and a recurring Apple calendar event appeared in the unified next-seven-days view
+    - On 2026-09-29 a real model submitted Google Tasks create and read-then-update through owner text chat, using normal allow_once confirmation for each required skill; provider readback showed the new title, denial produced no item, and all temporary items were cleaned up
   remaining:
     - google_revocation_refresh_and_long_term_stability_acceptance
-    - apple_calendar_reminders_native_permission_save_readback_and_icloud_acceptance
-    - durable_task_desktop_alarm_sound_sleep_restart_real_device_acceptance
-    - google_writes_and_cloud_voice_writes
-    - real_apple_and_home_assistant_acceptance
+    - native Google and Apple application visual readback and long-term OAuth stability
+    - offline or unknown-result write behavior, unhandled reminder inbox and paired-device revocation acceptance
+    - multiple-account default destination switching and external-item to reminder-rule reconciliation
+    - native desktop confirmation click and cloud realtime voice write support; current voice tool policy is read-only
+    - Home Assistant connection and device acceptance after VPN availability
 next_phase: "17.4C"
 server_deployment:
   status: linux_source_server_https_and_remote_client_running_further_acceptance_pending

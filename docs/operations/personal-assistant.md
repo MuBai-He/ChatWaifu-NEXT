@@ -24,9 +24,8 @@ time-of-day; timed ringing still uses the ChatWaifu task/alarm scheduler.
 Apple sources continue to require the paired Mac, EventKit permissions and online
 device receipts. Revoking the device or deselecting its source clears the matching
 default write destination. `queued` means the device has not confirmed the write.
-Live provider write evidence is recorded below. Visual use of the combined panel,
-chat-originated writes and offline notification inbox behavior still need separate
-acceptance.
+Live provider write evidence is recorded below. Native provider-app visual
+readback and offline notification inbox behavior still need separate acceptance.
 
 The Linux source service was backed up at
 `/home/mubai/chatwaifu-server/backups/unified-agenda-20260927T172613Z`
@@ -73,6 +72,22 @@ an explicit pending state while Apple reads complete, instead of presenting the
 initial Google/local-only list as if all sources had finished.
 EventKit gives these recurring occurrences the same calendar item ID, so the
 overview also keys each rendered occurrence by its start time and list position.
+
+On 2026-09-29, a separate owner session submitted text through the same
+`POST /v1/sessions/{id}/turns` route used by the desktop pet. The configured
+model selected `agenda.manage` to create a uniquely named task in the selected
+Google Tasks list. The normal pending-confirmation route was checked for the
+exact operation and resolved with `allow_once`; provider readback found exactly
+one task. A separate create was denied and provider readback found no task.
+The first natural-language rename attempt exposed the one-round tool limit:
+`google-tasks.read` succeeded, but the model's following write call was rejected
+as an unknown tool. After the bounded read-to-write loop fix, a fresh task was
+created and the model read its source ID and etag, requested `agenda.manage`
+update, received `allow_once`, and Google Tasks readback showed the new title.
+Both created tasks were deleted and read back with zero matching leftovers.
+This exercises the real model and text-chat Runtime path, not a physical click
+in the Tauri confirmation dialog or realtime voice write access. The existing
+confirmation UI component tests passed separately.
 
 Google Stage A has a user-confirmed Google connection and a selected calendar on the HTTPS deployment. The settings UI, authenticated event API, and direct `calendar.read` invocation returned the existing event `测试`. After the 2026-09-27 repair, the user confirmed the desktop-pet conversation could read the schedule.
 
