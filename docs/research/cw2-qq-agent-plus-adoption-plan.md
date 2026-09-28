@@ -142,7 +142,7 @@ M/L 表示相对复杂度，不承诺日历工期。首批范围为 **Q01 → Q0
 
 **目标**：支持自然停顿和结束，主动行为尊重边界，并能说明为什么没有开口。
 
-**现有落点**：`companion/attention.py`、`companion/ambient.py:decide_proactive`、`companion/settings.py`、`conversation/service.py`、`external_channels/burst.py`、`external_channels/service.py`；对应 `services/runtime/tests/test_companion.py`、`test_inbound_batch_observation.py`。
+**现有落点**：`companion/attention.py`、`companion/ambient.py:decide_proactive`、`companion/settings.py`、`conversation/service.py`、`external_channels/burst.py`、`external_channels/service.py`；对应 `services/runtime/tests/test_companion.py`、`test_realtime.py`、`test_external_channels.py` 和 `test_inbound_multi_image_burst.py`。
 
 1. 固定已有入口行为矩阵：直接提问正常响应；告别可简短回应且不额外追问；环境语音经 attention；主动唤醒经过 quiet hours、冷却和预算；外部输入走既有来源和绑定校验。
    “别再开这个玩笑”约束当前互动方式，不等于永久静默；之后的明确问题仍应正常回答。禁止把一次拒绝扩散成对新话题的冷淡态度。
@@ -207,7 +207,7 @@ uv run pytest services/runtime/tests/test_character_kernel.py services/runtime/t
 参与、记忆与表情：
 
 ```sh
-uv run pytest services/runtime/tests/test_companion.py services/runtime/tests/test_inbound_batch_observation.py services/runtime/tests/test_memory.py
+uv run pytest services/runtime/tests/test_companion.py services/runtime/tests/test_realtime.py services/runtime/tests/test_external_channels.py services/runtime/tests/test_inbound_multi_image_burst.py services/runtime/tests/test_memory.py
 uv run pytest services/runtime/tests/test_sticker_learning_integration.py services/runtime/tests/test_sticker_usage.py services/runtime/tests/test_sticker_repeat_avoidance.py services/runtime/tests/test_sticker_repeat_delivery.py
 ```
 
