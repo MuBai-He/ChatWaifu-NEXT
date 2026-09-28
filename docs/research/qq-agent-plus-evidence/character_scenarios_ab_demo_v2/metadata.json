@@ -1,11 +1,11 @@
 {
-  "created_at": "2026-09-28T20:38:23.672678+00:00",
+  "created_at": "2026-09-28T20:56:49.923468+00:00",
   "identity": {
     "tool": "evaluate_character_scenarios",
     "version": "1.1.0",
     "fixtures_hash": "43c9624b51198247",
     "provider": "demo",
-    "model": "demo-model",
+    "model": "demo",
     "repeats": 3,
     "base_url_hash": null,
     "input_usd_per_million": null,
