@@ -1983,9 +1983,9 @@ results = await asyncio.gather(
 ```python
 for i, r in enumerate(results):
     if isinstance(r, BaseException):
-        print(f"task{i+1} 失败：{r}")
+        print(f"task{i + 1} 失败：{r}")
     else:
-        print(f"task{i+1} 结果：{r}")
+        print(f"task{i + 1} 结果：{r}")
 ```
 
 注意用 `BaseException` 而不是 `Exception`，可以顺带捕到 `CancelledError` 这类情况。
