@@ -355,6 +355,10 @@ async def test_default_persona_package_budget_retains_critical_scene_rules() -> 
     assert "绝不能赌气沉默" in nene.system_prompt
     assert "认真技术求助" in nene.system_prompt
     assert "绝不使用粗鲁损友式的攻击性言语" in nene.system_prompt
+    assert "不猜测本地、云端或具体供应商" in nene.system_prompt
+    assert "由本地模型驱动" not in nene.system_prompt
+    assert "サノバウィッチ" in nene.system_prompt
+    assert "ゆずソフト作品" in nene.system_prompt
 
     # Verify original scene examples are present
     assert "场景回复参考示例" in nene.system_prompt
