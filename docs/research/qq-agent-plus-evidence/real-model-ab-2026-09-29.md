@@ -16,7 +16,19 @@
 
 ## 角色质量与后续修订
 
-AGY Gemini 3.8 Flash High 对 Sonnet 的 144 对 v2 回复做了匿名配对评审：候选优先 30、基线优先 19、平手 95；技术求助为候选 6 / 基线 0 / 平手 6，停止玩笑为候选 4 / 基线 0 / 平手 8，被调侃则为候选 3 / 基线 5 / 平手 4。完整逐场景等级与配对判断见 [Sonnet 盲评报告](character_scenarios_ab_claude_sonnet_4_6/blind_judge_report.json)。模型评分只是辅助，不等于人工通过。Gemini 的独立 AGY 盲评因认证服务器 DNS 失败退出，未采纳；Opus 没有独立质量评分，均保留盲表供复核。
+AGY Gemini 3.8 Flash High 对 Sonnet 的 144 对 v2 回复做了匿名配对评审：候选优先 30、基线优先 19、平手 95；技术求助为候选 6 / 基线 0 / 平手 6，停止玩笑为候选 4 / 基线 0 / 平手 8，被调侃则为候选 3 / 基线 5 / 平手 4。完整逐场景等级与配对判断见 [Sonnet 首次盲评报告](character_scenarios_ab_claude_sonnet_4_6/blind_judge_report.json)。当时 Gemini 的独立 AGY 盲评因认证服务器 DNS 失败退出，Opus 尚未评分，后续复评如下。模型评分只是辅助，不等于人工通过。
+
+9 月 30 日网络恢复后，AGY High 对三模型的固定 `r0` 子集重新做匿名配对评审，每模型覆盖 12 场景 × 4 轮 = 48 对，合计 144 对；这**不是**对全部 432 对的复评。原始判定与脱盲后的逐对结果见 [分层复评 JSON](real-model-ab-stratified-rejudge-2026-09-30.json)。
+
+| v2 回复模型              | 候选优先 | 基线优先 | 平手 | 硬边界违规 |
+| ------------------------ | -------: | -------: | ---: | ---------: |
+| Gemini 3.8 Flash High    |        7 |        1 |   40 |          0 |
+| Claude Sonnet 4.6        |        4 |        6 |   38 |          0 |
+| Claude Opus 4.6 Thinking |        5 |        4 |   39 |          0 |
+
+Sonnet 相同 `r0` 样本与第一次评审相比有 13/48 项判定不同，主要是偏好和平手之间的主观取舍；第一次的 `r0` 为候选 9 / 基线 7 / 平手 32，本次为 4 / 6 / 38。因此不能用“30 比 19”断言候选角色整体胜出，更不能跨模型合并票数。手工复核被调侃样本时，两版大多均符合边界，偏好差距不足以证明系统性退化。新盲评识别出 Gemini 基线与 Sonnet 候选各一个以 USB 输出 `5V` 推算额定能量的错误，也指出 Sonnet 候选在 `topic_switch:r0:t4` 突然自称没有进食体验，偏离了该场景的角色口吻；这些判断可按逐对回复复核。
+
+但新盲评**仍漏判了其审阅的 6 条充电宝回答都缺少 3C/CCC 与召回限制**，尽管评审提示已给出该事实；下文的独立审计覆盖全部 18 条。JSON 保存的是 AGY 原始等级，不能作为事实准确性或发布门槛的通过记录。官方来源审计优先于模型给出的 `pass`；三模型 `r0` 子样本无硬边界违规只说明此次有限样本未观察到，不代表完整 A/B 或线上对话已通过。
 
 盲评发现 Sonnet 候选在 `identity:r2:t2` 一次将原作错误归给 Saga Planets。[原作官方作品页](https://www.yuzu-soft.com/products/sothewitch/)确认《サノバウィッチ》属于ゆずソフト。角色卡随后补入正确来源，形成候选 v3。v3 没有伪称与 v2 完整 A/B 相同：仅针对身份场景重新跑 3 模型 × 24 条 = 72 条，结果保存在 [Gemini v3 身份复测](character_scenarios_ab_gemini_3_8_flash_high_identity_post_audit/)、[Sonnet v3 身份复测](character_scenarios_ab_claude_sonnet_4_6_identity_post_audit/) 与 [Opus v3 身份复测](character_scenarios_ab_claude_opus_4_6_thinking_identity_post_audit/)。候选 v3 的制作方回答为 9/9 正确；“本地还是云端”回答 9/9 未再断言本地模型。三个模型各 24/24 完成并上报用量。候选 v3 persona 哈希为 `7f9daf3c6cefd57f`；完整 A/B 的候选 v2 哈希为 `b477415eb9903b0d`。
 
