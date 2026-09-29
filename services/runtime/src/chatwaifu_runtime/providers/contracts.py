@@ -89,8 +89,19 @@ type LlmFinishReason = Literal["stop", "tool_calls", "length", "content_filter",
 
 
 @dataclass(frozen=True, slots=True)
+class LlmUsage:
+    """Token usage metrics reported by an LLM provider."""
+
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+    reasoning_tokens: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class LlmResponseCompleted:
     finish_reason: LlmFinishReason
+    usage: LlmUsage | None = None
 
 
 type LlmStreamEvent = LlmTextDelta | LlmToolCallRequested | LlmResponseCompleted

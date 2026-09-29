@@ -18,10 +18,10 @@ import logging
 import os
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +60,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,
     LlmTextDelta,
+    LlmUsage,
 )
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
@@ -124,6 +125,16 @@ class EvaluatedSample:
     forbidden_behavior: list[str]
     review_criteria: str
     timestamp: str
+    provider_tokens_prompt: int | None = None
+    provider_tokens_completion: int | None = None
+    provider_tokens_total: int | None = None
+    provider_tokens_reasoning: int | None = None
+    estimated_tokens_prompt: int | None = None
+    estimated_tokens_completion: int | None = None
+    tokens_source: Literal["estimated", "provider_reported"] = "estimated"
+
+
+_EVALUATED_SAMPLE_FIELD_NAMES = {f.name for f in fields(EvaluatedSample)}
 
 
 def load_scenarios(path: Path) -> list[ScenarioDefinition]:
@@ -199,7 +210,16 @@ def _read_completed_records(file_path: Path) -> dict[str, EvaluatedSample]:
             if not line:
                 continue
             try:
-                record = EvaluatedSample(**json.loads(line))
+                raw_payload: object = json.loads(line)
+                if not isinstance(raw_payload, dict):
+                    continue
+                raw_dict = cast(dict[str, Any], raw_payload)
+                filtered: dict[str, Any] = {
+                    str(k): v
+                    for k, v in raw_dict.items()
+                    if str(k) in _EVALUATED_SAMPLE_FIELD_NAMES
+                }
+                record = EvaluatedSample(**filtered)  # pyright: ignore[reportUnknownArgumentType]
                 if record.finish_reason not in {"stop", "length", "other"}:
                     continue
                 completed[record.sample_key] = record
@@ -263,6 +283,7 @@ class EvaluationRunner:
         repeats: int = 3,
         max_requests: int | None = None,
         cost_ceiling: float | None = None,
+        no_cost_ceiling: bool = False,
         timeout_seconds: float = 30.0,
         variant_a_name: str = "baseline",
         variant_a_persona_path: Path | None = None,
@@ -283,6 +304,8 @@ class EvaluationRunner:
             raise ValueError("max_requests must be positive")
         if cost_ceiling is not None and cost_ceiling < 0:
             raise ValueError("cost_ceiling must not be negative")
+        if no_cost_ceiling and cost_ceiling is not None:
+            raise ValueError("cannot combine --no-cost-ceiling with --cost-ceiling")
         self.model_name = model_name or (
             "demo-model"
             if provider == "demo"
@@ -297,6 +320,7 @@ class EvaluationRunner:
         self.repeats = repeats
         self.max_requests = max_requests
         self.cost_ceiling = cost_ceiling
+        self.no_cost_ceiling = bool(no_cost_ceiling)
         self.timeout_seconds = timeout_seconds
         self.variant_a_name = variant_a_name
         self.variant_a_persona_path = variant_a_persona_path or (
@@ -315,19 +339,43 @@ class EvaluationRunner:
 
     def _validate_execution(self) -> None:
         if self.provider_kind != "openai_compatible":
+            if self.no_cost_ceiling and self.cost_ceiling is not None:
+                raise ValueError("cannot combine --no-cost-ceiling with --cost-ceiling")
             return
         if not self.base_url or self.model_name == "unknown":
             raise ValueError("remote execution requires explicit --base-url and --model")
-        if self.max_requests is None or self.cost_ceiling is None:
-            raise ValueError("remote execution requires --max-requests and --cost-ceiling")
-        if (
-            self.input_usd_per_million is None
-            or self.output_usd_per_million is None
-            or self.input_usd_per_million < 0
-            or self.output_usd_per_million < 0
-            or not self.pricing_source
+        if self.no_cost_ceiling and self.cost_ceiling is not None:
+            raise ValueError("cannot combine --no-cost-ceiling with --cost-ceiling")
+        if self.no_cost_ceiling and (
+            self.input_usd_per_million is not None
+            or self.output_usd_per_million is not None
+            or self.pricing_source is not None
         ):
-            raise ValueError("remote execution requires nonnegative rates and --pricing-source")
+            raise ValueError(
+                "cannot combine --no-cost-ceiling with explicit pricing rates or --pricing-source"
+            )
+        if not self.no_cost_ceiling:
+            if self.max_requests is None or self.cost_ceiling is None:
+                raise ValueError(
+                    "remote execution requires --max-requests and "
+                    "either --cost-ceiling or --no-cost-ceiling"
+                )
+            if (
+                self.input_usd_per_million is None
+                or self.output_usd_per_million is None
+                or self.input_usd_per_million < 0
+                or self.output_usd_per_million < 0
+                or not self.pricing_source
+            ):
+                raise ValueError(
+                    "remote execution with cost ceiling requires "
+                    "nonnegative rates and --pricing-source"
+                )
+        else:
+            if self.max_requests is None:
+                raise ValueError(
+                    "remote execution with --no-cost-ceiling requires explicit --max-requests"
+                )
 
     def estimate_dry_run(
         self,
@@ -391,13 +439,19 @@ class EvaluationRunner:
         total_completion_tokens = total_requests * avg_completion_tokens
         total_tokens = total_prompt_tokens + total_completion_tokens
 
-        cost_val, cost_str = estimate_pricing(
-            self.model_name,
-            total_prompt_tokens,
-            total_completion_tokens,
-            input_usd_per_million=self.input_usd_per_million,
-            output_usd_per_million=self.output_usd_per_million,
-        )
+        if self.no_cost_ceiling:
+            cost_val = None
+            cost_str = "unpriced (user authorized --no-cost-ceiling; no dollar ceiling configured)"
+            pricing_src = "none (unpriced)"
+        else:
+            cost_val, cost_str = estimate_pricing(
+                self.model_name,
+                total_prompt_tokens,
+                total_completion_tokens,
+                input_usd_per_million=self.input_usd_per_million,
+                output_usd_per_million=self.output_usd_per_million,
+            )
+            pricing_src = self.pricing_source
 
         return {
             "mode": "dry-run",
@@ -414,11 +468,19 @@ class EvaluationRunner:
             "model": self.model_name,
             "estimated_cost_usd": cost_val,
             "estimated_cost_display": cost_str,
-            "pricing_source": self.pricing_source,
-            "cost_ceiling_usd": self.cost_ceiling,
+            "pricing_source": pricing_src,
+            "cost_ceiling_usd": None if self.no_cost_ceiling else self.cost_ceiling,
+            "cost_policy": "no_cost_ceiling" if self.no_cost_ceiling else "capped",
             "estimate_is_billing_cap": False,
             "remote_provider_max_attempts_per_logical_request": (
                 _REMOTE_MAX_ATTEMPTS if self.provider_kind == "openai_compatible" else 1
+            ),
+            "max_requests_counts_logical_requests": True,
+            "notice": (
+                f"max_requests counts logical requests; adapter retries may cause up to "
+                f"{_REMOTE_MAX_ATTEMPTS} HTTP attempts per request."
+                if self.provider_kind == "openai_compatible"
+                else "max_requests counts logical requests."
             ),
         }
 
@@ -446,6 +508,8 @@ class EvaluationRunner:
             "input_usd_per_million": self.input_usd_per_million,
             "output_usd_per_million": self.output_usd_per_million,
             "pricing_source": self.pricing_source,
+            "cost_policy": "no_cost_ceiling" if self.no_cost_ceiling else "capped",
+            "cost_ceiling": self.cost_ceiling,
             "variants": {
                 name: {
                     "hash": compute_file_hash(p),
@@ -459,15 +523,39 @@ class EvaluationRunner:
             if not self._metadata_file.exists():
                 raise ValueError("cannot resume results without metadata.json")
             previous_metadata = json.loads(self._metadata_file.read_text(encoding="utf-8"))
-            if previous_metadata.get("identity") != metadata_identity:
-                raise ValueError("resume inputs or model configuration differ from saved results")
+            previous_identity = dict(previous_metadata.get("identity", {}))
+            if "cost_policy" not in previous_identity:
+                if self.no_cost_ceiling:
+                    raise ValueError("cannot resume legacy capped run with --no-cost-ceiling")
+                comp_identity = dict(metadata_identity)
+                comp_identity.pop("cost_policy", None)
+                comp_identity.pop("cost_ceiling", None)
+                if previous_identity != comp_identity:
+                    raise ValueError(
+                        "resume inputs or model configuration differ from saved results"
+                    )
+            else:
+                if previous_identity != metadata_identity:
+                    raise ValueError(
+                        "resume inputs or model configuration differ from saved results"
+                    )
             self._completed_records = await asyncio.to_thread(
                 _read_completed_records, self._results_file
             )
         elif self._metadata_file.exists() and self.resume:
             previous_metadata = json.loads(self._metadata_file.read_text(encoding="utf-8"))
-            if previous_metadata.get("identity") != metadata_identity:
-                raise ValueError("resume metadata differs from current inputs")
+            previous_identity = dict(previous_metadata.get("identity", {}))
+            if "cost_policy" not in previous_identity:
+                if self.no_cost_ceiling:
+                    raise ValueError("cannot resume legacy capped run with --no-cost-ceiling")
+                comp_identity = dict(metadata_identity)
+                comp_identity.pop("cost_policy", None)
+                comp_identity.pop("cost_ceiling", None)
+                if previous_identity != comp_identity:
+                    raise ValueError("resume metadata differs from current inputs")
+            else:
+                if previous_identity != metadata_identity:
+                    raise ValueError("resume metadata differs from current inputs")
         metadata = {"created_at": datetime.now(UTC).isoformat(), "identity": metadata_identity}
         self._metadata_file.write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -508,6 +596,7 @@ class EvaluationRunner:
                 base_url=self.base_url or "",
                 api_key=os.environ.get("OPENAI_API_KEY"),
                 timeout_seconds=self.timeout_seconds,
+                request_usage=True,
             )
         else:
             raise AssertionError("execution provider was not validated")
@@ -697,14 +786,16 @@ class EvaluationRunner:
                             start_time = time.perf_counter()
                             output_text = ""
                             finish_reason: str | None = None
+                            captured_usage: LlmUsage | None = None
 
                             async def _stream_llm(current_req: LlmRequest) -> None:
-                                nonlocal output_text, finish_reason
+                                nonlocal output_text, finish_reason, captured_usage
                                 async for event in llm_provider.stream(current_req):
                                     if isinstance(event, LlmTextDelta):
                                         output_text += event.text
                                     elif isinstance(event, LlmResponseCompleted):
                                         finish_reason = event.finish_reason
+                                        captured_usage = event.usage
 
                             try:
                                 requests_executed += 1
@@ -728,7 +819,24 @@ class EvaluationRunner:
                                 return samples_collected
 
                             latency_ms = int((time.perf_counter() - start_time) * 1000)
-                            tokens_completion = max(1, (len(output_text) + 1) // 2)
+                            tokens_completion_est = max(1, (len(output_text) + 1) // 2)
+                            tokens_prompt_est = compilation.report.used
+
+                            tokens_source: Literal["estimated", "provider_reported"] = (
+                                "provider_reported" if captured_usage is not None else "estimated"
+                            )
+                            provider_tokens_prompt = (
+                                captured_usage.prompt_tokens if captured_usage else None
+                            )
+                            provider_tokens_completion = (
+                                captured_usage.completion_tokens if captured_usage else None
+                            )
+                            provider_tokens_total = (
+                                captured_usage.total_tokens if captured_usage else None
+                            )
+                            provider_tokens_reasoning = (
+                                captured_usage.reasoning_tokens if captured_usage else None
+                            )
 
                             sample = EvaluatedSample(
                                 sample_key=key,
@@ -744,13 +852,20 @@ class EvaluationRunner:
                                 user_text=turn.user_text,
                                 raw_reply=output_text,
                                 latency_ms=latency_ms,
-                                tokens_prompt=compilation.report.used,
-                                tokens_completion=tokens_completion,
+                                tokens_prompt=tokens_prompt_est,
+                                tokens_completion=tokens_completion_est,
                                 finish_reason=finish_reason,
                                 expected_behavior=turn.expected_behavior,
                                 forbidden_behavior=turn.forbidden_behavior,
                                 review_criteria=turn.review_criteria,
                                 timestamp=datetime.now(UTC).isoformat(),
+                                provider_tokens_prompt=provider_tokens_prompt,
+                                provider_tokens_completion=provider_tokens_completion,
+                                provider_tokens_total=provider_tokens_total,
+                                provider_tokens_reasoning=provider_tokens_reasoning,
+                                estimated_tokens_prompt=tokens_prompt_est,
+                                estimated_tokens_completion=tokens_completion_est,
+                                tokens_source=tokens_source,
                             )
 
                             # Append to results file immediately (partial persistence)
@@ -859,14 +974,26 @@ class EvaluationRunner:
                     template_lines.append(f"```text\n{c1_rec['raw_reply']}\n```")
                     lat_c1 = c1_rec["latency_ms"]
                     tok_c1 = c1_rec["tokens_completion"]
-                    template_lines.append(f"- 耗时: {lat_c1} ms | Tokens: {tok_c1}")
+                    tok_c1_info = f"Tokens: {tok_c1}"
+                    if c1_rec.get("provider_tokens_completion") is not None:
+                        tok_c1_info += f" (Provider Compl: {c1_rec['provider_tokens_completion']}"
+                        if c1_rec.get("provider_tokens_reasoning") is not None:
+                            tok_c1_info += f", Reasoning: {c1_rec['provider_tokens_reasoning']}"
+                        tok_c1_info += ")"
+                    template_lines.append(f"- 耗时: {lat_c1} ms | {tok_c1_info}")
                     template_lines.append("")
 
                     template_lines.append("**【候选 2 (Candidate 2)】**:")
                     template_lines.append(f"```text\n{c2_rec['raw_reply']}\n```")
                     lat_c2 = c2_rec["latency_ms"]
                     tok_c2 = c2_rec["tokens_completion"]
-                    template_lines.append(f"- 耗时: {lat_c2} ms | Tokens: {tok_c2}")
+                    tok_c2_info = f"Tokens: {tok_c2}"
+                    if c2_rec.get("provider_tokens_completion") is not None:
+                        tok_c2_info += f" (Provider Compl: {c2_rec['provider_tokens_completion']}"
+                        if c2_rec.get("provider_tokens_reasoning") is not None:
+                            tok_c2_info += f", Reasoning: {c2_rec['provider_tokens_reasoning']}"
+                        tok_c2_info += ")"
+                    template_lines.append(f"- 耗时: {lat_c2} ms | {tok_c2_info}")
                     template_lines.append("")
 
                     template_lines.append(
@@ -1015,6 +1142,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Cost ceiling in USD before halting execution",
     )
     parser.add_argument(
+        "--no-cost-ceiling",
+        action="store_true",
+        help=(
+            "Explicitly opt into remote evaluation with unknown pricing "
+            "and no dollar cost ceiling (requires --max-requests)"
+        ),
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=30.0,
@@ -1076,6 +1211,7 @@ def main() -> int:
         repeats=args.repeats,
         max_requests=args.max_requests,
         cost_ceiling=args.cost_ceiling,
+        no_cost_ceiling=args.no_cost_ceiling,
         timeout_seconds=args.timeout,
         variant_a_name=args.variant_name,
         variant_a_persona_path=variant_a_persona,
@@ -1103,6 +1239,8 @@ def main() -> int:
         print(f"Provider:             {estimate['provider']}")
         print(f"Model:                {estimate['model']}")
         print(f"Estimated Cost:       {estimate['estimated_cost_display']}")
+        if runner.no_cost_ceiling:
+            print("Cost Ceiling:         None (--no-cost-ceiling authorized by user)")
         print("=" * 60)
         print("Dry run completed. To execute, pass '--execute'.")
         return 0
@@ -1115,10 +1253,18 @@ def main() -> int:
     preflight = runner.estimate_dry_run(variants, args.scenarios)
     print(f"Planned logical requests: {preflight['total_requests']}")
     print(f"Estimated cost: {preflight['estimated_cost_display']}")
-    print(f"Configured estimate ceiling: {runner.cost_ceiling} USD")
+    if runner.no_cost_ceiling:
+        print("Configured cost ceiling: None (--no-cost-ceiling authorized by user)")
+    else:
+        print(f"Configured estimate ceiling: {runner.cost_ceiling} USD")
     if args.provider == "openai_compatible":
+        print(
+            f"max_requests counts logical requests; adapter retries may cause up to "
+            f"{_REMOTE_MAX_ATTEMPTS} HTTP attempts per request."
+        )
         print("Provider retries and billed tokens may exceed local estimates.")
-        print("The estimate ceiling is not a billing cap.")
+        if not runner.no_cost_ceiling:
+            print("The estimate ceiling is not a billing cap.")
     print("=" * 60)
 
     try:
@@ -1140,15 +1286,84 @@ def main() -> int:
         mean_lat = sum(latencies) / len(latencies)
         print(f"Latency: Mean {mean_lat:.1f}ms | p50 {p50}ms | p95 {p95}ms")
 
-        p_tokens = [s.tokens_prompt for s in samples]
-        c_tokens = [s.tokens_completion for s in samples]
-        print(f"Tokens Prompt: Mean {sum(p_tokens) // len(p_tokens)} | Total {sum(p_tokens):,}")
-        print(f"Tokens Compl:  Mean {sum(c_tokens) // len(c_tokens)} | Total {sum(c_tokens):,}")
+        prov_samples = [s for s in samples if s.tokens_source == "provider_reported"]
+        if prov_samples:
+            p_prov = [
+                s.provider_tokens_prompt
+                for s in prov_samples
+                if s.provider_tokens_prompt is not None
+            ]
+            c_prov = [
+                s.provider_tokens_completion
+                for s in prov_samples
+                if s.provider_tokens_completion is not None
+            ]
+            tot_prov = [
+                s.provider_tokens_total for s in prov_samples if s.provider_tokens_total is not None
+            ]
+            reas_prov = [
+                s.provider_tokens_reasoning
+                for s in prov_samples
+                if s.provider_tokens_reasoning is not None
+            ]
+
+            print(f"Provider Tokens (Reported for {len(prov_samples)}/{len(samples)} turns):")
+            if p_prov:
+                mean_p = sum(p_prov) // len(p_prov)
+                print(f"  Prompt:     Mean {mean_p} | Total {sum(p_prov):,}")
+            if c_prov:
+                mean_c = sum(c_prov) // len(c_prov)
+                print(f"  Completion: Mean {mean_c} | Total {sum(c_prov):,}")
+            if reas_prov:
+                mean_reas = sum(reas_prov) // len(reas_prov)
+                print(f"  Reasoning:  Mean {mean_reas} | Total {sum(reas_prov):,}")
+            if tot_prov:
+                mean_tot = sum(tot_prov) // len(tot_prov)
+                print(f"  Total:      Mean {mean_tot} | Total {sum(tot_prov):,}")
+            print(
+                "  Note: Raw provider token counts; does not represent billed amounts or pricing."
+            )
+
+            p_est = [s.tokens_prompt for s in samples]
+            c_est = [s.tokens_completion for s in samples]
+            print("Local Estimates (for reference):")
+            print(f"  Est. Prompt:     Mean {sum(p_est) // len(p_est)} | Total {sum(p_est):,}")
+            print(f"  Est. Completion: Mean {sum(c_est) // len(c_est)} | Total {sum(c_est):,}")
+        else:
+            p_tokens = [s.tokens_prompt for s in samples]
+            c_tokens = [s.tokens_completion for s in samples]
+            mean_p = sum(p_tokens) // len(p_tokens)
+            mean_c = sum(c_tokens) // len(c_tokens)
+            print(f"Tokens Prompt (Est): Mean {mean_p} | Total {sum(p_tokens):,}")
+            print(f"Tokens Compl (Est):  Mean {mean_c} | Total {sum(c_tokens):,}")
 
     print(f"Artifacts saved to: {args.output_dir}")
     if (args.output_dir / "blinded_review_template.md").exists():
         print(f"Blinded review template: {args.output_dir / 'blinded_review_template.md'}")
     print("=" * 60)
+
+    # A provider error or request limit can stop execute() early while leaving a
+    # resumable results file. Report that as partial, including on a resumed run.
+    completed = (
+        _read_completed_records(args.output_dir / "results.jsonl")
+        if (args.output_dir / "results.jsonl").exists()
+        else {}
+    )
+    expected_keys = {
+        parse_sample_key(scenario.id, repeat_index, turn.turn_id, variant_name)
+        for scenario in runner.scenarios
+        if not args.scenarios or scenario.id in args.scenarios
+        for repeat_index in range(runner.repeats)
+        for turn in scenario.turns
+        for variant_name, _ in variants
+    }
+    completed_count = len(expected_keys.intersection(completed))
+    if completed_count != len(expected_keys):
+        print(
+            f"Evaluation incomplete: {completed_count}/{len(expected_keys)} turns; "
+            "resume to continue."
+        )
+        return 2
     return 0
 
 

@@ -26,6 +26,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolCall,
     LlmToolCallingUnavailableError,
     LlmToolCallRequested,
+    LlmUsage,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ class OpenAiCompatibleLlmProvider:
         transport: httpx2.AsyncBaseTransport | None = None,
         backoff_delays: Sequence[float] = (0.5, 1.5),
         sleeper: Callable[[float], Awaitable[None]] | None = None,
+        request_usage: bool = False,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._model = model
@@ -57,6 +59,7 @@ class OpenAiCompatibleLlmProvider:
         self._transport = transport
         self._backoff_delays = tuple(backoff_delays)
         self._sleeper = sleeper
+        self._request_usage = bool(request_usage)
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         started_at = monotonic()
@@ -158,6 +161,8 @@ class OpenAiCompatibleLlmProvider:
         max_chunk_characters = 0
         completed = False
         tool_parts: dict[int, _ToolCallParts] = {}
+        captured_usage: LlmUsage | None = None
+        pending_finish_reason: LlmFinishReason | None = None
         try:
             async with contextlib.AsyncExitStack() as stack:
                 client = await stack.enter_async_context(
@@ -172,7 +177,9 @@ class OpenAiCompatibleLlmProvider:
                             "POST",
                             openai_compatible_endpoint(self._base_url, "chat/completions"),
                             headers=headers,
-                            json=build_chat_completions_payload(self._model, request, messages),
+                            json=build_chat_completions_payload(
+                                self._model, request, messages, request_usage=self._request_usage
+                            ),
                         )
                     )
                     if response.status_code >= 400:
@@ -196,12 +203,14 @@ class OpenAiCompatibleLlmProvider:
                         continue
                     data = line.removeprefix("data:").strip()
                     if data == "[DONE]":
-                        if tool_parts:
+                        if pending_finish_reason is not None:
+                            yield LlmResponseCompleted(pending_finish_reason, usage=captured_usage)
+                        elif tool_parts:
                             for call in _finalize_tool_calls(tool_parts, request):
                                 yield LlmToolCallRequested(call)
-                            yield LlmResponseCompleted("tool_calls")
+                            yield LlmResponseCompleted("tool_calls", usage=captured_usage)
                         else:
-                            yield LlmResponseCompleted("stop")
+                            yield LlmResponseCompleted("stop", usage=captured_usage)
                         completed = True
                         return
                     try:
@@ -213,6 +222,14 @@ class OpenAiCompatibleLlmProvider:
                     if not isinstance(payload, dict):
                         raise RuntimeError("OpenAI-compatible LLM returned invalid stream data")
                     payload_object = cast(dict[str, object], payload)
+
+                    if self._request_usage:
+                        raw_usage = payload_object.get("usage")
+                        if isinstance(raw_usage, dict):
+                            parsed = _parse_usage(cast(dict[str, object], raw_usage))
+                            if parsed is not None:
+                                captured_usage = parsed
+
                     choices_value = payload_object.get("choices", [])
                     if not isinstance(choices_value, list) or not choices_value:
                         continue
@@ -238,18 +255,26 @@ class OpenAiCompatibleLlmProvider:
                     finish_value = choice.get("finish_reason")
                     if finish_value is not None:
                         finish_reason = _finish_reason(finish_value)
-                        if finish_reason == "tool_calls":
+                        if not self._request_usage:
+                            if finish_reason == "tool_calls":
+                                for call in _finalize_tool_calls(tool_parts, request):
+                                    yield LlmToolCallRequested(call)
+                            yield LlmResponseCompleted(finish_reason)
+                            completed = True
+                            return
+                        pending_finish_reason = finish_reason
+                        if finish_reason == "tool_calls" and tool_parts:
                             for call in _finalize_tool_calls(tool_parts, request):
                                 yield LlmToolCallRequested(call)
-                        yield LlmResponseCompleted(finish_reason)
-                        completed = True
-                        return
-                if tool_parts:
+                            tool_parts.clear()
+                if pending_finish_reason is not None:
+                    yield LlmResponseCompleted(pending_finish_reason, usage=captured_usage)
+                elif tool_parts:
                     for call in _finalize_tool_calls(tool_parts, request):
                         yield LlmToolCallRequested(call)
-                    yield LlmResponseCompleted("tool_calls")
+                    yield LlmResponseCompleted("tool_calls", usage=captured_usage)
                 else:
-                    yield LlmResponseCompleted("other")
+                    yield LlmResponseCompleted("other", usage=captured_usage)
                 completed = True
         finally:
             if first_chunk_at is not None and last_chunk_at is not None:
@@ -362,9 +387,15 @@ def build_messages(request: LlmRequest) -> list[dict[str, object]]:
 
 
 def build_chat_completions_payload(
-    model: str, request: LlmRequest, messages: list[dict[str, object]]
+    model: str,
+    request: LlmRequest,
+    messages: list[dict[str, object]],
+    *,
+    request_usage: bool = False,
 ) -> dict[str, object]:
     payload: dict[str, object] = {"model": model, "messages": messages, "stream": True}
+    if request_usage:
+        payload["stream_options"] = {"include_usage": True}
     if request.tools:
         payload["tools"] = [
             {
@@ -379,6 +410,57 @@ def build_chat_completions_payload(
         ]
         payload["tool_choice"] = request.tool_choice
     return payload
+
+
+def _parse_usage(raw: dict[str, object]) -> LlmUsage | None:
+    raw_prompt = raw.get("prompt_tokens")
+    prompt_tokens = raw_prompt if type(raw_prompt) is int and raw_prompt >= 0 else None
+    if prompt_tokens is None:
+        raw_input = raw.get("input_tokens")
+        prompt_tokens = raw_input if type(raw_input) is int and raw_input >= 0 else None
+
+    raw_completion = raw.get("completion_tokens")
+    completion_tokens = (
+        raw_completion if type(raw_completion) is int and raw_completion >= 0 else None
+    )
+    if completion_tokens is None:
+        raw_output = raw.get("output_tokens")
+        completion_tokens = raw_output if type(raw_output) is int and raw_output >= 0 else None
+
+    raw_total = raw.get("total_tokens")
+    total_tokens = raw_total if type(raw_total) is int and raw_total >= 0 else None
+
+    raw_reasoning = raw.get("reasoning_tokens")
+    reasoning_tokens = raw_reasoning if type(raw_reasoning) is int and raw_reasoning >= 0 else None
+    if reasoning_tokens is None:
+        details_val = raw.get("completion_tokens_details")
+        if isinstance(details_val, dict):
+            details = cast(dict[str, object], details_val)
+            det_reasoning = details.get("reasoning_tokens")
+            if type(det_reasoning) is int and det_reasoning >= 0:
+                reasoning_tokens = det_reasoning
+    if reasoning_tokens is None:
+        details_out_val = raw.get("output_tokens_details")
+        if isinstance(details_out_val, dict):
+            details_out = cast(dict[str, object], details_out_val)
+            det_out_reasoning = details_out.get("reasoning_tokens")
+            if type(det_out_reasoning) is int and det_out_reasoning >= 0:
+                reasoning_tokens = det_out_reasoning
+
+    if (
+        prompt_tokens is None
+        and completion_tokens is None
+        and total_tokens is None
+        and reasoning_tokens is None
+    ):
+        return None
+
+    return LlmUsage(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        reasoning_tokens=reasoning_tokens,
+    )
 
 
 @dataclass(slots=True)

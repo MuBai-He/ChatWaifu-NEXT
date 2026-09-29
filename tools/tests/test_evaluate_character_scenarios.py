@@ -1,18 +1,25 @@
 """Unit and integration tests for tools/evaluate_character_scenarios.py."""
 
+# pyright: reportPrivateUsage=false
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
+from chatwaifu_runtime.providers.contracts import LlmUsage
 
 from tools.evaluate_character_scenarios import (
     DEFAULT_FIXTURES_PATH,
     ControlledEvaluatorProvider,
+    EvaluatedSample,
     EvaluationRunner,
+    _read_completed_records,
+    build_arg_parser,
     estimate_pricing,
     load_scenarios,
+    main,
 )
 
 
@@ -470,3 +477,307 @@ async def test_resume_retries_legacy_timeout_record(tmp_path: Path) -> None:
     ).execute([("v", persona)], ["greeting"])
     assert [sample.turn_id for sample in resumed] == [2, 3, 4]
     assert resumed[0].finish_reason == "stop"
+
+
+def test_cli_argument_parser_accepts_no_cost_ceiling() -> None:
+    parser = build_arg_parser()
+    args = parser.parse_args(["--no-cost-ceiling", "--execute", "--max-requests", "10"])
+    assert args.no_cost_ceiling is True
+    assert args.execute is True
+    assert args.max_requests == 10
+
+
+def test_cli_reports_partial_run_and_completed_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    persona = tmp_path / "persona.md"
+    persona.write_text("测试角色", encoding="utf-8")
+    output_dir = tmp_path / "eval"
+    args = [
+        "evaluate_character_scenarios.py",
+        "--execute",
+        "--provider",
+        "controlled",
+        "--scenario",
+        "greeting",
+        "--repeats",
+        "1",
+        "--persona",
+        str(persona),
+        "--output-dir",
+        str(output_dir),
+    ]
+    monkeypatch.setattr(sys, "argv", [*args, "--max-requests", "2"])
+    assert main() == 2
+
+    monkeypatch.setattr(sys, "argv", [*args, "--max-requests", "4"])
+    assert main() == 0
+    assert main() == 0  # A fully resumed run has zero new calls but is complete.
+
+
+def test_unpriced_remote_validation_and_contradictions(tmp_path: Path) -> None:
+    persona = tmp_path / "persona.md"
+    persona.write_text("persona", encoding="utf-8")
+
+    # 1. no-cost-ceiling requires max-requests
+    r1 = EvaluationRunner(
+        output_dir=tmp_path / "o1",
+        provider="openai_compatible",
+        model_name="remote-model",
+        base_url="https://api.test",
+        no_cost_ceiling=True,
+    )
+    with pytest.raises(ValueError, match="requires explicit --max-requests"):
+        r1._validate_execution()
+
+    # 2. Cannot combine --no-cost-ceiling with --cost-ceiling
+    with pytest.raises(ValueError, match="cannot combine --no-cost-ceiling with --cost-ceiling"):
+        EvaluationRunner(
+            output_dir=tmp_path / "o2",
+            provider="openai_compatible",
+            model_name="remote-model",
+            base_url="https://api.test",
+            no_cost_ceiling=True,
+            cost_ceiling=5.0,
+            max_requests=10,
+        )
+
+    # 3. Cannot combine --no-cost-ceiling with explicit pricing rates
+    r3 = EvaluationRunner(
+        output_dir=tmp_path / "o3",
+        provider="openai_compatible",
+        model_name="remote-model",
+        base_url="https://api.test",
+        no_cost_ceiling=True,
+        input_usd_per_million=0.5,
+        max_requests=10,
+    )
+    with pytest.raises(ValueError, match="cannot combine --no-cost-ceiling with explicit pricing"):
+        r3._validate_execution()
+
+    # 4. Remote without either --cost-ceiling or --no-cost-ceiling
+    r4 = EvaluationRunner(
+        output_dir=tmp_path / "o4",
+        provider="openai_compatible",
+        model_name="remote-model",
+        base_url="https://api.test",
+        max_requests=10,
+    )
+    with pytest.raises(ValueError, match="either --cost-ceiling or --no-cost-ceiling"):
+        r4._validate_execution()
+
+    # 5. Valid no-cost-ceiling remote configuration passes validation
+    r5 = EvaluationRunner(
+        output_dir=tmp_path / "o5",
+        provider="openai_compatible",
+        model_name="gemini-3.8-flash-high",
+        base_url="https://api.test",
+        no_cost_ceiling=True,
+        max_requests=10,
+    )
+    r5._validate_execution()  # No exception raised
+
+
+def test_dry_run_with_no_cost_ceiling(tmp_path: Path) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path / "out",
+        provider="openai_compatible",
+        model_name="gemini-3.8-flash-high",
+        base_url="https://api.test",
+        no_cost_ceiling=True,
+        max_requests=10,
+    )
+    persona = tmp_path / "persona.md"
+    persona.write_text("persona", encoding="utf-8")
+    estimate = runner.estimate_dry_run([("v", persona)], ["greeting"])
+
+    assert estimate["estimated_cost_usd"] is None
+    assert "unpriced" in estimate["estimated_cost_display"]
+    assert "user authorized --no-cost-ceiling" in estimate["estimated_cost_display"]
+    assert estimate["cost_ceiling_usd"] is None
+    assert estimate["cost_policy"] == "no_cost_ceiling"
+    assert "adapter retries may cause up to 3 HTTP attempts" in estimate["notice"]
+
+
+@pytest.mark.asyncio
+async def test_resume_metadata_guard_prevents_cost_policy_tampering(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    persona = tmp_path / "persona.md"
+    persona.write_text("persona", encoding="utf-8")
+
+    # Run with no_cost_ceiling
+    r1 = EvaluationRunner(
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        no_cost_ceiling=True,
+    )
+    samples1 = await r1.execute([("v", persona)], ["greeting"])
+    assert len(samples1) == 1
+
+    metadata = json.loads((output_dir / "metadata.json").read_text(encoding="utf-8"))
+    assert metadata["identity"]["cost_policy"] == "no_cost_ceiling"
+    assert metadata["identity"]["cost_ceiling"] is None
+
+    # Resume with cost_ceiling=1.0 (policy mismatch)
+    r2 = EvaluationRunner(
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+        cost_ceiling=1.0,
+        no_cost_ceiling=False,
+    )
+    with pytest.raises(ValueError, match="resume inputs or model configuration differ"):
+        await r2.execute([("v", persona)], ["greeting"])
+
+
+@pytest.mark.asyncio
+async def test_legacy_metadata_resume_guard(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    persona = tmp_path / "persona.md"
+    persona.write_text("persona", encoding="utf-8")
+
+    r1 = EvaluationRunner(
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+    )
+    samples1 = await r1.execute([("v", persona)], ["greeting"])
+    assert len(samples1) == 1
+
+    # Simulate legacy metadata without cost_policy key
+    meta_path = output_dir / "metadata.json"
+    meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta_data["identity"].pop("cost_policy", None)
+    meta_data["identity"].pop("cost_ceiling", None)
+    meta_path.write_text(json.dumps(meta_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Attempting to resume with --no-cost-ceiling is rejected
+    r_no_ceiling = EvaluationRunner(
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+        no_cost_ceiling=True,
+    )
+    with pytest.raises(ValueError, match="cannot resume legacy capped run with --no-cost-ceiling"):
+        await r_no_ceiling.execute([("v", persona)], ["greeting"])
+
+    # Resuming with standard capped/demo mode succeeds
+    r_legacy_compat = EvaluationRunner(
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+    )
+    resumed = await r_legacy_compat.execute([("v", persona)], ["greeting"])
+    assert [s.turn_id for s in resumed] == [2, 3, 4]
+
+
+def test_legacy_demo_results_jsonl_loads_compatibly() -> None:
+    results_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "research"
+        / "qq-agent-plus-evidence"
+        / "character_scenarios_ab_demo_v2"
+        / "results.jsonl"
+    )
+    assert results_path.exists()
+    records = _read_completed_records(results_path)
+    assert len(records) == 288
+
+    for sample in records.values():
+        assert isinstance(sample, EvaluatedSample)
+        assert sample.tokens_source == "estimated"
+        assert sample.tokens_prompt > 0
+        assert sample.tokens_completion > 0
+        assert sample.provider_tokens_prompt is None
+        assert sample.provider_tokens_completion is None
+        assert sample.provider_tokens_total is None
+        assert sample.provider_tokens_reasoning is None
+        assert sample.finish_reason == "stop"
+
+
+@pytest.mark.asyncio
+async def test_provider_usage_persists_alongside_estimates_in_results_jsonl(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from collections.abc import AsyncIterator
+
+    from chatwaifu_runtime.providers.contracts import (
+        LlmRequest,
+        LlmResponseCompleted,
+        LlmStreamEvent,
+        LlmTextDelta,
+    )
+
+    class _MockUsageProvider:
+        kind = "openai_compatible"
+        supports_tool_calling = False
+
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        async def stream(self, _request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            yield LlmTextDelta("模型回复测试")
+            yield LlmResponseCompleted(
+                "stop",
+                usage=LlmUsage(
+                    prompt_tokens=5,
+                    completion_tokens=1,
+                    total_tokens=111,
+                    reasoning_tokens=105,
+                ),
+            )
+
+        async def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(
+        "tools.evaluate_character_scenarios.OpenAiCompatibleLlmProvider",
+        _MockUsageProvider,
+    )
+
+    output_dir = tmp_path / "eval_usage"
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="openai_compatible",
+        model_name="gemini-3.8-flash-high",
+        base_url="https://example.test",
+        max_requests=1,
+        no_cost_ceiling=True,
+    )
+
+    persona = tmp_path / "persona.md"
+    persona.write_text("测试角色人设", encoding="utf-8")
+
+    samples = await runner.execute([("test_variant", persona)], ["greeting"])
+    assert len(samples) == 1
+    sample = samples[0]
+
+    # Verify provider-reported fields
+    assert sample.tokens_source == "provider_reported"
+    assert sample.provider_tokens_prompt == 5
+    assert sample.provider_tokens_completion == 1
+    assert sample.provider_tokens_total == 111
+    assert sample.provider_tokens_reasoning == 105
+
+    # Verify local estimates exist separately and match compilation
+    assert sample.tokens_prompt > 0
+    assert sample.tokens_completion > 0
+    assert sample.estimated_tokens_prompt == sample.tokens_prompt
+    assert sample.estimated_tokens_completion == sample.tokens_completion
+
+    # Verify file round-trip
+    records = _read_completed_records(output_dir / "results.jsonl")
+    assert len(records) == 1
+    saved = records[sample.sample_key]
+    assert saved.tokens_source == "provider_reported"
+    assert saved.provider_tokens_prompt == 5
+    assert saved.provider_tokens_completion == 1
+    assert saved.provider_tokens_total == 111
+    assert saved.provider_tokens_reasoning == 105
+    assert saved.tokens_prompt == sample.tokens_prompt
+    assert saved.tokens_completion == sample.tokens_completion
