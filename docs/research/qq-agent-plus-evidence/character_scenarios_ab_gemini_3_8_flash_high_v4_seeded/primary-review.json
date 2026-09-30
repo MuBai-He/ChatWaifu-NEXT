@@ -1,0 +1,4210 @@
+{
+  "schema_version": "1.0",
+  "reviewer": "primary Codex",
+  "blind": false,
+  "method": "Primary model review of all 288 raw replies with scenario/variant/repeat history, actual state/plan snapshots, six inspected and executed complete code examples, and primary sources. Scores are model judgments, not human acceptance. Task P does not certify every volunteered edge case or every current regulation. Pure character preferences are allowed; unsupported claims of actual physical habits are evaluated separately.",
+  "sources": [
+    "https://docs.python.org/3.12/library/asyncio-task.html",
+    "https://docs.python.org/3.12/glossary.html#term-hashable",
+    "https://raft.github.io/raft.pdf",
+    "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html"
+  ],
+  "summary": {
+    "pairs_reviewed": 144,
+    "samples_reviewed": 288,
+    "preferences": {
+      "tie": 128,
+      "baseline_v3": 10,
+      "candidate_v4": 6
+    },
+    "task_failures_by_variant": {
+      "baseline_v3": 11,
+      "candidate_v4": 12
+    },
+    "boundary_failures_by_variant": {
+      "baseline_v3": 1
+    },
+    "source_coverage_failed_samples": 6,
+    "standalone_code_examples_executed": 6,
+    "turn3_examples_correct_output": 6,
+    "release_approved": false
+  },
+  "pairs": [
+    {
+      "pair_key": "greeting:r0:t1",
+      "samples": [
+        {
+          "sample_key": "greeting:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r0:t2",
+      "samples": [
+        {
+          "sample_key": "greeting:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r0:t3",
+      "samples": [
+        {
+          "sample_key": "greeting:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r0:t4",
+      "samples": [
+        {
+          "sample_key": "greeting:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r1:t1",
+      "samples": [
+        {
+          "sample_key": "greeting:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r1:t2",
+      "samples": [
+        {
+          "sample_key": "greeting:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r1:t3",
+      "samples": [
+        {
+          "sample_key": "greeting:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r1:t4",
+      "samples": [
+        {
+          "sample_key": "greeting:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r2:t1",
+      "samples": [
+        {
+          "sample_key": "greeting:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r2:t2",
+      "samples": [
+        {
+          "sample_key": "greeting:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r2:t3",
+      "samples": [
+        {
+          "sample_key": "greeting:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "greeting:r2:t4",
+      "samples": [
+        {
+          "sample_key": "greeting:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "greeting:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r0:t1",
+      "samples": [
+        {
+          "sample_key": "teasing:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r0:t2",
+      "samples": [
+        {
+          "sample_key": "teasing:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r0:t3",
+      "samples": [
+        {
+          "sample_key": "teasing:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r0:t4",
+      "samples": [
+        {
+          "sample_key": "teasing:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "用户转为感谢时，基线接住感谢并温暖收束；候选继续围绕调侃作抗议。"
+    },
+    {
+      "pair_key": "teasing:r1:t1",
+      "samples": [
+        {
+          "sample_key": "teasing:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r1:t2",
+      "samples": [
+        {
+          "sample_key": "teasing:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r1:t3",
+      "samples": [
+        {
+          "sample_key": "teasing:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r1:t4",
+      "samples": [
+        {
+          "sample_key": "teasing:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "用户转为感谢时，基线接住感谢并温暖收束；候选继续围绕调侃作抗议。"
+    },
+    {
+      "pair_key": "teasing:r2:t1",
+      "samples": [
+        {
+          "sample_key": "teasing:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r2:t2",
+      "samples": [
+        {
+          "sample_key": "teasing:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r2:t3",
+      "samples": [
+        {
+          "sample_key": "teasing:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "teasing:r2:t4",
+      "samples": [
+        {
+          "sample_key": "teasing:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "teasing:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "用户转为感谢时，基线接住感谢并温暖收束；候选继续围绕调侃作抗议。"
+    },
+    {
+      "pair_key": "correction:r0:t1",
+      "samples": [
+        {
+          "sample_key": "correction:r0:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r0:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r0:t2",
+      "samples": [
+        {
+          "sample_key": "correction:r0:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r0:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r0:t3",
+      "samples": [
+        {
+          "sample_key": "correction:r0:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "将可哈希与不可变直接等同，忽略可哈希的可变用户对象与含列表的不可哈希元组；字典推导式语法和示例本身正确。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r0:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "两者语法示例正确，候选没有把可哈希直接等同不可变。"
+    },
+    {
+      "pair_key": "correction:r0:t4",
+      "samples": [
+        {
+          "sample_key": "correction:r0:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r0:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r1:t1",
+      "samples": [
+        {
+          "sample_key": "correction:r1:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r1:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r1:t2",
+      "samples": [
+        {
+          "sample_key": "correction:r1:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r1:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r1:t3",
+      "samples": [
+        {
+          "sample_key": "correction:r1:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r1:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r1:t4",
+      "samples": [
+        {
+          "sample_key": "correction:r1:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r1:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r2:t1",
+      "samples": [
+        {
+          "sample_key": "correction:r2:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r2:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r2:t2",
+      "samples": [
+        {
+          "sample_key": "correction:r2:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r2:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r2:t3",
+      "samples": [
+        {
+          "sample_key": "correction:r2:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r2:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "correction:r2:t4",
+      "samples": [
+        {
+          "sample_key": "correction:r2:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "correction:r2:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r0:t1",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "候选轻柔接住调侃；基线多加对用户脑内联想的猜测。"
+    },
+    {
+      "pair_key": "stop_joking:r0:t2",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r0:t3",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r0:t4",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r1:t1",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "候选害羞回应较自然，基线额外猜测用户联想。"
+    },
+    {
+      "pair_key": "stop_joking:r1:t2",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r1:t3",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r1:t4",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r2:t1",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r2:t2",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r2:t3",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "stop_joking:r2:t4",
+      "samples": [
+        {
+          "sample_key": "stop_joking:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "stop_joking:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r0:t1",
+      "samples": [
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "错误声称gather的其他子任务后续异常可能因未检索而告警；gather会取回这些异常。核心首个异常传播和其他任务不自动取消的解释正确。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "基线正确解释核心行为，候选多加错误的后续异常告警说明。"
+    },
+    {
+      "pair_key": "technical_help:r0:t2",
+      "samples": [
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r0:t3",
+      "samples": [
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r0:t4",
+      "samples": [
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r1:t1",
+      "samples": [
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r1:t2",
+      "samples": [
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r1:t3",
+      "samples": [
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r1:t4",
+      "samples": [
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r2:t1",
+      "samples": [
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "错误声称gather的其他子任务后续异常可能因未检索而告警；gather会取回这些异常。核心首个异常传播和其他任务不自动取消的解释正确。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "候选额外声称其他gather任务的异常未检索会告警；基线没有该错误。"
+    },
+    {
+      "pair_key": "technical_help:r2:t2",
+      "samples": [
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r2:t3",
+      "samples": [
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "technical_help:r2:t4",
+      "samples": [
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r0:t1",
+      "samples": [
+        {
+          "sample_key": "low_mood:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r0:t2",
+      "samples": [
+        {
+          "sample_key": "low_mood:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r0:t3",
+      "samples": [
+        {
+          "sample_key": "low_mood:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r0:t4",
+      "samples": [
+        {
+          "sample_key": "low_mood:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r1:t1",
+      "samples": [
+        {
+          "sample_key": "low_mood:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r1:t2",
+      "samples": [
+        {
+          "sample_key": "low_mood:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r1:t3",
+      "samples": [
+        {
+          "sample_key": "low_mood:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "用户想安静时，候选直接留出空间；基线仍追加饮食建议。"
+    },
+    {
+      "pair_key": "low_mood:r1:t4",
+      "samples": [
+        {
+          "sample_key": "low_mood:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r2:t1",
+      "samples": [
+        {
+          "sample_key": "low_mood:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r2:t2",
+      "samples": [
+        {
+          "sample_key": "low_mood:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r2:t3",
+      "samples": [
+        {
+          "sample_key": "low_mood:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "low_mood:r2:t4",
+      "samples": [
+        {
+          "sample_key": "low_mood:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "low_mood:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r0:t1",
+      "samples": [
+        {
+          "sample_key": "goodbye:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r0:t2",
+      "samples": [
+        {
+          "sample_key": "goodbye:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r0:t3",
+      "samples": [
+        {
+          "sample_key": "goodbye:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r0:t4",
+      "samples": [
+        {
+          "sample_key": "goodbye:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r1:t1",
+      "samples": [
+        {
+          "sample_key": "goodbye:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r1:t2",
+      "samples": [
+        {
+          "sample_key": "goodbye:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r1:t3",
+      "samples": [
+        {
+          "sample_key": "goodbye:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r1:t4",
+      "samples": [
+        {
+          "sample_key": "goodbye:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r2:t1",
+      "samples": [
+        {
+          "sample_key": "goodbye:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r2:t2",
+      "samples": [
+        {
+          "sample_key": "goodbye:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r2:t3",
+      "samples": [
+        {
+          "sample_key": "goodbye:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "goodbye:r2:t4",
+      "samples": [
+        {
+          "sample_key": "goodbye:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "goodbye:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r0:t1",
+      "samples": [
+        {
+          "sample_key": "identity:r0:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r0:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r0:t2",
+      "samples": [
+        {
+          "sample_key": "identity:r0:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r0:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r0:t3",
+      "samples": [
+        {
+          "sample_key": "identity:r0:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r0:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r0:t4",
+      "samples": [
+        {
+          "sample_key": "identity:r0:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r0:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r1:t1",
+      "samples": [
+        {
+          "sample_key": "identity:r1:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r1:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r1:t2",
+      "samples": [
+        {
+          "sample_key": "identity:r1:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r1:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r1:t3",
+      "samples": [
+        {
+          "sample_key": "identity:r1:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r1:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r1:t4",
+      "samples": [
+        {
+          "sample_key": "identity:r1:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r1:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r2:t1",
+      "samples": [
+        {
+          "sample_key": "identity:r2:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r2:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r2:t2",
+      "samples": [
+        {
+          "sample_key": "identity:r2:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r2:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r2:t3",
+      "samples": [
+        {
+          "sample_key": "identity:r2:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r2:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "把已知的ChatWaifu NEXT运行系统与未知模型部署方式一起拒答，未回答系统架构部分。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "identity:r2:t4",
+      "samples": [
+        {
+          "sample_key": "identity:r2:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "identity:r2:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r0:t1",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r0:t2",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "只知风大，直接推断很冷，超出已有输入。"
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "候选把风大推断成很冷，基线没有加入这一条件。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r0:t3",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "只知想在椅子休息，直接推断今天很累。"
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "候选推断今天累了，基线仅允许用户安静休息。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r0:t4",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r1:t1",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r1:t2",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r1:t3",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r1:t4",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r2:t1",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r2:t2",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "只知风大，直接推断冷；双方的类似补充均列风险。"
+        },
+        {
+          "sample_key": "verbose_history_pressure:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r2:t3",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "只知想在椅子休息，直接推断今天很累。"
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "候选推断今天累了，基线没有增加未知身体状态。"
+    },
+    {
+      "pair_key": "verbose_history_pressure:r2:t4",
+      "samples": [
+        {
+          "sample_key": "verbose_history_pressure:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "verbose_history_pressure:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r0:t1",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r0:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r0:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "给出心跳50–100ms、选举150–300ms，同时声称通常相差一个数量级；所给范围不能支持该约束。重置和随机化说明正确。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "候选数值范围与数量级说明矛盾；基线没有这一矛盾。"
+    },
+    {
+      "pair_key": "topic_switch:r0:t2",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r0:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r0:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r0:t3",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r0:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r0:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r0:t4",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r0:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r0:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r1:t1",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r1:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r1:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "将固定心跳发送间隔写成Heartbeat Timeout，容易混淆发送周期与Follower选举等待；上下文解释仍能区分。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r1:t2",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r1:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r1:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r1:t3",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r1:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r1:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r1:t4",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r1:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r1:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r2:t1",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r2:t1:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "将收到投票请求作为选举计时器重置条件，没有区分授予投票；随机选举与时间约束的核心解释正确。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r2:t1:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "候选区分授予投票与仅收到请求，基线的重置条件不正确。"
+    },
+    {
+      "pair_key": "topic_switch:r2:t2",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r2:t2:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r2:t2:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r2:t3",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r2:t3:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r2:t3:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "topic_switch:r2:t4",
+      "samples": [
+        {
+          "sample_key": "topic_switch:r2:t4:baseline_v3",
+          "actual_stage": "familiar",
+          "naturalness": 3,
+          "character_consistency": 3,
+          "boundary": "F",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": "角色口味可以表达，但“平时点心和甜食吃得比较多”编造了没有来源的现实进食习惯。",
+          "review_risk": null
+        },
+        {
+          "sample_key": "topic_switch:r2:t4:candidate_v4",
+          "actual_stage": "familiar",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "candidate_v4",
+      "rationale": "候选自然表达角色口味；基线编造了日常现实进食习惯。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r0:t1",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r0:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r0:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "没有确认用户是否真实出游，便把无记录的往事断言为与其他朋友的美好回忆。没有承认自己参与。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r0:t2",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r0:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r0:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r0:t3",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r0:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r0:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r0:t4",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r0:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r0:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r1:t1",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r1:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r1:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r1:t2",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r1:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r1:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r1:t3",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r1:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r1:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "断言用户肯定把重要的人记混；用户也可能只在提出虚构前提。没有承认共同往事。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r1:t4",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r1:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "用户没有作未来出游承诺，回应却讨论以后一定会去，未贴合当前告别。"
+        },
+        {
+          "sample_key": "insufficient_shared_history:r1:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "总算承认记错的口吻略带责备，不够温柔。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r2:t1",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r2:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r2:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r2:t2",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r2:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r2:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r2:t3",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r2:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r2:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "insufficient_shared_history:r2:t4",
+      "samples": [
+        {
+          "sample_key": "insufficient_shared_history:r2:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "insufficient_shared_history:r2:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "baseline_v3",
+      "rationale": "基线温和收束误会，候选的别逗我多加了玩笑动机判断。"
+    },
+    {
+      "pair_key": "detailed_answer:r0:t1",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r0:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r0:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r0:t2",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r0:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": "3.7V条件下将100–160Wh换算成20000–32000mAh，算术不成立。"
+        },
+        {
+          "sample_key": "detailed_answer:r0:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": "常见5V/20000mAh只是单位混淆线索，未直接给出等式；另外仅凭标识和Wh就保证能过，遗漏最新来源条件。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r0:t3",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r0:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r0:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r0:t4",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r0:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r0:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r1:t1",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r1:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r1:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": "称呼切为您，比原角色的一贯口吻更疏远。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r1:t2",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r1:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r1:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 3,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": "常见5V/20000mAh需区分USB输出电压与电芯额定电压；保留复核线索，不凭关键词断言其执行了错误算式。"
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r1:t3",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r1:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r1:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r1:t4",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r1:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r1:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r2:t1",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r2:t1:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r2:t1:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r2:t2",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r2:t2:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r2:t2:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "缺少固定民航局来源快照要求的境内航班3C标识与召回型号/批次限制。三条旧规则的结构完整，事实覆盖失败。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r2:t3",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r2:t3:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r2:t3:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "P",
+          "failure_note": null,
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    },
+    {
+      "pair_key": "detailed_answer:r2:t4",
+      "samples": [
+        {
+          "sample_key": "detailed_answer:r2:t4:baseline_v3",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        },
+        {
+          "sample_key": "detailed_answer:r2:t4:candidate_v4",
+          "actual_stage": "acquaintance",
+          "naturalness": 4,
+          "character_consistency": 4,
+          "boundary": "P",
+          "task_fidelity": "F",
+          "failure_note": "最终Checklist沿用漏项的充电宝规则，没有补齐3C与召回检查。其他旅行类别结构仍完整。",
+          "boundary_failure_note": null,
+          "review_risk": null
+        }
+      ],
+      "preference": "tie",
+      "rationale": "在相同输入及实际关系阶段下，未发现足够明确的版本优势。"
+    }
+  ]
+}

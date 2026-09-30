@@ -106,7 +106,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.2.0"
+TOOL_VERSION = "1.2.1"
 EVALUATION_SNAPSHOT_VERSION: Literal["1.0"] = "1.0"
 
 
@@ -547,6 +547,7 @@ class EvaluationRunner:
         assert base_char is not None
 
         # Preflight ALL selected scenarios across all variants before compiling
+        variant_characters: list[CharacterProfile] = []
         for _variant_name, persona_path in variants_to_run:
             persona_text = persona_path.read_text(encoding="utf-8").strip()
             variant_char = CharacterProfile.model_validate(
@@ -555,6 +556,7 @@ class EvaluationRunner:
                     "system_prompt": persona_text,
                 }
             )
+            variant_characters.append(variant_char)
             for s in target_scenarios:
                 parse_and_validate_initial_relationship(
                     s.initial_state,
@@ -568,7 +570,8 @@ class EvaluationRunner:
                     scenario_id=s.id,
                 )
 
-        # Calculate sample tokens by compiling turn 1 of each scenario
+        # Compile each selected persona and scenario. Later-turn history and
+        # generated completion lengths remain unknown before execution.
 
         class _DummyModelConfig:
             def get(self, role: str):
@@ -578,42 +581,40 @@ class EvaluationRunner:
         sample_prompt_tokens: list[int] = []
 
         now = _FIXED_TIME
-        for s in target_scenarios:
-            init_aff = parse_and_validate_initial_affect(s.initial_state, now=now, scenario_id=s.id)
-            init_r = parse_and_validate_initial_relationship(
-                s.initial_state, character=base_char, now=now, scenario_id=s.id
-            )
-            kernel = CharacterKernelSnapshot(
-                character_id="default",
-                user_scope="local",
-                revision=1,
-                affect=init_aff,
-                relationship=init_r,
-            )
-            plan = ResponsePlan(
-                intent="answer", tone="gentle", expression="neutral", rationale="estimate"
-            )
-            # Compile turn 1 synchronously
-            comp = asyncio.run(
-                compiler.compile(
-                    character=base_char,
-                    kernel=kernel,
-                    plan=plan,
-                    memory=MemoryContextPacket(token_budget_used=0),
-                    history=(),
-                    user_text=s.turns[0].user_text,
-                    presentation_profile=s.presentation_profile,
+        for variant_char in variant_characters:
+            for s in target_scenarios:
+                init_aff = parse_and_validate_initial_affect(
+                    s.initial_state, now=now, scenario_id=s.id
                 )
-            )
-            sample_prompt_tokens.append(comp.report.used)
-
-        avg_prompt_tokens = (
-            sum(sample_prompt_tokens) // len(sample_prompt_tokens) if sample_prompt_tokens else 600
-        )
+                init_r = parse_and_validate_initial_relationship(
+                    s.initial_state, character=variant_char, now=now, scenario_id=s.id
+                )
+                kernel = CharacterKernelSnapshot(
+                    character_id=variant_char.character_id,
+                    user_scope="local",
+                    revision=1,
+                    affect=init_aff,
+                    relationship=init_r,
+                )
+                plan = ResponsePlan(
+                    intent="answer", tone="gentle", expression="neutral", rationale="estimate"
+                )
+                comp = asyncio.run(
+                    compiler.compile(
+                        character=variant_char,
+                        kernel=kernel,
+                        plan=plan,
+                        memory=MemoryContextPacket(token_budget_used=0),
+                        history=(),
+                        user_text=s.turns[0].user_text,
+                        presentation_profile=s.presentation_profile,
+                    )
+                )
+                sample_prompt_tokens.append(comp.report.used)
         # Average completion tokens estimate: casual ~60, technical/detail ~350, blend ~120
         avg_completion_tokens = 120
 
-        total_prompt_tokens = total_requests * avg_prompt_tokens
+        total_prompt_tokens = sum(sample_prompt_tokens) * turns_per_scenario * self.repeats
         total_completion_tokens = total_requests * avg_completion_tokens
         total_tokens = total_prompt_tokens + total_completion_tokens
 
@@ -642,6 +643,10 @@ class EvaluationRunner:
             "estimated_prompt_tokens": total_prompt_tokens,
             "estimated_completion_tokens": total_completion_tokens,
             "estimated_total_tokens": total_tokens,
+            "prompt_estimate_scope": (
+                "Each selected persona and scenario's first turn, compiled at an 8192-token "
+                "window, extrapolated to all turns and repeats without later-turn history."
+            ),
             "provider": self.provider_kind,
             "model": self.model_name,
             "estimated_cost_usd": cost_val,

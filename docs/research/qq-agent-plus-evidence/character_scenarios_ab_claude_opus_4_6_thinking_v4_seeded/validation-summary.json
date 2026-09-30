@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-opus-4-6-thinking",
+  "samples": 288,
+  "pairs": 144,
+  "unique_sample_keys": 288,
+  "actual_input_snapshots_equal_independent_oracle": 288,
+  "oracle_turns": 48,
+  "relationship_stages": {
+    "familiar": 168,
+    "acquaintance": 120
+  },
+  "metrics": {
+    "baseline_v3": {
+      "samples": 144,
+      "latency_ms": {
+        "p50": 4552.0,
+        "p95": 22668.799999999992
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 144,
+          "total": 399487
+        },
+        "completion": {
+          "reported_samples": 144,
+          "total": 20409
+        },
+        "total": {
+          "reported_samples": 144,
+          "total": 419896
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    },
+    "candidate_v4": {
+      "samples": 144,
+      "latency_ms": {
+        "p50": 4566.0,
+        "p95": 18414.999999999993
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 144,
+          "total": 410451
+        },
+        "completion": {
+          "reported_samples": 144,
+          "total": 20475
+        },
+        "total": {
+          "reported_samples": 144,
+          "total": 430926
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    }
+  },
+  "percentile_method": "linear interpolation over sorted successful logical-request latencies",
+  "usage_scope": "Only provider-reported usage for retained successful requests; failed/retried billed amounts are unknown. Reasoning totals are not added again to completion/total.",
+  "cost_usd": null,
+  "pricing_source": null,
+  "release_approved": false,
+  "runtime_stripped_persona_hashes": {
+    "baseline_v3": "91060d74651da8b1",
+    "candidate_v4": "0bc4a9eecc637dcf"
+  },
+  "row_persona_hashes_verified": 288,
+  "execution_load_scope": {
+    "initial": "three batch subprocesses per model across three concurrently running models",
+    "explicit_resume_1": "at most two batch subprocesses; models processed sequentially",
+    "explicit_resume_2": "one batch subprocess; models processed sequentially",
+    "latencies_are_observational": true,
+    "causal_speed_comparison_validated": false
+  }
+}

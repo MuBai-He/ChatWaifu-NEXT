@@ -131,6 +131,42 @@ def test_dry_run_estimation_math(tmp_path: Path) -> None:
     )
 
 
+def test_dry_run_prices_each_selected_persona(tmp_path: Path) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path / "unused_output",
+        provider="openai_compatible",
+        model_name="specified-model",
+        input_usd_per_million=0.10,
+        output_usd_per_million=0.20,
+        pricing_source="synthetic test rates",
+        repeats=3,
+    )
+    short_persona = tmp_path / "short.md"
+    short_persona.write_text("你是温柔的角色。", encoding="utf-8")
+    long_persona = tmp_path / "long.md"
+    long_persona.write_text("听完问题后认真回答，保持角色口吻。" * 30, encoding="utf-8")
+
+    short = runner.estimate_dry_run([("short", short_persona)], ["greeting", "technical_help"])
+    long = runner.estimate_dry_run([("long", long_persona)], ["greeting", "technical_help"])
+    paired = runner.estimate_dry_run(
+        [("short", short_persona), ("long", long_persona)], ["greeting", "technical_help"]
+    )
+
+    assert long["estimated_prompt_tokens"] > short["estimated_prompt_tokens"]
+    assert paired["estimated_prompt_tokens"] == (
+        short["estimated_prompt_tokens"] + long["estimated_prompt_tokens"]
+    )
+    assert paired["estimated_completion_tokens"] == (
+        short["estimated_completion_tokens"] + long["estimated_completion_tokens"]
+    )
+    assert paired["estimated_cost_usd"] == pytest.approx(
+        short["estimated_cost_usd"] + long["estimated_cost_usd"]
+    )
+    assert paired["total_requests"] == 48
+    assert "without later-turn history" in paired["prompt_estimate_scope"]
+    assert not runner.output_dir.exists()
+
+
 @pytest.mark.asyncio
 async def test_execute_deterministic_demo_mode_records_results(tmp_path: Path) -> None:
     output_dir = tmp_path / "eval_run"

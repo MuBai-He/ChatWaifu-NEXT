@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "persona_sha256": "3df16760df3f75aa57f26072a75c16c90ba83eb64a2420585fe0e07bc4cf2b89",
+  "persona_tokens": 582,
+  "actual_compiler_checks": 288,
+  "untruncated_persona_checks": 288,
+  "context_windows": [4096, 8192],
+  "presentation_profiles": ["instant_message", "text", "voice"],
+  "scope": "Full candidate persona inclusion and typed compilation only; no history-pressure run, model generation, external rules lookup, channel delivery or subjective quality approval.",
+  "release_approved": false
+}
