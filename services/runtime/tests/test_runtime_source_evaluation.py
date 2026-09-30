@@ -107,15 +107,26 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             allow_once=allow_once,
             dns_resolver="system",
         )
-        request = LlmRequest(uuid4(), "请核查这个网页来源 https://source.example/", "Persona")
+        request = LlmRequest(
+            uuid4(),
+            "请核查这个网页来源 https://source.example/",
+            "Persona",
+            tool_decision_system_prompt="TRUSTED_SAFETY_AND_FROZEN_CLOCK",
+        )
         outcome = await evaluation.run(
             request, session_id=session.session_id, turn_id=uuid4(), sample_key="one"
         )
-        assert outcome.reply_origin == "provider"
+        assert outcome.reply_origin == ("provider" if allow_once else "runtime_fallback")
+        if not allow_once:
+            assert "Actual source result" not in outcome.reply
+            assert "尚未核实" in outcome.reply
         assert outcome.usage == (
             LlmUsage(35, 6, 41, None) if use_correction else LlmUsage(30, 5, 35, None)
         )
         assert len(provider.requests) == expected_rounds
+        assert provider.requests[0].system_prompt.startswith("TRUSTED_SAFETY_AND_FROZEN_CLOCK")
+        assert "dns_resolver=system" in provider.requests[0].system_prompt
+        assert "TRUSTED_SAFETY_AND_FROZEN_CLOCK" not in provider.requests[-1].system_prompt
         assert "Unverified source claim" not in outcome.reply
         result = provider.requests[-1].tool_exchanges[0].results[0]
         assert isinstance(result.content, dict)

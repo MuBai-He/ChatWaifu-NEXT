@@ -124,6 +124,9 @@ class LlmRequest:
     tool_choice: Literal["required", "auto"] = "required"
     tool_exchanges: tuple[LlmToolExchange, ...] = ()
     images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
+    # Optional trusted safety/time prompt for the initial required tool decision.
+    # Subsequent responses retain system_prompt and the full character contract.
+    tool_decision_system_prompt: str | None = None
 
     def __post_init__(self) -> None:
         if len(self.images) > 4:

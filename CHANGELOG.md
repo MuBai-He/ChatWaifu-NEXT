@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Separate the initial required-tool decision from character expression in prompt
+  template v4, quote prior assistant replies as bounded untrusted data, and restore
+  the full context after a real tool exchange. Evaluation 1.5.2 records context and
+  history fingerprints and preserves actual usage. Failed reads now produce an
+  honest Runtime fallback instead of unverified model claims. Real probes still
+  retain outdated-source and incomplete-answer failures; Q02 remains unapproved.
+
 - Add one bounded correction for a missing required initial tool call and an
   explicit final-answer instruction when the tool phase closes. Evaluation 1.4.2
   counts up to six Provider rounds per tool turn and preserves discarded-round

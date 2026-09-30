@@ -31,6 +31,7 @@ def _make_accepted() -> GenerationAccepted:
 class _FakeCompilation:
     def __init__(self, system_prompt: str = "base system prompt") -> None:
         self.system_prompt = system_prompt
+        self.tool_decision_system_prompt = "trusted safety/time context"
         self.context = ()
         self.history = ()
         self.recalled_memory_texts = ()

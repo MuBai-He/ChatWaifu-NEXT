@@ -1201,6 +1201,7 @@ class ConversationService:
                 generation_id=accepted.generation_id,
                 user_text=user_text,
                 system_prompt=system_prompt,
+                tool_decision_system_prompt=compilation.tool_decision_system_prompt,
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,

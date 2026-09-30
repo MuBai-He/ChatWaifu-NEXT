@@ -64,6 +64,13 @@ async def test_prompt_compiler_uses_explicit_aware_time_and_accounts_for_it() ->
     assert now.isoformat(timespec="seconds") in result.system_prompt
     assert "not evidence" in result.system_prompt
     assert "effective dates" in result.system_prompt
+    assert now.isoformat(timespec="seconds") in result.tool_decision_system_prompt
+    assert "[SAFETY]" in result.tool_decision_system_prompt
+    assert "not evidence" in result.tool_decision_system_prompt
+    assert "[CHARACTER CANON]" not in result.tool_decision_system_prompt
+    assert "[RESPONSE PLAN]" not in result.tool_decision_system_prompt
+    assert "[OUTPUT CONTRACT]" not in result.tool_decision_system_prompt
+    assert len(result.tool_decision_system_prompt) < len(result.system_prompt)
     # Clock data is mandatory safety context and participates in the reported estimate.
     safety_context = result.system_prompt.split("[CHARACTER CANON]", 1)[0]
     assert result.report.safety_tokens >= _tokens(safety_context) - 10

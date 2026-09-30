@@ -116,6 +116,10 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert [name for name, _request in requests] == [initial.model]
         assert admitted_at.isoformat(timespec="seconds") in requests[0][1].system_prompt
         assert Clock.current.isoformat(timespec="seconds") not in requests[0][1].system_prompt
+        initial_decision_prompt = requests[0][1].tool_decision_system_prompt
+        assert initial_decision_prompt is not None
+        assert admitted_at.isoformat(timespec="seconds") in initial_decision_prompt
+        assert Clock.current.isoformat(timespec="seconds") not in initial_decision_prompt
         rows = await container.event_store.read_stream(session.session_id, limit=500)
         first_payload = CharacterPromptCompiledPayload.model_validate(
             next(
@@ -153,6 +157,9 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert second_payload.identity.identity_hash != first_payload.identity.identity_hash
         assert second_payload.report.budget == 2048 - 900
         assert Clock.current.isoformat(timespec="seconds") in requests[1][1].system_prompt
+        next_decision_prompt = requests[1][1].tool_decision_system_prompt
+        assert next_decision_prompt is not None
+        assert Clock.current.isoformat(timespec="seconds") in next_decision_prompt
 
         # A new date changes dynamic context, not the static configuration identity.
         Clock.current = datetime(2026, 10, 2, 0, 1, tzinfo=UTC)

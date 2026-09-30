@@ -40,7 +40,8 @@ The snapshot freezes:
 - The character package identity, including character ID and a deterministic SHA-256 hash of the six-file
   character package (`character.yaml`, `persona.md`, `voice.yaml`, `avatar.yaml`, `relationship-policy.yaml`, `lexicon.yaml`).
 - The presentation profile (e.g. `instant_message` or `default`).
-- The prompt template version (initially `v2`; `v3` adds the trusted admission time).
+- The prompt template version (initially `v2`; `v3` adds the trusted admission time,
+  and `v4` separates the initial required-tool decision from character expression).
 - The generation's trusted admission time from its persisted Runtime turn event, normalized to UTC
   by the compiler. Delayed retrieval or a midnight boundary cannot change this time within a turn.
 - The frozen provider adapter (`LlmProvider`) configured for the captured chat route.
@@ -72,7 +73,7 @@ The system enforces a strict boundary between frozen generation parameters and t
 - `identity_hash`: Deterministic SHA-256 digest of canonical nonsecret fields.
 - `character_id`: Stable identifier of the active character.
 - `character_package_hash`: Deterministic digest of the six-file character package.
-- `prompt_template_version`: Template revision string (`v3` for the admission-time template).
+- `prompt_template_version`: Template revision string (`v4` for the initial-tool decision template).
 - `presentation_profile`: Active presentation surface mode.
 - `chat_route`: Nonsecret route identity (provider, model, hashed endpoint route, context window).
 - `memory_summary_route`: Nonsecret route identity for summarization.
@@ -109,6 +110,41 @@ or summarized into character personality.
 The `tools_digest` is computed deterministically from the canonical JSON serialization of sorted tool
 names, descriptions, and input schemas visible to that turn. Turns with no tools use a stable empty
 digest.
+
+### 7. Initial Required-Tool Decision
+
+Prompt template `v4` compiles a separate internal safety/time prompt from the same frozen
+admission time used by the full character prompt. `LlmRequest.tool_decision_system_prompt`
+is optional for existing callers. `ConversationService` and the scenario runner supply it;
+the Provider adapter still serializes only the selected `system_prompt`.
+
+When a projected tool requires an initial function decision, `AgentTurnOrchestrator` uses
+that safety/time prompt with its generic operation-planner and tool policies. It preserves
+the user input, selected factual context, images, route, generation and tool schemas. Prior
+assistant text is quoted as untrusted data instead of native assistant history in this
+decision; prior user history remains in place. The initial system/context/history character
+size does not exceed the original input. Some older assistant messages may be omitted with
+an explicit marker when that limit is reached. It does not add a second model route,
+new permissions, scripted source answers or a database.
+The tool gateway continues checking the live control plane. A missing call can receive
+the existing single bounded correction; its unverified text never becomes user output.
+
+After the first actual tool exchange, the orchestrator restores the full character prompt
+and original context/history for follow-up tool decisions and the final response.
+Ordinary chat without projected tools
+uses the full prompt immediately. The initial prompt reuses the frozen input budget rather
+than adding a second simultaneous character context.
+The existing four-tool and six-Provider-round bounds remain unchanged. This phase boundary
+establishes deterministic request behavior; it does not establish factual completeness or
+persona-quality acceptance without real-model evaluation.
+
+If all attempted reads fail and the model stops requesting tools, Runtime discards its
+unverified text and returns a factual failure notice. A normalized permission-denied code
+adds the authorization reason without projecting arbitrary error prose. Exhausting all
+four reads without any successful result returns the same notice without another Provider
+round. Follow-up tool unavailability cannot be described as a completed query. All actual
+Provider usage and tool results remain in evaluation traces. A successful but incomplete
+or outdated source does not activate this guard and still requires quality acceptance.
 
 ## Consequences
 

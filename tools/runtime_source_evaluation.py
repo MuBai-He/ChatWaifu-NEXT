@@ -92,6 +92,12 @@ class _RecordedProvider:
             "generation_id": str(request.generation_id),
             "started_at": datetime.now(UTC).isoformat(),
             "system_prompt_sha256": hashlib.sha256(request.system_prompt.encode()).hexdigest(),
+            "input_context_sha256": hashlib.sha256(
+                json.dumps(request.context, ensure_ascii=False, separators=(",", ":")).encode()
+            ).hexdigest(),
+            "input_history_sha256": hashlib.sha256(
+                json.dumps(request.history, ensure_ascii=False, separators=(",", ":")).encode()
+            ).hexdigest(),
             "tools": [asdict(tool) for tool in request.tools],
             "tool_choice": request.tool_choice if request.tools else None,
             "input_tool_exchanges": [asdict(exchange) for exchange in request.tool_exchanges],
@@ -243,13 +249,18 @@ class RuntimeSourceEvaluation:
             routing_previous_user_text=request.routing_previous_user_text,
             supports_tool_calling=self._provider.supports_tool_calling,
         )
+        evaluation_policy = (
+            "\nPublic source tools use an evaluation-only permission policy. "
+            f"When selecting a source tool use dns_resolver={self._resolver}. "
+            "This operational setting supplies no facts or source URLs."
+        )
         request = replace(
             request,
-            system_prompt=request.system_prompt
-            + (
-                "\nPublic source tools use an evaluation-only permission policy. "
-                f"When selecting a source tool use dns_resolver={self._resolver}. "
-                "This operational setting supplies no facts or source URLs."
+            system_prompt=request.system_prompt + evaluation_policy,
+            tool_decision_system_prompt=(
+                request.tool_decision_system_prompt + evaluation_policy
+                if request.tool_decision_system_prompt is not None
+                else None
             ),
         )
         self.last_trace = {

@@ -49,6 +49,7 @@ _SAFETY = (
 @dataclass(frozen=True, slots=True)
 class PromptCompilation:
     system_prompt: str
+    tool_decision_system_prompt: str
     context: tuple[tuple[str, str], ...]
     history: tuple[tuple[str, str], ...]
     recalled_memory_texts: tuple[str, ...]
@@ -263,6 +264,7 @@ class PromptCompiler:
         )
         return PromptCompilation(
             system_prompt=system_prompt,
+            tool_decision_system_prompt=f"[SAFETY]\n{_SAFETY}\n\n{clock_context}",
             context=tuple(context),
             history=tuple(selected_history),
             recalled_memory_texts=recalled_memory_texts,

@@ -468,7 +468,7 @@ phases:
       - A fingerprinted SQLite semantic projection is rebuilt on embedding-route changes while WAL plus FTS5 remains truth
       - Host-only OpenAI-compatible URLs default to /v1 while explicit and nested API base paths remain unchanged
       - Shared-event extraction requires completed playback acknowledgement and assistant spoken-text evidence
-      - "QQ Agent Plus Q02 remains unapproved: permissioned public source search/read, trusted admission-time prompt v3 and opt-in Runtime evaluator 1.4.2 are implemented. One bounded initial-call correction and explicit tool-phase closure have regression checks; real probes still retained Gemini missing calls, incomplete source coverage and Opus promising another query. Full twelve-scenario A/B, three presentation profiles and source/technical quality acceptance remain pending; see docs/research/qq-agent-plus-evidence/q02-required-tool-correction-2026-10-01.md."
+      - "QQ Agent Plus Q02 remains unapproved: prompt template v4 separates initial tool decisions and quotes prior assistant data, with opt-in Runtime evaluator 1.5.2. All-failed reads discard unverified model text; a real denied-permission control returned an honest fallback with actual usage retained and zero persistent grants. Latest Gemini search/read succeeded but used an old source and omitted later conditions; factual coverage and technical correctness remain pending alongside full twelve-scenario A/B, three presentation profiles and controlled Runtime acceptance. See docs/research/qq-agent-plus-evidence/q02-initial-tool-decision-2026-10-01.md."
   - id: 12.5
     name: runtime-hardening-core
     status: completed_validated_on_remote_ci

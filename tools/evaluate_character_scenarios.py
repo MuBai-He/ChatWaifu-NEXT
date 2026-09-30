@@ -118,7 +118,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.4.2"
+TOOL_VERSION = "1.5.2"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -813,6 +813,7 @@ class EvaluationRunner:
                 "services/runtime/src/chatwaifu_runtime/conversation/service.py",
                 "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+                "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py",
@@ -1138,6 +1139,7 @@ class EvaluationRunner:
                                 generation_id=uuid5(NAMESPACE_URL, key),
                                 user_text=turn.user_text,
                                 system_prompt=compilation.system_prompt,
+                                tool_decision_system_prompt=compilation.tool_decision_system_prompt,
                                 character_name=character.display_name,
                                 context=compilation.context,
                                 history=compilation.history,
