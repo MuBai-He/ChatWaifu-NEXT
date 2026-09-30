@@ -118,7 +118,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.5.2"
+TOOL_VERSION = "1.5.3"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -814,6 +814,7 @@ class EvaluationRunner:
                 "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
                 "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
+                "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py",
