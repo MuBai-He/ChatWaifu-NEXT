@@ -911,9 +911,9 @@ results = await asyncio.gather(
 ```python
 for i, r in enumerate(results):
     if isinstance(r, BaseException):
-        print(f"task{i+1} 失败：{r}")
+        print(f"task{i + 1} 失败：{r}")
     else:
-        print(f"task{i+1} 结果：{r}")
+        print(f"task{i + 1} 结果：{r}")
 ```
 
 用 `BaseException` 而不是 `Exception`，是为了也能捕到 `KeyboardInterrupt`、`SystemExit` 这类——实际项目里看需求选择就好。
@@ -1071,9 +1071,9 @@ results = await asyncio.gather(
 ```python
 for i, result in enumerate(results):
     if isinstance(result, BaseException):
-        print(f"task{i+1} 出错：{result}")
+        print(f"task{i + 1} 出错：{result}")
     else:
-        print(f"task{i+1} 结果：{result}")
+        print(f"task{i + 1} 结果：{result}")
 ```
 
 注意用 `BaseException` 而不是 `Exception` 会更严谨，因为 `asyncio.CancelledError` 在 Python 3.8+ 继承自 `BaseException`，如果任务被取消也能捕到。
