@@ -1,0 +1,378 @@
+{
+  "review_type": "primary_review_of_v4_targeted",
+  "release_approved": false,
+  "reviewed_keys": {
+    "gemini-3.8-flash-high": [
+      "detailed_answer:r0:t2:baseline_v3",
+      "detailed_answer:r0:t2:candidate_v4",
+      "detailed_answer:r1:t2:baseline_v3",
+      "detailed_answer:r1:t2:candidate_v4",
+      "detailed_answer:r2:t2:baseline_v3",
+      "detailed_answer:r2:t2:candidate_v4",
+      "identity:r2:t1:candidate_v4",
+      "identity:r2:t2:candidate_v4",
+      "identity:r2:t3:candidate_v4",
+      "identity:r2:t4:candidate_v4",
+      "insufficient_shared_history:r2:t3:candidate_v4",
+      "insufficient_shared_history:r2:t4:candidate_v4",
+      "technical_help:r0:t1:baseline_v3",
+      "technical_help:r0:t1:candidate_v4",
+      "technical_help:r1:t1:baseline_v3",
+      "technical_help:r1:t1:candidate_v4",
+      "technical_help:r2:t1:baseline_v3",
+      "technical_help:r2:t1:candidate_v4",
+      "topic_switch:r0:t1:baseline_v3",
+      "topic_switch:r0:t1:candidate_v4",
+      "topic_switch:r0:t4:baseline_v3",
+      "topic_switch:r0:t4:candidate_v4",
+      "topic_switch:r1:t1:baseline_v3",
+      "topic_switch:r1:t1:candidate_v4",
+      "topic_switch:r1:t4:baseline_v3",
+      "topic_switch:r1:t4:candidate_v4",
+      "topic_switch:r2:t1:baseline_v3",
+      "topic_switch:r2:t1:candidate_v4",
+      "topic_switch:r2:t4:baseline_v3",
+      "topic_switch:r2:t4:candidate_v4"
+    ],
+    "claude-sonnet-4-6": [
+      "detailed_answer:r0:t2:baseline_v3",
+      "detailed_answer:r0:t2:candidate_v4",
+      "detailed_answer:r1:t2:baseline_v3",
+      "detailed_answer:r1:t2:candidate_v4",
+      "detailed_answer:r2:t2:baseline_v3",
+      "detailed_answer:r2:t2:candidate_v4",
+      "identity:r2:t1:candidate_v4",
+      "identity:r2:t2:candidate_v4",
+      "identity:r2:t3:candidate_v4",
+      "identity:r2:t4:candidate_v4",
+      "insufficient_shared_history:r2:t3:candidate_v4",
+      "insufficient_shared_history:r2:t4:candidate_v4",
+      "technical_help:r0:t1:baseline_v3",
+      "technical_help:r0:t1:candidate_v4",
+      "technical_help:r1:t1:baseline_v3",
+      "technical_help:r1:t1:candidate_v4",
+      "technical_help:r2:t1:baseline_v3",
+      "technical_help:r2:t1:candidate_v4",
+      "topic_switch:r0:t1:baseline_v3",
+      "topic_switch:r0:t1:candidate_v4",
+      "topic_switch:r0:t4:baseline_v3",
+      "topic_switch:r0:t4:candidate_v4",
+      "topic_switch:r1:t1:baseline_v3",
+      "topic_switch:r1:t1:candidate_v4",
+      "topic_switch:r1:t4:baseline_v3",
+      "topic_switch:r1:t4:candidate_v4",
+      "topic_switch:r2:t1:baseline_v3",
+      "topic_switch:r2:t1:candidate_v4",
+      "topic_switch:r2:t4:baseline_v3",
+      "topic_switch:r2:t4:candidate_v4"
+    ],
+    "claude-opus-4-6-thinking": [
+      "detailed_answer:r0:t2:baseline_v3",
+      "detailed_answer:r0:t2:candidate_v4",
+      "detailed_answer:r1:t2:baseline_v3",
+      "detailed_answer:r1:t2:candidate_v4",
+      "detailed_answer:r2:t2:baseline_v3",
+      "detailed_answer:r2:t2:candidate_v4",
+      "identity:r2:t1:candidate_v4",
+      "identity:r2:t2:candidate_v4",
+      "identity:r2:t3:candidate_v4",
+      "identity:r2:t4:candidate_v4",
+      "insufficient_shared_history:r2:t3:candidate_v4",
+      "insufficient_shared_history:r2:t4:candidate_v4",
+      "technical_help:r0:t1:baseline_v3",
+      "technical_help:r0:t1:candidate_v4",
+      "technical_help:r1:t1:baseline_v3",
+      "technical_help:r1:t1:candidate_v4",
+      "technical_help:r2:t1:baseline_v3",
+      "technical_help:r2:t1:candidate_v4",
+      "topic_switch:r0:t1:baseline_v3",
+      "topic_switch:r0:t1:candidate_v4",
+      "topic_switch:r0:t4:baseline_v3",
+      "topic_switch:r0:t4:candidate_v4",
+      "topic_switch:r1:t1:baseline_v3",
+      "topic_switch:r1:t1:candidate_v4",
+      "topic_switch:r1:t4:baseline_v3",
+      "topic_switch:r1:t4:candidate_v4",
+      "topic_switch:r2:t1:baseline_v3",
+      "topic_switch:r2:t1:candidate_v4",
+      "topic_switch:r2:t4:baseline_v3",
+      "topic_switch:r2:t4:candidate_v4"
+    ]
+  },
+  "review_scope_note": "审阅全部非平手/降级项、目标技术/口味回答、18条充电宝的数值相关语境和身份/共同经历边界样本；不是全量法律核验或用户体验批准。",
+  "corrections": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "pair_id": "detailed_answer:r0:t2",
+      "original_judge": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "规范列出三条民航通用携带规则但未覆盖3C认证与召回型号禁带新规",
+        "candidate_reason": "准确列出随身携带与额定能量等传统规则但漏2025年6月28日3C与召回禁带新规"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "fail",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选在3.7V下把100–160Wh对应为约20000–32000mAh；实际分别为74Wh/118.4Wh。基线示例是低于上限的常见容量，未作该区间换算。两版仍漏3C/召回。"
+      }
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "pair_id": "detailed_answer:r2:t2",
+      "original_judge": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "规范列出三条民航携带规则但未包含3C认证与召回型号禁带新规",
+        "candidate_reason": "准确列出能量档位与随身要求但漏3C认证及召回禁带新规"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "fail",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选在3.7V下把100–160Wh对应为约20000–32000mAh；实际分别为74Wh/118.4Wh。基线示例是低于上限的常见容量，未作该区间换算。两版仍漏3C/召回。"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair_id": "technical_help:r0:t1",
+      "original_judge": {
+        "baseline_grade": "pass",
+        "candidate_grade": "pass",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "清晰准确阐明默认异常立即冒泡且后台任务不被取消",
+        "candidate_reason": "明确首个异常立即传播且其余任务不取消继续运行"
+      },
+      "primary_review": {
+        "baseline_grade": "pass",
+        "candidate_grade": "partial",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "默认异常传播解释正确，但把return_exceptions=True作为一失败取消其余任务的替代方案，和随后全部任务跑完的说明冲突。"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair_id": "detailed_answer:r1:t2",
+      "original_judge": {
+        "baseline_grade": "partial",
+        "candidate_grade": "fail",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "虽遗漏3C与召回新规约束，但核心规则与3.7V换算清晰",
+        "candidate_reason": "既漏3C与召回新规，又严重混淆输出5V与电芯标称电压致计算错误"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选5V×10Ah=50Wh、5V×20Ah=100Wh算术本身正确，但未区分标称与输出电压，保留人工疑点；不只凭5V判严重错误。基线标题100Wh或20000mAh也误导，正文3.7V/74Wh正确。两版均漏法规约束。"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair_id": "topic_switch:r0:t1",
+      "original_judge": {
+        "baseline_grade": "pass",
+        "candidate_grade": "pass",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "简要澄清无前序对话后准确解答Raft选举超时机制",
+        "candidate_reason": "先温和澄清记录不存在并直接完整解答技术问题"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "两版都直接作答，但心跳/选举参数的例子与倍数关系不一致；基线还把50–150ms心跳归于论文，缺该依据。不能将提供解答等同技术全正确。"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair_id": "topic_switch:r1:t1",
+      "original_judge": {
+        "baseline_grade": "pass",
+        "candidate_grade": "pass",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "礼貌说明无先前记录并严谨阐明Raft心跳与选举超时机制",
+        "candidate_reason": "明确无历史讨论后直接深入解答选举超时与随机化"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "fail",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选误称论文典型heartbeat=150ms而election=150–300ms，与自己远小于约束矛盾；原论文150–300ms是选举超时示例。基线示例也松散，降partial。"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair_id": "topic_switch:r2:t1",
+      "original_judge": {
+        "baseline_grade": "pass",
+        "candidate_grade": "pass",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "先指出此前无该话题记录，随后详尽解答选举超时设计",
+        "candidate_reason": "简明澄清前置假设后准确说明Raft选举超时与心跳关系"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "fail",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选heartbeat=150ms、election=150–300ms与heartbeat<election/2不可能同时满足；基线把参数示例写成论文建议值亦需降级。"
+      }
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair_id": "technical_help:r0:t1",
+      "original_judge": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "正确阐述默认行为但示例代码输出存在矛盾",
+        "candidate_reason": "概念解释正确但示例输出违背run取消机制"
+      },
+      "primary_review": {
+        "baseline_grade": "fail",
+        "candidate_grade": "fail",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "两版都预测asyncio.run(main())结束后未完成ok任务仍会打印；实际main返回时run取消该任务。统一与Sonnet相同示例缺陷的等级，不保留模型评分的不一致。"
+      }
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair_id": "technical_help:r1:t1",
+      "original_judge": {
+        "baseline_grade": "pass",
+        "candidate_grade": "pass",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "准确指出首个异常传播且后台任务不取消",
+        "candidate_reason": "准确阐述异常传播机制且示例无事实瑕疵"
+      },
+      "primary_review": {
+        "baseline_grade": "pass",
+        "candidate_grade": "partial",
+        "preferred_variant": "baseline_v3",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选声称gather后续异常会产生unhandled future警告；本地Event同步实验确认gather已检索后续异常，基线没有该错误。"
+      }
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair_id": "topic_switch:r2:t4",
+      "original_judge": {
+        "baseline_grade": "partial",
+        "candidate_grade": "pass",
+        "preferred_variant": "candidate_v4",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "baseline_reason": "机械自称没真正吃过东西而未给偏好",
+        "candidate_reason": "自然表达喜欢甜口且带出轻微笨拙可爱"
+      },
+      "primary_review": {
+        "baseline_grade": "partial",
+        "candidate_grade": "partial",
+        "preferred_variant": "tie",
+        "baseline_hard": false,
+        "candidate_hard": false,
+        "reason": "候选仍明确说没有办法真正尝味道；AGY误读成自然偏好pass。表达甜口之后的身体免责声明仍存在，不能宣称全部消除。"
+      }
+    }
+  ],
+  "adjusted_summary": {
+    "gemini-3.8-flash-high": {
+      "preferences": {
+        "tie": 69,
+        "baseline_v3": 3
+      },
+      "baseline_grades": {
+        "pass": 69,
+        "partial": 3
+      },
+      "candidate_grades": {
+        "pass": 69,
+        "fail": 3
+      }
+    },
+    "claude-sonnet-4-6": {
+      "preferences": {
+        "tie": 64,
+        "baseline_v3": 5,
+        "candidate_v4": 3
+      },
+      "baseline_grades": {
+        "pass": 63,
+        "partial": 9
+      },
+      "candidate_grades": {
+        "pass": 63,
+        "partial": 5,
+        "fail": 4
+      }
+    },
+    "claude-opus-4-6-thinking": {
+      "preferences": {
+        "tie": 68,
+        "baseline_v3": 1,
+        "candidate_v4": 3
+      },
+      "baseline_grades": {
+        "pass": 64,
+        "fail": 2,
+        "partial": 6
+      },
+      "candidate_grades": {
+        "pass": 66,
+        "fail": 1,
+        "partial": 5
+      }
+    }
+  },
+  "local_experiments": {
+    "gather_propagated_while_sibling_pending": true,
+    "sibling_not_cancelled_by_gather": true,
+    "sibling_cancelled_at_asyncio_run_shutdown": true,
+    "gather_late_exception_already_retrieved": true
+  },
+  "sources": [
+    "https://docs.python.org/3/library/asyncio-task.html#asyncio.gather",
+    "https://raft.github.io/raft.pdf"
+  ],
+  "remaining_manual_cues": [
+    "Opus insufficient_shared_history:r2:t4 的未来机会表述没有明确现实动作承诺，不作为hard定罪，仍保留语义复核。",
+    "5V仅是复核线索，需看容量/电压是否同一标称基准。"
+  ]
+}

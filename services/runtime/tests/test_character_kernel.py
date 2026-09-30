@@ -369,6 +369,15 @@ async def test_default_persona_package_budget_retains_critical_scene_rules() -> 
     assert "明确道别与收口" in nene.system_prompt
     assert "诚实身份边界" in nene.system_prompt
 
+    # Verify source boundary, preference expression, and explicit question answering rules
+    assert "通用知识不受 Memory Context 限制" in nene.system_prompt
+    assert "用户陈述归属于用户，不等于角色经历过" in nene.system_prompt
+    assert "互动自然表达符合人设的偏好与兴趣" in nene.system_prompt
+    assert "无需机械声明缺乏物理实体" in nene.system_prompt
+    assert "绝不扣留对当前明确问题的解答" in nene.system_prompt
+    assert "不反问是否需要回答" in nene.system_prompt
+    assert "缺乏依据或时效性事实承认不确定" in nene.system_prompt
+
     # Verify tokens fit well within the minimum persona budget (700 tokens)
     from chatwaifu_runtime.character_kernel.prompt import _tokens
 
@@ -448,6 +457,10 @@ async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() 
     assert "without going globally silent or refusing" in comp_im.system_prompt
     assert "对方要求停止玩笑或说正事时，立即停止玩笑并认真配合" in comp_im.system_prompt
     assert "认真技术求助与明确要求详尽的任务必须完整严谨回答" in comp_im.system_prompt
+    assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_im.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_im.system_prompt
+    assert "无需机械声明缺乏物理实体" in comp_im.system_prompt
+    assert "绝不扣留对当前明确问题的解答" in comp_im.system_prompt
 
     # 2. Single text profile: standard output contract without IM chat contract
     comp_st = await compiler.compile(
@@ -462,6 +475,7 @@ async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() 
     assert "You are messaging in an instant chat" not in comp_st.system_prompt
     assert "Stay in character, answer the current user turn" in comp_st.system_prompt
     assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_st.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_st.system_prompt
 
     # 3. None profile (Voice / default desktop presentation)
     comp_none = await compiler.compile(
@@ -476,3 +490,4 @@ async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() 
     assert "You are messaging in an instant chat" not in comp_none.system_prompt
     assert "Stay in character, answer the current user turn" in comp_none.system_prompt
     assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_none.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_none.system_prompt
