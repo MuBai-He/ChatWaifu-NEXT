@@ -291,7 +291,10 @@ async def test_generate_blinded_review_template_pairs_variants_and_hides_identit
     assert key_file.exists()
 
     content = template_file.read_text(encoding="utf-8")
-    assert "双盲角色场景评估评审表" in content
+    assert "匿名配对角色场景评审表" in content
+    assert "不保证独立盲评" in content
+    assert "- 耗时:" not in content
+    assert "Provider Compl:" not in content
     assert "候选 1" in content
     assert "候选 2" in content
     assert "普通问候" in content
@@ -302,6 +305,65 @@ async def test_generate_blinded_review_template_pairs_variants_and_hides_identit
     assert "greeting:r0:t1" in keys
     assert set(keys["greeting:r0:t1"].keys()) == {"candidate_1", "candidate_2"}
     assert set(keys["greeting:r0:t1"].values()) == {"varA", "varB"}
+
+
+@pytest.mark.asyncio
+async def test_review_preserves_nested_fences_and_saved_labels(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    choices = iter((False, True, False, True))
+
+    def choose_label(_: Any) -> bool:
+        return next(choices)
+
+    monkeypatch.setattr("tools.evaluate_character_scenarios.secrets.choice", choose_label)
+    output_dir = tmp_path / "eval_review_fences"
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=1,
+    )
+    persona_a = tmp_path / "persona_a.md"
+    persona_b = tmp_path / "persona_b.md"
+    persona_a.write_text("Persona A", encoding="utf-8")
+    persona_b.write_text("Persona B", encoding="utf-8")
+    await runner.execute([("vA", persona_a), ("vB", persona_b)], ["greeting"])
+    key_path = output_dir / "blinded_key.json"
+    saved_key_bytes = key_path.read_bytes()
+    keys = json.loads(saved_key_bytes)
+    assert keys["greeting:r0:t1"]["candidate_1"] == "vA"
+    assert keys["greeting:r0:t2"]["candidate_1"] == "vB"
+
+    # A reply that used to close the review's outer fence and inject headings.
+    reply = "完整代码:\n```python\nprint('hello')\n```\n````\n## 仍属于模型回复\n````"
+    results_path = output_dir / "results.jsonl"
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+    rows[0]["raw_reply"] = reply
+    rows[0]["latency_ms"] = 987654321
+    rows[0]["provider_tokens_completion"] = 123456789
+    results_path.write_text(
+        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8"
+    )
+    raw_bytes = results_path.read_bytes()
+
+    def refuse_new_labels(_: Any) -> bool:
+        raise AssertionError("Regeneration must reuse the already saved labels")
+
+    monkeypatch.setattr("tools.evaluate_character_scenarios.secrets.choice", refuse_new_labels)
+    template = runner.generate_blinded_review_template("vA", "vB").read_text(encoding="utf-8")
+    assert f"`````text\n{reply}\n`````" in template
+    assert "987654321" not in template
+    assert "123456789" not in template
+    assert key_path.read_bytes() == saved_key_bytes
+    assert results_path.read_bytes() == raw_bytes
+
+    invalid_keys: dict[str, Any] = dict(keys)
+    for bad_pair in (None, {"candidate_1": "unrelated_version", "candidate_2": "vB"}):
+        invalid_keys["greeting:r0:t1"] = bad_pair
+        key_path.write_text(json.dumps(invalid_keys), encoding="utf-8")
+        with pytest.raises(ValueError, match="saved review key does not match variants"):
+            runner.generate_blinded_review_template("vA", "vB")
 
 
 @pytest.mark.asyncio

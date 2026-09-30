@@ -16,6 +16,8 @@ import hashlib
 import json
 import logging
 import os
+import re
+import secrets
 import sys
 import time
 from dataclasses import asdict, dataclass, fields
@@ -106,7 +108,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.2.1"
+TOOL_VERSION = "1.2.2"
 EVALUATION_SNAPSHOT_VERSION: Literal["1.0"] = "1.0"
 
 
@@ -1127,12 +1129,21 @@ class EvaluationRunner:
                 records[k] = rec
 
         blind_key_map: dict[str, Any] = {}
+        key_file = self.output_dir / "blinded_key.json"
+        saved_keys: dict[str, Any] = {}
+        if key_file.exists():
+            loaded_keys: Any = json.loads(key_file.read_text(encoding="utf-8"))
+            if not isinstance(loaded_keys, dict):
+                raise ValueError("saved review key must be an object")
+            saved_keys = cast(dict[str, Any], loaded_keys)
         template_lines: list[str] = [
-            "# 双盲角色场景评估评审表 (Blinded Review Template)",
+            "# 匿名配对角色场景评审表 (Version-Masked Review Template)",
             "",
             f"- 评估日期: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"- 待评审样本源: `{self._results_file.name}`",
             "- 评审原则: 评审人员在不知晓候选者具体版本/提示词前提下，依据场景预期行为与禁止行为客观打分。",  # noqa: E501
+            "- 本表仅隐藏版本标签，不保证独立盲评；知晓候选设计的作者复核必须注明，不能称为双盲。",
+            "- 先保存判断再揭示键表；原始结果中的版本、时延及用量不随质量评审表展示。",
             "",
             "## 评分维度说明",
             "1. **自然度 (1-5分)**: 语言口语化自然、有来有回，无生硬机械感或多余舞台剧说明。",
@@ -1159,13 +1170,24 @@ class EvaluationRunner:
                     rec_a = records[k_a]
                     rec_b = records[k_b]
 
-                    # Deterministic randomized assignment based on hash
-                    seed_str = f"{scenario.id}:{r_idx}:{turn.turn_id}"
-                    swap = int(hashlib.md5(seed_str.encode("utf-8")).hexdigest(), 16) % 2 == 1
+                    blind_key = f"{scenario.id}:r{r_idx}:t{turn.turn_id}"
+                    saved_pair = saved_keys.get(blind_key)
+                    if blind_key in saved_keys:
+                        if not isinstance(saved_pair, dict) or saved_pair not in (
+                            {"candidate_1": variant_a, "candidate_2": variant_b},
+                            {"candidate_1": variant_b, "candidate_2": variant_a},
+                        ):
+                            raise ValueError(
+                                f"saved review key does not match variants: {blind_key}"
+                            )
+                        swap = cast(dict[str, str], saved_pair)["candidate_1"] == variant_b
+                    else:
+                        # Fresh labels cannot be inferred from public scenario names.
+                        # Persist the mapping so regeneration keeps existing judgments valid.
+                        swap = secrets.choice((False, True))
                     c1_rec = rec_b if swap else rec_a
                     c2_rec = rec_a if swap else rec_b
 
-                    blind_key = f"{scenario.id}:r{r_idx}:t{turn.turn_id}"
                     blind_key_map[blind_key] = {
                         "candidate_1": c1_rec["variant"],
                         "candidate_2": c2_rec["variant"],
@@ -1226,29 +1248,11 @@ class EvaluationRunner:
 
                     template_lines.append("#### 候选者回复对比:")
                     template_lines.append("**【候选 1 (Candidate 1)】**:")
-                    template_lines.append(f"```text\n{c1_rec['raw_reply']}\n```")
-                    lat_c1 = c1_rec["latency_ms"]
-                    tok_c1 = c1_rec["tokens_completion"]
-                    tok_c1_info = f"Tokens: {tok_c1}"
-                    if c1_rec.get("provider_tokens_completion") is not None:
-                        tok_c1_info += f" (Provider Compl: {c1_rec['provider_tokens_completion']}"
-                        if c1_rec.get("provider_tokens_reasoning") is not None:
-                            tok_c1_info += f", Reasoning: {c1_rec['provider_tokens_reasoning']}"
-                        tok_c1_info += ")"
-                    template_lines.append(f"- 耗时: {lat_c1} ms | {tok_c1_info}")
+                    template_lines.append(_fenced_review_reply(c1_rec["raw_reply"]))
                     template_lines.append("")
 
                     template_lines.append("**【候选 2 (Candidate 2)】**:")
-                    template_lines.append(f"```text\n{c2_rec['raw_reply']}\n```")
-                    lat_c2 = c2_rec["latency_ms"]
-                    tok_c2 = c2_rec["tokens_completion"]
-                    tok_c2_info = f"Tokens: {tok_c2}"
-                    if c2_rec.get("provider_tokens_completion") is not None:
-                        tok_c2_info += f" (Provider Compl: {c2_rec['provider_tokens_completion']}"
-                        if c2_rec.get("provider_tokens_reasoning") is not None:
-                            tok_c2_info += f", Reasoning: {c2_rec['provider_tokens_reasoning']}"
-                        tok_c2_info += ")"
-                    template_lines.append(f"- 耗时: {lat_c2} ms | {tok_c2_info}")
+                    template_lines.append(_fenced_review_reply(c2_rec["raw_reply"]))
                     template_lines.append("")
 
                     template_lines.append(
@@ -1264,14 +1268,20 @@ class EvaluationRunner:
                     template_lines.append("")
 
         template_file = self.output_dir / "blinded_review_template.md"
-        template_file.write_text("\n".join(template_lines), encoding="utf-8")
-
-        key_file = self.output_dir / "blinded_key.json"
+        # Persist the map before publishing a newly randomized review table.
         key_file.write_text(
             json.dumps(blind_key_map, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        template_file.write_text("\n".join(template_lines), encoding="utf-8")
 
         return template_file
+
+
+def _fenced_review_reply(reply: str) -> str:
+    """Keep model Markdown literal even when it contains its own code fences."""
+    longest_run = max((len(run) for run in re.findall(r"`+", reply)), default=0)
+    fence = "`" * max(3, longest_run + 1)
+    return f"{fence}text\n{reply}\n{fence}"
 
 
 def _build_memory_packet(
