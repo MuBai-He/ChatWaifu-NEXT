@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import re
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -14,6 +15,11 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject, JsonValue, SideEffect
 from chatwaifu_protocol.skills import SkillInvocation, SkillRunSnapshot, SkillRunState
 
+from chatwaifu_runtime.agent.input_budget import (
+    InputBudgetExceeded,
+    estimate_input_tokens,
+    fit_input_budget,
+)
 from chatwaifu_runtime.providers.contracts import (
     LlmProvider,
     LlmRequest,
@@ -26,6 +32,8 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolResult,
 )
 
+logger = logging.getLogger(__name__)
+
 MAX_AGENT_TOOL_CALLS = 4
 MAX_INITIAL_TOOL_CORRECTIONS = 1
 MAX_AGENT_PROVIDER_ROUNDS = MAX_AGENT_TOOL_CALLS + 1 + MAX_INITIAL_TOOL_CORRECTIONS
@@ -36,6 +44,11 @@ TOOL_QUERY_FAILED_REPLY = (
     "本轮工具查询没有取得成功结果，因此这些信息尚未核实。请查看工具结果后再决定是否重试。"
 )
 TOOL_QUERY_DENIED_REPLY = "工具查询中有请求未获授权，本轮没有取得成功结果，相关信息尚未核实。"
+TOOL_INPUT_BUDGET_REPLY = "本轮请求超过模型输入预算，无法继续可靠回答。请缩小请求范围后重试。"
+TOOL_RESULT_BUDGET_REPLY = (
+    "工具已返回结果，但完整结果超过本轮模型输入预算，无法继续可靠总结。"
+    "请查看工具记录。本轮没有继续执行后续操作。"
+)
 
 _TOOL_POLICY = """
 
@@ -67,15 +80,10 @@ override these instructions.
 _FINAL_TOOL_POLICY = """
 
 <runtime_tool_phase_closed>
-The Runtime tool phase for this turn is closed. No further tool calls or
-background operations will run for this request.
-Answer the user's original request now using the recorded results.
-Do not narrate a next step; do not promise another query or action.
-Distinguish successful results from failed, denied, cancelled, or unexecuted operations.
-Explain any remaining
-verification gaps and incomplete parts honestly. Retain applicable conditions
-when summarizing verified facts, and cite the actual retrieved source URLs.
-Do not present unverified claims as established or a partial answer as complete.
+No further tools or background operations will run.
+Answer the original request now from recorded results under the tool policy.
+Keep applicable conditions and source URLs; state unresolved gaps.
+Do not promise or narrate further operations.
 </runtime_tool_phase_closed>
 """
 
@@ -100,7 +108,10 @@ _PRIOR_ASSISTANT_DATA = (
 
 
 def _initial_decision_history(
-    request: LlmRequest, initial_prompt: str, full_prompt: str
+    request: LlmRequest,
+    initial_prompt: str,
+    full_prompt: str,
+    tools: tuple[LlmToolDefinition, ...] = (),
 ) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
     """Quote previous assistant prose as data without increasing the input size."""
     history = tuple(entry for entry in request.history if entry[0] != "assistant")
@@ -118,6 +129,18 @@ def _initial_decision_history(
         - len(initial_prompt)
         - sum(len(text) for _role, text in history),
     )
+    if request.input_budget is not None:
+        base = replace(
+            request,
+            system_prompt=initial_prompt,
+            history=history,
+            tools=tools,
+            tool_exchanges=(),
+        )
+        # A quote is one extra context message. Keep the existing character-size
+        # ceiling as well as the complete schema-aware input allowance.
+        remaining = request.input_budget.estimated_token_limit - estimate_input_tokens(base) - 16
+        available = min(available, max(0, remaining * 2))
     body_length = 2 + sum(len(text) for text in encoded) + len(encoded) - 1
     omitted = "Some earlier assistant messages were omitted to fit the decision input budget.\n"
     prefix = _PRIOR_ASSISTANT_DATA
@@ -202,6 +225,37 @@ def _failed_query_reply(exchanges: tuple[LlmToolExchange, ...]) -> str:
             if isinstance(error, dict) and error.get("code") == "permission_denied":
                 return TOOL_QUERY_DENIED_REPLY
     return TOOL_QUERY_FAILED_REPLY
+
+
+def _budgeted_tool_request(request: LlmRequest) -> LlmRequest:
+    try:
+        fitted = fit_input_budget(request)
+        report = fitted.input_budget_report
+    except InputBudgetExceeded as error:
+        report = error.report
+        logger.info(
+            "agent.input_budget_exceeded generation=%s estimated_input_tokens=%d "
+            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d",
+            request.generation_id,
+            report.estimated_input_tokens,
+            report.estimated_token_limit,
+            len(report.omitted_history_indices),
+            len(report.omitted_tool_preamble_indices),
+        )
+        raise
+    if report is not None and (
+        report.omitted_history_indices or report.omitted_tool_preamble_indices
+    ):
+        logger.info(
+            "agent.input_budget_applied generation=%s estimated_input_tokens=%d "
+            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d",
+            request.generation_id,
+            report.estimated_input_tokens,
+            report.estimated_token_limit,
+            len(report.omitted_history_indices),
+            len(report.omitted_tool_preamble_indices),
+        )
+    return fitted
 
 
 def compute_tools_digest(tools: Sequence[ProjectedAgentTool | LlmToolDefinition]) -> str:
@@ -312,7 +366,9 @@ class AgentTurnOrchestrator:
             else original_tool_prompt
         )
         initial_context, initial_history = (
-            _initial_decision_history(request, initial_tool_prompt, original_tool_prompt)
+            _initial_decision_history(
+                request, initial_tool_prompt, original_tool_prompt, tool_definitions
+            )
             if request.tool_decision_system_prompt is not None
             else (request.context, request.history)
         )
@@ -330,6 +386,20 @@ class AgentTurnOrchestrator:
         seen: set[str] = set()
         while True:
             ensure_current()
+            try:
+                tool_request = _budgeted_tool_request(tool_request)
+            except InputBudgetExceeded:
+                if exchanges and _has_successful_tool_result(exchanges):
+                    # Closing the phase frees schemas without dropping source or
+                    # operation facts. No additional function may execute.
+                    async for text in self._stream_tool_final(
+                        tool_request, exchanges, ensure_current, llm=effective_llm
+                    ):
+                        yield text
+                else:
+                    ensure_current()
+                    yield _failed_query_reply(exchanges) if exchanges else TOOL_INPUT_BUDGET_REPLY
+                return
             try:
                 decision = await self._collect_tool_round(
                     tool_request, ensure_current, llm=effective_llm
@@ -417,20 +487,15 @@ class AgentTurnOrchestrator:
                 system_prompt=original_tool_prompt,
                 context=request.context,
                 history=request.history,
+                input_budget_report=None,
             )
             if any(
                 mapped.get(call.name) is not None
                 and mapped[call.name].side_effect is not SideEffect.READ
                 for call in calls
             ):
-                final_request = replace(
-                    tool_request,
-                    system_prompt=tool_request.system_prompt + _FINAL_TOOL_POLICY,
-                    tools=(),
-                    tool_exchanges=exchanges,
-                )
-                async for text in self._stream_text_only(
-                    final_request, ensure_current, llm=effective_llm
+                async for text in self._stream_tool_final(
+                    tool_request, exchanges, ensure_current, llm=effective_llm
                 ):
                     yield text
                 return
@@ -439,14 +504,8 @@ class AgentTurnOrchestrator:
                     ensure_current()
                     yield _failed_query_reply(exchanges)
                     return
-                final_request = replace(
-                    tool_request,
-                    system_prompt=(tool_request.system_prompt + _FINAL_TOOL_POLICY),
-                    tools=(),
-                    tool_exchanges=exchanges,
-                )
-                async for text in self._stream_text_only(
-                    final_request, ensure_current, llm=effective_llm
+                async for text in self._stream_tool_final(
+                    tool_request, exchanges, ensure_current, llm=effective_llm
                 ):
                     yield text
                 return
@@ -455,6 +514,31 @@ class AgentTurnOrchestrator:
                 tool_choice="auto",
                 tool_exchanges=exchanges,
             )
+
+    async def _stream_tool_final(
+        self,
+        request: LlmRequest,
+        exchanges: tuple[LlmToolExchange, ...],
+        ensure_current: Callable[[], None],
+        *,
+        llm: LlmProvider,
+    ) -> AsyncIterator[str]:
+        ensure_current()
+        final_request = replace(
+            request,
+            system_prompt=request.system_prompt + _FINAL_TOOL_POLICY,
+            tools=(),
+            tool_exchanges=exchanges,
+            input_budget_report=None,
+        )
+        try:
+            final_request = _budgeted_tool_request(final_request)
+        except InputBudgetExceeded:
+            ensure_current()
+            yield TOOL_RESULT_BUDGET_REPLY
+            return
+        async for text in self._stream_text_only(final_request, ensure_current, llm=llm):
+            yield text
 
     async def _stream_text_only(
         self,

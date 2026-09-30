@@ -244,23 +244,10 @@ class PromptCompiler:
                 output_contract,
             )
         )
-        used = sum(
-            _tokens(value)
-            for value in (
-                _SAFETY,
-                clock_context,
-                persona,
-                state,
-                relationship,
-                output_contract,
-                memory_text,
-                memory_source_text,
-                scene,
-                user_text,
-                source_ledger,
-                photo_evidence,
-                *(text for _role, text in selected_history),
-            )
+        used = (
+            _tokens(system_prompt)
+            + _tokens(user_text)
+            + sum(_tokens(text) for _role, text in (*context, *selected_history))
         )
         return PromptCompilation(
             system_prompt=system_prompt,
@@ -272,7 +259,7 @@ class PromptCompiler:
             report=PromptBudgetReport(
                 model_role="chat",
                 budget=total_budget,
-                used=min(used, total_budget),
+                used=used,
                 safety_tokens=_tokens(_SAFETY) + _tokens(clock_context),
                 persona_tokens=_tokens(persona),
                 state_tokens=_tokens(state),

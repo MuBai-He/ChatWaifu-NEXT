@@ -41,7 +41,8 @@ The snapshot freezes:
   character package (`character.yaml`, `persona.md`, `voice.yaml`, `avatar.yaml`, `relationship-policy.yaml`, `lexicon.yaml`).
 - The presentation profile (e.g. `instant_message` or `default`).
 - The prompt template version (initially `v2`; `v3` adds the trusted admission time,
-  and `v4` separates the initial required-tool decision from character expression).
+  `v4` separates the initial required-tool decision from character expression,
+  and `v5` adds schema/exchange-aware estimated tool input budgets).
 - The generation's trusted admission time from its persisted Runtime turn event, normalized to UTC
   by the compiler. Delayed retrieval or a midnight boundary cannot change this time within a turn.
 - The frozen provider adapter (`LlmProvider`) configured for the captured chat route.
@@ -73,7 +74,7 @@ The system enforces a strict boundary between frozen generation parameters and t
 - `identity_hash`: Deterministic SHA-256 digest of canonical nonsecret fields.
 - `character_id`: Stable identifier of the active character.
 - `character_package_hash`: Deterministic digest of the six-file character package.
-- `prompt_template_version`: Template revision string (`v4` for the initial-tool decision template).
+- `prompt_template_version`: Template revision string (`v5` for the budgeted tool-input template).
 - `presentation_profile`: Active presentation surface mode.
 - `chat_route`: Nonsecret route identity (provider, model, hashed endpoint route, context window).
 - `memory_summary_route`: Nonsecret route identity for summarization.
@@ -146,9 +147,46 @@ round. Follow-up tool unavailability cannot be described as a completed query. A
 Provider usage and tool results remain in evaluation traces. A successful but incomplete
 or outdated source does not activate this guard and still requires quality acceptance.
 
+### 8. Complete Tool Input Estimate
+
+Template `v5` passes an internal versioned `LlmInputBudget` from the same frozen
+compilation report to the Agent. Every initial decision, correction, subsequent
+tool decision and final tool response accounts for schemas, arguments, all
+results and message overhead. The scenario evaluator follows the same path.
+The original compiler report now exposes its actual assembled-text estimate,
+including wrappers and summaries, instead of clamping `used` to `budget`.
+
+The estimate extends the existing two-characters-per-token heuristic. It is not
+a provider tokenizer or a hard native-token guarantee; image reserves also remain
+estimates. Real provider usage is separately measured. Ordinary no-tool text
+generation retains its existing compiler allocation path.
+
+If an input exceeds its estimate allowance, unexecuted model narratives and old
+assistant messages can be omitted with explicit markers, followed by older user
+history. Current input, the latest prior user turn, full character/safety rules,
+context and existing bounded tool result facts are preserved. Replacing history
+in place retains source-ledger positions. Initial quoted assistant data is bounded
+against schemas too. Tool call/result pairing, source bodies, fingerprints, errors,
+permissions and images are not rewritten by this projection.
+
+If schemas cannot fit after successful results, the Agent closes the tool phase
+and attempts a final response without tools. Mandatory overflow returns a factual
+budget notice and never retries writes or describes an executed action as
+unexecuted. Read failures, cancellation, deduplication, live grants and the existing
+four-tool/six-provider limits still apply. Nonsecret budget metadata and source
+projection hashes are available in opt-in evaluation traces; production logs
+contain only generation IDs and numbers.
+
+The frozen-source replay of 2026-10-01 reports Gemini input 6538 tokens, but both
+Claude models report 8393 with the same 7255-token estimate and an 8192 configured
+window. This contradicts any claim of native budget compliance across providers.
+Provider-aware counting and factual-answer acceptance remain unresolved; the
+estimate guard alone does not approve Q02.
+
 ## Consequences
 
-- Configuration changes made mid-turn cannot cause budget or token limit mismatches within an active turn.
+- Configuration changes cannot make an active generation use a different admitted
+  window or estimate allowance. Native tokenizer accuracy remains a separate gate.
 - Prompt context identity enables deterministic diagnostic tracing without leaking credentials or private text.
 - Tool schemas remain bounded and frozen to what was admitted, while permission revocation remains immediate.
 - Full backwards compatibility with existing event history and zero SQLite schema migrations.

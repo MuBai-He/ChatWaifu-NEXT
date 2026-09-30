@@ -68,6 +68,7 @@ from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.providers.contracts import (
+    LlmInputBudget,
     LlmRequest,
     LlmResponseCompleted,
     LlmTextDelta,
@@ -118,7 +119,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.5.3"
+TOOL_VERSION = "1.6.0"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -813,6 +814,7 @@ class EvaluationRunner:
                 "services/runtime/src/chatwaifu_runtime/conversation/service.py",
                 "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+                "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
                 "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
                 "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
@@ -1144,6 +1146,7 @@ class EvaluationRunner:
                                 character_name=character.display_name,
                                 context=compilation.context,
                                 history=compilation.history,
+                                input_budget=LlmInputBudget(compilation.report.budget),
                                 recalled_memory_texts=compilation.recalled_memory_texts,
                                 routing_previous_user_text=next(
                                     (

@@ -395,8 +395,11 @@ async def test_read_budget_still_allows_a_final_summary() -> None:
     assert llm.requests[1].tools == ()
     assert len(llm.requests[1].tool_exchanges) == 1
     assert "<runtime_tool_phase_closed>" in llm.requests[1].system_prompt
-    assert "Answer the user's original request now" in llm.requests[1].system_prompt
-    assert "do not promise another query" in llm.requests[1].system_prompt
+    assert (
+        "Answer the original request now from recorded results under the tool policy."
+        in llm.requests[1].system_prompt
+    )
+    assert "Do not promise or narrate further operations." in llm.requests[1].system_prompt
     assert llm.requests[1].user_text == "查询四项状态"
 
 
@@ -485,7 +488,10 @@ async def test_failed_write_closes_tool_phase_without_claiming_success() -> None
     content = final.tool_exchanges[0].results[0].content
     assert isinstance(content, dict) and content["ok"] is False
     assert "<runtime_tool_phase_closed>" in final.system_prompt
-    assert "failed, denied" in final.system_prompt
+    assert (
+        "If a tool was denied, cancelled, expired, or failed, explain that honestly and briefly."
+        in " ".join(final.system_prompt.split())
+    )
 
 
 @pytest.mark.asyncio
@@ -630,6 +636,144 @@ async def test_non_tool_chat_keeps_full_character_prompt() -> None:
     ]
     assert llm.requests[0].system_prompt == request.system_prompt
     assert not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_tool_inputs_fit_budget_without_clipping_source_results() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(
+        _request("核对本轮完整条件"),
+        input_budget=LlmInputBudget(2600),
+        history=(
+            ("user", "older user topic " * 300),
+            ("assistant", "old assistant speculation " * 500),
+            ("user", "保留当前主题的范围和前提"),
+        ),
+        context=(("system", "channel source ledger history_index=0"),),
+    )
+    source: JsonObject = {
+        "url": "https://example.org/update",
+        "text": "condition;" * 100,
+        "body_sha256": "unchanged",
+        "truncated": False,
+    }
+    call = LlmToolCall("source", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("核对完成。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data=source))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    ) == ["核对完成。"]
+    assert all(estimate_input_tokens(req) <= 2600 for req in llm.requests)
+    final = llm.requests[-1]
+    assert final.user_text == request.user_text and final.context == request.context
+    assert final.history[-1] == request.history[-1]
+    assert [role for role, _ in final.history] == [role for role, _ in request.history]
+    result = final.tool_exchanges[0].results[0]
+    assert isinstance(result.content, dict) and result.content["data"] == source
+    assert not result.is_error and source["truncated"] is False
+    assert final.input_budget_report is not None
+    assert final.input_budget_report.omitted_history_indices
+
+
+@pytest.mark.asyncio
+async def test_schema_overflow_closes_tools_and_preserves_acquired_source() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    projection = _Projection(input_schema={"description": "schema " * 1200})
+    source: JsonObject = {"text": "verified condition " * 250, "truncated": False}
+    call = LlmToolCall("source", projection.name, {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("本轮按已读取原文答复。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data=source))
+    request = replace(_request("读取并解释"), input_budget=LlmInputBudget(6000))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((projection,))), request, uuid4()
+    ) == ["本轮按已读取原文答复。"]
+    assert len(llm.requests) == 2 and len(gateway.invocations) == 1
+    assert llm.requests[0].tools and not llm.requests[1].tools
+    assert all(estimate_input_tokens(req) <= 6000 for req in llm.requests)
+    assert "runtime_tool_phase_closed" in llm.requests[1].system_prompt
+    result = llm.requests[1].tool_exchanges[0].results[0]
+    assert isinstance(result.content, dict) and result.content["data"] == source
+
+
+@pytest.mark.asyncio
+async def test_initial_quoted_history_shares_schema_budget() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(
+        _request("核查当前主题"),
+        system_prompt="FULL_CHARACTER " * 100,
+        tool_decision_system_prompt="Safety and frozen time",
+        input_budget=LlmInputBudget(3000),
+        history=(("user", "保留当前主题"), ("assistant", "OLD_UNTRUSTED_REPLY " * 1000)),
+    )
+    call = LlmToolCall("one", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("最终完整角色回复。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data={"condition": "actual"}))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    ) == ["最终完整角色回复。"]
+    assert all(estimate_input_tokens(req) <= 3000 for req in llm.requests)
+    assert "Some earlier assistant messages were omitted" in llm.requests[0].context[-1][1]
+    assert "OLD_UNTRUSTED_REPLY" not in llm.requests[0].context[-1][1]
+    assert llm.requests[-1].system_prompt.startswith(request.system_prompt)
+    assert llm.requests[-1].history[0] == request.history[0]
+
+
+@pytest.mark.asyncio
+async def test_mandatory_initial_overflow_never_dispatches_or_leaks_content(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(_request("PRIVATE_TASK_CONTENT" * 1000), input_budget=LlmInputBudget(1000))
+    llm = _ScriptedLlm([])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    with caplog.at_level("INFO"):
+        reply = await _collect(
+            AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+        )
+    assert "预算" in "".join(reply)
+    assert not llm.requests and not gateway.invocations
+    assert "PRIVATE_TASK_CONTENT" not in caplog.text
+    assert "estimated_input_tokens" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_write_result_overflow_does_not_repeat_or_claim_unexecuted_write() -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    call = LlmToolCall("write", "runtime_status_read", {})
+    llm = _ScriptedLlm([(LlmToolCallRequested(call), LlmResponseCompleted("tool_calls"))])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data={"receipt": "confirmed " * 2000}))
+    request = replace(_request("执行一次操作"), input_budget=LlmInputBudget(2000))
+    reply = await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(side_effect=SideEffect.WRITE),))),
+        request,
+        uuid4(),
+    )
+    assert "预算" in "".join(reply) and "记录" in "".join(reply)
+    assert "没有执行外部操作" not in "".join(reply)
+    assert len(llm.requests) == len(gateway.invocations) == 1
 
 
 @pytest.mark.asyncio
@@ -806,7 +950,12 @@ async def test_tool_unsupported_provider_returns_explicit_unavailable_reply() ->
 
 
 @pytest.mark.asyncio
-async def test_generation_cancellation_cancels_waiting_runtime_skill() -> None:
+@pytest.mark.parametrize("with_input_budget", [False, True])
+async def test_generation_cancellation_cancels_waiting_runtime_skill(
+    with_input_budget: bool,
+) -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
     call = LlmToolCall(call_id="call_status", name="runtime_status_read", arguments={})
     llm = _ScriptedLlm(
         [
@@ -818,7 +967,10 @@ async def test_generation_cancellation_cancels_waiting_runtime_skill() -> None:
     )
     gateway = _WaitingGateway()
     agent = AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),)))
-    task = asyncio.create_task(_collect(agent, _request("看看运行状态"), uuid4()))
+    request = replace(
+        _request("看看运行状态"), input_budget=LlmInputBudget(2600) if with_input_budget else None
+    )
+    task = asyncio.create_task(_collect(agent, request, uuid4()))
     await gateway.wait_started.wait()
 
     task.cancel()

@@ -1,0 +1,905 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-01",
+  "q02_accepted": false,
+  "scope": "Three final-only provider requests replay the same previously fetched synthetic-turn source exchanges; no source tool executes here.",
+  "source_parent_commit": "7fec1c77279c69262e0682beac50b7f0ed2d4444",
+  "manifest": {
+    "scope": "Three final-only provider requests replay the same previously fetched synthetic-turn source exchanges; no source tool executes here.",
+    "runtime_attempt_limit": 3,
+    "http_attempt_upper_bound": 9,
+    "dollar_ceiling": null,
+    "configured_endpoint_port": 8318,
+    "configured_context_window": 8192,
+    "estimated_input_limit": 7292,
+    "models": [
+      "gemini-3.8-flash-high",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6-thinking"
+    ],
+    "sampling": {
+      "temperature": null,
+      "top_p": null,
+      "seed": null
+    },
+    "frozen_prompt_as_of": "2026-09-30T16:23:48+00:00",
+    "prompt_template_version": "v5",
+    "scenario_evaluator_version": "1.6.0",
+    "implementation_sha256": {
+      "services/runtime/src/chatwaifu_runtime/agent/input_budget.py": "0b1b1d98083c8512d596cbefeed829fd2c2cb69cf399616925cc975837bdf9b0",
+      "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "9e7a1912e8344257df8a9facea12dc1452a980de35f7c7c6ac95478ca51b9da8",
+      "services/runtime/src/chatwaifu_runtime/providers/contracts.py": "d967bd95d2d21425ab773732ea345271986520b5316a6542771147bf947c5f55",
+      "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "e4bbad637980a3ee39d5ed3b8ae38ca6ad85ed5bef03398160c6b68e98b0d106",
+      "services/runtime/src/chatwaifu_runtime/conversation/service.py": "8a37a521d351d449c50d5e0ea9ff6adb4ade6833e831a4b06031a4698f88b077",
+      "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "c1483e6f8cfbbfaf8d5ae1cf6deea13d27f9bdfb8ba0cce0ffb5b18474564002",
+      "packages/protocol-python/src/chatwaifu_protocol/character.py": "c27420ba2dde0cd7efec593c5474e8e1cff158fa17b23705c37e39e5f07d6a1d",
+      "tools/evaluate_character_scenarios.py": "5b123dc60122659fa82aad8855c6299a6e369455acecf2618bc9b3888ac5d3b9",
+      "tools/runtime_source_evaluation.py": "a19e4fc3ada36ff794c68de427c1747157462dbb62712c694eabdba59d4ac3b6"
+    }
+  },
+  "offline_replay": {
+    "scope": "frozen real query/search/two-read exchange replay; no new source fetch",
+    "original_sample_key": "detailed_answer:r0:t2:candidate_v5",
+    "original_call_id": "1c80e531-ad09-4f37-b9db-177c3e0fef8d",
+    "original_provider_prompt_tokens": 8862,
+    "original_system_context_history_hashes_match": true,
+    "original_request_estimated_tokens": 8682,
+    "with_schema_overflow_report": {
+      "estimated_token_limit": 7292,
+      "estimated_original_tokens": 8682,
+      "estimated_input_tokens": 8327,
+      "omitted_history_indices": [1],
+      "omitted_tool_preamble_indices": [],
+      "estimated_image_tokens": 0,
+      "version": "1.0"
+    },
+    "final_projection_report": {
+      "estimated_token_limit": 7292,
+      "estimated_original_tokens": 7610,
+      "estimated_input_tokens": 7255,
+      "omitted_history_indices": [1],
+      "omitted_tool_preamble_indices": [],
+      "estimated_image_tokens": 0,
+      "version": "1.0"
+    },
+    "source_call_and_result_bytes_unchanged": true,
+    "source_results_sha256": "0afe04bd3983a370063c4e3b68ea5268b339457119be2921f44dff603ee25dc6",
+    "original_wire_chars": 18480,
+    "final_wire_chars": 15479,
+    "all_tools_disabled": true
+  },
+  "budget_review": {
+    "estimate_guard_passed_for_three_final_inputs": true,
+    "native_configured_window_compliance": false,
+    "reason": "Gemini reported 6538 input tokens. Sonnet and Opus each reported 8393, above the frozen 8192 configuration, despite the same 7255 estimate. No hard endpoint limit or cross-provider tokenizer compliance is inferred."
+  },
+  "quality_review": {
+    "blind": false,
+    "reviewer": "primary Codex direct review",
+    "gemini-3.8-flash-high": {
+      "source_url_citations": false,
+      "reason": "Selected old/new conditions are present, but actual URLs are absent; closing reassurance is stronger than a bounded source review establishes."
+    },
+    "claude-sonnet-4-6": {
+      "source_url_citations": true,
+      "reason": "Adds a written-approval condition and an automatic-confiscation claim unsupported by the recorded pages; omits in-flight use/shutoff restrictions."
+    },
+    "claude-opus-4-6-thinking": {
+      "source_url_citations": true,
+      "reason": "Observed capacity, unclear-energy-label, 3C/recall and in-flight restrictions with both actual URLs. This single final-only replay is not current-source discovery, multi-turn checklist retention or full persona acceptance."
+    }
+  },
+  "provider_usage": {
+    "prompt_tokens": {
+      "reported_sum": 23324,
+      "known_calls": 3,
+      "unknown_calls": 0
+    },
+    "completion_tokens": {
+      "reported_sum": 1594,
+      "known_calls": 3,
+      "unknown_calls": 0
+    },
+    "total_tokens": {
+      "reported_sum": 24918,
+      "known_calls": 3,
+      "unknown_calls": 0
+    },
+    "reasoning_tokens": {
+      "reported_sum": null,
+      "known_calls": 0,
+      "unknown_calls": 3
+    }
+  },
+  "actual_runtime_provider_attempts": 3,
+  "dollar_cost": null,
+  "journal_exactly_once": true,
+  "new_source_tool_executions": 0,
+  "no_new_permission_grants_or_production_config_changes": true,
+  "samples": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "raw_reply": "乘坐国内航班携带充电宝（移动电源）时，民航局有非常明确且严格的安全规定，整理下来主要有以下三条：\n\n1. **携带方式与使用限制**：充电宝必须是个人自用，**只能随身携带或放入手提行李，严禁托运**。同时，在整个飞行过程中不得使用充电宝给电子设备充电；若带有启动开关，航程中必须始终保持关闭状态。\n2. **额定能量与数量门槛**：\n   - 额定能量**不超过 100Wh**（常见 3.7V 下约 27000mAh 以内）：无需航空公司批准即可携带；\n   - **超过 100Wh 但不超过 160Wh**：须经航空公司批准后方可携带，且每人最多只能带 **2 个**；\n   - **超过 160Wh** 的充电宝一律严禁携带。\n3. **标识合规与 3C 认证**：严禁携带标识磨损、参数不清或无法换算出额定能量的“三无”产品；另外依据民航要求，**没有 3C 认证标识、3C 标识不清晰或属于官方召回型号/批次**的充电宝，均禁止携带乘坐境内航班。\n\n收拾行李时记得翻过来看一下底部的参数和 3C 标，确认清楚就不用担心过安检被扣下了。",
+      "error_type": null,
+      "provider_calls": [
+        {
+          "call_id": "fe930ea4-42f0-4908-8c10-4fddfca42120",
+          "sample_key": "budget-replay:gemini-3.8-flash-high",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T22:02:19.425915+00:00",
+          "system_prompt_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                    "max_characters": 3000,
+                    "dns_resolver": "cloudflare",
+                    "focus": "充電寶只能在手提行李中"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                      "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+                      "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+                      "total_characters": 2350,
+                      "text_offset": 915,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1435,
+                      "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                    "focus": "3C",
+                    "max_characters": 2000,
+                    "dns_resolver": "cloudflare"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                      "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                      "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+                      "total_characters": 1349,
+                      "text_offset": 63,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1286,
+                      "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 7610,
+            "estimated_input_tokens": 7255,
+            "omitted_history_indices": [1],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "version": "1.0"
+          },
+          "requested_calls": [],
+          "text": "乘坐国内航班携带充电宝（移动电源）时，民航局有非常明确且严格的安全规定，整理下来主要有以下三条：\n\n1. **携带方式与使用限制**：充电宝必须是个人自用，**只能随身携带或放入手提行李，严禁托运**。同时，在整个飞行过程中不得使用充电宝给电子设备充电；若带有启动开关，航程中必须始终保持关闭状态。\n2. **额定能量与数量门槛**：\n   - 额定能量**不超过 100Wh**（常见 3.7V 下约 27000mAh 以内）：无需航空公司批准即可携带；\n   - **超过 100Wh 但不超过 160Wh**：须经航空公司批准后方可携带，且每人最多只能带 **2 个**；\n   - **超过 160Wh** 的充电宝一律严禁携带。\n3. **标识合规与 3C 认证**：严禁携带标识磨损、参数不清或无法换算出额定能量的“三无”产品；另外依据民航要求，**没有 3C 认证标识、3C 标识不清晰或属于官方召回型号/批次**的充电宝，均禁止携带乘坐境内航班。\n\n收拾行李时记得翻过来看一下底部的参数和 3C 标，确认清楚就不用担心过安检被扣下了。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 6538,
+            "completion_tokens": 319,
+            "total_tokens": 6857,
+            "reasoning_tokens": null
+          },
+          "error_type": null,
+          "latency_ms": 4227
+        }
+      ],
+      "offline_replay": {
+        "scope": "frozen real query/search/two-read exchange replay; no new source fetch",
+        "original_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "original_call_id": "1c80e531-ad09-4f37-b9db-177c3e0fef8d",
+        "original_provider_prompt_tokens": 8862,
+        "original_system_context_history_hashes_match": true,
+        "original_request_estimated_tokens": 8682,
+        "with_schema_overflow_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 8682,
+          "estimated_input_tokens": 8327,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "final_projection_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 7610,
+          "estimated_input_tokens": 7255,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "source_call_and_result_bytes_unchanged": true,
+        "source_results_sha256": "0afe04bd3983a370063c4e3b68ea5268b339457119be2921f44dff603ee25dc6",
+        "original_wire_chars": 18480,
+        "final_wire_chars": 15479,
+        "all_tools_disabled": true
+      },
+      "dollar_cost": null,
+      "q02_accepted": false
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "raw_reply": "好的，根据民航局官方公告整理如下。\n\n---\n\n**国内航班携带移动电源（充电宝）三条明确规定**\n\n**一、只能随身或放手提行李，严禁托运**\n充电宝不得放入托运行李，只能随身携带或放在手提行李中过安检。这是最基本也最容易踩的坑。\n\n**二、容量限额明确，超标须申请或禁止携带**\n- **≤100Wh**：无需申请，直接携带；\n- **>100Wh 且 ≤160Wh**：须事先获得航空公司书面批准，且每人最多携带两个；\n- **>160Wh**：严禁携带，无例外。\n\n如果充电宝上没有直接标注Wh，可用公式换算：**Wh = V（标称电压）× Ah（标称容量）**，常见10000mAh/3.7V的充电宝约为37Wh，在100Wh以内。\n\n**三、须有清晰3C认证标识（2025年6月28日起执行新规）**\n民航局2025年6月发布紧急通知，自2025年6月28日起，**禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝**乘坐境内航班。购买时务必确认产品有正规3C认证，杂牌或山寨充电宝很可能被直接没收。\n\n---\n\n来源：\n- 民航局《关于民航旅客携带\"充电宝\"乘机规定的公告》（2014年）：[caac.gov.cn](https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html)\n- 民航局东北局充电宝管控督导报道（2025年6月）：[db.caac.gov.cn](https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html)\n\n出发前最好翻出充电宝看一眼标注，省得在安检口被拦下来手忙脚乱。",
+      "error_type": null,
+      "provider_calls": [
+        {
+          "call_id": "a9f454aa-6186-47d7-9078-b16eaa8c2222",
+          "sample_key": "budget-replay:claude-sonnet-4-6",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T22:02:23.655022+00:00",
+          "system_prompt_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                    "max_characters": 3000,
+                    "dns_resolver": "cloudflare",
+                    "focus": "充電寶只能在手提行李中"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                      "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+                      "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+                      "total_characters": 2350,
+                      "text_offset": 915,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1435,
+                      "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                    "focus": "3C",
+                    "max_characters": 2000,
+                    "dns_resolver": "cloudflare"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                      "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                      "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+                      "total_characters": 1349,
+                      "text_offset": 63,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1286,
+                      "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 7610,
+            "estimated_input_tokens": 7255,
+            "omitted_history_indices": [1],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "version": "1.0"
+          },
+          "requested_calls": [],
+          "text": "好的，根据民航局官方公告整理如下。\n\n---\n\n**国内航班携带移动电源（充电宝）三条明确规定**\n\n**一、只能随身或放手提行李，严禁托运**\n充电宝不得放入托运行李，只能随身携带或放在手提行李中过安检。这是最基本也最容易踩的坑。\n\n**二、容量限额明确，超标须申请或禁止携带**\n- **≤100Wh**：无需申请，直接携带；\n- **>100Wh 且 ≤160Wh**：须事先获得航空公司书面批准，且每人最多携带两个；\n- **>160Wh**：严禁携带，无例外。\n\n如果充电宝上没有直接标注Wh，可用公式换算：**Wh = V（标称电压）× Ah（标称容量）**，常见10000mAh/3.7V的充电宝约为37Wh，在100Wh以内。\n\n**三、须有清晰3C认证标识（2025年6月28日起执行新规）**\n民航局2025年6月发布紧急通知，自2025年6月28日起，**禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝**乘坐境内航班。购买时务必确认产品有正规3C认证，杂牌或山寨充电宝很可能被直接没收。\n\n---\n\n来源：\n- 民航局《关于民航旅客携带\"充电宝\"乘机规定的公告》（2014年）：[caac.gov.cn](https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html)\n- 民航局东北局充电宝管控督导报道（2025年6月）：[db.caac.gov.cn](https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html)\n\n出发前最好翻出充电宝看一眼标注，省得在安检口被拦下来手忙脚乱。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 8393,
+            "completion_tokens": 654,
+            "total_tokens": 9047,
+            "reasoning_tokens": null
+          },
+          "error_type": null,
+          "latency_ms": 17378
+        }
+      ],
+      "offline_replay": {
+        "scope": "frozen real query/search/two-read exchange replay; no new source fetch",
+        "original_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "original_call_id": "1c80e531-ad09-4f37-b9db-177c3e0fef8d",
+        "original_provider_prompt_tokens": 8862,
+        "original_system_context_history_hashes_match": true,
+        "original_request_estimated_tokens": 8682,
+        "with_schema_overflow_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 8682,
+          "estimated_input_tokens": 8327,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "final_projection_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 7610,
+          "estimated_input_tokens": 7255,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "source_call_and_result_bytes_unchanged": true,
+        "source_results_sha256": "0afe04bd3983a370063c4e3b68ea5268b339457119be2921f44dff603ee25dc6",
+        "original_wire_chars": 18480,
+        "final_wire_chars": 15479,
+        "all_tools_disabled": true
+      },
+      "dollar_cost": null,
+      "q02_accepted": false
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "raw_reply": "好的，这个我帮你整理一下。根据民航局公告（来源：[caac.gov.cn](https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html)）以及 2025 年 6 月底的补充规定，国内航班携带移动电源（充电宝）主要有以下三条明确规则：\n\n**1. 只能随身携带，严禁托运**\n充电宝只能放在手提行李中或随身携带，**不得**放入托运行李。这一点非常重要，很多人容易忽略。\n\n**2. 额定能量限制**\n- ≤ 100Wh：可以直接携带，无需航空公司批准。\n- 100Wh ＜ 额定能量 ≤ 160Wh：需要经航空公司批准才能携带，且每人最多带 **两个**。\n- ＞ 160Wh：**严禁携带**。\n- 如果充电宝上没有直接标注 Wh，可以用\"标称电压(V) × 标称容量(Ah)\"来换算。未标明能量且无法通过参数计算的，同样禁止携带。\n\n**3. 必须有清晰的 3C 认证标识（2025 年 6 月 28 日起执行）**\n自 2025 年 6 月 28 日起，境内航班**禁止**携带没有 3C 标识、3C 标识不清晰、或属于被召回型号/批次的充电宝（来源：[东北局报道](https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html)）。\n\n另外还有一点附带提醒：飞行过程中不得用充电宝给设备充电，有开关的充电宝应全程关闭。\n\n出发前检查一下自己的充电宝标签是否清晰、能量是否达标就好，这样过安检会顺利很多。",
+      "error_type": null,
+      "provider_calls": [
+        {
+          "call_id": "47710e4b-b182-479c-b0ae-84e0f434302e",
+          "sample_key": "budget-replay:claude-opus-4-6-thinking",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T22:02:41.036034+00:00",
+          "system_prompt_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                    "max_characters": 3000,
+                    "dns_resolver": "cloudflare",
+                    "focus": "充電寶只能在手提行李中"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                      "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+                      "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+                      "total_characters": 2350,
+                      "text_offset": 915,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1435,
+                      "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                    "focus": "3C",
+                    "max_characters": 2000,
+                    "dns_resolver": "cloudflare"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                      "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                      "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+                      "total_characters": 1349,
+                      "text_offset": 63,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1286,
+                      "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 7610,
+            "estimated_input_tokens": 7255,
+            "omitted_history_indices": [1],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "version": "1.0"
+          },
+          "requested_calls": [],
+          "text": "好的，这个我帮你整理一下。根据民航局公告（来源：[caac.gov.cn](https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html)）以及 2025 年 6 月底的补充规定，国内航班携带移动电源（充电宝）主要有以下三条明确规则：\n\n**1. 只能随身携带，严禁托运**\n充电宝只能放在手提行李中或随身携带，**不得**放入托运行李。这一点非常重要，很多人容易忽略。\n\n**2. 额定能量限制**\n- ≤ 100Wh：可以直接携带，无需航空公司批准。\n- 100Wh ＜ 额定能量 ≤ 160Wh：需要经航空公司批准才能携带，且每人最多带 **两个**。\n- ＞ 160Wh：**严禁携带**。\n- 如果充电宝上没有直接标注 Wh，可以用\"标称电压(V) × 标称容量(Ah)\"来换算。未标明能量且无法通过参数计算的，同样禁止携带。\n\n**3. 必须有清晰的 3C 认证标识（2025 年 6 月 28 日起执行）**\n自 2025 年 6 月 28 日起，境内航班**禁止**携带没有 3C 标识、3C 标识不清晰、或属于被召回型号/批次的充电宝（来源：[东北局报道](https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html)）。\n\n另外还有一点附带提醒：飞行过程中不得用充电宝给设备充电，有开关的充电宝应全程关闭。\n\n出发前检查一下自己的充电宝标签是否清晰、能量是否达标就好，这样过安检会顺利很多。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 8393,
+            "completion_tokens": 621,
+            "total_tokens": 9014,
+            "reasoning_tokens": null
+          },
+          "error_type": null,
+          "latency_ms": 17597
+        }
+      ],
+      "offline_replay": {
+        "scope": "frozen real query/search/two-read exchange replay; no new source fetch",
+        "original_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "original_call_id": "1c80e531-ad09-4f37-b9db-177c3e0fef8d",
+        "original_provider_prompt_tokens": 8862,
+        "original_system_context_history_hashes_match": true,
+        "original_request_estimated_tokens": 8682,
+        "with_schema_overflow_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 8682,
+          "estimated_input_tokens": 8327,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "final_projection_report": {
+          "estimated_token_limit": 7292,
+          "estimated_original_tokens": 7610,
+          "estimated_input_tokens": 7255,
+          "omitted_history_indices": [1],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "version": "1.0"
+        },
+        "source_call_and_result_bytes_unchanged": true,
+        "source_results_sha256": "0afe04bd3983a370063c4e3b68ea5268b339457119be2921f44dff603ee25dc6",
+        "original_wire_chars": 18480,
+        "final_wire_chars": 15479,
+        "all_tools_disabled": true
+      },
+      "dollar_cost": null,
+      "q02_accepted": false
+    }
+  ],
+  "prior_commit_ci": {
+    "commit": "7fec1c77279c69262e0682beac50b7f0ed2d4444",
+    "checks": [
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804890/job/110107151976",
+        "name": "deploy",
+        "state": "SKIPPED"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106861914",
+        "name": "python (macos-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804772/job/110106862381",
+        "name": "rust (macos-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106861536",
+        "name": "neural-worker (macos-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804835/job/110106862734",
+        "name": "web-smoke",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106861855",
+        "name": "python (windows-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804741/job/110106862047",
+        "name": "web (ubuntu-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804772/job/110106862448",
+        "name": "rust (windows-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804772/job/110106861823",
+        "name": "rust (ubuntu-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804762/job/110106863200",
+        "name": "contract",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804885/job/110106862653",
+        "name": "secrets",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804741/job/110106861683",
+        "name": "web (windows-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804890/job/110106862588",
+        "name": "build",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106862035",
+        "name": "neural-worker (ubuntu-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804885/job/110106862942",
+        "name": "dependencies",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804835/job/110106863053",
+        "name": "architecture-boundaries",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106861867",
+        "name": "python (ubuntu-latest)",
+        "state": "SUCCESS"
+      },
+      {
+        "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36779804781/job/110106862037",
+        "name": "neural-worker (windows-latest)",
+        "state": "SUCCESS"
+      }
+    ],
+    "meaning": "17 successful and one PR deployment skip for the prior source-query commit; not a CI claim for this new budget patch"
+  },
+  "artifact_sha256": {
+    "claude-opus-4-6-thinking-provider-rounds.jsonl": "19088b69c2e8e8b739429ee99610b3e2a730c256ecfae45339edb790e79ba12a",
+    "claude-opus-4-6-thinking-result.json": "f8b9b337857317dd5d5722e19eb1881280a879e2b58f2825007eca986b4f4a7a",
+    "claude-sonnet-4-6-provider-rounds.jsonl": "943d4503ade289893122795c875f0dd37abd86c210ce4d0e719a43bfdd0f01e6",
+    "claude-sonnet-4-6-result.json": "ec51e07af7aee5abe23ed7cbc691afc55823a0ea01281c487027f5186b0a82c9",
+    "gemini-3.8-flash-high-provider-rounds.jsonl": "63f21b46261ff7a649171e40f6a85413269c107c22555e3c858fd806dc692993",
+    "gemini-3.8-flash-high-result.json": "05a612e4892179af42d79cc27065f7cdddccc43e2d30ccdf0b6198f3ce4a4a92",
+    "model-replay-manifest.json": "3d81beeb1e6abbf0498d1b8c42ded9f19679812fc27b3ac024d9f7d670e9aea2",
+    "offline-replay.json": "eafdc2cadf6e63fb8b98befcbfd851fda16c68d9b02f0d9a2791864e57985d45"
+  },
+  "script_sha256": {
+    "replay-tool-input-budget-20261001.py": "5fcf82ab8212e07cf768da95688434e922b36402b5de5b3694dfeceb79c60d06",
+    "run-tool-input-budget-model-replay-20261001.py": "3637978d4ad0ba5060d1240607c5af80180c0c113eadf5ca115c5dd71a20e664",
+    "publish-tool-input-budget-20261001.py": "e41ebf0084825afca93acd3130ceb4e143adc27424aa868f9f4f344efe7b897e"
+  },
+  "public_evidence_policy": "Raw retrieved source bodies stay in local artifacts; public evidence contains body/text hashes and character counts. Synthetic model replies, actual usage and projection metadata are retained."
+}

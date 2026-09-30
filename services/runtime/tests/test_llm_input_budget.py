@@ -1,0 +1,116 @@
+"""Whole-request budget estimates and source-preserving projection."""
+
+from dataclasses import replace
+from uuid import uuid4
+
+import pytest
+from chatwaifu_protocol.base import JsonObject
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    LlmToolCall,
+    LlmToolExchange,
+    LlmToolResult,
+)
+
+
+def test_budget_accounts_for_tools_arguments_and_results() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.providers.contracts import LlmToolDefinition
+
+    request = LlmRequest(uuid4(), "question", "safety")
+    base = estimate_input_tokens(request)
+    tool_request = replace(
+        request,
+        tools=(LlmToolDefinition("read", "source", {"description": "schema" * 1000}),),
+    )
+    assert estimate_input_tokens(tool_request) > base + 2500
+    exchange = LlmToolExchange(
+        "unexecuted narrative" * 200,
+        (LlmToolCall("one", "read", {"focus": "argument" * 1000}),),
+        (LlmToolResult("one", "read", {"text": "source" * 1000}),),
+    )
+    assert estimate_input_tokens(replace(tool_request, tool_exchanges=(exchange,))) > (
+        estimate_input_tokens(tool_request) + 6500
+    )
+
+
+def test_projection_keeps_current_task_sources_and_history_positions() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens, fit_input_budget
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    source: JsonObject = {
+        "url": "https://example.org/update",
+        "text": "condition;" * 100,
+        "body_sha256": "original",
+        "truncated": False,
+        "untrusted": True,
+    }
+    exchange = LlmToolExchange(
+        "speculative preamble " * 400,
+        (LlmToolCall("one", "read", {"url": source["url"]}),),
+        (LlmToolResult("one", "read", source),),
+    )
+    request = LlmRequest(
+        uuid4(),
+        "check all of these conditions",
+        "full safety and persona",
+        context=(("system", "source ledger: history_index=0"),),
+        history=(
+            ("user", "old topic " * 300),
+            ("assistant", "old answer " * 1200),
+            ("user", "current topic and its requirements"),
+        ),
+        tool_exchanges=(exchange,),
+        input_budget=LlmInputBudget(1600),
+    )
+    fitted = fit_input_budget(request)
+    assert estimate_input_tokens(request) > 1600
+    assert estimate_input_tokens(fitted) <= 1600
+    assert fitted.user_text == request.user_text
+    assert fitted.system_prompt == request.system_prompt
+    assert fitted.context == request.context
+    assert [role for role, _ in fitted.history] == [role for role, _ in request.history]
+    assert fitted.history[-1] == request.history[-1]
+    assert fitted.tool_exchanges[0].calls == exchange.calls
+    assert fitted.tool_exchanges[0].results == exchange.results
+    assert source["text"] == "condition;" * 100 and source["truncated"] is False
+    assert "omitted" in fitted.history[1][1]
+    assert fitted.input_budget_report is not None
+    assert fitted.input_budget_report.estimated_original_tokens > 1600
+    assert fitted.input_budget_report.estimated_input_tokens <= 1600
+    assert fitted.input_budget_report.omitted_tool_preamble_indices == (0,)
+
+
+def test_mandatory_source_overflow_is_explicit_and_never_clipped() -> None:
+    from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded, fit_input_budget
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    source: JsonObject = {"text": "verified condition " * 1000, "truncated": False}
+    result = LlmToolResult("one", "read", source)
+    request = LlmRequest(
+        uuid4(),
+        "question",
+        "safety",
+        input_budget=LlmInputBudget(500),
+        tool_exchanges=(LlmToolExchange("", (LlmToolCall("one", "read", {}),), (result,)),),
+    )
+    with pytest.raises(InputBudgetExceeded) as caught:
+        fit_input_budget(request)
+    assert caught.value.report.estimated_input_tokens > 500
+    assert request.tool_exchanges[0].results[0] == result
+    assert source["truncated"] is False
+
+
+@pytest.mark.parametrize("limit", [0, -1, True])
+def test_input_budget_rejects_invalid_limits(limit: int) -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    with pytest.raises(ValueError):
+        LlmInputBudget(limit)
+
+
+def test_legacy_request_keeps_its_original_projection() -> None:
+    from chatwaifu_runtime.agent.input_budget import fit_input_budget
+
+    request = LlmRequest(uuid4(), "question", "safety", history=(("assistant", "old" * 4000),))
+    assert fit_input_budget(request) is request

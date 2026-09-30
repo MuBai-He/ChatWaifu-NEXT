@@ -133,6 +133,8 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert first_payload.identity.chat_route.model == initial.model
         assert first_payload.identity.chat_route.context_window == initial.context_window
         assert first_payload.report.budget == initial.context_window - 900
+        assert requests[0][1].input_budget is not None
+        assert requests[0][1].input_budget.estimated_token_limit == first_payload.report.budget
 
         second = await container.conversation.submit_text(
             session.session_id,
@@ -156,6 +158,8 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert second_payload.identity.chat_route.model == "route-after-admission"
         assert second_payload.identity.identity_hash != first_payload.identity.identity_hash
         assert second_payload.report.budget == 2048 - 900
+        assert requests[1][1].input_budget is not None
+        assert requests[1][1].input_budget.estimated_token_limit == second_payload.report.budget
         assert Clock.current.isoformat(timespec="seconds") in requests[1][1].system_prompt
         next_decision_prompt = requests[1][1].tool_decision_system_prompt
         assert next_decision_prompt is not None

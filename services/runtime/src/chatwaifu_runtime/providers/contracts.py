@@ -108,6 +108,33 @@ type LlmStreamEvent = LlmTextDelta | LlmToolCallRequested | LlmResponseCompleted
 
 
 @dataclass(frozen=True, slots=True)
+class LlmInputBudget:
+    """Frozen estimated input allowance, not a provider tokenizer guarantee."""
+
+    estimated_token_limit: int
+    version: Literal["1.0"] = "1.0"
+
+    def __post_init__(self) -> None:
+        if type(self.estimated_token_limit) is not int or self.estimated_token_limit < 1:
+            raise ValueError("estimated input token limit must be a positive integer")
+        if self.version != "1.0":
+            raise ValueError("unsupported input budget version")
+
+
+@dataclass(frozen=True, slots=True)
+class LlmInputBudgetReport:
+    """Nonsecret projection metadata; actual usage remains provider-reported."""
+
+    estimated_token_limit: int
+    estimated_original_tokens: int
+    estimated_input_tokens: int
+    omitted_history_indices: tuple[int, ...] = ()
+    omitted_tool_preamble_indices: tuple[int, ...] = ()
+    estimated_image_tokens: int = 0
+    version: Literal["1.0"] = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
 class LlmRequest:
     generation_id: UUID
     user_text: str
@@ -127,6 +154,8 @@ class LlmRequest:
     # Optional trusted safety/time prompt for the initial required tool decision.
     # Subsequent responses retain system_prompt and the full character contract.
     tool_decision_system_prompt: str | None = None
+    input_budget: LlmInputBudget | None = None
+    input_budget_report: LlmInputBudgetReport | None = None
 
     def __post_init__(self) -> None:
         if len(self.images) > 4:

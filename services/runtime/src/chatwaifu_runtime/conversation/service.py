@@ -67,7 +67,12 @@ from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObserv
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
-from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider, LlmRequest
+from chatwaifu_runtime.providers.contracts import (
+    LlmInputBudget,
+    LlmInputImage,
+    LlmProvider,
+    LlmRequest,
+)
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.providers.model_config import (
     ModelConfigurationService,
@@ -1211,6 +1216,7 @@ class ConversationService:
                 recalled_memory_texts=compilation.recalled_memory_texts,
                 trigger=trigger,
                 images=loaded_images,
+                input_budget=LlmInputBudget(compilation.report.budget),
             )
             async for delta in self._agent.stream(
                 request,

@@ -13,6 +13,7 @@ import pytest
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.providers.contracts import (
+    LlmInputBudget,
     LlmRequest,
     LlmResponseCompleted,
     LlmStreamEvent,
@@ -112,6 +113,7 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             "请核查这个网页来源 https://source.example/",
             "Persona",
             tool_decision_system_prompt="TRUSTED_SAFETY_AND_FROZEN_CLOCK",
+            input_budget=LlmInputBudget(7292),
         )
         outcome = await evaluation.run(
             request, session_id=session.session_id, turn_id=uuid4(), sample_key="one"
@@ -134,6 +136,11 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         assert len(requests) == int(allow_once)
         assert outcome.trace["permission_policy"] == ("allow_once" if allow_once else "deny")
         assert len(outcome.trace["provider_calls"]) == expected_rounds
+        assert all(
+            call["input_budget"]["estimated_token_limit"] == 7292
+            and call["input_budget_report"]["estimated_input_tokens"] <= 7292
+            for call in outcome.trace["provider_calls"]
+        )
         assert outcome.trace["tool_runs"][0]["state"] == ("succeeded" if allow_once else "failed")
         allowed = RuntimeSkillRouter(
             lambda: [

@@ -149,6 +149,34 @@ class _PromptModels:
 
 
 @pytest.mark.asyncio
+async def test_prompt_report_does_not_hide_actual_estimated_overflow() -> None:
+    models = _PromptModels()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=(),
+        user_text="current task " * 1000,
+    )
+    # The task and mandatory rules are not silently clipped; a budget report is
+    # evidence of the actual projection, even when mandatory input is too large.
+    assert result.report.used > result.report.budget
+    assert result.report.used >= _tokens("current task " * 1000)
+
+
+@pytest.mark.asyncio
 async def test_prompt_compiler_preserves_channel_source_as_untrusted_context() -> None:
     models = _PromptModels()
     compiler = PromptCompiler(cast(ModelConfigurationService, models))

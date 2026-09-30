@@ -101,6 +101,10 @@ class _RecordedProvider:
             "tools": [asdict(tool) for tool in request.tools],
             "tool_choice": request.tool_choice if request.tools else None,
             "input_tool_exchanges": [asdict(exchange) for exchange in request.tool_exchanges],
+            "input_budget": asdict(request.input_budget) if request.input_budget else None,
+            "input_budget_report": asdict(request.input_budget_report)
+            if request.input_budget_report
+            else None,
             "requested_calls": [],
             "text": "",
             "finish_reason": None,
