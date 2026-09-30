@@ -143,6 +143,7 @@ class ConversationService:
         chat_config: ModelRoleConfig,
         summary_config: ModelRoleConfig,
         chat_provider: LlmProvider,
+        admitted_at: datetime,
         routing_previous_user_text: str | None = None,
     ) -> GenerationContextSnapshot:
         allow_tools = trigger == "user" and options.allow_tools
@@ -182,6 +183,7 @@ class ConversationService:
             chat_provider=chat_provider,
             visible_tools=visible_tools,
             identity=identity,
+            admitted_at=admitted_at,
         )
 
     @property
@@ -617,6 +619,7 @@ class ConversationService:
                 chat_config=chat_config,
                 summary_config=summary_config,
                 chat_provider=chat_provider,
+                admitted_at=events[0].occurred_at,
             )
             task = asyncio.create_task(
                 self._run_generation(
@@ -721,6 +724,7 @@ class ConversationService:
                     chat_config=chat_config,
                     summary_config=summary_config,
                     chat_provider=chat_provider,
+                    admitted_at=events[0].occurred_at,
                     routing_previous_user_text=_previous_local_user_text(
                         history, options.source_context
                     ),

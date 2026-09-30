@@ -5,6 +5,7 @@ import asyncio
 import json
 import shutil
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 from uuid import UUID
 
@@ -43,6 +44,15 @@ class _RecordingProvider:
 async def test_admission_snapshot_survives_live_route_edit(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    class Clock(datetime):
+        current = datetime(2026, 9, 30, 23, 59, tzinfo=UTC)
+
+        @classmethod
+        def now(cls, tz: tzinfo | None = None) -> datetime:
+            return cls.current.astimezone(tz)
+
+    monkeypatch.setattr("chatwaifu_runtime.conversation.service.datetime", Clock)
+    admitted_at = Clock.current
     container = RuntimeContainer(runtime_settings)
     await container.start()
     try:
@@ -92,6 +102,7 @@ async def test_admission_snapshot_survives_live_route_edit(
             )
         )
         await asyncio.wait_for(entered.wait(), 3)
+        Clock.current = datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
         changed = initial.model_copy(
             update={"model": "route-after-admission", "context_window": 2048}
         )
@@ -103,6 +114,8 @@ async def test_admission_snapshot_survives_live_route_edit(
         await asyncio.wait_for(active.task, 5)
 
         assert [name for name, _request in requests] == [initial.model]
+        assert admitted_at.isoformat(timespec="seconds") in requests[0][1].system_prompt
+        assert Clock.current.isoformat(timespec="seconds") not in requests[0][1].system_prompt
         rows = await container.event_store.read_stream(session.session_id, limit=500)
         first_payload = CharacterPromptCompiledPayload.model_validate(
             next(
@@ -139,6 +152,30 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert second_payload.identity.chat_route.model == "route-after-admission"
         assert second_payload.identity.identity_hash != first_payload.identity.identity_hash
         assert second_payload.report.budget == 2048 - 900
+        assert Clock.current.isoformat(timespec="seconds") in requests[1][1].system_prompt
+
+        # A new date changes dynamic context, not the static configuration identity.
+        Clock.current = datetime(2026, 10, 2, 0, 1, tzinfo=UTC)
+        third = await container.conversation.submit_text(
+            session.session_id,
+            "third",
+            options=ConversationTurnOptions(output_modes=frozenset({"text"}), allow_tools=False),
+        )
+        active = container.conversation._active[session.session_id]
+        assert active.task is not None
+        await asyncio.wait_for(active.task, 5)
+        rows = await container.event_store.read_stream(session.session_id, limit=500)
+        third_payload = CharacterPromptCompiledPayload.model_validate(
+            next(
+                row["payload"]
+                for row in rows
+                if row["event_type"] == "character.prompt_compiled"
+                and row["generation_id"] == str(third.generation_id)
+            )
+        )
+        assert third_payload.identity is not None
+        assert third_payload.identity == second_payload.identity
+        assert Clock.current.isoformat(timespec="seconds") in requests[2][1].system_prompt
     finally:
         await container.stop()
 
@@ -154,6 +191,7 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert [identity.identity_hash for identity in identities if identity is not None] == [
             first_payload.identity.identity_hash,
             second_payload.identity.identity_hash,
+            third_payload.identity.identity_hash,
         ]
     finally:
         await recovered.stop()

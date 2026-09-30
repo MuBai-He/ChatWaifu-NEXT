@@ -201,3 +201,4 @@ class GenerationContextSnapshot:
     chat_provider: LlmProvider
     visible_tools: tuple[ProjectedAgentTool, ...]
     identity: PromptContextIdentity
+    admitted_at: datetime

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
 from chatwaifu_protocol.character import (
@@ -73,7 +74,22 @@ class PromptCompiler:
         presentation_profile: str | None = None,
         photo_evidence: str = "",
         snapshot: GenerationContextSnapshot | None = None,
+        as_of: datetime | None = None,
     ) -> PromptCompilation:
+        if snapshot is not None and as_of is not None:
+            raise ValueError("as_of cannot override a generation admission snapshot")
+        reference_time = (
+            snapshot.admitted_at if snapshot is not None else as_of or datetime.now(UTC)
+        )
+        if reference_time.utcoffset() is None:
+            raise ValueError("prompt reference time must have a timezone")
+        clock_context = (
+            "[CURRENT TIME]\nRuntime generation admission time (UTC): "
+            f"{reference_time.astimezone(UTC).isoformat(timespec='seconds')}. "
+            "This is a time reference, not evidence that an external fact is current. "
+            "Respect source publication and effective dates; check later amendments when "
+            "answering about current rules."
+        )
         if snapshot is not None:
             chat_config = snapshot.chat_config
             summary_config = snapshot.memory_summary_config
@@ -219,6 +235,7 @@ class PromptCompiler:
         system_prompt = "\n\n".join(
             (
                 f"[SAFETY]\n{_SAFETY}",
+                clock_context,
                 f"[CHARACTER CANON]\n{persona}",
                 f"[CURRENT AFFECT]\n{state}",
                 f"[RELATIONSHIP]\n{relationship}",
@@ -230,6 +247,7 @@ class PromptCompiler:
             _tokens(value)
             for value in (
                 _SAFETY,
+                clock_context,
                 persona,
                 state,
                 relationship,
@@ -253,7 +271,7 @@ class PromptCompiler:
                 model_role="chat",
                 budget=total_budget,
                 used=min(used, total_budget),
-                safety_tokens=_tokens(_SAFETY),
+                safety_tokens=_tokens(_SAFETY) + _tokens(clock_context),
                 persona_tokens=_tokens(persona),
                 state_tokens=_tokens(state),
                 relationship_tokens=_tokens(relationship),

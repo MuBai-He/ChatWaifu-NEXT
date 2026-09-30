@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Freeze the trusted Runtime turn time in prompt template v3, count it in the
+  safety budget, and require date-aware original-source verification. Evaluation
+  1.4.0 records an explicit UTC prompt time and preserves it across resume,
+  separately from synthetic relationship-state time. Fix a Windows test's UTF-8
+  journal read; Q02 quality acceptance remains pending.
+
 - Add permissioned public source discovery and opt-in Runtime source evaluation
   1.3.0, with actual tool results, provider-round usage and persistent attempt
   limits across resume. Fix regulation recall and generic code-result false

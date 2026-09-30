@@ -17,7 +17,7 @@ from chatwaifu_protocol.memory import (
     MemoryContextPacket,
     MemoryExcerpt,
 )
-from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptCompiler, _tokens
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.models import (
@@ -27,6 +27,48 @@ from chatwaifu_runtime.conversation.models import (
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
+
+
+@pytest.mark.asyncio
+async def test_prompt_compiler_uses_explicit_aware_time_and_accounts_for_it() -> None:
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
+    kernel = CharacterKernelSnapshot(
+        character_id="default",
+        user_scope="local",
+        revision=1,
+        affect=AffectState(updated_at=now),
+        relationship=RelationshipState(updated_at=now),
+    )
+
+    async def compile_at(as_of: datetime) -> PromptCompilation:
+        return await compiler.compile(
+            character=character,
+            kernel=kernel,
+            plan=ResponsePlan(
+                intent="answer", tone="gentle", expression="neutral", rationale="test"
+            ),
+            memory=MemoryContextPacket(token_budget_used=0),
+            history=(),
+            user_text="当前规定是什么？",
+            as_of=as_of,
+        )
+
+    result = await compile_at(now)
+    assert "[CURRENT TIME]" in result.system_prompt
+    assert now.isoformat(timespec="seconds") in result.system_prompt
+    assert "not evidence" in result.system_prompt
+    assert "effective dates" in result.system_prompt
+    # Clock data is mandatory safety context and participates in the reported estimate.
+    safety_context = result.system_prompt.split("[CHARACTER CANON]", 1)[0]
+    assert result.report.safety_tokens >= _tokens(safety_context) - 10
+    with pytest.raises(ValueError, match="timezone"):
+        await compile_at(now.replace(tzinfo=None))
 
 
 def test_six_file_character_package_loads_renderer_independent_policy() -> None:

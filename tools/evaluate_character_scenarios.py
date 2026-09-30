@@ -117,7 +117,22 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.3.0"
+TOOL_VERSION = "1.4.0"
+
+
+def _utc_prompt_time(value: datetime) -> datetime:
+    if value.utcoffset() is None:
+        raise ValueError("prompt reference time must have a timezone")
+    return value.astimezone(UTC)
+
+
+def _parse_prompt_time(value: str) -> datetime:
+    try:
+        return _utc_prompt_time(datetime.fromisoformat(value))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 EVALUATION_SNAPSHOT_VERSION: Literal["1.0"] = "1.0"
 
 
@@ -458,6 +473,7 @@ class EvaluationRunner:
         allow_source_tools_once: bool = False,
         max_provider_requests: int | None = None,
         source_dns_resolver: Literal["system", "cloudflare"] = "system",
+        prompt_as_of: datetime | None = None,
     ) -> None:
         self.fixtures_path = fixtures_path
         self.characters_dir = characters_dir
@@ -522,6 +538,18 @@ class EvaluationRunner:
         self._results_file = self.output_dir / "results.jsonl"
         self._metadata_file = self.output_dir / "metadata.json"
         self._incomplete_file = self.output_dir / "incomplete.jsonl"
+        if prompt_as_of is None and resume and self._metadata_file.exists():
+            saved = json.loads(self._metadata_file.read_text(encoding="utf-8"))
+            saved_time = saved.get("identity", {}).get("prompt_as_of")
+            if saved_time is not None:
+                prompt_as_of = datetime.fromisoformat(saved_time)
+        self.prompt_as_of = _utc_prompt_time(
+            prompt_as_of
+            if prompt_as_of is not None
+            else datetime.now(UTC)
+            if provider == "openai_compatible"
+            else _FIXED_TIME
+        )
 
     def _validate_execution(self) -> None:
         if self.provider_kind != "openai_compatible":
@@ -643,6 +671,7 @@ class EvaluationRunner:
                         history=(),
                         user_text=s.turns[0].user_text,
                         presentation_profile=s.presentation_profile,
+                        as_of=self.prompt_as_of,
                     )
                 )
                 sample_prompt_tokens.append(comp.report.used)
@@ -669,6 +698,8 @@ class EvaluationRunner:
 
         return {
             "mode": "dry-run",
+            "prompt_as_of": self.prompt_as_of.isoformat(),
+            "state_time": _FIXED_TIME.isoformat(),
             "execution_path": "runtime_source_tools"
             if self.runtime_source_tools
             else "direct_provider",
@@ -752,6 +783,8 @@ class EvaluationRunner:
         metadata_identity: dict[str, Any] = {
             "tool": "evaluate_character_scenarios",
             "version": TOOL_VERSION,
+            "prompt_as_of": self.prompt_as_of.isoformat(),
+            "state_time": _FIXED_TIME.isoformat(),
             "fixtures_hash": compute_file_hash(self.fixtures_path),
             "provider": self.provider_kind,
             "model": self.model_name,
@@ -773,6 +806,10 @@ class EvaluationRunner:
             fingerprint = hashlib.sha256()
             for relative in (
                 "tools/runtime_source_evaluation.py",
+                "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
+                "services/runtime/src/chatwaifu_runtime/conversation/models.py",
+                "services/runtime/src/chatwaifu_runtime/conversation/service.py",
+                "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
@@ -1074,6 +1111,7 @@ class EvaluationRunner:
                                 history=tuple(history),
                                 user_text=turn.user_text,
                                 presentation_profile=scenario.presentation_profile,
+                                as_of=self.prompt_as_of,
                             )
 
                             if self.cost_ceiling is not None:
@@ -1306,6 +1344,8 @@ class EvaluationRunner:
             "# 匿名配对角色场景评审表 (Version-Masked Review Template)",
             "",
             f"- 评估日期: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"- 提示时间基准: {self.prompt_as_of.isoformat()}"
+            f"（状态夹具时间另为 {_FIXED_TIME.isoformat()}）",
             f"- 待评审样本源: `{self._results_file.name}`",
             "- 评审原则: 评审人员在不知晓候选者具体版本/提示词前提下，依据场景预期行为与禁止行为客观打分。",  # noqa: E501
             "- 本表仅隐藏版本标签，不保证独立盲评；知晓候选设计的作者复核必须注明，不能称为双盲。",
@@ -1589,6 +1629,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--source-dns-resolver", choices=["system", "cloudflare"], default="system")
     parser.add_argument(
+        "--prompt-as-of",
+        type=_parse_prompt_time,
+        help=(
+            "Freeze the prompt time to an ISO timestamp with timezone; remote defaults to run "
+            "admission, local providers to fixture time, resume reuses saved time"
+        ),
+    )
+    parser.add_argument(
         "--cost-ceiling",
         type=float,
         default=None,
@@ -1675,6 +1723,7 @@ def main() -> int:
         allow_source_tools_once=args.allow_source_tools_once,
         max_provider_requests=args.max_provider_requests,
         source_dns_resolver=args.source_dns_resolver,
+        prompt_as_of=args.prompt_as_of,
     )
 
     is_execute = args.execute and not args.dry_run

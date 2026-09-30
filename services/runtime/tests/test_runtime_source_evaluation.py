@@ -115,7 +115,8 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         assert await container.runtime_skills.pending_confirmations(session.session_id) == []
         assert await container.database.fetchall("SELECT * FROM permission_grants") == []
         journal = [
-            json.loads(line) for line in (tmp_path / "rounds.jsonl").read_text().splitlines()
+            json.loads(line)
+            for line in (tmp_path / "rounds.jsonl").read_text(encoding="utf-8").splitlines()
         ]
         assert [row["event"] for row in journal] == ["started", "finished", "started", "finished"]
         # A fresh helper must account for paid rounds even after a resume/restart.

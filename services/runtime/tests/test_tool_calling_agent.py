@@ -444,6 +444,9 @@ async def test_tool_relevant_turn_never_accepts_unverified_text_only_answer() ->
 
     assert "没有执行外部操作" in "".join(chunks)
     assert "联网查到了" not in "".join(chunks)
+    # A missing call does not prove that this otherwise tool-capable model is unsupported.
+    assert llm.supports_tool_calling
+    assert "换用" not in "".join(chunks)
     assert not gateway.invocations
 
 

@@ -3,9 +3,11 @@
 # pyright: reportPrivateUsage=false
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from copy import deepcopy
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +45,64 @@ from tools.evaluate_character_scenarios import (
     parse_and_validate_initial_affect,
     parse_and_validate_initial_relationship,
 )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runtime_tools", [False, True])
+async def test_prompt_clock_is_explicit_frozen_and_checked_on_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def record(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", record)
+    local_time = datetime(2026, 10, 1, 8, 1, tzinfo=timezone(timedelta(hours=8)))
+    options: dict[str, Any] = dict(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        runtime_source_tools=runtime_tools,
+        allow_source_tools_once=runtime_tools,
+        max_provider_requests=10 if runtime_tools else None,
+    )
+    first = EvaluationRunner(**options, max_requests=1, prompt_as_of=local_time)
+    variants = [("baseline", first.variant_a_persona_path)]
+    estimate = await asyncio.to_thread(first.estimate_dry_run, variants, ["greeting"])
+    expected = local_time.astimezone(UTC).isoformat()
+    assert estimate["prompt_as_of"] == expected
+    await first.execute(variants, ["greeting"])
+    metadata = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))
+    assert metadata["identity"]["prompt_as_of"] == expected
+    assert metadata["identity"]["state_time"] == _FIXED_TIME.isoformat()
+    assert expected in requests[0].system_prompt
+
+    # No explicit override: resume must reuse the saved instant rather than a fresh clock.
+    resumed = EvaluationRunner(**options)
+    assert resumed.prompt_as_of == local_time.astimezone(UTC)
+    completed = await resumed.execute(variants, ["greeting"])
+    assert [sample.turn_id for sample in completed] == [2, 3, 4]
+    assert len(requests) == 4
+    assert all(expected in request.system_prompt for request in requests)
+    before = (tmp_path / "results.jsonl").read_bytes()
+    changed = EvaluationRunner(**options, prompt_as_of=local_time + timedelta(days=1))
+    with pytest.raises(ValueError, match="differ"):
+        await changed.execute(variants, ["greeting"])
+    assert len(requests) == 4
+    assert (tmp_path / "results.jsonl").read_bytes() == before
+
+
+def test_prompt_clock_rejects_ambiguous_dates_and_cli_normalizes_offsets(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="timezone"):
+        EvaluationRunner(output_dir=tmp_path, prompt_as_of=datetime(2026, 10, 1))
+    args = build_arg_parser().parse_args(["--prompt-as-of", "2026-10-01T08:01:00+08:00"])
+    assert args.prompt_as_of == datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
+    with pytest.raises(SystemExit):
+        build_arg_parser().parse_args(["--prompt-as-of", "2026-10-01"])
 
 
 def test_load_scenarios_validates_12_scenarios_and_48_turns() -> None:

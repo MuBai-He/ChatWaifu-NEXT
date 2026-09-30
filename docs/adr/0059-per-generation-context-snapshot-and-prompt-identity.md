@@ -34,12 +34,15 @@ boundaries, and complex rollback overhead incompatible with ChatWaifu NEXT's loc
 generation background task (`asyncio.create_task`) is spawned.
 
 The snapshot freezes:
+
 - The `chat` route configuration (`ModelRoleConfig`), including provider, model, context window, and timeout.
 - The `memory_summary` route configuration (`ModelRoleConfig`).
 - The character package identity, including character ID and a deterministic SHA-256 hash of the six-file
   character package (`character.yaml`, `persona.md`, `voice.yaml`, `avatar.yaml`, `relationship-policy.yaml`, `lexicon.yaml`).
 - The presentation profile (e.g. `instant_message` or `default`).
-- The prompt template version (`v2`).
+- The prompt template version (initially `v2`; `v3` adds the trusted admission time).
+- The generation's trusted admission time from its persisted Runtime turn event, normalized to UTC
+  by the compiler. Delayed retrieval or a midnight boundary cannot change this time within a turn.
 - The frozen provider adapter (`LlmProvider`) configured for the captured chat route.
 - The bounded tool schemas (`ProjectedAgentTool`) visible to the generation, along with their deterministic digest.
 - The typed, versioned `PromptContextIdentity`.
@@ -49,6 +52,7 @@ Neither global `ContextVar` nor parallel provider-thread/lease databases are int
 ### 2. Frozen vs. Live Control Plane
 
 The system enforces a strict boundary between frozen generation parameters and the live control plane:
+
 - **Frozen parameters**: Route, model, context window, compiler budget, and tool schemas visible to the LLM
   are frozen at admission. `PromptCompiler` uses the frozen context window to establish safety, persona,
   memory, and conversation token budgets, and uses the frozen summary route for history summarization.
@@ -64,17 +68,20 @@ The system enforces a strict boundary between frozen generation parameters and t
 ### 3. Nonsecret Identity and Credential Rotation
 
 `PromptContextIdentity` is versioned (`1.0`) and typed. It contains:
+
 - `identity_hash`: Deterministic SHA-256 digest of canonical nonsecret fields.
 - `character_id`: Stable identifier of the active character.
 - `character_package_hash`: Deterministic digest of the six-file character package.
-- `prompt_template_version`: Template revision string (`v2`).
+- `prompt_template_version`: Template revision string (`v3` for the admission-time template).
 - `presentation_profile`: Active presentation surface mode.
 - `chat_route`: Nonsecret route identity (provider, model, hashed endpoint route, context window).
 - `memory_summary_route`: Nonsecret route identity for summarization.
 - `tools_digest`: Deterministic digest of visible tool schemas.
 
 The identity strictly excludes secret API keys, URL queries/tokens/paths, user input text, memory bodies,
-prompt text, and dynamic token counts.
+prompt text, dynamic token counts, and the admission timestamp. Time is dynamic context, not static
+configuration identity; it can be recovered from the existing generation/turn events without adding
+a timestamp to the public identity contract.
 
 Credential rotation (updating an API key in local secret storage) does not alter the nonsecret route
 identity or its hash. The provider adapter accesses current credentials live via the local secret store,
