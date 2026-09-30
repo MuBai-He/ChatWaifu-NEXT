@@ -2,12 +2,17 @@
 
 ## Unreleased
 
+- Add permissioned public source discovery and opt-in Runtime source evaluation
+  1.3.0, with actual tool results, provider-round usage and persistent attempt
+  limits across resume. Fix regulation recall and generic code-result false
+  recall in public-reader metadata. Real three-model smoke tests preserve failed
+  reads, missing calls and outdated sources; Q02 quality remains unapproved.
+
 - Add permissioned public HTTPS source reads through the Runtime Skill gateway,
   with source URL/time/fingerprint and bounded excerpts. Address pins, public-only
   DNS, redirects, decompression and HTML limits protect the network boundary;
   explicit Cloudflare encrypted DNS supports proxy Fake-IP environments without
-  changing system settings. Q02 model quality and general source discovery remain
-  pending.
+  changing system settings. Q02 model quality remains pending.
 
 - Add explicit remote connection selection for Web and desktop: the native host starts no
   Runtime or model Worker until local mode is chosen. Remote clients use HTTPS, authenticated

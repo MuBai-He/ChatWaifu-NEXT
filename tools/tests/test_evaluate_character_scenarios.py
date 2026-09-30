@@ -81,6 +81,69 @@ def test_load_scenarios_validates_12_scenarios_and_48_turns() -> None:
             assert turn.review_criteria
 
 
+def test_runtime_source_mode_requires_explicit_permission_and_provider_round_bound(
+    tmp_path: Path,
+) -> None:
+    args = build_arg_parser().parse_args(
+        [
+            "--runtime-source-tools",
+            "--allow-source-tools-once",
+            "--max-provider-requests",
+            "12",
+            "--source-dns-resolver",
+            "cloudflare",
+        ]
+    )
+    assert args.runtime_source_tools and args.allow_source_tools_once
+    assert args.max_provider_requests == 12
+    with pytest.raises(ValueError, match="allow-source-tools-once"):
+        EvaluationRunner(output_dir=tmp_path, runtime_source_tools=True, max_provider_requests=12)
+    with pytest.raises(ValueError, match="max-provider-requests"):
+        EvaluationRunner(
+            output_dir=tmp_path, runtime_source_tools=True, allow_source_tools_once=True
+        )
+    with pytest.raises(ValueError, match="no-cost-ceiling"):
+        EvaluationRunner(
+            output_dir=tmp_path,
+            provider="openai_compatible",
+            runtime_source_tools=True,
+            allow_source_tools_once=True,
+            max_provider_requests=12,
+        )
+
+
+@pytest.mark.asyncio
+async def test_runtime_mode_preserves_trace_and_refuses_direct_path_resume(tmp_path: Path) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+    )
+    variants = [("baseline", runner.variant_a_persona_path)]
+    samples = await runner.execute(variants, ["greeting"])
+    assert len(samples) == 1
+    assert samples[0].runtime_source_trace is not None
+    assert samples[0].runtime_source_trace["execution_path"] == "runtime_source_tools"
+    assert len(samples[0].runtime_source_trace["provider_calls"]) == 1
+    identity = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))["identity"]
+    assert identity["execution_path"] == "runtime_source_tools"
+    assert identity["runtime_source_config"]["permission_policy"] == "allow_once"
+    assert identity["runtime_source_config"]["implementation_sha256"]
+    journal = tmp_path / "provider-rounds.jsonl"
+    saved_journal = journal.read_text(encoding="utf-8")
+    journal.unlink()
+    with pytest.raises(ValueError, match="provider-rounds"):
+        await runner.execute(variants, ["greeting"])
+    journal.write_text(saved_journal, encoding="utf-8")
+    direct = EvaluationRunner(output_dir=tmp_path, provider="demo", repeats=1, max_requests=1)
+    with pytest.raises(ValueError, match="differ"):
+        await direct.execute(variants, ["greeting"])
+
+
 def test_pricing_estimation_known_and_unknown_models() -> None:
     cost, text = estimate_pricing(
         "specified-model",

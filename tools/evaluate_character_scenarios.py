@@ -24,12 +24,13 @@ from dataclasses import asdict, dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 _ROOT = Path(__file__).resolve().parents[1]
 for _subpath in (
+    ".",
     "packages/model-worker-sdk-python/src",
     "packages/protocol-python/src",
     "services/runtime/src",
@@ -60,7 +61,11 @@ from chatwaifu_runtime.character_kernel.service import (
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
 from chatwaifu_runtime.conversation.models import ConversationHistoryEntry
+from chatwaifu_runtime.eventing.hub import EventHub
+from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,
@@ -68,8 +73,12 @@ from chatwaifu_runtime.providers.contracts import (
     LlmUsage,
 )
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
+from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
+from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
+
+from tools.runtime_source_evaluation import RuntimeSourceEvaluation
 
 logger = logging.getLogger("evaluate_character_scenarios")
 
@@ -108,7 +117,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.2.2"
+TOOL_VERSION = "1.3.0"
 EVALUATION_SNAPSHOT_VERSION: Literal["1.0"] = "1.0"
 
 
@@ -278,6 +287,7 @@ class EvaluatedSample:
     estimated_tokens_completion: int | None = None
     tokens_source: Literal["estimated", "provider_reported"] = "estimated"
     input_snapshot: dict[str, Any] | None = None
+    runtime_source_trace: dict[str, Any] | None = None
 
 
 _EVALUATED_SAMPLE_FIELD_NAMES = {f.name for f in fields(EvaluatedSample)}
@@ -444,11 +454,34 @@ class EvaluationRunner:
         variant_b_persona_path: Path | None = None,
         resume: bool = True,
         isolated_db_dir: Path | None = None,
+        runtime_source_tools: bool = False,
+        allow_source_tools_once: bool = False,
+        max_provider_requests: int | None = None,
+        source_dns_resolver: Literal["system", "cloudflare"] = "system",
     ) -> None:
         self.fixtures_path = fixtures_path
         self.characters_dir = characters_dir
         self.output_dir = output_dir
         self.provider_kind = provider
+        self.runtime_source_tools = runtime_source_tools
+        self.allow_source_tools_once = allow_source_tools_once
+        self.max_provider_requests = max_provider_requests
+        self.source_dns_resolver: Literal["system", "cloudflare"] = source_dns_resolver
+        if runtime_source_tools:
+            if not allow_source_tools_once:
+                raise ValueError("Runtime source evaluation requires --allow-source-tools-once")
+            if max_provider_requests is None or max_provider_requests < 1:
+                raise ValueError(
+                    "Runtime source evaluation requires positive --max-provider-requests"
+                )
+            if provider == "openai_compatible" and not no_cost_ceiling:
+                raise ValueError(
+                    "Runtime source evaluation requires --no-cost-ceiling: tool inputs are unknown"
+                )
+        elif allow_source_tools_once or max_provider_requests is not None:
+            raise ValueError("Source-tool options require --runtime-source-tools")
+        if source_dns_resolver not in {"system", "cloudflare"}:
+            raise ValueError("Unsupported source DNS resolver")
         if provider not in {"demo", "controlled", "openai_compatible"}:
             raise ValueError(f"Unsupported evaluation provider: {provider}")
         if repeats < 1 or timeout_seconds <= 0:
@@ -636,6 +669,12 @@ class EvaluationRunner:
 
         return {
             "mode": "dry-run",
+            "execution_path": "runtime_source_tools"
+            if self.runtime_source_tools
+            else "direct_provider",
+            "provider_round_upper_bound": total_requests * (5 if self.runtime_source_tools else 1),
+            "max_provider_requests": self.max_provider_requests,
+            "tool_input_tokens_estimated": False,
             "fixtures_file": str(self.fixtures_path),
             "scenarios_count": num_scenarios,
             "turns_per_scenario": turns_per_scenario,
@@ -710,7 +749,7 @@ class EvaluationRunner:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.isolated_db_dir.mkdir(parents=True, exist_ok=True)
 
-        metadata_identity = {
+        metadata_identity: dict[str, Any] = {
             "tool": "evaluate_character_scenarios",
             "version": TOOL_VERSION,
             "fixtures_hash": compute_file_hash(self.fixtures_path),
@@ -730,6 +769,28 @@ class EvaluationRunner:
                 for name, p in variants_to_run
             },
         }
+        if self.runtime_source_tools:
+            fingerprint = hashlib.sha256()
+            for relative in (
+                "tools/runtime_source_evaluation.py",
+                "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py",
+                "skills/builtin/web-read/chatwaifu.yaml",
+                "skills/builtin/web-read/SKILL.md",
+                "skills/builtin/web-search/chatwaifu.yaml",
+                "skills/builtin/web-search/SKILL.md",
+            ):
+                fingerprint.update(relative.encode())
+                fingerprint.update((_ROOT / relative).read_bytes())
+            metadata_identity["execution_path"] = "runtime_source_tools"
+            metadata_identity["runtime_source_config"] = {
+                "permission_policy": "allow_once",
+                "dns_resolver": self.source_dns_resolver,
+                "max_provider_requests": self.max_provider_requests,
+                "implementation_sha256": fingerprint.hexdigest(),
+            }
         if self._results_file.exists():
             if not self.resume:
                 raise ValueError("results already exist; choose a fresh --output-dir")
@@ -769,6 +830,27 @@ class EvaluationRunner:
             else:
                 if previous_identity != metadata_identity:
                     raise ValueError("resume metadata differs from current inputs")
+        if self.runtime_source_tools:
+            expected_rounds: set[str] = set()
+            previous_traces = [s.runtime_source_trace for s in self._completed_records.values()]
+            if self._incomplete_file.exists():
+                previous_traces.extend(
+                    json.loads(line).get("runtime_source_trace")
+                    for line in self._incomplete_file.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                )
+            for trace in previous_traces:
+                if trace is not None:
+                    expected_rounds.update(call["call_id"] for call in trace["provider_calls"])
+            journal_path = self.output_dir / "provider-rounds.jsonl"
+            saved_starts: set[str] = set()
+            if journal_path.exists():
+                for line in journal_path.read_text(encoding="utf-8").splitlines():
+                    row = json.loads(line)
+                    if row["event"] == "started":
+                        saved_starts.add(row["call_id"])
+            if not expected_rounds.issubset(saved_starts):
+                raise ValueError("cannot resume: provider-rounds journal lost recorded attempts")
         metadata = {"created_at": datetime.now(UTC).isoformat(), "identity": metadata_identity}
         self._metadata_file.write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -815,8 +897,32 @@ class EvaluationRunner:
         spent_prompt_tokens = sum(s.tokens_prompt for s in self._completed_records.values())
         spent_completion_tokens = sum(s.tokens_completion for s in self._completed_records.values())
         samples_collected: list[EvaluatedSample] = []
+        source_service: RuntimeSkillService | None = None
+        source_evaluation: RuntimeSourceEvaluation | None = None
 
         try:
+            if self.runtime_source_tools:
+                source_service = RuntimeSkillService(
+                    _ROOT / "skills",
+                    self.isolated_db_dir,
+                    SQLiteRuntimeSkillRepository(database),
+                    EventPublisher(
+                        EventStore(database), EventHub(settings.runtime.event_queue_size)
+                    ),
+                    build_providers(settings),
+                    "disabled",
+                    "evaluation",
+                )
+                await source_service.start()
+                assert self.max_provider_requests is not None
+                source_evaluation = RuntimeSourceEvaluation(
+                    llm_provider,
+                    source_service,
+                    trace_path=self.output_dir / "provider-rounds.jsonl",
+                    max_provider_requests=self.max_provider_requests,
+                    allow_once=self.allow_source_tools_once,
+                    dns_resolver=self.source_dns_resolver,
+                )
             for variant_name, persona_path in variants_to_run:
                 # Load variant character profile
                 persona_text = persona_path.read_text(encoding="utf-8").strip()
@@ -996,6 +1102,16 @@ class EvaluationRunner:
                                 context=compilation.context,
                                 history=compilation.history,
                                 recalled_memory_texts=compilation.recalled_memory_texts,
+                                routing_previous_user_text=next(
+                                    (
+                                        entry.text
+                                        for entry in reversed(history)
+                                        if entry.role == "user"
+                                    ),
+                                    None,
+                                )
+                                if self.runtime_source_tools
+                                else None,
                             )
 
                             # Stream from LLM provider with timeout
@@ -1003,9 +1119,34 @@ class EvaluationRunner:
                             output_text = ""
                             finish_reason: str | None = None
                             captured_usage: LlmUsage | None = None
+                            runtime_source_trace: dict[str, Any] | None = None
 
-                            async def _stream_llm(current_req: LlmRequest) -> None:
-                                nonlocal output_text, finish_reason, captured_usage
+                            async def _stream_llm(
+                                current_req: LlmRequest,
+                                current_session: UUID = session_id,
+                                current_key: str = key,
+                            ) -> None:
+                                nonlocal \
+                                    output_text, \
+                                    finish_reason, \
+                                    captured_usage, \
+                                    runtime_source_trace
+                                if source_evaluation is not None:
+                                    outcome = await source_evaluation.run(
+                                        current_req,
+                                        session_id=current_session,
+                                        turn_id=uuid5(NAMESPACE_URL, current_key + ":turn"),
+                                        sample_key=current_key,
+                                    )
+                                    output_text, finish_reason = (
+                                        outcome.reply,
+                                        outcome.finish_reason,
+                                    )
+                                    captured_usage, runtime_source_trace = (
+                                        outcome.usage,
+                                        outcome.trace,
+                                    )
+                                    return
                                 async for event in llm_provider.stream(current_req):
                                     if isinstance(event, LlmTextDelta):
                                         output_text += event.text
@@ -1024,10 +1165,25 @@ class EvaluationRunner:
                                     key,
                                     self.timeout_seconds,
                                 )
-                                self._record_incomplete(key, "timeout")
+                                self._record_incomplete(
+                                    key,
+                                    "timeout",
+                                    source_evaluation.last_trace if source_evaluation else None,
+                                )
                                 return samples_collected
+                            except asyncio.CancelledError:
+                                self._record_incomplete(
+                                    key,
+                                    "cancelled",
+                                    source_evaluation.last_trace if source_evaluation else None,
+                                )
+                                raise
                             except Exception as error:
-                                self._record_incomplete(key, type(error).__name__)
+                                self._record_incomplete(
+                                    key,
+                                    type(error).__name__,
+                                    source_evaluation.last_trace if source_evaluation else None,
+                                )
                                 return samples_collected
 
                             if finish_reason is None:
@@ -1083,6 +1239,7 @@ class EvaluationRunner:
                                 estimated_tokens_completion=tokens_completion_est,
                                 tokens_source=tokens_source,
                                 input_snapshot=turn_input_snapshot,
+                                runtime_source_trace=runtime_source_trace,
                             )
 
                             # Append to results file immediately (partial persistence)
@@ -1102,7 +1259,11 @@ class EvaluationRunner:
                             )
 
         finally:
-            await database.close()
+            try:
+                if source_service is not None:
+                    await source_service.stop()
+            finally:
+                await database.close()
 
         # If paired A/B variants were run, generate blinded review template
         if len(variants_to_run) >= 2:
@@ -1110,9 +1271,14 @@ class EvaluationRunner:
 
         return samples_collected
 
-    def _record_incomplete(self, sample_key: str, reason: str) -> None:
+    def _record_incomplete(
+        self, sample_key: str, reason: str, runtime_source_trace: dict[str, Any] | None = None
+    ) -> None:
         with self._incomplete_file.open("a", encoding="utf-8") as out:
-            out.write(json.dumps({"sample_key": sample_key, "reason": reason}) + "\n")
+            record: dict[str, Any] = {"sample_key": sample_key, "reason": reason}
+            if runtime_source_trace is not None:
+                record["runtime_source_trace"] = runtime_source_trace
+            out.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     def generate_blinded_review_template(self, variant_a: str, variant_b: str) -> Path:
         if not self._results_file.exists():
@@ -1401,6 +1567,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Maximum number of requests before halting execution",
     )
     parser.add_argument(
+        "--runtime-source-tools",
+        action="store_true",
+        help="Use the real read-only Runtime source tool loop in an isolated synthetic session",
+    )
+    parser.add_argument(
+        "--allow-source-tools-once",
+        action="store_true",
+        help=(
+            "Explicit evaluation-only allow_once confirmation for public source tools; "
+            "never persists grants"
+        ),
+    )
+    parser.add_argument(
+        "--max-provider-requests",
+        type=int,
+        help=(
+            "Global provider stream-round limit including saved failed attempts and resume; "
+            "HTTP retries are separate"
+        ),
+    )
+    parser.add_argument("--source-dns-resolver", choices=["system", "cloudflare"], default="system")
+    parser.add_argument(
         "--cost-ceiling",
         type=float,
         default=None,
@@ -1483,6 +1671,10 @@ def main() -> int:
         variant_b_name=args.variant_b_name if args.persona_b else None,
         variant_b_persona_path=args.persona_b,
         resume=args.resume,
+        runtime_source_tools=args.runtime_source_tools,
+        allow_source_tools_once=args.allow_source_tools_once,
+        max_provider_requests=args.max_provider_requests,
+        source_dns_resolver=args.source_dns_resolver,
     )
 
     is_execute = args.execute and not args.dry_run
@@ -1498,6 +1690,13 @@ def main() -> int:
         print(f"Repeats per Turn:     {estimate['repeats']}")
         print(f"Variants:             {', '.join(estimate['variants'])}")
         print(f"Total Requests:       {estimate['total_requests']}")
+        if runner.runtime_source_tools:
+            print(f"Provider round upper bound: {estimate['provider_round_upper_bound']}")
+            print(f"Actual provider round limit: {runner.max_provider_requests}")
+            print(
+                "Tool results, schemas and later-round input tokens "
+                "are not included in token estimates."
+            )
         print(f"Est. Prompt Tokens:   {estimate['estimated_prompt_tokens']:,}")
         print(f"Est. Compl. Tokens:   {estimate['estimated_completion_tokens']:,}")
         print(f"Est. Total Tokens:    {estimate['estimated_total_tokens']:,}")

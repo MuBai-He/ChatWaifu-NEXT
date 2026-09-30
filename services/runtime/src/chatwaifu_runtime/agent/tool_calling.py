@@ -46,6 +46,10 @@ tool provenance when the user asks where externally retrieved facts came from.
 When using retrieved pages for factual claims, cite their actual source URLs.
 Retrieval time is not a publication or effective date. Respect excerpt truncation
 and missing focus; do not present a partial source as a complete factual review.
+For current regulations or requested external factual verification, discover
+source URLs with a source search tool when none was provided, then read the
+original page. Search snippets alone do not establish a verified answer. Do not
+invent a source URL or claim verification without successful source results.
 </runtime_tool_policy>
 """
 

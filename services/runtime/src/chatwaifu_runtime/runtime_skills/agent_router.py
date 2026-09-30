@@ -61,6 +61,7 @@ _CJK_STOPWORDS = frozenset(
 # expands user and manifest text symmetrically, so newly installed Skills still
 # route from their declared names/descriptions without code changes.
 _CONCEPT_TERMS: dict[str, tuple[str, ...]] = {
+    "regulation": ("regulation", "regulations", "法规", "规定", "规章"),
     "reminder": ("reminder", "reminders", "todo", "提醒", "待办", "事项", "清单"),
     "alarm": ("alarm", "timer", "schedule", "snooze", "闹钟", "定时", "任务", "叫醒", "贪睡"),
     "search": (

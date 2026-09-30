@@ -60,6 +60,7 @@ from chatwaifu_runtime.runtime_skills.permissions import (
 )
 from chatwaifu_runtime.runtime_skills.plugins import PluginManager
 from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
 from chatwaifu_runtime.runtime_skills.registry import (
     RegistryEntry,
     SkillRegistry,
@@ -131,6 +132,8 @@ class RuntimeSkillService:
         self._builtin.register("runtime_status", self._runtime_status)
         self._public_web = PublicWebReader()
         self._builtin.register("public_web_read", self._public_web.read)
+        self._public_web_search = PublicWebSearch(self._public_web)
+        self._builtin.register("public_web_search", self._public_web_search.search)
         for name, handler in (session_builtin_handlers or {}).items():
             self._builtin.register_session(name, handler)
         launcher = sandbox_launcher or RuntimeSandboxLauncher()

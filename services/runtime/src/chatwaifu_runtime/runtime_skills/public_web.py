@@ -9,6 +9,7 @@ import json
 import re
 import zlib
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from typing import Literal, cast
@@ -75,7 +76,7 @@ _BLOCK_TAGS = {
 }
 
 
-def _normalize_url(url: str) -> str:
+def normalize_public_source_url(url: str) -> str:
     try:
         if len(url) > MAX_SOURCE_URL_CHARACTERS or any(ord(char) <= 32 for char in url):
             raise ValueError("invalid URL length or whitespace")
@@ -102,7 +103,7 @@ def _normalize_url(url: str) -> str:
 
 async def validate_public_url(url: str) -> ValidatedMcpEndpoint:
     """Reuse address pins, while excluding the MCP loopback/LAN exceptions."""
-    normalized = _normalize_url(url)
+    normalized = normalize_public_source_url(url)
     try:
         endpoint = await validate_mcp_url(normalized, allow_remote=True)
     except SkillExecutionError as error:
@@ -119,6 +120,16 @@ async def validate_public_url(url: str) -> ValidatedMcpEndpoint:
             "web_url_forbidden", "Source URL must resolve only to public Internet addresses"
         )
     return endpoint
+
+
+@dataclass(frozen=True, slots=True)
+class PublicWebPage:
+    url: str
+    body: bytes
+    decoded: str
+    content_type: str
+    retrieved_at: str
+    dns_resolver: Literal["system", "cloudflare"]
 
 
 class PublicWebReader:
@@ -154,7 +165,7 @@ class PublicWebReader:
         try:
             async with asyncio.timeout(self._timeout_seconds):
                 return await self._read(
-                    _normalize_url(url),
+                    normalize_public_source_url(url),
                     focus,
                     maximum,
                     cast(Literal["system", "cloudflare"], resolver),
@@ -182,6 +193,57 @@ class PublicWebReader:
     async def _read(
         self, url: str, focus: str | None, maximum: int, resolver: Literal["system", "cloudflare"]
     ) -> JsonObject:
+        page = await self.fetch(url, dns_resolver=resolver)
+        title, text = _source_text(page.decoded, page.content_type)
+        if not text.strip():
+            raise SkillExecutionError(
+                "web_empty_content", "Public source contained no readable text"
+            )
+        match = re.search(re.escape(focus), text, re.IGNORECASE) if focus else None
+        offset = max(0, match.start() - 160) if match is not None else 0
+        excerpt = text[offset : offset + maximum]
+        return {
+            "url": page.url,
+            "title": title[:240],
+            "text": excerpt,
+            "retrieved_at": page.retrieved_at,
+            "content_type": page.content_type,
+            "body_sha256": hashlib.sha256(page.body).hexdigest(),
+            "total_characters": len(text),
+            "text_offset": offset,
+            "truncated": offset > 0 or offset + len(excerpt) < len(text),
+            "focus_matched": bool(match) if focus else None,
+            "dns_resolver": resolver,
+        }
+
+    async def fetch(
+        self, url: str, *, dns_resolver: Literal["system", "cloudflare"] = "system"
+    ) -> PublicWebPage:
+        """Internal source adapter boundary shared with discovery; never exposed as a tool."""
+        try:
+            async with asyncio.timeout(self._timeout_seconds):
+                return await self._fetch(normalize_public_source_url(url), dns_resolver)
+        except (TimeoutError, httpx2.TimeoutException) as error:
+            raise SkillExecutionError(
+                "web_timeout", "Public source read timed out", retryable=True
+            ) from error
+        except httpx2.HTTPError as error:
+            raise SkillExecutionError(
+                "web_network_error", "Public source could not be read", retryable=True
+            ) from error
+        except SkillExecutionError as error:
+            if error.structured.code.startswith("mcp_"):
+                code = (
+                    "web_response_limit"
+                    if error.structured.code == "mcp_response_limit"
+                    else "web_invalid_response"
+                )
+                raise SkillExecutionError(
+                    code, "Public source failed its network response validation"
+                ) from error
+            raise
+
+    async def _fetch(self, url: str, resolver: Literal["system", "cloudflare"]) -> PublicWebPage:
         for redirect_count in range(MAX_SOURCE_REDIRECTS + 1):
             endpoint = (
                 await validate_public_url(url)
@@ -206,7 +268,7 @@ class PublicWebReader:
                             raise SkillExecutionError(
                                 "web_redirect_limit", "Public source redirect could not be followed"
                             )
-                        url = _normalize_url(urljoin(url, location))
+                        url = normalize_public_source_url(urljoin(url, location))
                         continue
                     if response.status_code != 200:
                         raise SkillExecutionError(
@@ -230,27 +292,14 @@ class PublicWebReader:
                             "web_encoding",
                             "Public source declared an unsupported character encoding",
                         ) from error
-            title, text = _source_text(decoded, content_type)
-            if not text.strip():
-                raise SkillExecutionError(
-                    "web_empty_content", "Public source contained no readable text"
-                )
-            match = re.search(re.escape(focus), text, re.IGNORECASE) if focus else None
-            offset = max(0, match.start() - 160) if match is not None else 0
-            excerpt = text[offset : offset + maximum]
-            return {
-                "url": url,
-                "title": title[:240],
-                "text": excerpt,
-                "retrieved_at": datetime.now(UTC).isoformat(),
-                "content_type": content_type,
-                "body_sha256": hashlib.sha256(body).hexdigest(),
-                "total_characters": len(text),
-                "text_offset": offset,
-                "truncated": offset > 0 or offset + len(excerpt) < len(text),
-                "focus_matched": bool(match) if focus else None,
-                "dns_resolver": resolver,
-            }
+            return PublicWebPage(
+                url=url,
+                body=body,
+                decoded=decoded,
+                content_type=content_type,
+                retrieved_at=datetime.now(UTC).isoformat(),
+                dns_resolver=resolver,
+            )
         raise AssertionError("redirect loop must return or fail")
 
     async def _cloudflare_endpoint(self, url: str) -> ValidatedMcpEndpoint:
