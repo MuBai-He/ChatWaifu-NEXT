@@ -1,6 +1,6 @@
 ---
 id: web.read
-version: 1.0.1
+version: 1.1.0
 name: Public Web Source Reader
 ---
 
@@ -9,6 +9,14 @@ name: Public Web Source Reader
 Read a public HTTPS page when the user provides a URL or asks to check an external
 source. Request permission before reading; use the actual returned URL as the
 source. The optional focus is a literal text match, not a web search.
+
+When the readable source fits the requested length, focus preserves it in full.
+`main_content` extraction contains a single explicitly marked body; text outside
+that body, including publication metadata, may be omitted. `visible_text` falls
+back to the readable document when the body is unclear. `document_characters`
+counts readable document text before body selection; `total_characters` and
+`text_offset` refer to the selected text. Neither body selection nor an untruncated
+excerpt proves that the page covers every applicable condition or later update.
 
 System DNS is the default. Explicit `dns_resolver: cloudflare` uses Cloudflare DNS
 over HTTPS to resolve the source hostname, which is disclosed to Cloudflare; page

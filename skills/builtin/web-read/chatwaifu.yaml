@@ -4,7 +4,7 @@
   "definition":
     {
       "skill_id": "web.read",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "name": "Public Web Source Reader 公开网页来源核查",
       "description": "Read a public HTTPS URL to check an external source, latest information, documentation or regulations. 读取公开网页链接，核查来源、最新资料、文档或法规。 Does not discover URLs.",
       "capabilities":
@@ -65,6 +65,8 @@
                     "truncated",
                     "focus_matched",
                     "dns_resolver",
+                    "extraction_method",
+                    "document_characters",
                   ],
                 "properties":
                   {
@@ -85,6 +87,11 @@
                     "truncated": { "type": "boolean" },
                     "focus_matched": { "type": ["boolean", "null"] },
                     "dns_resolver": { "enum": ["system", "cloudflare"] },
+                    "extraction_method":
+                      {
+                        "enum": ["plain_text", "visible_text", "main_content"],
+                      },
+                    "document_characters": { "type": "integer", "minimum": 1 },
                   },
                 "additionalProperties": false,
               },

@@ -1163,7 +1163,11 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
 
     def handle(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return httpx2.Response(200, headers={"content-type": "text/plain"}, text=source_body)
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/html"},
+            text=f"<main>{source_body}</main><div>Site footer outside the source body.</div>",
+        )
 
     monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", resolve)
 
@@ -1184,7 +1188,7 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
         session = await container.sessions.create_session("ayachi_nene")
         definitions = container.runtime_skills.list()
         definition = next(item for item in definitions if item.skill_id == "web.read")
-        assert definition.version == "1.0.1"
+        assert definition.version == "1.1.0"
         assert definition.capabilities[0].required_permissions == ["web.public.read"]
         assert definition.interruptible is True
         assert all(
@@ -1225,6 +1229,9 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
             data = result.content["data"]
             assert isinstance(data, dict)
             assert data["text"] == source_body
+            assert data["extraction_method"] == "main_content"
+            assert cast(int, data["document_characters"]) > cast(int, data["total_characters"])
+            assert data["truncated"] is False
             assert data["url"] == source_url
             assert data["retrieved_at"]
             assert "actual source URLs" in llm.requests[1].system_prompt

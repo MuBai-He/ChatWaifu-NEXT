@@ -36,6 +36,14 @@ _REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 _CONTENT_TYPES = {"text/html", "application/xhtml+xml", "text/plain"}
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _IGNORED_TAGS = {"script", "style", "nav", "footer", "aside", "template", "noscript", "svg"}
+_CONTENT_CLASSES = {
+    "article-body",
+    "article-content",
+    "entry-content",
+    "post-content",
+    "story-body",
+    "trs_editor",
+}
 _VOID_TAGS = {
     "area",
     "base",
@@ -194,13 +202,20 @@ class PublicWebReader:
         self, url: str, focus: str | None, maximum: int, resolver: Literal["system", "cloudflare"]
     ) -> JsonObject:
         page = await self.fetch(url, dns_resolver=resolver)
-        title, text = _source_text(page.decoded, page.content_type)
+        source = _source_text(page.decoded, page.content_type)
+        title, text = source.title, source.text
         if not text.strip():
             raise SkillExecutionError(
                 "web_empty_content", "Public source contained no readable text"
             )
         match = re.search(re.escape(focus), text, re.IGNORECASE) if focus else None
-        offset = max(0, match.start() - 160) if match is not None else 0
+        # Do not discard earlier conditions when the whole source fits. Near the
+        # end, move the window back to use the available excerpt length fully.
+        offset = (
+            min(max(0, match.start() - 160), max(0, len(text) - maximum))
+            if match is not None
+            else 0
+        )
         excerpt = text[offset : offset + maximum]
         return {
             "url": page.url,
@@ -214,6 +229,8 @@ class PublicWebReader:
             "truncated": offset > 0 or offset + len(excerpt) < len(text),
             "focus_matched": bool(match) if focus else None,
             "dns_resolver": resolver,
+            "extraction_method": source.extraction_method,
+            "document_characters": source.document_characters,
         }
 
     async def fetch(
@@ -468,12 +485,39 @@ def _dns_addresses(
     return addresses
 
 
+@dataclass(slots=True)
+class _ContentRegion:
+    start: int
+    end: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _SourceText:
+    title: str
+    text: str
+    extraction_method: Literal["plain_text", "visible_text", "main_content"]
+    document_characters: int
+
+
+def _is_content_region(tag: str, attributes: dict[str, str | None]) -> bool:
+    # Explicit document/CMS body markers only. Generic "content", "bottom" or
+    # words in source prose cannot safely distinguish an article from site chrome.
+    return (
+        tag in {"main", "article"}
+        or "main" in (attributes.get("role") or "").lower().split()
+        or "articlebody" in (attributes.get("itemprop") or "").lower().split()
+        or bool(_CONTENT_CLASSES.intersection((attributes.get("class") or "").lower().split()))
+        or attributes.get("data-role") == "n_content"
+    )
+
+
 class _SourceParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.title: list[str] = []
-        self.stack: list[tuple[str, bool]] = []
+        self.stack: list[tuple[str, bool, _ContentRegion | None]] = []
+        self.regions: list[_ContentRegion] = []
         self.nodes = 0
 
     def _count_node(self) -> None:
@@ -498,7 +542,15 @@ class _SourceParser(HTMLParser):
         if tag in _BLOCK_TAGS and not ignored:
             self.parts.append("\n")
         if tag not in _VOID_TAGS:
-            self.stack.append((tag, ignored))
+            region = None
+            if (
+                not ignored
+                and _is_content_region(tag, attributes)
+                and not any(frame[2] is not None for frame in self.stack)
+            ):
+                region = _ContentRegion(start=len(self.parts))
+                self.regions.append(region)
+            self.stack.append((tag, ignored, region))
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.handle_starttag(tag, attrs)
@@ -511,6 +563,9 @@ class _SourceParser(HTMLParser):
             if self.stack[index][0] == tag:
                 if tag in _BLOCK_TAGS and not self.stack[index][1]:
                     self.parts.append("\n")
+                for _, _, region in self.stack[index:]:
+                    if region is not None:
+                        region.end = len(self.parts)
                 del self.stack[index:]
                 break
 
@@ -518,20 +573,30 @@ class _SourceParser(HTMLParser):
         self._count_node()
         if self.stack and self.stack[-1][1]:
             return
-        tags = {tag for tag, _ in self.stack}
+        tags = {tag for tag, _, _ in self.stack}
         if "title" in tags:
             self.title.append(data)
         elif "head" not in tags:
             self.parts.append(data)
 
 
-def _source_text(decoded: str, content_type: str) -> tuple[str, str]:
+def _source_text(decoded: str, content_type: str) -> _SourceText:
     if content_type == "text/plain":
-        return "", _clean_text(decoded)
+        text = _clean_text(decoded)
+        return _SourceText("", text, "plain_text", len(text))
     parser = _SourceParser()
     parser.feed(decoded)
     parser.close()
-    return _clean_text("".join(parser.title)).strip(), _clean_text("".join(parser.parts))
+    title = _clean_text("".join(parser.title)).strip()
+    visible = _clean_text("".join(parser.parts))
+    # Several independent bodies may be a document index or multiple articles;
+    # preserve all visible text rather than silently selecting one of them.
+    if len(parser.regions) == 1 and parser.regions[0].end is not None:
+        region = parser.regions[0]
+        content = _clean_text("".join(parser.parts[region.start : region.end]))
+        if content.strip():
+            return _SourceText(title, content, "main_content", len(visible))
+    return _SourceText(title, visible, "visible_text", len(visible))
 
 
 def _clean_text(text: str) -> str:
