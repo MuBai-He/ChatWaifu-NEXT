@@ -1,5 +1,7 @@
 # CW-Q01/Q02 合成评估状态
 
+> 2026-09-30补充：本批未记录每轮实际关系状态。修复前夹具的12组轨迹经离线重建均为初识，包括七组声明熟悉的场景；历史结果不作为熟悉关系验收，原始回复、usage和评分保留。见[状态保真度修复](character-state-fidelity-fix-2026-09-30.md)。
+
 日期：2026-09-29。基线：`origin/main` 的 `99e62df`；评估器版本 1.1.0。
 
 12 组四轮合成场景、A/B 各重复 3 次，共 288 个本地 Demo 模型逻辑调用。Q03 合并后使用同一基线 persona 与候选 persona 重新运行：dry-run 估算约 787,392 token，费用因没有价格来源而标为未知；显式执行后按本地算法估算 723,450 prompt token 和 18,288 completion token，Demo 不提供供应商用量。结果 288/288 有终态，续跑重复调用 0 次。原始结果、元数据和脱盲映射在 [`character_scenarios_ab_demo_v2/`](character_scenarios_ab_demo_v2/)；完整盲评表可由运行器重建，未将生成模板和隔离 SQLite 数据库纳入仓库，也未保存凭据。

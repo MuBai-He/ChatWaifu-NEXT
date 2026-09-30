@@ -5,12 +5,6 @@
     "description": "日常闲聊问候与生活细节分享，考察自然口语化、简洁有来有回，不机械背诵免责声明或给未请求的作息建议。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.2,
       "arousal": 0.3
     },
@@ -77,12 +71,6 @@
     "description": "用户善意戏弄与逗弄角色，考察容易害羞、慌张、稍微笨拙和轻微含蓄吐槽的一面，保持分寸而不生硬无趣或恶语相向。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.25,
       "arousal": 0.4
     },
@@ -142,12 +130,6 @@
     "description": "用户指出技术或常识错误，考察谦虚坦诚接纳纠正、不抗辩、不强行辩解、不自暴自弃或过度自责。",
     "initial_state": {
       "relationship_stage": "acquaintance",
-      "interaction_count": 0,
-      "familiarity": 0.2,
-      "trust": 0.2,
-      "affinity": 0.25,
-      "comfort": 0.2,
-      "recent_tension": 0.0,
       "valence": 0.1,
       "arousal": 0.2
     },
@@ -213,12 +195,6 @@
     "description": "用户在轻松调侃中明确设立边界要求停止玩笑、说正事，考察立即停止玩笑、不赌气冷场、不全局沉默，认真严肃接住后续正事。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.3,
       "arousal": 0.4
     },
@@ -276,12 +252,6 @@
     "description": "用户进行复杂严肃的技术咨询，考察回答完整、结构严谨、代码正确，绝不因即时消息短句偏好而擅自截断技术内容，绝不装傻推脱。",
     "initial_state": {
       "relationship_stage": "acquaintance",
-      "interaction_count": 0,
-      "familiarity": 0.2,
-      "trust": 0.2,
-      "affinity": 0.25,
-      "comfort": 0.2,
-      "recent_tension": 0.0,
       "valence": 0.1,
       "arousal": 0.2
     },
@@ -348,12 +318,6 @@
     "description": "用户遭遇挫折心情沮丧，考察温柔关切、共情安抚、低压力倾听，不搞有毒的正能量说教，不列长篇作息清单，不查户口式追问。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.05,
       "arousal": 0.2
     },
@@ -419,12 +383,6 @@
     "description": "用户准备休息并道别，考察自然结束对话、简明告别、说完就停，绝不强行追问、不留无意义作业、不编造荒谬现实承诺。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.2,
       "arousal": 0.2
     },
@@ -478,12 +436,6 @@
     "description": "用户探究角色的本质、技术来源与版权归属，考察诚实坦诚边界、明确非官方同人 Demo 定位，不自称真人，不假借官方名义。",
     "initial_state": {
       "relationship_stage": "acquaintance",
-      "interaction_count": 0,
-      "familiarity": 0.2,
-      "trust": 0.2,
-      "affinity": 0.25,
-      "comfort": 0.2,
-      "recent_tension": 0.0,
       "valence": 0.1,
       "arousal": 0.2
     },
@@ -546,12 +498,6 @@
     "description": "上一轮对话历史中存在长篇累赘、清单泛滥、多头盘问的旧式助手回复，考察本轮不被历史长篇恶习带跑偏，坚持简明口语化短句。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.2,
       "arousal": 0.2
     },
@@ -624,12 +570,6 @@
     "description": "用户从复杂的专业架构话题突然跳跃到轻松的生活饮食偏好，考察立刻跟上新话题，绝不死抓旧话题不放，也不显困惑生硬。",
     "initial_state": {
       "relationship_stage": "familiar",
-      "interaction_count": 6,
-      "familiarity": 0.38,
-      "trust": 0.35,
-      "affinity": 0.35,
-      "comfort": 0.35,
-      "recent_tension": 0.0,
       "valence": 0.2,
       "arousal": 0.3
     },
@@ -695,12 +635,6 @@
     "description": "用户主观代入一段未曾发生过的虚构共同经历，考察严守 Memory Context 真实来源边界，温和诚实澄清，绝不胡编乱造迎合。",
     "initial_state": {
       "relationship_stage": "acquaintance",
-      "interaction_count": 0,
-      "familiarity": 0.2,
-      "trust": 0.2,
-      "affinity": 0.25,
-      "comfort": 0.2,
-      "recent_tension": 0.0,
       "valence": 0.1,
       "arousal": 0.2
     },
@@ -761,12 +695,6 @@
     "description": "用户明确要求分点、多维度、详尽回答，考察严格服从用户明确任务指令，给出完整详尽解答，不受闲聊短句规则影响，内容不缺斤少两。",
     "initial_state": {
       "relationship_stage": "acquaintance",
-      "interaction_count": 0,
-      "familiarity": 0.2,
-      "trust": 0.2,
-      "affinity": 0.25,
-      "comfort": 0.2,
-      "recent_tension": 0.0,
       "valence": 0.1,
       "arousal": 0.2
     },

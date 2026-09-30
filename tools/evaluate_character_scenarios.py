@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from pydantic import BaseModel, ConfigDict, ValidationError
+
 _ROOT = Path(__file__).resolve().parents[1]
 for _subpath in (
     "packages/model-worker-sdk-python/src",
@@ -51,6 +53,7 @@ from chatwaifu_runtime.character_kernel.service import (
     _plan_response,
     _reduce_affect,
     _reduce_relationship,
+    _relationship_stage,
 )
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
@@ -103,6 +106,146 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
+TOOL_VERSION = "1.2.0"
+EVALUATION_SNAPSHOT_VERSION: Literal["1.0"] = "1.0"
+
+
+class EvaluationInputSnapshot(BaseModel):
+    """Evaluation-only record of kernel snapshot and planned response admitted to PromptCompiler."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: Literal["1.0"]
+    kernel: CharacterKernelSnapshot
+    plan: ResponsePlan
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+    @classmethod
+    def from_turn(
+        cls,
+        *,
+        snapshot: CharacterKernelSnapshot,
+        plan: ResponsePlan,
+    ) -> EvaluationInputSnapshot:
+        return cls(
+            version=EVALUATION_SNAPSHOT_VERSION,
+            kernel=snapshot.model_copy(deep=True),
+            plan=plan.model_copy(deep=True),
+        )
+
+
+def parse_and_validate_initial_relationship(
+    init_st: dict[str, Any],
+    *,
+    character: CharacterProfile,
+    now: datetime = _FIXED_TIME,
+    scenario_id: str = "unknown",
+) -> RelationshipState:
+    """Validate and load initial relationship state against character policy.
+
+    Enforces:
+    - Typed RelationshipState schema validation (bounds, count, stage values).
+    - Consistency between duplicate keys if provided.
+    - Validation that declared stage matches character policy _relationship_stage.
+    - Legacy support for valid acquaintance defaults (e.g. old acquaintance fixtures).
+    - Immediate rejection of contradictory stages (e.g. familiar declared with
+      default or missing acquaintance metrics).
+    """
+    has_stage = "stage" in init_st
+    has_rel_stage = "relationship_stage" in init_st
+    if has_stage and has_rel_stage and init_st["stage"] != init_st["relationship_stage"]:
+        raise ValueError(
+            f"Scenario '{scenario_id}' initial_state has conflicting stage '{init_st['stage']}' "
+            f"and relationship_stage '{init_st['relationship_stage']}'"
+        )
+    declared_stage = init_st.get("stage", init_st.get("relationship_stage", "acquaintance"))
+
+    has_count = "count" in init_st
+    has_interaction_count = "interaction_count" in init_st
+    if has_count and has_interaction_count and init_st["count"] != init_st["interaction_count"]:
+        raise ValueError(
+            f"Scenario '{scenario_id}' initial_state has conflicting count ({init_st['count']}) "
+            f"and interaction_count ({init_st['interaction_count']})"
+        )
+    raw_count = (
+        init_st.get("interaction_count") if has_interaction_count else init_st.get("count", 0)
+    )
+    if not isinstance(raw_count, int) or isinstance(raw_count, bool):
+        raise ValueError(f"Scenario '{scenario_id}' count must be an integer: {raw_count}")
+    interaction_count: int = raw_count
+
+    familiarity = init_st.get("familiarity", 0.2)
+    trust = init_st.get("trust", 0.2)
+    affinity = init_st.get("affinity", 0.25)
+    comfort = init_st.get("comfort", 0.2)
+    recent_tension = init_st.get("recent_tension", 0.0)
+    preferred_address = init_st.get("preferred_address", None)
+
+    try:
+        rel = RelationshipState(
+            familiarity=familiarity,
+            trust=trust,
+            affinity=affinity,
+            comfort=comfort,
+            recent_tension=recent_tension,
+            interaction_count=interaction_count,
+            stage=declared_stage,
+            preferred_address=preferred_address,
+            updated_at=now,
+        )
+    except ValidationError as exc:
+        raise ValueError(
+            f"Scenario '{scenario_id}' has invalid initial relationship state: {exc}"
+        ) from exc
+
+    policy_stage = _relationship_stage(
+        rel.interaction_count,
+        rel.familiarity,
+        rel.trust,
+        rel.affinity,
+        character,
+    )
+    if rel.stage != policy_stage:
+        raise ValueError(
+            f"Scenario '{scenario_id}' declared initial stage '{rel.stage}' contradicts "
+            f"character policy stage '{policy_stage}' for character '{character.character_id}' "
+            f"(count={rel.interaction_count}, familiarity={rel.familiarity}, "
+            f"trust={rel.trust}, affinity={rel.affinity})"
+        )
+
+    return rel
+
+
+def parse_and_validate_initial_affect(
+    init_st: dict[str, Any],
+    *,
+    now: datetime = _FIXED_TIME,
+    scenario_id: str = "unknown",
+) -> AffectState:
+    valence = init_st.get("valence", 0.15)
+    arousal = init_st.get("arousal", 0.25)
+    energy = init_st.get("energy", 0.65)
+    attention = init_st.get("attention", 0.7)
+    embarrassment = init_st.get("embarrassment", 0.1)
+    tension = init_st.get("tension", 0.05)
+    try:
+        return AffectState(
+            valence=valence,
+            arousal=arousal,
+            energy=energy,
+            attention=attention,
+            embarrassment=embarrassment,
+            tension=tension,
+            updated_at=now,
+        )
+    except ValidationError as exc:
+        raise ValueError(
+            f"Scenario '{scenario_id}' has invalid initial affect state: {exc}"
+        ) from exc
+
+
 @dataclass(frozen=True, slots=True)
 class EvaluatedSample:
     sample_key: str
@@ -132,6 +275,7 @@ class EvaluatedSample:
     estimated_tokens_prompt: int | None = None
     estimated_tokens_completion: int | None = None
     tokens_source: Literal["estimated", "provider_reported"] = "estimated"
+    input_snapshot: dict[str, Any] | None = None
 
 
 _EVALUATED_SAMPLE_FIELD_NAMES = {f.name for f in fields(EvaluatedSample)}
@@ -222,9 +366,16 @@ def _read_completed_records(file_path: Path) -> dict[str, EvaluatedSample]:
                 record = EvaluatedSample(**filtered)  # pyright: ignore[reportUnknownArgumentType]
                 if record.finish_reason not in {"stop", "length", "other"}:
                     continue
-                completed[record.sample_key] = record
             except (json.JSONDecodeError, KeyError, TypeError, ValueError):
                 continue
+            if record.input_snapshot is not None:
+                try:
+                    EvaluationInputSnapshot.model_validate(record.input_snapshot)
+                except ValidationError as exc:
+                    raise ValueError(
+                        f"Invalid recorded input_snapshot for {record.sample_key}: {exc}"
+                    ) from exc
+            completed[record.sample_key] = record
     return completed
 
 
@@ -390,11 +541,34 @@ class EvaluationRunner:
         num_variants = len(variants_to_run)
         total_requests = num_scenarios * turns_per_scenario * self.repeats * num_variants
 
-        # Calculate sample tokens by compiling turn 1 of each scenario
         characters = CharacterService(self.characters_dir)
         characters.start()
         base_char = characters.get("default")
         assert base_char is not None
+
+        # Preflight ALL selected scenarios across all variants before compiling
+        for _variant_name, persona_path in variants_to_run:
+            persona_text = persona_path.read_text(encoding="utf-8").strip()
+            variant_char = CharacterProfile.model_validate(
+                {
+                    **base_char.model_dump(),
+                    "system_prompt": persona_text,
+                }
+            )
+            for s in target_scenarios:
+                parse_and_validate_initial_relationship(
+                    s.initial_state,
+                    character=variant_char,
+                    now=_FIXED_TIME,
+                    scenario_id=s.id,
+                )
+                parse_and_validate_initial_affect(
+                    s.initial_state,
+                    now=_FIXED_TIME,
+                    scenario_id=s.id,
+                )
+
+        # Calculate sample tokens by compiling turn 1 of each scenario
 
         class _DummyModelConfig:
             def get(self, role: str):
@@ -403,14 +577,18 @@ class EvaluationRunner:
         compiler = PromptCompiler(_DummyModelConfig())  # pyright: ignore[reportArgumentType]
         sample_prompt_tokens: list[int] = []
 
-        now = datetime.now(UTC)
+        now = _FIXED_TIME
         for s in target_scenarios:
+            init_aff = parse_and_validate_initial_affect(s.initial_state, now=now, scenario_id=s.id)
+            init_r = parse_and_validate_initial_relationship(
+                s.initial_state, character=base_char, now=now, scenario_id=s.id
+            )
             kernel = CharacterKernelSnapshot(
                 character_id="default",
                 user_scope="local",
                 revision=1,
-                affect=AffectState(updated_at=now),
-                relationship=RelationshipState(updated_at=now),
+                affect=init_aff,
+                relationship=init_r,
             )
             plan = ResponsePlan(
                 intent="answer", tone="gentle", expression="neutral", rationale="estimate"
@@ -490,16 +668,44 @@ class EvaluationRunner:
         selected_scenario_ids: list[str] | None = None,
     ) -> list[EvaluatedSample]:
         self._validate_execution()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.isolated_db_dir.mkdir(parents=True, exist_ok=True)
 
         target_scenarios = [
             s for s in self.scenarios if not selected_scenario_ids or s.id in selected_scenario_ids
         ]
 
+        characters_service = CharacterService(self.characters_dir)
+        characters_service.start()
+        base_character = characters_service.get("default")
+        assert base_character is not None
+
+        # Preflight ALL selected scenarios across all variants before model calls or DB setup
+        for _variant_name, persona_path in variants_to_run:
+            persona_text = persona_path.read_text(encoding="utf-8").strip()
+            variant_character = CharacterProfile.model_validate(
+                {
+                    **base_character.model_dump(),
+                    "system_prompt": persona_text,
+                }
+            )
+            for scenario in target_scenarios:
+                parse_and_validate_initial_relationship(
+                    scenario.initial_state,
+                    character=variant_character,
+                    now=_FIXED_TIME,
+                    scenario_id=scenario.id,
+                )
+                parse_and_validate_initial_affect(
+                    scenario.initial_state,
+                    now=_FIXED_TIME,
+                    scenario_id=scenario.id,
+                )
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.isolated_db_dir.mkdir(parents=True, exist_ok=True)
+
         metadata_identity = {
             "tool": "evaluate_character_scenarios",
-            "version": "1.1.0",
+            "version": TOOL_VERSION,
             "fixtures_hash": compute_file_hash(self.fixtures_path),
             "provider": self.provider_kind,
             "model": self.model_name,
@@ -580,10 +786,7 @@ class EvaluationRunner:
         await model_configs.start()
         compiler = PromptCompiler(model_configs)
 
-        characters_service = CharacterService(self.characters_dir)
-        characters_service.start()
-        base_character = characters_service.get("default")
-        assert base_character is not None
+        # base_character already started during preflight
 
         # Build LLM provider
         if self.provider_kind == "controlled":
@@ -638,14 +841,16 @@ class EvaluationRunner:
 
                         # Set up initial state if provided
                         init_st = scenario.initial_state
-                        init_affect = AffectState(
-                            valence=float(init_st.get("valence", 0.15)),
-                            arousal=float(init_st.get("arousal", 0.25)),
-                            updated_at=now,
+                        init_affect = parse_and_validate_initial_affect(
+                            init_st,
+                            now=now,
+                            scenario_id=scenario.id,
                         )
-                        init_rel = RelationshipState(
-                            stage=init_st.get("relationship_stage", "acquaintance"),
-                            updated_at=now,
+                        init_rel = parse_and_validate_initial_relationship(
+                            init_st,
+                            character=character,
+                            now=now,
+                            scenario_id=scenario.id,
                         )
                         # Insert initial state into DB for this user_scope
                         await database.execute(
@@ -723,6 +928,10 @@ class EvaluationRunner:
                                 relationship=current_rel,
                             )
                             plan = _plan_response(turn.user_text, signal, snapshot, character)
+                            turn_input_snapshot = EvaluationInputSnapshot.from_turn(
+                                snapshot=snapshot,
+                                plan=plan,
+                            ).to_dict()
 
                             previous = self._completed_records.get(key)
                             if previous is not None:
@@ -866,6 +1075,7 @@ class EvaluationRunner:
                                 estimated_tokens_prompt=tokens_prompt_est,
                                 estimated_tokens_completion=tokens_completion_est,
                                 tokens_source=tokens_source,
+                                input_snapshot=turn_input_snapshot,
                             )
 
                             # Append to results file immediately (partial persistence)
@@ -961,6 +1171,46 @@ class EvaluationRunner:
                         f"用户输入: 「{turn.user_text}」"
                     )
                     template_lines.append(header_label)
+
+                    c1_snap = c1_rec.get("input_snapshot")
+                    c2_snap = c2_rec.get("input_snapshot")
+
+                    def _grounding_lines(snap: dict[str, Any] | None) -> list[str]:
+                        if not snap:
+                            return [
+                                "- 状态记录: unknown (历史记录未记录 input_snapshot)",
+                                "- 关系阶段: unknown",
+                                "- 交互计数: unknown",
+                                "- 响应计划: unknown",
+                            ]
+                        parsed = EvaluationInputSnapshot.model_validate(snap)
+                        rel = parsed.kernel.relationship
+                        plan = parsed.plan
+                        motion = f", 动作={plan.motion}" if plan.motion else ""
+                        return [
+                            (
+                                f"- 关系状态 (Relationship): 阶段=`{rel.stage}`, "
+                                f"交互计数=`{rel.interaction_count}` "
+                                f"(熟悉度={rel.familiarity:.3f}, 信任度={rel.trust:.3f}, "
+                                f"好感度={rel.affinity:.3f}, 舒适度={rel.comfort:.3f})"
+                            ),
+                            (
+                                f"- 响应计划 (Response Plan): 意图=`{plan.intent}`, "
+                                f"语气=`{plan.tone}`, 表情=`{plan.expression}`{motion}, "
+                                f"长度={plan.response_length} | 依据: {plan.rationale}"
+                            ),
+                        ]
+
+                    template_lines.append("**输入状态基底 (Input State Grounding):**")
+                    if c1_snap == c2_snap:
+                        template_lines.extend(_grounding_lines(c1_snap))
+                    else:
+                        template_lines.append("【候选 1 状态基底】:")
+                        template_lines.extend(_grounding_lines(c1_snap))
+                        template_lines.append("【候选 2 状态基底】:")
+                        template_lines.extend(_grounding_lines(c2_snap))
+                    template_lines.append("")
+
                     template_lines.append("**预期行为 (Expected):**")
                     for eb in turn.expected_behavior:
                         template_lines.append(f"- [ ] {eb}")

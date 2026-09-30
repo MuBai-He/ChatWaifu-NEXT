@@ -1,5 +1,6 @@
 """Policy-filtered FTS retrieval with reserved semantic and temporal contributors."""
 
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
@@ -184,9 +185,47 @@ class MemoryRetriever:
         )
 
 
-def _requests_memory_recall(query: str) -> bool:
-    normalized = query.casefold()
-    return any(
-        marker in normalized
-        for marker in ("记得", "记住的", "我的喜好", "我的信息", "remember", "recall")
+# Only complete, unqualified memory-inventory requests permit recent-only padding.
+# Finite patterns deliberately decline unsupported wording; topical retrieval still
+# uses the genuine FTS/semantic/temporal contributors above.
+_EDGE_PUNCTUATION = "?!.,;:~！？。，；：～…"  # noqa: RUF001
+_BROAD_INVENTORY_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"(?:你|您)?(?:还|都|到底|总共)?(?:记得|记住|记了|存了|知道)(?:了)?"
+        r"(?:我|关于我|关于我的|我的)"
+        r"(?:什么|哪些|哪些信息|哪些事情|哪些细节|所有信息|全部信息)(?:呢|吗|呀|吧|啊)?",
+        r"(?:关于我|对我)(?:你|您)?(?:还|都|到底)?(?:记得|记住|记了|知道)(?:了)?"
+        r"(?:什么|哪些|哪些信息|哪些事情|所有信息|全部信息)(?:呢|吗|呀|吧|啊)?",
+        r"(?:说说|告诉我|列出|查看|看一下|展示)(?:你|您)?(?:还|都)?"
+        r"(?:(?:记得|记住)(?:了)?)?(?:我|关于我|关于我的|我的)"
+        r"(?:什么|哪些|哪些信息|喜好|偏好|习惯|信息|资料|记忆)(?:呢|呀|吧|啊)?",
+        r"(?:关于我的|我的)(?:喜好|偏好|个人喜好|习惯|信息|基本信息|个人信息|记忆)"
+        r"(?:呢|呀|吧|啊)?",
+        r"(?:你|您)?(?:对我|关于我)"
+        r"(?:(?:有什么|有哪些)(?:记忆|了解)|(?:了解|知道)(?:了)?(?:什么|哪些))"
+        r"(?:呢|吗|呀|吧|啊)?",
+        r"(?:你|您)(?:还|都|到底)?(?:记得|记住|记了)(?:了)?"
+        r"(?:什么|哪些|全部|所有)(?:呢|吗|呀|吧|啊)?",
+        r"what (?:do|can) you remember(?: about me)?",
+        r"what (?:do|can) you know about me",
+        r"tell me what you (?:know about me|remember(?: about me)?)",
+        r"what memories do you have(?: (?:of|about) me)?",
+        r"(?:list|show|recall|tell) (?:all )?(?:my )?memories",
+        r"my (?:memories|preferences|profile)",
     )
+)
+
+
+def is_broad_inventory_query(query: str) -> bool:
+    """Recognize supported whole-query inventory requests without stripping quotes."""
+    normalized = " ".join(query.casefold().split()).strip(_EDGE_PUNCTUATION).strip()
+    chinese = "".join(normalized.split())
+    return any(
+        pattern.fullmatch(normalized) or pattern.fullmatch(chinese)
+        for pattern in _BROAD_INVENTORY_PATTERNS
+    )
+
+
+def _requests_memory_recall(query: str) -> bool:
+    return is_broad_inventory_query(query)

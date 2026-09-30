@@ -974,7 +974,7 @@ def main() -> int:
             )
             return 1
 
-        if result.overall_metrics.tp < 18 or result.overall_metrics.fp > 1:
+        if result.overall_metrics.tp < 18 or result.overall_metrics.fp > 0:
             logger.error(
                 "Check failed: retrieval quality regressed from the synthetic baseline: %s",
                 result.overall_metrics,

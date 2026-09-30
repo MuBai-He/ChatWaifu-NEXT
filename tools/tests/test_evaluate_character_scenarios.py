@@ -5,12 +5,32 @@ from __future__ import annotations
 
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
-from chatwaifu_runtime.providers.contracts import LlmUsage
+from chatwaifu_protocol.character import (
+    RelationshipState,
+)
+from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptCompiler
+from chatwaifu_runtime.character_kernel.service import (
+    _classify,
+    _reduce_affect,
+    _reduce_relationship,
+)
+from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest,
+    LlmResponseCompleted,
+    LlmStreamEvent,
+    LlmTextDelta,
+    LlmUsage,
+)
 
 from tools.evaluate_character_scenarios import (
+    _FIXED_TIME,
+    DEFAULT_CHARACTERS_DIR,
     DEFAULT_FIXTURES_PATH,
     ControlledEvaluatorProvider,
     EvaluatedSample,
@@ -20,6 +40,8 @@ from tools.evaluate_character_scenarios import (
     estimate_pricing,
     load_scenarios,
     main,
+    parse_and_validate_initial_affect,
+    parse_and_validate_initial_relationship,
 )
 
 
@@ -706,9 +728,7 @@ async def test_provider_usage_persists_alongside_estimates_in_results_jsonl(
     from collections.abc import AsyncIterator
 
     from chatwaifu_runtime.providers.contracts import (
-        LlmRequest,
         LlmResponseCompleted,
-        LlmStreamEvent,
         LlmTextDelta,
     )
 
@@ -781,3 +801,638 @@ async def test_provider_usage_persists_alongside_estimates_in_results_jsonl(
     assert saved.provider_tokens_reasoning == 105
     assert saved.tokens_prompt == sample.tokens_prompt
     assert saved.tokens_completion == sample.tokens_completion
+
+
+def test_red_before_green_after_familiar_state_trajectories() -> None:
+    """Verify red-before vs green-after behavior across real reducer and compiler."""
+    chars = CharacterService(DEFAULT_CHARACTERS_DIR)
+    chars.start()
+    char = chars.get("default")
+    assert char is not None
+
+    scenarios = load_scenarios(DEFAULT_FIXTURES_PATH)
+    assert len(scenarios) == 12
+
+    # Red before simulation:
+    # Under old fixture, greeting declared relationship_stage="familiar",
+    # but metrics were default (count=0, familiarity=0.2).
+    old_greeting_rel = RelationshipState(
+        stage="familiar",
+        familiarity=0.2,
+        trust=0.2,
+        affinity=0.25,
+        comfort=0.2,
+        recent_tension=0.0,
+        interaction_count=0,
+        updated_at=_FIXED_TIME,
+    )
+    # Turn 1 user input: "晚上好，今天过得怎么样？"
+    signal_t1 = _classify("晚上好，今天过得怎么样？")
+    old_t1_reduced = _reduce_relationship(old_greeting_rel, signal_t1, char, _FIXED_TIME)
+    # RED: In old run, stage dropped from familiar to acquaintance on turn 1!
+    assert old_t1_reduced.interaction_count == 1
+    assert old_t1_reduced.familiarity == pytest.approx(0.212)
+    assert old_t1_reduced.stage == "acquaintance"
+
+    # Green after verification:
+    # All 12 scenarios with new seed metrics maintain their declared stages across all 4 turns!
+    familiar_count = 0
+    acquaintance_count = 0
+
+    for s in scenarios:
+        init_st = s.initial_state
+        init_rel = parse_and_validate_initial_relationship(
+            init_st, character=char, now=_FIXED_TIME, scenario_id=s.id
+        )
+        target_stage = init_rel.stage
+        if target_stage == "familiar":
+            familiar_count += 1
+            assert init_rel.interaction_count == 6
+            assert init_rel.familiarity == pytest.approx(0.38)
+            assert init_rel.trust == pytest.approx(0.35)
+            assert init_rel.affinity == pytest.approx(0.35)
+            assert init_rel.comfort == pytest.approx(0.35)
+        else:
+            acquaintance_count += 1
+            assert init_rel.interaction_count == 0
+            assert init_rel.familiarity == pytest.approx(0.2)
+            assert init_rel.trust == pytest.approx(0.2)
+            assert init_rel.affinity == pytest.approx(0.25)
+            assert init_rel.comfort == pytest.approx(0.2)
+
+        cur_rel = init_rel
+        cur_affect = parse_and_validate_initial_affect(init_st, now=_FIXED_TIME, scenario_id=s.id)
+        for turn in s.turns:
+            signal = _classify(turn.user_text)
+            cur_affect = _reduce_affect(cur_affect, signal, _FIXED_TIME)
+            cur_rel = _reduce_relationship(cur_rel, signal, char, _FIXED_TIME)
+            assert cur_rel.stage == target_stage, (
+                f"Scenario {s.id} turn {turn.turn_id} diverged from "
+                f"{target_stage} to {cur_rel.stage}"
+            )
+
+    assert familiar_count == 7
+    assert acquaintance_count == 5
+
+
+@pytest.mark.asyncio
+async def test_preflight_validates_all_scenarios_before_paid_calls_and_conditional_negative(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Preflight catches contradictory or invalid fixtures before ANY model call executes."""
+    chars = CharacterService(DEFAULT_CHARACTERS_DIR)
+    chars.start()
+    char = chars.get("default")
+    assert char is not None
+
+    stream_call_count = 0
+
+    class _CountingProvider:
+        kind = "controlled"
+        supports_tool_calling = False
+
+        async def stream(self, request: LlmRequest):
+            nonlocal stream_call_count
+            stream_call_count += 1
+            yield LlmTextDelta("reply")
+            yield LlmResponseCompleted("stop")
+
+    def _make_counting_provider(*_args: object, **_kwargs: object) -> object:
+        return _CountingProvider()
+
+    monkeypatch.setattr(
+        "tools.evaluate_character_scenarios.ControlledEvaluatorProvider",
+        _make_counting_provider,
+    )
+
+    # Create a fixture file with a valid scenario followed by an invalid contradictory scenario
+    fixtures_file = tmp_path / "mixed_fixtures.json"
+    scenarios_data = [
+        {
+            "id": "greeting_valid",
+            "name": "有效问候",
+            "description": "有效熟悉场景",
+            "initial_state": {
+                "relationship_stage": "familiar",
+                "stage": "familiar",
+                "interaction_count": 6,
+                "count": 6,
+                "familiarity": 0.38,
+                "trust": 0.35,
+                "affinity": 0.35,
+                "comfort": 0.35,
+                "recent_tension": 0.0,
+                "valence": 0.2,
+                "arousal": 0.3,
+            },
+            "synthetic_memory": [],
+            "seed_history": [],
+            "presentation_profile": "instant_message",
+            "turns": [
+                {
+                    "turn_id": i,
+                    "user_text": f"输入 {i}",
+                    "expected_behavior": ["预期"],
+                    "forbidden_behavior": ["禁止"],
+                    "review_criteria": "标准",
+                }
+                for i in range(1, 5)
+            ],
+        },
+        {
+            "id": "invalid_contradictory",
+            "name": "矛盾场景",
+            "description": "声明 familiar 但缺少指标，属于旧缺陷 fixture",
+            "initial_state": {
+                "relationship_stage": "familiar",
+                "valence": 0.2,
+                "arousal": 0.3,
+            },
+            "synthetic_memory": [],
+            "seed_history": [],
+            "presentation_profile": "instant_message",
+            "turns": [
+                {
+                    "turn_id": i,
+                    "user_text": f"输入 {i}",
+                    "expected_behavior": ["预期"],
+                    "forbidden_behavior": ["禁止"],
+                    "review_criteria": "标准",
+                }
+                for i in range(1, 5)
+            ],
+        },
+    ]
+    fixtures_file.write_text(json.dumps(scenarios_data, ensure_ascii=False), encoding="utf-8")
+
+    output_dir = tmp_path / "eval_conditional_negative"
+    runner = EvaluationRunner(
+        fixtures_path=fixtures_file,
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+    )
+
+    persona = tmp_path / "persona.md"
+    persona.write_text("Persona", encoding="utf-8")
+
+    # Order: valid scenario first, invalid scenario second
+    with pytest.raises(ValueError, match="contradicts character policy stage"):
+        await runner.execute([("variant_a", persona)], ["greeting_valid", "invalid_contradictory"])
+
+    # CRITICAL: Prove NO provider calls were made, even for the valid scenario!
+    assert stream_call_count == 0
+
+    # Also prove dry run catches it
+    with pytest.raises(ValueError, match="contradicts character policy stage"):
+        runner.estimate_dry_run(
+            [("variant_a", persona)], ["greeting_valid", "invalid_contradictory"]
+        )
+
+    # Test legacy support for valid acquaintance without explicit metrics
+    legacy_acq_st = {"relationship_stage": "acquaintance", "valence": 0.1, "arousal": 0.2}
+    rel_acq = parse_and_validate_initial_relationship(
+        legacy_acq_st, character=char, now=_FIXED_TIME
+    )
+    assert rel_acq.stage == "acquaintance"
+    assert rel_acq.interaction_count == 0
+
+    # Test invalid out-of-range metrics
+    with pytest.raises(ValueError, match="invalid initial relationship state"):
+        parse_and_validate_initial_relationship(
+            {"familiarity": 1.5, "stage": "acquaintance"}, character=char, now=_FIXED_TIME
+        )
+
+    # Test conflicting count keys
+    with pytest.raises(ValueError, match="conflicting count"):
+        parse_and_validate_initial_relationship(
+            {"count": 6, "interaction_count": 5, "stage": "familiar"},
+            character=char,
+            now=_FIXED_TIME,
+        )
+
+    # Test conflicting stage keys
+    with pytest.raises(ValueError, match="conflicting stage"):
+        parse_and_validate_initial_relationship(
+            {"stage": "familiar", "relationship_stage": "acquaintance"},
+            character=char,
+            now=_FIXED_TIME,
+        )
+
+
+@pytest.mark.asyncio
+async def test_input_snapshot_schema_type_version_and_serialization(tmp_path: Path) -> None:
+    """Validate typed input_snapshot structure, versioning, and legacy deserialization."""
+    output_dir = tmp_path / "eval_snapshot"
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=1,
+    )
+    persona = tmp_path / "persona.md"
+    persona.write_text("测试角色设定", encoding="utf-8")
+
+    samples = await runner.execute([("baseline", persona)], ["greeting"])
+    assert len(samples) == 4
+
+    for sample in samples:
+        snap = sample.input_snapshot
+        assert snap is not None
+        assert snap["version"] == "1.0"
+        assert snap["kernel"]["revision"] == sample.turn_id
+        assert snap["kernel"]["character_id"] == "default"
+        assert snap["kernel"]["user_scope"] == "local"
+
+        rel = snap["kernel"]["relationship"]
+        assert rel["stage"] == "familiar"
+        assert rel["interaction_count"] == 6 + sample.turn_id
+        assert rel["familiarity"] > 0.38
+        assert rel["updated_at"] == "2026-01-01T00:00:00Z"
+
+        plan = snap["plan"]
+        assert plan["intent"]
+        assert plan["tone"]
+        assert plan["expression"]
+        assert plan["rationale"]
+
+    # Verify JSONL on-disk serialization roundtrip
+    records = _read_completed_records(output_dir / "results.jsonl")
+    for _key, rec in records.items():
+        assert rec.input_snapshot is not None
+        assert rec.input_snapshot["version"] == "1.0"
+        assert rec.input_snapshot["kernel"]["relationship"]["stage"] == "familiar"
+
+    # Test legacy row missing input_snapshot
+    legacy_file = tmp_path / "legacy_results.jsonl"
+    legacy_row: dict[str, Any] = {
+        "sample_key": "greeting:r0:t1:baseline",
+        "scenario_id": "greeting",
+        "scenario_name": "普通问候",
+        "turn_id": 1,
+        "repeat_index": 0,
+        "variant": "baseline",
+        "persona_hash": "abcd",
+        "provider": "demo",
+        "model": "demo-model",
+        "presentation_profile": "instant_message",
+        "user_text": "你好",
+        "raw_reply": "回复",
+        "latency_ms": 10,
+        "tokens_prompt": 100,
+        "tokens_completion": 50,
+        "finish_reason": "stop",
+        "expected_behavior": [],
+        "forbidden_behavior": [],
+        "review_criteria": "",
+        "timestamp": "2026-01-01T00:00:00Z",
+    }
+    legacy_file.write_text(json.dumps(legacy_row) + "\n", encoding="utf-8")
+    loaded_legacy = _read_completed_records(legacy_file)
+    assert "greeting:r0:t1:baseline" in loaded_legacy
+    assert loaded_legacy["greeting:r0:t1:baseline"].input_snapshot is None
+
+    valid_row = json.loads((output_dir / "results.jsonl").read_text().splitlines()[0])
+    for corruption in ("version", "missing_version", "count", "time", "plan", "extra"):
+        malformed = deepcopy(valid_row)
+        snapshot = malformed["input_snapshot"]
+        if corruption == "version":
+            snapshot["version"] = "2.0"
+        elif corruption == "missing_version":
+            del snapshot["version"]
+        elif corruption == "count":
+            snapshot["kernel"]["relationship"]["interaction_count"] = -1
+        elif corruption == "time":
+            snapshot["kernel"]["relationship"]["updated_at"] = "2026-01-01T00:00:00"
+        elif corruption == "plan":
+            snapshot["plan"]["intent"] = "invented"
+        else:
+            snapshot["extra"] = "unexpected"
+        legacy_file.write_text(json.dumps(malformed) + "\n")
+        with pytest.raises(ValueError, match="Invalid recorded input_snapshot"):
+            _read_completed_records(legacy_file)
+
+
+@pytest.mark.parametrize("stage", [None, "", "friend", 0, False])
+def test_explicit_invalid_stage_does_not_fall_back_to_acquaintance(stage: object) -> None:
+    characters = CharacterService(DEFAULT_CHARACTERS_DIR)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    with pytest.raises(ValueError, match="invalid initial relationship state"):
+        parse_and_validate_initial_relationship({"relationship_stage": stage}, character=character)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_parity_uninterrupted_vs_resumed(tmp_path: Path) -> None:
+    """Verify snapshot parity between uninterrupted run and resumed run."""
+    dir_uninterrupted = tmp_path / "eval_uninterrupted"
+    dir_resumed = tmp_path / "eval_resumed"
+    persona = tmp_path / "persona.md"
+    persona.write_text("人设文本", encoding="utf-8")
+
+    # 1. Uninterrupted run (all 4 turns)
+    runner_full = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=dir_uninterrupted,
+        provider="demo",
+        repeats=1,
+    )
+    samples_full = await runner_full.execute([("v", persona)], ["greeting"])
+    assert len(samples_full) == 4
+
+    # 2. Interrupted run: only 2 requests allowed
+    runner_part1 = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=dir_resumed,
+        provider="demo",
+        repeats=1,
+        max_requests=2,
+    )
+    samples_part1 = await runner_part1.execute([("v", persona)], ["greeting"])
+    assert len(samples_part1) == 2
+
+    # 3. Resume run: finish remaining 2 turns
+    runner_part2 = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=dir_resumed,
+        provider="demo",
+        repeats=1,
+        resume=True,
+    )
+    samples_part2 = await runner_part2.execute([("v", persona)], ["greeting"])
+    assert len(samples_part2) == 2
+
+    records_full = _read_completed_records(dir_uninterrupted / "results.jsonl")
+    records_resumed = _read_completed_records(dir_resumed / "results.jsonl")
+    assert len(records_full) == 4
+    assert len(records_resumed) == 4
+
+    for turn_id in (1, 2, 3, 4):
+        key = f"greeting:r0:t{turn_id}:v"
+        full_snap = records_full[key].input_snapshot
+        resumed_snap = records_resumed[key].input_snapshot
+        assert full_snap == resumed_snap, f"Parity mismatch on turn {turn_id}"
+
+
+@pytest.mark.asyncio
+async def test_snapshot_and_plan_parity_ab_and_repeats(tmp_path: Path) -> None:
+    """Verify state and plan parity across A/B variants and across repeat runs."""
+    output_dir = tmp_path / "eval_parity"
+    persona_a = tmp_path / "persona_a.md"
+    persona_a.write_text("Persona Variant A 强调温柔", encoding="utf-8")
+    persona_b = tmp_path / "persona_b.md"
+    persona_b.write_text("Persona Variant B 强调内向害羞", encoding="utf-8")
+
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=3,
+    )
+    samples = await runner.execute(
+        [("varA", persona_a), ("varB", persona_b)],
+        ["greeting"],
+    )
+    # 4 turns * 3 repeats * 2 variants = 24
+    assert len(samples) == 24
+
+    records = _read_completed_records(output_dir / "results.jsonl")
+
+    for turn_id in (1, 2, 3, 4):
+        # A/B parity within repeat 0
+        key_a = f"greeting:r0:t{turn_id}:varA"
+        key_b = f"greeting:r0:t{turn_id}:varB"
+        snap_a = records[key_a].input_snapshot
+        snap_b = records[key_b].input_snapshot
+        assert snap_a is not None and snap_b is not None
+
+        # Relationship state metrics must be identical
+        assert snap_a["kernel"]["relationship"] == snap_b["kernel"]["relationship"]
+        # ResponsePlan must be identical
+        assert snap_a["plan"] == snap_b["plan"]
+
+        # Repeats parity (r0 vs r1 vs r2 for varA)
+        key_r0 = f"greeting:r0:t{turn_id}:varA"
+        key_r1 = f"greeting:r1:t{turn_id}:varA"
+        key_r2 = f"greeting:r2:t{turn_id}:varA"
+        snap_r0 = records[key_r0].input_snapshot
+        snap_r1 = records[key_r1].input_snapshot
+        snap_r2 = records[key_r2].input_snapshot
+        assert snap_r0 is not None and snap_r1 is not None and snap_r2 is not None
+        assert (
+            snap_r0["kernel"]["relationship"]
+            == snap_r1["kernel"]["relationship"]
+            == snap_r2["kernel"]["relationship"]
+        )
+        assert snap_r0["plan"] == snap_r1["plan"] == snap_r2["plan"]
+
+
+@pytest.mark.asyncio
+async def test_resume_refuses_version_and_fixture_mismatch(tmp_path: Path) -> None:
+    """Resume rejects old metadata version or modified fixture hash."""
+    output_dir = tmp_path / "eval_mismatch"
+    persona = tmp_path / "persona.md"
+    persona.write_text("人设", encoding="utf-8")
+
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=1,
+    )
+    await runner.execute([("v", persona)], ["greeting"])
+
+    metadata_path = output_dir / "metadata.json"
+    meta = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    # Case 1: Old version (e.g. 1.1.0)
+    meta_old_version = dict(meta)
+    meta_old_version["identity"] = dict(meta["identity"])
+    meta_old_version["identity"]["version"] = "1.1.0"
+    metadata_path.write_text(json.dumps(meta_old_version), encoding="utf-8")
+
+    runner_res = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=1,
+        resume=True,
+    )
+    with pytest.raises(ValueError, match="resume inputs or model configuration differ"):
+        await runner_res.execute([("v", persona)], ["greeting"])
+
+    # Case 2: Modified fixtures_hash
+    meta_mod_hash = dict(meta)
+    meta_mod_hash["identity"] = dict(meta["identity"])
+    meta_mod_hash["identity"]["fixtures_hash"] = "altered_hash_123"
+    metadata_path.write_text(json.dumps(meta_mod_hash), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="resume inputs or model configuration differ"):
+        await runner_res.execute([("v", persona)], ["greeting"])
+
+
+@pytest.mark.asyncio
+async def test_blinded_review_template_includes_grounding_and_marks_historical_unknown(
+    tmp_path: Path,
+) -> None:
+    """Blinded review template includes state grounding and handles missing snapshots cleanly."""
+    output_dir = tmp_path / "eval_blinded_grounding"
+    persona_a = tmp_path / "persona_a.md"
+    persona_a.write_text("Persona A", encoding="utf-8")
+    persona_b = tmp_path / "persona_b.md"
+    persona_b.write_text("Persona B", encoding="utf-8")
+
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="demo",
+        repeats=1,
+    )
+    await runner.execute([("vA", persona_a), ("vB", persona_b)], ["greeting"])
+
+    template_file = output_dir / "blinded_review_template.md"
+    assert template_file.exists()
+    content = template_file.read_text(encoding="utf-8")
+
+    # Must contain input state grounding
+    assert "输入状态基底 (Input State Grounding):" in content
+    assert "关系状态 (Relationship): 阶段=`familiar`" in content
+    assert "交互计数=`7`" in content
+    assert "响应计划 (Response Plan): 意图=" in content
+
+    # Candidate comparison must NOT leak variant names "vA" or "vB"
+    # Find section under 候选者回复对比
+    contrast_pos = content.find("#### 候选者回复对比:")
+    assert contrast_pos != -1
+    sub_content = content[contrast_pos:]
+    assert "vA" not in sub_content
+    assert "vB" not in sub_content
+
+    # Now simulate legacy results where input_snapshot is missing
+    output_dir_legacy = tmp_path / "eval_blinded_legacy"
+    output_dir_legacy.mkdir()
+    results_legacy = output_dir_legacy / "results.jsonl"
+    rows: list[dict[str, Any]] = [
+        {
+            "sample_key": f"greeting:r0:t1:{v}",
+            "scenario_id": "greeting",
+            "scenario_name": "普通问候",
+            "turn_id": 1,
+            "repeat_index": 0,
+            "variant": v,
+            "persona_hash": "abcd",
+            "provider": "demo",
+            "model": "demo-model",
+            "presentation_profile": "instant_message",
+            "user_text": "你好",
+            "raw_reply": f"{v} 回复",
+            "latency_ms": 10,
+            "tokens_prompt": 100,
+            "tokens_completion": 50,
+            "finish_reason": "stop",
+            "expected_behavior": [],
+            "forbidden_behavior": [],
+            "review_criteria": "",
+            "timestamp": "2026-01-01T00:00:00Z",
+            # input_snapshot omitted!
+        }
+        for v in ("vA", "vB")
+    ]
+    results_legacy.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+
+    runner_legacy = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir_legacy,
+        provider="demo",
+        repeats=1,
+    )
+    tmpl_legacy = runner_legacy.generate_blinded_review_template("vA", "vB")
+    content_legacy = tmpl_legacy.read_text(encoding="utf-8")
+    assert "unknown (历史记录未记录 input_snapshot)" in content_legacy
+    assert "关系阶段: unknown" in content_legacy
+
+
+@pytest.mark.asyncio
+async def test_compiler_input_and_llm_request_matches_recorded_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Prove recorded input_snapshot grounds the actual LlmRequest and compiler prompt."""
+    from uuid import NAMESPACE_URL, uuid5
+
+    captured_requests: list[LlmRequest] = []
+    compiler_inputs: list[dict[str, Any]] = []
+    original_compile = PromptCompiler.compile
+
+    async def capture_compile(self: PromptCompiler, **kwargs: Any) -> PromptCompilation:
+        compiler_inputs.append(
+            {
+                "version": "1.0",
+                "kernel": kwargs["kernel"].model_dump(mode="json"),
+                "plan": kwargs["plan"].model_dump(mode="json"),
+            }
+        )
+        return await original_compile(self, **kwargs)
+
+    monkeypatch.setattr(PromptCompiler, "compile", capture_compile)
+
+    class _CaptureProvider:
+        kind = "controlled"
+        supports_tool_calling = False
+
+        async def stream(self, request: LlmRequest):
+            captured_requests.append(request)
+            yield LlmTextDelta("测试回复")
+            yield LlmResponseCompleted("stop")
+
+    output_dir = tmp_path / "eval_capture_verify"
+    runner = EvaluationRunner(
+        fixtures_path=DEFAULT_FIXTURES_PATH,
+        output_dir=output_dir,
+        provider="controlled",
+        repeats=1,
+    )
+
+    persona = tmp_path / "persona.md"
+    persona.write_text("绫地宁宁的人设文本", encoding="utf-8")
+
+    # Run greeting turn 1
+    # We monkeypatch ControlledEvaluatorProvider so execute uses our capturing provider
+    def _make_capture_provider(*_args: object, **_kwargs: object) -> object:
+        return _CaptureProvider()
+
+    monkeypatch.setattr(
+        "tools.evaluate_character_scenarios.ControlledEvaluatorProvider",
+        _make_capture_provider,
+    )
+
+    samples = await runner.execute([("baseline", persona)], ["greeting"])
+    assert len(samples) == 4
+    assert len(captured_requests) == 4
+    assert [sample.input_snapshot for sample in samples] == compiler_inputs
+
+    for turn_idx, (sample, req) in enumerate(zip(samples, captured_requests, strict=True), start=1):
+        snap = sample.input_snapshot
+        assert snap is not None
+
+        # 1. Generation ID parity with uuid5
+        expected_gen_id = uuid5(NAMESPACE_URL, sample.sample_key)
+        assert req.generation_id == expected_gen_id
+
+        # 2. System prompt contains exact relationship stage and interaction count
+        stage = snap["kernel"]["relationship"]["stage"]
+        count = snap["kernel"]["relationship"]["interaction_count"]
+        expected_rel_str = f"Stage: {stage}. Interactions: {count}."
+        assert expected_rel_str in req.system_prompt, (
+            f"Expected '{expected_rel_str}' in system prompt for turn {turn_idx}"
+        )
+
+        # 3. System prompt contains exact response plan
+        plan = snap["plan"]
+        expected_plan_str = (
+            f"Intent {plan['intent']}; tone {plan['tone']}; "
+            f"emotional expression {plan['expression']}"
+        )
+        assert expected_plan_str in req.system_prompt, (
+            f"Expected '{expected_plan_str}' in system prompt for turn {turn_idx}"
+        )

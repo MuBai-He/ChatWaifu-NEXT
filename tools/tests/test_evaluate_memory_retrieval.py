@@ -330,12 +330,15 @@ async def test_real_world_false_retrieval_and_miss_observations(tmp_path: Path) 
     result = await evaluator.run_scenarios(scen_data, tmp_path, verbose=False)
     assert len(result.scenarios) == 2
 
-    # 1. shared-joke relevance: recency padding fallback pulls rec_ice_cream (FP=1)
+    # 1. shared-joke relevance: recency padding fallback is suppressed for topical joke query (FP=0)
     joke_scen = next(
         s for s in result.scenarios if s.scenario_id == "scenario_shared_joke_relevance"
     )
-    assert joke_scen.aggregate_metrics.fp == 1
-    assert joke_scen.queries_with_false_retrieval == 1
+    assert joke_scen.aggregate_metrics.fp == 0
+    assert joke_scen.queries_with_false_retrieval == 0
+    joke_probe = next(q for q in joke_scen.queries if q.query_id == "q_joke_positive")
+    assert joke_probe.expected_keys == ["rec_joke_popsicle"]
+    assert joke_probe.retrieved_keys == ["rec_joke_popsicle"]
 
     # A question using the obsolete value should retrieve the corrected fact, never the old one.
     corr_scen = next(s for s in result.scenarios if s.scenario_id == "scenario_correction")
@@ -396,17 +399,17 @@ async def test_full_suite_evaluation_runner(tmp_path: Path) -> None:
 
     # Stable quantitative aggregate metrics:
     assert result.overall_metrics.tp == 18
-    assert result.overall_metrics.fp == 1
+    assert result.overall_metrics.fp == 0
     assert result.overall_metrics.fn == 3
-    assert result.overall_metrics.precision == 0.9474
+    assert result.overall_metrics.precision == 1.0
     assert result.overall_metrics.recall == 0.8571
-    assert result.overall_metrics.false_retrieval_rate == 0.0526
+    assert result.overall_metrics.false_retrieval_rate == 0.0
     assert result.overall_metrics.miss_rate == 0.1429
 
     # Query level rates:
-    assert result.overall_query_false_retrieval_rate == 0.037
+    assert result.overall_query_false_retrieval_rate == 0.0
     assert result.overall_query_miss_rate == 0.0667
-    assert result.queries_with_false_retrieval == 1
+    assert result.queries_with_false_retrieval == 0
     assert result.queries_with_misses == 1
 
 
@@ -495,3 +498,70 @@ def test_cli_main_check(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["evaluate_memory_retrieval.py", "--check"])
     exit_code = main()
     assert exit_code == 0
+
+
+def test_cli_main_check_rejects_nonzero_false_retrieval(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validate that CLI entrypoint rejects any future non-zero false retrieval."""
+    monkeypatch.setattr("sys.argv", ["evaluate_memory_retrieval.py", "--check"])
+
+    async def _mock_eval_suite(*args: object, **kwargs: object) -> object:
+        from tools.evaluate_memory_retrieval import (
+            MetricScores,
+            QueryEvaluationResult,
+            ScenarioEvaluationResult,
+            SuiteEvaluationResult,
+        )
+
+        mock_metrics = MetricScores(
+            tp=18,
+            fp=1,  # Nonzero false retrieval regression
+            fn=3,
+            total_retrieved=19,
+            total_expected=21,
+            precision=0.9474,
+            recall=0.8571,
+            false_retrieval_rate=0.0526,
+            miss_rate=0.1429,
+        )
+        dummy_query = QueryEvaluationResult(
+            query_id="q_dummy",
+            label="dummy",
+            is_negative=False,
+            token_budget=700,
+            expected_keys=["rec1"],
+            retrieved_keys=["rec1", "rec2"],
+            metrics=mock_metrics,
+        )
+        dummy_scenario = ScenarioEvaluationResult(
+            scenario_id="scenario_explicit_fact",
+            name="dummy",
+            condition="explicit fact",
+            evaluable=True,
+            limitation_note=None,
+            queries=[dummy_query],
+            aggregate_metrics=mock_metrics,
+            query_false_retrieval_rate=1.0,
+            query_miss_rate=0.0,
+            queries_with_false_retrieval=1,
+            queries_with_misses=0,
+        )
+        return SuiteEvaluationResult(
+            timestamp_iso="2026-09-30T00:00:00Z",
+            total_scenarios=1,
+            evaluable_scenarios=1,
+            non_evaluable_scenarios=0,
+            total_queries=1,
+            scenarios=[dummy_scenario],
+            overall_metrics=mock_metrics,
+            overall_query_false_retrieval_rate=1.0,
+            overall_query_miss_rate=0.0,
+            queries_with_false_retrieval=1,
+            queries_with_misses=0,
+        )
+
+    monkeypatch.setattr(
+        "tools.evaluate_memory_retrieval.MemoryRetrievalEvaluator.evaluate_suite",
+        _mock_eval_suite,
+    )
+    exit_code = main()
+    assert exit_code == 1
