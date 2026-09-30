@@ -43,3 +43,13 @@ PromptCompiler 模板 v4 额外产出安全/同一受理时间子集。Conversat
 上述工作树计数包含预先存在的四条 TTS 等待诊断测试；该 CI/TTS 调整保留，未纳入本切片。此前已推送的 e12d779 远端 CI 最终为 17 项成功、1 项 deploy 跳过；Windows Python 首次 TTS 等待门超时，指定重跑成功，首次失败日志仍保留且根因未确认。这不能替代本切片新提交的 CI。
 
 Q02 仍需要核查适用的完整当前原文、纠正并复测技术解释、完整十二场景/三重复/三种 presentation 的 A/B 与受控 Runtime 交互。失败保护和工具调用成功均不等于这些质量门槛已经通过。
+
+## 后续决策对照与准确提交 CI
+
+提交 `7302babe20a7c3446dc91b327253982c6c4be0c0` 的远端检查已全部终止：17 项成功，1 项 deploy 按 PR 规则跳过。记录见 [后续对照与 CI 元数据](post-read-decision-probe-evidence-2026-10-01.json)。这证明该软件切片的检查通过，Q02 的质量限制保持原样。
+
+复用了最新 Gemini 的同一用户请求、工具 schema、`tool_choice=auto` 和实际旧公告/截断结果：完整角色、精简后续提示、精简提示加引用助手历史，各重复两次，共六次都没有追加调用；引用历史两次还转去回答上一轮旅行清单。该结果不支持把首轮精简方案直接扩大到后续决策。随后带/不带实际工具交换的四次短控制均返回不透明标记，只能排除端点一律丢弃 system/当前用户指令的解释，不能证明复杂任务保真。
+
+另将通用核查提醒放在工具结果之后，两次原请求均未追加调用，提醒条件仅一次请求了宽泛搜索；没有执行该函数，也未提供法规答案或新的 URL。这不是当前来源覆盖或质量通过的证据。所有十四次 Provider 控制均有开始/结束、终态与实际 usage，原始记录保留；完成后出现的 native httpcore 清理警告亦保留，不据此伪造缺样本或重跑已完成请求。生产后续决策路径未依据这些小实验改动。
+
+技术解释另建立仅评估的 [v6 范围候选](persona-candidate-v6-technical-scope-2026-10-01.md.txt)，增加区分局部调用与外层生命周期、不泛化特例的通用规则，没有写入 `asyncio` 答案。同批三个模型、v5/v6、三重复的 72 条回复及 27 个完整示例执行已完成；[技术复核报告](real-model-ab-v6-technical-scope-2026-10-01.md)记录错误回复从 v5 的 9/36 到 v6 的 6/36，Sonnet 两版仍各错 4/12，v6 不替换默认角色。原始付费执行及失败续跑记录保留在独立目录 `.local/research/q02/cw2-technical-scope-ab-20261001/`，公开证据含全部回复、判断和实际用量。评审以[官方 gather 文档](https://docs.python.org/3.12/library/asyncio-task.html#asyncio.gather)、[Runner 文档](https://docs.python.org/3.12/library/asyncio-runner.html)及独立 Event 同步实验为依据，保留代码执行与解释正确性的区别。
