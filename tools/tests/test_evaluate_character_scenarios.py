@@ -193,6 +193,8 @@ async def test_runtime_mode_preserves_trace_and_refuses_direct_path_resume(tmp_p
     assert identity["execution_path"] == "runtime_source_tools"
     assert identity["runtime_source_config"]["permission_policy"] == "allow_once"
     assert identity["runtime_source_config"]["implementation_sha256"]
+    estimate = await asyncio.to_thread(runner.estimate_dry_run, variants, ["greeting"])
+    assert estimate["provider_round_upper_bound"] == 4 * 6
     journal = tmp_path / "provider-rounds.jsonl"
     saved_journal = journal.read_text(encoding="utf-8")
     journal.unlink()

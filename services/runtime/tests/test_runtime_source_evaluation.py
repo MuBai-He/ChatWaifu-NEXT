@@ -54,10 +54,26 @@ class _Provider:
             yield LlmResponseCompleted("stop", LlmUsage(20, 3, 23, None))
 
 
+class _MissingFirstProvider(_Provider):
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if not self.requests:
+            self.requests.append(request)
+            yield LlmTextDelta("Unverified source claim")
+            yield LlmResponseCompleted("stop", LlmUsage(5, 1, 6, None))
+            return
+        async for event in super().stream(request):
+            yield event
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("allow_once", [True, False])
+@pytest.mark.parametrize("use_correction", [False, True])
 async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_rounds(
-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, allow_once: bool
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    allow_once: bool,
+    use_correction: bool,
 ) -> None:
     requests: list[httpx2.Request] = []
 
@@ -81,12 +97,13 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
     await container.start()
     try:
         session = await container.sessions.create_session("ayachi_nene")
-        provider = _Provider()
+        provider = _MissingFirstProvider() if use_correction else _Provider()
+        expected_rounds = 3 if use_correction else 2
         evaluation = RuntimeSourceEvaluation(
             provider,
             container.runtime_skills,
             trace_path=tmp_path / "rounds.jsonl",
-            max_provider_requests=2,
+            max_provider_requests=expected_rounds,
             allow_once=allow_once,
             dns_resolver="system",
         )
@@ -95,14 +112,17 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             request, session_id=session.session_id, turn_id=uuid4(), sample_key="one"
         )
         assert outcome.reply_origin == "provider"
-        assert outcome.usage == LlmUsage(30, 5, 35, None)
-        assert len(provider.requests) == 2
+        assert outcome.usage == (
+            LlmUsage(35, 6, 41, None) if use_correction else LlmUsage(30, 5, 35, None)
+        )
+        assert len(provider.requests) == expected_rounds
+        assert "Unverified source claim" not in outcome.reply
         result = provider.requests[-1].tool_exchanges[0].results[0]
         assert isinstance(result.content, dict)
         assert result.content["ok"] is allow_once
         assert len(requests) == int(allow_once)
         assert outcome.trace["permission_policy"] == ("allow_once" if allow_once else "deny")
-        assert len(outcome.trace["provider_calls"]) == 2
+        assert len(outcome.trace["provider_calls"]) == expected_rounds
         assert outcome.trace["tool_runs"][0]["state"] == ("succeeded" if allow_once else "failed")
         allowed = RuntimeSkillRouter(
             lambda: [
@@ -118,13 +138,13 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             json.loads(line)
             for line in (tmp_path / "rounds.jsonl").read_text(encoding="utf-8").splitlines()
         ]
-        assert [row["event"] for row in journal] == ["started", "finished", "started", "finished"]
+        assert [row["event"] for row in journal] == ["started", "finished"] * expected_rounds
         # A fresh helper must account for paid rounds even after a resume/restart.
         resumed = RuntimeSourceEvaluation(
             provider,
             container.runtime_skills,
             trace_path=tmp_path / "rounds.jsonl",
-            max_provider_requests=2,
+            max_provider_requests=expected_rounds,
             allow_once=allow_once,
             dns_resolver="system",
         )
@@ -132,7 +152,7 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             await resumed.run(
                 request, session_id=session.session_id, turn_id=uuid4(), sample_key="two"
             )
-        assert len(provider.requests) == 2
+        assert len(provider.requests) == expected_rounds
     finally:
         await container.stop()
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add one bounded correction for a missing required initial tool call and an
+  explicit final-answer instruction when the tool phase closes. Evaluation 1.4.2
+  counts up to six Provider rounds per tool turn and preserves discarded-round
+  usage. Gemini still missed calls and Opus still promised another query in real
+  probes; Q02 quality remains unapproved and persona v4 remains the default.
+
 - Freeze the trusted Runtime turn time in prompt template v3, count it in the
   safety budget, and require date-aware original-source verification. Evaluation
   1.4.0 records an explicit UTC prompt time and preserves it across resume,

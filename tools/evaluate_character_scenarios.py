@@ -50,6 +50,7 @@ from chatwaifu_protocol.memory import (
     MemoryContextPacket,
     MemoryExcerpt,
 )
+from chatwaifu_runtime.agent.tool_calling import MAX_AGENT_PROVIDER_ROUNDS
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import (
     _classify,
@@ -117,7 +118,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.4.0"
+TOOL_VERSION = "1.4.2"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -703,7 +704,8 @@ class EvaluationRunner:
             "execution_path": "runtime_source_tools"
             if self.runtime_source_tools
             else "direct_provider",
-            "provider_round_upper_bound": total_requests * (5 if self.runtime_source_tools else 1),
+            "provider_round_upper_bound": total_requests
+            * (MAX_AGENT_PROVIDER_ROUNDS if self.runtime_source_tools else 1),
             "max_provider_requests": self.max_provider_requests,
             "tool_input_tokens_estimated": False,
             "fixtures_file": str(self.fixtures_path),

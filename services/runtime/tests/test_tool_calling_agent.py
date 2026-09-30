@@ -24,7 +24,11 @@ from chatwaifu_protocol.skills import (
     SkillRunSnapshot,
     SkillRunState,
 )
-from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator, ProjectedAgentTool
+from chatwaifu_runtime.agent.tool_calling import (
+    MAX_AGENT_PROVIDER_ROUNDS,
+    AgentTurnOrchestrator,
+    ProjectedAgentTool,
+)
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.models import (
@@ -336,6 +340,8 @@ async def test_read_then_write_uses_same_bounded_tool_projection_and_stops_after
     }
     assert llm.requests[2].tools == ()
     assert len(llm.requests[2].tool_exchanges) == 2
+    assert "<runtime_tool_phase_closed>" in llm.requests[2].system_prompt
+    assert llm.requests[2].user_text == "修改我的待办"
 
 
 @pytest.mark.asyncio
@@ -359,6 +365,7 @@ async def test_read_then_final_answer_does_not_require_another_tool_call() -> No
     ) == ["查到了。"]
     assert llm.requests[1].tool_choice == "auto"
     assert len(gateway.invocations) == 1
+    assert "<runtime_tool_phase_closed>" not in llm.requests[1].system_prompt
 
 
 @pytest.mark.asyncio
@@ -385,6 +392,40 @@ async def test_read_budget_still_allows_a_final_summary() -> None:
     assert len(gateway.invocations) == 4
     assert llm.requests[1].tools == ()
     assert len(llm.requests[1].tool_exchanges) == 1
+    assert "<runtime_tool_phase_closed>" in llm.requests[1].system_prompt
+    assert "Answer the user's original request now" in llm.requests[1].system_prompt
+    assert "do not promise another query" in llm.requests[1].system_prompt
+    assert llm.requests[1].user_text == "查询四项状态"
+
+
+@pytest.mark.asyncio
+async def test_failed_write_closes_tool_phase_without_claiming_success() -> None:
+    call = LlmToolCall("failed-write", "agenda_manage", {"action": "update"})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("这次修改没有完成。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.FAILED))
+    request = _request("修改我的待办")
+    assert await _collect(
+        AgentTurnOrchestrator(
+            llm,
+            gateway,
+            _Router((_Projection(name="agenda_manage", side_effect=SideEffect.WRITE),)),
+        ),
+        request,
+        uuid4(),
+    ) == ["这次修改没有完成。"]
+    final = llm.requests[-1]
+    assert len(gateway.invocations) == 1 and len(llm.requests) == 2
+    assert final.tools == () and final.generation_id == request.generation_id
+    assert final.tool_exchanges[0].results[0].is_error
+    content = final.tool_exchanges[0].results[0].content
+    assert isinstance(content, dict) and content["ok"] is False
+    assert "<runtime_tool_phase_closed>" in final.system_prompt
+    assert "failed, denied" in final.system_prompt
 
 
 @pytest.mark.asyncio
@@ -436,7 +477,7 @@ async def test_post_read_truncated_text_is_returned_without_provider_error() -> 
 
 @pytest.mark.asyncio
 async def test_tool_relevant_turn_never_accepts_unverified_text_only_answer() -> None:
-    llm = _ScriptedLlm([(LlmTextDelta("我已经联网查到了。"), LlmResponseCompleted("stop"))])
+    llm = _ScriptedLlm([(LlmTextDelta("我已经联网查到了。"), LlmResponseCompleted("stop"))] * 2)
     gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
     agent = AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),)))
 
@@ -448,6 +489,150 @@ async def test_tool_relevant_turn_never_accepts_unverified_text_only_answer() ->
     assert llm.supports_tool_calling
     assert "换用" not in "".join(chunks)
     assert not gateway.invocations
+    assert len(llm.requests) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("side_effect", [SideEffect.READ, SideEffect.WRITE])
+async def test_missing_required_call_is_corrected_once_without_replaying_unverified_text(
+    side_effect: SideEffect,
+) -> None:
+    call = LlmToolCall("corrected", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (LlmTextDelta("UNVERIFIED_MODEL_CLAIM"), LlmResponseCompleted("stop")),
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("实际查证后的回答。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    request = replace(_request("查询状态"), context=(("system", "Frozen time and source context"),))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(side_effect=side_effect),))),
+        request,
+        uuid4(),
+    ) == ["实际查证后的回答。"]
+    assert len(llm.requests) == 3 and len(gateway.invocations) == 1
+    first, repaired, final = llm.requests
+    assert repaired.tools == first.tools
+    assert repaired.context == first.context == request.context
+    assert repaired.history == first.history == request.history
+    assert repaired.generation_id == request.generation_id
+    assert repaired.tool_choice == "required" and repaired.tool_exchanges == ()
+    assert "runtime_status_read" in repaired.system_prompt
+    assert "No external operation occurred" in repaired.system_prompt
+    assert "UNVERIFIED_MODEL_CLAIM" not in repr(repaired)
+    assert len(final.tool_exchanges) == 1
+    assert "<runtime_tool_correction>" not in final.system_prompt
+    if side_effect is SideEffect.WRITE:
+        assert final.tools == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("finish_reason", ["length", "content_filter", "other", None])
+async def test_missing_call_does_not_repair_incomplete_or_rejected_round(
+    finish_reason: Literal["length", "content_filter", "other"] | None,
+) -> None:
+    events: tuple[LlmStreamEvent, ...] = (LlmTextDelta("unverified partial"),)
+    if finish_reason is not None:
+        events += (LlmResponseCompleted(finish_reason),)
+    llm = _ScriptedLlm([events])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    chunks = await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        _request("查询状态"),
+        uuid4(),
+    )
+    assert "unverified partial" not in "".join(chunks)
+    assert len(llm.requests) == 1 and not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_cancelling_missing_call_correction_never_invokes_a_skill() -> None:
+    entered = asyncio.Event()
+
+    class Provider(_ScriptedLlm):
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield LlmTextDelta("unverified claim")
+                yield LlmResponseCompleted("stop")
+            else:
+                entered.set()
+                await asyncio.Event().wait()
+
+    llm = Provider([])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    task = asyncio.create_task(
+        _collect(
+            AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+            _request("查询状态"),
+            uuid4(),
+        )
+    )
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert len(llm.requests) == 2 and not gateway.invocations
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+@pytest.mark.asyncio
+async def test_correction_does_not_expand_tool_execution_limit() -> None:
+    rounds: list[tuple[LlmStreamEvent, ...]] = [(LlmResponseCompleted("stop"),)]
+    rounds.extend(
+        (
+            LlmToolCallRequested(LlmToolCall(f"read-{i}", "runtime_status_read", {"index": i})),
+            LlmResponseCompleted("tool_calls"),
+        )
+        for i in range(4)
+    )
+    rounds.append((LlmTextDelta("四次实际结果。"), LlmResponseCompleted("stop")))
+    llm = _ScriptedLlm(rounds)
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        _request("查询状态"),
+        uuid4(),
+    ) == ["四次实际结果。"]
+    assert len(gateway.invocations) == 4
+    assert len(llm.requests) == MAX_AGENT_PROVIDER_ROUNDS == 6
+    assert llm.requests[-1].tools == () and len(llm.requests[-1].tool_exchanges) == 4
+
+
+@pytest.mark.asyncio
+async def test_stale_generation_cannot_dispatch_correction() -> None:
+    current = True
+
+    class Provider(_ScriptedLlm):
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            nonlocal current
+            self.requests.append(request)
+            yield LlmTextDelta("unverified claim")
+            yield LlmResponseCompleted("stop")
+            current = False
+
+    def ensure_current() -> None:
+        if not current:
+            raise asyncio.CancelledError
+
+    llm = Provider([])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    agent = AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),)))
+    with pytest.raises(asyncio.CancelledError):
+        async for _ in agent.stream(
+            _request("查询状态"),
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            ensure_current=ensure_current,
+        ):
+            pytest.fail("stale unverified text must not escape")
+    assert len(llm.requests) == 1 and not gateway.invocations
 
 
 @pytest.mark.asyncio
@@ -460,6 +645,7 @@ async def test_tool_unsupported_provider_returns_explicit_unavailable_reply() ->
 
     assert "没有执行外部操作" in "".join(chunks)
     assert not gateway.invocations
+    assert len(llm.requests) == 1
 
 
 @pytest.mark.asyncio
