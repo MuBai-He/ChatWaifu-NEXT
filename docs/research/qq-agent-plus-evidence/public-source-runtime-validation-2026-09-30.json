@@ -1,0 +1,85 @@
+{
+  "scope": "live_public_sources_through_isolated_permissioned_runtime_not_model_quality",
+  "recorded_at": "2026-09-30T13:59:20.865073+00:00",
+  "reads": [
+    {
+      "source_url": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+      "state": "succeeded",
+      "permission": "allow_once_in_isolated_synthetic_session",
+      "tool_provenance": ["skill:web.read@1.0.0", "adapter:builtin"],
+      "source_metadata": {
+        "url": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+        "title": "民航局：禁止旅客携带无3C标识及被召回的充电宝乘坐境内航班",
+        "retrieved_at": "2026-09-30T13:55:29.931253+00:00",
+        "content_type": "text/html",
+        "body_sha256": "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec",
+        "total_characters": 2481,
+        "text_offset": 664,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare"
+      },
+      "excerpt_characters": 1817,
+      "excerpt_sha256": "3c33812730acd5796d3b8093d2dcbc35166e2c1b9dca521f23f712c69d933bcd",
+      "selected_terms_present": {
+        "3C": true,
+        "召回": true,
+        "2025": true,
+        "6月28日": true
+      }
+    },
+    {
+      "source_url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "state": "succeeded",
+      "permission": "allow_once_in_isolated_synthetic_session",
+      "tool_provenance": ["skill:web.read@1.0.0", "adapter:builtin"],
+      "source_metadata": {
+        "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+        "title": "Coroutines and Tasks — Python 3.12.14 documentation",
+        "retrieved_at": "2026-09-30T13:55:30.874156+00:00",
+        "content_type": "text/html",
+        "body_sha256": "a72188652dcb97af84b7e6ab3d2187ba9d5f02ff903e80aa8b29bf566d414301",
+        "total_characters": 39142,
+        "text_offset": 4874,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare"
+      },
+      "excerpt_characters": 6000,
+      "excerpt_sha256": "0a33efcb0e9bdd3529b64936205df9fb32afd301d98511a6b95bb4aba48a48f2",
+      "selected_terms_present": {
+        "gather": true,
+        "return_exceptions": false,
+        "cancel": true
+      }
+    },
+    {
+      "source_url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "focus": "return_exceptions",
+      "attempt": "refine_literal_focus",
+      "state": "succeeded",
+      "permission": "allow_once_in_isolated_synthetic_session",
+      "tool_provenance": ["skill:web.read@1.0.0", "adapter:builtin"],
+      "source_metadata": {
+        "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+        "title": "Coroutines and Tasks — Python 3.12.14 documentation",
+        "retrieved_at": "2026-09-30T13:59:20.860585+00:00",
+        "content_type": "text/html",
+        "body_sha256": "a72188652dcb97af84b7e6ab3d2187ba9d5f02ff903e80aa8b29bf566d414301",
+        "total_characters": 39142,
+        "text_offset": 12352,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare"
+      },
+      "excerpt_characters": 6000,
+      "excerpt_sha256": "777bedabbe51872e37dd6421e6fb83fe62d70bbf123fe091442e7e25eff17503",
+      "selected_terms_present": {
+        "gather": true,
+        "return_exceptions": true,
+        "cancel": true,
+        "exception": true
+      }
+    }
+  ]
+}

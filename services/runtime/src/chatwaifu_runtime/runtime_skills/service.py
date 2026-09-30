@@ -59,6 +59,7 @@ from chatwaifu_runtime.runtime_skills.permissions import (
     PermissionBroker,
 )
 from chatwaifu_runtime.runtime_skills.plugins import PluginManager
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
 from chatwaifu_runtime.runtime_skills.registry import (
     RegistryEntry,
     SkillRegistry,
@@ -128,6 +129,8 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
         self._builtin.register("runtime_status", self._runtime_status)
+        self._public_web = PublicWebReader()
+        self._builtin.register("public_web_read", self._public_web.read)
         for name, handler in (session_builtin_handlers or {}).items():
             self._builtin.register_session(name, handler)
         launcher = sandbox_launcher or RuntimeSandboxLauncher()

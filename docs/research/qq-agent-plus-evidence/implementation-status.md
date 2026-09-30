@@ -78,3 +78,11 @@ Q02 补充独立来源覆盖审计：审计工具和既有 A/B 运行器的 48 �
 此前42a9caa的远端检查17项成功、1项文档部署跳过；macOS Python1566通过/46跳过、Windows1591通过/21跳过，只有已有audioop弃用提示，见[准确提交CI快照](ci-42a9caa-validation-2026-09-30.json)。后续提交的检查另行核验，不混用提交状态。
 
 评审工具最终回归为Python1565通过/46跳过，全仓Ruff格式/lint、Pyright、文档构建通过；46个本轮文件的密钥扫描通过，288条原始字节、144对固定评分/映射及Provider用量再次校验一致。新提交远端CI另行记录。
+
+### 2026-09-30：Q02 实际来源读取
+
+新增 `web.read` 1.0.0 内置能力，沿用 Registry、权限确认、Executor 和 Agent 工具交换，返回实际 URL、抓取时间、正文指纹、定位结果和截断标记。系统 DNS 默认拒绝非公网地址；显式选择加密 DNS 后，在独立合成 Runtime 会话中通过 `allow_once` 读取了民航局公告和 Python 文档。Python 的首次 `asyncio.gather` 定位命中前面的示例，未含 `return_exceptions`；保留原记录，并用参数名定位追加成功读取。该实测只证明来源链路和原文词项存在，不能按关键词宣称技术/法规解答正确。
+
+见[切片设计与验收范围](q02-public-source-reader-design-2026-09-30.md)及[三次真实 Runtime 读取元数据](public-source-runtime-validation-2026-09-30.json)。没有授予用户生产会话权限、修改系统 DNS/代理或增加搜索供应商。公开 URL 的发现/搜索、真实模型消费来源后的复评、十二场景和三种 presentation 验收仍待完成，Q02 继续失败，v5 不替换默认 v4。
+
+本次完整 Python 回归 1613 通过/46 跳过，新增读取与 Agent 集成回归共 63 项通过；全仓 Ruff lint/格式、Pyright、Web 和桌面前端构建、文档构建通过。构建保留既有大分块与动态导入提示，Python 保留既有 audioop 弃用提示。新提交远端检查另行核验。

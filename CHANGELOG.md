@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add permissioned public HTTPS source reads through the Runtime Skill gateway,
+  with source URL/time/fingerprint and bounded excerpts. Address pins, public-only
+  DNS, redirects, decompression and HTML limits protect the network boundary;
+  explicit Cloudflare encrypted DNS supports proxy Fake-IP environments without
+  changing system settings. Q02 model quality and general source discovery remain
+  pending.
+
 - Add explicit remote connection selection for Web and desktop: the native host starts no
   Runtime or model Worker until local mode is chosen. Remote clients use HTTPS, authenticated
   HTTP/audio and ticketed WebSockets, with server-provided STUN/TURN configuration for voice.
