@@ -1092,7 +1092,9 @@ async def test_input_snapshot_schema_type_version_and_serialization(tmp_path: Pa
     assert "greeting:r0:t1:baseline" in loaded_legacy
     assert loaded_legacy["greeting:r0:t1:baseline"].input_snapshot is None
 
-    valid_row = json.loads((output_dir / "results.jsonl").read_text().splitlines()[0])
+    valid_row = json.loads(
+        (output_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
     for corruption in ("version", "missing_version", "count", "time", "plan", "extra"):
         malformed = deepcopy(valid_row)
         snapshot = malformed["input_snapshot"]
@@ -1108,7 +1110,7 @@ async def test_input_snapshot_schema_type_version_and_serialization(tmp_path: Pa
             snapshot["plan"]["intent"] = "invented"
         else:
             snapshot["extra"] = "unexpected"
-        legacy_file.write_text(json.dumps(malformed) + "\n")
+        legacy_file.write_text(json.dumps(malformed) + "\n", encoding="utf-8")
         with pytest.raises(ValueError, match="Invalid recorded input_snapshot"):
             _read_completed_records(legacy_file)
 
