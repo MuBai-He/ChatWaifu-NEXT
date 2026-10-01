@@ -8,4 +8,8 @@
 
 提示身份 v6→v7 记录选择政策变化，历史身份/schema 1.0 仍兼容；评测器 1.9.1 拒绝混合实现续跑。默认 persona 仍是 v4；提示模板版本与 persona 候选版本是两个概念。此前[三展示 Gemini 144 条](q02-gemini-three-presentations-2026-10-01.md)全部属于修改前 4a/v6，不能冒充此修复后的付费验证。
 
-完整 Python **1863 通过、46 平台跳过**；定向 Agent/Conversation 138 项和 Web 312 项通过。Ruff lint/format、全量 Pyright、架构边界、Web lint/typecheck、Web 构建和文档构建通过，协议生成无 Schema/TypeScript/fixtures 差异。正式桌面 UI 构建、精确暂存扫描及新源码 CI 分别记录；已通过的原 4a CI 不算后续源码通过。来源条件混淆、当前搜索可用性、原生 WRITE 确认与整体 Q02 质量仍开放。
+在修复提交 `3ef23da786a8af5ed292062851fb109bca22e087` 固定源码后，新 Gemini 实际 Conversation 补测四类请求、三种展示、各一重复，共 **12 条回复、12 次 Provider**。主代理逐条复核均符合任务要求；全部 auto、完整角色、零 native call/Skill run/确认/外部执行/持久授权。没有用已完成旧记录补样本。所有文字 delta 与可见回复一致；[全部回复、原始 Provider 事件、usage 和输入身份](gemini-local-content-conversation-evidence-2026-10-01.json)可复核。四项判断标准在读取回复前保存，主代理知道设计，非盲、不是人工通过。
+
+供应商输入 33836、输出 818、总量 36300、reasoning 1646 token，全部 12 次上报，reasoning 已含总量。最大实际输入 3388、完整估算 3965，价格与美元账单未知。每展示每类仅一次，不是概率保证或十二场景 A/B；voice origin 仍只是文字输出，所有外部适配器均围栏。这批没有重测来源条件混淆或真实 WRITE。
+
+完整 Python **1863 通过、46 平台跳过**；定向 Agent/Conversation 138 项和 Web 312 项通过。Ruff lint/format、全量 Pyright、架构边界、Web lint/typecheck、Web/正式桌面 UI 构建和文档构建通过，协议生成无 Schema/TypeScript/fixtures 差异。十四个精确暂存文件扫描零发现，原 CI/TTS 文件字节保持；新源码 CI 单独记录，原 4a CI 不算后续源码通过。来源条件混淆、当前搜索可用性、原生 WRITE 确认与整体 Q02 质量仍开放。
