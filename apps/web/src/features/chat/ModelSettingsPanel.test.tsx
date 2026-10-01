@@ -224,7 +224,7 @@ describe("ModelSettingsPanel", () => {
     expect(screen.getByRole("button", { name: "稍后" })).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
     const later = screen.getByRole("button", { name: "稍后" });
-    expect(document.activeElement).toBe(later);
+    await waitFor(() => expect(document.activeElement).toBe(later));
     fireEvent.keyDown(window, { key: "Tab" });
     expect(document.activeElement?.textContent).toBe("重建索引");
     expect(runtimeClient.rebuildIndexes).not.toHaveBeenCalled();

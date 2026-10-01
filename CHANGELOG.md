@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Wait for the embedding warning dialog's actual focus transfer before checking
+  its keyboard trap. Keep exact text/focus/Tab assertions and the default deadline;
+  a suppressed-production-focus control still fails. Preserve the Ubuntu CI
+  failure separately from the successful local verification.
+
 - Carry bounded prior public READ receipts through actual Conversation follow-ups,
   using completed generations, stable source routes and the existing ephemeral
   result store. Preserve whole originals or explicit budget/unavailable states,
