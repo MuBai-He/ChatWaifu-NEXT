@@ -33,11 +33,14 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.character import (
     CharacterKernelSnapshot,
+    CharacterPromptCompiledPayload,
     PromptBudgetReport,
+    PromptContextIdentity,
     ResponsePlan,
 )
 from chatwaifu_protocol.commands import CommandModel
 from chatwaifu_protocol.conversation import ConversationInterruption
+from chatwaifu_protocol.diagnostics import InteractionTraceDetail, InteractionTracePage
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import EgressBlockedPayload, EgressReceiptPayload, EventModel
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
@@ -107,6 +110,10 @@ class ProtocolCatalog(ProtocolModel):
     character_kernel: CharacterKernelSnapshot
     response_plan: ResponsePlan
     prompt_budget: PromptBudgetReport
+    prompt_context_identity: PromptContextIdentity
+    character_prompt_compiled: CharacterPromptCompiledPayload
+    interaction_trace_page: InteractionTracePage
+    interaction_trace_detail: InteractionTraceDetail
     channel_authorization_start_request: ChannelAuthorizationStartRequest
     channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
     channel_authorization: ChannelAuthorizationSnapshot
@@ -194,6 +201,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "conversation-interruption": ConversationInterruption,
     "event-envelope": TypeAdapter(EventModel),
     "generation-snapshot": GenerationSnapshot,
+    "interaction-trace-page": InteractionTracePage,
+    "interaction-trace-detail": InteractionTraceDetail,
     "learned-sticker": LearnedSticker,
     "memory-context-packet": MemoryContextPacket,
     "memory-channel-attribution": MemoryChannelAttribution,
@@ -208,6 +217,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "permission-grant": PermissionGrant,
     "permission-request": PermissionRequest,
     "prompt-budget-report": PromptBudgetReport,
+    "prompt-context-identity": PromptContextIdentity,
+    "character-prompt-compiled": CharacterPromptCompiledPayload,
     "photo-memory-settings": PhotoMemorySettings,
     "photo-memory-settings-update": PhotoMemorySettingsUpdate,
     "photo-memory-snapshot": PhotoMemorySnapshot,

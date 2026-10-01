@@ -45,6 +45,9 @@ from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperien
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
+from chatwaifu_runtime.persistence.sqlite_interaction_diagnostics import (
+    SQLiteInteractionDiagnosticsReader,
+)
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
 from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
@@ -128,6 +131,7 @@ class RuntimeContainer:
         )
         self.event_hub = EventHub(settings.runtime.event_queue_size)
         self.event_store = EventStore(self.database)
+        self.interaction_diagnostics = SQLiteInteractionDiagnosticsReader(self.database)
         self.event_publisher = EventPublisher(self.event_store, self.event_hub)
         self.sessions = SessionService(self.database, self.event_store, self.event_hub)
         self.activity = ActivityTracker()
@@ -264,6 +268,8 @@ class RuntimeContainer:
             self.agent,
             photo_recall=self.photo_recall,
             photo_annotations=self.photo_annotations,
+            models=self.model_configurations,
+            source_context=self.runtime_skills,
         )
         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
         self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)

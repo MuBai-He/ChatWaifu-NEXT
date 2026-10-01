@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -339,6 +340,38 @@ async def test_tts_committed_update_with_leftover_journal_recovers_on_restart(
         await restarted.stop()
 
 
+async def _wait_for_persist_gate[ResultT](
+    update_task: asyncio.Task[ResultT],
+    entered: asyncio.Event,
+    *,
+    max_wait_seconds: float,
+    persist_calls: Callable[[], int],
+) -> None:
+    entered_waiter = asyncio.create_task(entered.wait())
+    try:
+        done, _ = await asyncio.wait(
+            {update_task, entered_waiter},
+            timeout=max_wait_seconds,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        if update_task in done:
+            await update_task  # Surface an early failure instead of reporting an event timeout.
+            pytest.fail("first update completed before entering the persistence gate")
+        if entered_waiter not in done:
+            stack = "\n".join(
+                f"{frame.f_code.co_filename}:{frame.f_lineno} in {frame.f_code.co_name}"
+                for frame in update_task.get_stack()
+            )
+            pytest.fail(
+                "first update did not reach the persistence gate "
+                f"within {max_wait_seconds:g} seconds; persist_calls={persist_calls()}; "
+                f"task stack:\n{stack or '<empty>'}"
+            )
+    finally:
+        entered_waiter.cancel()
+        await asyncio.gather(entered_waiter, return_exceptions=True)
+
+
 @pytest.mark.asyncio
 async def test_tts_configuration_updates_are_serialized_with_their_secrets(
     runtime_settings: Settings,
@@ -346,11 +379,13 @@ async def test_tts_configuration_updates_are_serialized_with_their_secrets(
 ) -> None:
     container = RuntimeContainer(runtime_settings)
     await container.start()
+    first_task = None
+    second_task = None
+    release_first_persist = asyncio.Event()
     try:
         service = container.tts_configurations
         original_persist = service._persist_config  # pyright: ignore[reportPrivateUsage]
         first_persist_entered = asyncio.Event()
-        release_first_persist = asyncio.Event()
         persist_calls = 0
 
         async def gated_persist(*args: object, **kwargs: object) -> None:
@@ -370,18 +405,29 @@ async def test_tts_configuration_updates_are_serialized_with_their_secrets(
                 api_key="first-secret",
             )
         )
-        await asyncio.wait_for(first_persist_entered.wait(), timeout=1)
-        second_task = asyncio.create_task(
-            service.update_patch(
+        await _wait_for_persist_gate(
+            first_task,
+            first_persist_entered,
+            max_wait_seconds=10,
+            persist_calls=lambda: persist_calls,
+        )
+        second_update_started = asyncio.Event()
+
+        async def update_second() -> BaseModel:
+            second_update_started.set()
+            return await service.update_patch(
                 ALIYUN_COSYVOICE_TTS_PROVIDER_ID,
                 {"speech_rate": 1.35},
                 api_key="second-secret",
             )
-        )
-        await asyncio.sleep(0)
 
+        second_task = asyncio.create_task(update_second())
+        await asyncio.wait_for(second_update_started.wait(), timeout=10)
+
+        if second_task.done():
+            await second_task  # Surface an early failure before checking serialization.
+            pytest.fail("second update completed while the first persistence is blocked")
         assert persist_calls == 1
-        assert not second_task.done()
         assert service.get_cosyvoice().volume == original.volume
         assert service.api_key(ALIYUN_COSYVOICE_TTS_PROVIDER_ID) is None
 
@@ -403,7 +449,63 @@ async def test_tts_configuration_updates_are_serialized_with_their_secrets(
             is None
         )
     finally:
+        release_first_persist.set()
+        for task in (first_task, second_task):
+            if task is not None and not task.done():
+                task.cancel()
+        await asyncio.gather(
+            *(task for task in (first_task, second_task) if task is not None),
+            return_exceptions=True,
+        )
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_persist_gate_wait_propagates_early_failure() -> None:
+    async def fail() -> None:
+        raise RuntimeError("update failed before persistence")
+
+    task = asyncio.create_task(fail())
+    with pytest.raises(RuntimeError, match="update failed before persistence"):
+        await _wait_for_persist_gate(
+            task, asyncio.Event(), max_wait_seconds=1, persist_calls=lambda: 0
+        )
+
+
+@pytest.mark.asyncio
+async def test_persist_gate_wait_rejects_early_completion() -> None:
+    task = asyncio.create_task(asyncio.sleep(0))
+    with pytest.raises(pytest.fail.Exception, match="completed before entering"):
+        await _wait_for_persist_gate(
+            task, asyncio.Event(), max_wait_seconds=1, persist_calls=lambda: 0
+        )
+
+
+@pytest.mark.asyncio
+async def test_persist_gate_wait_reports_bounded_timeout() -> None:
+    task = asyncio.create_task(asyncio.Event().wait())
+    try:
+        with pytest.raises(pytest.fail.Exception, match="persist_calls=7; task stack:"):
+            await _wait_for_persist_gate(
+                task, asyncio.Event(), max_wait_seconds=0.02, persist_calls=lambda: 7
+            )
+        assert not task.done()
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_persist_gate_wait_accepts_entry_without_cancelling_update() -> None:
+    task = asyncio.create_task(asyncio.Event().wait())
+    entered = asyncio.Event()
+    entered.set()
+    try:
+        await _wait_for_persist_gate(task, entered, max_wait_seconds=1, persist_calls=lambda: 1)
+        assert not task.done()
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.asyncio

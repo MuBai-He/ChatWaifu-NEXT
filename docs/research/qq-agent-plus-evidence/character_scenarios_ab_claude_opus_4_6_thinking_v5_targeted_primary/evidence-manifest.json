@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-opus-4-6-thinking",
+  "raw_samples": 96,
+  "raw_byte_identity_verified": true,
+  "primary_review_pairs": 48,
+  "review_blind": false,
+  "judgments_frozen_before_label_reveal": true,
+  "files": [
+    {
+      "path": "blinded_key.json",
+      "sha256": "0c0f3a5898a01d47fb5dabe7db4fc23980a0c811b1f1ca857de57813898d59b4"
+    },
+    {
+      "path": "blinded_review_template.md.txt",
+      "sha256": "f57b4770600fd7180c36c4880ebac8283ed048aebd8267e972800054fffa21c2"
+    },
+    {
+      "path": "fact-coverage-audit.json",
+      "sha256": "fa8921331d39d9100c5e3360b9886fba8ef0cf4973b32de70349365185c5b5cf"
+    },
+    {
+      "path": "metadata.json",
+      "sha256": "c1069fb8fb7e1a403cd56032c91788e53072f0aa145b01a27e24ca067784ff21"
+    },
+    {
+      "path": "primary-code-execution.json",
+      "sha256": "e4da3e76b19847dde4909512ff11edc45115bfd0e9049a2403cd8468919af6ca"
+    },
+    {
+      "path": "primary-default-gather-execution.json",
+      "sha256": "7be61cecd3c46ed6f5ba88236951e216562eb167dc1ca3bec32ec431cc229f1a"
+    },
+    {
+      "path": "primary-masked-packet.json",
+      "sha256": "64410d2761898a1320dd98fde4164249619c5bdc66140cdee7a7fc3cfdf95742"
+    },
+    {
+      "path": "primary-masked-review.json",
+      "sha256": "5590c57b3a121ad30ef984be8ecb02db0d5021404856ea822da7035b6d0970dd"
+    },
+    {
+      "path": "primary-review-labels.json",
+      "sha256": "8549897a4d0d107a4de3b5d73b82e9c385fee8a414ff133c3f6c2385ff80a574"
+    },
+    {
+      "path": "primary-review.json",
+      "sha256": "889c6df9581b88ab2c5a68d6c47d22072751b325d7122c7aea26062b448e8421"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "01864c78cd94308cbdf69437d29b1b9c9bc173da0960909f91928264bc20e156"
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "ef2c38497bad1990b504f6a667874a82d7a64220bcdebf80217ec1530e61b1a8"
+    }
+  ],
+  "release_approved": false
+}

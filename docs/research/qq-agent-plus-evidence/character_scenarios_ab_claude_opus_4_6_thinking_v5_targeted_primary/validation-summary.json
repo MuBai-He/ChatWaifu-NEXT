@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-opus-4-6-thinking",
+  "samples": 96,
+  "pairs": 48,
+  "unique_sample_keys": 96,
+  "scenarios": [
+    "detailed_answer",
+    "identity",
+    "technical_help",
+    "topic_switch"
+  ],
+  "actual_input_snapshots_equal_independent_oracle": 96,
+  "oracle_turns": 16,
+  "runtime_stripped_persona_hashes": {
+    "baseline_v4": "0bc4a9eecc637dcf",
+    "candidate_v5": "554b28bebda60025"
+  },
+  "relationship_stages": {
+    "acquaintance": 72,
+    "familiar": 24
+  },
+  "source_results_sha256": "01864c78cd94308cbdf69437d29b1b9c9bc173da0960909f91928264bc20e156",
+  "execution_load_scope": "One subprocess per model, three models concurrent; variants run in fixed blocks, latency is observational and not a causal comparison.",
+  "metrics": {
+    "baseline_v4": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 6371.0,
+        "p95": 22842.8
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 155893
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 16987
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 172880
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    },
+    "candidate_v5": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 6527.0,
+        "p95": 22450.75
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 142547
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 15813
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 158360
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    }
+  },
+  "usage_scope": "Only provider-reported usage for retained successful requests; failed/retried bills unknown; reasoning is not added again to reported total.",
+  "cost_usd": null,
+  "release_approved": false
+}

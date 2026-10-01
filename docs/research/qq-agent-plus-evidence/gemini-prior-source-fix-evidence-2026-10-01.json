@@ -1,0 +1,2497 @@
+{
+  "plan": {
+    "schema_version": "1.0",
+    "code_commit": "fb6ee1704167d54abfe3e4feaa7a1b1df0ef75e1",
+    "evaluator_version": "1.8.2",
+    "model": "gemini-3.8-flash-high",
+    "scenarios": ["source_followup_boundary"],
+    "repeats": 3,
+    "variants": ["baseline_v6", "candidate_v7"],
+    "logical_replies": 24,
+    "maximum_provider_rounds": 144,
+    "prompt_as_of": "2026-10-01T04:02:49.873524+00:00",
+    "fixtures_sha256": "191161d86cf0c4f0480cfc1307f75287fc0a0a5187322cebfda12c65ecc04858",
+    "port": 8318,
+    "no_cost_ceiling": true,
+    "live_channel_sends": false,
+    "persistent_grants": false,
+    "comparison_scope": "Fresh Runtime regression of source-only transformation, ending and new topic. v6/v7 candidates remain evaluation-only; not a causal before/after or full release gate.",
+    "claude_excluded": "User confirms only Gemini quota available."
+  },
+  "audit": {
+    "records": 24,
+    "unique_keys": 24,
+    "provider_attempts": 30,
+    "tool_runs": 6,
+    "tool_states": {
+      "succeeded": 6
+    },
+    "persistent_grants": 0,
+    "journal_capture_hashes_match": true,
+    "file_sha256": [
+      {
+        "path": "gemini-3.8-flash-high/runtime/results.jsonl",
+        "sha256": "9041ce486ee67370409af3e7bc1e1ba377ffa08b43519b7d1ac99889fff84c57"
+      },
+      {
+        "path": "gemini-3.8-flash-high/runtime/provider-rounds.jsonl",
+        "sha256": "7f6df26c87eab1e9541c4a5a16aa4cd4751a1e26e952f35082eea66de6d5dcfd"
+      },
+      {
+        "path": "gemini-3.8-flash-high/actual-requests.jsonl",
+        "sha256": "980a2e685f6e47c641076aead4fe613becf901d97d52e7557ffb03892937ebde"
+      },
+      {
+        "path": "masked-review.json",
+        "sha256": "26591ad5f6d083c644d7c072c458633fc82e390ee1c0338ff57e38b9703676f7"
+      },
+      {
+        "path": "masked-key.json",
+        "sha256": "bc3edb6e10a2fad3849072d878913b4461d2ed26a526eebad0bbb3734818c46a"
+      },
+      {
+        "path": "review-rubric.json",
+        "sha256": "c0fd1434dffce63d809e153acbba5bc622491e232b8b2b9b83ec2dda233b9429"
+      }
+    ]
+  },
+  "variant_metrics": {
+    "baseline_v6": {
+      "grades": {
+        "partially_conforming": 4,
+        "conforming": 8
+      },
+      "logical_replies": 12,
+      "p50_ms": 4780.0,
+      "p95_nearest_rank_ms": 14459,
+      "provider_calls": 15,
+      "source_read_runs": 3
+    },
+    "candidate_v7": {
+      "grades": {
+        "partially_conforming": 1,
+        "conforming": 11
+      },
+      "logical_replies": 12,
+      "p50_ms": 8694.5,
+      "p95_nearest_rank_ms": 24381,
+      "provider_calls": 15,
+      "source_read_runs": 3
+    }
+  },
+  "preferences": {
+    "tie": 9,
+    "candidate_v7": 3
+  },
+  "usage": {
+    "prompt_tokens": {
+      "reported_sum": 102649,
+      "reported_calls": 30,
+      "unknown_calls": 0
+    },
+    "completion_tokens": {
+      "reported_sum": 3282,
+      "reported_calls": 30,
+      "unknown_calls": 0
+    },
+    "total_tokens": {
+      "reported_sum": 111403,
+      "reported_calls": 30,
+      "unknown_calls": 0
+    },
+    "reasoning_tokens": {
+      "reported_sum": 5472,
+      "reported_calls": 17,
+      "unknown_calls": 13
+    }
+  },
+  "source_summary_request_checks": [
+    {
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t2:candidate_v7",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t2:candidate_v7",
+      "original_body_available": true,
+      "provider_rounds": 1,
+      "tools": 0,
+      "new_tool_runs": 0
+    }
+  ],
+  "review": {
+    "reviewer": "primary",
+    "blind": false,
+    "source": "masked-review.json",
+    "source_sha256": "26591ad5f6d083c644d7c072c458633fc82e390ee1c0338ff57e38b9703676f7",
+    "rubric_sha256": "c0fd1434dffce63d809e153acbba5bc622491e232b8b2b9b83ec2dda233b9429",
+    "judgments": [
+      {
+        "pair_id": "r0:t1",
+        "grades": {
+          "A": "partially_conforming",
+          "B": "partially_conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both actually read the specified notice and retain date, domestic scope, all prohibited categories and current-rule caveat, but omit a visible original link. Extra prior-rule examples and publication-date wording are unverified additions, recorded as risks rather than proven false current rules."
+      },
+      {
+        "pair_id": "r0:t2",
+        "grades": {
+          "A": "conforming",
+          "B": "partially_conforming"
+        },
+        "preferred": "A",
+        "reason": "Both preserve the notice categories and current-verification caveat without new tools. A also retains date and original link; B omits the original link."
+      },
+      {
+        "pair_id": "r0:t3",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both briefly close without reopening the old task, questions or reminders."
+      },
+      {
+        "pair_id": "r0:t4",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both visible replies are exactly 391."
+      },
+      {
+        "pair_id": "r1:t1",
+        "grades": {
+          "A": "conforming",
+          "B": "partially_conforming"
+        },
+        "preferred": "A",
+        "reason": "Both actually read and preserve the requested historical notice facts/caveat. A supplies the original link; B omits it. Date inferred from the public URL is not independently established publication metadata."
+      },
+      {
+        "pair_id": "r1:t2",
+        "grades": {
+          "A": "conforming",
+          "B": "partially_conforming"
+        },
+        "preferred": "A",
+        "reason": "Both preserve all three prohibited categories and current uncertainty. A retains date and original link; B omits both. Manufacturer/regulator explanatory wording is not treated as a new verified source fact."
+      },
+      {
+        "pair_id": "r1:t3",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both briefly say goodnight, without reopening the task or claiming an external action."
+      },
+      {
+        "pair_id": "r1:t4",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both reply exactly 391."
+      },
+      {
+        "pair_id": "r2:t1",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both actually read the original, retain date/scope/categories/link and distinguish historical notice from current complete rules. B adds unchecked numerical prior-rule examples under a caveat; record risk rather than claiming those examples were read in the notice."
+      },
+      {
+        "pair_id": "r2:t2",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both retain date/domestic scope/prohibited categories/link and current-verification caveat without another operation. A uses a manufacturer recall qualifier and B repeats unchecked energy examples; these wording risks do not prove a missed original category or current-law guarantee."
+      },
+      {
+        "pair_id": "r2:t3",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both simply close, with no task revival or new question."
+      },
+      {
+        "pair_id": "r2:t4",
+        "grades": {
+          "A": "conforming",
+          "B": "conforming"
+        },
+        "preferred": "tie",
+        "reason": "Both replies are exactly 391."
+      }
+    ],
+    "hard_boundary_failures": 0,
+    "scope": "24 source-boundary replies only; no release or human approval"
+  },
+  "revealed_mapping": {
+    "0": {
+      "A": "candidate_v7",
+      "B": "baseline_v6"
+    },
+    "1": {
+      "A": "candidate_v7",
+      "B": "baseline_v6"
+    },
+    "2": {
+      "A": "baseline_v6",
+      "B": "candidate_v7"
+    }
+  },
+  "judgments_sha256": "bbcc9ca20745a9b8960e630bffdd48558280a2f06ce003812fa8b828e2cd174d",
+  "quality_approved": false,
+  "dollar_bill": null,
+  "grading_complete": true,
+  "records": [
+    {
+      "sample_key": "source_followup_boundary:r0:t1:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 1,
+      "variant": "baseline_v6",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "根据民航局该公告（发布于 2025 年 6 月 26 日）的原文内容，相关信息核对如下：\n\n* **实施日期**：自 6 月 28 日起实施。\n* **适用航班范围**：境内航班。\n* **禁止携带的充电宝类别**：\n  1. 没有 3C 标识的充电宝；\n  2. 3C 标识不清晰的充电宝；\n  3. 被召回型号或批次的充电宝。\n\n需要注意的是，这份文件属于针对特定安全风险发布的补充紧急通知，单份历史公告不能代表今天的完整乘机行李规则。民航对于充电宝与锂电池的携带要求（例如严禁托运、额定能量与携带数量限制、标识完好度等）还包含更早的规定及后续可能的政策调整。乘机前仍需结合民航局与承运航司当前的最新管理细则进行核对。",
+      "latency_ms": 14459,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5345,
+      "provider_tokens_completion": 292,
+      "provider_tokens_total": 6173,
+      "provider_tokens_reasoning": 536,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 2,
+      "variant": "baseline_v6",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "这份公告的核对清单整理如下：\n\n* **文件来源**：民航局《禁止旅客携带无3C标识及被召回的充电宝乘坐境内航班》（2025年6月26日发布）\n* **生效时间**：自当年 6 月 28 日起实施\n* **适用范围**：境内航班旅客随身携带的充电宝\n\n**禁止携带类别**：\n1. 没有 3C 标识的充电宝\n2. 3C 标识不清晰的充电宝\n3. 被召回型号或批次的充电宝\n\n**核实提醒**：\n该清单仅提取自该单份历史紧急通知，无法代表民航现行的完整行李运输规则。关于充电宝的额定能量上限（如 100Wh/160Wh 规定）、携带件数限制、严禁托运要求及最新监管动态，出行前仍需以民航局与所乘航司当下的最新有效规定为准。",
+      "latency_ms": 12357,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3372,
+      "provider_tokens_completion": 218,
+      "provider_tokens_total": 3590,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t3:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 3,
+      "variant": "baseline_v6",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "好的，晚安。",
+      "latency_ms": 3630,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3612,
+      "provider_tokens_completion": 5,
+      "provider_tokens_total": 3617,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t4:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 4,
+      "variant": "baseline_v6",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 4054,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3637,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 3640,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t1:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 1,
+      "variant": "baseline_v6",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "这份民航局公告（发文于2025年6月26日）的具体内容整理如下：\n\n* **实施日期**：自6月28日起。\n* **适用航班范围**：境内航班。\n* **公告禁止携带的充电宝类别**：\n  1. 没有 3C 标识的充电宝；\n  2. 3C 标识不清晰的充电宝；\n  3. 被召回型号或批次的充电宝。\n\n另外需要说明的是，这份公告是在既有规定基础上的专项紧急管控措施，单份历史公告不能代表今天的完整规则。民航对充电宝的额定能量（瓦时 Wh 限制）、严禁托运只能随身携带、携带数量上限，以及后续是否有最新的调整或补充要求，还需要结合民航局现行有效的完整锂电池安全运输规定与各航司具体要求进行综合确认。",
+      "latency_ms": 11800,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5345,
+      "provider_tokens_completion": 276,
+      "provider_tokens_total": 5981,
+      "provider_tokens_reasoning": 360,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 2,
+      "variant": "baseline_v6",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "**充电宝携带规定核对清单（基于该公告）**\n\n* **适用范围**：乘坐境内航班的旅客\n* **禁止携带类别**：\n  * 没有 3C 标识\n  * 3C 标识不清晰\n  * 属于被召回型号或批次\n\n* **当前规则待核实提醒**：\n  本清单仅为该单份历史公告内容，不能代表今天的完整规定。实际乘机前，额定能量（瓦时 Wh 限制）、随身携带数量上限、严禁托运要求，以及后续是否有最新政策调整，仍须以民航局现行有效标准及承运航司的最新规定为准。",
+      "latency_ms": 5329,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3360,
+      "provider_tokens_completion": 150,
+      "provider_tokens_total": 3510,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t3:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 3,
+      "variant": "baseline_v6",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "嗯，不客气。晚安，好好休息吧。",
+      "latency_ms": 3893,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3532,
+      "provider_tokens_completion": 13,
+      "provider_tokens_total": 3545,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t4:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 4,
+      "variant": "baseline_v6",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 3391,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3565,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 3568,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t1:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 1,
+      "variant": "baseline_v6",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "根据民航局该篇公告原文（来源：https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html ），提取的具体信息如下：\n\n- **实施日期**：自6月28日起实施。\n- **适用航班范围**：境内航班。\n- **禁止携带的充电宝类别**：没有3C标识、3C标识不清晰、被召回型号或批次的充电宝。\n\n需要说明的是，这只是一份特定时期针对特定安全风险发布的单份历史通知，民航旅客携带锂电池/充电宝还受额定能量（如严禁托运、额定能量上限及航司批准限制）等其他法规与持续更新的管理政策约束，单凭该公告不能代表现行的完整乘机携带规则。",
+      "latency_ms": 14216,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5345,
+      "provider_tokens_completion": 276,
+      "provider_tokens_total": 5788,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 2,
+      "variant": "baseline_v6",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "这份公告整理出的核对清单如下：\n\n### 充电宝乘机核对清单（基于[民航局公告原文](https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html)）\n\n- **适用范围**：乘坐境内航班的旅客随身携带物品（实施日期为自6月28日起）\n- **禁止携带类别**：\n  - [ ] **没有 3C 标识** 的充电宝\n  - [ ] **3C 标识不清晰** 的充电宝\n  - [ ] **属于厂家召回型号或批次** 的充电宝\n\n---\n\n**当前规则核查提醒**：  \n本清单仅涵盖该单份专项通知中的管控项，不能代表现行完整的锂电池航空运输规定。出行前仍需结合民航局与承运航司的最新规定，进一步核实额定能量上限（如 Wh 限制）、携带数量限制、严禁作为托运行李运输等通用规则与最新修订动态。",
+      "latency_ms": 12287,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3363,
+      "provider_tokens_completion": 245,
+      "provider_tokens_total": 4439,
+      "provider_tokens_reasoning": 831,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t3:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 3,
+      "variant": "baseline_v6",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "好的，不打扰你了。晚安。",
+      "latency_ms": 4231,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4461,
+      "provider_tokens_completion": 10,
+      "provider_tokens_total": 4471,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t4:baseline_v6",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 4,
+      "variant": "baseline_v6",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 3135,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4491,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 4494,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t1:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 1,
+      "variant": "candidate_v7",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "已经核对过该网页的原文内容，具体信息如下：\n\n* **实施日期**：自6月28日起实施（公告发布于2025年6月26日）。\n* **适用航班范围**：境内航班。\n* **公告禁止携带的充电宝类别**：\n  1. 没有3C标识的充电宝；\n  2. 3C标识不清晰的充电宝；\n  3. 被召回型号或批次的充电宝。\n\n需要说明的是，这篇公告属于当时针对特定安全隐患发布的专项紧急通知，是在现行政策基础上新增的管理要求。它并未包含充电宝的额定能量（如100Wh/160Wh限制）、随身携带数量、严禁托运以及后续可能调整的最新标准等其他规范，因此单凭这一份历史公告不能代表今天民航携带充电宝的完整规定。",
+      "latency_ms": 24381,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5467,
+      "provider_tokens_completion": 276,
+      "provider_tokens_total": 6256,
+      "provider_tokens_reasoning": 513,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 2,
+      "variant": "candidate_v7",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "整理好了，具体清单如下：\n\n* **核对依据**：民航局专项紧急通知（[查看原文](https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html)）\n* **适用航班范围**：境内航班\n* **实施时间**：2025年6月28日起\n\n**禁止携带登机类别（满足任一即禁止）：**\n1. 无 3C 标识的充电宝\n2. 3C 标识不清晰的充电宝\n3. 属于被召回型号或批次的充电宝\n\n**核实提醒：**\n本清单仅涵盖该份历史公告限定的专项要求。关于额定能量上限（如 100Wh/160Wh 限制）、携带数量限制、严禁托运要求以及是否有更新的适航新规，出行前仍需以民航局和承运航司当前的最新完整规定为准。",
+      "latency_ms": 9097,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3485,
+      "provider_tokens_completion": 232,
+      "provider_tokens_total": 3717,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t3:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 3,
+      "variant": "candidate_v7",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "不客气。晚安，好好休息吧。",
+      "latency_ms": 3193,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3739,
+      "provider_tokens_completion": 11,
+      "provider_tokens_total": 3750,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r0:t4:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 0,
+      "turn_id": 4,
+      "variant": "candidate_v7",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 4397,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3770,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 3773,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t1:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 1,
+      "variant": "candidate_v7",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "根据民航局该篇公告原文（来源：https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html ），提取出的具体要求如下：\n\n1. **实施日期**：自6月28日起（对应发布年份为2025年6月28日起）。\n2. **适用航班范围**：境内航班。\n3. **禁止携带的充电宝类别**：\n   - 没有3C标识的充电宝；\n   - 3C标识不清晰的充电宝；\n   - 被召回型号或批次的充电宝。\n\n同时需要说明的是，这份公告是当时民航局在现行政策基础上发布的紧急管控通知，只明确了针对3C标识与召回批次的专项禁令；单份历史公告并不能代表今天乘机的完整规则。实际出行时，仍须结合民航局关于充电宝额定能量（如严禁托运、额定能量及数量限制等）的全部现行有效规定与最新要求来执行。",
+      "latency_ms": 11653,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5467,
+      "provider_tokens_completion": 329,
+      "provider_tokens_total": 6310,
+      "provider_tokens_reasoning": 514,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t2:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 2,
+      "variant": "candidate_v7",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "好的，依据该公告原文（ https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html ）整理的核对清单如下：\n\n---\n\n### 充电宝乘机专项核对清单\n\n* **适用范围与生效时间**\n  * **适用航班**：境内航班旅客随身携带物品。\n  * **实施日期**：2025年6月28日起。\n\n* **禁止携带情形（命中任一项即严禁乘机携带）**\n  * [ ] 充电宝表面**无 3C 认证标识**\n  * [ ] 充电宝表面 **3C 标识磨损、模糊或不清晰**\n  * [ ] 属于厂家或监管部门通报的**被召回型号或批次**\n\n---\n\n⚠️ **现行规则核实提醒**\n本清单仅涵盖该份历史公告针对 3C 标识与召回批次的特定禁令，不能代表当前民航安检的全部完整规则。出行前仍须查验并核实民航局现行有效的一般性规定（如严禁托运、额定能量 Wh 上限、携带数量限制以及最新监管动态）。",
+      "latency_ms": 8292,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3539,
+      "provider_tokens_completion": 286,
+      "provider_tokens_total": 4466,
+      "provider_tokens_reasoning": 641,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t3:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 3,
+      "variant": "candidate_v7",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "好的。晚安，好好休息吧。",
+      "latency_ms": 5238,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4488,
+      "provider_tokens_completion": 9,
+      "provider_tokens_total": 4772,
+      "provider_tokens_reasoning": 275,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r1:t4:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 1,
+      "turn_id": 4,
+      "variant": "candidate_v7",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 23048,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4792,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 4990,
+      "provider_tokens_reasoning": 195,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t1:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 1,
+      "variant": "candidate_v7",
+      "user_text": "请读取 https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html 这份公告，说明它的实施日期、适用航班范围，以及公告禁止携带的充电宝类别。只按该公告原文回答，并说明单份历史公告不能代表今天的完整规则。",
+      "raw_reply": "依据民航局该公告原文（[来源页面](https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html)），核对信息如下：\n\n* **实施日期**：自 6 月 28 日起（公告发布于 2025 年 6 月 26 日）。\n* **适用航班范围**：境内航班。\n* **公告禁止携带的充电宝类别**：\n  * 没有 3C 标识的充电宝；\n  * 3C 标识不清晰的充电宝；\n  * 被召回型号或批次的充电宝。\n\n需要特别说明的是，单份历史公告属于阶段性的针对性管控措施，不能代表今天的完整乘机行李规则。关于充电宝的额定能量限制（如 100Wh 及以下、100Wh 至 160Wh 需经航司批准、超过 160Wh 禁止携带）、严禁托运要求以及携带数量上限等现行民用航空安全管理规定，仍需结合民航局现行有效的完整政策及各航司最新要求进行综合核查。",
+      "latency_ms": 9641,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 5467,
+      "provider_tokens_completion": 352,
+      "provider_tokens_total": 6015,
+      "provider_tokens_reasoning": null,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 1,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.19,
+            "energy": 0.645,
+            "attention": 0.71,
+            "embarrassment": 0.08,
+            "tension": 0.030000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.21200000000000002,
+            "trust": 0.20400000000000001,
+            "affinity": 0.254,
+            "comfort": 0.20600000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 1,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t2:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 2,
+      "variant": "candidate_v7",
+      "user_text": "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，以及当前规则仍需要再核实的提醒。",
+      "raw_reply": "这份公告的核对清单整理如下：\n\n* **信息来源**：[民航局公告原文](https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html)\n* **适用范围**：乘坐境内航班的旅客随身携带行李（实施日期：自 6 月 28 日起）\n* **禁止携带类别**：\n  * [ ] 没有 3C 标识的充电宝\n  * [ ] 3C 标识不清晰的充电宝\n  * [ ] 属于被召回型号或批次的充电宝\n* **现行规则核实提醒**：\n  * 该公告仅针对 3C 标识与召回批次作出专项禁止，并非完整的航空运输安全规定。\n  * 额定能量限制（如 100Wh 及以下、100Wh 至 160Wh 需批准、超 160Wh 禁止）、携带数量上限以及严禁作为行李托运等常态化要求，出行前仍需对照民航局现行有效法规及具体执飞航司的最新规定进行核实。",
+      "latency_ms": 10104,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 3558,
+      "provider_tokens_completion": 271,
+      "provider_tokens_total": 4548,
+      "provider_tokens_reasoning": 719,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 2,
+          "affect": {
+            "valence": 0.1,
+            "arousal": 0.18,
+            "energy": 0.64,
+            "attention": 0.72,
+            "embarrassment": 0.06,
+            "tension": 0.010000000000000002,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.22400000000000003,
+            "trust": 0.20800000000000002,
+            "affinity": 0.258,
+            "comfort": 0.21200000000000002,
+            "recent_tension": 0.0,
+            "interaction_count": 2,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t3:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 3,
+      "variant": "candidate_v7",
+      "user_text": "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+      "raw_reply": "嗯，不客气。晚安，好好休息吧。",
+      "latency_ms": 4066,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4570,
+      "provider_tokens_completion": 13,
+      "provider_tokens_total": 4859,
+      "provider_tokens_reasoning": 276,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 3,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.16999999999999998,
+            "energy": 0.635,
+            "attention": 0.73,
+            "embarrassment": 0.039999999999999994,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.254,
+            "trust": 0.21200000000000002,
+            "affinity": 0.28300000000000003,
+            "comfort": 0.21800000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 3,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "answer",
+          "tone": "gentle",
+          "expression": "neutral",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "default plan for relationship stage acquaintance"
+        }
+      }
+    },
+    {
+      "sample_key": "source_followup_boundary:r2:t4:candidate_v7",
+      "scenario_id": "source_followup_boundary",
+      "repeat_index": 2,
+      "turn_id": 4,
+      "variant": "candidate_v7",
+      "user_text": "换个话题：17×23 等于多少？只回复计算结果。",
+      "raw_reply": "391",
+      "latency_ms": 4249,
+      "finish_reason": "stop",
+      "provider_tokens_prompt": 4879,
+      "provider_tokens_completion": 3,
+      "provider_tokens_total": 5131,
+      "provider_tokens_reasoning": 249,
+      "input_snapshot": {
+        "version": "1.0",
+        "kernel": {
+          "character_id": "default",
+          "user_scope": "local",
+          "revision": 4,
+          "affect": {
+            "valence": 0.18,
+            "arousal": 0.15999999999999998,
+            "energy": 0.63,
+            "attention": 0.76,
+            "embarrassment": 0.019999999999999993,
+            "tension": 0.0,
+            "updated_at": "2026-01-01T00:00:00Z"
+          },
+          "relationship": {
+            "familiarity": 0.266,
+            "trust": 0.21600000000000003,
+            "affinity": 0.28700000000000003,
+            "comfort": 0.22400000000000003,
+            "recent_tension": 0.0,
+            "interaction_count": 4,
+            "stage": "acquaintance",
+            "preferred_address": null,
+            "updated_at": "2026-01-01T00:00:00Z"
+          }
+        },
+        "plan": {
+          "intent": "curious",
+          "tone": "gentle",
+          "expression": "curious",
+          "motion": null,
+          "response_length": "normal",
+          "rationale": "answering a question attentively"
+        }
+      }
+    }
+  ],
+  "source_metadata": [
+    {
+      "url": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+      "title": "民航局：禁止旅客携带无3C标识及被召回的充电宝乘坐境内航班",
+      "body_sha256": "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec",
+      "total_characters": 845,
+      "truncated": false,
+      "extraction_method": "main_content"
+    }
+  ],
+  "complete_budget_reports": 30,
+  "maximum_reported_prompt_tokens": 4879,
+  "provider_call_observations": [
+    {
+      "call_id": "bf7f6a06-df94-423a-adba-cbba9cdc5827",
+      "sample_key": "source_followup_boundary:r0:t1:baseline_v6",
+      "generation_id": "38a3d5b4-ee16-5adc-bd70-b7d3300cac02",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1720,
+        "reasoning_tokens": 164
+      },
+      "error_type": null,
+      "latency_ms": 5102
+    },
+    {
+      "call_id": "5d3235cb-ad5b-47e2-9ec7-a66b75312677",
+      "sample_key": "source_followup_boundary:r0:t1:baseline_v6",
+      "generation_id": "38a3d5b4-ee16-5adc-bd70-b7d3300cac02",
+      "system_prompt_sha256": "c1d3e9cccc0440eea7836d83cf20740f4bfd8c879bb427886de27ac39319c414",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5063,
+        "estimated_input_tokens": 5063,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3869,
+        "completion_tokens": 212,
+        "total_tokens": 4453,
+        "reasoning_tokens": 372
+      },
+      "error_type": null,
+      "latency_ms": 8177
+    },
+    {
+      "call_id": "cfc86581-0c27-4a52-a214-a6193cf966d6",
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "generation_id": "a0231cdd-d33b-5be3-9b24-2a08dd9be9ec",
+      "system_prompt_sha256": "5fdbd833640ebf0755155a0d3f0523e9f95a3885e8749ca4f4700b62fa13c37a",
+      "input_context_sha256": "b5c94ffb1536dc637e41aebb3eabf1737ddb4432c2240ed6b7c27dc8256d5947",
+      "input_history_sha256": "c9edc0c1d7b1deb8f2ca9035d3f85101cee3b15228d2ee3a94c4006570fece2b",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 4774,
+        "estimated_input_tokens": 4774,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3372,
+        "completion_tokens": 218,
+        "total_tokens": 3590,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 12341
+    },
+    {
+      "call_id": "edb01d01-c7aa-4cdb-9425-12c770e5b375",
+      "sample_key": "source_followup_boundary:r0:t3:baseline_v6",
+      "generation_id": "8a850a29-9852-534c-b1a9-ab393f97af5b",
+      "system_prompt_sha256": "085823a29e301ea7f77ee8367fcb24b7139181dbc645078d9a3115b9476d1184",
+      "input_context_sha256": "b5c94ffb1536dc637e41aebb3eabf1737ddb4432c2240ed6b7c27dc8256d5947",
+      "input_history_sha256": "5be92dd2ee40866b6b1e333dbedceefd69f64e7b89f65403fb239f8cac1bb573",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5205,
+        "estimated_input_tokens": 5205,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3612,
+        "completion_tokens": 5,
+        "total_tokens": 3617,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 3605
+    },
+    {
+      "call_id": "cf39b9a9-61b5-4099-98fa-5e1986389179",
+      "sample_key": "source_followup_boundary:r0:t4:baseline_v6",
+      "generation_id": "cc48045a-0c5e-5b40-8033-e93f5237efd6",
+      "system_prompt_sha256": "248024d87889091f3cc8ba43b9b75f92517c1021e6653fdbfbf5fa82a3ba0e15",
+      "input_context_sha256": "b5c94ffb1536dc637e41aebb3eabf1737ddb4432c2240ed6b7c27dc8256d5947",
+      "input_history_sha256": "dce599740d0f36f2e9ce53cc1c767e2f9a947ab3924ea7f1aaae9ab4a3e0a3d5",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5280,
+        "estimated_input_tokens": 5280,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3637,
+        "completion_tokens": 3,
+        "total_tokens": 3640,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 4037
+    },
+    {
+      "call_id": "91b265d3-a59e-46f8-a07a-bf65ce2f2e3e",
+      "sample_key": "source_followup_boundary:r1:t1:baseline_v6",
+      "generation_id": "ad346c19-42d4-5048-8c35-7c8da4577ac6",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1655,
+        "reasoning_tokens": 99
+      },
+      "error_type": null,
+      "latency_ms": 3106
+    },
+    {
+      "call_id": "b0129ab2-ce94-4c2e-9af6-752ff05b1694",
+      "sample_key": "source_followup_boundary:r1:t1:baseline_v6",
+      "generation_id": "ad346c19-42d4-5048-8c35-7c8da4577ac6",
+      "system_prompt_sha256": "c1d3e9cccc0440eea7836d83cf20740f4bfd8c879bb427886de27ac39319c414",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5063,
+        "estimated_input_tokens": 5063,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3869,
+        "completion_tokens": 196,
+        "total_tokens": 4326,
+        "reasoning_tokens": 261
+      },
+      "error_type": null,
+      "latency_ms": 7302
+    },
+    {
+      "call_id": "2564fc97-b8ae-4ab2-bbbf-ef27f55d442e",
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "generation_id": "bbae3603-65c9-5f39-ba84-c602b1dfda6f",
+      "system_prompt_sha256": "5fdbd833640ebf0755155a0d3f0523e9f95a3885e8749ca4f4700b62fa13c37a",
+      "input_context_sha256": "9f19e905fdb0138f85afa64e4a5e8bb187340138a1d5a727e6136da4eaadf0d2",
+      "input_history_sha256": "0987c8b92690f717a3dc45b19732b63212660d4c0bfd37218005a706bcf5cfa8",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 4762,
+        "estimated_input_tokens": 4762,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3360,
+        "completion_tokens": 150,
+        "total_tokens": 3510,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 5313
+    },
+    {
+      "call_id": "3be2f183-0685-47bb-9c1f-4be2f6b88a69",
+      "sample_key": "source_followup_boundary:r1:t3:baseline_v6",
+      "generation_id": "3f459772-7f45-5bc3-8e2c-ab0f7436ea33",
+      "system_prompt_sha256": "085823a29e301ea7f77ee8367fcb24b7139181dbc645078d9a3115b9476d1184",
+      "input_context_sha256": "9f19e905fdb0138f85afa64e4a5e8bb187340138a1d5a727e6136da4eaadf0d2",
+      "input_history_sha256": "ce1f2ccc1b3bec29f1860e75332f5fcfd09ca104753f55b5f717a2cb517728da",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5093,
+        "estimated_input_tokens": 5093,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3532,
+        "completion_tokens": 13,
+        "total_tokens": 3545,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 3876
+    },
+    {
+      "call_id": "c207bac3-3f0c-4ca5-aa44-20d6748e872a",
+      "sample_key": "source_followup_boundary:r1:t4:baseline_v6",
+      "generation_id": "e3b5d9be-b358-5d21-95c1-b7380692cf5e",
+      "system_prompt_sha256": "248024d87889091f3cc8ba43b9b75f92517c1021e6653fdbfbf5fa82a3ba0e15",
+      "input_context_sha256": "9f19e905fdb0138f85afa64e4a5e8bb187340138a1d5a727e6136da4eaadf0d2",
+      "input_history_sha256": "3ab014b4f02e2110f4a64e616de8fc68052cb904f298bf83ccfdbe7b0807a872",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5182,
+        "estimated_input_tokens": 5182,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3565,
+        "completion_tokens": 3,
+        "total_tokens": 3568,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 3372
+    },
+    {
+      "call_id": "1e03dd1a-72ea-4e7e-8f37-630171532496",
+      "sample_key": "source_followup_boundary:r2:t1:baseline_v6",
+      "generation_id": "9201c54c-ca81-5056-be7b-6ea431a68f8e",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1723,
+        "reasoning_tokens": 167
+      },
+      "error_type": null,
+      "latency_ms": 5506
+    },
+    {
+      "call_id": "56be419f-3e22-4d8b-aa7d-97fecfec4b9e",
+      "sample_key": "source_followup_boundary:r2:t1:baseline_v6",
+      "generation_id": "9201c54c-ca81-5056-be7b-6ea431a68f8e",
+      "system_prompt_sha256": "c1d3e9cccc0440eea7836d83cf20740f4bfd8c879bb427886de27ac39319c414",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5063,
+        "estimated_input_tokens": 5063,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3869,
+        "completion_tokens": 196,
+        "total_tokens": 4065,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 7725
+    },
+    {
+      "call_id": "e8371590-b56f-4c02-b123-c4823a720564",
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "generation_id": "7f070db6-76f1-5f10-b6c2-4bdfbc231f58",
+      "system_prompt_sha256": "5fdbd833640ebf0755155a0d3f0523e9f95a3885e8749ca4f4700b62fa13c37a",
+      "input_context_sha256": "ffa43e1f8d5d8214130ec561a92ebf0599f6bbea6f26fe63a02c0ded82bba6fd",
+      "input_history_sha256": "3c85a0395db34e40202d83f64c6ab2cd4c4d52ba818053f3ee28864e123ba536",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 4713,
+        "estimated_input_tokens": 4713,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3363,
+        "completion_tokens": 245,
+        "total_tokens": 4439,
+        "reasoning_tokens": 831
+      },
+      "error_type": null,
+      "latency_ms": 12271
+    },
+    {
+      "call_id": "6a584417-45a0-43f9-aab2-5d2b7cde0ce3",
+      "sample_key": "source_followup_boundary:r2:t3:baseline_v6",
+      "generation_id": "a6e8d820-0c34-54cc-8922-62c1ae366822",
+      "system_prompt_sha256": "085823a29e301ea7f77ee8367fcb24b7139181dbc645078d9a3115b9476d1184",
+      "input_context_sha256": "ffa43e1f8d5d8214130ec561a92ebf0599f6bbea6f26fe63a02c0ded82bba6fd",
+      "input_history_sha256": "61ca14ae79a6c79d7d4d325302624b3736812beacf006564f400ce91aca41d2a",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5148,
+        "estimated_input_tokens": 5148,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4461,
+        "completion_tokens": 10,
+        "total_tokens": 4471,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 4213
+    },
+    {
+      "call_id": "042d5673-5a35-4473-8096-ee8da21c05db",
+      "sample_key": "source_followup_boundary:r2:t4:baseline_v6",
+      "generation_id": "36b1f5dd-8562-585c-98ae-3a51c2efd299",
+      "system_prompt_sha256": "248024d87889091f3cc8ba43b9b75f92517c1021e6653fdbfbf5fa82a3ba0e15",
+      "input_context_sha256": "ffa43e1f8d5d8214130ec561a92ebf0599f6bbea6f26fe63a02c0ded82bba6fd",
+      "input_history_sha256": "686aba787504c146a4a2e385524b3d20d31739c0aafb2e5b6635f80f80cc21fa",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5230,
+        "estimated_input_tokens": 5230,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4491,
+        "completion_tokens": 3,
+        "total_tokens": 4494,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 3118
+    },
+    {
+      "call_id": "3744fb77-9e71-43d7-a4b1-3114f2a2abca",
+      "sample_key": "source_followup_boundary:r0:t1:candidate_v7",
+      "generation_id": "0d6b5a86-68c6-5e95-8868-fa119e251335",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1708,
+        "reasoning_tokens": 152
+      },
+      "error_type": null,
+      "latency_ms": 16885
+    },
+    {
+      "call_id": "8dea42d0-cfbe-4d77-a805-c24a1258bf13",
+      "sample_key": "source_followup_boundary:r0:t1:candidate_v7",
+      "generation_id": "0d6b5a86-68c6-5e95-8868-fa119e251335",
+      "system_prompt_sha256": "b100897713dabc32cb4e1e0a9e17030435a5b90ade8ea3d067d1c0636cccd202",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5265,
+        "estimated_input_tokens": 5265,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3991,
+        "completion_tokens": 196,
+        "total_tokens": 4548,
+        "reasoning_tokens": 361
+      },
+      "error_type": null,
+      "latency_ms": 5529
+    },
+    {
+      "call_id": "0549a96a-d5c3-4ba1-b9fb-cd502bd6e4bd",
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "generation_id": "4ad65e78-168d-5db6-adb6-e6c35e51f833",
+      "system_prompt_sha256": "62648483cec6d91db8c294b724d4934e38617ff7ac022ab65197400ae25c3ba9",
+      "input_context_sha256": "e873f951315b24b9eaa8d9d2905416e0837905313847f094f8bba2226333cb44",
+      "input_history_sha256": "693fa370aca2cc5b36fedcc0e6e879a8d68ed560ef33ef29d27e1a8f78f879eb",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 4956,
+        "estimated_input_tokens": 4956,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3485,
+        "completion_tokens": 232,
+        "total_tokens": 3717,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 9079
+    },
+    {
+      "call_id": "112f43e7-4218-494d-8d6f-45b21a583890",
+      "sample_key": "source_followup_boundary:r0:t3:candidate_v7",
+      "generation_id": "f816f9d9-efe6-5c68-b686-c5725cb1466b",
+      "system_prompt_sha256": "390c5eb7f73182488990a08455e35f0a50d8316bcb410e90bed48543f31a225f",
+      "input_context_sha256": "e873f951315b24b9eaa8d9d2905416e0837905313847f094f8bba2226333cb44",
+      "input_history_sha256": "d9a2d89dc0c8f2bd470e5bb08773650abab4f0477ded550d662db9856b647b99",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5354,
+        "estimated_input_tokens": 5354,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3739,
+        "completion_tokens": 11,
+        "total_tokens": 3750,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 3176
+    },
+    {
+      "call_id": "b9195bd1-9e7d-4883-8cc4-44efb61aac58",
+      "sample_key": "source_followup_boundary:r0:t4:candidate_v7",
+      "generation_id": "e2b04f88-84ce-594a-9545-ce8fb6986b7e",
+      "system_prompt_sha256": "e8e7dcaee79ef1a452aacf8d4884012bf19a2df531f84c4644df4a020474e0cc",
+      "input_context_sha256": "e873f951315b24b9eaa8d9d2905416e0837905313847f094f8bba2226333cb44",
+      "input_history_sha256": "189723cb7a796029e1b267b64f5264042038cf1819920fa632200017778dcd2e",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5439,
+        "estimated_input_tokens": 5439,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3770,
+        "completion_tokens": 3,
+        "total_tokens": 3773,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 4380
+    },
+    {
+      "call_id": "d696718d-d590-4698-8dd3-6cc2d8e2203e",
+      "sample_key": "source_followup_boundary:r1:t1:candidate_v7",
+      "generation_id": "4f13e7dc-1307-59fe-be01-94dae841f07b",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1693,
+        "reasoning_tokens": 137
+      },
+      "error_type": null,
+      "latency_ms": 4463
+    },
+    {
+      "call_id": "8a9a10df-8b17-41df-899c-8f5d1cf17938",
+      "sample_key": "source_followup_boundary:r1:t1:candidate_v7",
+      "generation_id": "4f13e7dc-1307-59fe-be01-94dae841f07b",
+      "system_prompt_sha256": "b100897713dabc32cb4e1e0a9e17030435a5b90ade8ea3d067d1c0636cccd202",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5265,
+        "estimated_input_tokens": 5265,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3991,
+        "completion_tokens": 249,
+        "total_tokens": 4617,
+        "reasoning_tokens": 377
+      },
+      "error_type": null,
+      "latency_ms": 5674
+    },
+    {
+      "call_id": "fd4aa0e8-4f67-4b07-bae1-2013581c90d2",
+      "sample_key": "source_followup_boundary:r1:t2:candidate_v7",
+      "generation_id": "b8ce234c-a07a-5733-889b-b4c3c3d9448b",
+      "system_prompt_sha256": "62648483cec6d91db8c294b724d4934e38617ff7ac022ab65197400ae25c3ba9",
+      "input_context_sha256": "6c35ba0892c99fdc1fa035d92d5dd015f013bbbfb7de00729316bd57dbb98391",
+      "input_history_sha256": "0d77527098d2d7e65146a8e564748976f0e6019bf85b0d4aa7df12488f3ed52c",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 4980,
+        "estimated_input_tokens": 4980,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3539,
+        "completion_tokens": 286,
+        "total_tokens": 4466,
+        "reasoning_tokens": 641
+      },
+      "error_type": null,
+      "latency_ms": 8275
+    },
+    {
+      "call_id": "ebaad590-e681-47fc-99f0-be7de639655d",
+      "sample_key": "source_followup_boundary:r1:t3:candidate_v7",
+      "generation_id": "0a2263fa-8d8a-5e69-a8f1-c0c1b6e05c63",
+      "system_prompt_sha256": "390c5eb7f73182488990a08455e35f0a50d8316bcb410e90bed48543f31a225f",
+      "input_context_sha256": "6c35ba0892c99fdc1fa035d92d5dd015f013bbbfb7de00729316bd57dbb98391",
+      "input_history_sha256": "8a2d7e4977c11f0b7c0c34e77be6aedcf22a74c8df4855773fa9df9e9d987486",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5471,
+        "estimated_input_tokens": 5471,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4488,
+        "completion_tokens": 9,
+        "total_tokens": 4772,
+        "reasoning_tokens": 275
+      },
+      "error_type": null,
+      "latency_ms": 5221
+    },
+    {
+      "call_id": "c3f4bf9a-39e4-4218-942a-deaffa0c98f2",
+      "sample_key": "source_followup_boundary:r1:t4:candidate_v7",
+      "generation_id": "a2327d3c-a162-55c3-8657-fb600e0f5b27",
+      "system_prompt_sha256": "e8e7dcaee79ef1a452aacf8d4884012bf19a2df531f84c4644df4a020474e0cc",
+      "input_context_sha256": "6c35ba0892c99fdc1fa035d92d5dd015f013bbbfb7de00729316bd57dbb98391",
+      "input_history_sha256": "f97d074a04467b66fd206a1f2d988257a68effd6ced1b4dca5ece21852bbf513",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5554,
+        "estimated_input_tokens": 5554,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4792,
+        "completion_tokens": 3,
+        "total_tokens": 4990,
+        "reasoning_tokens": 195
+      },
+      "error_type": null,
+      "latency_ms": 22992
+    },
+    {
+      "call_id": "6510c734-7f05-4249-b93f-40563e4213af",
+      "sample_key": "source_followup_boundary:r2:t1:candidate_v7",
+      "generation_id": "b337e646-dbb5-50f8-9376-e8d32db42ade",
+      "system_prompt_sha256": "c9da52f1afdc982179a955823cce326d300ee7a9b2510d4eafa944a827ca4a3d",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "required",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 1488,
+        "estimated_input_tokens": 1488,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 1476,
+        "completion_tokens": 80,
+        "total_tokens": 1752,
+        "reasoning_tokens": 196
+      },
+      "error_type": null,
+      "latency_ms": 3518
+    },
+    {
+      "call_id": "cc37957e-e4ec-4cd1-9b67-32c6a7950273",
+      "sample_key": "source_followup_boundary:r2:t1:candidate_v7",
+      "generation_id": "b337e646-dbb5-50f8-9376-e8d32db42ade",
+      "system_prompt_sha256": "b100897713dabc32cb4e1e0a9e17030435a5b90ade8ea3d067d1c0636cccd202",
+      "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "tool_choice": "auto",
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5265,
+        "estimated_input_tokens": 5265,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3991,
+        "completion_tokens": 272,
+        "total_tokens": 4263,
+        "reasoning_tokens": null
+      },
+      "error_type": null,
+      "latency_ms": 5074
+    },
+    {
+      "call_id": "57726cd0-5055-4c53-9acf-869f5d420f59",
+      "sample_key": "source_followup_boundary:r2:t2:candidate_v7",
+      "generation_id": "a8307b46-3cc4-5225-8217-6772a9f238e7",
+      "system_prompt_sha256": "62648483cec6d91db8c294b724d4934e38617ff7ac022ab65197400ae25c3ba9",
+      "input_context_sha256": "9012c4a005befe4bc79c3950c53eefde8923f58984e90392206fb53367d17c8e",
+      "input_history_sha256": "0176515edb988102075af4452c279f172bef5d251759e450e2a82c07d49f1042",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5004,
+        "estimated_input_tokens": 5004,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3558,
+        "completion_tokens": 271,
+        "total_tokens": 4548,
+        "reasoning_tokens": 719
+      },
+      "error_type": null,
+      "latency_ms": 10087
+    },
+    {
+      "call_id": "a839070d-0f30-4d10-ac45-c5a6c044fa6e",
+      "sample_key": "source_followup_boundary:r2:t3:candidate_v7",
+      "generation_id": "4460201e-4d17-588c-82a2-53df99d7dfae",
+      "system_prompt_sha256": "390c5eb7f73182488990a08455e35f0a50d8316bcb410e90bed48543f31a225f",
+      "input_context_sha256": "9012c4a005befe4bc79c3950c53eefde8923f58984e90392206fb53367d17c8e",
+      "input_history_sha256": "69efe0e7f5a9b76b894572b00542429f2ba9e0136d29bc5badc06a74ccb6dcd8",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5455,
+        "estimated_input_tokens": 5455,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4570,
+        "completion_tokens": 13,
+        "total_tokens": 4859,
+        "reasoning_tokens": 276
+      },
+      "error_type": null,
+      "latency_ms": 4048
+    },
+    {
+      "call_id": "72d60791-28eb-4d15-9369-74b53ce5189f",
+      "sample_key": "source_followup_boundary:r2:t4:candidate_v7",
+      "generation_id": "7ac53569-687d-52e0-bafd-ec1d1d5197b4",
+      "system_prompt_sha256": "e8e7dcaee79ef1a452aacf8d4884012bf19a2df531f84c4644df4a020474e0cc",
+      "input_context_sha256": "9012c4a005befe4bc79c3950c53eefde8923f58984e90392206fb53367d17c8e",
+      "input_history_sha256": "4d2f1397cf60e3d87b183ab5b84c5fb844d6fc1fa79bf39bc79cbbd8fa515302",
+      "tool_choice": null,
+      "input_budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 5544,
+        "estimated_input_tokens": 5544,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4879,
+        "completion_tokens": 3,
+        "total_tokens": 5131,
+        "reasoning_tokens": 249
+      },
+      "error_type": null,
+      "latency_ms": 4229
+    }
+  ],
+  "method_limits": [
+    "Only the public-source tool-loop router is exposed in this paid batch, not every production registered skill. Actual full-router Conversation transformation was covered by local controls.",
+    "Primary knows candidate design: masked labels do not create independent blind or human acceptance.",
+    "Historical notice only: current complete rules were not queried or established. Publication header was absent from extracted main body; URL-inferred date remains a provenance limitation.",
+    "Reference input budgets are not native tokenizer guarantees.",
+    "Repeats are small and variants follow their own histories; order/load prevent causal speed or persona attribution.",
+    "Default persona remains v4; v7 is an evaluation candidate. Full twelve-scene/three-presentation/controlled Runtime gates stay open."
+  ]
+}

@@ -1,0 +1,705 @@
+{
+  "$schema": "memory-retrieval-scenarios-v1",
+  "version": "1.0",
+  "description": "Synthetic source-grounded memory retrieval evaluation scenarios for CW2 Q06.",
+  "scenarios": [
+    {
+      "scenario_id": "scenario_explicit_fact",
+      "name": "Explicit Fact Retrieval",
+      "condition": "explicit fact",
+      "description": "Deterministic retrieval of an explicitly committed fact alongside distractor records and negative queries.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_user_name",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "profile.name",
+          "value": "木白",
+          "text": "真实姓名叫木白",
+          "confidence": 0.98,
+          "importance": 0.90,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_distractor_coffee",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.drink",
+          "value": "美式黑咖啡",
+          "text": "平时喜好喝美式黑咖啡",
+          "confidence": 0.90,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_explicit_positive",
+          "label": "Direct keyword query for explicit name",
+          "query_text": "木白 真实姓名",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_user_name"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_explicit_negative",
+          "label": "Completely unrelated culinary query",
+          "query_text": "明天晚饭吃什么菜谱推荐",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_explicit_distractor",
+          "label": "Query targeting distractor drink preference",
+          "query_text": "平时喜好喝什么咖啡 黑咖啡",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_distractor_coffee"],
+          "is_negative": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_pending_implicit_fact",
+      "name": "Pending Implicit Fact Exclusion",
+      "condition": "pending implicit fact",
+      "description": "Ensures unconfirmed/pending implicit proposals remain outside active memory records and are never retrieved.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_active_distractor",
+          "kind": "procedural.preference",
+          "subject_id": "user",
+          "predicate": "preference.os",
+          "value": "Linux",
+          "text": "主力开发操作系统是Linux",
+          "confidence": 0.88,
+          "importance": 0.70,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "proposals": [
+        {
+          "proposal_key": "prop_pending_reading",
+          "status": "pending",
+          "operation": "add",
+          "candidate": {
+            "kind": "semantic.preference",
+            "subject_id": "user",
+            "predicate": "preference.reading",
+            "value": "窗边看书",
+            "text": "平时喜欢在窗边看书",
+            "confidence": 0.80,
+            "importance": 0.65,
+            "sensitivity": "private"
+          }
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_pending_probe",
+          "label": "Query attempting to retrieve unconfirmed pending reading preference",
+          "query_text": "窗边看书 阅读喜好",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_pending_negative",
+          "label": "Unrelated weather query with no matching memories",
+          "query_text": "天气预报怎么样",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_pending_active",
+          "label": "Query for confirmed active OS preference",
+          "query_text": "开发操作系统 Linux",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_active_distractor"],
+          "is_negative": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_sensitive_fact",
+      "name": "Sensitive Fact Policy Exclusion",
+      "condition": "sensitive fact",
+      "description": "Ensures sensitive records stored in SQLite are strictly filtered out by retrieval policy.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_sensitive_phone",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "profile.phone",
+          "value": "13800138000",
+          "text": "私人手机号码是13800138000",
+          "confidence": 0.95,
+          "importance": 0.80,
+          "sensitivity": "sensitive",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_private_city",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "profile.city",
+          "value": "杭州市",
+          "text": "当前居住城市是杭州市",
+          "confidence": 0.92,
+          "importance": 0.70,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_sensitive_probe",
+          "label": "Sensitive phone number probe (redacted in results)",
+          "query_text": "手机号码 13800138000 联系方式",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_sensitive_distractor",
+          "label": "Query for non-sensitive private city fact",
+          "query_text": "居住城市在哪里 杭州市",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_private_city"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_sensitive_negative",
+          "label": "Unrelated hiking query",
+          "query_text": "周末去哪里徒步路线推荐",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_stale_superseded_fact",
+      "name": "Stale/Superseded Fact Exclusion",
+      "condition": "stale/superseded fact",
+      "description": "Verifies that superseded historical records are excluded from context, while the active successor is retrieved.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_city_old",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "profile.residence",
+          "value": "杭州市西湖区",
+          "text": "以前长期居住在杭州市西湖区",
+          "confidence": 0.90,
+          "importance": 0.70,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_city_new",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "profile.residence",
+          "value": "上海市徐汇区",
+          "text": "搬迁到了上海市徐汇区定居",
+          "confidence": 0.95,
+          "importance": 0.85,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false,
+          "supersedes_key": "rec_city_old"
+        },
+        {
+          "record_key": "rec_distractor_hobby",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.hobby",
+          "value": "摄影拍照",
+          "text": "业余时间喜欢摄影和拍照记录生活",
+          "confidence": 0.85,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_superseded_new",
+          "label": "Query for updated residence in Shanghai",
+          "query_text": "搬迁定居上海徐汇区",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_city_new"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_superseded_old_probe",
+          "label": "Probe query targeting outdated Hangzhou residence",
+          "query_text": "杭州西湖区长期住所",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_superseded_distractor",
+          "label": "Distractor hobby query",
+          "query_text": "摄影和拍照记录生活",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_distractor_hobby"],
+          "is_negative": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_shared_joke_relevance",
+      "name": "Shared Joke Relevance and Attribution",
+      "condition": "shared-joke relevance",
+      "description": "Verifies that an episodic shared joke with spoken evidence is retrieved and routed to recent_episodes, while distractors are separated.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "events": [
+        {
+          "event_key": "evt_assistant_spoken",
+          "event_type": "assistant.spoken_text_committed",
+          "payload": {"spoken_text": "今天好冷啊变成冰棒了"},
+          "channel_attribution": {
+            "provider_id": "qq",
+            "connection_id": "a1b2c3d4-0000-0000-0000-000000000001",
+            "account_key": "qq-bot-account",
+            "principal_scope": "local",
+            "chat_type": "direct",
+            "conversation_key": "direct-owner-qq",
+            "sender_key": "owner-qq-user",
+            "received_at": "2026-09-29T00:00:00Z"
+          }
+        },
+        {
+          "event_key": "evt_user_uptake",
+          "event_type": "user.turn_committed",
+          "payload": {"text": "哈哈变成冰棒了太逗了"},
+          "channel_attribution": {
+            "provider_id": "qq",
+            "connection_id": "a1b2c3d4-0000-0000-0000-000000000001",
+            "account_key": "qq-bot-account",
+            "principal_scope": "local",
+            "chat_type": "direct",
+            "conversation_key": "direct-owner-qq",
+            "sender_key": "owner-qq-user",
+            "received_at": "2026-09-29T00:00:05Z"
+          }
+        }
+      ],
+      "records": [
+        {
+          "record_key": "rec_joke_popsicle",
+          "kind": "episodic.shared_event",
+          "subject_id": "character",
+          "predicate": "shared_joke.冰棒",
+          "value": {"joke": "变成冰棒了", "established_by": "assistant"},
+          "text": "彼此共享了关于变成冰棒了的共同经历互动梗",
+          "confidence": 0.95,
+          "importance": 0.85,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false,
+          "source_event_keys": ["evt_assistant_spoken", "evt_user_uptake"]
+        },
+        {
+          "record_key": "rec_ice_cream",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.dessert",
+          "value": "草莓口味雪糕",
+          "text": "夏天喜欢吃草莓口味雪糕甜点",
+          "confidence": 0.88,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_joke_positive",
+          "label": "Query triggering shared joke by keyword",
+          "query_text": "还记得变成冰棒了的互动梗吗 冰棒",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_joke_popsicle"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_joke_negative",
+          "label": "Wakeup alarm query unrelated to jokes",
+          "query_text": "明天早上七点叫醒我开会",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_joke_distractor",
+          "label": "Dessert query matching food preference instead of joke",
+          "query_text": "草莓口味雪糕甜点",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_ice_cream"],
+          "is_negative": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_absent_source",
+      "name": "Absent Source Provenance Invariant",
+      "condition": "absent source",
+      "description": "Evaluates source requirement. Note: MemoryRetriever does not perform redundant source filtering at retrieval time; source-grounding is an invariant enforced strictly at write/ingestion boundaries.",
+      "evaluable_in_retrieval": false,
+      "limitation_note": "MemoryRetriever assumes valid database records have sources; source presence is enforced by SQLiteMemoryRepository and MemoryService write contracts. Records cannot be created without sources via repository/service APIs.",
+      "records": [],
+      "queries": []
+    },
+    {
+      "scenario_id": "scenario_token_budget_pressure",
+      "name": "Token-Budget Pressure and Nonzero Miss Rate",
+      "condition": "token-budget pressure",
+      "description": "Quantitatively measures missed relevant memories under restrictive token budget versus generous token budget.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_habit_coffee",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "habit.coffee",
+          "value": "黑咖啡",
+          "text": "早晨喝一杯热黑咖啡唤醒精神",
+          "confidence": 0.95,
+          "importance": 0.95,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_habit_rest",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "habit.rest",
+          "value": "闭目休息",
+          "text": "下午三点需要闭目休息十五分钟",
+          "confidence": 0.90,
+          "importance": 0.85,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_habit_keyboard",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "habit.keyboard",
+          "value": "机械键盘",
+          "text": "习惯使用青轴机械键盘写代码创作",
+          "confidence": 0.88,
+          "importance": 0.75,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_habit_pomodoro",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "habit.pomodoro",
+          "value": "番茄工作法",
+          "text": "喜欢在番茄工作法节奏下保持深度专注",
+          "confidence": 0.85,
+          "importance": 0.65,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_distractor_travel",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "travel.vacation",
+          "value": "海边度假",
+          "text": "每年秋天会去海边度假旅行一次",
+          "confidence": 0.80,
+          "importance": 0.50,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_budget_generous",
+          "label": "Habits query with generous token budget (700 tokens)",
+          "query_text": "生活作息习惯 早晨 下午 机械键盘 深度专注",
+          "token_budget": 700,
+          "expected_memory_keys": [
+            "rec_habit_coffee",
+            "rec_habit_rest",
+            "rec_habit_keyboard",
+            "rec_habit_pomodoro"
+          ],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_budget_constrained",
+          "label": "Habits query with tightly constrained token budget (25 tokens)",
+          "query_text": "生活作息习惯 早晨 下午 机械键盘 深度专注",
+          "token_budget": 25,
+          "expected_memory_keys": [
+            "rec_habit_coffee",
+            "rec_habit_rest",
+            "rec_habit_keyboard",
+            "rec_habit_pomodoro"
+          ],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_budget_negative",
+          "label": "Physics query completely unrelated to user habits",
+          "query_text": "宇宙黑洞形成的物理原理",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_correction",
+      "name": "Memory Correction Superseding",
+      "condition": "correction",
+      "description": "Verifies that an explicitly corrected record supersedes the prior fact and is retrieved, while the old fact is excluded.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_lang_rust",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.prog_lang",
+          "value": "Rust",
+          "text": "最喜爱的主力编程语言是Rust",
+          "confidence": 0.90,
+          "importance": 0.70,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_lang_python",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.prog_lang",
+          "value": "Python",
+          "text": "最喜爱的主力编程语言改成了Python",
+          "confidence": 0.95,
+          "importance": 0.85,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false,
+          "supersedes_key": "rec_lang_rust"
+        },
+        {
+          "record_key": "rec_editor_vscode",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.editor",
+          "value": "VSCode",
+          "text": "平时习惯的代码编辑器工具是VSCode",
+          "confidence": 0.88,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_correction_query",
+          "label": "Query for corrected programming language preference",
+          "query_text": "最喜爱主力编程语言 Python",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_lang_python"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_correction_old_probe",
+          "label": "Probe query specifically targeting old Rust preference",
+          "query_text": "主力编程语言 Rust",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_lang_python"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_correction_distractor",
+          "label": "Query for code editor distractor",
+          "query_text": "代码编辑器工具 VSCode",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_editor_vscode"],
+          "is_negative": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_forget_delete",
+      "name": "Forget/Tombstone Deletion Exclusion",
+      "condition": "forget/delete",
+      "description": "Verifies that tombstoned/forgotten records are never retrieved, while surviving records remain retrievable.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "records": [
+        {
+          "record_key": "rec_forget_milk",
+          "kind": "semantic.fact",
+          "subject_id": "user",
+          "predicate": "health.sleep_aid",
+          "value": "温热牛奶",
+          "text": "经常失眠需要喝温热牛奶助眠",
+          "confidence": 0.90,
+          "importance": 0.75,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false,
+          "after_seed": "tombstone"
+        },
+        {
+          "record_key": "rec_music_sleep",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.music",
+          "value": "古典钢琴轻音乐",
+          "text": "睡前喜欢听古典钢琴轻音乐放松心情",
+          "confidence": 0.90,
+          "importance": 0.75,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_forget_probe",
+          "label": "Query targeting forgotten milk sleep aid",
+          "query_text": "喝温热牛奶 失眠助眠",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_forget_surviving",
+          "label": "Query targeting un-forgotten piano music preference",
+          "query_text": "睡前听古典钢琴轻音乐放松心情",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_music_sleep"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_forget_negative",
+          "label": "Completely unrelated automotive maintenance query",
+          "query_text": "汽车发动机保养周期",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario_restart",
+      "name": "Database Restart and Durability",
+      "condition": "restart",
+      "description": "Verifies that after closing and reopening the SQLite database, retrieval results match the pre-restart state exactly.",
+      "evaluable_in_retrieval": true,
+      "limitation_note": null,
+      "action_before_query": "restart_database",
+      "records": [
+        {
+          "record_key": "rec_restart_sunflower",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.flower",
+          "value": "向日葵",
+          "text": "最喜欢的观赏植物是向日葵",
+          "confidence": 0.95,
+          "importance": 0.90,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_restart_tulip",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.flower",
+          "value": "郁金香",
+          "text": "以前喜爱过郁金香",
+          "confidence": 0.85,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "superseded",
+          "pinned": false
+        },
+        {
+          "record_key": "rec_restart_peony",
+          "kind": "semantic.preference",
+          "subject_id": "user",
+          "predicate": "preference.flower",
+          "value": "牡丹",
+          "text": "庭院种植过牡丹",
+          "confidence": 0.85,
+          "importance": 0.60,
+          "sensitivity": "private",
+          "state": "active",
+          "pinned": false,
+          "after_seed": "tombstone"
+        }
+      ],
+      "queries": [
+        {
+          "query_id": "q_restart_active",
+          "label": "Post-restart query for active sunflower preference",
+          "query_text": "最喜欢观赏植物 向日葵",
+          "token_budget": 700,
+          "expected_memory_keys": ["rec_restart_sunflower"],
+          "is_negative": false
+        },
+        {
+          "query_id": "q_restart_stale",
+          "label": "Post-restart query for superseded tulip fact",
+          "query_text": "喜爱郁金香",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        },
+        {
+          "query_id": "q_restart_forgotten",
+          "label": "Post-restart query for tombstoned peony fact",
+          "query_text": "种植牡丹",
+          "token_budget": 700,
+          "expected_memory_keys": [],
+          "is_negative": true
+        }
+      ]
+    }
+  ]
+}

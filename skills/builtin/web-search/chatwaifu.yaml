@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "web.search",
+      "version": "1.0.1",
+      "name": "Public Source Search 公开来源搜索",
+      "description": "Search public source URLs to verify current information, documentation and regulations. 搜索公开来源，核查最新资料、文档、法规；搜索片段须用 web.read 读取原文后核实。",
+      "capabilities":
+        [
+          {
+            "name": "search",
+            "description": "Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。",
+            "input_schema":
+              {
+                "type": "object",
+                "required": ["query"],
+                "properties":
+                  {
+                    "query":
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data.",
+                      },
+                    "domains":
+                      {
+                        "type": "array",
+                        "maxItems": 3,
+                        "uniqueItems": true,
+                        "items":
+                          {
+                            "type": "string",
+                            "minLength": 3,
+                            "maxLength": 253,
+                          },
+                        "description": "Optional public DNS names used for site queries and filtering actual result hosts.",
+                      },
+                    "max_results":
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5,
+                        "default": 5,
+                      },
+                    "dns_resolver":
+                      {
+                        "enum": ["system", "cloudflare"],
+                        "default": "system",
+                        "description": "Explicit Cloudflare DoH sends only the search hostname to Cloudflare; all addresses must remain public.",
+                      },
+                  },
+                "additionalProperties": false,
+              },
+            "output_schema":
+              {
+                "type": "object",
+                "required":
+                  [
+                    "provider",
+                    "query",
+                    "search_url",
+                    "retrieved_at",
+                    "body_sha256",
+                    "dns_resolver",
+                    "results",
+                    "total_matched",
+                    "filtered_count",
+                    "truncated",
+                    "empty_reason",
+                  ],
+                "properties":
+                  {
+                    "provider": { "const": "duckduckgo_lite" },
+                    "query": { "type": "string", "maxLength": 256 },
+                    "search_url":
+                      { "type": "string", "maxLength": 2048, "format": "uri" },
+                    "retrieved_at": { "type": "string", "format": "date-time" },
+                    "body_sha256":
+                      { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                    "dns_resolver": { "enum": ["system", "cloudflare"] },
+                    "results":
+                      {
+                        "type": "array",
+                        "maxItems": 5,
+                        "items":
+                          {
+                            "type": "object",
+                            "required": ["url", "title", "snippet"],
+                            "properties":
+                              {
+                                "url":
+                                  {
+                                    "type": "string",
+                                    "maxLength": 2048,
+                                    "format": "uri",
+                                  },
+                                "title": { "type": "string", "maxLength": 240 },
+                                "snippet":
+                                  { "type": "string", "maxLength": 480 },
+                              },
+                            "additionalProperties": false,
+                          },
+                      },
+                    "total_matched": { "type": "integer", "minimum": 0 },
+                    "filtered_count": { "type": "integer", "minimum": 0 },
+                    "truncated": { "type": "boolean" },
+                    "empty_reason":
+                      { "enum": ["no_results", "filtered", null] },
+                  },
+                "additionalProperties": false,
+              },
+            "side_effect": "read",
+            "required_permissions": ["web.public.search"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "public_web_search" },
+}

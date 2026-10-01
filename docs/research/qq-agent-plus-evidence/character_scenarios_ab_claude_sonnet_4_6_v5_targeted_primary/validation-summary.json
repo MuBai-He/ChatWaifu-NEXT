@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-sonnet-4-6",
+  "samples": 96,
+  "pairs": 48,
+  "unique_sample_keys": 96,
+  "scenarios": [
+    "detailed_answer",
+    "identity",
+    "technical_help",
+    "topic_switch"
+  ],
+  "actual_input_snapshots_equal_independent_oracle": 96,
+  "oracle_turns": 16,
+  "runtime_stripped_persona_hashes": {
+    "baseline_v4": "0bc4a9eecc637dcf",
+    "candidate_v5": "554b28bebda60025"
+  },
+  "relationship_stages": {
+    "acquaintance": 72,
+    "familiar": 24
+  },
+  "source_results_sha256": "a31eee85d4559614b96b01500c056df4c7a98cd580e20a2e3e579bdf291c94b8",
+  "execution_load_scope": "One subprocess per model, three models concurrent; variants run in fixed blocks, latency is observational and not a causal comparison.",
+  "metrics": {
+    "baseline_v4": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 5974.5,
+        "p95": 14476.499999999998
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 149140
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 12816
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 161956
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    },
+    "candidate_v5": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 7075.0,
+        "p95": 14164.5
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 136120
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 11949
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 148069
+        },
+        "reasoning": {
+          "reported_samples": 0,
+          "total": null
+        }
+      }
+    }
+  },
+  "usage_scope": "Only provider-reported usage for retained successful requests; failed/retried bills unknown; reasoning is not added again to reported total.",
+  "cost_usd": null,
+  "release_approved": false
+}

@@ -1,0 +1,1202 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-01",
+  "q02_accepted": false,
+  "scope": "one Gemini detailed_answer repeat, v5 only; current query guidance; no same-batch baseline; not full A/B",
+  "source_parent_commit": "f4f5049480b72ad126de780280616f29e2a30f44",
+  "configured_cw2_endpoint_port": 8318,
+  "metadata_identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.5.3",
+    "prompt_as_of": "2026-09-30T16:23:48+00:00",
+    "state_time": "2026-01-01T00:00:00+00:00",
+    "fixtures_hash": "1a2281443a1c0fc5",
+    "provider": "openai_compatible",
+    "model": "gemini-3.8-flash-high",
+    "repeats": 1,
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "candidate_v5": {
+        "hash": "3df16760df3f75aa"
+      }
+    },
+    "execution_path": "runtime_source_tools",
+    "runtime_source_config": {
+      "permission_policy": "allow_once",
+      "dns_resolver": "cloudflare",
+      "max_provider_requests": 24,
+      "implementation_sha256": "4cc1df669ceea9a3dea7fbfc3ba1da44f4cf1e4cb201bda2dd10abebbd5e5781"
+    }
+  },
+  "sampling": {
+    "temperature": null,
+    "top_p": null,
+    "seed": null,
+    "meaning": "not sent; endpoint defaults"
+  },
+  "preflight": {
+    "mode": "dry-run",
+    "prompt_as_of": "2026-09-30T16:23:48+00:00",
+    "state_time": "2026-01-01T00:00:00+00:00",
+    "execution_path": "runtime_source_tools",
+    "provider_round_upper_bound": 24,
+    "max_provider_requests": 24,
+    "tool_input_tokens_estimated": false,
+    "fixtures_file": "/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/tests/fixtures/conversation/character_scenarios.json",
+    "scenarios_count": 1,
+    "turns_per_scenario": 4,
+    "repeats": 1,
+    "variants": ["candidate_v5"],
+    "total_requests": 4,
+    "estimated_prompt_tokens": 10632,
+    "estimated_completion_tokens": 480,
+    "estimated_total_tokens": 11112,
+    "prompt_estimate_scope": "Each selected persona and scenario's first turn, compiled at an 8192-token window, extrapolated to all turns and repeats without later-turn history.",
+    "provider": "openai_compatible",
+    "model": "gemini-3.8-flash-high",
+    "estimated_cost_usd": null,
+    "estimated_cost_display": "unpriced (user authorized --no-cost-ceiling; no dollar ceiling configured)",
+    "pricing_source": "none (unpriced)",
+    "cost_ceiling_usd": null,
+    "cost_policy": "no_cost_ceiling",
+    "estimate_is_billing_cap": false,
+    "remote_provider_max_attempts_per_logical_request": 3,
+    "max_requests_counts_logical_requests": true,
+    "notice": "max_requests counts logical requests; adapter retries may cause up to 3 HTTP attempts per request."
+  },
+  "manifest_validation": {
+    "before_raw_sha256": "d7987aa9d6c975ebca51f2603a183b2767de6b4ab5f4d9c61aa9061c2d78fb59",
+    "after_raw_sha256": "3081462b01e1fa764101f1f1e851d9f8d7d3eb224c6d5a5b2129b6ea623f6ab0",
+    "changed_fields": [
+      "definition.version",
+      "definition.capabilities[0].input_schema.properties.query.description"
+    ],
+    "other_manifest_fields_identical": true,
+    "actual_projected_query_description_matches": true,
+    "query_description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data."
+  },
+  "summary": {
+    "saved_replies": 4,
+    "provider_attempts": 7,
+    "tool_attempts": 3,
+    "successful_searches": 1,
+    "successful_reads": 2,
+    "persistent_grants": 0,
+    "journal_exactly_once": true,
+    "latency_ms": {
+      "p50": 7912.5,
+      "p95_nearest_rank": 21157
+    },
+    "provider_usage": {
+      "prompt_tokens": {
+        "reported_sum": 34178,
+        "known_calls": 7,
+        "unknown_calls": 0
+      },
+      "completion_tokens": {
+        "reported_sum": 2156,
+        "known_calls": 7,
+        "unknown_calls": 0
+      },
+      "total_tokens": {
+        "reported_sum": 39542,
+        "known_calls": 7,
+        "unknown_calls": 0
+      },
+      "reasoning_tokens": {
+        "reported_sum": 3208,
+        "known_calls": 7,
+        "unknown_calls": 0
+      }
+    },
+    "dollar_cost": null
+  },
+  "review": {
+    "blind": false,
+    "reviewer": "primary Codex direct review",
+    "detailed_rules_turn_2": {
+      "selected_2014_and_2025_condition_coverage": true,
+      "actual_source_reads": true,
+      "actual_source_url_citations_in_reply": false,
+      "current_complete_regulation_review_proven": false,
+      "reason": "ordinary capacity/transport rules plus CCC clarity and recalled model/batch conditions were included; no source URLs or effective-date explanation in final text; broader current coverage not proven"
+    },
+    "checklist_turn_4": {
+      "task_pass": false,
+      "reason": "omits recalled model/batch check, two-item limit for the approved energy band and flight-use/shutoff restrictions; notification wording does not explicitly establish airline approval"
+    },
+    "first_turn_risk": "mAh range is given as a typical compliant range without a voltage condition; subsequent Wh explanation does not turn this into a universal capacity test",
+    "causal_limit": "query still names the historical announcement; discovery returned a later page and model read it. Without a same-batch control, stochastic/network differences prevent attribution to the new query description"
+  },
+  "context_budget_observation": {
+    "configured_compilation_window": 8192,
+    "maximum_reported_single_request_prompt_tokens": 8862,
+    "request_failed_for_context_length": false,
+    "endpoint_hard_context_limit": null,
+    "meaning": "provider reported more prompt tokens than the configured compiler window after tool exchanges; no claim that the complete tool loop fits that window"
+  },
+  "successful_source_records": [
+    {
+      "skill_run_id": "39e3415d-da7f-4bf1-aa09-555b47063931",
+      "data": {
+        "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+        "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+        "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+        "content_type": "text/html",
+        "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+        "total_characters": 2350,
+        "text_offset": 915,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare",
+        "text_omitted_from_public_evidence": true,
+        "text_characters": 1435,
+        "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+      },
+      "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+    },
+    {
+      "skill_run_id": "709f7876-be0a-413a-996a-3070f8f64e07",
+      "data": {
+        "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+        "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+        "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+        "content_type": "text/html",
+        "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+        "total_characters": 1349,
+        "text_offset": 63,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare",
+        "text_omitted_from_public_evidence": true,
+        "text_characters": 1286,
+        "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+      },
+      "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+    }
+  ],
+  "samples": [
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate_v5",
+      "turn_id": 1,
+      "user_text": "请帮我制定一份为期三天的周末短途旅行准备清单，分别列出证件与资金、衣物与穿搭、电子设备与配件三个类别，每个类别详细列出三条具体建议。",
+      "raw_reply": "好的，三天两晚的短途旅行以轻便实用为主。按你的要求，清单整理如下，收拾行李时可以对照核对一下：\n\n**一、证件与资金**\n1. **核心有效身份证件**：随身携带身份证（乘坐高铁、飞机或酒店入住必不可少），建议放在背包或随身小包易取用的夹层中，并在手机相册里留存一份清晰的证件正反面照片以备不时之需。\n2. **电子支付与交通凭证**：提前确认微信、支付宝等移动支付账户余额充足以免临时卡顿，并预先在手机中开通目的地城市的公交/地铁乘车码，或下载当地所需的出行 App。\n3. **少量应急现金与实体卡**：准备 100 至 200 元零钱纸币，以防景区、地下车库等弱网环境无法扫码支付，同时携带一张常用银行卡作为备用支付手段。\n\n**二、衣物与穿搭**\n1. **按天数规划的换洗衣物**：除出发当天身上所穿的衣物外，在行李中备好 2 套外穿衣物以及 3 套贴身换洗内衣裤和袜子；尽量挑选不易起皱、易于互相搭配的基础款式。\n2. **便于穿脱的外套**：准备一件轻便的防风外套、薄开衫或衬衫，应对早晚温差以及高铁、飞机或室内较强的冷暖气，方便随时增减。\n3. **舒适鞋履与应急防护**：穿一双适合长时间步行的平底鞋或运动鞋，尽量避免穿新鞋出行；随身带一把小巧的晴雨两用折叠伞，既可防晒也能应对突发降雨。\n\n**三、电子设备与配件**\n1. **合规移动电源与数据线**：携带容量符合安检规定（通常为 10000mAh 至 20000mAh 且标识清晰）的充电宝，并搭配与手机接口匹配的快充线，务必随身携带而不要托运。\n2. **多口快充充电头**：带一个双口或三口的氮化镓多功能充电器，晚上回酒店后可以用一个插座同时为手机、耳机等多台设备补电，减少携带充电头的数量。\n3. **降噪耳机与专属配件线缆**：备一副降噪耳机，能有效缓解途中公共交通上的噪音干扰；如果有佩戴智能手表或手环的习惯，记得带好专属的磁吸充电线。\n\n希望这份清单能帮上忙，祝你周末出行顺利。",
+      "latency_ms": 8724,
+      "provider_calls": [
+        {
+          "call_id": "1a2c0e7c-4c39-4fb4-9b89-6ccd276a153a",
+          "sample_key": "detailed_answer:r0:t1:candidate_v5",
+          "generation_id": "33c96c67-7bc2-564b-8b2d-f30397dd6a71",
+          "started_at": "2026-09-30T21:18:18.664178+00:00",
+          "system_prompt_sha256": "94a896d5efc29a058202dad2587a89eb29ed28aea203b85c0ac0073740dcfb9f",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [],
+          "requested_calls": [],
+          "text": "好的，三天两晚的短途旅行以轻便实用为主。按你的要求，清单整理如下，收拾行李时可以对照核对一下：\n\n**一、证件与资金**\n1. **核心有效身份证件**：随身携带身份证（乘坐高铁、飞机或酒店入住必不可少），建议放在背包或随身小包易取用的夹层中，并在手机相册里留存一份清晰的证件正反面照片以备不时之需。\n2. **电子支付与交通凭证**：提前确认微信、支付宝等移动支付账户余额充足以免临时卡顿，并预先在手机中开通目的地城市的公交/地铁乘车码，或下载当地所需的出行 App。\n3. **少量应急现金与实体卡**：准备 100 至 200 元零钱纸币，以防景区、地下车库等弱网环境无法扫码支付，同时携带一张常用银行卡作为备用支付手段。\n\n**二、衣物与穿搭**\n1. **按天数规划的换洗衣物**：除出发当天身上所穿的衣物外，在行李中备好 2 套外穿衣物以及 3 套贴身换洗内衣裤和袜子；尽量挑选不易起皱、易于互相搭配的基础款式。\n2. **便于穿脱的外套**：准备一件轻便的防风外套、薄开衫或衬衫，应对早晚温差以及高铁、飞机或室内较强的冷暖气，方便随时增减。\n3. **舒适鞋履与应急防护**：穿一双适合长时间步行的平底鞋或运动鞋，尽量避免穿新鞋出行；随身带一把小巧的晴雨两用折叠伞，既可防晒也能应对突发降雨。\n\n**三、电子设备与配件**\n1. **合规移动电源与数据线**：携带容量符合安检规定（通常为 10000mAh 至 20000mAh 且标识清晰）的充电宝，并搭配与手机接口匹配的快充线，务必随身携带而不要托运。\n2. **多口快充充电头**：带一个双口或三口的氮化镓多功能充电器，晚上回酒店后可以用一个插座同时为手机、耳机等多台设备补电，减少携带充电头的数量。\n3. **降噪耳机与专属配件线缆**：备一副降噪耳机，能有效缓解途中公共交通上的噪音干扰；如果有佩戴智能手表或手环的习惯，记得带好专属的磁吸充电线。\n\n希望这份清单能帮上忙，祝你周末出行顺利。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 1824,
+            "completion_tokens": 590,
+            "total_tokens": 3370,
+            "reasoning_tokens": 956
+          },
+          "error_type": null,
+          "latency_ms": 8723
+        }
+      ],
+      "tool_runs": []
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate_v5",
+      "turn_id": 2,
+      "user_text": "关于电子设备中提到的移动电源，乘坐国内航班时有哪些具体的民航携带规定？请详细列出三条明确规则。",
+      "raw_reply": "根据中国民航局关于旅客携带充电宝乘机的现行规定，主要有以下三条明确规则：\n\n1. **携带方式限制：只能随身携带，严禁托运**  \n   充电宝必须由旅客个人自用携带，且**只能放在手提行李中或随身携带**，绝对不能放入托运行李中办理托运。\n\n2. **额定能量（容量）与数量分级限制**  \n   民航局以充电宝的“额定能量（Wh，瓦特小时）”为准进行管控：  \n   * **不超过 100Wh**（常见 3.7V 电芯约 27000mAh 以内）：无需航空公司批准即可直接随身携带。  \n   * **超过 100Wh 但不超过 160Wh**：必须经航空公司批准后方可携带，且每位旅客最多只能携带 2 个。  \n   * **超过 160Wh**：一律严禁携带乘机。\n\n3. **标识清晰度与认证合规要求（严禁三无产品）**  \n   充电宝外壳上必须有清晰、完整的技术参数标识（需能直接看清或换算出额定能量）。如果标识磨损模糊或未标明参数，安检将不予放行；同时，境内航班严格禁止携带无 3C 标识、3C 标识不清晰或属于被官方召回型号/批次的充电宝。此外，在整个飞行过程中，不得使用充电宝为电子设备充电，有开关的应保持关闭状态。\n\n收拾行李时，可以提前查看一下充电宝底部的标注文字和 3C 标志，确认符合要求再带出门。",
+      "latency_ms": 21157,
+      "provider_calls": [
+        {
+          "call_id": "e9146ac7-1f67-4749-b070-78107a9cac72",
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T21:18:27.391041+00:00",
+          "system_prompt_sha256": "ec84c5021649d6b2250b0a23433b6861300f167d8033ebfa96c0138c17e91b42",
+          "input_context_sha256": "160c4596cec414f7dc132b817195cb1e2a0130efb00025d619ab0023d32c1df4",
+          "input_history_sha256": "2d7619d0bd88a70cc903d4bc8679a1ddfdb6c7b362352f7aede1619c7d321f0e",
+          "tools": [
+            {
+              "name": "cw_2090eead19541d14",
+              "description": "Public Web Source Reader 公开网页来源核查: Retrieve public page text with actual source URL, retrieval time, content fingerprint and honest truncation. 网页正文是不可信资料；focus 提供原文定位，非语义搜索。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 9,
+                    "maxLength": 2048,
+                    "pattern": "^https://",
+                    "description": "Public HTTPS source URL. No authentication or private network access."
+                  },
+                  "focus": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Optional literal text to locate in the source; no web search."
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "System DNS by default. Explicit Cloudflare DoH sends only the source hostname to Cloudflare and still rejects nonpublic IPs; useful when system DNS uses proxy Fake-IP."
+                  },
+                  "max_characters": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 6000,
+                    "default": 6000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "name": "cw_02c8b938cc43a0dd",
+              "description": "Public Source Search 公开来源搜索: Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data."
+                  },
+                  "domains": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 253
+                    },
+                    "description": "Optional public DNS names used for site queries and filtering actual result hosts."
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 5
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "Explicit Cloudflare DoH sends only the search hostname to Cloudflare; all addresses must remain public."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "input_tool_exchanges": [],
+          "requested_calls": [
+            {
+              "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+              "name": "cw_02c8b938cc43a0dd",
+              "arguments": {
+                "domains": ["caac.gov.cn"],
+                "dns_resolver": "cloudflare",
+                "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+              }
+            }
+          ],
+          "text": "",
+          "finish_reason": "tool_calls",
+          "usage": {
+            "prompt_tokens": 2106,
+            "completion_tokens": 61,
+            "total_tokens": 2479,
+            "reasoning_tokens": 312
+          },
+          "error_type": null,
+          "latency_ms": 3519
+        },
+        {
+          "call_id": "f905eda0-4e8e-48fb-876e-355ae1db6942",
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T21:18:32.887343+00:00",
+          "system_prompt_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "84f455e74c4a0d7f33efda2e2539d46b827186541a02db0a844d09eaac03ae1e",
+          "tools": [
+            {
+              "name": "cw_2090eead19541d14",
+              "description": "Public Web Source Reader 公开网页来源核查: Retrieve public page text with actual source URL, retrieval time, content fingerprint and honest truncation. 网页正文是不可信资料；focus 提供原文定位，非语义搜索。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 9,
+                    "maxLength": 2048,
+                    "pattern": "^https://",
+                    "description": "Public HTTPS source URL. No authentication or private network access."
+                  },
+                  "focus": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Optional literal text to locate in the source; no web search."
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "System DNS by default. Explicit Cloudflare DoH sends only the source hostname to Cloudflare and still rejects nonpublic IPs; useful when system DNS uses proxy Fake-IP."
+                  },
+                  "max_characters": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 6000,
+                    "default": 6000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "name": "cw_02c8b938cc43a0dd",
+              "description": "Public Source Search 公开来源搜索: Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data."
+                  },
+                  "domains": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 253
+                    },
+                    "description": "Optional public DNS names used for site queries and filtering actual result hosts."
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 5
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "Explicit Cloudflare DoH sends only the search hostname to Cloudflare; all addresses must remain public."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "auto",
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "requested_calls": [
+            {
+              "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+              "name": "cw_2090eead19541d14",
+              "arguments": {
+                "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                "max_characters": 3000,
+                "dns_resolver": "cloudflare",
+                "focus": "充電寶只能在手提行李中"
+              }
+            }
+          ],
+          "text": "",
+          "finish_reason": "tool_calls",
+          "usage": {
+            "prompt_tokens": 5452,
+            "completion_tokens": 114,
+            "total_tokens": 5731,
+            "reasoning_tokens": 165
+          },
+          "error_type": null,
+          "latency_ms": 3427
+        },
+        {
+          "call_id": "eec6c33e-79eb-4458-838d-5efe85d771ba",
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T21:18:37.742365+00:00",
+          "system_prompt_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "84f455e74c4a0d7f33efda2e2539d46b827186541a02db0a844d09eaac03ae1e",
+          "tools": [
+            {
+              "name": "cw_2090eead19541d14",
+              "description": "Public Web Source Reader 公开网页来源核查: Retrieve public page text with actual source URL, retrieval time, content fingerprint and honest truncation. 网页正文是不可信资料；focus 提供原文定位，非语义搜索。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 9,
+                    "maxLength": 2048,
+                    "pattern": "^https://",
+                    "description": "Public HTTPS source URL. No authentication or private network access."
+                  },
+                  "focus": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Optional literal text to locate in the source; no web search."
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "System DNS by default. Explicit Cloudflare DoH sends only the source hostname to Cloudflare and still rejects nonpublic IPs; useful when system DNS uses proxy Fake-IP."
+                  },
+                  "max_characters": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 6000,
+                    "default": 6000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "name": "cw_02c8b938cc43a0dd",
+              "description": "Public Source Search 公开来源搜索: Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data."
+                  },
+                  "domains": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 253
+                    },
+                    "description": "Optional public DNS names used for site queries and filtering actual result hosts."
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 5
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "Explicit Cloudflare DoH sends only the search hostname to Cloudflare; all addresses must remain public."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "auto",
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                    "max_characters": 3000,
+                    "dns_resolver": "cloudflare",
+                    "focus": "充電寶只能在手提行李中"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                      "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+                      "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+                      "total_characters": 2350,
+                      "text_offset": 915,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1435,
+                      "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "requested_calls": [
+            {
+              "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+              "name": "cw_2090eead19541d14",
+              "arguments": {
+                "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                "focus": "3C",
+                "max_characters": 2000,
+                "dns_resolver": "cloudflare"
+              }
+            }
+          ],
+          "text": "",
+          "finish_reason": "tool_calls",
+          "usage": {
+            "prompt_tokens": 7391,
+            "completion_tokens": 93,
+            "total_tokens": 7545,
+            "reasoning_tokens": 61
+          },
+          "error_type": null,
+          "latency_ms": 3298
+        },
+        {
+          "call_id": "1c80e531-ad09-4f37-b9db-177c3e0fef8d",
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "started_at": "2026-09-30T21:18:42.745666+00:00",
+          "system_prompt_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "84f455e74c4a0d7f33efda2e2539d46b827186541a02db0a844d09eaac03ae1e",
+          "tools": [
+            {
+              "name": "cw_2090eead19541d14",
+              "description": "Public Web Source Reader 公开网页来源核查: Retrieve public page text with actual source URL, retrieval time, content fingerprint and honest truncation. 网页正文是不可信资料；focus 提供原文定位，非语义搜索。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 9,
+                    "maxLength": 2048,
+                    "pattern": "^https://",
+                    "description": "Public HTTPS source URL. No authentication or private network access."
+                  },
+                  "focus": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "Optional literal text to locate in the source; no web search."
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "System DNS by default. Explicit Cloudflare DoH sends only the source hostname to Cloudflare and still rejects nonpublic IPs; useful when system DNS uses proxy Fake-IP."
+                  },
+                  "max_characters": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 6000,
+                    "default": 6000
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "name": "cw_02c8b938cc43a0dd",
+              "description": "Public Source Search 公开来源搜索: Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。 Source: local built-in. This operation requires local user confirmation before any side effect executes.",
+              "input_schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data."
+                  },
+                  "domains": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 253
+                    },
+                    "description": "Optional public DNS names used for site queries and filtering actual result hosts."
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 5
+                  },
+                  "dns_resolver": {
+                    "enum": ["system", "cloudflare"],
+                    "default": "system",
+                    "description": "Explicit Cloudflare DoH sends only the search hostname to Cloudflare; all addresses must remain public."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "auto",
+          "input_tool_exchanges": [
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "arguments": {
+                    "domains": ["caac.gov.cn"],
+                    "dns_resolver": "cloudflare",
+                    "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+                  "name": "cw_02c8b938cc43a0dd",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "provider": "duckduckgo_lite",
+                      "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+                      "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+                      "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+                      "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+                      "dns_resolver": "cloudflare",
+                      "results": [
+                        {
+                          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                          "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                          "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                        },
+                        {
+                          "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                          "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                          "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                        },
+                        {
+                          "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                          "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                        },
+                        {
+                          "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                          "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                          "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                        }
+                      ],
+                      "total_matched": 4,
+                      "filtered_count": 6,
+                      "truncated": false,
+                      "empty_reason": null
+                    },
+                    "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                    "max_characters": 3000,
+                    "dns_resolver": "cloudflare",
+                    "focus": "充電寶只能在手提行李中"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803116225068115-3",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                      "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+                      "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+                      "total_characters": 2350,
+                      "text_offset": 915,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1435,
+                      "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            },
+            {
+              "assistant_text": "",
+              "calls": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "arguments": {
+                    "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                    "focus": "3C",
+                    "max_characters": 2000,
+                    "dns_resolver": "cloudflare"
+                  }
+                }
+              ],
+              "results": [
+                {
+                  "call_id": "cw_2090eead19541d14-1790803120961678297-4",
+                  "name": "cw_2090eead19541d14",
+                  "content": {
+                    "untrusted": true,
+                    "ok": true,
+                    "state": "succeeded",
+                    "data": {
+                      "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                      "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                      "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+                      "content_type": "text/html",
+                      "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+                      "total_characters": 1349,
+                      "text_offset": 63,
+                      "truncated": true,
+                      "focus_matched": true,
+                      "dns_resolver": "cloudflare",
+                      "text_omitted_from_public_evidence": true,
+                      "text_characters": 1286,
+                      "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+                    },
+                    "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+                  },
+                  "is_error": false
+                }
+              ]
+            }
+          ],
+          "requested_calls": [],
+          "text": "根据中国民航局关于旅客携带充电宝乘机的现行规定，主要有以下三条明确规则：\n\n1. **携带方式限制：只能随身携带，严禁托运**  \n   充电宝必须由旅客个人自用携带，且**只能放在手提行李中或随身携带**，绝对不能放入托运行李中办理托运。\n\n2. **额定能量（容量）与数量分级限制**  \n   民航局以充电宝的“额定能量（Wh，瓦特小时）”为准进行管控：  \n   * **不超过 100Wh**（常见 3.7V 电芯约 27000mAh 以内）：无需航空公司批准即可直接随身携带。  \n   * **超过 100Wh 但不超过 160Wh**：必须经航空公司批准后方可携带，且每位旅客最多只能携带 2 个。  \n   * **超过 160Wh**：一律严禁携带乘机。\n\n3. **标识清晰度与认证合规要求（严禁三无产品）**  \n   充电宝外壳上必须有清晰、完整的技术参数标识（需能直接看清或换算出额定能量）。如果标识磨损模糊或未标明参数，安检将不予放行；同时，境内航班严格禁止携带无 3C 标识、3C 标识不清晰或属于被官方召回型号/批次的充电宝。此外，在整个飞行过程中，不得使用充电宝为电子设备充电，有开关的应保持关闭状态。\n\n收拾行李时，可以提前查看一下充电宝底部的标注文字和 3C 标志，确认符合要求再带出门。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 8862,
+            "completion_tokens": 379,
+            "total_tokens": 9847,
+            "reasoning_tokens": 606
+          },
+          "error_type": null,
+          "latency_ms": 5799
+        }
+      ],
+      "tool_runs": [
+        {
+          "skill_run_id": "fa195ff4-76e2-4616-9588-11e1a6051a1d",
+          "skill_id": "web.search",
+          "skill_version": "1.0.1",
+          "capability": "search",
+          "plugin_id": null,
+          "mcp_connection_id": null,
+          "session_id": "dfc63339-d6e2-413f-ad45-e5633ab04483",
+          "turn_id": "7f6827dc-9f34-5933-a1e6-3ce21669f60e",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "origin": "agent",
+          "provider_tool_call_id": "cw_02c8b938cc43a0dd-1790803110816392984-2",
+          "state": "succeeded",
+          "progress": 1.0,
+          "confirmation_request_id": "d878c44a-9ec2-47d6-9d6d-5ed595fd7c8d",
+          "result": {
+            "status": "succeeded",
+            "data": {
+              "provider": "duckduckgo_lite",
+              "query": "民航局 关于民航旅客携带充电宝乘机规定的公告",
+              "search_url": "https://lite.duckduckgo.com/lite/?q=%E6%B0%91%E8%88%AA%E5%B1%80+%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E5%85%85%E7%94%B5%E5%AE%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A+site%3Acaac.gov.cn",
+              "retrieved_at": "2026-09-30T21:18:32.878172+00:00",
+              "body_sha256": "fb80a47bc8e10448b7e2ee4147c6ddcc54e8eb6939f2c2729814b4188ef4a433",
+              "dns_resolver": "cloudflare",
+              "results": [
+                {
+                  "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+                  "title": "關於民航旅客攜帶\"充電寶\"乘機規定的公告",
+                  "snippet": "充電寶是指主要功能用於給手機等電子設備提供外部電源的鋰電池移動電源。根據現行有效國際民航組織《危險物品安全航空運輸技術細則》和《中國民用航空危險品運輸管理規定》，旅客攜帶充電寶乘機應遵守以下規定： 一、充電寶必須是旅客個人自用攜帶。 二、充電寶只能在手提行李中攜帶或 ..."
+                },
+                {
+                  "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+                  "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+                  "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+                },
+                {
+                  "url": "https://xb.caac.gov.cn/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+                  "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+                  "snippet": "6月28日，是民航局关于\"禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班\"有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。"
+                },
+                {
+                  "url": "https://zwfw.caac.gov.cn/zwcx/mhgz",
+                  "title": "民航行政审批服务平台-政务查询-民航规章 - Caac",
+                  "snippet": "版权所有：中国民用航空局 网站管理：中国民用航空局综合司 技术支持：中国民用航空局信息中心 地址：北京市东城区东四西大街155号（100710） 京公网安备11010102007643号 ICP备案编号：京ICP备19046468号"
+                }
+              ],
+              "total_matched": 4,
+              "filtered_count": 6,
+              "truncated": false,
+              "empty_reason": null
+            },
+            "spoken_summary": null,
+            "ui_cards": [],
+            "avatar_cues": [],
+            "memory_proposal_ids": [],
+            "prospective_task_ids": [],
+            "provenance": ["skill:web.search@1.0.1", "adapter:builtin"]
+          },
+          "error": null,
+          "created_at": "2026-09-30T21:18:30.913993Z",
+          "started_at": "2026-09-30T21:18:30.922048Z",
+          "updated_at": "2026-09-30T21:18:32.885278Z",
+          "completed_at": "2026-09-30T21:18:32.885278Z"
+        },
+        {
+          "skill_run_id": "39e3415d-da7f-4bf1-aa09-555b47063931",
+          "skill_id": "web.read",
+          "skill_version": "1.0.1",
+          "capability": "read",
+          "plugin_id": null,
+          "mcp_connection_id": null,
+          "session_id": "dfc63339-d6e2-413f-ad45-e5633ab04483",
+          "turn_id": "7f6827dc-9f34-5933-a1e6-3ce21669f60e",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "origin": "agent",
+          "provider_tool_call_id": "cw_2090eead19541d14-1790803116225068115-3",
+          "state": "succeeded",
+          "progress": 1.0,
+          "confirmation_request_id": "233ae46a-7b3a-493d-8c93-3fe9c702cd35",
+          "result": {
+            "status": "succeeded",
+            "data": {
+              "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+              "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+              "retrieved_at": "2026-09-30T21:18:37.731884+00:00",
+              "content_type": "text/html",
+              "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+              "total_characters": 2350,
+              "text_offset": 915,
+              "truncated": true,
+              "focus_matched": true,
+              "dns_resolver": "cloudflare",
+              "text_omitted_from_public_evidence": true,
+              "text_characters": 1435,
+              "text_sha256": "f6df84bca758c381fcec75f3d9e7e6daebcbe0d0134a614152f07c6f94b7fa62"
+            },
+            "spoken_summary": null,
+            "ui_cards": [],
+            "avatar_cues": [],
+            "memory_proposal_ids": [],
+            "prospective_task_ids": [],
+            "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+          },
+          "error": null,
+          "created_at": "2026-09-30T21:18:36.316630Z",
+          "started_at": "2026-09-30T21:18:36.319768Z",
+          "updated_at": "2026-09-30T21:18:37.740392Z",
+          "completed_at": "2026-09-30T21:18:37.740392Z"
+        },
+        {
+          "skill_run_id": "709f7876-be0a-413a-996a-3070f8f64e07",
+          "skill_id": "web.read",
+          "skill_version": "1.0.1",
+          "capability": "read",
+          "plugin_id": null,
+          "mcp_connection_id": null,
+          "session_id": "dfc63339-d6e2-413f-ad45-e5633ab04483",
+          "turn_id": "7f6827dc-9f34-5933-a1e6-3ce21669f60e",
+          "generation_id": "9a499987-b920-53b5-a0cd-a1169385df26",
+          "origin": "agent",
+          "provider_tool_call_id": "cw_2090eead19541d14-1790803120961678297-4",
+          "state": "succeeded",
+          "progress": 1.0,
+          "confirmation_request_id": "c4c24d45-2071-4208-bf2b-8a7bc05b6abb",
+          "result": {
+            "status": "succeeded",
+            "data": {
+              "url": "https://db.caac.gov.cn/DB_DQYW/202507/t20250709_227899.html",
+              "title": "东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查",
+              "retrieved_at": "2026-09-30T21:18:42.738291+00:00",
+              "content_type": "text/html",
+              "body_sha256": "89f7f9f41571cfd239fd5ce4a9b2626460a39eb8d28deb1c926a8843ce8154d5",
+              "total_characters": 1349,
+              "text_offset": 63,
+              "truncated": true,
+              "focus_matched": true,
+              "dns_resolver": "cloudflare",
+              "text_omitted_from_public_evidence": true,
+              "text_characters": 1286,
+              "text_sha256": "725bac73f7d6cc3e522b507279583491dbba8fa5a28541f247cccd45970effc6"
+            },
+            "spoken_summary": null,
+            "ui_cards": [],
+            "avatar_cues": [],
+            "memory_proposal_ids": [],
+            "prospective_task_ids": [],
+            "provenance": ["skill:web.read@1.0.1", "adapter:builtin"]
+          },
+          "error": null,
+          "created_at": "2026-09-30T21:18:41.043779Z",
+          "started_at": "2026-09-30T21:18:41.049580Z",
+          "updated_at": "2026-09-30T21:18:42.743679Z",
+          "completed_at": "2026-09-30T21:18:42.743679Z"
+        }
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate_v5",
+      "turn_id": 3,
+      "user_text": "如果第一天下午遭遇暴雨无法进行户外游览，请给出两个具体的室内备选活动方案，每个方案包含活动内容、预计用时与注意事项。",
+      "raw_reply": "如果遇到下雨打乱了原本的户外安排，这两个室内备选方案可以参考：\n\n**方案一：当地城市博物馆或美术馆深度观展**\n* **活动内容**：前往目的地的省/市级博物馆或知名艺术馆，租借一台语音导览器或跟随馆内的整点人工讲解，系统了解当地的历史底蕴、出土文物或当代艺术展。室内环境开阔且安静，既避雨又能直观感受城市特色。\n* **预计用时**：2.5 至 3.5 小时。\n* **注意事项**：大部分大型场馆需要提前在官方微信公众号实名预约，前往途中需先查看当日下午是否还有余票；另外，场馆通常在 16:00 至 16:30 停止检票并于 17:00 闭馆，需要合理把控入馆时间，湿雨伞通常需存放在入口处。\n\n**方案二：特色独立书店与文化复合空间休闲**\n* **活动内容**：挑选一家由老建筑改造的特色书店、大型综合阅读空间或带有本地文创的艺术园区室内馆。挑选几本介绍当地风土人情或文学的书籍，在馆内的咖啡区喝杯热饮歇脚，顺便盖纪念章、选购明信片等伴手礼。\n* **预计用时**：2 至 3 小时。\n* **注意事项**：下雨天室内热门点位可能会有较多人停留，建议尽量选择空间较大、带有堂食休憩座位的场馆；选址时优先考虑地铁直达或下车后步行距离极短的地点，避免打伞在积水路面辗转。",
+      "latency_ms": 5696,
+      "provider_calls": [
+        {
+          "call_id": "f4558097-1e01-43b2-ac98-35f6bd922fc8",
+          "sample_key": "detailed_answer:r0:t3:candidate_v5",
+          "generation_id": "da9c01ca-4c50-5ff7-8b20-65d9e498e402",
+          "started_at": "2026-09-30T21:18:48.549926+00:00",
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "29d24631ad4b2b3a2f2a4d7a9c6effd432682ae90831554f75e37fdee45a353d",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [],
+          "requested_calls": [],
+          "text": "如果遇到下雨打乱了原本的户外安排，这两个室内备选方案可以参考：\n\n**方案一：当地城市博物馆或美术馆深度观展**\n* **活动内容**：前往目的地的省/市级博物馆或知名艺术馆，租借一台语音导览器或跟随馆内的整点人工讲解，系统了解当地的历史底蕴、出土文物或当代艺术展。室内环境开阔且安静，既避雨又能直观感受城市特色。\n* **预计用时**：2.5 至 3.5 小时。\n* **注意事项**：大部分大型场馆需要提前在官方微信公众号实名预约，前往途中需先查看当日下午是否还有余票；另外，场馆通常在 16:00 至 16:30 停止检票并于 17:00 闭馆，需要合理把控入馆时间，湿雨伞通常需存放在入口处。\n\n**方案二：特色独立书店与文化复合空间休闲**\n* **活动内容**：挑选一家由老建筑改造的特色书店、大型综合阅读空间或带有本地文创的艺术园区室内馆。挑选几本介绍当地风土人情或文学的书籍，在馆内的咖啡区喝杯热饮歇脚，顺便盖纪念章、选购明信片等伴手礼。\n* **预计用时**：2 至 3 小时。\n* **注意事项**：下雨天室内热门点位可能会有较多人停留，建议尽量选择空间较大、带有堂食休憩座位的场馆；选址时优先考虑地铁直达或下车后步行距离极短的地点，避免打伞在积水路面辗转。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 3816,
+            "completion_tokens": 376,
+            "total_tokens": 4698,
+            "reasoning_tokens": 506
+          },
+          "error_type": null,
+          "latency_ms": 5694
+        }
+      ],
+      "tool_runs": []
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate_v5",
+      "turn_id": 4,
+      "user_text": "最后请将上述所有准备要点和应急建议，整理成一份简明的出发前检查核对表（Checklist）。",
+      "raw_reply": "好的，已经为你整合好出发前的最终核对清单。出门前对照着逐项打勾确认即可：\n\n### 出发前最终核对表（Checklist）\n\n**【证件与资金】**\n* [ ] **身份证件**：实体身份证原件（随身放置在易取夹层），手机相册已保存正反面备份照片。\n* [ ] **交通与支付**：微信/支付宝余额充足，已提前领好目的地的地铁/公交乘车码。\n* [ ] **应急现金**：准备 100~200 元纸币零钱，随身携带一张能正常刷卡的银行卡。\n\n**【衣物与穿搭】**\n* [ ] **核心衣物**：除身上穿的以外，备用外穿衣物 2 套、贴身内衣裤及袜子 3 套（耐磨防皱）。\n* [ ] **温差防护**：一件便于穿脱的轻便防风外套或开衫（应对早晚温差与车厢/室内空调）。\n* [ ] **鞋履与雨具**：穿舒适防滑的平底步履鞋，随身携带折叠晴雨伞。\n\n**【电子设备（民航合规）】**\n* [ ] **合规充电宝**：确认**必须随身携带、严禁托运**；确认参数与 3C 标识清晰，额定能量在 100Wh 以内（超过 100Wh 但不超过 160Wh 需报备航司）。\n* [ ] **充电组件**：多口快充插头 1 个、匹配手机接口的快充数据线。\n* [ ] **个人配件**：降噪耳机（随身带），以及智能手表等专用磁吸充电线。\n\n**【行程与雨天应急】**\n* [ ] **天气核对**：出发前再次查看目的地首日下午的具体降水预报。\n* [ ] **室内备选 A（博物馆/美术馆）**：已确认目标场馆的门票余量、是否需线上预约，以及 16:00 前后的停止入馆时间。\n* [ ] **室内备选 B（特色书店/文化综合体）**：已选定 1~2 处地铁直达、少走室外积水路段的室内休憩点位。\n\n清单核对完毕后就可以放心出发了，祝你周末旅行一切顺利。",
+      "latency_ms": 7101,
+      "provider_calls": [
+        {
+          "call_id": "339df765-8613-4bf2-86d7-10754ed97c08",
+          "sample_key": "detailed_answer:r0:t4:candidate_v5",
+          "generation_id": "0c990c44-8d52-5248-b8e3-a578467cba74",
+          "started_at": "2026-09-30T21:18:54.247537+00:00",
+          "system_prompt_sha256": "a61c436cca8e681150fc2b30bd6f97ac9bd29eeed2104af3a0219a9bf1f255e6",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "2cc9d74a944da62f90f3028bd4d32eb3a34bcb9739bff777e76d5c6cc64ae23a",
+          "tools": [],
+          "tool_choice": null,
+          "input_tool_exchanges": [],
+          "requested_calls": [],
+          "text": "好的，已经为你整合好出发前的最终核对清单。出门前对照着逐项打勾确认即可：\n\n### 出发前最终核对表（Checklist）\n\n**【证件与资金】**\n* [ ] **身份证件**：实体身份证原件（随身放置在易取夹层），手机相册已保存正反面备份照片。\n* [ ] **交通与支付**：微信/支付宝余额充足，已提前领好目的地的地铁/公交乘车码。\n* [ ] **应急现金**：准备 100~200 元纸币零钱，随身携带一张能正常刷卡的银行卡。\n\n**【衣物与穿搭】**\n* [ ] **核心衣物**：除身上穿的以外，备用外穿衣物 2 套、贴身内衣裤及袜子 3 套（耐磨防皱）。\n* [ ] **温差防护**：一件便于穿脱的轻便防风外套或开衫（应对早晚温差与车厢/室内空调）。\n* [ ] **鞋履与雨具**：穿舒适防滑的平底步履鞋，随身携带折叠晴雨伞。\n\n**【电子设备（民航合规）】**\n* [ ] **合规充电宝**：确认**必须随身携带、严禁托运**；确认参数与 3C 标识清晰，额定能量在 100Wh 以内（超过 100Wh 但不超过 160Wh 需报备航司）。\n* [ ] **充电组件**：多口快充插头 1 个、匹配手机接口的快充数据线。\n* [ ] **个人配件**：降噪耳机（随身带），以及智能手表等专用磁吸充电线。\n\n**【行程与雨天应急】**\n* [ ] **天气核对**：出发前再次查看目的地首日下午的具体降水预报。\n* [ ] **室内备选 A（博物馆/美术馆）**：已确认目标场馆的门票余量、是否需线上预约，以及 16:00 前后的停止入馆时间。\n* [ ] **室内备选 B（特色书店/文化综合体）**：已选定 1~2 处地铁直达、少走室外积水路段的室内休憩点位。\n\n清单核对完毕后就可以放心出发了，祝你周末旅行一切顺利。",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 4727,
+            "completion_tokens": 543,
+            "total_tokens": 5872,
+            "reasoning_tokens": 602
+          },
+          "error_type": null,
+          "latency_ms": 7099
+        }
+      ],
+      "tool_runs": []
+    }
+  ],
+  "artifact_sha256": {
+    "metadata.json": "a90c1904862d828c3d230a6d19f8da1f1d83a84a43c2e129d19e42fbf527dbaf",
+    "results.jsonl": "583415dcc3f2dd44e8d8ac273b2dc1b160aafe88137161bc8bfa9cc5de8b8b68",
+    "provider-rounds.jsonl": "ef858d9ecce9f1c096d49e00c6875b7d6e76a32fe038224facc52e8e57a9d057"
+  },
+  "script_sha256": {
+    "source_query_run": "8d59435b654eab4a67bdd024612dc5a8bbbbf1aca732eef0e768791d01eec4d6",
+    "publication": "af95a611fd4bacb814da5410909a5ab7dc432c46ef655a140fd61b80b135d9a2"
+  },
+  "local_raw_directory": ".local/research/q02/cw2-source-query-guidance-20261001/gemini-3.8-flash-high/runtime",
+  "independent_review_sources": [
+    "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+    "https://www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html"
+  ],
+  "public_evidence_policy": "source article bodies retained only in raw local tool traces; public metadata preserves URLs, body/text hashes, character counts and truncation; synthetic model replies unchanged"
+}

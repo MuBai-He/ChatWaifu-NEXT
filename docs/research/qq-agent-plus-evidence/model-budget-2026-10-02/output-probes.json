@@ -1,0 +1,287 @@
+{
+  "large_requested_caps": [
+    {
+      "model": "gemini-3.1-flash-lite",
+      "requested_max_tokens": 65536,
+      "status": 200,
+      "elapsed_ms": 2492,
+      "usage": {
+        "completion_tokens": 2,
+        "total_tokens": 7,
+        "prompt_tokens": 5
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "OK.",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "error_type": null
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "requested_max_tokens": 65537,
+      "status": 200,
+      "elapsed_ms": 1676,
+      "usage": {
+        "completion_tokens": 2,
+        "total_tokens": 7,
+        "prompt_tokens": 5
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "OK.",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "error_type": null
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "requested_max_tokens": 65536,
+      "status": 200,
+      "elapsed_ms": 4369,
+      "usage": {
+        "completion_tokens": 99,
+        "total_tokens": 104,
+        "prompt_tokens": 5,
+        "completion_tokens_details": {
+          "reasoning_tokens": 98
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "OK",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "error_type": null
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "requested_max_tokens": 65537,
+      "status": 200,
+      "elapsed_ms": 5149,
+      "usage": {
+        "completion_tokens": 68,
+        "total_tokens": 73,
+        "prompt_tokens": 5,
+        "completion_tokens_details": {
+          "reasoning_tokens": 67
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "OK",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "error_type": null
+    }
+  ],
+  "small_cap_enforcement": [
+    {
+      "model": "gemini-3.1-flash-lite",
+      "requested_field": "max_tokens",
+      "requested_limit": 1,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 69,
+        "total_tokens": 93,
+        "prompt_tokens": 24
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.1-flash-lite",
+      "elapsed_ms": 3087,
+      "observed_at": "2026-10-01T15:37:52.777767+00:00"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "requested_field": "max_completion_tokens",
+      "requested_limit": 1,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 69,
+        "total_tokens": 93,
+        "prompt_tokens": 24
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.1-flash-lite",
+      "elapsed_ms": 1542,
+      "observed_at": "2026-10-01T15:37:54.320435+00:00"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "requested_field": "max_tokens",
+      "requested_limit": 4096,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 69,
+        "total_tokens": 93,
+        "prompt_tokens": 24
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.1-flash-lite",
+      "elapsed_ms": 1256,
+      "observed_at": "2026-10-01T15:37:55.576767+00:00"
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "requested_field": "max_tokens",
+      "requested_limit": 1,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 411,
+        "total_tokens": 435,
+        "prompt_tokens": 24,
+        "completion_tokens_details": {
+          "reasoning_tokens": 342
+        }
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.8-flash",
+      "elapsed_ms": 6289,
+      "observed_at": "2026-10-01T15:38:01.866689+00:00"
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "requested_field": "max_completion_tokens",
+      "requested_limit": 1,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 260,
+        "total_tokens": 284,
+        "prompt_tokens": 24,
+        "completion_tokens_details": {
+          "reasoning_tokens": 191
+        }
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.8-flash-control",
+      "elapsed_ms": 2983,
+      "observed_at": "2026-10-01T15:38:04.851045+00:00"
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "requested_field": "max_tokens",
+      "requested_limit": 4096,
+      "status": 200,
+      "usage": {
+        "completion_tokens": 408,
+        "total_tokens": 432,
+        "prompt_tokens": 24,
+        "completion_tokens_details": {
+          "reasoning_tokens": 339
+        }
+      },
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "response_model": "gemini-3.8-flash",
+      "elapsed_ms": 3475,
+      "observed_at": "2026-10-01T15:38:08.326209+00:00"
+    }
+  ]
+}

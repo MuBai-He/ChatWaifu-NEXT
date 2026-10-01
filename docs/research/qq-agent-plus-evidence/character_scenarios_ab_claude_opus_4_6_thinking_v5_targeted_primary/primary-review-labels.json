@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "label_scope": "group",
+  "labels": [
+    {
+      "group_key": "technical_help:r0",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "technical_help:r1",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "technical_help:r2",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "identity:r0",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "identity:r1",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "identity:r2",
+      "A": "candidate_v5",
+      "B": "baseline_v4"
+    },
+    {
+      "group_key": "topic_switch:r0",
+      "A": "candidate_v5",
+      "B": "baseline_v4"
+    },
+    {
+      "group_key": "topic_switch:r1",
+      "A": "candidate_v5",
+      "B": "baseline_v4"
+    },
+    {
+      "group_key": "topic_switch:r2",
+      "A": "candidate_v5",
+      "B": "baseline_v4"
+    },
+    {
+      "group_key": "detailed_answer:r0",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    },
+    {
+      "group_key": "detailed_answer:r1",
+      "A": "candidate_v5",
+      "B": "baseline_v4"
+    },
+    {
+      "group_key": "detailed_answer:r2",
+      "A": "baseline_v4",
+      "B": "candidate_v5"
+    }
+  ]
+}

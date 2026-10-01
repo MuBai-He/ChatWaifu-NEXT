@@ -1,0 +1,691 @@
+{
+  "date": "2026-10-01",
+  "source_commit": "a567b695d2bb8fca3c6ee6e12e907455c82fdeac",
+  "scope": "Offline reference-count diagnostics and four count-only HTTP requests; no generation, tool execution or production/config/permission writes",
+  "q02_accepted": false,
+  "default_persona": "v4",
+  "model_generation_requests": 0,
+  "count_only_http_client_requests": 4,
+  "unknown_proxy_internal_count_attempts": true,
+  "new_generation_usage": null,
+  "dollar_cost": null,
+  "endpoint_port": 8318,
+  "small_capability_probe": {
+    "scope": "One synthetic native messages/count_tokens capability probe, no generation request, no tool execution or production/config/grant writes",
+    "endpoint_port": 8318,
+    "path": "messages/count_tokens",
+    "model": "claude-opus-4-6-thinking",
+    "request_payload": {
+      "model": "claude-opus-4-6-thinking",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello"
+        }
+      ]
+    },
+    "http_request_limit": 1,
+    "automatic_retry": false,
+    "model_generation_requests": 0,
+    "q02_accepted": false,
+    "dollar_cost": null,
+    "status_code": 200,
+    "response_body_sha256": "e29916ba2e92f8217d8f9a8d730a929a0e63281d517006161a7526a29437027d",
+    "response_keys": ["input_tokens"],
+    "reported_input_tokens": 1,
+    "structured_error_type": null,
+    "positive_count_response": true
+  },
+  "long_count_comparison": {
+    "scope": "Three endpoint count observations against already measured synthetic inputs; count provenance and exact translation remain unproved",
+    "endpoint_port": 8318,
+    "http_requests": 3,
+    "maximum_http_requests": 3,
+    "model_generation_requests": 0,
+    "automatic_retry": false,
+    "q02_accepted": false,
+    "records": [
+      {
+        "name": "old-source-fitted",
+        "model": "claude-opus-4-6-thinking",
+        "system_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+        "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+        "source_exchanges_sha256": "15cd7c84790c3b27b806e57c5fdfe3e70bfc35578eabbe99c52d10aa165196da",
+        "count_payload_sha256": "3a974561467c4bb82e1478db526808d711664740689bb14184b3611683fa1a26",
+        "prior_generation_reported_input": 8393,
+        "shape": "Messages API text/tool_use/tool_result representation; equality to proxy internal Chat Completions translation unproved",
+        "status_code": 200,
+        "response_body_sha256": "2fb193b375e102176c679bc16bafa1105d9bb8b9bf2f8012b5a78c9ed6da5c21",
+        "response_keys": ["input_tokens"],
+        "endpoint_reported_input_tokens": 97,
+        "difference_from_prior_usage": -8296,
+        "previous_measured_call_id": "47710e4b-b182-479c-b0ae-84e0f434302e",
+        "matching_system_context_history_and_source_results": true
+      },
+      {
+        "name": "preserved-source-final",
+        "model": "claude-opus-4-6-thinking",
+        "system_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+        "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "history_sha256": "84f455e74c4a0d7f33efda2e2539d46b827186541a02db0a844d09eaac03ae1e",
+        "source_exchanges_sha256": "26c4c51bda259daeaa232f3e243f65e3b2dd66ce172791bfc145367afef1da52",
+        "count_payload_sha256": "8ffb6413831ce25f05a342f273f77f8874c9524104cc048027ae5795d8a0037a",
+        "prior_generation_reported_input": 7711,
+        "shape": "Messages API text/tool_use/tool_result representation; equality to proxy internal Chat Completions translation unproved",
+        "status_code": 200,
+        "response_body_sha256": "4e5123825f9e25c9859b5205e5d7d77f0cc30cab8cfb86231c209385b092937f",
+        "response_keys": ["input_tokens"],
+        "endpoint_reported_input_tokens": 665,
+        "difference_from_prior_usage": -7046,
+        "previous_measured_call_id": "caf511f9-ada0-4712-97f3-0013388bdecc",
+        "matching_system_context_history_and_source_results": true
+      },
+      {
+        "name": "preserved-source-old-assistant-omitted",
+        "model": "claude-opus-4-6-thinking",
+        "system_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+        "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+        "source_exchanges_sha256": "26c4c51bda259daeaa232f3e243f65e3b2dd66ce172791bfc145367afef1da52",
+        "count_payload_sha256": "91def14849692ed9ab3828b1f3549f78abcb7f4ec83ced182c7919b99c834018",
+        "prior_generation_reported_input": 6855,
+        "shape": "Messages API text/tool_use/tool_result representation; equality to proxy internal Chat Completions translation unproved",
+        "status_code": 200,
+        "response_body_sha256": "2fb193b375e102176c679bc16bafa1105d9bb8b9bf2f8012b5a78c9ed6da5c21",
+        "response_keys": ["input_tokens"],
+        "endpoint_reported_input_tokens": 97,
+        "difference_from_prior_usage": -6758,
+        "previous_measured_call_id": "ee8f2972-d40d-435c-bb9b-df038a94895e",
+        "matching_system_context_history_and_source_results": true
+      }
+    ]
+  },
+  "offline_comparison": {
+    "scope": "Offline wire-content diagnostics, surrogate OpenAI encodings are not native Claude/Gemini token counts",
+    "model_calls": 0,
+    "source_body_printed_or_published": false,
+    "tiktoken_version": "0.12.0",
+    "inputs": [
+      {
+        "name": "old-source-final",
+        "system_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+        "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "history_sha256": "8dab738ceb69e97f069e86f0b780f92698722f520604af28e4670388d8a37b51",
+        "tool_exchanges_sha256": "e695a36433eb3d13dc32e1be4c11f7492c607f40c99ea9187b227ca722b9357a",
+        "whole_request_current_estimate": 7255,
+        "prior_reported_claude_input": 8393,
+        "parts": [
+          {
+            "role": "system",
+            "characters": 7450,
+            "utf8_bytes": 10076,
+            "non_ascii_characters": 1313,
+            "current_character_estimate": 3725,
+            "ascii_half_nonascii_one": 4382,
+            "ascii_quarter_nonascii_one": 2848,
+            "text_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+            "surrogate_content_tokens": {
+              "cl100k_base": 2741,
+              "o200k_base": 2214
+            }
+          },
+          {
+            "role": "user",
+            "characters": 66,
+            "utf8_bytes": 198,
+            "non_ascii_characters": 66,
+            "current_character_estimate": 33,
+            "ascii_half_nonascii_one": 66,
+            "ascii_quarter_nonascii_one": 66,
+            "text_sha256": "2d975a4cd1d60be29cd1ed05ea8ef1409555bcfd02bf9f0dac1888094396fdfb",
+            "surrogate_content_tokens": {
+              "cl100k_base": 78,
+              "o200k_base": 52
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 122,
+            "utf8_bytes": 122,
+            "non_ascii_characters": 0,
+            "current_character_estimate": 61,
+            "ascii_half_nonascii_one": 61,
+            "ascii_quarter_nonascii_one": 31,
+            "text_sha256": "913b675c064bfe6538866183ff42b8e45feaad969593dffba4278bbee5429435",
+            "surrogate_content_tokens": {
+              "cl100k_base": 22,
+              "o200k_base": 22
+            }
+          },
+          {
+            "role": "user",
+            "characters": 47,
+            "utf8_bytes": 141,
+            "non_ascii_characters": 47,
+            "current_character_estimate": 24,
+            "ascii_half_nonascii_one": 47,
+            "ascii_quarter_nonascii_one": 47,
+            "text_sha256": "af64f507e0ab711a7e222ae854c2fd6e060a796f66228dbc9a08b3ee9fb6fccc",
+            "surrogate_content_tokens": {
+              "cl100k_base": 57,
+              "o200k_base": 35
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 227,
+            "utf8_bytes": 269,
+            "non_ascii_characters": 21,
+            "current_character_estimate": 114,
+            "ascii_half_nonascii_one": 124,
+            "ascii_quarter_nonascii_one": 73,
+            "text_sha256": "d6111bba27f36aa64736115021e877d231d5c73bb6d4f2ff4af0853ddfc75375",
+            "surrogate_content_tokens": {
+              "cl100k_base": 104,
+              "o200k_base": 93
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 1654,
+            "utf8_bytes": 2696,
+            "non_ascii_characters": 521,
+            "current_character_estimate": 827,
+            "ascii_half_nonascii_one": 1088,
+            "ascii_quarter_nonascii_one": 805,
+            "text_sha256": "8aad3eb15e9b7e0117981a9096ef2b0ca4ce5b44ed0bd9db27871e3abeca3ff4",
+            "surrogate_content_tokens": {
+              "cl100k_base": 1183,
+              "o200k_base": 911
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 310,
+            "utf8_bytes": 332,
+            "non_ascii_characters": 11,
+            "current_character_estimate": 155,
+            "ascii_half_nonascii_one": 161,
+            "ascii_quarter_nonascii_one": 86,
+            "text_sha256": "0565d993511a14fcd440763b3858e391c1768bac3d7cf3915878030d432bd277",
+            "surrogate_content_tokens": {
+              "cl100k_base": 119,
+              "o200k_base": 115
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 2151,
+            "utf8_bytes": 4317,
+            "non_ascii_characters": 1084,
+            "current_character_estimate": 1076,
+            "ascii_half_nonascii_one": 1618,
+            "ascii_quarter_nonascii_one": 1351,
+            "text_sha256": "9988e5f79c27815b6612f2fbd91e9c5d30b0bfdf6e8fd32e93a81fe94269e93b",
+            "surrogate_content_tokens": {
+              "cl100k_base": 2052,
+              "o200k_base": 1468
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 273,
+            "utf8_bytes": 273,
+            "non_ascii_characters": 0,
+            "current_character_estimate": 137,
+            "ascii_half_nonascii_one": 137,
+            "ascii_quarter_nonascii_one": 69,
+            "text_sha256": "f45ab1bacb499683857237d1a6f31255d35a87cef48190079505fbed3743e56a",
+            "surrogate_content_tokens": {
+              "cl100k_base": 93,
+              "o200k_base": 95
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 1900,
+            "utf8_bytes": 4096,
+            "non_ascii_characters": 1098,
+            "current_character_estimate": 950,
+            "ascii_half_nonascii_one": 1499,
+            "ascii_quarter_nonascii_one": 1299,
+            "text_sha256": "baa40e834456ff244b0841e72d690fc9b35bea6c27e5062091ae78a5003faa01",
+            "surrogate_content_tokens": {
+              "cl100k_base": 1690,
+              "o200k_base": 1152
+            }
+          }
+        ],
+        "totals": {
+          "characters": 14200,
+          "utf8_bytes": 22520,
+          "non_ascii_characters": 4161,
+          "current_character_estimate": 7102,
+          "ascii_half_nonascii_one": 9183,
+          "ascii_quarter_nonascii_one": 6675
+        },
+        "surrogate_content_total": {
+          "cl100k_base": 8139,
+          "o200k_base": 6157
+        },
+        "surrogate_wire_json_tokens": {
+          "cl100k_base": 8687,
+          "o200k_base": 6711
+        }
+      },
+      {
+        "name": "preserved-source-final",
+        "system_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+        "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "history_sha256": "84f455e74c4a0d7f33efda2e2539d46b827186541a02db0a844d09eaac03ae1e",
+        "tool_exchanges_sha256": "f72854a3dbaec0497d37462ee5a942c2e483aa070b9539b3647a71118bede748",
+        "whole_request_current_estimate": 6887,
+        "prior_reported_claude_input": 7711,
+        "parts": [
+          {
+            "role": "system",
+            "characters": 7450,
+            "utf8_bytes": 10076,
+            "non_ascii_characters": 1313,
+            "current_character_estimate": 3725,
+            "ascii_half_nonascii_one": 4382,
+            "ascii_quarter_nonascii_one": 2848,
+            "text_sha256": "0083f8df8c4899c06069b6a1e7152d12126d53989e90d088829414187896c479",
+            "surrogate_content_tokens": {
+              "cl100k_base": 2741,
+              "o200k_base": 2214
+            }
+          },
+          {
+            "role": "user",
+            "characters": 66,
+            "utf8_bytes": 198,
+            "non_ascii_characters": 66,
+            "current_character_estimate": 33,
+            "ascii_half_nonascii_one": 66,
+            "ascii_quarter_nonascii_one": 66,
+            "text_sha256": "2d975a4cd1d60be29cd1ed05ea8ef1409555bcfd02bf9f0dac1888094396fdfb",
+            "surrogate_content_tokens": {
+              "cl100k_base": 78,
+              "o200k_base": 52
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 832,
+            "utf8_bytes": 2230,
+            "non_ascii_characters": 699,
+            "current_character_estimate": 416,
+            "ascii_half_nonascii_one": 766,
+            "ascii_quarter_nonascii_one": 733,
+            "text_sha256": "81ac5a704c9b5377d6fc3111ffc075bee284f75f3f8297e3d61fd40450098a22",
+            "surrogate_content_tokens": {
+              "cl100k_base": 953,
+              "o200k_base": 671
+            }
+          },
+          {
+            "role": "user",
+            "characters": 47,
+            "utf8_bytes": 141,
+            "non_ascii_characters": 47,
+            "current_character_estimate": 24,
+            "ascii_half_nonascii_one": 47,
+            "ascii_quarter_nonascii_one": 47,
+            "text_sha256": "af64f507e0ab711a7e222ae854c2fd6e060a796f66228dbc9a08b3ee9fb6fccc",
+            "surrogate_content_tokens": {
+              "cl100k_base": 57,
+              "o200k_base": 35
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 227,
+            "utf8_bytes": 269,
+            "non_ascii_characters": 21,
+            "current_character_estimate": 114,
+            "ascii_half_nonascii_one": 124,
+            "ascii_quarter_nonascii_one": 73,
+            "text_sha256": "d6111bba27f36aa64736115021e877d231d5c73bb6d4f2ff4af0853ddfc75375",
+            "surrogate_content_tokens": {
+              "cl100k_base": 104,
+              "o200k_base": 93
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 1654,
+            "utf8_bytes": 2696,
+            "non_ascii_characters": 521,
+            "current_character_estimate": 827,
+            "ascii_half_nonascii_one": 1088,
+            "ascii_quarter_nonascii_one": 805,
+            "text_sha256": "8aad3eb15e9b7e0117981a9096ef2b0ca4ce5b44ed0bd9db27871e3abeca3ff4",
+            "surrogate_content_tokens": {
+              "cl100k_base": 1183,
+              "o200k_base": 911
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 310,
+            "utf8_bytes": 332,
+            "non_ascii_characters": 11,
+            "current_character_estimate": 155,
+            "ascii_half_nonascii_one": 161,
+            "ascii_quarter_nonascii_one": 86,
+            "text_sha256": "0565d993511a14fcd440763b3858e391c1768bac3d7cf3915878030d432bd277",
+            "surrogate_content_tokens": {
+              "cl100k_base": 119,
+              "o200k_base": 115
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 1344,
+            "utf8_bytes": 2520,
+            "non_ascii_characters": 589,
+            "current_character_estimate": 672,
+            "ascii_half_nonascii_one": 967,
+            "ascii_quarter_nonascii_one": 778,
+            "text_sha256": "d67b70923548df5eb17fc4721b67c35c2b39e0a9daaa6740e40c7c22abc32645",
+            "surrogate_content_tokens": {
+              "cl100k_base": 1152,
+              "o200k_base": 866
+            }
+          },
+          {
+            "role": "assistant",
+            "characters": 273,
+            "utf8_bytes": 273,
+            "non_ascii_characters": 0,
+            "current_character_estimate": 137,
+            "ascii_half_nonascii_one": 137,
+            "ascii_quarter_nonascii_one": 69,
+            "text_sha256": "f45ab1bacb499683857237d1a6f31255d35a87cef48190079505fbed3743e56a",
+            "surrogate_content_tokens": {
+              "cl100k_base": 93,
+              "o200k_base": 95
+            }
+          },
+          {
+            "role": "tool",
+            "characters": 1262,
+            "utf8_bytes": 2674,
+            "non_ascii_characters": 706,
+            "current_character_estimate": 631,
+            "ascii_half_nonascii_one": 984,
+            "ascii_quarter_nonascii_one": 845,
+            "text_sha256": "d164d451b1aa924c9967782c1102d0adfe81172d76f00c13205cb1069981c6bd",
+            "surrogate_content_tokens": {
+              "cl100k_base": 1074,
+              "o200k_base": 744
+            }
+          }
+        ],
+        "totals": {
+          "characters": 13465,
+          "utf8_bytes": 21409,
+          "non_ascii_characters": 3973,
+          "current_character_estimate": 6734,
+          "ascii_half_nonascii_one": 8722,
+          "ascii_quarter_nonascii_one": 6350
+        },
+        "surrogate_content_total": {
+          "cl100k_base": 7554,
+          "o200k_base": 5796
+        },
+        "surrogate_wire_json_tokens": {
+          "cl100k_base": 7862,
+          "o200k_base": 6112
+        }
+      }
+    ]
+  },
+  "interpretation": {
+    "count_endpoint_is_not_trusted_for_budget_enforcement": true,
+    "native_count_provenance_and_exact_chat_to_messages_translation_unproved": true,
+    "surrogate_openai_encodings_are_not_native_claude_or_gemini_counts": true,
+    "local_cl100k_wire_reference_exceeds_two_previously_measured_claude_inputs_only_in_this_small_corpus": true,
+    "no_production_estimator_or_budget_change": true
+  },
+  "diagnostic_corrections": [
+    "Ephemeral tiktoken overlay did not expand editable workspace source paths; explicit repository source paths repaired the local script, without project dependency changes.",
+    "Initial old-source comparison used unprojected history against a fitted request usage; excluded. Corrected report verifies original system/context/history and full source-result hashes against measured calls.",
+    "Attempt to reuse the existing output directory failed before writing; corrected run uses a distinct preserved directory."
+  ],
+  "preceding_commit_ci": {
+    "headRefOid": "a567b695d2bb8fca3c6ee6e12e907455c82fdeac",
+    "isDraft": true,
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:21:03Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506544/job/110157899002",
+        "name": "rust (ubuntu-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Desktop Product CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:06Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506553/job/110157898708",
+        "name": "build",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Documentation"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:16Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506554/job/110157899001",
+        "name": "contract",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Protocol Contract CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:22:13Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898860",
+        "name": "python (ubuntu-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:18:32Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506569/job/110157898967",
+        "name": "secrets",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Security CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:20:04Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506552/job/110157898831",
+        "name": "web-smoke",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Web E2E and Architecture Boundaries"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:20:27Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506572/job/110157898667",
+        "name": "web (ubuntu-latest)",
+        "startedAt": "2026-10-01T00:18:25Z",
+        "status": "COMPLETED",
+        "workflowName": "Web Product CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:23:41Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506544/job/110157899055",
+        "name": "rust (windows-latest)",
+        "startedAt": "2026-10-01T00:18:27Z",
+        "status": "COMPLETED",
+        "workflowName": "Desktop Product CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:23:38Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898852",
+        "name": "python (macos-latest)",
+        "startedAt": "2026-10-01T00:18:31Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:21:16Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506572/job/110157898901",
+        "name": "web (windows-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Web Product CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:27:16Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898905",
+        "name": "python (windows-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:21:46Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506544/job/110157899092",
+        "name": "rust (macos-latest)",
+        "startedAt": "2026-10-01T00:18:32Z",
+        "status": "COMPLETED",
+        "workflowName": "Desktop Product CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:06Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506553/job/110158089905",
+        "name": "deploy",
+        "startedAt": "2026-10-01T00:19:07Z",
+        "status": "COMPLETED",
+        "workflowName": "Documentation"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:18:42Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898906",
+        "name": "neural-worker (ubuntu-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:11Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506569/job/110157899262",
+        "name": "dependencies",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Security CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:18:33Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506552/job/110157898549",
+        "name": "architecture-boundaries",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Web E2E and Architecture Boundaries"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:06Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898665",
+        "name": "neural-worker (macos-latest)",
+        "startedAt": "2026-10-01T00:18:36Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T00:19:29Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36795506548/job/110157898968",
+        "name": "neural-worker (windows-latest)",
+        "startedAt": "2026-10-01T00:18:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Python CI"
+      }
+    ]
+  },
+  "windows_failure": {
+    "test": "test_started_event_failure_does_not_strand_running_run",
+    "observation": "One-second wait_for_terminal watchdog expired; durable execution and waiter completion were not independently observed. No lost signal or storage root cause proved. Prior shutdown commit failure is a different test and remains recorded.",
+    "new_tests": "Readiness synchronized after registered waiter reread observes RUNNING; real execution/storage setup bounded separately, original one-second notification wait preserved. Controlled held notification proves waiter stays pending; original 0.9-second shutdown assertion unchanged."
+  },
+  "local_artifact_sha256": {
+    "native-budget-analysis-corrected-20261001/report.json": "74ef5f3145f8243982167656d7e556d1805fe8bb93cddfb0c362a927d5151a15",
+    "endpoint-count-comparison-20261001/report.json": "597a74e366742fc2139d9424e0d5f5f3f96434a84fea31f44cc09caf8f62657d",
+    "native-count-probe-20261001/result.json": "7d578c10a5d7cf6826c69a26b189b9c4c051da291bf04d8586c674797c7ef9f6",
+    "ci-a567b69-third-20261001.json": "b87ad3583ccf8ea402c6d9476b54291f59c947d1f5acc8d7077a7c3e461af466",
+    "ci-a567b69-windows-python-failed-20261001.log": "37392991db119997143c2b8b99bd7038fca22917230633887098cb703543e7f0",
+    "analyze-native-budget-20261001.py": "715dd7ab62b0f9c4eef4d9de64f788bdf02faa2fc981501cdfbe7efdc1bdfb87",
+    "compare-endpoint-count-20261001.py": "ccf5e1999b7209c493b823276b69d4a6e9a0ef1110c7fa43d7a68ffe2a89bf0d",
+    "probe-native-count-20261001.py": "db57010a84d2b5cb2e9e65f5adcbba51e4d800b1e46661bc9a9bfa6dcf656a9b"
+  },
+  "privacy": "Only counts, roles, lengths, public source hashes and synthetic Hello payload; no source-page or prompt bodies, secrets, headers, private endpoint address, or reasoning content.",
+  "strict_shutdown_test_unchanged": {
+    "verified": true,
+    "sha256": "37b0f1c9638403f087029c887942b6f8719afe8c46026c781609899f97935a5b"
+  },
+  "software_checks": {
+    "targeted": {
+      "local_log": "lifecycle-waiter-targeted-20261001.log",
+      "sha256": "fe611ac564677b2f59b9e50d4f05995b1511a0788fa7790ec1b9e1d3c299c870",
+      "observed_result": "13 passed",
+      "expected_failure": false
+    },
+    "full_python": {
+      "local_log": "lifecycle-waiter-full-python-20261001.log",
+      "sha256": "0331e37d22e31eef0580e5cf310aa41a0c28e29fdfd80422d64af1a7c327aae3",
+      "observed_result": "1708 passed, 46 skipped",
+      "expected_failure": false
+    },
+    "pyright": {
+      "local_log": "lifecycle-waiter-pyright-final-20261001.log",
+      "sha256": "f552d237ad0bd249c05f97eb62dbc65d2d0e4a5fe2346608e10fb7838dba9ed1",
+      "observed_result": "0 errors, 0 warnings",
+      "expected_failure": false
+    },
+    "notification_mutation": {
+      "local_log": "lifecycle-waiter-notify-mutation-20261001.log",
+      "sha256": "99108b28a199891b54f6404f1f928d35d0d9cad393c2ee46efa9d1935869c7dd",
+      "observed_result": "2 failed, 11 deselected",
+      "expected_failure": true
+    }
+  },
+  "full_python_count_scope": "Whole worktree including four existing unstaged TTS diagnostics; not a committed-only count"
+}

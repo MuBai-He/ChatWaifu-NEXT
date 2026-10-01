@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "reviewer": "primary Codex",
+  "renderer": "Installed VitePress Markdown renderer",
+  "tool_version": "1.2.2",
+  "results": [
+    {
+      "case": "actual Opus multi-code reply",
+      "old_fence_count": 3,
+      "fixed_fence_count": 1,
+      "old_preserves_full_reply": false,
+      "fixed_preserves_full_reply": true
+    },
+    {
+      "case": "synthetic triple/quadruple fences and fake heading",
+      "old_fence_count": 3,
+      "fixed_fence_count": 1,
+      "old_preserves_full_reply": false,
+      "fixed_preserves_full_reply": true
+    }
+  ]
+}

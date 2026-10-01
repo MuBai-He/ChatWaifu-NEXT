@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "scope": "same recorded initial decision, system-prompt-only contrast; no actual tools executed",
+  "q02_accepted": false,
+  "model": "gemini-3.8-flash-high",
+  "prompt_as_of": "2026-09-30T16:23:48+00:00",
+  "source_sample_key": "detailed_answer:r0:t2:candidate_v5",
+  "same_inputs": [
+    "user_text",
+    "context",
+    "history",
+    "generation_id",
+    "tools",
+    "tool_choice"
+  ],
+  "conditions": [
+    {
+      "condition": "full",
+      "provider_rounds": 3,
+      "rounds_with_function_calls": 0,
+      "finish_reasons": {
+        "stop": 3
+      },
+      "system_prompt_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+      "usage": {
+        "prompt_tokens": 10218,
+        "completion_tokens": 1260,
+        "total_tokens": 13459,
+        "reasoning_tokens": 1981
+      }
+    },
+    {
+      "condition": "lean",
+      "provider_rounds": 3,
+      "rounds_with_function_calls": 3,
+      "finish_reasons": {
+        "tool_calls": 3
+      },
+      "system_prompt_sha256": "b0baddd62d1064f9f7999aec514c439aa71b474e346315cde2af9f811ab36d44",
+      "usage": {
+        "prompt_tokens": 6015,
+        "completion_tokens": 186,
+        "total_tokens": 6971,
+        "reasoning_tokens": 770
+      }
+    }
+  ],
+  "artifact_sha256": {
+    "run-reference.json": "f8f7bb6d17b46c5229cd3db3e7060b5d052290ccb8080e8b0a56a428affd8631",
+    "provider-rounds.jsonl": "6ff5ba6a46b4147ca876f6e2f1a4608aa54663abed9a75ad2178a72b0c686c0a"
+  }
+}

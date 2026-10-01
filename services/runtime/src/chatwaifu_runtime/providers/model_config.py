@@ -10,9 +10,11 @@ from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import httpx2
+from chatwaifu_protocol.character import ModelContextBudget, NonsecretModelRoute
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from chatwaifu_runtime.config.settings import Settings
@@ -22,6 +24,7 @@ from chatwaifu_runtime.photo_memory.ports import (
     EmbeddingModality,
     PhotoEmbeddingInput,
 )
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.contracts import (
     LlmProvider,
     LlmRequest,
@@ -29,6 +32,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
 )
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
 from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
     openai_compatible_endpoint,
@@ -59,12 +63,15 @@ class ModelRoleConfig(BaseModel):
     base_url: str = Field(default="", max_length=2048)
     timeout_seconds: float = Field(default=60, gt=0, le=600)
     context_window: int = Field(default=8192, ge=1024, le=2_000_000)
+    budget: ModelContextBudget = Field(default_factory=ModelContextBudget)
     enabled: bool = True
     api_key_configured: bool = False
     updated_at: datetime
 
     @model_validator(mode="after")
     def validate_role_provider(self) -> ModelRoleConfig:
+        if self.role != "embedding":
+            resolve_context_budget(self.context_window, self.budget)
         if self.role == "embedding" and self.provider == "demo":
             raise ValueError("embedding role uses local_hash instead of demo")
         if self.role != "embedding" and self.provider == "local_hash":
@@ -142,8 +149,8 @@ class ModelConfigurationService:
                     """
                     INSERT OR IGNORE INTO model_role_configs(
                         role, provider, model, base_url, timeout_seconds,
-                        context_window, enabled, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        context_window, enabled, updated_at, budget_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         role,
@@ -154,6 +161,7 @@ class ModelConfigurationService:
                         config.context_window,
                         int(config.enabled),
                         now.isoformat(),
+                        config.budget.model_dump_json(),
                     ),
                 )
         await self.reload()
@@ -162,7 +170,7 @@ class ModelConfigurationService:
         rows = await self._database.fetchall(
             """
             SELECT role, provider, model, base_url, timeout_seconds,
-                   context_window, enabled, updated_at
+                   context_window, enabled, updated_at, budget_json
             FROM model_role_configs ORDER BY role
             """
         )
@@ -177,6 +185,7 @@ class ModelConfigurationService:
                     "base_url": str(row["base_url"]),
                     "timeout_seconds": float(row["timeout_seconds"]),
                     "context_window": int(row["context_window"]),
+                    "budget": json.loads(str(row["budget_json"])),
                     "enabled": bool(row["enabled"]),
                     "api_key_configured": self._secrets.get(role) is not None,
                     "updated_at": datetime.fromisoformat(str(row["updated_at"])),
@@ -202,20 +211,23 @@ class ModelConfigurationService:
         api_key: str | None = None,
         clear_api_key: bool = False,
     ) -> ModelRoleConfig:
+        # model_copy(update=...) can bypass validation in internal callers.
+        config = ModelRoleConfig.model_validate(config.model_dump())
         now = datetime.now(UTC)
         async with self._database.transaction() as connection:
             await connection.execute(
                 """
                 INSERT INTO model_role_configs(
                     role, provider, model, base_url, timeout_seconds,
-                    context_window, enabled, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    context_window, enabled, updated_at, budget_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(role) DO UPDATE SET
                     provider = excluded.provider,
                     model = excluded.model,
                     base_url = excluded.base_url,
                     timeout_seconds = excluded.timeout_seconds,
                     context_window = excluded.context_window,
+                    budget_json = excluded.budget_json,
                     enabled = excluded.enabled,
                     updated_at = excluded.updated_at
                 """,
@@ -228,6 +240,7 @@ class ModelConfigurationService:
                     config.context_window,
                     int(config.enabled),
                     now.isoformat(),
+                    config.budget.model_dump_json(),
                 ),
             )
         if clear_api_key:
@@ -238,33 +251,57 @@ class ModelConfigurationService:
         return self.get(config.role)
 
     async def complete(
-        self, role: Literal["memory_extraction", "memory_summary"], system: str, user: str
+        self,
+        role: Literal["memory_extraction", "memory_summary"],
+        system: str,
+        user: str,
+        *,
+        config: ModelRoleConfig | None = None,
     ) -> str:
-        config = self.get(role)
-        if not config.enabled or config.provider == "disabled":
+        effective_config = config if config is not None else self.get(role)
+        if not effective_config.enabled or effective_config.provider == "disabled":
             return ""
-        if config.provider == "demo":
+        if effective_config.provider == "demo":
             if role == "memory_extraction":
                 return '{"memories": []}'
             compact = " ".join(user.split())
             return compact[-1200:]
-        if config.provider != "openai_compatible":
-            raise RuntimeError(f"unsupported completion provider for {role}: {config.provider}")
+        if effective_config.provider != "openai_compatible":
+            raise RuntimeError(
+                f"unsupported completion provider for {role}: {effective_config.provider}"
+            )
+        request = LlmRequest(
+            generation_id=uuid4(),
+            user_text=user,
+            system_prompt=system,
+            max_output_tokens=effective_config.budget.max_output_tokens,
+        )
+        input_limit = resolve_context_budget(
+            effective_config.context_window, effective_config.budget
+        ).input_tokens
+        if estimate_reference_input_tokens(request) > input_limit:
+            # No silent truncation of extraction evidence or summary source text.
+            raise ValueError(f"{role} mandatory input exceeds its configured reference budget")
         headers = {"Content-Type": "application/json"}
         if key := self._secrets.get(role):
             headers["Authorization"] = f"Bearer {key}"
-        async with httpx2.AsyncClient(timeout=config.timeout_seconds) as client:
+        async with httpx2.AsyncClient(timeout=effective_config.timeout_seconds) as client:
             response = await client.post(
-                openai_compatible_endpoint(config.base_url, "chat/completions"),
+                openai_compatible_endpoint(effective_config.base_url, "chat/completions"),
                 headers=headers,
                 json={
-                    "model": config.model,
+                    "model": effective_config.model,
                     "messages": [
                         {"role": "system", "content": system},
                         {"role": "user", "content": user},
                     ],
                     "stream": False,
                     "temperature": 0,
+                    **(
+                        {"max_tokens": effective_config.budget.max_output_tokens}
+                        if effective_config.budget.max_output_tokens is not None
+                        else {}
+                    ),
                 },
             )
             response.raise_for_status()
@@ -429,8 +466,7 @@ class ModelConfigurationService:
                 break
         return {"status": "ok", "characters": sum(len(item) for item in chunks)}
 
-    def chat_provider(self) -> LlmProvider:
-        config = self.get("chat")
+    def create_chat_provider(self, config: ModelRoleConfig) -> LlmProvider:
         if not config.enabled or config.provider in {"disabled", "local_hash"}:
             return DemoLlmProvider(self._settings.llm.demo_chunk_delay_ms)
         if config.provider == "demo":
@@ -438,9 +474,12 @@ class ModelConfigurationService:
         return OpenAiCompatibleLlmProvider(
             base_url=config.base_url,
             model=config.model,
-            api_key=self._secrets.get("chat"),
+            api_key=lambda: self._secrets.get("chat"),
             timeout_seconds=config.timeout_seconds,
         )
+
+    def chat_provider(self) -> LlmProvider:
+        return self.create_chat_provider(self.get("chat"))
 
     def _defaults(self, now: datetime) -> dict[ModelRole, ModelRoleConfig]:
         llm = self._settings.llm
@@ -520,3 +559,26 @@ def _hash_embedding(text: str, dimensions: int = 64) -> list[float]:
         vector[slot] += -1.0 if digest[4] & 1 else 1.0
     norm = math.sqrt(sum(value * value for value in vector)) or 1.0
     return [value / norm for value in vector]
+
+
+def extract_nonsecret_route(config: ModelRoleConfig) -> NonsecretModelRoute:
+    endpoint_digest: str | None = None
+    if config.base_url:
+        split = urlsplit(config.base_url)
+        if split.hostname:
+            try:
+                port = split.port
+            except ValueError:
+                port = None
+            route_identity = (
+                f"{split.scheme}://{split.hostname.lower()}:{port or ''}{split.path.rstrip('/')}"
+            )
+            endpoint_digest = hashlib.sha256(route_identity.encode("utf-8")).hexdigest()
+    return NonsecretModelRoute(
+        role=config.role,
+        provider=config.provider,
+        model=config.model,
+        endpoint_digest=endpoint_digest,
+        context_window=config.context_window,
+        budget=config.budget,
+    )

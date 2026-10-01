@@ -22,6 +22,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmStreamEvent,
     LlmTextDelta,
 )
+from provider_test_support import use_chat_stream_stub
 from test_external_channels import _configuration, _message
 
 _EXPECTED_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
@@ -38,6 +39,8 @@ async def test_failed_generation_notice_survives_restart_and_replay(
         yield LlmTextDelta("")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", fail)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     connection_id = uuid4()
     created = await container.external_channels.create_connection(_configuration(connection_id))
@@ -159,6 +162,8 @@ async def test_failed_generation_notice_survives_restart_and_replay(
             yield LlmResponseCompleted("stop")
 
         monkeypatch.setattr(recovered.model_configurations.chat, "stream", succeed_next)
+
+        use_chat_stream_stub(monkeypatch, recovered.model_configurations)
         next_message = _message(
             connection_id,
             external_message_id="subsequent-inbound",
@@ -207,6 +212,8 @@ async def test_new_inbound_cancels_generation_and_no_old_failure_notice(
         yield LlmResponseCompleted("stop")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", stream)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     try:
         connection_id = uuid4()
@@ -306,6 +313,8 @@ async def test_native_notice_keeps_context_until_ack_and_then_cleans(
         yield LlmTextDelta("")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", fail)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     try:
         connection_id = uuid4()
@@ -377,6 +386,8 @@ async def test_new_message_cancels_unsent_failure_notice(
         yield LlmResponseCompleted("stop")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", stream)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     try:
         connection_id = uuid4()
@@ -462,6 +473,8 @@ async def test_cancellation_wins_race_before_notice_transaction(
         yield LlmTextDelta("")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", fail)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     monkeypatch.setattr(container.external_channel_repository, "fail_turn_with_notice", race)
     await container.start()
     try:
@@ -498,6 +511,8 @@ async def test_cancellation_before_failure_leaves_no_recovery_history_row(
         yield LlmTextDelta("")
 
     monkeypatch.setattr(container.model_configurations.chat, "stream", hang_and_cancel)
+
+    use_chat_stream_stub(monkeypatch, container.model_configurations)
     await container.start()
     try:
         connection_id = uuid4()

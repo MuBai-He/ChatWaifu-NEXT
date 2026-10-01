@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-sonnet-4-6",
+  "raw_samples": 96,
+  "raw_byte_identity_verified": true,
+  "primary_review_pairs": 48,
+  "review_blind": false,
+  "judgments_frozen_before_label_reveal": true,
+  "files": [
+    {
+      "path": "blinded_key.json",
+      "sha256": "0c0f3a5898a01d47fb5dabe7db4fc23980a0c811b1f1ca857de57813898d59b4"
+    },
+    {
+      "path": "blinded_review_template.md.txt",
+      "sha256": "a62ce4c2b40504d211768ff5715c015688bf815097c08f5618d90e8c213edefb"
+    },
+    {
+      "path": "fact-coverage-audit.json",
+      "sha256": "595169afb1adc10c1ed9d53c2370aa4407947d198fa91ac08d69d9e481bf9875"
+    },
+    {
+      "path": "metadata.json",
+      "sha256": "327c9747e610c5b981f02d0da745554990782b54782e25020f84c66b1517794f"
+    },
+    {
+      "path": "primary-code-execution.json",
+      "sha256": "3c5f9df6e8d3f50e96beb52f3cd6e96d3a4b485e1e8942170fffa8af84b8d219"
+    },
+    {
+      "path": "primary-masked-packet.json",
+      "sha256": "38a505d56b832d0c6debbb7d3409f8d0e85a05657642bd7918e7bedda2594d44"
+    },
+    {
+      "path": "primary-masked-review.json",
+      "sha256": "a1fa6a1a8850a5629f03fda1d861ff255b066a0916e26f30d5f400f52a8ae148"
+    },
+    {
+      "path": "primary-review-labels.json",
+      "sha256": "7b635a24983655dcffd6af853b7dc9c51a90fb7b756021d1543dad970c16c3c7"
+    },
+    {
+      "path": "primary-review.json",
+      "sha256": "aadd9f7ac495591426f3d8b72b3bdf2fa7b8e1b1758995253e53b7d177143a47"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "a31eee85d4559614b96b01500c056df4c7a98cd580e20a2e3e579bdf291c94b8"
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "6733391c5a7ce97eef74f9b16e133ba79776b34b89d4b461cd2e00eb7805eb83"
+    }
+  ],
+  "release_approved": false
+}

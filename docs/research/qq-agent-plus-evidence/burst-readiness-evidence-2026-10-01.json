@@ -1,0 +1,207 @@
+{
+  "schema_version": "1.0",
+  "failed_source_commit": "29431786cfc2e8a9f15183b707d75c6f525be359",
+  "ci_check_states": [
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002939",
+      "name": "python (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030100/job/110277199363",
+      "name": "deploy",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030097/job/110277002391",
+      "name": "architecture-boundaries",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002821",
+      "name": "neural-worker (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002861",
+      "name": "python (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030096/job/110277003696",
+      "name": "rust (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030149/job/110277002865",
+      "name": "web (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002782",
+      "name": "neural-worker (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002916",
+      "name": "python (windows-latest)",
+      "state": "FAILURE"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030097/job/110277002667",
+      "name": "web-smoke",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002762",
+      "name": "python-static",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030132/job/110277002902",
+      "name": "neural-worker (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030096/job/110277003708",
+      "name": "rust (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030112/job/110277002299",
+      "name": "secrets",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030112/job/110277002465",
+      "name": "dependencies",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030096/job/110277003287",
+      "name": "rust (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030149/job/110277002550",
+      "name": "web (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030122/job/110277002335",
+      "name": "contract",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36834030100/job/110277004094",
+      "name": "build",
+      "state": "SUCCESS"
+    }
+  ],
+  "failed_ci_run": 36834030132,
+  "failed_ci_job": 110277002916,
+  "failed_test": "test_full_deferred_burst_and_many_more_images_do_not_block_stop[False]",
+  "failure_phase": "initial provider stream_entered readiness, before stop/overflow behavior",
+  "failed_ci_exception": "TimeoutError at asyncio.wait_for(entered.wait(), 5), old line 2338",
+  "change_scope": "test fixture phase readiness only; production code unchanged",
+  "checks": {
+    "delayed_initial_intake_before": "expected failure at original entered.wait, 1 failed in 5.26 s",
+    "delayed_initial_intake_after": "1 passed in 6.43 s",
+    "suppressed_dispatch_after": "expected failure at unchanged entered.wait(5), 1 failed in 5.67 s",
+    "targeted": "71 passed",
+    "full_python": "1863 passed, 46 platform skips, 1 audioop warning in 69.93 s",
+    "ruff_lint": "passed",
+    "ruff_format": "619 files already formatted",
+    "pyright": "0 errors, 0 warnings, 0 informations",
+    "architecture": "passed",
+    "web_build": "passed",
+    "desktop_ui_build": "passed",
+    "docs_build": "passed"
+  },
+  "controls": [
+    {
+      "path": "burst-intake-latency-before-20261001.log",
+      "sha256": "7ac1752b2c6e6b37b7e3b8ccf903ee721c7841a3dca8adbf11a381995cc61c71",
+      "log_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____ test_full_deferred_burst_and_many_more_images_do_not_block_stop[False] ____\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py:520: in wait_for\n    return await fut\n           ^^^^^^^^^\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/locks.py:212: in wait\n    await fut\nE   asyncio.exceptions.CancelledError\n\nThe above exception was the direct cause of the following exception:\nservices/runtime/tests/test_inbound_multi_image_burst.py:2338: in test_full_deferred_burst_and_many_more_images_do_not_block_stop\n    await asyncio.wait_for(entered.wait(), 5)\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py:519: in wait_for\n    async with timeouts.timeout(timeout):\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/timeouts.py:115: in __aexit__\n    raise TimeoutError from exc_val\nE   TimeoutError\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14\n  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13\n    import audioop\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED services/runtime/tests/test_inbound_multi_image_burst.py::test_full_deferred_burst_and_many_more_images_do_not_block_stop[False]\n1 failed, 1 warning in 5.26s\n"
+    },
+    {
+      "path": "burst-intake-latency-after-20261001.log",
+      "sha256": "1b268303afbc14b34c9252c0e27ba664b2ba2a5d09bcac598115630689b97457",
+      "log_text": ".                                                                        [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14\n  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13\n    import audioop\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n1 passed, 1 warning in 6.43s\n"
+    },
+    {
+      "path": "burst-dispatch-negative-control-20261001.log",
+      "sha256": "73d7e01e5eadfb843c8b6496edfb6aac88c9cda33a5490937936165a9d5cdf08",
+      "log_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____ test_full_deferred_burst_and_many_more_images_do_not_block_stop[False] ____\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py:520: in wait_for\n    return await fut\n           ^^^^^^^^^\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/locks.py:212: in wait\n    await fut\nE   asyncio.exceptions.CancelledError\n\nThe above exception was the direct cause of the following exception:\nservices/runtime/tests/test_inbound_multi_image_burst.py:2355: in test_full_deferred_burst_and_many_more_images_do_not_block_stop\n    await asyncio.wait_for(entered.wait(), 5)\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/tasks.py:519: in wait_for\n    async with timeouts.timeout(timeout):\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\n../../../../.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/asyncio/timeouts.py:115: in __aexit__\n    raise TimeoutError from exc_val\nE   TimeoutError\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14\n  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13\n    import audioop\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED services/runtime/tests/test_inbound_multi_image_burst.py::test_full_deferred_burst_and_many_more_images_do_not_block_stop[False]\n1 failed, 1 warning in 5.67s\n"
+    },
+    {
+      "path": "burst-readiness-targeted-20261001.log",
+      "sha256": "3da85af569a6b7e3b84e815aced08e37c5e7c70cfd421159844c54674cd137bb",
+      "log_text": ".......................................................................  [100%]\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14\n  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13\n    import audioop\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n71 passed, 1 warning in 7.58s\n"
+    }
+  ],
+  "fault_injection_scripts": [
+    {
+      "path": "burst-intake-latency-control-20261001.py",
+      "sha256": "863c2e8851a09c29dbcd4299c353c2643501b86027d0dea0ddd294efe07b5a39",
+      "source": "\"\"\"Fault-inject initial intake latency, not synchronization or a production change.\"\"\"\nimport asyncio,sys\nfrom pathlib import Path\nrepo=Path.cwd()\nfor p in [repo,repo/'services/runtime/src',repo/'packages/protocol-python/src',repo/'packages/model-worker-sdk-python/src',repo/'services/runtime/tests']:sys.path.insert(0,str(p))\nimport pytest\nfrom chatwaifu_runtime.external_channels.management import ChannelManagementService\nclass InitialIntakeLatency:\n @pytest.hookimpl(hookwrapper=True)\n def pytest_runtest_call(self,item):\n  original=ChannelManagementService._remember_context\n  async def slow(self,connection_id,external_message_id,context):\n   if external_message_id in {f'pressure-{i}' for i in range(4)}:\n    await asyncio.sleep(1.5)\n   return await original(self,connection_id,external_message_id,context)\n  ChannelManagementService._remember_context=slow\n  try:yield\n  finally:ChannelManagementService._remember_context=original\nsys.exit(pytest.main(['services/runtime/tests/test_inbound_multi_image_burst.py::test_full_deferred_burst_and_many_more_images_do_not_block_stop[False]','-q','--tb=short'],plugins=[InitialIntakeLatency()]))\n"
+    },
+    {
+      "path": "burst-dispatch-negative-control-20261001.py",
+      "sha256": "2d1a979e092a50288cd1cd949b1f96c7a0df6c2da2ab73dea3c9ffe07cf472c2",
+      "source": "\"\"\"Suppress dispatch in memory; revised readiness check must still fail.\"\"\"\nimport asyncio\nimport sys\nfrom pathlib import Path\nrepo = Path.cwd()\nfor path in (repo, repo / 'services/runtime/src', repo / 'packages/protocol-python/src', repo / 'packages/model-worker-sdk-python/src', repo / 'services/runtime/tests'):\n    sys.path.insert(0, str(path))\nimport pytest\nfrom chatwaifu_runtime.external_channels.burst import ImageBurstCoordinator\nclass SuppressedDispatch:\n    @pytest.hookimpl(hookwrapper=True)\n    def pytest_runtest_call(self, item):\n        original = ImageBurstCoordinator._spawn_dispatch_task\n        def suppress(self, batch):\n            async def no_dispatch():\n                return None\n            return asyncio.create_task(no_dispatch())\n        ImageBurstCoordinator._spawn_dispatch_task = suppress\n        try:\n            yield\n        finally:\n            ImageBurstCoordinator._spawn_dispatch_task = original\nsys.exit(pytest.main(['services/runtime/tests/test_inbound_multi_image_burst.py::test_full_deferred_burst_and_many_more_images_do_not_block_stop[False]', '-q', '--tb=short'], plugins=[SuppressedDispatch()]))\n"
+    }
+  ],
+  "protected_files": [
+    {
+      "path": ".github/workflows/ci-python.yml",
+      "sha256": "14d4d99e1403adfa96dd2e89f8cd1b96b98f66ffc28b42e1dc193287938efec5"
+    },
+    {
+      "path": "services/runtime/tests/test_tts_configuration.py",
+      "sha256": "6b2b0aed886c8a2b24ab820563b92313096c2936d278e01ef365325f772f9fe5"
+    }
+  ],
+  "limits": [
+    "The per-message latency injection demonstrates setup-deadline coupling; it does not establish the exact Windows host root cause.",
+    "Stop, overflow, cursor and dispatch deadlines/assertions are unchanged. No added skips or arbitrary synchronization sleeps.",
+    "Negative controls are in-memory fault injection, with original methods restored; no production file is mutated.",
+    "New-head Windows CI must be separately verified; local success does not clear historical failure.",
+    "No real channels, user data or product settings were used."
+  ],
+  "test_source_sha256": "0946b24d24da87965ab8d8ebceda3aaf166422fc84a791e6a8655eb347869d6c",
+  "verification_log_hashes": [
+    {
+      "path": "burst-readiness-python-full-20261001.log",
+      "sha256": "960384cfdb1fc849f3f98db296157261c89f31b71ed3cb988e700b4175aefe27"
+    },
+    {
+      "path": "burst-readiness-ruff-20261001.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "burst-readiness-format-20261001.log",
+      "sha256": "c8ee7115aab1f52abe84d21ffe4362cfadcc12311ce1872dded49d51640b1465"
+    },
+    {
+      "path": "burst-readiness-pyright-20261001.log",
+      "sha256": "f552d237ad0bd249c05f97eb62dbc65d2d0e4a5fe2346608e10fb7838dba9ed1"
+    },
+    {
+      "path": "burst-readiness-architecture-20261001.log",
+      "sha256": "949c9b19feaee050e55e759809771c462e82029514613b066953746f8f5d6021"
+    },
+    {
+      "path": "burst-readiness-web-build-20261001.log",
+      "sha256": "2011d7c38d072691300756fb1908e06e89bd48f949aa39d5efdb94def3b4638b"
+    },
+    {
+      "path": "burst-readiness-desktop-ui-build-20261001.log",
+      "sha256": "0c3cc41c35abe2600fe2a4bb11af39cd8a931d6beeb29250c066e35b135d4178"
+    },
+    {
+      "path": "source-scope-denial-docs-build-20261001.log",
+      "sha256": "d9aa152a425740737c13bdb054d59020da19511bdfba20b0ac01f5f7b809ebc2"
+    }
+  ]
+}

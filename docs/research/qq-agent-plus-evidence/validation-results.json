@@ -1,0 +1,130 @@
+{
+  "date": "2026-09-29",
+  "commit": "cd5b64abafb80985b930bb1062d547e2c3ecaf89",
+  "platform": "Darwin",
+  "node": "v26.0.0",
+  "npm": "11.16.0",
+  "bash": "3.2.57",
+  "ffmpeg_available": false,
+  "checks": [
+    {
+      "name": "js-syntax",
+      "files": 207,
+      "exit_code": 0,
+      "failures": [],
+      "seconds": 9.65
+    },
+    {
+      "name": "shell-syntax",
+      "command": [
+        "/bin/bash -n deploy.sh",
+        "/bin/bash -n deploy-all.sh",
+        "/bin/bash -n manage.sh"
+      ],
+      "exit_code": 0,
+      "per_file": [
+        {
+          "file": "deploy.sh",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "file": "deploy-all.sh",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "file": "manage.sh",
+          "exit_code": 0,
+          "output": ""
+        }
+      ]
+    },
+    {
+      "name": "strict-scan",
+      "command": ["node", "src/ops.js", "scan", "--strict"],
+      "exit_code": 0,
+      "seconds": 0.13
+    },
+    {
+      "name": "unit",
+      "command": ["npm", "run", "test:unit"],
+      "exit_code": 1,
+      "seconds": 16.03
+    },
+    {
+      "name": "local",
+      "command": ["npm", "run", "test:local"],
+      "exit_code": 0,
+      "seconds": 4.82
+    },
+    {
+      "name": "prompt",
+      "command": ["node", "test/test-prompt.mjs"],
+      "exit_code": 0,
+      "seconds": 0.13
+    },
+    {
+      "name": "render",
+      "command": ["node", "test/render-test.mjs"],
+      "exit_code": 0,
+      "seconds": 3.79
+    },
+    {
+      "name": "scroll",
+      "command": ["node", "test/scroll-test.mjs"],
+      "exit_code": 0,
+      "seconds": 2.62
+    },
+    {
+      "name": "usage",
+      "command": ["node", "test/usage-e2e.mjs"],
+      "exit_code": 0,
+      "seconds": 1.09
+    }
+  ],
+  "unit_summary": {
+    "tests": 679,
+    "passed": 649,
+    "failed": 21,
+    "skipped": 9,
+    "cancelled": 0
+  },
+  "failed_test_names": [
+    "fresh preflight succeeds without creating the stack or asking for model credentials",
+    "pre-created empty data directories do not count as an existing installation",
+    "a not-found service reported with nonzero exit still permits fresh installation",
+    "a managed stack may be checked repeatedly with all of its own ports occupied",
+    "ordinary managed update does not attempt password rotation and preserves Agent configuration",
+    "a managed stack with a stopped container and Agent can be updated",
+    "preflight protects external SnowLuma at another root",
+    "preflight protects pre-existing Agent service",
+    "preflight protects Nginx on the selected WebUI port",
+    "preflight protects failed Docker inventory",
+    "preflight protects inaccessible Docker daemon",
+    "preflight protects failed service inspection",
+    "preflight protects unavailable port inventory",
+    "managed preflight refuses mismatched service directory without writing",
+    "managed preflight refuses mismatched container project without writing",
+    "managed preflight refuses mismatched container volumes without writing",
+    "managed preflight refuses mismatched unrelated Compose services without writing",
+    "managed preflight refuses mismatched Compose volume source without writing",
+    "managed preflight refuses mismatched changed live Token without writing",
+    "managed preflight refuses mismatched production OneBot endpoints without writing",
+    "managed preflight refuses mismatched corrupt configuration without writing"
+  ],
+  "skipped_test_names": [
+    "ffmpegToPcm 真实转换：wav 输入产出 16k mono PCM # 本环境没有 ffmpeg",
+    "ffmpegToPcm 无效输入报错而不是挂起 # 本环境没有 ffmpeg",
+    "git 通道不通时改用 API + codeload 源码包完成部署 # 更新器只在 Linux 上运行（需要 /bin/bash、tar 与 systemd）",
+    "API 通道取源码失败时回退 git，并先 fetch 再 checkout # 更新器只在 Linux 上运行（需要 /bin/bash、tar 与 systemd）",
+    "API 解析 tag 遇到瞬时 5xx 会按配置重试（不再一次抖动就放弃） # 更新器只在 Linux 上运行（需要 /bin/bash、tar 与 systemd）",
+    "视频抽帧条：3 秒视频抽成一张 JPEG 四宫格 # 本环境没有 ffmpeg",
+    "抽帧遇到垃圾输入返回 null（由调用方报\"抽帧失败\"，不当成空图静默通过） # 本环境没有 ffmpeg",
+    "get_message_images 在视频消息上返回帧条 JPEG（不是\"没有可查看的图片\"） # 本环境没有 ffmpeg",
+    "抽帧被中止时原样抛出（不误报\"需要 ffmpeg/ffprobe\"） # 本环境没有 ffmpeg"
+  ],
+  "real_qq_verified": false,
+  "real_model_verified": false,
+  "linux_deployment_verified": false
+}

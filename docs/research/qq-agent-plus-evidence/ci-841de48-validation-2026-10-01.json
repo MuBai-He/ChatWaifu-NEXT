@@ -1,0 +1,199 @@
+{
+  "headRefName": "mubai/qq-agent-plus-implementation",
+  "headRefOid": "841de487f79a3c949a68af25a8e427a3061f118e",
+  "isDraft": true,
+  "number": 50,
+  "state": "OPEN",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:23:19Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558387/job/110413949757",
+      "name": "rust (ubuntu-latest)",
+      "startedAt": "2026-10-01T14:20:31Z",
+      "status": "COMPLETED",
+      "workflowName": "Desktop Product CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:13Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558580/job/110413949848",
+      "name": "build",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Documentation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:08Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558417/job/110413949425",
+      "name": "contract",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Protocol Contract CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:17Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950397",
+      "name": "python-static",
+      "startedAt": "2026-10-01T14:20:31Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:20:40Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558427/job/110413952523",
+      "name": "secrets",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Security CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:22:00Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558398/job/110413949776",
+      "name": "web-smoke",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Web E2E and Architecture Boundaries"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:22:20Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558523/job/110413949159",
+      "name": "web (ubuntu-latest)",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Web Product CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:26:49Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558387/job/110413949703",
+      "name": "rust (windows-latest)",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Desktop Product CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:23:47Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558523/job/110413949496",
+      "name": "web (windows-latest)",
+      "startedAt": "2026-10-01T14:20:37Z",
+      "status": "COMPLETED",
+      "workflowName": "Web Product CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:24:09Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558387/job/110413949770",
+      "name": "rust (macos-latest)",
+      "startedAt": "2026-10-01T14:20:34Z",
+      "status": "COMPLETED",
+      "workflowName": "Desktop Product CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:13Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558580/job/110414308147",
+      "name": "deploy",
+      "startedAt": "2026-10-01T14:21:14Z",
+      "status": "COMPLETED",
+      "workflowName": "Documentation"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:23:50Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950539",
+      "name": "python (ubuntu-latest)",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:15Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558427/job/110413952840",
+      "name": "dependencies",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Security CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:20:39Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558398/job/110413950415",
+      "name": "architecture-boundaries",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Web E2E and Architecture Boundaries"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:25:46Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950241",
+      "name": "python (macos-latest)",
+      "startedAt": "2026-10-01T14:20:38Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:30:38Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413949975",
+      "name": "python (windows-latest)",
+      "startedAt": "2026-10-01T14:20:29Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:20:48Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950331",
+      "name": "neural-worker (ubuntu-latest)",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:11Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950443",
+      "name": "neural-worker (macos-latest)",
+      "startedAt": "2026-10-01T14:20:36Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-01T14:21:13Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36875558421/job/110413950471",
+      "name": "neural-worker (windows-latest)",
+      "startedAt": "2026-10-01T14:20:30Z",
+      "status": "COMPLETED",
+      "workflowName": "Python CI"
+    }
+  ]
+}

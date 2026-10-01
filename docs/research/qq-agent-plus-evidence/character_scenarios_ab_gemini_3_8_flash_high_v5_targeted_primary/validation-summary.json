@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "model": "gemini-3.8-flash-high",
+  "samples": 96,
+  "pairs": 48,
+  "unique_sample_keys": 96,
+  "scenarios": [
+    "detailed_answer",
+    "identity",
+    "technical_help",
+    "topic_switch"
+  ],
+  "actual_input_snapshots_equal_independent_oracle": 96,
+  "oracle_turns": 16,
+  "runtime_stripped_persona_hashes": {
+    "baseline_v4": "0bc4a9eecc637dcf",
+    "candidate_v5": "554b28bebda60025"
+  },
+  "relationship_stages": {
+    "acquaintance": 72,
+    "familiar": 24
+  },
+  "source_results_sha256": "7071ea1f947fbad812b3ac7ac603dd9382c33b5b6e179b77c49b4dfa6bc2995b",
+  "execution_load_scope": "One subprocess per model, three models concurrent; variants run in fixed blocks, latency is observational and not a causal comparison.",
+  "metrics": {
+    "baseline_v4": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 6641.5,
+        "p95": 11812.349999999999
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 143939
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 9178
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 177530
+        },
+        "reasoning": {
+          "reported_samples": 48,
+          "total": 24413
+        }
+      }
+    },
+    "candidate_v5": {
+      "samples": 48,
+      "latency_ms": {
+        "p50": 5998.0,
+        "p95": 11143.75
+      },
+      "provider_tokens": {
+        "prompt": {
+          "reported_samples": 48,
+          "total": 132083
+        },
+        "completion": {
+          "reported_samples": 48,
+          "total": 8919
+        },
+        "total": {
+          "reported_samples": 48,
+          "total": 162231
+        },
+        "reasoning": {
+          "reported_samples": 46,
+          "total": 21229
+        }
+      }
+    }
+  },
+  "usage_scope": "Only provider-reported usage for retained successful requests; failed/retried bills unknown; reasoning is not added again to reported total.",
+  "cost_usd": null,
+  "release_approved": false
+}

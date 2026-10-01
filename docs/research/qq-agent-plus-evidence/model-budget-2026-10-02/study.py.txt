@@ -1,0 +1,194 @@
+"""Frozen, private budget experiment; never edits production configuration."""
+import asyncio
+import hashlib
+import importlib.util
+import json
+import random
+import sqlite3
+import subprocess
+import sys
+import time
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID, uuid4
+
+ROOT = Path(__file__).resolve().parent
+REPO = Path.cwd()
+for p in (REPO, REPO/'services/runtime/src', REPO/'packages/protocol-python/src', REPO/'packages/model-worker-sdk-python/src'):
+    sys.path.insert(0, str(p))
+import httpx2
+from chatwaifu_protocol.character import AffectState, CharacterKernelSnapshot, RelationshipState, ResponsePlan
+from chatwaifu_protocol.memory import MemoryContextPacket, MemoryExcerpt
+from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded, fit_input_budget
+from chatwaifu_runtime.agent.tool_calling import bounded_tool_result_payload
+from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmRequest, LlmTextDelta, LlmResponseCompleted, LlmToolCall, LlmToolExchange, LlmToolResult
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from chatwaifu_runtime.providers.model_config import LocalModelSecretStore
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider, build_messages, build_chat_completions_payload, openai_compatible_endpoint
+
+def sha(data):
+    return hashlib.sha256(data if isinstance(data, bytes) else data.encode()).hexdigest()
+def write(name, data):
+    (ROOT/name).write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str)+'\n')
+def append(name, data):
+    with (ROOT/name).open('a') as f:
+        f.write(json.dumps(data, ensure_ascii=False, default=str)+'\n')
+def owner_route():
+    owner=Path.home()/'Library/Application Support/local.chatwaifu.next/runtime'
+    with sqlite3.connect(f'file:{owner}/chatwaifu.db?mode=ro', uri=True) as db:
+        url=db.execute("SELECT base_url FROM model_role_configs WHERE role='chat'").fetchone()[0]
+    assert sha(url)==json.loads((ROOT/'endpoint-metadata.json').read_text())['base_url_sha256']
+    return url, LocalModelSecretStore(owner/'model-secrets.json').get('chat')
+def check_freeze():
+    plan=json.loads((ROOT/'plan.json').read_text())
+    assert subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()==plan['code_commit']
+    assert not subprocess.check_output(['git','status','--porcelain'], text=True).strip()
+    assert sha(Path(__file__).read_bytes())==plan['driver_sha256']
+    for item in plan['source_hashes']:
+        assert sha((REPO/item['path']).read_bytes())==item['sha256']
+    return plan
+
+class Models:
+    def __init__(self, window):
+        self.window=window
+        self.summary_inputs=[]
+    def get(self, role):
+        return SimpleNamespace(context_window=self.window)
+    async def complete(self, role, system, user, **kwargs):
+        # Deliberately controlled summary, rather than variable model summarization.
+        # No missing fact is reconstructed. Its loss is separately reported.
+        self.summary_inputs.append({'role':role, 'system':system, 'user':user})
+        return '较早资料没有形成可引用的逐字记录；无法从摘要恢复原始编号。'
+
+async def prepare():
+    source=REPO/'services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py'
+    original=source.read_text()
+    candidate=original
+    changes={
+      'persona_budget = min(1800, max(700, total_budget * 18 // 100))':'persona_budget = max(700, total_budget * 18 // 100)',
+      'memory_budget = min(1400, max(300, total_budget * 16 // 100))':'memory_budget = max(300, total_budget * 16 // 100)',
+      'conversation_budget = min(3600, max(700, total_budget * 34 // 100))':'conversation_budget = max(700, total_budget * 34 // 100)',
+    }
+    for a,b in changes.items():
+        assert candidate.count(a)==1
+        candidate=candidate.replace(a,b)
+    (ROOT/'experimental_prompt.py').write_text(candidate)
+    spec=importlib.util.spec_from_file_location('experimental_budget_prompt',ROOT/'experimental_prompt.py')
+    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
+    characters=CharacterService(REPO/'characters');characters.start();character=characters.get('default')
+    now=datetime(2026,10,1,15,30,tzinfo=UTC)
+    kernel=CharacterKernelSnapshot(character_id='default',user_scope='local',revision=1,affect=AffectState(updated_at=now),relationship=RelationshipState(updated_at=now))
+    rp=ResponsePlan(intent='answer',tone='serious',expression='neutral',rationale='同一合成资料的预算调查')
+    instruction='只依据本轮已提供资料回答；没有资料时填 null，勿推测。只输出 JSON 对象，字段为 fact 和 reason。fact 填精确编号字符串或 null，reason 简述依据。'
+    pad='此条为与所问编号无关的合成背景，不含所问值。\n'
+    cases=[
+      {'id':'persona_tail','question':'角色设定末尾记载的档案编号是什么？','gold':'CANON-2749','persona':character.system_prompt+'\n'+pad*200+'\n角色档案编号为 CANON-2749。'},
+      {'id':'memory_retrieval','question':'我记忆中的 PROJECT-DELTA 验收编号是什么？','gold':'MEMORY-5816','memory':[f'PROJECT-DELTA 背景条目 {i}：'+pad*5 for i in range(7)]+[pad*5+'PROJECT-DELTA 验收编号为 MEMORY-5816。']},
+      {'id':'history_literal','question':'前面提供的测试日志里最终检查编号是什么？','gold':'HISTORY-9362','history':[('user',pad*320+'\n测试日志最终检查编号为 HISTORY-9362。'),('assistant','资料已收到。')]},
+      {'id':'tool_body','question':'已执行工具结果中最终审批编号是什么？','gold':'TOOL-4073','tool':{'ok':True,'state':'succeeded','data':{'background':pad*750,'approval_code':'TOOL-4073'}}},
+      {'id':'short_control','question':'当前提供的短资料：会议编号 SHORT-8621。会议编号是什么？','gold':'SHORT-8621'},
+      {'id':'technical_control','question':'根据 Python 规则分析：x=[1,2,3]; y=x; y.append(4); z=x[:]; z.pop(); 最后 x 和 z 的长度是多少？将 fact 写为 x4-z3，或你算出的对应格式。','gold':'x4-z3'},
+    ]
+    assert len(cases[0]['persona'])<=10000
+    write('materials.json',cases)
+    requests=[]
+    for case in cases:
+      for variant in ['current','window_only','scaled_sections']:
+        models=Models(8192 if variant=='current' else 32768)
+        compiler=(module.PromptCompiler if variant=='scaled_sections' else PromptCompiler)(models)
+        texts=case.get('memory',[])
+        # Matches current retriever's character accounting and ordered candidates.
+        retrieval_limit=700 if variant!='scaled_sections' else 2550
+        selected=[];used=0
+        for index,text in enumerate(texts):
+            if used+len(text)>retrieval_limit: continue
+            used+=len(text);selected.append(MemoryExcerpt(memory_id=UUID(int=index+1),text=text,source_event_ids=[UUID(int=100+index)],relevance=1))
+        memory=MemoryContextPacket(token_budget_used=used,relevant_memories=selected)
+        compilation=await compiler.compile(character=character.model_copy(update={'system_prompt':case.get('persona',character.system_prompt)}),kernel=kernel,plan=rp,memory=memory,history=tuple(case.get('history',[])),user_text=case['question']+'\n'+instruction,presentation_profile='instant_message',as_of=now)
+        exchanges=()
+        if 'tool' in case:
+            result=bounded_tool_result_payload(case['tool'],max_bytes=131072 if variant=='scaled_sections' else 32768)
+            call=LlmToolCall('budget-study-call','study_read',{})
+            exchanges=(LlmToolExchange('',(call,),(LlmToolResult(call.call_id,call.name,result),)),)
+        raw=LlmRequest(generation_id=uuid4(),user_text=case['question']+'\n'+instruction,system_prompt=compilation.system_prompt,character_name=character.display_name,context=compilation.context,history=compilation.history,recalled_memory_texts=compilation.recalled_memory_texts,tool_exchanges=exchanges,input_budget=LlmInputBudget(compilation.report.budget))
+        try:
+            fitted=fit_input_budget(raw);error=None
+        except InputBudgetExceeded as e:
+            fitted=raw;error=asdict(e.report)
+        payload=build_chat_completions_payload('unset',fitted,build_messages(fitted),request_usage=True)
+        serialized=json.dumps(payload,ensure_ascii=False,separators=(',',':'))
+        record={'case':case['id'],'variant':variant,'gold':case['gold'],'fact_available':case['gold'] in serialized if case['id']!='technical_control' else True,'request':asdict(fitted),'payload':payload,'reference_tokens':estimate_reference_input_tokens(fitted),'compiler_report':compilation.report.model_dump(mode='json'),'retrieval_selected':[str(x.memory_id) for x in selected],'retrieval_omitted':[str(UUID(int=i+1)) for i in range(len(texts)) if str(UUID(int=i+1)) not in {str(x.memory_id) for x in selected}],'summary_calls':models.summary_inputs,'local_budget_error':error}
+        requests.append(record)
+    write('requests.json',requests)
+    paths=['services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py','services/runtime/src/chatwaifu_runtime/agent/input_budget.py','services/runtime/src/chatwaifu_runtime/agent/tool_calling.py','services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py','services/runtime/src/chatwaifu_runtime/providers/input_estimation.py','characters/default/persona.md']
+    plan={'code_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'driver_sha256':sha(Path(__file__).read_bytes()),'experimental_compiler_sha256':sha(candidate),'materials_sha256':sha((ROOT/'materials.json').read_bytes()),'requests_sha256':sha((ROOT/'requests.json').read_bytes()),'models':['gemini-3.1-flash-lite','gemini-3.8-flash-high'],'repeats':3,'maximum_generation_requests':108,'maximum_http_attempts':108,'no_retries':True,'source_hashes':[{'path':p,'sha256':sha((REPO/p).read_bytes())} for p in paths],'scope':'Synthetic focused budget stress tests; controlled summary; no live memory, tools, channel or production writes','output_limit':'unchanged/omitted in all three variants; separate capability probes'}
+    write('plan.json',plan)
+    print(json.dumps([{'case':x['case'],'variant':x['variant'],'reference':x['reference_tokens'],'fact_available':x['fact_available'],'error':bool(x['local_budget_error'])} for x in requests]))
+
+async def probe():
+    check_freeze();url,key=owner_route()
+    async with httpx2.AsyncClient(timeout=90) as client:
+      for model in ['gemini-3.1-flash-lite','gemini-3.8-flash-high']:
+        for maximum in [65536,65537]:
+          payload={'model':model,'messages':[{'role':'user','content':'Reply exactly OK.'}],'stream':False,'max_tokens':maximum}
+          start=time.perf_counter()
+          r=await client.post(openai_compatible_endpoint(url,'chat/completions'),headers={'Authorization':f'Bearer {key}'},json=payload)
+          data=r.json()
+          # Do not write upstream error prose, which can contain private routes.
+          item={'model':model,'requested_max_tokens':maximum,'status':r.status_code,'elapsed_ms':round((time.perf_counter()-start)*1000),'usage':data.get('usage'),'response_model':data.get('model'),'choices':data.get('choices') if r.status_code==200 else None,'error_type':data.get('error',{}).get('type')}
+          append('output-capability-probes.jsonl',item); print(json.dumps(item),flush=True)
+
+async def run():
+    plan=check_freeze();url,key=owner_route()
+    assert sha((ROOT/'requests.json').read_bytes())==plan['requests_sha256']
+    requests=json.loads((ROOT/'requests.json').read_text())
+    completed={json.loads(l)['key'] for l in (ROOT/'replies.jsonl').read_text().splitlines()} if (ROOT/'replies.jsonl').exists() else set()
+    jobs=[(m,r,i) for m in plan['models'] for r in requests for i in range(plan['repeats'])]
+    random.Random(20261001).shuffle(jobs)
+    sem=asyncio.Semaphore(3)
+    async def one(model,record,repetition):
+      identity=f"{model}:{record['case']}:{record['variant']}:{repetition}"
+      if identity in completed:return
+      async with sem:
+        if record['local_budget_error']:
+            append('replies.jsonl',{'key':identity,'model':model,'case':record['case'],'variant':record['variant'],'repetition':repetition,'local_budget_error':True});return
+        payload=record['payload']|{'model':model}
+        start=time.perf_counter();first=None;chunks=[];usage=None;finish=None;error=None;status=None;response_model=None
+        append('http-attempts.jsonl',{'key':identity,'payload':payload,'payload_sha256':sha(json.dumps(payload,ensure_ascii=False,separators=(',',':'))),'started_at':datetime.now(UTC).isoformat()})
+        try:
+          async with httpx2.AsyncClient(timeout=180) as client:
+            async with client.stream('POST',openai_compatible_endpoint(url,'chat/completions'),headers={'Authorization':f'Bearer {key}'},json=payload) as resp:
+              status=resp.status_code
+              if status!=200: error='http_error';await resp.aread()
+              else:
+                async for line in resp.aiter_lines():
+                  if not line.startswith('data:'):continue
+                  value=line[5:].strip()
+                  if value=='[DONE]':break
+                  data=json.loads(value)
+                  append('stream-events.jsonl',{'key':identity,'data':data})
+                  response_model=data.get('model',response_model)
+                  if data.get('usage'):usage=data['usage']
+                  for choice in data.get('choices',[]):
+                    text=choice.get('delta',{}).get('content')
+                    if text:
+                      if first is None:first=round((time.perf_counter()-start)*1000)
+                      chunks.append(text)
+                    if choice.get('finish_reason'):finish=choice['finish_reason']
+        except Exception as e:error=type(e).__name__
+        reply=''.join(chunks)
+        normalized=reply.strip()
+        if normalized.startswith('```'):normalized=normalized.split('\n',1)[-1].rsplit('```',1)[0].strip()
+        try: parsed=json.loads(normalized)
+        except Exception:parsed=None
+        fact=parsed.get('fact') if isinstance(parsed,dict) else None
+        item={'key':identity,'model':model,'response_model':response_model,'case':record['case'],'variant':record['variant'],'repetition':repetition,'status':status,'error':error,'reply':reply,'parsed':parsed,'fact_available':record['fact_available'],'fact_covered':fact==record['gold'],'unsupported_fact':not record['fact_available'] and fact is not None,'available_fact_error':record['fact_available'] and fact!=record['gold'],'reference_input_tokens':record['reference_tokens'],'usage':usage,'finish_reason':finish,'ttft_ms':first,'elapsed_ms':round((time.perf_counter()-start)*1000)}
+        append('replies.jsonl',item);print(json.dumps({k:item[k] for k in ['key','status','error','fact_covered','fact_available','finish_reason','elapsed_ms']}),flush=True)
+    await asyncio.gather(*(one(*j) for j in jobs))
+
+if __name__=='__main__':
+    asyncio.run({'prepare':prepare,'probe':probe,'run':run}[sys.argv[1]]())

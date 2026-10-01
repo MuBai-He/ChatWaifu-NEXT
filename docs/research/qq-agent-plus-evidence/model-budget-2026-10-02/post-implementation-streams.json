@@ -1,0 +1,3353 @@
+[
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "9pa-asfaFv_e1e8PqsWKoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "9pa-asfaFv_e1e8PqsWKoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "9pa-asfaFv_e1e8PqsWKoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "提供的背景资料中明确指出了 PROJECT-DELTA 的验收编号为 MEMORY-5816。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "9pa-asfaFv_e1e8PqsWKoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2566,
+        "prompt_tokens": 2522
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-at6TJZj_2roP_96KyAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-at6TJZj_2roP_96KyAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"SHORT-8621\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-at6TJZj_2roP_96KyAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "这是本轮对话资料中明确提供的会议编号。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-at6TJZj_2roP_96KyAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1632,
+        "prompt_tokens": 1599
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-au7zH4e32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"SHORT-",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-au7zH4e32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "8621\",\n  \"reason\": \"提供的短资料明确指出会议编号为 SHORT-862",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-au7zH4e32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "1。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:1",
+    "data": {
+      "id": "9pa-au7zH4e32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2066,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 430
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"x4-z2\",\n  \"reason\": \"y",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " 是 x 的引用，修改 y 影响 x 使 x 变为 [1,2,3,4]，长度",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "为 4；z 是 x 的浅拷贝，执行 pop() 后 z 变为 [1,2]，长度为 2",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+    "data": {
+      "id": "-Ja-apPcMZ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 74,
+        "total_tokens": 1713,
+        "prompt_tokens": 1639
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:0",
+    "data": {
+      "id": "-Za-aqOgBfqf0-kPlI6JyAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"CANON-2749\",\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:0",
+    "data": {
+      "id": "-Za-aqOgBfqf0-kPlI6JyAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"reason\": \"资料末尾明确记录「角色档案编号为 CANON-2749」。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:0",
+    "data": {
+      "id": "-Za-aqOgBfqf0-kPlI6JyAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 5732,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 286
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:2",
+    "data": {
+      "id": "-5a-as3kE_7G0-kPt9WTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:2",
+    "data": {
+      "id": "-5a-as3kE_7G0-kPt9WTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"TOOL-4073\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:2",
+    "data": {
+      "id": "-5a-as3kE_7G0-kPt9WTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "已提供的资料中明确包含了 approval_code 字段，其对应值为 TOOL-4073。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:2",
+    "data": {
+      "id": "-5a-as3kE_7G0-kPt9WTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 15934,
+        "prompt_tokens": 15890
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+    "data": {
+      "id": "_Ja-asGQGP7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+    "data": {
+      "id": "_Ja-asGQGP7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+    "data": {
+      "id": "_Ja-asGQGP7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "在用户提供的历史输入末尾明确写有“测试日志最终检查编号为 HISTORY-9362”。",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+    "data": {
+      "id": "_Ja-asGQGP7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+    "data": {
+      "id": "_Ja-asGQGP7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 7737,
+        "prompt_tokens": 7690
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "_Za-atCNJaO12roPh6yHiAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "_Za-atCNJaO12roPh6yHiAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "_Za-atCNJaO12roPh6yHiAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "已提供的资料中明确指出 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "_Za-atCNJaO12roPh6yHiAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 43,
+        "total_tokens": 2565,
+        "prompt_tokens": 2522
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"x4-z2\",\n  \"reason\": \"y",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " 是 x 的引用，修改 y 导致 x 变为 [1,2,3,4]，故 x 长度为 ",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "4；z 是 x 的切片副本，执行 pop() 后 z 变为 [1,2]，故 z 长度为 ",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "2。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+    "data": {
+      "id": "_pa-aqOdKu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 79,
+        "total_tokens": 1718,
+        "prompt_tokens": 1639
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "_5a-auuENNuz2roPqLmSqAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "_5a-auuENNuz2roPqLmSqAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "_5a-auuENNuz2roPqLmSqAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "依据本轮提供的 Memory Context 中关于 PROJECT-DELTA 的描述，明确记载了验收编号为 MEMORY-581",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "_5a-auuENNuz2roPqLmSqAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "6。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "_5a-auuENNuz2roPqLmSqAI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 50,
+        "total_tokens": 2572,
+        "prompt_tokens": 2522
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:0",
+    "data": {
+      "id": "_Za-avq1Kv-m2roPhs2GqAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"HISTORY-9362\",\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:0",
+    "data": {
+      "id": "_Za-avq1Kv-m2roPhs2GqAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"reason\": \"前文测试日志结尾明确标注测试日志最终检查编号为 HISTORY-9362。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:0",
+    "data": {
+      "id": "_Za-avq1Kv-m2roPhs2GqAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 8311,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 579
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:1",
+    "data": {
+      "id": "Ape-auqCB9jt2roP9s3giQo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:1",
+    "data": {
+      "id": "Ape-auqCB9jt2roP9s3giQo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"CANON-2749\",\n  \"reason\":",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:1",
+    "data": {
+      "id": "Ape-auqCB9jt2roP9s3giQo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " \"角色设定最后一行明确标注了档案编号为 CANON-2749。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:1",
+    "data": {
+      "id": "Ape-auqCB9jt2roP9s3giQo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5445,
+        "prompt_tokens": 5404
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:1",
+    "data": {
+      "id": "AZe-atTkGPqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json\n{",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:1",
+    "data": {
+      "id": "AZe-atTkGPqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已执行工具返回数据",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:1",
+    "data": {
+      "id": "AZe-atTkGPqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "中的 approval_code 字段明确记录为 TOOL-4073。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:1",
+    "data": {
+      "id": "AZe-atTkGPqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 48,
+        "total_tokens": 16057,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 119
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:0",
+    "data": {
+      "id": "BJe-atm8LZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"SHORT-8621\",\n  \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:0",
+    "data": {
+      "id": "BJe-atm8LZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "reason\": \"提供的短资料中明确说明会议编号为 SHORT-8621。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:0",
+    "data": {
+      "id": "BJe-atm8LZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 2126,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 489
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:2",
+    "data": {
+      "id": "Ape-asPuEY2l0-kPuYSH2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"HISTORY-9362\",\n  ",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:2",
+    "data": {
+      "id": "Ape-asPuEY2l0-kPuYSH2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\"reason\": \"前文提供的测试日志结尾明确记录最终检查编号为 HISTORY-9362。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:2",
+    "data": {
+      "id": "Ape-asPuEY2l0-kPuYSH2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 8180,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 449
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "BZe-asvyBJOs0-kP7s29sAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"MEMORY-5816\",\n  ",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "BZe-asvyBJOs0-kP7s29sAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\"reason\": \"提供的背景资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:0",
+    "data": {
+      "id": "BZe-asvyBJOs0-kP7s29sAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 2954,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 390
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:0",
+    "data": {
+      "id": "CZe-aqmiCIe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:0",
+    "data": {
+      "id": "CZe-aqmiCIe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"SHORT-8621\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:0",
+    "data": {
+      "id": "CZe-aqmiCIe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "已提供资料中明确将会议编号标注为 SHORT-8621。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:0",
+    "data": {
+      "id": "CZe-aqmiCIe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1638,
+        "prompt_tokens": 1599
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+    "data": {
+      "id": "C5e-aoDVDfew2roP7faB0Ak",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+    "data": {
+      "id": "C5e-aoDVDfew2roP7faB0Ak",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+    "data": {
+      "id": "C5e-aoDVDfew2roP7faB0Ak",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "在用户提供的历史信息末尾明确标注了“测试日志最终检查编号为 HISTORY-9362”。",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+    "data": {
+      "id": "C5e-aoDVDfew2roP7faB0Ak",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+    "data": {
+      "id": "C5e-aoDVDfew2roP7faB0Ak",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 7737,
+        "prompt_tokens": 7690
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:2",
+    "data": {
+      "id": "C5e-as6UOObH2roPtv6NwQI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:2",
+    "data": {
+      "id": "C5e-as6UOObH2roPtv6NwQI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"SHORT-8621\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:2",
+    "data": {
+      "id": "C5e-as6UOObH2roPtv6NwQI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "这是本轮对话资料中明确给出的会议编号。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:short_control:configured_production:2",
+    "data": {
+      "id": "C5e-as6UOObH2roPtv6NwQI",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 1633,
+        "prompt_tokens": 1599
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:0",
+    "data": {
+      "id": "DZe-au_KJqG50-kPoLqS-A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:0",
+    "data": {
+      "id": "DZe-au_KJqG50-kPoLqS-A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"CANON-2749\",\n  \"reason\":",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:0",
+    "data": {
+      "id": "DZe-au_KJqG50-kPoLqS-A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " \"设定文本末尾明确标注了角色档案编号为 CANON-2749。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:0",
+    "data": {
+      "id": "DZe-au_KJqG50-kPoLqS-A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 5446,
+        "prompt_tokens": 5404
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:1",
+    "data": {
+      "id": "CZe-aqf7DP7M2roP8Iqa8Qs",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y引用x，append",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:1",
+    "data": {
+      "id": "CZe-aqf7DP7M2roP8Iqa8Qs",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "(4)后x变为[1, 2, 3, 4]（长度为4）；z是x的",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:1",
+    "data": {
+      "id": "CZe-aqf7DP7M2roP8Iqa8Qs",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "浅拷贝，执行pop()后变为[1, 2, 3]（长度为3）。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:1",
+    "data": {
+      "id": "CZe-aqf7DP7M2roP8Iqa8Qs",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 76,
+        "total_tokens": 2808,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1093
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:1",
+    "data": {
+      "id": "EJe-aoCTA_mf0-kP6vLC-Q4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"CANON-2749\",\n  ",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:1",
+    "data": {
+      "id": "EJe-aoCTA_mf0-kP6vLC-Q4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\"reason\": \"资料中明确记载角色档案编号为 CANON-2749。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:1",
+    "data": {
+      "id": "EJe-aoCTA_mf0-kP6vLC-Q4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 5715,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 272
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+    "data": {
+      "id": "D5e-arK9L-Ck0-kPwe6l8AU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+    "data": {
+      "id": "D5e-arK9L-Ck0-kPwe6l8AU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x引用同一列表，y.append(4",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+    "data": {
+      "id": "D5e-arK9L-Ck0-kPwe6l8AU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ")使x变为[1,2,3,4]（长4）；z为x[:]切片浅拷贝",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+    "data": {
+      "id": "D5e-arK9L-Ck0-kPwe6l8AU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "，z.pop()使其长度变为3且不影响x。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+    "data": {
+      "id": "D5e-arK9L-Ck0-kPwe6l8AU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 72,
+        "total_tokens": 2471,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 760
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:2",
+    "data": {
+      "id": "Dpe-arvJHJ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"SHORT-8621\",\n  \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:2",
+    "data": {
+      "id": "Dpe-arvJHJ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "reason\": \"提供的短资料中明确记录会议编号为 SHORT-8621。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:short_control:configured_production:2",
+    "data": {
+      "id": "Dpe-arvJHJ7nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 2077,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 440
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:2",
+    "data": {
+      "id": "FZe-aqHCNb2H0-kPz86FgA4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:2",
+    "data": {
+      "id": "FZe-aqHCNb2H0-kPz86FgA4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:2",
+    "data": {
+      "id": "FZe-aqHCNb2H0-kPz86FgA4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "测试日志最后一行明确指出最终检查编号为 HISTORY-9362。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:history_literal:configured_production:2",
+    "data": {
+      "id": "FZe-aqHCNb2H0-kPz86FgA4",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 7729,
+        "prompt_tokens": 7690,
+        "prompt_tokens_details": {
+          "cached_tokens": 4073
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:0",
+    "data": {
+      "id": "FZe-atncAquL0-kP-smaoAE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json\n{\n  \"fact\": \"TOOL-4073\",\n  \"reason",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:0",
+    "data": {
+      "id": "FZe-atncAquL0-kP-smaoAE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\": \"已执行工具返回的数据中 approval_code 字段记录为 TOOL-4073。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:0",
+    "data": {
+      "id": "FZe-atncAquL0-kP-smaoAE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 16140,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 203
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 12255
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"x4-z2\",\n  \"reason\": \"y",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " 是 x 的引用，修改 y 会改变 x，此时 x 为 [1,2,3,4]，长度",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "为4；z 是 x 的浅拷贝，z.pop() 移除一个元素后 z 为 [1,2]，",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "长度为2。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+    "data": {
+      "id": "GJe-ao3lAZOg0-kP3rSr6AE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 76,
+        "total_tokens": 1715,
+        "prompt_tokens": 1639
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:2",
+    "data": {
+      "id": "F5e-ao-wAv7G0-kP6NaTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y=x 为引用赋值",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:2",
+    "data": {
+      "id": "F5e-ao-wAv7G0-kP6NaTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "，y.append(4) 会同时修改 x，使其长度变为 4；z=x[:] 建立了",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:2",
+    "data": {
+      "id": "F5e-ao-wAv7G0-kP6NaTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "浅拷贝切片，z.pop() 仅修改 z，使其长度变为 3，不影响 x。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:technical_control:configured_production:2",
+    "data": {
+      "id": "F5e-ao-wAv7G0-kP6NaTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 75,
+        "total_tokens": 2204,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 490
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:2",
+    "data": {
+      "id": "Gpe-aoKwGf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:2",
+    "data": {
+      "id": "Gpe-aoKwGf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"CANON-2749\",\n  \"reason\":",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:2",
+    "data": {
+      "id": "Gpe-aoKwGf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " \"该编号直接记载于所提供角色设定的末尾部分。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:persona_tail:configured_production:2",
+    "data": {
+      "id": "Gpe-aoKwGf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 5441,
+        "prompt_tokens": 5404
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:2",
+    "data": {
+      "id": "GZe-asyYDMq52roPt8icqAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"设定资料末尾",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:2",
+    "data": {
+      "id": "GZe-asyYDMq52roPt8icqAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "明确记录角色档案编号为 CANON-2749。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:persona_tail:configured_production:2",
+    "data": {
+      "id": "GZe-asyYDMq52roPt8icqAw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5807,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 362
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:2",
+    "data": {
+      "id": "G5e-at-CHvqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"工具 study",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:2",
+    "data": {
+      "id": "G5e-at-CHvqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "_read 返回的数据中明确包含 approval_code 字段，值为 TOOL-4073。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:tool_body:configured_production:2",
+    "data": {
+      "id": "G5e-at-CHvqf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 45,
+        "total_tokens": 16208,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 273
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "HJe-arepF_7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json\n{\n  \"fact\": \"MEMORY-5816\",\n  \"reason",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "HJe-arepF_7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\": \"提供的资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:1",
+    "data": {
+      "id": "HJe-arepF_7G0-kP4M6TqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 2885,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 317
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:0",
+    "data": {
+      "id": "IJe-avnuB9P22roP357g4A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:0",
+    "data": {
+      "id": "IJe-avnuB9P22roP357g4A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\n  \"fact\": \"TOOL-4073\",\n  \"reason\":",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:0",
+    "data": {
+      "id": "IJe-avnuB9P22roP357g4A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": " \"已执行工具结果中明确记录了 approval_code 为 TOOL-4073。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:0",
+    "data": {
+      "id": "IJe-avnuB9P22roP357g4A8",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 15931,
+        "prompt_tokens": 15890,
+        "prompt_tokens_details": {
+          "cached_tokens": 12257
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "Hpe-as6tM42l0-kPqfyG2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"MEMORY-5816\",\n  \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "Hpe-as6tM42l0-kPqfyG2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "reason\": \"依据提供的记忆资料，明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:2",
+    "data": {
+      "id": "Hpe-as6tM42l0-kPqfyG2AM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2991,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 425
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:1",
+    "data": {
+      "id": "IZe-avW-O57nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:1",
+    "data": {
+      "id": "IZe-avW-O57nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"TOOL-4073\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:1",
+    "data": {
+      "id": "IZe-avW-O57nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "已提供的资料中明确包含了 approval_code 字段，其对应的值即为 TOOL-4073。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:tool_body:configured_production:1",
+    "data": {
+      "id": "IZe-avW-O57nrfcPwoCaoQw",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 15936,
+        "prompt_tokens": 15890
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:1",
+    "data": {
+      "id": "HZe-arTMN_qf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"前面",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:1",
+    "data": {
+      "id": "HZe-arTMN_qf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "提供的测试日志记录中明确写有“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:history_literal:configured_production:1",
+    "data": {
+      "id": "HZe-arTMN_qf0-kPyu-G4Ao",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 8235,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 499
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        }
+      }
+    }
+  }
+]

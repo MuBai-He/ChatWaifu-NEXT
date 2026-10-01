@@ -7,3 +7,9 @@ a1540a9a4a9bb6641cb503a680c511042065f908:services/runtime/tests/test_channel_fai
 # Current fixture is generated in code; retain exact exclusions for the historical PR commit.
 27af8c1a1f2e032b7dc78dfa846abc53b09e52b2:services/runtime/tests/external_channels/adapters/weixin_ilink/test_wire_image.py:generic-api-key:125
 27af8c1a1f2e032b7dc78dfa846abc53b09e52b2:services/runtime/tests/external_channels/adapters/weixin_ilink/test_wire_image.py:generic-api-key:137
+
+# SHA256 of public synthetic blinded_key.json files, independently verified against archived bytes.
+# Keep only exact historical fingerprints; current manifests separate path and checksum.
+0f71bfc6b4b99cfcf5674c5be0c1acfb58cd7948:docs/research/qq-agent-plus-evidence/real-model-v4-remaining-evidence-manifest-2026-09-30.json:generic-api-key:38
+0f71bfc6b4b99cfcf5674c5be0c1acfb58cd7948:docs/research/qq-agent-plus-evidence/real-model-v4-remaining-evidence-manifest-2026-09-30.json:generic-api-key:77
+0f71bfc6b4b99cfcf5674c5be0c1acfb58cd7948:docs/research/qq-agent-plus-evidence/real-model-v4-remaining-evidence-manifest-2026-09-30.json:generic-api-key:116

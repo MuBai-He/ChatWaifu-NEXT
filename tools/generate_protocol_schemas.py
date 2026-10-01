@@ -28,6 +28,11 @@ def main() -> None:
     # Python installation ignores editable-install .pth files.
     sys.path.insert(0, str(PROTOCOL_SOURCE))
     from chatwaifu_protocol.channels import ChannelInboundTextMessage
+    from chatwaifu_protocol.diagnostics import (
+        InteractionTraceDetail,
+        InteractionTracePage,
+        InteractionTraceSummary,
+    )
     from chatwaifu_protocol.events import (
         GENERIC_CORE_EVENT_TYPES,
         SessionCreatedEvent,
@@ -37,6 +42,23 @@ def main() -> None:
     from chatwaifu_protocol.schema_export import export_schemas
 
     export_schemas(SCHEMA_DIR)
+    diagnostic_summary = InteractionTraceSummary(
+        interaction_id=UUID("00000000-0000-4000-8000-000000000901"),
+        session_id=UUID("00000000-0000-4000-8000-000000000201"),
+        turn_id=UUID("00000000-0000-4000-8000-000000000902"),
+        generation_id=UUID("00000000-0000-4000-8000-000000000901"),
+        occurred_at=FIXED_TIME,
+        trigger="user",
+        generation_state="completed",
+    )
+    write_json(
+        FIXTURE_DIR / "interaction-trace-page.json",
+        InteractionTracePage(items=[diagnostic_summary]),
+    )
+    write_json(
+        FIXTURE_DIR / "interaction-trace-detail.json",
+        InteractionTraceDetail(summary=diagnostic_summary),
+    )
     write_json(
         FIXTURE_DIR / "python-session-created-event.json",
         SessionCreatedEvent(
@@ -80,6 +102,32 @@ def main() -> None:
             conversation_label="与宁宁的测试会话",
             sender_display_name="木白",
             received_at=FIXED_TIME,
+        ),
+    )
+    from chatwaifu_protocol.character import NonsecretModelRoute, PromptContextIdentity
+
+    write_json(
+        FIXTURE_DIR / "prompt-context-identity.json",
+        PromptContextIdentity.create(
+            character_id="default-character",
+            character_package_hash="0" * 64,
+            prompt_template_version="v1",
+            presentation_profile="instant_message",
+            chat_route=NonsecretModelRoute(
+                role="chat",
+                provider="openai_compatible",
+                model="gpt-4o",
+                endpoint_digest="772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
+                context_window=128000,
+            ),
+            memory_summary_route=NonsecretModelRoute(
+                role="memory_summary",
+                provider="demo",
+                model="deterministic-summary-v1",
+                endpoint_digest=None,
+                context_window=8192,
+            ),
+            tools_digest="1" * 32,
         ),
     )
 

@@ -2,10 +2,42 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 from chatwaifu_protocol.base import JsonObject, SideEffect
 from chatwaifu_protocol.skills import SkillCapability, SkillDefinition
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
+from chatwaifu_runtime.runtime_skills.registry import SkillRegistry
 from chatwaifu_runtime.runtime_skills.tool_names import allocate_tool_names
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "乘坐国内航班时有哪些具体的民航携带规定？",
+        "核对当前安全规章和法规来源",
+    ],
+)
+def test_source_tools_route_regulations_from_metadata(query: str) -> None:
+    registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
+    registry.reload([])
+    selected = RuntimeSkillRouter(registry.list).select(query)
+    assert {tool.skill_id for tool in selected} >= {"web.search", "web.read"}
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "展示 return_exceptions=True 并区分正常结果与异常",
+        "异常对象是直接作为元素返回，还是会封装在特定类型里？",
+    ],
+)
+def test_generic_code_result_language_does_not_recall_public_sources(query: str) -> None:
+    registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
+    registry.reload([])
+    selected = RuntimeSkillRouter(registry.list).select(query)
+    assert not {tool.skill_id for tool in selected} & {"web.search", "web.read"}
 
 
 def test_router_selects_relevant_chinese_and_english_tools_with_opaque_names() -> None:

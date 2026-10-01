@@ -1,0 +1,395 @@
+{
+  "$defs": {
+    "ModelContextBudget": {
+      "description": "Operator-selected limits, not an assertion of provider capabilities.",
+      "properties": {
+        "estimate_margin_ratio": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Estimate Margin Ratio",
+          "type": "number"
+        },
+        "history_turn_limit": {
+          "default": 16,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "History Turn Limit",
+          "type": "integer"
+        },
+        "input_token_limit": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Token Limit"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Output Tokens"
+        },
+        "memory_candidate_limit": {
+          "default": 12,
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Memory Candidate Limit",
+          "type": "integer"
+        },
+        "output_reserve_tokens": {
+          "default": 900,
+          "maximum": 2000000,
+          "minimum": 0,
+          "title": "Output Reserve Tokens",
+          "type": "integer"
+        },
+        "output_token_limit": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Token Limit"
+        },
+        "section_policy": {
+          "default": "legacy",
+          "enum": [
+            "legacy",
+            "scaled"
+          ],
+          "title": "Section Policy",
+          "type": "string"
+        },
+        "tool_result_max_bytes": {
+          "default": 32768,
+          "maximum": 1048576,
+          "minimum": 1024,
+          "title": "Tool Result Max Bytes",
+          "type": "integer"
+        },
+        "version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "title": "ModelContextBudget",
+      "type": "object"
+    },
+    "NonsecretModelRoute": {
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/ModelContextBudget"
+        },
+        "context_window": {
+          "default": 8192,
+          "maximum": 2000000,
+          "minimum": 1024,
+          "title": "Context Window",
+          "type": "integer"
+        },
+        "endpoint_digest": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Digest"
+        },
+        "model": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "provider",
+        "model"
+      ],
+      "title": "NonsecretModelRoute",
+      "type": "object"
+    },
+    "PromptBudgetReport": {
+      "properties": {
+        "budget": {
+          "minimum": 1,
+          "title": "Budget",
+          "type": "integer"
+        },
+        "conversation_tokens": {
+          "minimum": 0,
+          "title": "Conversation Tokens",
+          "type": "integer"
+        },
+        "dropped_history_turns": {
+          "minimum": 0,
+          "title": "Dropped History Turns",
+          "type": "integer"
+        },
+        "estimate_margin_ratio": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Estimate Margin Ratio",
+          "type": "number"
+        },
+        "estimator": {
+          "const": "character_half_v1",
+          "default": "character_half_v1",
+          "title": "Estimator",
+          "type": "string"
+        },
+        "memory_tokens": {
+          "minimum": 0,
+          "title": "Memory Tokens",
+          "type": "integer"
+        },
+        "model_role": {
+          "enum": [
+            "chat",
+            "memory_extraction",
+            "memory_summary",
+            "embedding"
+          ],
+          "title": "Model Role",
+          "type": "string"
+        },
+        "omitted_memory_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Omitted Memory Ids",
+          "type": "array"
+        },
+        "output_reserve_tokens": {
+          "default": 900,
+          "minimum": 0,
+          "title": "Output Reserve Tokens",
+          "type": "integer"
+        },
+        "persona_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Persona Omitted Characters",
+          "type": "integer"
+        },
+        "persona_tokens": {
+          "minimum": 0,
+          "title": "Persona Tokens",
+          "type": "integer"
+        },
+        "photo_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Photo Omitted Characters",
+          "type": "integer"
+        },
+        "relationship_tokens": {
+          "minimum": 0,
+          "title": "Relationship Tokens",
+          "type": "integer"
+        },
+        "safety_tokens": {
+          "minimum": 0,
+          "title": "Safety Tokens",
+          "type": "integer"
+        },
+        "scene_tokens": {
+          "minimum": 0,
+          "title": "Scene Tokens",
+          "type": "integer"
+        },
+        "section_budget_limits": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Section Budget Limits",
+          "type": "object"
+        },
+        "state_tokens": {
+          "minimum": 0,
+          "title": "State Tokens",
+          "type": "integer"
+        },
+        "summary_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Summary Omitted Characters",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_role",
+        "budget",
+        "used",
+        "safety_tokens",
+        "persona_tokens",
+        "state_tokens",
+        "relationship_tokens",
+        "memory_tokens",
+        "scene_tokens",
+        "conversation_tokens",
+        "dropped_history_turns"
+      ],
+      "title": "PromptBudgetReport",
+      "type": "object"
+    },
+    "PromptContextIdentity": {
+      "properties": {
+        "character_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "character_package_hash": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Character Package Hash",
+          "type": "string"
+        },
+        "chat_route": {
+          "$ref": "#/$defs/NonsecretModelRoute"
+        },
+        "identity_hash": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Identity Hash",
+          "type": "string"
+        },
+        "memory_summary_route": {
+          "$ref": "#/$defs/NonsecretModelRoute"
+        },
+        "presentation_profile": {
+          "default": "default",
+          "maxLength": 64,
+          "title": "Presentation Profile",
+          "type": "string"
+        },
+        "prompt_template_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Prompt Template Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "tools_digest": {
+          "maxLength": 64,
+          "minLength": 16,
+          "title": "Tools Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity_hash",
+        "character_id",
+        "character_package_hash",
+        "prompt_template_version",
+        "chat_route",
+        "memory_summary_route",
+        "tools_digest"
+      ],
+      "title": "PromptContextIdentity",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/character-prompt-compiled.schema.json",
+  "properties": {
+    "identity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PromptContextIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "report": {
+      "$ref": "#/$defs/PromptBudgetReport"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_memory_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Memory Ids"
+    }
+  },
+  "required": [
+    "report"
+  ],
+  "title": "CharacterPromptCompiled",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

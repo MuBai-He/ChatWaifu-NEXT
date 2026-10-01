@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -97,15 +98,45 @@ async def test_confirmation_commit_then_cancellation_terminalizes_detached_run(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("hold_terminal_signal", [False, True])
 async def test_started_event_failure_does_not_strand_running_run(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
+    hold_terminal_signal: bool,
 ) -> None:
     container = RuntimeContainer(runtime_settings)
+    release_status = asyncio.Event()
     await container.start()
     try:
         service = container.runtime_skills
         original_emit = service._emit  # pyright: ignore[reportPrivateUsage]
+        original_invoke = service._builtin.invoke  # pyright: ignore[reportPrivateUsage]
+        repository = service._repository  # pyright: ignore[reportPrivateUsage]
+        original_run = repository.run
+        original_notify = service._notify_terminal  # pyright: ignore[reportPrivateUsage]
+        waiter_registered = asyncio.Event()
+        terminal_signals: list[UUID] = []
+
+        async def gated_status(skill_id: str, arguments: JsonObject, capability: str) -> JsonObject:
+            await release_status.wait()
+            return await original_invoke(skill_id, arguments, capability)
+
+        async def observe_waiter_read(run_id: UUID) -> Mapping[str, object] | None:
+            row = await original_run(run_id)
+            if (
+                service._terminal_waiters.get(run_id)  # pyright: ignore[reportPrivateUsage]
+                and row is not None
+                and row["state"] == "running"
+            ):
+                # Set only after the registered waiter's second read has seen
+                # RUNNING. It must subsequently observe the terminal signal.
+                waiter_registered.set()
+            return row
+
+        def notify(run_id: UUID) -> None:
+            terminal_signals.append(run_id)
+            if not hold_terminal_signal:
+                original_notify(run_id)
 
         async def fail_started(
             session_id: UUID,
@@ -118,14 +149,28 @@ async def test_started_event_failure_does_not_strand_running_run(
             await original_emit(session_id, event_type, payload, run_id)
 
         monkeypatch.setattr(service, "_emit", fail_started)
+        monkeypatch.setattr(service._builtin, "invoke", gated_status)  # pyright: ignore[reportPrivateUsage]
+        monkeypatch.setattr(repository, "run", observe_waiter_read)
+        monkeypatch.setattr(service, "_notify_terminal", notify)
         session = await container.sessions.create_session("default")
         created = await service.invoke(session.session_id, _status_invocation())
-
-        terminal = await asyncio.wait_for(
-            service.wait_for_terminal(created.skill_run_id), timeout=1
-        )
+        execution = service._tasks[created.skill_run_id]  # pyright: ignore[reportPrivateUsage]
+        waiter = asyncio.create_task(service.wait_for_terminal(created.skill_run_id))
+        # Setup and durable execution are not a one-second storage benchmark.
+        # Keep the actual notification deadline separate from SQLite work.
+        await asyncio.wait_for(waiter_registered.wait(), timeout=10)
+        assert not waiter.done()
+        release_status.set()
+        await asyncio.wait_for(asyncio.shield(execution), timeout=10)
+        assert created.skill_run_id in terminal_signals
+        if hold_terminal_signal:
+            assert not waiter.done()
+            original_notify(created.skill_run_id)
+        terminal = await asyncio.wait_for(waiter, timeout=1)
         assert terminal.state is SkillRunState.SUCCEEDED
+        assert terminal.result is not None
     finally:
+        release_status.set()
         await container.stop()
 
 

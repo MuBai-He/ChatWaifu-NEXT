@@ -19,6 +19,14 @@ class LlmImageInputUnavailableError(RuntimeError):
     """The selected provider cannot honor an image input."""
 
 
+class LlmEmptyResponseError(RuntimeError):
+    """A completed response has no answer; recorded tool results remain valid."""
+
+    def __init__(self, *, has_tool_results: bool = False) -> None:
+        super().__init__("LLM completed without visible answer text")
+        self.has_tool_results = has_tool_results
+
+
 @dataclass(frozen=True, slots=True)
 class LlmInputImage:
     """One provider-neutral raster image input attached to a turn."""
@@ -89,11 +97,50 @@ type LlmFinishReason = Literal["stop", "tool_calls", "length", "content_filter",
 
 
 @dataclass(frozen=True, slots=True)
+class LlmUsage:
+    """Token usage metrics reported by an LLM provider."""
+
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+    reasoning_tokens: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class LlmResponseCompleted:
     finish_reason: LlmFinishReason
+    usage: LlmUsage | None = None
 
 
 type LlmStreamEvent = LlmTextDelta | LlmToolCallRequested | LlmResponseCompleted
+
+
+@dataclass(frozen=True, slots=True)
+class LlmInputBudget:
+    """Frozen estimated input allowance, not a provider tokenizer guarantee."""
+
+    estimated_token_limit: int
+    version: Literal["1.0"] = "1.0"
+
+    def __post_init__(self) -> None:
+        if type(self.estimated_token_limit) is not int or self.estimated_token_limit < 1:
+            raise ValueError("estimated input token limit must be a positive integer")
+        if self.version != "1.0":
+            raise ValueError("unsupported input budget version")
+
+
+@dataclass(frozen=True, slots=True)
+class LlmInputBudgetReport:
+    """Nonsecret projection metadata; actual usage remains provider-reported."""
+
+    estimated_token_limit: int
+    estimated_original_tokens: int
+    estimated_input_tokens: int
+    omitted_history_indices: tuple[int, ...] = ()
+    omitted_tool_preamble_indices: tuple[int, ...] = ()
+    estimated_image_tokens: int = 0
+    estimator: Literal["cl100k_chat_json_v1"] = "cl100k_chat_json_v1"
+    version: Literal["1.1"] = "1.1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,8 +160,24 @@ class LlmRequest:
     tool_choice: Literal["required", "auto"] = "required"
     tool_exchanges: tuple[LlmToolExchange, ...] = ()
     images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
+    # Trusted safety/time prompt for a required initial operation decision.
+    # Native optional decisions and later responses retain the full character contract.
+    tool_decision_system_prompt: str | None = None
+    input_budget: LlmInputBudget | None = None
+    input_budget_report: LlmInputBudgetReport | None = None
+    max_output_tokens: int | None = None
+    tool_result_max_bytes: int = 32_768
 
     def __post_init__(self) -> None:
+        if self.max_output_tokens is not None and (
+            type(self.max_output_tokens) is not int or self.max_output_tokens < 1
+        ):
+            raise ValueError("max_output_tokens must be a positive integer")
+        if (
+            type(self.tool_result_max_bytes) is not int
+            or not 1024 <= self.tool_result_max_bytes <= 1_048_576
+        ):
+            raise ValueError("tool_result_max_bytes must be within the supported projection limit")
         if len(self.images) > 4:
             raise ValueError("at most 4 images are currently supported")
         for image in self.images:

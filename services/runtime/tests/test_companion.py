@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import time
+import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import cast
 
 import pytest
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.activity import ActivityTracker
 from chatwaifu_runtime.companion.ambient import decide_proactive, is_quiet_time
 from chatwaifu_runtime.companion.attention import evaluate_attention
@@ -16,6 +17,7 @@ from chatwaifu_runtime.companion.resources import ResourceLifecycleService
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.config.settings import StorageConfig
 from chatwaifu_runtime.persistence.database import Database
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
@@ -98,28 +100,82 @@ def test_proactive_policy_respects_quiet_hours_busy_state_and_budget() -> None:
     )
 
 
+def test_cross_midnight_quiet_hours_release_without_sticky_silence() -> None:
+    china = timezone(timedelta(hours=8))
+    settings = CompanionSettings(
+        proactive_enabled=True,
+        quiet_hours_enabled=True,
+        quiet_start="23:00",
+        quiet_end="08:00",
+        proactive_idle_minutes=10,
+    )
+    before = datetime(2026, 9, 28, 22, 59, tzinfo=china)
+    start = datetime(2026, 9, 28, 23, 0, tzinfo=china)
+    overnight = datetime(2026, 9, 29, 7, 59, tzinfo=china)
+    end = datetime(2026, 9, 29, 8, 0, tzinfo=china)
+    assert [
+        is_quiet_time(moment, "23:00", "08:00") for moment in (before, start, overnight, end)
+    ] == [
+        False,
+        True,
+        True,
+        False,
+    ]
+
+    def decision(now: datetime, busy: bool):
+        return decide_proactive(
+            settings,
+            now=now,
+            idle_seconds=900,
+            generation_active=busy,
+            proactive_today=0,
+            last_proactive_at=None,
+        )
+
+    assert decision(overnight, False).reason == "quiet_hours"
+    assert decision(end, True).reason == "conversation_busy"
+    assert decision(end, False).reason == "idle_check_in"
+
+
 def test_manual_proactive_turn_is_audited_without_fabricating_user_text(
     client: TestClient,
 ) -> None:
     created = cast(dict[str, object], client.post("/v1/sessions", json={}).json())
     session_id = str(created["session_id"])
+    portal = client.portal
+    assert portal is not None
+    container = cast(RuntimeContainer, cast(FastAPI, client.app).state.container)
+    # This checks durable audit semantics, not a two-second response-time gate.
+    # Subscribe before admission so an already-completed generation is retained.
+    subscription = portal.call(
+        lambda: container.event_hub.subscribe(
+            lambda event: (
+                str(event.get("session_id")) == session_id
+                and event.get("event_type")
+                in {
+                    "assistant.generation_completed",
+                    "system.error_raised",
+                    "assistant.generation_cancelled",
+                }
+            ),
+            queue_size=8,
+        )
+    )
+    try:
+        accepted = client.post(f"/v1/sessions/{session_id}/companion/proactive")
+        assert accepted.status_code == 200
+        generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
 
-    accepted = client.post(f"/v1/sessions/{session_id}/companion/proactive")
-    assert accepted.status_code == 200
-    generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
+        async def wait_for_terminal() -> dict[str, object]:
+            return await asyncio.wait_for(subscription.receive(), timeout=10)
 
-    events: list[dict[str, object]] = []
-    deadline = time.monotonic() + 2
-    while time.monotonic() < deadline:
-        payload = cast(dict[str, object], client.get(f"/v1/sessions/{session_id}/events").json())
-        events = cast(list[dict[str, object]], payload["items"])
-        if any(
-            item["event_type"] == "assistant.generation_completed"
-            and str(item.get("generation_id")) == generation_id
-            for item in events
-        ):
-            break
-        time.sleep(0.01)
+        terminal = portal.call(wait_for_terminal)
+    finally:
+        portal.call(subscription.close)
+    assert str(terminal.get("generation_id")) == generation_id
+    assert terminal["event_type"] == "assistant.generation_completed", terminal
+    payload = cast(dict[str, object], client.get(f"/v1/sessions/{session_id}/events").json())
+    events = cast(list[dict[str, object]], payload["items"])
 
     generation_events = [item for item in events if str(item.get("generation_id")) == generation_id]
     assert any(item["event_type"] == "companion.proactive_triggered" for item in events)

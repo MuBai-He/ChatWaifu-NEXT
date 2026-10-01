@@ -1,0 +1,468 @@
+{
+  "schema_version": "1.0",
+  "source_hashes": {
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "d714cb914366d4708805c80353f2216d31dfdd81b4b986d658b991f9c7b79675",
+    "skills/builtin/web-read/chatwaifu.yaml": "c4d467b984a6cfc7626433aca04f2dbfb44ee1a5fa2df8d753d27bff0bfb36cb",
+    "skills/builtin/web-read/SKILL.md": "e316797421ba6fa8d2a4eef8999e0e975ad4354e8f20a5f40c639ebd944bc99a",
+    "tools/evaluate_character_scenarios.py": "4e16b2726d54eb8a59307a151032e26cbfa60f630405c6a6576ea1a4072c65ff"
+  },
+  "actual_permissioned_reads": 2,
+  "index_url": "https://www.caac.gov.cn/XWZX/MHYW/",
+  "selected_actual_link": {
+    "url": "https://www.caac.gov.cn/XXGK/XXGK/",
+    "label": "信息公开",
+    "label_truncated": false
+  },
+  "target_not_fetched_before_explicit_read": true,
+  "network": [
+    {
+      "url": "https://cloudflare-dns.com/dns-query?name=www.caac.gov.cn&type=A",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    },
+    {
+      "url": "https://cloudflare-dns.com/dns-query?name=www.caac.gov.cn&type=AAAA",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    },
+    {
+      "url": "https://www.caac.gov.cn/XWZX/MHYW/",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    },
+    {
+      "url": "https://cloudflare-dns.com/dns-query?name=www.caac.gov.cn&type=A",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    },
+    {
+      "url": "https://cloudflare-dns.com/dns-query?name=www.caac.gov.cn&type=AAAA",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    },
+    {
+      "url": "https://www.caac.gov.cn/XXGK/XXGK/",
+      "method": "GET",
+      "authorization_present": false,
+      "cookie_present": false
+    }
+  ],
+  "sources": [
+    {
+      "arguments": {
+        "url": "https://www.caac.gov.cn/XWZX/MHYW/",
+        "max_characters": 1000,
+        "max_links": 20,
+        "dns_resolver": "cloudflare"
+      },
+      "skill_run_id": "9222ddf3-172d-40f9-a2ce-64401b59818c",
+      "skill_version": "1.2.0",
+      "state": "succeeded",
+      "data": {
+        "url": "https://www.caac.gov.cn/XWZX/MHYW/",
+        "title": "中国民用航空局--民航要闻",
+        "retrieved_at": "2026-10-01T09:24:59.604350+00:00",
+        "content_type": "text/html",
+        "body_sha256": "bb9eb81906640dc535cfa8001cd45702a7994d404c328790f630f727307e0646",
+        "total_characters": 2558,
+        "text_offset": 0,
+        "truncated": true,
+        "focus_matched": null,
+        "dns_resolver": "cloudflare",
+        "extraction_method": "visible_text",
+        "document_characters": 2558,
+        "links": [
+          {
+            "url": "http://www.caac.gov.cn/INDEX/",
+            "label": "简体中文",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/big5/www.caac.gov.cn",
+            "label": "繁体中文",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/English/Home/",
+            "label": "ENGLISH",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/INDEX/YDKHDXZ/",
+            "label": "移动客户端",
+            "label_truncated": false
+          },
+          {
+            "url": "https://mail.caac.gov.cn",
+            "label": "政府邮箱",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/INDEX/GZPT/",
+            "label": "工作平台入口",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/INDEX/",
+            "label": "首 页",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/XWZX/",
+            "label": "新闻中心",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/XXGK/XXGK/",
+            "label": "信息公开",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/FWDT/",
+            "label": "办事大厅",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/HDJL/",
+            "label": "互动交流",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/ZTZL/",
+            "label": "专题专栏",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/GYMH/",
+            "label": "关于民航",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/WHMH/",
+            "label": "我和民航",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/",
+            "label": "首页",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/XWZX/MHYW/202609/t20260925_231789.html",
+            "label": "梁楠会见塞舌尔交通、港口和民航部部长",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/XWZX/MHYW/202609/t20260924_231785.html",
+            "label": "梁楠会见新加坡交通部兼国家发展部高...",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/XWZX/MHYW/202609/t20260923_231782.html",
+            "label": "梁楠会见香港运输及物流局局长",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/XWZX/MHYW/202609/t20260923_231774.html",
+            "label": "民航局部署中秋国庆假期运输保障工作",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/XWZX/MHYW/202609/t20260921_231764.html",
+            "label": "胡振江会见马来西亚交通部部长",
+            "label_truncated": false
+          }
+        ],
+        "links_requested": true,
+        "links_truncated": true,
+        "links_scope": "selected_source"
+      },
+      "excerpt_sha256": "79d42dbb131bdaa67bdd5b23bb3a93223b38a59d0449bbde965f223d2d08626b",
+      "excerpt_characters": 1000
+    },
+    {
+      "arguments": {
+        "url": "https://www.caac.gov.cn/XXGK/XXGK/",
+        "max_characters": 3000,
+        "max_links": 5,
+        "dns_resolver": "cloudflare"
+      },
+      "skill_run_id": "e8fbbae4-f593-4d76-a464-269c7efd833b",
+      "skill_version": "1.2.0",
+      "state": "succeeded",
+      "data": {
+        "url": "https://www.caac.gov.cn/XXGK/XXGK/",
+        "title": "中国民用航空局--信息公开",
+        "retrieved_at": "2026-10-01T09:25:00.786474+00:00",
+        "content_type": "text/html",
+        "body_sha256": "b938def2e16bf9e6efbbaa2b750ead2c7484be47dda5737dd4e8c9ec0acc1258",
+        "total_characters": 775,
+        "text_offset": 0,
+        "truncated": false,
+        "focus_matched": null,
+        "dns_resolver": "cloudflare",
+        "extraction_method": "visible_text",
+        "document_characters": 775,
+        "links": [
+          {
+            "url": "https://www.caac.gov.cn/INDEX/",
+            "label": "简体中文",
+            "label_truncated": false
+          },
+          {
+            "url": "http://www.caac.gov.cn/big5/www.caac.gov.cn",
+            "label": "繁体中文",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/English/",
+            "label": "ENGLISH",
+            "label_truncated": false
+          },
+          {
+            "url": "https://www.caac.gov.cn/INDEX/YDKHDXZ/",
+            "label": "移动客户端",
+            "label_truncated": false
+          },
+          {
+            "url": "https://mail.caac.gov.cn",
+            "label": "政府邮箱",
+            "label_truncated": false
+          }
+        ],
+        "links_requested": true,
+        "links_truncated": true,
+        "links_scope": "selected_source"
+      },
+      "excerpt_sha256": "55db3d691855cc408414a4ca1c179fdf781d996b157029d67c3ab63f027e0389",
+      "excerpt_characters": 775
+    }
+  ],
+  "persistent_grants": 0,
+  "source_text_in_durable_audit": false,
+  "model_calls": 0,
+  "Q02_approved": false,
+  "limits": [
+    "No model consumed these reads yet.",
+    "Actual retrieved links are source data; target verification belongs only to the explicit subsequent read.",
+    "CAAC index and information-publication index only, not a current complete legal answer or Python-document success.",
+    "No real channel/device/client voice operation or production setting change."
+  ],
+  "runtime_stopped": true,
+  "generation_count": 0,
+  "records_files": [
+    {
+      "path": "preflight.json",
+      "sha256": "f5a6d873ae927d6e000c3dc0ac27ec5ecd2def9b51f6003acdda4d688bf81dc5"
+    },
+    {
+      "path": "records.json",
+      "sha256": "f1ecdca2ffe4651dd36d24e77c9aec90bb28e3072fc11af46425d1c09343ea66"
+    },
+    {
+      "path": "network.json",
+      "sha256": "ed7c70d454fdada70f5aba7d367cb28fc9f8c18a2395eeee53193ae9cd3a99d7"
+    },
+    {
+      "path": "shutdown.json",
+      "sha256": "1fe5759b170d23aac3e3435810c4bea5f66e029c49229625ac5ed97d613756b1"
+    },
+    {
+      "path": "report.json",
+      "sha256": "ffa9f951ac146999ea77a3c25143b38099c822e01c269e945649cd643eb6ffcc"
+    }
+  ],
+  "previous_pre_base_fix_control": {
+    "actual_reads": 2,
+    "source_hashes": {
+      "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "2e8b20b7c7d7245c0c09acbe16e3b55d34597f71a9952d8da1f69280097cfeac",
+      "skills/builtin/web-read/chatwaifu.yaml": "c307184ecd044aa24f815d1b855f48617294cd6e25de0fe86d8ed558ceb45c67",
+      "skills/builtin/web-read/SKILL.md": "58a764934e3312419b3920987d04a78fda2d0482c8c6b1a5699c44c4cc89bb68",
+      "tools/evaluate_character_scenarios.py": "4e16b2726d54eb8a59307a151032e26cbfa60f630405c6a6576ea1a4072c65ff"
+    },
+    "report_sha256": "6fef69ad39dcbf3c4ae9adbf6dbc7b9b444ac1ccfa7b14bb3a1be0d2074713f5",
+    "scope": "Earlier actual index control, source preceding final base-correctness fix; not merged with final source identity"
+  },
+  "python_failures": [
+    {
+      "attempt": "public-web-links-runtime-20261001",
+      "preflight": {
+        "parent_commit": "d43dd4dcdd37e2a00aee087672b22c7bc78306ba",
+        "source_hashes": {
+          "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "2e8b20b7c7d7245c0c09acbe16e3b55d34597f71a9952d8da1f69280097cfeac",
+          "skills/builtin/web-read/chatwaifu.yaml": "c307184ecd044aa24f815d1b855f48617294cd6e25de0fe86d8ed558ceb45c67",
+          "skills/builtin/web-read/SKILL.md": "58a764934e3312419b3920987d04a78fda2d0482c8c6b1a5699c44c4cc89bb68",
+          "tools/evaluate_character_scenarios.py": "4e16b2726d54eb8a59307a151032e26cbfa60f630405c6a6576ea1a4072c65ff"
+        },
+        "skill_version": "1.2.0",
+        "index_url": "https://docs.python.org/3.12/library/asyncio.html",
+        "max_real_reads": 2,
+        "dns_resolver": "cloudflare",
+        "scope": "Actual permissioned public index and linked document reads in isolated Runtime, no model or production grants/settings"
+      },
+      "terminal": {
+        "skill_run_id": "cc4aa240-34c0-408e-82b4-6d187c86783d",
+        "skill_id": "web.read",
+        "skill_version": "1.2.0",
+        "capability": "read",
+        "plugin_id": null,
+        "mcp_connection_id": null,
+        "session_id": "ea80757d-6123-453a-a81e-8e9404b9f4bf",
+        "turn_id": null,
+        "generation_id": null,
+        "origin": "manual",
+        "provider_tool_call_id": null,
+        "state": "failed",
+        "progress": null,
+        "confirmation_request_id": "8e8d7e23-04ce-4ca4-89e5-83518bb44e07",
+        "result": null,
+        "error": {
+          "code": "web_http_error",
+          "message": "Public source returned an unsuccessful HTTP status",
+          "retryable": true,
+          "component": "runtime.skills",
+          "details": {
+            "status_code": 503
+          },
+          "correlation_id": null
+        },
+        "created_at": "2026-10-01T09:13:24.660002Z",
+        "started_at": "2026-10-01T09:13:24.667004Z",
+        "updated_at": "2026-10-01T09:13:26.674683Z",
+        "completed_at": "2026-10-01T09:13:26.674683Z"
+      },
+      "raw_records_sha256": "3fa38af2fba9c0c12ff1bc1a0f0da093da359f8b4612b2dd79b74d17fa10ca46",
+      "shutdown_artifact": null,
+      "limits": "No successful Python index or linked document; initial attempt awaited stop in finally but has no separate shutdown file."
+    },
+    {
+      "attempt": "public-web-links-runtime-retry1-20261001",
+      "preflight": {
+        "parent_commit": "d43dd4dcdd37e2a00aee087672b22c7bc78306ba",
+        "source_hashes": {
+          "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "2e8b20b7c7d7245c0c09acbe16e3b55d34597f71a9952d8da1f69280097cfeac",
+          "skills/builtin/web-read/chatwaifu.yaml": "c307184ecd044aa24f815d1b855f48617294cd6e25de0fe86d8ed558ceb45c67",
+          "skills/builtin/web-read/SKILL.md": "58a764934e3312419b3920987d04a78fda2d0482c8c6b1a5699c44c4cc89bb68",
+          "tools/evaluate_character_scenarios.py": "4e16b2726d54eb8a59307a151032e26cbfa60f630405c6a6576ea1a4072c65ff"
+        },
+        "driver_sha256": "68d3a7a8a9614b937d86c9abe713b9b753473d3a9984e4908daa981acae2f85f",
+        "attempt": "explicit retry1 after terminal HTTP 503; original files retained",
+        "skill_version": "1.2.0",
+        "index_url": "https://docs.python.org/3.12/library/asyncio.html",
+        "max_real_reads": 2,
+        "dns_resolver": "cloudflare",
+        "scope": "Actual permissioned public index and linked document reads in isolated Runtime, no model or production grants/settings"
+      },
+      "terminal": {
+        "skill_run_id": "f54d216e-6947-4e4e-8001-bb48dbf30c16",
+        "skill_id": "web.read",
+        "skill_version": "1.2.0",
+        "capability": "read",
+        "plugin_id": null,
+        "mcp_connection_id": null,
+        "session_id": "553ce445-ea65-4556-bfd5-fb8302349d38",
+        "turn_id": null,
+        "generation_id": null,
+        "origin": "manual",
+        "provider_tool_call_id": null,
+        "state": "failed",
+        "progress": null,
+        "confirmation_request_id": "0ce55315-e5d9-44cf-866a-f75cb6876edb",
+        "result": null,
+        "error": {
+          "code": "web_http_error",
+          "message": "Public source returned an unsuccessful HTTP status",
+          "retryable": true,
+          "component": "runtime.skills",
+          "details": {
+            "status_code": 503
+          },
+          "correlation_id": null
+        },
+        "created_at": "2026-10-01T09:15:52.084863Z",
+        "started_at": "2026-10-01T09:15:52.088653Z",
+        "updated_at": "2026-10-01T09:15:53.427404Z",
+        "completed_at": "2026-10-01T09:15:53.427404Z"
+      },
+      "raw_records_sha256": "121d4a6ab4bba2025a0d34f9df44960e488cfcd07d84a5bc02fe04bdb2061688",
+      "shutdown_artifact": {
+        "runtime_stopped": true
+      },
+      "limits": "No successful Python index or linked document; initial attempt awaited stop in finally but has no separate shutdown file."
+    }
+  ],
+  "software_checks": {
+    "missing_feature_regressions_before": "12 failed",
+    "targeted_after_base_fix": "224 passed",
+    "base_ignore_negative_control": "5 expected failures; in-memory rejected-policy injection, not a historical source run",
+    "full_python": "1882 passed / 46 platform skips",
+    "ruff": "passed",
+    "pyright": "0 errors, 0 warnings, 0 informations",
+    "ruff_format": "623 files already formatted",
+    "architecture": "passed",
+    "web_build": "passed",
+    "desktop_ui_build": "passed",
+    "docs_build": "passed",
+    "protocol_generate": "passed; no generated Schema/TS/fixture changes",
+    "last_link_agent_guard": "83 passed"
+  },
+  "verification_log_hashes": [
+    {
+      "path": "public-web-links-before-20261001.log",
+      "sha256": "57340e0c6458f0e8ceb2576efcd64526a5201658dbf48d6da06c382085d57816"
+    },
+    {
+      "path": "public-web-links-targeted-final-20261001.log",
+      "sha256": "dac8f073907582d24308792aa7dc6e22fa5fe41738d730b39b8b726631df51b1"
+    },
+    {
+      "path": "public-web-links-last-guard-20261001.log",
+      "sha256": "b2838e22746255dd581a774964e5002536518d8dbea7ae067fadcdf4d731f805"
+    },
+    {
+      "path": "public-web-links-base-negative-20261001.log",
+      "sha256": "c75f4f2035effec470532d96e0ed8194bf0efff51bc53c964635df6a4e91281f"
+    },
+    {
+      "path": "public-web-links-python-full-final-20261001.log",
+      "sha256": "518582b4044455a5f296403815988b1f22f311a63173ecffa79f8b7047d67c28"
+    },
+    {
+      "path": "public-web-links-ruff-last-20261001.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "public-web-links-format-final-pass-20261001.log",
+      "sha256": "1b99e2450b04a0d7aca34f802c3468f8d83dec99c32736715e066beac45e8966"
+    },
+    {
+      "path": "public-web-links-pyright-last-20261001.log",
+      "sha256": "f552d237ad0bd249c05f97eb62dbc65d2d0e4a5fe2346608e10fb7838dba9ed1"
+    },
+    {
+      "path": "public-web-links-architecture-last-20261001.log",
+      "sha256": "949c9b19feaee050e55e759809771c462e82029514613b066953746f8f5d6021"
+    },
+    {
+      "path": "public-web-links-web-build-20261001.log",
+      "sha256": "9d2382b0d754b946b820bc924d64dd08442445a951e78e221f529be6dd85f126"
+    },
+    {
+      "path": "public-web-links-desktop-ui-build-20261001.log",
+      "sha256": "f5fc87e34c10d01d4ed2e50b01ec3831987b3a117cabe71d303ed0f51a67e61e"
+    },
+    {
+      "path": "public-web-links-docs-build-20261001.log",
+      "sha256": "1f9222cf72d19aa50c198e4e3568ad920702f0bdc4c6eb1349bd161fbf583f07"
+    },
+    {
+      "path": "public-web-links-protocol-20261001.log",
+      "sha256": "09ad255556e6f5d6270bf968aa9440c5a7f550237eada5088917464d5d066a19"
+    }
+  ]
+}

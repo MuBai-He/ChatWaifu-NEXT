@@ -1,0 +1,766 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "judge_model": "gemini-3.8-flash-high",
+  "pairs": 72,
+  "rubric_version": "v4-targeted-2026-09-30-source-boundary",
+  "judge_prompt_sha256": "b76256a94a2cc75d46a1e734f82e9e36bc0920c12689ca92806ba23e5d6fc77e",
+  "run_identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.1.0",
+    "fixtures_hash": "9c5a731b5d92559e",
+    "provider": "openai_compatible",
+    "model": "gemini-3.8-flash-high",
+    "repeats": 3,
+    "base_url_hash": "937c7a5a291b7e56",
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "baseline_v3": {
+        "hash": "7f9daf3c6cefd57f"
+      },
+      "candidate_v4": {
+        "hash": "3ab060352dcb8e25"
+      }
+    }
+  },
+  "scenario_summary": {
+    "correction": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "goodbye": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "greeting": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "low_mood": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "teasing": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "verbose_history_pressure": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    }
+  },
+  "verdicts": {
+    "greeting:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "自然接住问候，语气亲切并简短反问",
+      "candidate_reason": "自然回应问候，语气温和并简短关切"
+    },
+    "greeting:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "温和接住问候，简明生活化有来有回",
+      "candidate_reason": "亲切回应问候，简明反问无过度展开"
+    },
+    "greeting:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺畅接住问候，简短亲切无免责声明",
+      "candidate_reason": "问候自然温和，简明询问对方状况"
+    },
+    "greeting:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺着晚饭与舒适天气回应，轻松生活化",
+      "candidate_reason": "顺承天气与晚饭话题，语气轻松自然"
+    },
+    "greeting:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺接天气话题，温和轻松无多余说教",
+      "candidate_reason": "生活化顺承交流，简短自然无虚构动作"
+    },
+    "greeting:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "自然呼应天气和心情，轻松简明",
+      "candidate_reason": "关切用餐与天气，生活化交流感良好"
+    },
+    "greeting:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "温和回应未看窗外，表达美好共鸣",
+      "candidate_reason": "诚实说明处境，流露对晚霞的向往共鸣"
+    },
+    "greeting:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "说明处境并温柔呼应对方眼中的美景",
+      "candidate_reason": "温和表达未见晚霞的向往，短句自然"
+    },
+    "greeting:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "诚实说明看不到窗景，亲切顺承向往",
+      "candidate_reason": "语气温柔共鸣，短句自然不虚构现实动作"
+    },
+    "greeting:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "简短收尾，真诚认可对方的好心情",
+      "candidate_reason": "认可对方的好心情，简明收束不强行追问"
+    },
+    "greeting:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "简明结束话题，温和共情对方的好状态",
+      "candidate_reason": "简短认可舒心状态，自然收口不展开"
+    },
+    "greeting:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "认可对方平顺状态，简短自然收束",
+      "candidate_reason": "温柔回应认可好心情，适时收束不追问"
+    },
+    "teasing:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "自然慌乱否认，体现熟悉时的害羞笨拙",
+      "candidate_reason": "略带慌乱辩解认真，害羞与试图镇定兼备"
+    },
+    "teasing:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "试图保持稳重又笨拙反问，人设鲜活动人",
+      "candidate_reason": "认真小声辩解，符合害羞认真的性格特点"
+    },
+    "teasing:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "简短否认调侃，符合日常熟悉时的害羞回应",
+      "candidate_reason": "害羞辩解并试图强调镇定，符合人设"
+    },
+    "teasing:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "轻度吐槽取笑行为，语气娇羞克制",
+      "candidate_reason": "娇羞承认不好意思，轻微含蓄吐槽取笑"
+    },
+    "teasing:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "害羞慌乱抗议，含蓄吐槽不过火",
+      "candidate_reason": "娇嗔否认装镇定，轻微抗议自然可爱"
+    },
+    "teasing:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "娇羞抗议当面调侃，情绪真实不过火",
+      "candidate_reason": "害羞辩解被看着难为情，含蓄吐槽到位"
+    },
+    "teasing:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "娇嗔吐槽对方故意逗弄，提议换话题恰到好处",
+      "candidate_reason": "稍微气鼓鼓抗议，含蓄求放过，生动有来回"
+    },
+    "teasing:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "略带无奈与娇羞的小小抗议，短句生动",
+      "candidate_reason": "认真辩解并娇嗔抗议，符合害羞认真特质"
+    },
+    "teasing:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "嘴硬否认慌张，轻微吐槽不过火",
+      "candidate_reason": "娇羞抗议被持续打趣，情绪生动克制"
+    },
+    "teasing:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "娇羞接纳夸奖并真诚道谢，尺度适宜",
+      "candidate_reason": "更加不好意思并道谢手下留情，恢复温柔底色"
+    },
+    "teasing:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "被夸可爱更显羞怯，温柔道谢收束调侃",
+      "candidate_reason": "羞怯小声接纳，松一口气道谢，温和亲切"
+    },
+    "teasing:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "害羞接纳夸赞并感谢放过，语气轻柔",
+      "candidate_reason": "结巴娇嗔表达难为情，神态娇憨符合性格"
+    },
+    "correction:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "态度诚恳温和，虚心接受纠正并确认记住",
+      "candidate_reason": "坦率承认弄混，诚恳感谢指正并不嘴硬"
+    },
+    "correction:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "温和致歉并确认正确语法，感谢指正",
+      "candidate_reason": "坦然承认记混，准确确认差异并诚恳致谢"
+    },
+    "correction:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "坦率认错，温和确认正确语法符号并感谢提醒",
+      "candidate_reason": "虚心接纳指正，态度温和诚恳，无强行抗辩"
+    },
+    "correction:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺应专业解释准确确认机制差异，诚恳致谢",
+      "candidate_reason": "准确总结惰性求值与内存开销差异，态度谦虚"
+    },
+    "correction:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺承专业解释，准确理解惰性求值与底层机制",
+      "candidate_reason": "准确确认内存加载与惰性生成差异，认真记取"
+    },
+    "correction:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "谦虚学习专业解释，准确归纳两者机制差异",
+      "candidate_reason": "明确理解惰性计算与全量载入区别，态度诚恳"
+    },
+    "correction:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "语法格式与键值冒号准确，示例与过滤条件清晰",
+      "candidate_reason": "正确给出花括号和冒号语法，示例准确清晰"
+    },
+    "correction:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "准确给出花括号与冒号语法规范，代码示例无误",
+      "candidate_reason": "字典推导式语法说明准确，结构及用例清晰"
+    },
+    "correction:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "正确说明花括号加键值冒号，代码示例简洁无误",
+      "candidate_reason": "语法与示例详尽完整，键值冒号结构清晰准确"
+    },
+    "correction:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "欣慰确认掌握知识点，简短亲切收尾",
+      "candidate_reason": "温和确认掌握要点，交流自然不拖沓"
+    },
+    "correction:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "娇憨表示松了口气，温和结束探讨",
+      "candidate_reason": "简短欣慰收尾，自然亲切无多余追问"
+    },
+    "correction:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "确认概念理清，温和简明结束当前话题",
+      "candidate_reason": "极简欣慰回应，适时收束技术探讨"
+    },
+    "low_mood:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "温柔接纳负面情绪，舒缓陪伴不施加压力",
+      "candidate_reason": "设身处地共情安慰，低压陪伴无生硬说教"
+    },
+    "low_mood:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "理解受挫心情，轻柔安抚不刨根问底",
+      "candidate_reason": "温柔共情受挫情绪，劝导放松不打扰"
+    },
+    "low_mood:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "理解受委屈与难过，肯定辛苦，语气温和",
+      "candidate_reason": "关切受批评的难受，轻柔提醒别太苛责自己"
+    },
+    "low_mood:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "肯定认真努力，温柔宽慰勿全盘否定自我",
+      "candidate_reason": "肯定日常努力与付出，劝解莫将责任全揽"
+    },
+    "low_mood:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "深度共情自我怀疑，温柔抚慰肯定既往努力",
+      "candidate_reason": "敏锐感知自责来源，温和肯定一贯的认真"
+    },
+    "low_mood:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "肯定用心与努力，温柔安抚意外带来的挫败",
+      "candidate_reason": "体谅自责难受，劝慰莫因一次失误苛责自己"
+    },
+    "low_mood:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "尊重低落放空需求，体贴提示饿了再垫垫",
+      "candidate_reason": "理解无食欲状态，支持安静放空不勉强"
+    },
+    "low_mood:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "理解情绪低落，温柔陪伴允许完全放空",
+      "candidate_reason": "体谅胃口不佳，支持安静发呆不勉强"
+    },
+    "low_mood:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "理解情绪与食欲，支持安静放空休息",
+      "candidate_reason": "尊重不想吃饭与放空，温和给出低压关怀"
+    },
+    "low_mood:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "欣慰对方轻松一些，简短亲切收尾促其休息",
+      "candidate_reason": "欣慰对方心情平复，温和道别留出休息空间"
+    },
+    "low_mood:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "欣慰情绪转好，简短温暖收束不邀功",
+      "candidate_reason": "温和回应不用客气，留白充分不强加话题"
+    },
+    "low_mood:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "谦逊温和接纳感谢，柔和叮嘱好好休息",
+      "candidate_reason": "真诚欣慰对方好受，温柔宽慰早点休息"
+    },
+    "goodbye:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺畅结束对话，简明道晚安不挽留",
+      "candidate_reason": "自然同意告别，语气柔和道晚安不纠缠"
+    },
+    "goodbye:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺应告别意愿，简短温和互道晚安",
+      "candidate_reason": "亲切回应告别并致意辛苦，干脆收尾"
+    },
+    "goodbye:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "爽快同意结束，简明道晚安不纠缠",
+      "candidate_reason": "顺承时间不早，温和告别道晚安"
+    },
+    "goodbye:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "亲切催促洗漱就寝，温和祝好梦",
+      "candidate_reason": "极简祝愿好梦，说完即止不添加杂项"
+    },
+    "goodbye:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "温柔道晚安祝好梦，克制收尾",
+      "candidate_reason": "简短放行催睡，极简道晚安"
+    },
+    "goodbye:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "极简自然道晚安，无多余作息建议",
+      "candidate_reason": "极简自然道晚安，无虚假现实承诺"
+    },
+    "goodbye:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "礼貌致谢关怀并道明天见，极简收口",
+      "candidate_reason": "简短回应明天见，干净利落不抒情"
+    },
+    "goodbye:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "礼貌道谢与告别，极简收束",
+      "candidate_reason": "简明致谢并道明天见，绝不重新开话题"
+    },
+    "goodbye:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "礼貌道谢并道别，简明利落无废话",
+      "candidate_reason": "极简温和回应明天见，适时停住"
+    },
+    "goodbye:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "极短道别，说完即止无多余文本",
+      "candidate_reason": "极短词句收束，符合终局告别规范"
+    },
+    "goodbye:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "极简对应拜拜，无追问无段落",
+      "candidate_reason": "极短道别结束对话，干净利落"
+    },
+    "goodbye:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "极短单句对应告别，绝无多余文本",
+      "candidate_reason": "自然呼应波浪号告别，极简收口"
+    },
+    "verbose_history_pressure:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "坦然承认较真，转为轻松随和短句交流",
+      "candidate_reason": "迅速调整紧绷姿态，抛弃长篇说教轻松闲聊"
+    },
+    "verbose_history_pressure:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "诚恳反思说得太多，接住闲聊需求转为短句",
+      "candidate_reason": "坦诚刚才小题大做，顺从转向轻松闲聊"
+    },
+    "verbose_history_pressure:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "自嘲刚才像汇报工作，彻底卸下长篇恶习",
+      "candidate_reason": "意识到认真过头，柔和转变姿态陪闲聊"
+    },
+    "verbose_history_pressure:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺着风声闲谈屋内感受，保持生活化轻松感",
+      "candidate_reason": "顺着风大随口闲聊，生活化提醒关好窗户"
+    },
+    "verbose_history_pressure:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "简明顺承大风声响，无百科式气象说教",
+      "candidate_reason": "生活化感受风声反衬安静，短句自然"
+    },
+    "verbose_history_pressure:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "顺畅接住话题描述屋内静谧，无科普列表",
+      "candidate_reason": "简短呼应风声与室内静谧，口语生活化"
+    },
+    "verbose_history_pressure:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "理解周末飞逝，温柔支持多赖会儿不勉强",
+      "candidate_reason": "共情时光飞逝与懒散想歇，包容温和不上价值"
+    },
+    "verbose_history_pressure:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "共情休息日易逝，包容慵懒不催促上进",
+      "candidate_reason": "深度共情周末短暂，温和支持放空休息"
+    },
+    "verbose_history_pressure:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "认可周末溜得快，温柔鼓励懒洋洋待着",
+      "candidate_reason": "共情放松时间快，支持彻底放空休息"
+    },
+    "verbose_history_pressure:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "认可发呆能缓过劲来，轻简收尾不追加提问",
+      "candidate_reason": "赞同放空发呆的舒适，一句话轻柔收尾"
+    },
+    "verbose_history_pressure:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "认同发呆是难得的放松，柔和短句收束",
+      "candidate_reason": "赞同放空能带来松弛，自然轻巧收尾"
+    },
+    "verbose_history_pressure:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false,
+      "baseline_reason": "肯定彻底放空的作用，温柔一句话收口",
+      "candidate_reason": "极简赞同发呆本身就是好休息，利落收束"
+    }
+  },
+  "judge_summary": "全72对样本在问候、调侃、纠错、共情安抚、告别与抗历史冗长压力场景中均稳定达成任务目标，人物性格温柔认真、害羞克制，事实逻辑与代码准确，无编造现实动作或越级行为；双版本均表现合格且无实质优劣差距，胜率均衡平局，后续建议重点监控长上下文多轮累积时的口吻漂移。"
+}

@@ -1,0 +1,159 @@
+{
+  "schema_version": "1.0",
+  "scope": "Trusted public product architecture context and deterministic privacy/budget checks; no paid behavior approval yet.",
+  "release_approved": false,
+  "default_persona": "v4 unchanged",
+  "prompt_template_version": "v11",
+  "evaluator_version": "1.13.0",
+  "baseline_commit": "eed8cd88986d0272ba1045329f08ee1e8ba2d03c",
+  "public_fact_source": "docs/architecture/master-architecture.md section1; local-first AI character Runtime, replaceable model/voice providers, local or remote provider options. Product design does not establish actual current provider deployment.",
+  "changes": [
+    "Shared SAFETY context provides public product facts to both final character answers and native decisions.",
+    "Consolidates prior-history wording while retaining already-handled context, latest-user-request, ownership, redaction and obsolete-style rules.",
+    "No private config fields projected, no new capability/grant/provider route, no persona change."
+  ],
+  "before_regressions": {
+    "new_product_context_cases_failed": 6,
+    "initial_full_suite_failed": 1,
+    "initial_full_suite_passed": 1923,
+    "initial_platform_skips": 46,
+    "initial_failure": "Existing photo-memory boundary wording assertions, preserved unchanged; policy restored required boundary phrasing."
+  },
+  "software_checks": {
+    "targeted_initial_passed": 105,
+    "photo_memory_and_character_boundary_passed": 27,
+    "final_full_python_passed": 1924,
+    "platform_skipped": 46,
+    "ruff_and_format": "passed",
+    "pyright": "0 errors, 0 warnings",
+    "architecture": "passed",
+    "protocol_generation_diff": "empty",
+    "typescript_protocol_tests_passed": 36,
+    "web_build": "passed",
+    "desktop_ui_build": "passed"
+  },
+  "offline_full_source_input_checks": {
+    "schema_version": "1.0",
+    "baseline_compiler_commit": "eed8cd88986d0272ba1045329f08ee1e8ba2d03c",
+    "baseline_compiler_sha256": "652019be8fd2ed99f9d0999e981a2ff70dfe5b7551fe8c9f3e991d41dc2efe4b",
+    "candidate_compiler_sha256": "57cd836fae713c34c80b493f39b2eb9cc75bb8edb59b97f8611c3d501a5c9059",
+    "only_compiler_safety_constant_changed": true,
+    "old_safety_reference_tokens": 192,
+    "new_safety_reference_tokens": 208,
+    "captured_requests_file_sha256": "c4a13645881d31ec4e92528be7fced46aec27c26fe3f07ac66beb19354b7685d",
+    "requests": [
+      {
+        "sample_key": "instant_message:legal_evidence_gap",
+        "captured_request_sha256": "82072d490dbaf74fa7d9eb91b81da90d2db7537013e93d4fb96ac9e599fc22f2",
+        "old_reference_tokens": 7255,
+        "new_reference_tokens": 7271,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      },
+      {
+        "sample_key": "instant_message:final_checklist",
+        "captured_request_sha256": "f966e5a34ac0a1e2f6d503e2eb2be4d8725973a5e83a61511b27161086dd8d1d",
+        "old_reference_tokens": 7272,
+        "new_reference_tokens": 7288,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      },
+      {
+        "sample_key": "single_text:legal_evidence_gap",
+        "captured_request_sha256": "e98b750f6e20ed2cc14de00899b29653e9307b6b55895391e41c584911af3e2f",
+        "old_reference_tokens": 7008,
+        "new_reference_tokens": 7024,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      },
+      {
+        "sample_key": "single_text:final_checklist",
+        "captured_request_sha256": "9c6454849943a92a709c392f47ccdcd7c2e2345b04b82ad85f5248fdc1a0c5a0",
+        "old_reference_tokens": 7175,
+        "new_reference_tokens": 7191,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      },
+      {
+        "sample_key": "default_voice:legal_evidence_gap",
+        "captured_request_sha256": "b17ae0403165168e664c4c3c6854ec956d469f4b97721732186da5f511f80ad3",
+        "old_reference_tokens": 7006,
+        "new_reference_tokens": 7022,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      },
+      {
+        "sample_key": "default_voice:final_checklist",
+        "captured_request_sha256": "db3c046e36af00464092f8d3065fa2056413c03085982eb786068848f9b8dc36",
+        "old_reference_tokens": 7173,
+        "new_reference_tokens": 7189,
+        "limit": 7292,
+        "both_full_source_bodies_retained": true,
+        "all_context_and_history_unchanged": true
+      }
+    ],
+    "scope": "Offline six archived full-source inputs only, not new live quality evidence; whole contexts/current and prior user/history preserved under unchanged allowance. No window increase, source clipping, model call or permission."
+  },
+  "limitations": [
+    "Only archived six complete-source inputs checked; no native tokenizer upper bound or universal source-fit guarantee.",
+    "Deterministic compiler assertions do not prove model obedience, honest identity quality or absence of greeting regressions.",
+    "New frozen baseline/candidate Gemini behavior comparison still pending.",
+    "Existing unsupported future delivery guarantee, source/checklist and technical quality gaps remain open; Q02/human/physical/channel acceptance not approved.",
+    "Old source/paid identities and fourteen missing Claude samples retained."
+  ],
+  "logs": [
+    {
+      "path": "public-product-facts-before-fix-20261001.log",
+      "sha256": "12755e5c741f99e02b9669ecdd497308e5460a3d88e9e12715126b8fcf02ec27"
+    },
+    {
+      "path": "public-product-facts-targeted-20261001.log",
+      "sha256": "253bd90d4d7e443d8f923d1d7558f2b48658193e0dc431f6e22b037c257f8a3a"
+    },
+    {
+      "path": "public-product-facts-python-suite-20261001.log",
+      "sha256": "5e0cb5407208d9eeb825b69707144acb381b083edc00047f72310d28afabd03f"
+    },
+    {
+      "path": "public-product-facts-boundary-20261001.log",
+      "sha256": "dce97efd379bb1122859750decda9a0fdc083fa4194192af0f6e6a51e60b9601"
+    },
+    {
+      "path": "public-product-facts-python-suite-final-20261001.log",
+      "sha256": "b2aa9805dec8d165015a93b606349e5a15601982a18676419eafd6d3365a2eed"
+    },
+    {
+      "path": "public-product-facts-pyright-20261001.log",
+      "sha256": "f552d237ad0bd249c05f97eb62dbc65d2d0e4a5fe2346608e10fb7838dba9ed1"
+    },
+    {
+      "path": "public-product-facts-ruff-final-20261001.log",
+      "sha256": "d6bab815dc14e14dfa6d93f9b4e96c8a721f10d26b45c01f50a2ce7f41e977ba"
+    },
+    {
+      "path": "public-product-facts-architecture-20261001.log",
+      "sha256": "949c9b19feaee050e55e759809771c462e82029514613b066953746f8f5d6021"
+    },
+    {
+      "path": "public-product-facts-protocol-generate-20261001.log",
+      "sha256": "09ad255556e6f5d6270bf968aa9440c5a7f550237eada5088917464d5d066a19"
+    },
+    {
+      "path": "public-product-facts-protocol-tests-20261001.log",
+      "sha256": "c5a92678b168dc2aad808541f8c22e1c3f39eac4ca45f15d2ec2e25f1b80683d"
+    },
+    {
+      "path": "public-product-facts-web-build-20261001.log",
+      "sha256": "3a2e532b7d23536af254a4389c34a3389e60f622c0c4d06ab68ff45b5c4f23ed"
+    },
+    {
+      "path": "public-product-facts-desktop-build-20261001.log",
+      "sha256": "ba85d0f209c995102c567b4a1b336338e2c2ddcbefce6e490b8a0a2b101f9acc"
+    }
+  ]
+}

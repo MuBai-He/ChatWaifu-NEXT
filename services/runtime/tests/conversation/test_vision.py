@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from chatwaifu_protocol.character import ModelContextBudget, PromptBudgetReport
 from chatwaifu_protocol.session import GenerationState
 from chatwaifu_runtime.conversation.models import (
     ConversationTurnOptions,
@@ -15,6 +16,10 @@ from chatwaifu_runtime.conversation.models import (
 )
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmRequest
+
+
+def _budgeted_snapshot() -> MagicMock:
+    return MagicMock(chat_config=MagicMock(budget=ModelContextBudget()))
 
 
 def _make_accepted() -> GenerationAccepted:
@@ -30,12 +35,26 @@ def _make_accepted() -> GenerationAccepted:
 class _FakeCompilation:
     def __init__(self, system_prompt: str = "base system prompt") -> None:
         self.system_prompt = system_prompt
+        self.tool_decision_system_prompt = "trusted safety/time context"
         self.context = ()
         self.history = ()
         self.recalled_memory_texts = ()
-        report = MagicMock()
-        report.model_dump.return_value = {}
-        self.report = report
+        self.selected_memory_ids = ()
+        self.report = PromptBudgetReport(
+            model_role="chat",
+            budget=1024,
+            used=1,
+            safety_tokens=0,
+            persona_tokens=0,
+            state_tokens=0,
+            relationship_tokens=0,
+            memory_tokens=0,
+            scene_tokens=0,
+            conversation_tokens=0,
+            dropped_history_turns=0,
+        )
+        self.identity = None
+        self.source_generation_ids = ()
 
 
 @pytest.mark.asyncio
@@ -45,6 +64,7 @@ async def test_image_loaded_before_llm_and_request_has_images() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -97,6 +117,7 @@ async def test_image_loaded_before_llm_and_request_has_images() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
+        snapshot=_budgeted_snapshot(),
     )
 
     assert load_order == ["loaded"]
@@ -116,6 +137,7 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -154,6 +176,7 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
+            snapshot=_budgeted_snapshot(),
         )
 
     assert agent.stream.call_count == 0
@@ -168,6 +191,7 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -208,6 +232,7 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
+        snapshot=_budgeted_snapshot(),
     )
 
     assert agent.stream.call_count == 0
@@ -227,6 +252,7 @@ async def test_bytes_not_in_persisted_events() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -280,6 +306,7 @@ async def test_bytes_not_in_persisted_events() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
+        snapshot=_budgeted_snapshot(),
     )
 
     for _event_type, payload in emitted_events:
@@ -295,6 +322,7 @@ async def test_stale_before_loader_prevents_image_load() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -339,6 +367,7 @@ async def test_stale_before_loader_prevents_image_load() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
+            snapshot=_budgeted_snapshot(),
         )
 
     assert loader_called is False
@@ -353,6 +382,7 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -401,6 +431,7 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
+            snapshot=_budgeted_snapshot(),
         )
 
     assert loader_called is True
@@ -416,6 +447,7 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
     service._repository.prepare_history = AsyncMock(return_value=())
     service._photo_recall = None
     service._photo_annotations = None
+    service._source_context = None
     service._run_generation = ConversationService._run_generation.__get__(
         service, ConversationService
     )
@@ -458,6 +490,7 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
+        snapshot=_budgeted_snapshot(),
     )
 
     assert service._complete.await_count == 0

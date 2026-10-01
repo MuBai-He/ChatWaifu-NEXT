@@ -1,0 +1,33 @@
+{
+  "model": "claude-opus-4-6-thinking",
+  "scenarios": [
+    "topic_switch",
+    "technical_help",
+    "detailed_answer",
+    "insufficient_shared_history",
+    "identity",
+    "stop_joking"
+  ],
+  "samples": 144,
+  "pairs": 72,
+  "nonempty_replies": 144,
+  "finish_reasons": {
+    "stop": 144
+  },
+  "provider_usage_coverage": 144,
+  "latency_ms_p50": 4536.0,
+  "latency_ms_p95": 20365,
+  "totals": {
+    "provider_tokens_prompt": 430700,
+    "provider_tokens_completion": 35369,
+    "provider_tokens_reasoning": 0,
+    "provider_tokens_total": 466069
+  },
+  "usage_field_coverage": {
+    "provider_tokens_prompt": 144,
+    "provider_tokens_completion": 144,
+    "provider_tokens_reasoning": 0,
+    "provider_tokens_total": 144
+  },
+  "shared_compiler_sha256_first16": "7c85a6ef6515d89c"
+}

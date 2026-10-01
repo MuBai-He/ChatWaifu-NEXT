@@ -1,0 +1,4070 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-01",
+  "source_commit": "7302babe20a7c3446dc91b327253982c6c4be0c0",
+  "scope": "technical_help only; three models; v5/v6; three four-turn repeats; instant_message; isolated Runtime; no live channel",
+  "decision": "candidate_v6 remains evaluation-only; default persona v4 unchanged; Q02 not accepted",
+  "sampling": {
+    "temperature": null,
+    "top_p": null,
+    "seed": null,
+    "meaning": "not sent; provider defaults; no deterministic sampling guarantee"
+  },
+  "limits": {
+    "logical_replies_per_model": 24,
+    "provider_round_preflight_upper_bound_per_model": 144,
+    "timeout_seconds": 180,
+    "context_window": 8192,
+    "tool_calls_observed": 0,
+    "persistent_permission_grants": 0,
+    "verified_prices": false,
+    "dollar_cost": null
+  },
+  "models": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "metadata_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.5.2",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "gemini-3.8-flash-high",
+        "repeats": 3,
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v5": {
+            "hash": "3df16760df3f75aa"
+          },
+          "candidate_v6": {
+            "hash": "61722fa690510f0d"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 144,
+          "implementation_sha256": "b79d98b06d557aca587462b90164a3059204afc16f8083f24857d41910096bfe"
+        }
+      },
+      "preflight": {
+        "mode": "dry-run",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "execution_path": "runtime_source_tools",
+        "provider_round_upper_bound": 144,
+        "max_provider_requests": 144,
+        "tool_input_tokens_estimated": false,
+        "fixtures_file": "/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/tests/fixtures/conversation/character_scenarios.json",
+        "scenarios_count": 1,
+        "turns_per_scenario": 4,
+        "repeats": 3,
+        "variants": ["baseline_v5", "candidate_v6"],
+        "total_requests": 24,
+        "estimated_prompt_tokens": 64332,
+        "estimated_completion_tokens": 2880,
+        "estimated_total_tokens": 67212,
+        "prompt_estimate_scope": "Each selected persona and scenario's first turn, compiled at an 8192-token window, extrapolated to all turns and repeats without later-turn history.",
+        "provider": "openai_compatible",
+        "model": "gemini-3.8-flash-high",
+        "estimated_cost_usd": null,
+        "estimated_cost_display": "unpriced (user authorized --no-cost-ceiling; no dollar ceiling configured)",
+        "pricing_source": "none (unpriced)",
+        "cost_ceiling_usd": null,
+        "cost_policy": "no_cost_ceiling",
+        "estimate_is_billing_cap": false,
+        "remote_provider_max_attempts_per_logical_request": 3,
+        "max_requests_counts_logical_requests": true,
+        "notice": "max_requests counts logical requests; adapter retries may cause up to 3 HTTP attempts per request."
+      },
+      "variants": [
+        {
+          "variant": "baseline_v5",
+          "replies": 12,
+          "failed_replies": 1,
+          "failed_by_turn": {
+            "1": 1,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "latency_ms": {
+            "p50": 4412.0,
+            "p95_nearest_rank": 12123
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 31339,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 2164,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 37040,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": 3537,
+              "known_calls": 12,
+              "unknown_calls": 0
+            }
+          },
+          "dollar_cost": null
+        },
+        {
+          "variant": "candidate_v6",
+          "replies": 12,
+          "failed_replies": 0,
+          "failed_by_turn": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "latency_ms": {
+            "p50": 4507.5,
+            "p95_nearest_rank": 5729
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 34849,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 2166,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 42232,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": 5217,
+              "known_calls": 12,
+              "unknown_calls": 0
+            }
+          },
+          "dollar_cost": null
+        }
+      ],
+      "paired_preferences": {
+        "candidate_v6": 1,
+        "tie": 11
+      },
+      "saved_replies": 24,
+      "all_provider_attempts": 24,
+      "failed_attempts": 0,
+      "failed_attempt_records": [],
+      "saved_reply_records": [
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 11383,
+          "timestamp": "2026-09-30T20:18:49.834639+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1802,
+            "completion_tokens": 179,
+            "total_tokens": 2730,
+            "reasoning_tokens": 749
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 4365,
+          "timestamp": "2026-09-30T20:18:54.203422+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2762,
+            "completion_tokens": 128,
+            "total_tokens": 3193,
+            "reasoning_tokens": 303
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "5efc81ef736eeba95311422c7e6f316e88d571545264c47d23228279b90534fe"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 4935,
+          "timestamp": "2026-09-30T20:18:59.140017+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3219,
+            "completion_tokens": 336,
+            "total_tokens": 3828,
+            "reasoning_tokens": 273
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "0b83cf1edc7052bada9abe91a47ef9f740a725f35e3ed7020c4fbd264fc884c8"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 4459,
+          "timestamp": "2026-09-30T20:19:03.600605+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3851,
+            "completion_tokens": 175,
+            "total_tokens": 4483,
+            "reasoning_tokens": 457
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "607ef059c824819741ca0e13660c2420f514f8d0037347dc7db7b342d020ba1e"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 4502,
+          "timestamp": "2026-09-30T20:19:08.105888+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1802,
+            "completion_tokens": 111,
+            "total_tokens": 2144,
+            "reasoning_tokens": 231
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 3685,
+          "timestamp": "2026-09-30T20:19:11.792491+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2176,
+            "completion_tokens": 121,
+            "total_tokens": 2441,
+            "reasoning_tokens": 144
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "53eebaba7d061e8b8db713f4940f3d8c083526cdc90a53f4b9e910decb8d5ece"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 3598,
+          "timestamp": "2026-09-30T20:19:15.391328+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2467,
+            "completion_tokens": 311,
+            "total_tokens": 2875,
+            "reasoning_tokens": 97
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "b8482373f70c8766951fc0849812cf97859e77b4302945a88de4cba03091fba2"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 3773,
+          "timestamp": "2026-09-30T20:19:19.165465+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2898,
+            "completion_tokens": 76,
+            "total_tokens": 3090,
+            "reasoning_tokens": 116
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "725f222020b63ee7e07b80319e6a4149647e05f96317aab6b53042e020ca704d"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 5218,
+          "timestamp": "2026-09-30T20:19:24.386377+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1802,
+            "completion_tokens": 155,
+            "total_tokens": 2369,
+            "reasoning_tokens": 412
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 4214,
+          "timestamp": "2026-09-30T20:19:28.602146+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2401,
+            "completion_tokens": 128,
+            "total_tokens": 2728,
+            "reasoning_tokens": 199
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "20aa2696085d6eb77bf14e8628068f12dfe171c52d5977be59e9928e33f66732"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 4140,
+          "timestamp": "2026-09-30T20:19:32.743838+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2754,
+            "completion_tokens": 303,
+            "total_tokens": 3382,
+            "reasoning_tokens": 325
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "cd3eaec4545701b97b55d231b6bd9ddec50d11ed8a13508540f9daee5a1268fd"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 12123,
+          "timestamp": "2026-09-30T20:19:44.868028+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3405,
+            "completion_tokens": 141,
+            "total_tokens": 3777,
+            "reasoning_tokens": 231
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "f3f5a128224e11d85a50ff75cab41216874ebf2de763f9e654ab58866899934a"
+        },
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 5729,
+          "timestamp": "2026-09-30T20:19:50.600452+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1872,
+            "completion_tokens": 164,
+            "total_tokens": 2766,
+            "reasoning_tokens": 730
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 4014,
+          "timestamp": "2026-09-30T20:19:54.616161+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2798,
+            "completion_tokens": 131,
+            "total_tokens": 3302,
+            "reasoning_tokens": 373
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "12bf9d1572f6e1b174281588cb25bb56c131bead7b617a6da3fe0c754a72864f"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 4893,
+          "timestamp": "2026-09-30T20:19:59.510413+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3328,
+            "completion_tokens": 338,
+            "total_tokens": 4144,
+            "reasoning_tokens": 478
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "e17bab261d7e645440f45f4d01e0631e29477563dad3db3da3e4940ccfe6161f"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 4813,
+          "timestamp": "2026-09-30T20:20:04.324577+00:00",
+          "provider_usage": {
+            "prompt_tokens": 4167,
+            "completion_tokens": 117,
+            "total_tokens": 4729,
+            "reasoning_tokens": 445
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "eb8dac1674605b764a08e3eb5908969a0c0dd7930f207875166e865ad6b197d5"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 4258,
+          "timestamp": "2026-09-30T20:20:08.585577+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1872,
+            "completion_tokens": 114,
+            "total_tokens": 2467,
+            "reasoning_tokens": 481
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 4441,
+          "timestamp": "2026-09-30T20:20:13.028253+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2499,
+            "completion_tokens": 107,
+            "total_tokens": 2841,
+            "reasoning_tokens": 235
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "d7245eea91a44a7e5a955ec499d20e904454732955533feb4c41646ee6de1b1a"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 4734,
+          "timestamp": "2026-09-30T20:20:17.764162+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2867,
+            "completion_tokens": 361,
+            "total_tokens": 3623,
+            "reasoning_tokens": 395
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "23103b2a06591a616b73724b9fe28afe5d087a492b95a09086f578a9e655042b"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 4245,
+          "timestamp": "2026-09-30T20:20:22.011072+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3646,
+            "completion_tokens": 100,
+            "total_tokens": 3961,
+            "reasoning_tokens": 215
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "5840ea0b061578abee7fff0fb136a6bad497fe8223954c5617031a388ad46129"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 4999,
+          "timestamp": "2026-09-30T20:20:27.013831+00:00",
+          "provider_usage": {
+            "prompt_tokens": 1872,
+            "completion_tokens": 127,
+            "total_tokens": 2628,
+            "reasoning_tokens": 629
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 4035,
+          "timestamp": "2026-09-30T20:20:31.050198+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2660,
+            "completion_tokens": 139,
+            "total_tokens": 3203,
+            "reasoning_tokens": 404
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "eac3cc21876b33f4fa6b345b18f14fe81173f1302b458ee42d7685ecf3c832f7"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 4565,
+          "timestamp": "2026-09-30T20:20:35.616317+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3229,
+            "completion_tokens": 354,
+            "total_tokens": 4016,
+            "reasoning_tokens": 433
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "7677a98f6a739d703c11a8a3d5f96603c100f103b6ed36a68316a41bff3c25c2"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 4450,
+          "timestamp": "2026-09-30T20:20:40.067529+00:00",
+          "provider_usage": {
+            "prompt_tokens": 4039,
+            "completion_tokens": 114,
+            "total_tokens": 4552,
+            "reasoning_tokens": 399
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "c4b8484850125612af5c3bac8a67e3909288841ed3032dedde9b341e54ceda95"
+        }
+      ],
+      "sample_judgment_mapping": [
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "group_id": "m1-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "group_id": "m1-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "group_id": "m1-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "group_id": "m1-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "group_id": "m1-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "group_id": "m1-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "group_id": "m1-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "group_id": "m1-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "group_id": "m1-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "group_id": "m1-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "group_id": "m1-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "group_id": "m1-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "group_id": "m1-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "group_id": "m1-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "group_id": "m1-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "group_id": "m1-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "group_id": "m1-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "group_id": "m1-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "group_id": "m1-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "group_id": "m1-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "group_id": "m1-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "group_id": "m1-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "group_id": "m1-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "group_id": "m1-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": true
+        }
+      ],
+      "artifact_sha256": {
+        "metadata.json": "8820aee9cfc3ac1837b4bbf0198a9e5bd7ed0758031b294f548221969be271b4",
+        "results.jsonl": "07140b8f4cdd182333bc603c89bfd397a1909cfabe4f8364c3cfea08b4d2296b",
+        "provider-rounds.jsonl": "3ec39e84727346775066215a40f8ee3674e7a7db20746dd0d9fef3ad3772624e"
+      },
+      "local_raw_directory": ".local/research/q02/cw2-technical-scope-ab-20261001/gemini-3.8-flash-high/runtime"
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "metadata_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.5.2",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "claude-sonnet-4-6",
+        "repeats": 3,
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v5": {
+            "hash": "3df16760df3f75aa"
+          },
+          "candidate_v6": {
+            "hash": "61722fa690510f0d"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 144,
+          "implementation_sha256": "b79d98b06d557aca587462b90164a3059204afc16f8083f24857d41910096bfe"
+        }
+      },
+      "preflight": {
+        "mode": "dry-run",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "execution_path": "runtime_source_tools",
+        "provider_round_upper_bound": 144,
+        "max_provider_requests": 144,
+        "tool_input_tokens_estimated": false,
+        "fixtures_file": "/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/tests/fixtures/conversation/character_scenarios.json",
+        "scenarios_count": 1,
+        "turns_per_scenario": 4,
+        "repeats": 3,
+        "variants": ["baseline_v5", "candidate_v6"],
+        "total_requests": 24,
+        "estimated_prompt_tokens": 64332,
+        "estimated_completion_tokens": 2880,
+        "estimated_total_tokens": 67212,
+        "prompt_estimate_scope": "Each selected persona and scenario's first turn, compiled at an 8192-token window, extrapolated to all turns and repeats without later-turn history.",
+        "provider": "openai_compatible",
+        "model": "claude-sonnet-4-6",
+        "estimated_cost_usd": null,
+        "estimated_cost_display": "unpriced (user authorized --no-cost-ceiling; no dollar ceiling configured)",
+        "pricing_source": "none (unpriced)",
+        "cost_ceiling_usd": null,
+        "cost_policy": "no_cost_ceiling",
+        "estimate_is_billing_cap": false,
+        "remote_provider_max_attempts_per_logical_request": 3,
+        "max_requests_counts_logical_requests": true,
+        "notice": "max_requests counts logical requests; adapter retries may cause up to 3 HTTP attempts per request."
+      },
+      "variants": [
+        {
+          "variant": "baseline_v5",
+          "replies": 12,
+          "failed_replies": 4,
+          "failed_by_turn": {
+            "1": 0,
+            "2": 3,
+            "3": 0,
+            "4": 1
+          },
+          "latency_ms": {
+            "p50": 6248.5,
+            "p95_nearest_rank": 12029
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 37464,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 4150,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 41614,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "known_calls": 0,
+              "unknown_calls": 12
+            }
+          },
+          "dollar_cost": null
+        },
+        {
+          "variant": "candidate_v6",
+          "replies": 12,
+          "failed_replies": 4,
+          "failed_by_turn": {
+            "1": 2,
+            "2": 0,
+            "3": 1,
+            "4": 1
+          },
+          "latency_ms": {
+            "p50": 6324.5,
+            "p95_nearest_rank": 13142
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 39175,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 4169,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 43344,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "known_calls": 0,
+              "unknown_calls": 12
+            }
+          },
+          "dollar_cost": null
+        }
+      ],
+      "paired_preferences": {
+        "baseline_v5": 4,
+        "candidate_v6": 4,
+        "tie": 4
+      },
+      "saved_replies": 24,
+      "all_provider_attempts": 24,
+      "failed_attempts": 0,
+      "failed_attempt_records": [],
+      "saved_reply_records": [
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 12029,
+          "timestamp": "2026-09-30T20:20:52.161305+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 536,
+            "total_tokens": 2965,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 8803,
+          "timestamp": "2026-09-30T20:21:00.965782+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3024,
+            "completion_tokens": 449,
+            "total_tokens": 3473,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "0033317199b2464068ca97c08ac42816cb4f50b0c0ec6659afe52aae2ef6363c"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 6539,
+          "timestamp": "2026-09-30T20:21:07.506087+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3520,
+            "completion_tokens": 422,
+            "total_tokens": 3942,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "33516ea37464624096e3fea917c5ef200c3ac1aa8931cfe2844ec2b7aa4b6d1b"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 5319,
+          "timestamp": "2026-09-30T20:21:12.826326+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3981,
+            "completion_tokens": 229,
+            "total_tokens": 4210,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "e0f3c1a5ae7784a7ddbd8dddb2cc771ae89eae66bc5469526f45f0266b2ad8fe"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 9729,
+          "timestamp": "2026-09-30T20:21:22.559379+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 450,
+            "total_tokens": 2879,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 6921,
+          "timestamp": "2026-09-30T20:21:29.481930+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2938,
+            "completion_tokens": 355,
+            "total_tokens": 3293,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "efffe744a441457005bcf07a9940117f2577afa4714819126d351285cfb26031"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 5443,
+          "timestamp": "2026-09-30T20:21:34.926270+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3340,
+            "completion_tokens": 327,
+            "total_tokens": 3667,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "c254383ce9b0410c3e9ee01f67da4210c238deeb67518335a81a440b74f708d1"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 5958,
+          "timestamp": "2026-09-30T20:21:40.885245+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3706,
+            "completion_tokens": 228,
+            "total_tokens": 3934,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "18fc854702b61ae0876f4b7818e6152a8bf75e35ade47baef9fae374501657a1"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 8096,
+          "timestamp": "2026-09-30T20:21:48.984400+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 401,
+            "total_tokens": 2830,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 5419,
+          "timestamp": "2026-09-30T20:21:54.405301+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2889,
+            "completion_tokens": 280,
+            "total_tokens": 3169,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "dd3f9fceac9c620fad7b4915c0aef45ca4527e73dba75a20f1a96701ca8d3e90"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 5348,
+          "timestamp": "2026-09-30T20:21:59.754482+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3216,
+            "completion_tokens": 308,
+            "total_tokens": 3524,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "e1ce889d18fb55ceb6a23282466a643c64c6a5c1d034ea8e371ea40abc7f0cb5"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 4684,
+          "timestamp": "2026-09-30T20:22:04.439760+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3563,
+            "completion_tokens": 165,
+            "total_tokens": 3728,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "37f2681d795085b2190f85545f2895912e125444a366b0f1eb4802182b017a4d"
+        },
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 13142,
+          "timestamp": "2026-09-30T20:22:17.585051+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 703,
+            "total_tokens": 3239,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 5182,
+          "timestamp": "2026-09-30T20:22:22.768539+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3298,
+            "completion_tokens": 212,
+            "total_tokens": 3510,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "935c02ea8cf1c42e62302acd13ed8294926ddd35cedb8e309b1fcf055fda8719"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 7133,
+          "timestamp": "2026-09-30T20:22:29.903201+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3557,
+            "completion_tokens": 413,
+            "total_tokens": 3970,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "fed9197fe35bfba9158172d0782750dffa7d20107d3d42c977129d10121be732"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 4376,
+          "timestamp": "2026-09-30T20:22:34.280177+00:00",
+          "provider_usage": {
+            "prompt_tokens": 4009,
+            "completion_tokens": 150,
+            "total_tokens": 4159,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "72041f329777d124709658e2fee968b8c1a3f6ad4254d57827550730ded27470"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 11525,
+          "timestamp": "2026-09-30T20:22:45.808467+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 515,
+            "total_tokens": 3051,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 7427,
+          "timestamp": "2026-09-30T20:22:53.237341+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3110,
+            "completion_tokens": 406,
+            "total_tokens": 3516,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "06ae21aff261a9ab5c9288e3a506955bf47d3c17d0f4c851342a4f956b2a3220"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 5833,
+          "timestamp": "2026-09-30T20:22:59.071566+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3563,
+            "completion_tokens": 318,
+            "total_tokens": 3881,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "a81843d061b4855ec42fc02eb2208955d0b82ecfd4dd3ea3d12acda35e5174a1"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 4687,
+          "timestamp": "2026-09-30T20:23:03.760572+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3920,
+            "completion_tokens": 193,
+            "total_tokens": 4113,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "fb18857398361d267124ff1890ba11b26abdb0e109c2193f56e996c23cf6f6af"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 8976,
+          "timestamp": "2026-09-30T20:23:12.739864+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 416,
+            "total_tokens": 2952,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 5758,
+          "timestamp": "2026-09-30T20:23:18.498958+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3011,
+            "completion_tokens": 292,
+            "total_tokens": 3303,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "3600312fd3275c20cbc3b53bbc8a620aa27691698e39ab578f7b8e47822aea6a"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 6816,
+          "timestamp": "2026-09-30T20:23:25.318736+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3350,
+            "completion_tokens": 360,
+            "total_tokens": 3710,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "f1745ff3fab999ce29ae7fcee37b4a2c1f698d8e922bd1f524ebfe5a4a38c6ba"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 5534,
+          "timestamp": "2026-09-30T20:23:30.854013+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3749,
+            "completion_tokens": 191,
+            "total_tokens": 3940,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "33e3a2150256371fd2921fc723fe64f5a96a54dae2eed92c99e6631baab67cb3"
+        }
+      ],
+      "sample_judgment_mapping": [
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "group_id": "m2-r0",
+          "masked_label": "A",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "group_id": "m2-r0",
+          "masked_label": "B",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "group_id": "m2-r0",
+          "masked_label": "A",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "group_id": "m2-r0",
+          "masked_label": "B",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "group_id": "m2-r0",
+          "masked_label": "A",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "group_id": "m2-r0",
+          "masked_label": "B",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "group_id": "m2-r0",
+          "masked_label": "A",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "group_id": "m2-r0",
+          "masked_label": "B",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "group_id": "m2-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "group_id": "m2-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "group_id": "m2-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "group_id": "m2-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "group_id": "m2-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "group_id": "m2-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "group_id": "m2-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "group_id": "m2-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "group_id": "m2-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "group_id": "m2-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "group_id": "m2-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "group_id": "m2-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "group_id": "m2-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "group_id": "m2-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "group_id": "m2-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "group_id": "m2-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": false
+        }
+      ],
+      "artifact_sha256": {
+        "metadata.json": "e49de83a0a41072891617c981055d030a33eaadcaf9e5a52e2374821955997e8",
+        "results.jsonl": "ed9bd3f5d92ae33f09e679cdfc5c1cbdf7a565b8c18145a4df9135ba230510ec",
+        "provider-rounds.jsonl": "67c9b57055be55f6358002430c88629fbb58e6fbef0323f32e46efb215124df5"
+      },
+      "local_raw_directory": ".local/research/q02/cw2-technical-scope-ab-20261001/claude-sonnet-4-6/runtime"
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "metadata_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.5.2",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "claude-opus-4-6-thinking",
+        "repeats": 3,
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v5": {
+            "hash": "3df16760df3f75aa"
+          },
+          "candidate_v6": {
+            "hash": "61722fa690510f0d"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 144,
+          "implementation_sha256": "b79d98b06d557aca587462b90164a3059204afc16f8083f24857d41910096bfe"
+        }
+      },
+      "preflight": {
+        "mode": "dry-run",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "execution_path": "runtime_source_tools",
+        "provider_round_upper_bound": 144,
+        "max_provider_requests": 144,
+        "tool_input_tokens_estimated": false,
+        "fixtures_file": "/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/tests/fixtures/conversation/character_scenarios.json",
+        "scenarios_count": 1,
+        "turns_per_scenario": 4,
+        "repeats": 3,
+        "variants": ["baseline_v5", "candidate_v6"],
+        "total_requests": 24,
+        "estimated_prompt_tokens": 64332,
+        "estimated_completion_tokens": 2880,
+        "estimated_total_tokens": 67212,
+        "prompt_estimate_scope": "Each selected persona and scenario's first turn, compiled at an 8192-token window, extrapolated to all turns and repeats without later-turn history.",
+        "provider": "openai_compatible",
+        "model": "claude-opus-4-6-thinking",
+        "estimated_cost_usd": null,
+        "estimated_cost_display": "unpriced (user authorized --no-cost-ceiling; no dollar ceiling configured)",
+        "pricing_source": "none (unpriced)",
+        "cost_ceiling_usd": null,
+        "cost_policy": "no_cost_ceiling",
+        "estimate_is_billing_cap": false,
+        "remote_provider_max_attempts_per_logical_request": 3,
+        "max_requests_counts_logical_requests": true,
+        "notice": "max_requests counts logical requests; adapter retries may cause up to 3 HTTP attempts per request."
+      },
+      "variants": [
+        {
+          "variant": "baseline_v5",
+          "replies": 12,
+          "failed_replies": 4,
+          "failed_by_turn": {
+            "1": 3,
+            "2": 1,
+            "3": 0,
+            "4": 0
+          },
+          "latency_ms": {
+            "p50": 6114.0,
+            "p95_nearest_rank": 14749
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 37418,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 3725,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 41143,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "known_calls": 0,
+              "unknown_calls": 12
+            }
+          },
+          "dollar_cost": null
+        },
+        {
+          "variant": "candidate_v6",
+          "replies": 12,
+          "failed_replies": 2,
+          "failed_by_turn": {
+            "1": 1,
+            "2": 1,
+            "3": 0,
+            "4": 0
+          },
+          "latency_ms": {
+            "p50": 6895.5,
+            "p95_nearest_rank": 17977
+          },
+          "provider_usage": {
+            "prompt_tokens": {
+              "reported_sum": 40285,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "completion_tokens": {
+              "reported_sum": 4498,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "total_tokens": {
+              "reported_sum": 44783,
+              "known_calls": 12,
+              "unknown_calls": 0
+            },
+            "reasoning_tokens": {
+              "reported_sum": null,
+              "known_calls": 0,
+              "unknown_calls": 12
+            }
+          },
+          "dollar_cost": null
+        }
+      ],
+      "paired_preferences": {
+        "candidate_v6": 2,
+        "tie": 10
+      },
+      "saved_replies": 24,
+      "all_provider_attempts": 27,
+      "failed_attempts": 3,
+      "failed_attempt_records": [
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "reason": "HTTPStatusError",
+          "provider_calls": [
+            {
+              "call_id": "e2bb7244-af02-41c7-90b6-af8b76d3ae7f",
+              "error_type": "HTTPStatusError",
+              "usage": null,
+              "latency_ms": 3183
+            }
+          ]
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "reason": "HTTPStatusError",
+          "provider_calls": [
+            {
+              "call_id": "88d8c7fb-78d5-45cc-a611-2e005c50c45f",
+              "error_type": "HTTPStatusError",
+              "usage": null,
+              "latency_ms": 4116
+            }
+          ]
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "reason": "HTTPStatusError",
+          "provider_calls": [
+            {
+              "call_id": "d6b72e5a-a466-4a61-a903-c6c9a5d23d2b",
+              "error_type": "HTTPStatusError",
+              "usage": null,
+              "latency_ms": 4231
+            }
+          ]
+        }
+      ],
+      "saved_reply_records": [
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 12335,
+          "timestamp": "2026-09-30T20:23:43.249644+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 524,
+            "total_tokens": 2953,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 5532,
+          "timestamp": "2026-09-30T20:23:48.782947+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3012,
+            "completion_tokens": 162,
+            "total_tokens": 3174,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "c76e12da647c52316c01aab4b92e17313bebbee57ca2e6fe94251e4ee40d2312"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 6189,
+          "timestamp": "2026-09-30T20:23:54.973226+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3221,
+            "completion_tokens": 345,
+            "total_tokens": 3566,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "0d6675f6a66125b9a5a174b12477aa5fbc88904ef17dd8cf0010c442df59ab1b"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "baseline_v5",
+          "latency_ms": 5141,
+          "timestamp": "2026-09-30T20:24:00.116170+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3606,
+            "completion_tokens": 120,
+            "total_tokens": 3726,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "5f805c854f4cfe2761a2dfc6996ef1b4fae4464ddb25c24ea5297b4303cc9630"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 12218,
+          "timestamp": "2026-09-30T20:24:12.337975+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 553,
+            "total_tokens": 2982,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 7526,
+          "timestamp": "2026-09-30T20:24:19.865040+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3041,
+            "completion_tokens": 351,
+            "total_tokens": 3392,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "42f82d4825944ca255692f923ba762e3ad55b49c9a65134689ef83e042e50bc9"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 6164,
+          "timestamp": "2026-09-30T20:24:26.030446+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3439,
+            "completion_tokens": 329,
+            "total_tokens": 3768,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "d66e190519d23d9153b5f4f8311afd6870c69783232050c323619b418ca47abe"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "baseline_v5",
+          "latency_ms": 4831,
+          "timestamp": "2026-09-30T20:24:30.862798+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3808,
+            "completion_tokens": 119,
+            "total_tokens": 3927,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "cc37b9ea5c726caecb5d842d464bf65a4b58ce72f5e1bcfa76d2a7967ad09048"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 14749,
+          "timestamp": "2026-09-30T20:24:45.614832+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2429,
+            "completion_tokens": 515,
+            "total_tokens": 2944,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "ea3b41f620d80c0712637d668a1d40f1b5b5fca73a3fe73670187b468d331d48",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 5444,
+          "timestamp": "2026-09-30T20:24:51.060612+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3003,
+            "completion_tokens": 273,
+            "total_tokens": 3276,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "cffa4647cc3140b4297cb6ccd22240500f8fba11a66802f0160236631f7260ab",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "36561f416fbbf9457d53e96d6bee22511ac94f24afa712ad7228d840a344c087"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 6064,
+          "timestamp": "2026-09-30T20:24:57.126407+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3323,
+            "completion_tokens": 315,
+            "total_tokens": 3638,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "29c421cda4657e437570823e8f73995237caf2586e9b50c5733a8ca363cf9614",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "86b371871d66c08f1d233af924a57a92d801c4f55c5252c7aaabfe9c4503fd49"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "baseline_v5",
+          "latency_ms": 5118,
+          "timestamp": "2026-09-30T20:25:02.245343+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3678,
+            "completion_tokens": 119,
+            "total_tokens": 3797,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6b8cf039b113566cca3894ae2d1ede320f55457ca8e239a3dd3be520c2d3c136",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "9acac4c2a5a8472fdd18cf20e22bda3e6c56a3d9525dd73afdd0d87dbde153e1"
+        },
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 13772,
+          "timestamp": "2026-09-30T20:25:16.022151+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 691,
+            "total_tokens": 3227,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 4799,
+          "timestamp": "2026-09-30T20:25:20.822451+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3286,
+            "completion_tokens": 190,
+            "total_tokens": 3476,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "d6c116b2702024f68dcc7b6690d0c2053f0c31ba953aef272f4071250a9ffcd2"
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 6574,
+          "timestamp": "2026-09-30T20:25:27.398146+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3523,
+            "completion_tokens": 334,
+            "total_tokens": 3857,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "5804dbf2741eaf61b8e2e46941fa7a4ec655799c8aeb7d7ce18eea6e6f4fae75"
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "variant": "candidate_v6",
+          "latency_ms": 5517,
+          "timestamp": "2026-09-30T20:39:12.401686+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3897,
+            "completion_tokens": 183,
+            "total_tokens": 4080,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "6f4cac41993408270497db770179532d2b79a9b27946ad4108b5279a46d1c4fd"
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 17977,
+          "timestamp": "2026-09-30T20:39:30.382676+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 806,
+            "total_tokens": 3342,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 7983,
+          "timestamp": "2026-09-30T20:39:38.367590+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3401,
+            "completion_tokens": 261,
+            "total_tokens": 3662,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "44955daadaaa8e014b1111e76d61e780aa6dda2e72b1e9bbdd341399e2471068"
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 6431,
+          "timestamp": "2026-09-30T20:39:44.800132+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3709,
+            "completion_tokens": 324,
+            "total_tokens": 4033,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "774e8af3a773e0608da609946c0074860067d870bbb3a67f8331ed689cc7b6df"
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "variant": "candidate_v6",
+          "latency_ms": 6391,
+          "timestamp": "2026-09-30T20:39:51.192658+00:00",
+          "provider_usage": {
+            "prompt_tokens": 4073,
+            "completion_tokens": 187,
+            "total_tokens": 4260,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "3940cbfc8440cb98d1c63e56b6200d69d97e59fe9d9b7bc7d10db89f92e4c66a"
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 14726,
+          "timestamp": "2026-09-30T20:40:05.921740+00:00",
+          "provider_usage": {
+            "prompt_tokens": 2536,
+            "completion_tokens": 649,
+            "total_tokens": 3185,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "6036df356a6fd534390c60f2fa68c863308b307abe1fac8289f08384f020680d",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 7720,
+          "timestamp": "2026-09-30T20:40:13.643108+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3244,
+            "completion_tokens": 303,
+            "total_tokens": 3547,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "e7d79e8f57256b06bc1667e5a2784e8f75825233f6110003d72931def0b904f6",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "9695e1879b98ad2047b16fc1a7be784cb1592f10b82e7501836d33a26dd8c648"
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 5868,
+          "timestamp": "2026-09-30T20:40:19.515205+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3594,
+            "completion_tokens": 316,
+            "total_tokens": 3910,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "846b8ce3715177c2494c91a684b91935eca0fbaf2e781005448a473c308f5315",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "46de920f7376609ad15df73c0c018316d26f4c5ec3168571e9eadb397810bb6a"
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "variant": "candidate_v6",
+          "latency_ms": 7217,
+          "timestamp": "2026-09-30T20:43:03.182534+00:00",
+          "provider_usage": {
+            "prompt_tokens": 3950,
+            "completion_tokens": 254,
+            "total_tokens": 4204,
+            "reasoning_tokens": null
+          },
+          "system_prompt_sha256": "da9ca59cb62d45f8330c1b0f0b30b9ed194001402f82f06de4fd4c0eca98b041",
+          "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "history_sha256": "d8fec1d4037ea6a41768e1d313848a14eadfbe09b5cb859c2f9d9d27840895f2"
+        }
+      ],
+      "sample_judgment_mapping": [
+        {
+          "sample_key": "technical_help:r0:t1:candidate_v6",
+          "group_id": "m3-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t1:baseline_v5",
+          "group_id": "m3-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 0,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r0:t2:candidate_v6",
+          "group_id": "m3-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t2:baseline_v5",
+          "group_id": "m3-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:candidate_v6",
+          "group_id": "m3-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t3:baseline_v5",
+          "group_id": "m3-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t4:candidate_v6",
+          "group_id": "m3-r0",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r0:t4:baseline_v5",
+          "group_id": "m3-r0",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 0,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t1:candidate_v6",
+          "group_id": "m3-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t1:baseline_v5",
+          "group_id": "m3-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 1,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t2:candidate_v6",
+          "group_id": "m3-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t2:baseline_v5",
+          "group_id": "m3-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 1,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r1:t3:candidate_v6",
+          "group_id": "m3-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t3:baseline_v5",
+          "group_id": "m3-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:candidate_v6",
+          "group_id": "m3-r1",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r1:t4:baseline_v5",
+          "group_id": "m3-r1",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 1,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t1:candidate_v6",
+          "group_id": "m3-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r2:t1:baseline_v5",
+          "group_id": "m3-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 1,
+          "repeat_index": 2,
+          "task_pass": false
+        },
+        {
+          "sample_key": "technical_help:r2:t2:candidate_v6",
+          "group_id": "m3-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t2:baseline_v5",
+          "group_id": "m3-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 2,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t3:candidate_v6",
+          "group_id": "m3-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t3:baseline_v5",
+          "group_id": "m3-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 3,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:candidate_v6",
+          "group_id": "m3-r2",
+          "masked_label": "A",
+          "variant": "candidate_v6",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": true
+        },
+        {
+          "sample_key": "technical_help:r2:t4:baseline_v5",
+          "group_id": "m3-r2",
+          "masked_label": "B",
+          "variant": "baseline_v5",
+          "turn_id": 4,
+          "repeat_index": 2,
+          "task_pass": true
+        }
+      ],
+      "artifact_sha256": {
+        "metadata.json": "e7df03f991bbe4c6fc06774d4a3436ee993bb378f0f4ccf6e9f30344383d43de",
+        "results.jsonl": "32471e5a42dc0a8fe81cecb2016a991d11d0848cba79533f381650e87bd9be35",
+        "provider-rounds.jsonl": "dc585a466067155afebfbbababe3bb8fedad8bbb55a5eee83b78f9846e3a66bf"
+      },
+      "local_raw_directory": ".local/research/q02/cw2-technical-scope-ab-20261001/claude-opus-4-6-thinking/runtime"
+    }
+  ],
+  "validation": {
+    "models": [
+      {
+        "model": "gemini-3.8-flash-high",
+        "saved_replies": 24,
+        "all_provider_attempts": 24,
+        "completed_reply_provider_attempts": 24,
+        "failed_provider_attempts": 0,
+        "incomplete_reasons": [],
+        "journal_exactly_once": true,
+        "persistent_grants": 0,
+        "same_paired_input_snapshots": true,
+        "reconstructed_compilations": 24,
+        "full_candidate_rule_retained_in_all_12_compilations": true,
+        "artifact_sha256": {
+          "metadata.json": "8820aee9cfc3ac1837b4bbf0198a9e5bd7ed0758031b294f548221969be271b4",
+          "results.jsonl": "07140b8f4cdd182333bc603c89bfd397a1909cfabe4f8364c3cfea08b4d2296b",
+          "provider-rounds.jsonl": "3ec39e84727346775066215a40f8ee3674e7a7db20746dd0d9fef3ad3772624e"
+        }
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "saved_replies": 24,
+        "all_provider_attempts": 24,
+        "completed_reply_provider_attempts": 24,
+        "failed_provider_attempts": 0,
+        "incomplete_reasons": [],
+        "journal_exactly_once": true,
+        "persistent_grants": 0,
+        "same_paired_input_snapshots": true,
+        "reconstructed_compilations": 24,
+        "full_candidate_rule_retained_in_all_12_compilations": true,
+        "artifact_sha256": {
+          "metadata.json": "e49de83a0a41072891617c981055d030a33eaadcaf9e5a52e2374821955997e8",
+          "results.jsonl": "ed9bd3f5d92ae33f09e679cdfc5c1cbdf7a565b8c18145a4df9135ba230510ec",
+          "provider-rounds.jsonl": "67c9b57055be55f6358002430c88629fbb58e6fbef0323f32e46efb215124df5"
+        }
+      },
+      {
+        "model": "claude-opus-4-6-thinking",
+        "saved_replies": 24,
+        "all_provider_attempts": 27,
+        "completed_reply_provider_attempts": 24,
+        "failed_provider_attempts": 3,
+        "incomplete_reasons": [
+          "HTTPStatusError",
+          "HTTPStatusError",
+          "HTTPStatusError"
+        ],
+        "journal_exactly_once": true,
+        "persistent_grants": 0,
+        "same_paired_input_snapshots": true,
+        "reconstructed_compilations": 24,
+        "full_candidate_rule_retained_in_all_12_compilations": true,
+        "artifact_sha256": {
+          "metadata.json": "e7df03f991bbe4c6fc06774d4a3436ee993bb378f0f4ccf6e9f30344383d43de",
+          "results.jsonl": "32471e5a42dc0a8fe81cecb2016a991d11d0848cba79533f381650e87bd9be35",
+          "provider-rounds.jsonl": "dc585a466067155afebfbbababe3bb8fedad8bbb55a5eee83b78f9846e3a66bf"
+        }
+      }
+    ],
+    "masked_quality_pack_sha256": "15558e2b5b2d7fa9f41c77cf3f6483f3cd191a0f2c29194638999777938f45dc",
+    "prepare_script_sha256": "17c5d882b705018bb43ab8abeee797fc969be1104eec12d5ec34ec042eccf1f2",
+    "masked_label_mapping_sha256": "524e149bcc17910d8c26ad1e45c1663887ffec8fc7b342ee2581601a35fa860a"
+  },
+  "review_freeze": {
+    "review_sha256": "a651896571a869834a072eae6e16d379daaa1b97ea9569550aa5ed7fd6f049cd",
+    "key_not_read_before_freeze": true
+  },
+  "primary_masked_review": {
+    "method": "primary masked-label review; reviewer knows candidate design, not independent blind judging",
+    "blind": false,
+    "reviewer": "primary Codex; knows candidate design; model and variant labels withheld until this file was frozen",
+    "rubric": {
+      "scope": "four-turn ordinary asyncio exception task, plus correctness of every explicitly added special-case claim",
+      "failure": "a concrete contradiction in a technical claim or a claimed program output; correct code does not clear incorrect accompanying prose",
+      "scope_risk": "ordinary Exception wording alone is not treated as proof of an arbitrary BaseException/cancellation guarantee; limits are recorded",
+      "tie": "no material preference, including both-failed pairs; not equivalent to pass",
+      "code": "all 27 manually reviewed complete synthetic asyncio-only programs executed; incomplete illustrative fragments not executed"
+    },
+    "pack_sha256": "15558e2b5b2d7fa9f41c77cf3f6483f3cd191a0f2c29194638999777938f45dc",
+    "code_execution_sha256": "7d77997d66c20852233d77da9f2eaad794d5d4ce1441eef6b85e878db19751b1",
+    "extra_oracle_sha256": "75ae18531b99c68f07ef2d05aa5ba0f29eab32a0b2732602574f68398457aa0c",
+    "pairs": [
+      {
+        "group_id": "m1-r0",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "正确说明首个普通异常立即传播，gather 本身不取消其余任务。",
+          "risks": [],
+          "reply_sha256": "c2d71ddbfeaed2be1295a188b85874c339839d76a029d475c4f0f4c563689098",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "核心行为正确，但额外声称其他子任务后来报错可能产生未检索警告；本场景 gather 的完成回调仍检索后续异常。",
+          "risks": [],
+          "reply_sha256": "054d1676b6bab9c8827a6bedcfafae6247983904c94d33b3e208629f180bd5a5",
+          "executed_programs": []
+        },
+        "preference": "A",
+        "preference_reason": "B 新增错误的后续异常警告解释。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r0",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True 配置、普通异常对象与结果分流正确。",
+          "risks": [
+            "普通 Exception 上下文中的全称措辞未限定外部取消或特殊 BaseException；不作为已证实的当前任务错误，但不能扩展为任意异常保证。"
+          ],
+          "reply_sha256": "f80266d4a9229c8f69d42219ec33e83eecd00cd5ba5c95256b68c106e44d32fc",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "True 配置、输入顺序与普通异常对象分流正确。",
+          "risks": [
+            "普通 Exception 上下文中的全称措辞未限定外部取消或特殊 BaseException；不作为已证实的当前任务错误，但不能扩展为任意异常保证。"
+          ],
+          "reply_sha256": "fde82691723a9ae39095c47e1a7a987f21dd73ceb9ce2c3b4515b9ba52d4138f",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r0",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成普通异常，示例完整；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "026d356ff4e05c01c01dd7efa5e1a6e7863206e2c7781a2ad632d298be627e1d",
+          "executed_programs": ["m1-r0-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成普通异常，示例完整；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "52783a23bb31c863ec2d02e5959e7c9e46b7bc2ed278a8b7c9f6d082d6dc42ec",
+          "executed_programs": ["m1-r0-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r0",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通 ValueError/TimeoutError 直接返回对象，无额外包装。",
+          "risks": [],
+          "reply_sha256": "1766bdc3269e1e3c65ab71a4671f651948b9023b807a17ecf2b7bac526dc812a",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常直接返回；额外取消例中 CancelledError 的 BaseException 分类正确。",
+          "risks": [],
+          "reply_sha256": "14162f0317f84f341d5942851a10913e8c15f2886624f9cdeb8396fa7955ff3d",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r1",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "默认首错立即传播，其余任务不被 gather 自动取消。",
+          "risks": [],
+          "reply_sha256": "4c6cd38e04a04dd34227ca4237fe2ed1a78799ccf14141f6415e43b0a12079cf",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "默认首错立即传播，其余任务不被 gather 自动取消。",
+          "risks": [],
+          "reply_sha256": "4bc8cc5493c2392d77478e1cd847a6ed3193af992161d47fe8dc9e248b051877",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r1",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True 等待任务完成，普通异常对象直接进入结果。",
+          "risks": [],
+          "reply_sha256": "1ac3096ebb55ee4139ce6d0ad6a464fb64aec00119bb07b0726976b414670519",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "True 等待任务结束，普通异常对象直接进入结果。",
+          "risks": [],
+          "reply_sha256": "0dca33483264c41ff87c9b6f6e43a5a2c60397997e2bf337d49c7f616ace2e2a",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r1",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成普通异常，完整示例；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "28c17a0a63734237cc6ec9229c7d7963e2fffd615d74c6fe23a2a2f376c4c8dc",
+          "executed_programs": ["m1-r1-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成普通异常，完整示例；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "f3b56fa5f296cb3eefe15220f9403e58820bd40470995e0bf8d93c1fcac013c6",
+          "executed_programs": ["m1-r1-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r1",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "直接返回普通异常对象，并正确说明 traceback 属性。",
+          "risks": [],
+          "reply_sha256": "b18c9da374f5d48e0acb1b6f8d29838146074a59f2868a6df68ad313d9687013",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "直接返回普通异常对象，args/traceback 可读取。",
+          "risks": [],
+          "reply_sha256": "0e5ff7d4adbac4368815117f6b85f52778d4dfb2a82aa94a2987da6eb0be5994",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r2",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "首错立即传播，明确 gather 不取消仍在事件循环中的其他任务。",
+          "risks": [],
+          "reply_sha256": "2d535344f15c6b0cee14510b27f43503591d9316e29c13bcf2badef79800841d",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "首错立即传播且 gather 不主动取消其他任务；TaskGroup 普通异常建议合理。",
+          "risks": [],
+          "reply_sha256": "3813cfd492ee1626c8bc760ccabf7375c118dd097b115ac5abbeb25577822989",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r2",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True 配置、列表位置与普通异常检查正确。",
+          "risks": [
+            "普通 Exception 上下文中的全称措辞未限定外部取消或特殊 BaseException；不作为已证实的当前任务错误，但不能扩展为任意异常保证。"
+          ],
+          "reply_sha256": "e9c8292e69884e32e9641876ab09d2f431502a68634272f64944f0fa10afa6a6",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "True 配置、直接异常对象与普通异常检查正确。",
+          "risks": [
+            "普通 Exception 上下文中的全称措辞未限定外部取消或特殊 BaseException；不作为已证实的当前任务错误，但不能扩展为任意异常保证。"
+          ],
+          "reply_sha256": "77311b52e6570d2bd23b0814d61b4570462fe31f4bd71b30a9eac6255dc3ec1d",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r2",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成 ValueError，完整示例；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "1246b052acf5e743fcec88693747e1574e75a344b4f7d78245ee482d574b4267",
+          "executed_programs": ["m1-r2-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "人工审查代码仅 asyncio 与合成 ValueError，完整示例；实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "78a536c6de4f2a1d00a64648fa0f06b5d37d5eee1853156f36bcb3a594e63a71",
+          "executed_programs": ["m1-r2-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m1-r2",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回，属性/重新抛出说明正确。",
+          "risks": [],
+          "reply_sha256": "59607a693a17d0ae1ee0ee64c7a75847c3dac14a82c54010cb5b6686427f79c8",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回，Python 3.8+ 取消分类说明正确。",
+          "risks": [],
+          "reply_sha256": "d631e7b55121a2b595bc64eae3eae90438846e3c07dfe95e1e26deac4a8bf92b",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项在当前普通异常任务中均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r0",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "gather 核心解释正确。完整程序的 catch 点兄弟任务尚在运行，未声称实测完成。",
+          "risks": [
+            "完整示例未解释 main 返回后的 Runner 清理；无法演示兄弟任务自然完成。"
+          ],
+          "reply_sha256": "09500920f6091f881f561b035f25933252eda31ae549bb1dc9105306083da147",
+          "executed_programs": ["m2-r0-t1-A-b0"]
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "完整 asyncio.run 程序返回后会清理未完成任务，声称输出 ok_task 完成错误。",
+          "risks": [],
+          "reply_sha256": "0dd49e0446b94be995273a58178a9980f591c160c0c6a9aacedc779a09a99e3a",
+          "executed_programs": ["m2-r0-t1-B-b0"]
+        },
+        "preference": "A",
+        "preference_reason": "B 的完整示例预期输出与实际生命周期冲突。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r0",
+        "turn_id": 2,
+        "A": {
+          "task_pass": false,
+          "reason": "普通异常配置/代码正确，但额外声称 KeyboardInterrupt 不传播、被放进结果列表错误。",
+          "risks": [],
+          "reply_sha256": "13edfab3efb434a82049f4bc158e1cfe363d7ad88e8532245eee073d7b0e1c31",
+          "executed_programs": ["m2-r0-t2-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "正确给出 True、结果顺序和普通异常分流。",
+          "risks": [],
+          "reply_sha256": "b397efa8b3c600439c5741d3ff823c7e5da2d3ea5444627d24e00ad7351309c5",
+          "executed_programs": []
+        },
+        "preference": "B",
+        "preference_reason": "A 额外的特殊异常说明不适用于所示 coroutine/Task 路径。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r0",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "代码与普通异常分流正确，CancelledError 分类说明正确，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "ceec6162330d16bdda2f035214a5ba9562acfd4fb24bad54795754ea27ba64e0",
+          "executed_programs": ["m2-r0-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "普通异常代码正确，但建议可能抛 KeyboardInterrupt/SystemExit 的任务改检查 BaseException，错误暗示这些会作为结果返回。",
+          "risks": [],
+          "reply_sha256": "f35a399b3f7a0a42f552e8378eaa1183dc536b26a2384403bb5e3847ba5b601b",
+          "executed_programs": ["m2-r0-t3-B-b0"]
+        },
+        "preference": "A",
+        "preference_reason": "B 的普通示例可运行仍不能支持额外的特殊异常说明。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r0",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常直接返回、属性读取正确。",
+          "risks": [],
+          "reply_sha256": "757f9c241ec53219d2590586cca35db54f7a3353b24b44da69ec5ed408d65ba4",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "直接对象核心正确，但声称正常返回值不会是 Exception 实例，忽略任务可以正常返回异常对象。",
+          "risks": [],
+          "reply_sha256": "2ab427f74c110351c0673b337f74e75485d74209190c6693d0930ebd57efdbc1",
+          "executed_programs": []
+        },
+        "preference": "A",
+        "preference_reason": "B 为 isinstance 的可靠性给出错误的普遍保证。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r1",
+        "turn_id": 1,
+        "A": {
+          "task_pass": false,
+          "reason": "声称完整 asyncio.run 示例打印兄弟完成错误；另声称 False/True 能取消其他任务，与自身总结冲突。",
+          "risks": [],
+          "reply_sha256": "ac64439dfcd111edc7d6ccc95bacca52b37090cf5bfdbeb8fc515e5d49c6e330",
+          "executed_programs": ["m2-r1-t1-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "默认首错传播、gather 不取消其他任务；无错误的独立 Runner 输出示例。",
+          "risks": [],
+          "reply_sha256": "6d6c336bf5ddad6e71e328eea284eae48c555544d9119462f43d2ebbe09c9345",
+          "executed_programs": []
+        },
+        "preference": "B",
+        "preference_reason": "A 有预期输出错误与取消配置自相矛盾。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r1",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常程序正确，BaseException 检查覆盖已取消子任务的解释正确。",
+          "risks": [],
+          "reply_sha256": "7362298236852089103212554e71cdbc3b4003221d3119f49c8db88d6f214693",
+          "executed_programs": ["m2-r1-t2-A-b0"]
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "程序正确，但额外声称 KeyboardInterrupt 也可能被此处 gather 收进来错误。",
+          "risks": [],
+          "reply_sha256": "12b812ecc269b9c699610fc8cacfbe6dab163d565268349415302f87e52e4f24",
+          "executed_programs": ["m2-r1-t2-B-b0"]
+        },
+        "preference": "A",
+        "preference_reason": "B 添加错误的特殊异常解释。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r1",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "完整合成普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "742e0742f47969ab647058d7c49143e55c894a24b21188e5a1aebd3d35f800f4",
+          "executed_programs": ["m2-r1-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "完整合成普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "402008807989ee81d40076b7bd000d0714f72c957c923f5ef727ed28fb05f22a",
+          "executed_programs": ["m2-r1-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r1",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回及属性检查正确。",
+          "risks": [],
+          "reply_sha256": "3ae59faec4cb84253678ead65bb10427889926e1a15a5717f618e1ae71d5a994",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回，已取消子任务结果类型与 Python 3.8+ 继承关系正确。",
+          "risks": [],
+          "reply_sha256": "fa4cd204399cc8e58bfe2becaf44178f2819033fbdb3cc02716ded2c1820fd2c",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r2",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "首错传播且 gather 不取消其余任务，True/TaskGroup 普通异常建议合理。",
+          "risks": [],
+          "reply_sha256": "4b09331f32b4593a7cbd09c4636b97e923c898dd304b166532fef990e8474a99",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "首错传播且 gather 不取消其余任务，True/TaskGroup 普通异常建议合理。",
+          "risks": [],
+          "reply_sha256": "d23204568ee037aabc90b7bb7e9599cce54f9b6da2bc0e34e0b0ee29841302ce",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前普通异常任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r2",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True 配置、顺序、CancelledError 分类和已取消子任务的收集说明正确。",
+          "risks": [],
+          "reply_sha256": "79d9e4bfb45539faaa450e5acff46eb2ebee8d5b28aaf0d3df44bbbff2b9f455",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "普通配置正确，但额外声称 KeyboardInterrupt/SystemExit 同样被收进列表错误。",
+          "risks": [],
+          "reply_sha256": "cc28cd486aec5790a75c7ddcb814286c608643cba019bc493ad25b178c56db60",
+          "executed_programs": []
+        },
+        "preference": "A",
+        "preference_reason": "B 的特殊异常解释错误。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r2",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "完整普通异常程序正确，CancelledError 的类型检查解释合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "04872a4d8145b784fc856988555a098f11a299f96a4d2c38594bec53d32040a0",
+          "executed_programs": ["m2-r2-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "完整普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "df9d4a640eb7a8f1dd1fb363d843231f5f10b7df318639577f2f7aa1176c8e1c",
+          "executed_programs": ["m2-r2-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "当前普通异常任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m2-r2",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回与 args 检查正确。",
+          "risks": [],
+          "reply_sha256": "cbf9fe1cb7c0c1c2ac548923abf3ad3ee1cea54d26cc73bdfd74a737b520a216",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "直接对象核心正确，但建议读取 Python 3 ValueError 的 .message 属性错误。",
+          "risks": [],
+          "reply_sha256": "2d334a4577f59896e2f5821fff4cbeb4c1450f9443fa596633c5ab0155f6f36c",
+          "executed_programs": []
+        },
+        "preference": "A",
+        "preference_reason": "B 添加不存在的异常属性。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r0",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "完整示例 catch 后继续 await 保持事件循环运行，预期兄弟完成合理，输出待执行。",
+          "risks": [],
+          "reply_sha256": "0820d687d4a21b71bc6bbaa1e5579f48c6a039d5d0451304253e602c1759041b",
+          "executed_programs": ["m3-r0-t1-A-b0"]
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "首错传播核心正确，但声称同组后续失败会产生未处理警告错误。",
+          "risks": [],
+          "reply_sha256": "2c5c828c3ee8870630b37892a278dcbf65b31cf093382125860bb1cad042a6ab",
+          "executed_programs": []
+        },
+        "preference": "A",
+        "preference_reason": "A 的局部行为与实际示例一致，B 添加错误警告说明。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r0",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True 配置、普通异常收集与分流正确。",
+          "risks": [],
+          "reply_sha256": "99968b9c7b1deaba83ec4f6c106fb0662469331a95fe3f19723a3ba17b8c6cdf",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "True 配置、顺序与 BaseException 检查对普通异常合理。",
+          "risks": [],
+          "reply_sha256": "162773b6b933de348c701f909ec98cc50b835e8a38c6e5105d1da8259053a2b2",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前普通异常任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r0",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "完整合成普通异常程序正确，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "ae907ea081a66191416919fc380c1ac3536834e911a91d466719cb1855e20596",
+          "executed_programs": ["m3-r0-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "完整合成普通异常程序正确，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "ad9de52e7ec58aec87b25c796eedb91ee6e153b4db4c13b94053049fa07ce48a",
+          "executed_programs": ["m3-r0-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "当前普通异常任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r0",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常直接返回且 type/traceback 说明正确。",
+          "risks": [],
+          "reply_sha256": "8d98b90f80cb65ed4474e8bf0ae83132a7a3a5584f14dd125d279a895b5958b6",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常直接返回及 args/traceback/重新抛出说明正确。",
+          "risks": [],
+          "reply_sha256": "a4e3360c897f2b17eab898099c88502dda90f735cf7d10a44c084485abff8362",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前普通异常任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r1",
+        "turn_id": 1,
+        "A": {
+          "task_pass": true,
+          "reason": "catch 后继续 await 保持事件循环运行，兄弟完成预期合理，完整代码输出待执行。",
+          "risks": [],
+          "reply_sha256": "958bd0e635aeeed00fbeee135b98e0d27500d0647bfddd4e70ccf4cbdf7ccfa5",
+          "executed_programs": ["m3-r1-t1-A-b0"]
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "完整 asyncio.run 返回后会取消未完成兄弟任务，预期 ok 完成输出错误。",
+          "risks": [],
+          "reply_sha256": "8c5e1bb65ab47bf4b93de2c5f0f567009c37cb7241cf23fa11fb87ec1c7cd326",
+          "executed_programs": ["m3-r1-t1-B-b0"]
+        },
+        "preference": "A",
+        "preference_reason": "A 的示例保持 loop 运行，B 的生命周期解释与输出错误。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r1",
+        "turn_id": 2,
+        "A": {
+          "task_pass": false,
+          "reason": "普通配置正确，但建议可能抛 KeyboardInterrupt/SystemExit 的任务改用 BaseException 检查，错误暗示这些会作为列表元素。",
+          "risks": [],
+          "reply_sha256": "b78ad7afcf759fb54d23ec179f3eff07066ebaae55a30a23a2dec4c125425ed1",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "普通配置正确，但建议可能抛 KeyboardInterrupt/SystemExit 的任务改用 BaseException 检查，错误暗示这些会作为列表元素。",
+          "risks": [],
+          "reply_sha256": "542266a380964b63ad73f4e47031f8ed0198358e1bb3364f0324345c2a31d640",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项均添加了错误的特殊异常处理说明，平手不表示通过。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r1",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "完整普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "db713c4619a81a284b561b1df312fdcd1d2cd3c99f09c259ee272b170757bd66",
+          "executed_programs": ["m3-r1-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "完整普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "29f5e85060afe01e929f0b3e48b391b7b585d433c2c62a15695b1c028db597b3",
+          "executed_programs": ["m3-r1-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r1",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常直接返回，与普通异常的 ExceptionGroup 对比合理。",
+          "risks": [],
+          "reply_sha256": "b5fef4067afdc6d6038f33238d05a5ea6fe8fdd500c4b3df0f118cce036baabe",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常直接返回及属性/重新抛出说明正确。",
+          "risks": [],
+          "reply_sha256": "0536a21cc59a1f5493b520cf5da78d68915ac5efaf31a099c374347064f9be9a",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r2",
+        "turn_id": 1,
+        "A": {
+          "task_pass": false,
+          "reason": "首错传播核心正确，但额外声称后续异常 logged to task exception handler 错误。",
+          "risks": [],
+          "reply_sha256": "578d51af01001f7ac8e85464b4035fb17516561682d3c39d927cd03c8a7354e3",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": false,
+          "reason": "首错传播核心正确，但额外声称后续异常可能产生未检索警告错误。",
+          "risks": [],
+          "reply_sha256": "020fe27327cca19a02ba8d8b2b259cb9531f9c59c67969b151c36ab005bfd9d3",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "两项均有错误的后续异常日志说明，平手不表示通过。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r2",
+        "turn_id": 2,
+        "A": {
+          "task_pass": true,
+          "reason": "True/顺序/已取消子任务的 BaseException 分类正确。",
+          "risks": [
+            "Python 3.9+ 的断言本身正确，但未给出继承关系已于 3.8 改变的最早版本；不是明确错误的版本引入断言。"
+          ],
+          "reply_sha256": "0af9120085dc014313a03ccbb3ba6a1ed4e5a2579dac5089f9ae48b81b559521",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "True/顺序/已取消子任务的 BaseException 分类正确。",
+          "risks": [
+            "Python 3.9+ 的断言本身正确，但未给出继承关系已于 3.8 改变的最早版本；不是明确错误的版本引入断言。"
+          ],
+          "reply_sha256": "ce5fb116d725e188f26666a5e6367691579f4bafa56963a1997bbbb07ab046aa",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r2",
+        "turn_id": 3,
+        "A": {
+          "task_pass": true,
+          "reason": "完整普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "efceccb77fcaa3ae2c9019f6019d8a96e02ecd1eb3421cbbe9b7b3c9704f2d64",
+          "executed_programs": ["m3-r2-t3-A-b0"]
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "完整普通异常程序与分流合理，实际输出与所示输出一致。",
+          "risks": [],
+          "reply_sha256": "0bc37587b315cc88e46945d0997cfa2ce72ac67e2b55b511dd59addbaf028dea",
+          "executed_programs": ["m3-r2-t3-B-b0"]
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      },
+      {
+        "group_id": "m3-r2",
+        "turn_id": 4,
+        "A": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回及 args/traceback/重新抛出说明正确。",
+          "risks": [],
+          "reply_sha256": "93305a64e48c08ff64d8cfe0283d91714618212db066cb195fc3d4b7c221ae88",
+          "executed_programs": []
+        },
+        "B": {
+          "task_pass": true,
+          "reason": "普通异常对象直接返回及 args/traceback 说明正确。",
+          "risks": [],
+          "reply_sha256": "5fe4e10668a7ac7249fff44b76602186a60bce2d0bea1f0fa32c2aa609f49895",
+          "executed_programs": []
+        },
+        "preference": "tie",
+        "preference_reason": "当前任务均正确，未观察到实质差别。",
+        "code_execution_pending": false
+      }
+    ]
+  },
+  "masked_reply_pack": {
+    "method": "primary masked-label review; reviewer knows candidate design, not independent blind judging",
+    "blind": false,
+    "groups": [
+      {
+        "group_id": "m1-r0",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "在默认情况下（即 `return_exceptions=False`），如果并发任务中有任何一个抛出了异常，它的行为是这样的：\n\n1. **立即向外抛出该异常**：等待 `asyncio.gather` 的地方会立刻捕获到这个异常，中断当前的 await 流程。\n2. **其他任务不会被自动取消**：这一点需要特别注意，虽然外层已经收到了异常，但其余正在运行的任务依然会在后台继续执行，直到它们自行结束。\n\n如果希望把异常当作普通返回值收集起来，可以设置 `return_exceptions=True`；如果希望在某个任务失败时自动取消其他未完成的任务，在 Python 3.11 及以上版本中，通常更推荐使用 `asyncio.TaskGroup`。",
+            "B": "在默认情况下（即 `return_exceptions=False`），如果其中一个任务抛出了异常，它的行为主要是这样的：\n\n1. **立即向上抛出该异常**：`await asyncio.gather(...)` 会立刻把最先发生的那个异常传播给调用方。\n2. **其他任务不会被自动取消**：其余还在运行的任务依然会在后台继续执行，并不会因为某一个任务出错而中断。如果这些后台任务随后也抛出异常且未被捕获，可能会触发异常未被检索（unretrieved exception）的警告。\n\n如果希望把异常作为返回值收集起来而不是直接中断抛出，可以设置 `return_exceptions=True`；如果需要“一旦出错就取消其他所有任务”的行为，在 Python 3.11 及以上通常更推荐使用 `asyncio.TaskGroup`。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "只需要把 `return_exceptions` 参数设置为 `True` 就可以了：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. 任何任务抛出的异常都不会向外中断，所有任务都会正常执行完毕。\n2. 返回的 `results` 列表中，正常完成的任务会保留其返回值，抛出异常的任务对应的位置则会直接存放该**异常对象**（继承自 `Exception` 的实例）。\n\n在后续处理结果时，通常可以通过 `isinstance(res, Exception)` 来区分是正常结果还是错误信息。",
+            "B": "把参数设置为 `return_exceptions=True` 就可以了。\n\n像这样配置：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样设置后：\n1. 任何任务抛出异常都不会中断整体流程，所有任务都会完整执行完毕。\n2. 返回的列表中元素顺序与传入的任务顺序严格一致。正常的任务返回其执行结果，失败的任务对应位置上则是抛出的异常实例对象（`Exception`）。\n\n在后续处理结果时，通常可以通过 `isinstance(item, Exception)` 来区分是正常返回值还是异常。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "这是一个可以直接运行的简洁示例：\n\n```python\nimport asyncio\n\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    # 模拟任务 2 出现错误\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 处理失败！\")\n    return f\"任务 {task_id} 的数据\"\n\n\nasync def main():\n    # 创建 3 个并发任务\n    tasks = [fetch_data(i) for i in range(1, 4)]\n\n    # return_exceptions=True 会捕获所有异常并存入列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并区分正常值与异常\n    for index, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{index}] 失败: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{index}] 成功: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出效果：**\n```text\n[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 处理失败！\n[3] 成功: 任务 3 的数据\n```\n\n通过 `isinstance(res, Exception)` 就可以把成功的返回值与抛出的异常对象清晰地拆开处理了。",
+            "B": "这是一个可以直接运行的简洁示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误！\")\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 成功结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 启用 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分结果与异常\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 失败，捕获到异常: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[{i}] 成功，获取到结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**输出效果：**\n```text\n[1] 成功，获取到结果: 任务 1 成功结果\n[2] 失败，捕获到异常: ValueError -> 任务 2 发生错误！\n[3] 成功，获取到结果: 任务 3 成功结果\n```\n\n通过 `isinstance(res, Exception)` 就能清晰地把正常返回值和错误分流处理了。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "它是**直接作为元素返回**的，没有任何额外的封装类型或包装对象。\n\n如果任务中抛出的是 `ValueError(\"...\")`，那么列表对应位置上就是这个 `ValueError` 实例本身；如果抛出的是 `TimeoutError`，对应的就是 `TimeoutError` 实例。\n\n它不会像某些语言或框架那样包一层类似 `Result`、`Failure` 或自定义包装类。也正是因为这个原因，通常直接使用 `isinstance(item, Exception)` 就能判断出该位置是正常返回值还是抛出的错误。",
+            "B": "它是**直接作为元素返回**的，完全不会封装在任何特定的类型或包装类（比如 Result 或 Wrapper）里。\n\n你在任务里 `raise` 的是什么异常实例，列表中对应位置拿到的就是那个原原本本的对象。比如任务抛出 `ValueError(\"出错了\")`，取出来的就是这个 `ValueError` 实例，可以直接读取它的 `.args` 属性或用 `traceback` 打印回溯。\n\n顺便提一个小细节：如果任务是被取消的，列表里对应的元素会是 `asyncio.CancelledError` 对象。因为在 Python 3.8 之后 `CancelledError` 继承自 `BaseException` 而不是 `Exception`，如果你的场景里可能会涉及任务取消，用 `isinstance(res, BaseException)` 来做类型检查会更稳妥一些。"
+          }
+        ]
+      },
+      {
+        "group_id": "m1-r1",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "默认情况下（即 `return_exceptions=False`），只要其中任意一个任务抛出异常：\n\n1. **异常会立刻向外抛出**：`await asyncio.gather(...)` 会立即中断等待，并将该异常直接传播给调用者。\n2. **其他任务不会被自动取消**：其余仍在运行的任务会继续在后台执行，并不会因为某一个任务报错而被终止。\n\n如果你希望把异常也当作正常返回值一起收集在结果列表里，可以将参数设置为 `return_exceptions=True`。",
+            "B": "默认情况下（也就是 `return_exceptions=False` 时），只要有任何一个任务抛出异常，`asyncio.gather` 会立即把这个异常向外抛给等待它的调用方。\n\n不过需要注意的一点是，其他还没执行完的任务**并不会**被自动取消，它们依然会在事件循环里继续运行，只是 `gather` 本身已经提前因为异常而中断返回了。如果希望把异常当成普通结果一起收集，可以把参数设为 `return_exceptions=True`。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "把 `return_exceptions` 设置为 `True` 就可以了。\n\n像这样写：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后，`asyncio.gather` 会等待所有任务执行完毕。返回的列表中，成功完成的任务是其返回值，抛出异常的任务对应的位置则是具体的异常对象（`Exception` 实例）。\n\n之后你可以遍历列表，用 `isinstance(item, Exception)` 来区分结果和异常。",
+            "B": "把 `return_exceptions` 参数设置为 `True` 就可以了。\n\n像这样写：\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样设置后，抛出异常的任务不会中断其他任务，`gather` 会等所有任务全部结束才返回。返回的列表里，成功的任务是正常返回值，抛出异常的位置则会直接存放对应的异常实例（比如 `ValueError`、`RuntimeError` 等）。\n\n后续你可以通过 `isinstance(res, Exception)` 来区分结果是正常数据还是异常。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "这是一个简洁完整的示例，可以直接运行：\n\n```python\nimport asyncio\n\nasync def fetch_success(task_id: int):\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 成功\"\n\nasync def fetch_error(task_id: int):\n    await asyncio.sleep(0.1)\n    raise ValueError(f\"任务 {task_id} 发生错误\")\n\nasync def main():\n    # 创建一组任务，其中包含会抛出异常的任务\n    tasks = [\n        fetch_success(1),\n        fetch_error(2),\n        fetch_success(3),\n    ]\n\n    # 设置 return_exceptions=True，异常会被作为结果对象返回\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分正常结果与异常\n    for index, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{index}] 捕获到异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{index}] 正常结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n[1] 正常结果: 任务 1 成功\n[2] 捕获到异常: ValueError - 任务 2 发生错误\n[3] 正常结果: 任务 3 成功\n```\n\n这样通过 `isinstance(res, Exception)` 就能清晰地把正常返回值和异常分开处理了。",
+            "B": "这是一个完整的示例，包含了正常任务和抛异常的任务，并在拿到结果后进行区分：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误！\")\n    return f\"任务 {task_id} 的结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 设置 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 执行失败: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[{i}] 执行成功: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行输出：\n```text\n[1] 执行成功: 任务 1 的结果\n[2] 执行失败: ValueError -> 任务 2 发生错误！\n[3] 执行成功: 任务 3 的结果\n```\n\n通过 `isinstance(res, Exception)` 就可以很清楚地把成功与失败的情况分开了。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "是**直接作为元素返回**的，不会封装在任何特定的包装类（比如 Result 或容器对象）里。\n\n抛出什么异常，列表中对应的位置就是该异常的实例本身（比如直接就是一个 `ValueError` 或 `RuntimeError` 对象）。\n\n它的追溯信息（Traceback）也会正常保留在异常对象的 `__traceback__` 属性中，如果需要打印堆栈，可以直接用 `traceback.print_exception(res)` 来查看。",
+            "B": "是直接作为元素返回的，不会做任何额外的类封装。\n\n任务里 `raise` 的是什么异常实例，列表对应位置拿到的就是那个原生对象，比如 `ValueError`、`KeyError` 等。你可以直接读取它的属性（如 `res.args`）或者用 `traceback.print_exception(res)` 打印调用栈。"
+          }
+        ]
+      },
+      {
+        "group_id": "m1-r2",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "默认情况下（也就是 `return_exceptions=False` 时），只要其中任何一个任务抛出异常，`asyncio.gather` 就会立刻把该异常向外抛出给调用者，导致当前的 `await` 处中断。\n\n不过需要注意一个细节：虽然 `gather` 会立即抛出异常，但其他正在并发运行的任务**并不会**被自动取消，它们依然会在事件循环中继续执行。\n\n如果希望即使发生异常也不中断流程，而是把异常对象当作普通结果一起放进返回列表里，可以显式传入 `return_exceptions=True`。",
+            "B": "默认情况下（即 `return_exceptions=False`），只要其中任意一个任务抛出异常：\n\n1. **立即向外抛出异常**：`asyncio.gather` 会立刻中断等待，并将最先发生的那个异常向上抛出给调用方。\n2. **其他任务不会被自动取消**：已经在运行的其他协程或任务仍会在后台继续执行，直到它们自行结束，`gather` 并不会主动去 cancel 它们。\n\n如果希望把异常当作普通返回值收集到结果列表里，可以设置 `return_exceptions=True`；如果希望在某个任务失败时自动取消其余任务，在 Python 3.11 及以上版本通常推荐使用 `asyncio.TaskGroup`。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "只要在调用时传入 `return_exceptions=True` 就可以了。\n\n例如这样写：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. 任何任务抛出异常都不会中断其他任务，所有任务都会执行完毕。\n2. 返回的 `results` 列表长度和传入的任务数一致。成功的任务返回正常结果，失败的任务对应的位置则是捕获到的异常对象（例如 `ZeroDivisionError`、`TimeoutError` 的实例）。\n3. 后续处理时，可以用 `isinstance(item, Exception)` 来区分是正常结果还是错误。",
+            "B": "把参数设置为 `return_exceptions=True` 就可以了。\n\n像这样写：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. 任何一个任务抛出异常，都不会中断其他任务，所有任务都会继续执行直到结束。\n2. 返回的列表中，成功执行的任务会保存其正常返回值；发生异常的任务，其对应位置存放的则是抛出的**异常对象本身**。\n\n后续处理时，通常遍历结果并用 `isinstance(r, Exception)` 区分正常数据和报错即可。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "好的，这里是一个可以直接运行的完整示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    # 模拟第 2 个任务出现异常\n    if task_id == 2:\n        raise ValueError(\"数据请求失败：404\")\n    return f\"任务 {task_id} 的结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 开启 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分正常结果与异常\n    for index, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {index} 抛出异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {index} 正常返回: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出效果：**\n```text\n[成功] 任务 1 正常返回: 任务 1 的结果\n[失败] 任务 2 抛出异常: ValueError - 数据请求失败：404\n[成功] 任务 3 正常返回: 任务 3 的结果\n```\n\n通过 `isinstance(res, Exception)` 就可以很清晰地把捕获到的异常对象和正常返回值拆开处理了。",
+            "B": "这是一个完整的示例代码，展示了并发执行任务、设置 `return_exceptions=True` 以及用 `isinstance` 区分结果：\n\n```python\nimport asyncio\n\n\nasync def worker(task_id: int):\n    # 模拟第二个任务抛出异常\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 顺利完成\"\n\n\nasync def main():\n    tasks = [worker(1), worker(2), worker(3)]\n\n    # 设置 return_exceptions=True，异常会被当作结果返回\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for idx, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{idx}] 失败: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[{idx}] 成功: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行输出：\n```text\n[1] 成功: 任务 1 顺利完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 顺利完成\n```"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "是直接作为元素返回的，不会做任何额外的封装（没有包在类似 `Result`、`Wrapper` 或元组之类的自定义容器里）。\n\n比如任务里执行了 `raise ValueError(\"404\")`，那么列表对应位置上的元素就是这个 `ValueError` 实例本身。\n\n因为是原始的异常对象，你既可以直接读取它的属性（比如 `str(res)`、`res.args`、`res.__traceback__`），也可以在需要的时候通过 `raise res` 把它重新抛出来。",
+            "B": "是**直接**作为元素返回的，不会进行任何额外的类或结构封装。\n\n也就是说，如果任务里执行了 `raise ValueError(\"出错了\")`，列表对应位置放的就是那个原原本本的 `ValueError` 实例本身。\n\n因此直接用 `isinstance(item, Exception)` 判断即可。不过有一点需要稍微留意：如果任务被手动取消（Cancel），列表中对应的是 `asyncio.CancelledError` 对象。在 Python 3.8 及之后版本里，它继承自 `BaseException` 而非 `Exception`，如果代码里有取消操作，用 `isinstance(item, BaseException)` 会更稳妥一些。"
+          }
+        ]
+      },
+      {
+        "group_id": "m2-r0",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "默认行为是：**异常会被传播，但其他任务不会被取消**。\n\n具体来说——\n\n`asyncio.gather` 默认 `return_exceptions=False`。这时如果某个任务抛出异常，`gather` 会立即将该异常重新抛给 `await` 的调用方。但其他还在跑的任务会继续在后台执行，只是它们的结果（或异常）你拿不到了，除非你自己持有那些 Task 的引用。\n\n```python\nimport asyncio\n\nasync def ok():\n    await asyncio.sleep(1)\n    return \"done\"\n\nasync def bad():\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok(), bad())\n    except ValueError as e:\n        print(f\"捕获到异常：{e}\")\n        # ok() 仍在后台跑，但结果丢失了\n\nasyncio.run(main())\n```\n\n---\n\n**两种常见处理方式：**\n\n**① `return_exceptions=True`**  \n所有任务都会跑完，异常作为普通返回值放进结果列表，不会被抛出，你自己逐项判断 `isinstance(result, Exception)`。\n\n**② 用 `asyncio.TaskGroup`（Python 3.11+）**  \n任意一个任务失败，组内其余任务会被自动取消，语义更清晰，推荐新代码优先用这个。\n\n```python\nasync def main():\n    async with asyncio.TaskGroup() as tg:\n        t1 = tg.create_task(ok())\n        t2 = tg.create_task(bad())\n    # bad() 一抛异常，ok() 会被取消\n```\n\n简单说：默认行为\"异常向上传，但不主动清理兄弟任务\"，这点很容易留下游离的后台任务，生产代码要留意。",
+            "B": "默认情况下，`asyncio.gather` 会**立即将那个异常传播给调用方**，但其他任务**不会被取消**，它们会继续在后台运行直到各自完成（或抛出自己的异常）。\n\n具体来说：\n\n```python\nimport asyncio\n\nasync def ok_task():\n    await asyncio.sleep(1)\n    print(\"ok_task 完成\")\n    return \"ok\"\n\nasync def bad_task():\n    await asyncio.sleep(0.5)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok_task(), bad_task())\n    except ValueError as e:\n        print(f\"捕获到异常: {e}\")\n    # ok_task 仍在后台跑，但结果已经没有人接收了\n\nasyncio.run(main())\n```\n\n输出顺序大致是：\n```\n捕获到异常: 出错了\nok_task 完成        # 仍然执行完了\n```\n\n---\n\n如果你想改变这个行为，有两个常用方式：\n\n**1. `return_exceptions=True`**  \n把所有异常当作正常返回值收集，不抛出，全部任务都会跑完：\n\n```python\nresults = await asyncio.gather(ok_task(), bad_task(), return_exceptions=True)\n# results = [\"ok\", ValueError(\"出错了\")]\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"任务失败: {r}\")\n```\n\n**2. 用 `asyncio.TaskGroup`（Python 3.11+）**  \n任意一个子任务失败，其余任务会被**自动取消**，行为更安全：\n\n```python\nasync def main():\n    async with asyncio.TaskGroup() as tg:\n        t1 = tg.create_task(ok_task())\n        t2 = tg.create_task(bad_task())\n    # bad_task 失败 → ok_task 被取消 → 抛出 ExceptionGroup\n```\n\n---\n\n简单总结：\n\n| 方式 | 异常处理 | 其他任务 |\n|---|---|---|\n| `gather`（默认） | 立即抛出第一个异常 | 继续后台运行，结果丢失 |\n| `gather(return_exceptions=True)` | 作为返回值收集 | 全部正常运行完 |\n| `TaskGroup` | 抛出 `ExceptionGroup` | 自动取消 |\n\n看你的场景，有具体在用哪种吗？"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "就是把 `return_exceptions=True` 传给 `gather`，这样所有任务都会跑完，异常以返回值的形式出现在结果列表里。\n\n```python\nimport asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.5)\n    return \"成功\"\n\nasync def task_fail():\n    raise ValueError(\"失败了\")\n\nasync def task_also_ok():\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_also_ok(),\n        return_exceptions=True,   # 关键在这里\n    )\n\n    for i, result in enumerate(results):\n        if isinstance(result, Exception):\n            print(f\"任务 {i} 异常：{result}\")\n        else:\n            print(f\"任务 {i} 结果：{result}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n任务 0 结果：成功\n任务 1 异常：失败了\n任务 2 结果：42\n```\n\n---\n\n几个值得注意的地方：\n\n- 结果列表顺序和传入协程的顺序一一对应，不受执行快慢影响。\n- `BaseException` 的子类（比如 `KeyboardInterrupt`、`CancelledError`）同样会被捕获进列表，不会向上传播，处理时如果需要区分要多判断一层。\n- 遍历结果时建议优先判断 `isinstance(result, BaseException)` 而非只判断 `Exception`，视业务情况决定是否要重新抛出 `BaseException`。",
+            "B": "直接用 `return_exceptions=True` 就行。\n\n```python\nresults = await asyncio.gather(\n    task_a(),\n    task_b(),\n    task_c(),\n    return_exceptions=True\n)\n```\n\n返回的 `results` 是一个列表，顺序和传入任务一一对应——成功的是返回值，失败的是异常对象本身。然后自己遍历处理：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, Exception):\n        print(f\"任务 {i} 失败: {r}\")\n    else:\n        print(f\"任务 {i} 成功: {r}\")\n```\n\n这样所有任务都会跑完，不会因为某一个出错就中断其他的。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "```python\nimport asyncio\n\nasync def task_a():\n    await asyncio.sleep(0.3)\n    return \"task_a 完成\"\n\nasync def task_b():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"task_b 出错\")\n\nasync def task_c():\n    await asyncio.sleep(0.2)\n    raise RuntimeError(\"task_c 也出错\")\n\nasync def main():\n    results = await asyncio.gather(\n        task_a(),\n        task_b(),\n        task_c(),\n        return_exceptions=True,\n    )\n\n    for i, result in enumerate(results):\n        if isinstance(result, BaseException):\n            print(f\"[异常] 任务 {i}：{type(result).__name__}: {result}\")\n        else:\n            print(f\"[成功] 任务 {i}：{result}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n[成功] 任务 0：task_a 完成\n[异常] 任务 1：ValueError: task_b 出错\n[异常] 任务 2：RuntimeError: task_c 也出错\n```\n\n判断用 `BaseException` 而非 `Exception`，是为了兜住 `CancelledError` 这类不继承 `Exception` 的情况（Python 3.8+ 起 `CancelledError` 改为直接继承 `BaseException`）。如果业务上需要对 `CancelledError` 单独处理，可以在循环里再加一层 `isinstance(result, asyncio.CancelledError)` 的判断。",
+            "B": "```python\nimport asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.5)\n    return \"成功结果\"\n\nasync def task_fail():\n    await asyncio.sleep(0.3)\n    raise ValueError(\"任务失败了\")\n\nasync def task_also_ok():\n    await asyncio.sleep(0.4)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_also_ok(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, Exception):\n            print(f\"任务 {i} 异常: {type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功: {r}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n任务 0 成功: 成功结果\n任务 1 异常: ValueError: 任务失败了\n任务 2 成功: 42\n```\n\n几个要点：\n- 返回列表顺序与传入顺序严格对应，方便按索引追溯是哪个任务。\n- 用 `isinstance(r, Exception)` 而不是 `isinstance(r, BaseException)`——如果你的任务可能抛 `KeyboardInterrupt` 或 `SystemExit` 这类，才需要换成后者，通常不必要。\n- 三个任务并发执行，总耗时约 0.5 秒，不是三者之和。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接作为元素返回，不做任何封装。\n\n拿到的就是原始的异常实例本身，类型和抛出时完全一致。比如任务里 `raise ValueError(\"出错\")`，结果列表里那一项就是那个 `ValueError` 实例，`isinstance(result, ValueError)` 为 `True`，可以直接访问 `.args`、`.\\_\\_traceback\\_\\_` 等属性。\n\n```python\nresult = results[1]         # 取出异常那一项\nprint(type(result))         # <class 'ValueError'>\nprint(result.args)          # ('task_b 出错',)\nprint(result.__traceback__) # <traceback object ...>\n```\n\n所以区分的方式就是朴素的 `isinstance` 判断，没有额外的包装类需要解包。",
+            "B": "直接作为元素返回，不做任何封装。\n\n就是原始的异常对象本身，类型和你在任务里 `raise` 的完全一致。比如任务抛了 `ValueError(\"任务失败了\")`，列表里那个位置就是那个 `ValueError` 实例，`isinstance(r, ValueError)` 直接成立。\n\n所以才用 `isinstance(r, Exception)` 来区分——正常返回值不会是 `Exception` 的实例，这个判断足够可靠。"
+          }
+        ]
+      },
+      {
+        "group_id": "m2-r1",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "默认情况下，`asyncio.gather` 会把第一个抛出的异常**立即传播给 await 它的调用方**，但其余任务**不会被自动取消**，它们仍在后台继续运行直到完成或自己出错。\n\n---\n\n具体来说：\n\n```python\nimport asyncio\n\nasync def ok():\n    await asyncio.sleep(1)\n    print(\"ok 完成\")\n    return \"ok\"\n\nasync def boom():\n    await asyncio.sleep(0.5)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok(), boom())\n    except ValueError as e:\n        print(f\"捕获到: {e}\")\n    # 此时 ok() 仍在后台跑，直到 sleep(1) 结束才打印\n\nasyncio.run(main())\n```\n\n输出顺序大致是：\n```\n捕获到: 出错了\nok 完成          # 仍然执行完了\n```\n\n---\n\n**如果你想让一个任务出错时取消其他所有任务**，传入 `return_exceptions=False`（这是默认值，行为如上），或者改用 `return_exceptions=True`：\n\n- `return_exceptions=True`：所有任务跑完，异常作为普通返回值收进结果列表，不抛出，你自己遍历检查。\n- 想要\"一出错全取消\"，需要手动把协程包成 `Task`，再在 except 里逐一 `.cancel()`，或者用 Python 3.11+ 的 `asyncio.TaskGroup`，它原生支持这个语义。\n\n简单总结：**默认抛出异常、不取消其他任务；`return_exceptions=True` 收集所有结果；真正需要\"出错即全停\"用 `TaskGroup`。**",
+            "B": "默认情况下，`asyncio.gather` 会把第一个抛出的异常**立即传播给调用方**——也就是说，`await asyncio.gather(...)` 这行会直接抛出那个异常。\n\n但有几个细节值得注意：\n\n**其余任务不会被自动取消。**\n它们会继续在后台运行直到各自结束，只是结果被丢弃了。这很容易造成\"泄漏\"的协程。\n\n**`return_exceptions=True` 会改变这个行为。**\n加上这个参数后，异常不会被传播，而是作为普通返回值放进结果列表，所有任务都会跑完，你再自己逐个检查。\n\n```python\nresults = await asyncio.gather(task1(), task2(), task3(), return_exceptions=True)\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"出错了：{r}\")\n```\n\n**如果你需要\"一个失败就取消其余\"的语义**，Python 3.11 引入的 `asyncio.TaskGroup` 更适合：\n\n```python\nasync with asyncio.TaskGroup() as tg:\n    t1 = tg.create_task(task1())\n    t2 = tg.create_task(task2())\n# 任意一个抛异常，其余会被取消，异常通过 ExceptionGroup 传出\n```\n\n简单总结：`gather` 默认只传播异常、不管其他任务；想要安全并发，要么 `return_exceptions=True` 自己处理，要么用 `TaskGroup`。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "直接传 `return_exceptions=True` 就行。\n\n```python\nimport asyncio\n\nasync def task_a():\n    await asyncio.sleep(0.5)\n    return \"a 完成\"\n\nasync def task_b():\n    await asyncio.sleep(1)\n    raise ValueError(\"b 出错了\")\n\nasync def task_c():\n    await asyncio.sleep(0.8)\n    return \"c 完成\"\n\nasync def main():\n    results = await asyncio.gather(\n        task_a(), task_b(), task_c(),\n        return_exceptions=True\n    )\n    for i, result in enumerate(results):\n        if isinstance(result, BaseException):\n            print(f\"任务 {i} 异常: {result}\")\n        else:\n            print(f\"任务 {i} 结果: {result}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n任务 0 结果: a 完成\n任务 1 异常: b 出错了\n任务 2 结果: c 完成\n```\n\n几个要注意的点：\n\n- 结果列表顺序与传入协程顺序**严格对应**，不受完成先后影响。\n- 捕获时建议用 `BaseException` 而非 `Exception`，因为 `CancelledError` 在 Python 3.8+ 继承自 `BaseException`，用 `Exception` 会漏掉它。\n- 所有任务都会**跑完**，不会因为某个出错而提前退出。",
+            "B": "直接用 `return_exceptions=True` 就够了。\n\n```python\nimport asyncio\n\nasync def task(n):\n    if n == 2:\n        raise ValueError(f\"task {n} 出错\")\n    return f\"task {n} 完成\"\n\nasync def main():\n    results = await asyncio.gather(\n        task(1), task(2), task(3),\n        return_exceptions=True\n    )\n    for i, r in enumerate(results, 1):\n        if isinstance(r, BaseException):\n            print(f\"task {i} 异常：{r}\")\n        else:\n            print(f\"task {i} 结果：{r}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\ntask 1 结果：task 1 完成\ntask 2 异常：task 2 出错\ntask 3 结果：task 3 完成\n```\n\n两点要注意：\n\n- **顺序对应**：results 列表顺序和传入 gather 的顺序一一对应，方便你知道哪个任务出了问题。\n- **用 `BaseException` 还是 `Exception`**：建议用 `BaseException`，因为 `KeyboardInterrupt`、`CancelledError` 这类也可能被捕获进来，用 `Exception` 会漏掉它们。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "```python\nimport asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.3)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.5)\n    raise RuntimeError(\"任务失败\")\n\nasync def task_cancel():\n    await asyncio.sleep(1)\n    return \"也成功\"\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_cancel(),\n        return_exceptions=True,\n    )\n\n    for i, result in enumerate(results):\n        if isinstance(result, BaseException):\n            print(f\"任务 {i} 异常 [{type(result).__name__}]: {result}\")\n        else:\n            print(f\"任务 {i} 结果: {result}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n任务 0 结果: 成功\n任务 1 异常 [RuntimeError]: 任务失败\n任务 2 结果: 也成功\n```\n\n核心就两步：传 `return_exceptions=True` 让 gather 不抛出；遍历时用 `isinstance(result, BaseException)` 区分异常与正常值。",
+            "B": "```python\nimport asyncio\n\nasync def task(n):\n    await asyncio.sleep(0.1)\n    if n % 2 == 0:\n        raise ValueError(f\"task {n} 失败\")\n    return f\"task {n} 成功\"\n\nasync def main():\n    results = await asyncio.gather(\n        *[task(n) for n in range(1, 6)],\n        return_exceptions=True\n    )\n    for n, r in enumerate(results, 1):\n        if isinstance(r, BaseException):\n            print(f\"[异常] task {n}: {r}\")\n        else:\n            print(f\"[正常] task {n}: {r}\")\n\nasyncio.run(main())\n```\n\n输出：\n```\n[正常] task 1: task 1 成功\n[异常] task 2: task 2 失败\n[正常] task 3: task 3 成功\n[异常] task 4: task 4 失败\n[正常] task 5: task 5 成功\n```\n\n逻辑很直接：gather 把所有结果（含异常对象）按顺序收进列表，用 `isinstance(r, BaseException)` 区分就行，不需要额外的 try/except。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接作为元素返回，不做任何封装。\n\n拿到的就是原始异常实例本身，比如你 raise 了 `RuntimeError(\"任务失败\")`，列表里对应位置就是那个 `RuntimeError` 对象，可以直接访问 `.args`、`.\\_\\_traceback\\_\\_` 等属性。\n\n```python\nresult = results[1]\nprint(type(result))        # <class 'RuntimeError'>\nprint(result.args)         # ('任务失败',)\nprint(result.__traceback__) # traceback 对象\n```\n\n所以区分时只需要 `isinstance(result, BaseException)` 就够了，不需要解包或额外处理。",
+            "B": "直接作为元素返回，不做任何封装。\n\n就是原始的异常对象本身，比如你抛了 `ValueError(\"task 2 失败\")`，列表里那个位置就是那个 `ValueError` 实例，类型不变、信息不变。\n\n所以 `isinstance(r, BaseException)` 能直接判断，也可以进一步区分具体类型：\n\n```python\nif isinstance(r, ValueError):\n    ...\nelif isinstance(r, TimeoutError):\n    ...\n```\n\n唯一需要注意的是，`asyncio.CancelledError` 在 Python 3.8 之后继承自 `BaseException` 而非 `Exception`，如果任务被取消，它也会原样出现在列表里——这也是建议用 `BaseException` 判断的原因。"
+          }
+        ]
+      },
+      {
+        "group_id": "m2-r2",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "默认情况下，`asyncio.gather` 会把第一个抛出的异常**立即传播给调用方**——也就是说，`await asyncio.gather(...)` 这一行会直接抛出那个异常。\n\n但其他还在运行的任务**不会被自动取消**，它们会继续跑到完成或自己出错，只是结果被你丢弃了。\n\n---\n\n**关键参数：`return_exceptions`**\n\n```python\nresults = await asyncio.gather(task1(), task2(), task3(), return_exceptions=True)\n```\n\n设为 `True` 之后，所有任务都会跑完，异常不会抛出，而是作为普通值放进返回列表里，你可以逐项检查：\n\n```python\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"出错了：{r}\")\n    else:\n        print(f\"结果：{r}\")\n```\n\n---\n\n**如果你需要\"一个出错就全部取消\"的语义**，`gather` 本身做不到，推荐用 `asyncio.TaskGroup`（Python 3.11+）：\n\n```python\nasync with asyncio.TaskGroup() as tg:\n    t1 = tg.create_task(task1())\n    t2 = tg.create_task(task2())\n```\n\n任意一个任务抛异常，其他任务会被自动取消，异常以 `ExceptionGroup` 的形式抛出，语义更清晰。",
+            "B": "默认情况下，`asyncio.gather` 会把第一个抛出的异常**立即传播给调用方**——也就是说，`await asyncio.gather(...)` 这行会直接抛出那个异常。\n\n但其余任务**不会被自动取消**，它们会继续在后台运行直到完成，只是你拿不到它们的结果了。\n\n---\n\n**关键参数：`return_exceptions`**\n\n```python\nresults = await asyncio.gather(task1(), task2(), task3(), return_exceptions=True)\n```\n\n设为 `True` 之后，异常不会被抛出，而是作为**普通返回值**放进结果列表，你可以逐项检查：\n\n```python\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"任务失败：{r}\")\n    else:\n        print(f\"任务结果：{r}\")\n```\n\n---\n\n**如果需要\"一个失败就取消其余\"的行为**，Python 3.11 起可以用 `asyncio.TaskGroup`：\n\n```python\nasync with asyncio.TaskGroup() as tg:\n    t1 = tg.create_task(task1())\n    t2 = tg.create_task(task2())\n```\n\n任意一个任务抛异常，其余会被自动取消，退出时把所有异常合并成 `ExceptionGroup` 抛出。比手动管理干净很多。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "直接用 `return_exceptions=True` 就够了。\n\n```python\nresults = await asyncio.gather(\n    task1(),\n    task2(),\n    task3(),\n    return_exceptions=True\n)\n```\n\n这样三个任务都会独立跑完，互不干扰。返回的 `results` 是一个列表，顺序和传入顺序一致——正常完成的位置放返回值，出错的位置放异常对象本身。\n\n处理时按类型区分就好：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, BaseException):\n        print(f\"task{i+1} 出错：{r}\")\n    else:\n        print(f\"task{i+1} 结果：{r}\")\n```\n\n这里用 `BaseException` 比 `Exception` 更严谨一点，因为 `asyncio.CancelledError` 在 Python 3.8+ 是 `BaseException` 的子类，`return_exceptions=True` 同样会把它捕获进列表而不是继续传播。",
+            "B": "直接用 `return_exceptions=True` 就够了。\n\n```python\nresults = await asyncio.gather(\n    task1(),\n    task2(),\n    task3(),\n    return_exceptions=True\n)\n```\n\n所有任务都会跑完，异常不会被抛出，而是以异常对象的形式出现在对应位置的结果列表里，顺序和传入顺序一致。\n\n处理时逐项判断类型即可：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, Exception):\n        print(f\"task{i+1} 失败：{r}\")\n    else:\n        print(f\"task{i+1} 结果：{r}\")\n```\n\n需要注意的一点：`BaseException` 的子类（比如 `KeyboardInterrupt`、`SystemExit`）同样会被捕获进列表，如果你想对这类异常做特殊处理，判断时可以用 `isinstance(r, BaseException)` 而不是 `Exception`。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "```python\nimport asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.2)\n    raise ValueError(\"出错了\")\n\nasync def task_ok2():\n    await asyncio.sleep(0.1)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_ok2(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"task{i+1} 异常：{type(r).__name__}: {r}\")\n        else:\n            print(f\"task{i+1} 结果：{r}\")\n\nasyncio.run(main())\n```\n\n**输出：**\n\n```\ntask1 结果：成功\ntask2 异常：ValueError: 出错了\ntask3 结果：42\n```\n\n几点说明：\n\n- 三个任务并发执行，`task_fail` 抛异常不影响其他两个。\n- 返回列表顺序与传入顺序严格对应，方便对照定位。\n- 用 `BaseException` 而非 `Exception` 是为了同时捕获 `CancelledError`，上一条提到过原因。",
+            "B": "```python\nimport asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"出错了\")\n\nasync def task_also_ok():\n    await asyncio.sleep(0.1)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_also_ok(),\n        return_exceptions=True\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, Exception):\n            print(f\"任务 {i+1} 异常：{type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i+1} 结果：{r}\")\n\nasyncio.run(main())\n```\n\n输出：\n\n```\n任务 1 结果：成功\n任务 2 异常：ValueError: 出错了\n任务 3 结果：42\n```\n\n三个任务并发执行，`task_fail` 抛出异常后不影响其余两个，最终所有结果按原始顺序收齐。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接作为元素返回，不做任何封装。\n\n就是原始的异常对象本身，类型还是 `ValueError`、`RuntimeError` 之类的，放在列表对应位置上。所以才能直接用 `isinstance(r, BaseException)` 来区分——如果有封装的话就不会这么简单了。\n\n你可以验证一下：\n\n```python\nprint(type(results[1]))   # <class 'ValueError'>\nprint(results[1].args)    # ('出错了',)\n```\n\n和你在 `except` 块里拿到的异常对象完全一样，只是没有被抛出，而是静默地放进了列表。",
+            "B": "直接作为元素返回，不做任何封装。\n\n列表里的异常对象就是任务实际抛出的那个实例，类型和原始异常完全一致。比如任务抛出 `ValueError(\"出错了\")`，你拿到的就是那个 `ValueError` 实例，可以直接访问 `.args`、`.message` 或做 `isinstance` 判断，不需要解包。\n\n这也是为什么区分正常结果时只需要 `isinstance(r, Exception)` 就够了——没有额外的包装层需要处理。"
+          }
+        ]
+      },
+      {
+        "group_id": "m3-r0",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "好问题。默认行为是这样的：\n\n---\n\n## `asyncio.gather` 的默认异常行为\n\n默认情况下（`return_exceptions=False`），当 **任意一个** 任务抛出异常时：\n\n1. **该异常会立即从 `gather` 所在的 `await` 处向上传播**——就像你直接 `await` 了那个失败的任务一样。\n2. **其余尚未完成的任务不会被自动取消**，它们仍然在后台继续运行。\n\n这是一个容易踩坑的地方：异常虽然传播了，但剩余任务并没有被清理。\n\n---\n\n### 简单示例\n\n```python\nimport asyncio\n\nasync def ok():\n    await asyncio.sleep(2)\n    print(\"ok 完成\")\n    return \"ok\"\n\nasync def fail():\n    await asyncio.sleep(1)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok(), fail())\n    except ValueError as e:\n        print(f\"捕获到异常: {e}\")\n    # 此时 ok() 仍在后台运行，没有被取消\n    await asyncio.sleep(3)  # 等一下就能看到 \"ok 完成\" 被打印\n\nasyncio.run(main())\n```\n\n输出：\n```\n捕获到异常: 出错了\nok 完成\n```\n\n可以看到 `ok()` 并没有因为 `fail()` 的异常而被取消。\n\n---\n\n### `return_exceptions=True` 的区别\n\n如果传入 `return_exceptions=True`，行为完全不同：\n\n- **异常不会向上传播**，而是作为普通返回值放进结果列表。\n- `gather` 会等待所有任务完成后才返回。\n\n```python\nresults = await asyncio.gather(ok(), fail(), return_exceptions=True)\n# results == [\"ok\", ValueError(\"出错了\")]\n```\n\n---\n\n### 实践建议\n\n如果你希望一个任务失败时**取消其余任务**，默认的 `gather` 做不到。常见做法：\n\n- **Python 3.11+**：用 `asyncio.TaskGroup`，它会在任一任务异常时自动取消同组其余任务。\n- **手动取消**：在 `except` 块里显式 `task.cancel()` 剩余任务。\n\n需要深入哪个部分我可以继续展开。",
+            "B": "默认情况下，`asyncio.gather` 的 `return_exceptions` 参数为 `False`。这意味着：\n\n1. **异常会立即向上传播**——`gather` 返回的那个聚合 `Future` 会以第一个被抛出的异常作为自己的异常结果，`await asyncio.gather(...)` 处会直接 raise。\n\n2. **其余任务不会被取消**——这是容易踩坑的地方。虽然异常已经传播出去了，但其他还在跑的协程仍然会继续执行，不会被自动 cancel。它们变成了\"无人等待\"的后台任务，如果也出了异常，会以 `asyncio.Task` 的未处理异常形式出现在日志里。\n\n3. **只能看到第一个异常**——如果有多个任务几乎同时失败，你只会拿到最先完成的那个异常，其余的会被吞掉（或仅作为警告日志）。\n\n---\n\n如果把 `return_exceptions=True`，行为就不同了：所有异常会被当作返回值，和正常结果一起放进结果列表里，`gather` 本身不会 raise，你可以事后逐个检查哪些是 `Exception` 实例。\n\n```python\nresults = await asyncio.gather(task_a(), task_b(), task_c(), return_exceptions=True)\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"任务失败: {r}\")\n    else:\n        print(f\"任务成功: {r}\")\n```\n\n所以实际项目里如果希望\"一个失败就全部取消\"，通常需要配合 `asyncio.TaskGroup`（Python 3.11+），它才会在某个子任务失败时自动取消同组的其他任务。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "就是你刚才看到的 `return_exceptions=True`：\n\n```python\nresults = await asyncio.gather(task_a(), task_b(), task_c(), return_exceptions=True)\n```\n\n这样 `gather` 会等所有任务跑完，返回一个列表，成功的放返回值，失败的放异常对象。之后你可以统一处理：\n\n```python\nfor i, result in enumerate(results):\n    if isinstance(result, Exception):\n        print(f\"任务 {i} 失败: {result}\")\n    else:\n        print(f\"任务 {i} 成功: {result}\")\n```\n\n就这一个参数，不需要其他额外配置。",
+            "B": "就是刚才提到的 `return_exceptions=True`。\n\n```python\nresults = await asyncio.gather(\n    task_a(),\n    task_b(),\n    task_c(),\n    return_exceptions=True,\n)\n```\n\n这样每个任务无论成功还是抛异常，都会跑完，最终 `results` 是一个与传入顺序一一对应的列表——成功的位置放返回值，失败的位置放对应的异常对象。你拿到列表后再逐个判断 `isinstance(r, BaseException)` 就行。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "\n\n```python\nimport asyncio\n\nasync def fetch_data():\n    await asyncio.sleep(1)\n    return {\"id\": 1, \"name\": \"宁宁\"}\n\nasync def fetch_score():\n    await asyncio.sleep(0.5)\n    raise TimeoutError(\"请求超时\")\n\nasync def fetch_status():\n    await asyncio.sleep(0.8)\n    return \"online\"\n\nasync def main():\n    tasks = [fetch_data(), fetch_score(), fetch_status()]\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    labels = [\"data\", \"score\", \"status\"]\n    for label, result in zip(labels, results):\n        if isinstance(result, Exception):\n            print(f\"[失败] {label}: {type(result).__name__}: {result}\")\n        else:\n            print(f\"[成功] {label}: {result}\")\n\nasyncio.run(main())\n```\n\n输出：\n\n```\n[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] score: TimeoutError: 请求超时\n[成功] status: online\n```\n\n三个任务并发执行，`fetch_score` 抛了异常但不影响其余两个，最后统一拿到所有结果逐个判断就好。",
+            "B": "\n\n```python\nimport asyncio\n\n\nasync def fetch_data(name: str, delay: float, fail: bool = False):\n    await asyncio.sleep(delay)\n    if fail:\n        raise ValueError(f\"{name} 出错了\")\n    return f\"{name} 的数据\"\n\n\nasync def main():\n    results = await asyncio.gather(\n        fetch_data(\"A\", 0.5),\n        fetch_data(\"B\", 0.3, fail=True),\n        fetch_data(\"C\", 0.4),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i}: 失败 — {r!r}\")\n        else:\n            print(f\"任务 {i}: 成功 — {r}\")\n\n\nasyncio.run(main())\n```\n\n运行输出：\n\n```\n任务 0: 成功 — A 的数据\n任务 1: 失败 — ValueError('B 出错了')\n任务 2: 成功 — C 的数据\n```\n\n三个任务并发执行，B 虽然抛了异常，A 和 C 不受影响，最终拿到的列表顺序和传入顺序一致，逐个用 `isinstance` 区分就好。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接作为元素返回，不做任何封装。\n\n列表里拿到的就是任务抛出的那个原始异常实例本身，类型、消息、traceback 都原样保留。所以你可以直接用 `isinstance` 按具体异常类型去判断：\n\n```python\nfor result in results:\n    if isinstance(result, TimeoutError):\n        # 处理超时\n    elif isinstance(result, ValueError):\n        # 处理值错误\n    elif isinstance(result, Exception):\n        # 其他异常\n    else:\n        # 正常返回值\n```\n\n没有中间包装层，拿到什么就是什么。",
+            "B": "直接作为元素返回，不做任何封装。列表里放的就是那个原始的异常实例本身，比如 `ValueError('B 出错了')` 这个对象，你可以直接访问它的 `args`、用 `traceback` 模块提取堆栈，或者 `raise` 它，跟你在 `except` 块里 catch 到的是同一个东西。"
+          }
+        ]
+      },
+      {
+        "group_id": "m3-r1",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "好问题。默认行为是这样的：\n\n## `asyncio.gather` 的默认异常行为\n\n默认情况下（`return_exceptions=False`），当其中**一个任务抛出异常**时：\n\n1. **`gather` 返回的那个聚合 Future 会立即被标记为异常完成**，将第一个抛出的异常向上传播（即 `await asyncio.gather(...)` 处会抛出该异常）。\n\n2. **其余尚未完成的任务不会被取消**——它们仍然继续在后台运行，直到各自自然结束或被其他代码显式取消。这是一个容易踩的坑。\n\n简单示例：\n\n```python\nimport asyncio\n\nasync def ok():\n    await asyncio.sleep(2)\n    print(\"ok 完成\")  # 依然会打印\n\nasync def bad():\n    await asyncio.sleep(0.5)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok(), bad())\n    except ValueError as e:\n        print(f\"捕获异常: {e}\")\n    # ok() 并没有被取消，2 秒后仍会打印 \"ok 完成\"\n    await asyncio.sleep(3)\n\nasyncio.run(main())\n```\n\n## 两个关键参数对比\n\n| | `return_exceptions=False`（默认） | `return_exceptions=True` |\n|---|---|---|\n| 异常处理 | 第一个异常立即向上抛出 | 异常作为返回值混在结果列表里 |\n| 其余任务 | **继续运行，不取消** | 继续运行，全部结束后一起返回 |\n| 适用场景 | fail-fast，但需自行清理 | 需要收集所有结果（含异常）再统一处理 |\n\n## 想要\"一个失败就全部取消\"怎么办？\n\n`gather` 本身不提供这个语义。常见做法：\n\n- **Python 3.11+ 推荐用 `asyncio.TaskGroup`**：任何子任务异常时，会自动取消同组其余任务，退出 `async with` 块时抛出 `ExceptionGroup`。\n- 手动方案：在 `except` 块里遍历取消剩余 task。\n\n```python\n# TaskGroup 示例 (3.11+)\nasync def main():\n    try:\n        async with asyncio.TaskGroup() as tg:\n            tg.create_task(ok())\n            tg.create_task(bad())\n    except* ValueError as eg:\n        print(f\"捕获: {eg.exceptions}\")\n    # ok() 会被自动取消，不会打印\n```\n\n总结一句：`gather` 默认只传播异常，**不负责善后**；想要自动取消得用 `TaskGroup` 或自己处理。",
+            "B": "默认情况下，`asyncio.gather` 的 `return_exceptions` 参数为 `False`。这意味着：\n\n1. **异常会立即向上传播**——`gather` 返回的那个聚合 Future 会以第一个被引发的异常完成，`await asyncio.gather(...)` 处会抛出该异常。\n2. **其余尚未完成的任务不会被取消**——它们仍然在后台继续运行，只是你已经拿不到它们的返回值了（因为 `gather` 已经以异常结束）。\n\n```python\nimport asyncio\n\nasync def ok():\n    await asyncio.sleep(1)\n    print(\"ok 完成\")\n    return \"ok\"\n\nasync def bad():\n    await asyncio.sleep(0.5)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok(), bad())\n    except ValueError as e:\n        print(f\"捕获到异常: {e}\")\n        # 此时 ok() 仍在后台运行，不会被自动取消\n\nasyncio.run(main())\n```\n\n输出大致是：\n\n```\n捕获到异常: 出错了\nok 完成\n```\n\n可以看到 `ok()` 依然跑完了。\n\n---\n\n如果把 `return_exceptions=True`，行为就不同了：异常不会被抛出，而是作为普通返回值放进结果列表里，`gather` 会等所有任务都结束后才返回。\n\n```python\nresults = await asyncio.gather(ok(), bad(), return_exceptions=True)\n# results == [\"ok\", ValueError(\"出错了\")]\n```\n\n所以实际使用时，如果你希望某个任务失败后及时取消其余任务，需要自己手动处理取消逻辑，或者考虑用 Python 3.11 引入的 `asyncio.TaskGroup`——它在任一任务异常时会自动取消同组的其他任务。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "用 `return_exceptions=True` 就行：\n\n```python\nresults = await asyncio.gather(task1(), task2(), task3(), return_exceptions=True)\n```\n\n这样每个任务都会跑完，返回的 `results` 是一个列表，成功的位置放返回值，失败的位置放异常对象。处理时按类型区分就好：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, Exception):\n        print(f\"任务 {i} 失败: {r}\")\n    else:\n        print(f\"任务 {i} 成功: {r}\")\n```\n\n一个要注意的点：`KeyboardInterrupt` 和 `SystemExit` 不是 `Exception` 的子类，是 `BaseException`。如果你的场景可能遇到这类，判断时用 `BaseException` 更稳妥，不过一般业务代码里 `Exception` 就够了。",
+            "B": "就是你刚才提到的那个参数——把 `return_exceptions` 设为 `True` 就行。\n\n```python\nresults = await asyncio.gather(task_a(), task_b(), task_c(), return_exceptions=True)\n```\n\n这样的话：\n\n- 所有任务都会跑完，不会因为某个任务异常而中断。\n- 返回的 `results` 列表与传入的任务顺序一一对应。\n- 正常完成的任务对应其返回值，抛异常的任务对应异常对象本身。\n\n拿到结果后可以逐个判断：\n\n```python\nfor i, result in enumerate(results):\n    if isinstance(result, Exception):\n        print(f\"任务 {i} 失败: {result}\")\n    else:\n        print(f\"任务 {i} 成功: {result}\")\n```\n\n一个需要注意的细节：`isinstance(result, Exception)` 不会捕获 `KeyboardInterrupt`、`SystemExit` 这类继承自 `BaseException` 但不继承 `Exception` 的异常。如果你的任务可能抛出这类异常，判断时要用 `BaseException`。不过一般业务场景下用 `Exception` 就够了。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "\n\n```python\nimport asyncio\n\nasync def fetch_data():\n    await asyncio.sleep(1)\n    return {\"id\": 1, \"name\": \"宁宁\"}\n\nasync def fetch_error():\n    await asyncio.sleep(0.5)\n    raise ValueError(\"请求超时\")\n\nasync def fetch_number():\n    await asyncio.sleep(0.8)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        fetch_data(),\n        fetch_error(),\n        fetch_number(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, Exception):\n            print(f\"任务 {i} 失败: {type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功: {r}\")\n\nasyncio.run(main())\n```\n\n输出：\n\n```\n任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败: ValueError: 请求超时\n任务 2 成功: 42\n```\n\n三个任务并发执行，失败的不影响其余两个，最后在结果列表里按下标逐个判断类型就好。",
+            "B": "\n\n```python\nimport asyncio\n\nasync def fetch_data():\n    await asyncio.sleep(0.5)\n    return {\"id\": 1, \"name\": \"宁宁\"}\n\nasync def fetch_config():\n    await asyncio.sleep(0.3)\n    raise TimeoutError(\"配置服务超时\")\n\nasync def fetch_status():\n    await asyncio.sleep(0.4)\n    return \"running\"\n\nasync def main():\n    tasks = [fetch_data(), fetch_config(), fetch_status()]\n    labels = [\"data\", \"config\", \"status\"]\n\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for label, result in zip(labels, results):\n        if isinstance(result, Exception):\n            print(f\"[失败] {label}: {type(result).__name__}: {result}\")\n        else:\n            print(f\"[成功] {label}: {result}\")\n\nasyncio.run(main())\n```\n\n输出：\n\n```\n[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] config: TimeoutError: 配置服务超时\n[成功] status: running\n```\n\n三个任务都跑完了，异常的那个不影响其余两个，结果顺序和传入顺序一致。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接作为原始异常对象返回，没有任何额外封装。\n\n也就是说，`fetch_error` 里抛的是 `ValueError(\"请求超时\")`，列表里拿到的就是这个 `ValueError` 实例本身，可以直接访问它的属性：\n\n```python\nr = results[1]\nprint(type(r))      # <class 'ValueError'>\nprint(r.args)       # ('请求超时',)\nprint(r.__traceback__)  # traceback 对象，可用 traceback 模块格式化\n```\n\n不会像 `TaskGroup` 那样包一层 `ExceptionGroup`，就是原样放进去的。",
+            "B": "直接作为元素返回，不做任何封装。\n\n任务里 `raise TimeoutError(\"超时\")` ，结果列表对应位置拿到的就是那个 `TimeoutError` 实例本身。你可以直接访问它的属性、打印它、甚至用 `raise result` 重新抛出，和你在 `except` 块里捕获到的对象没有区别。"
+          }
+        ]
+      },
+      {
+        "group_id": "m3-r2",
+        "turns": [
+          {
+            "turn_id": 1,
+            "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+            "A": "好问题。\n\n默认行为（`return_exceptions=False`，即默认值）是这样的：\n\n---\n\n### 当某个任务抛出异常时\n\n1. **`gather` 返回的那个聚合 Future 会立即被设置为失败**，异常会从 `await asyncio.gather(...)` 处抛出——你拿到的是**第一个**被传播的异常。\n\n2. **其余尚未完成的任务不会被自动取消，它们会继续运行。** 这一点经常让人踩坑：异常虽然抛出了，但后台任务还在跑，可能产生副作用或资源泄漏。\n\n3. 如果有多个任务几乎同时失败，你也只会看到其中一个异常，其余的会被静默吞掉（logged to the task's exception handler，但不会再向调用者传播）。\n\n---\n\n### 对比 `return_exceptions=True`\n\n如果传入 `return_exceptions=True`，`gather` 会等**所有**任务完成，把每个任务的返回值或异常对象一起放进结果列表里返回，不会向外抛异常。\n\n```python\nresults = await asyncio.gather(coro1(), coro2(), coro3(), return_exceptions=True)\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"任务失败: {r}\")\n    else:\n        print(f\"任务成功: {r}\")\n```\n\n---\n\n### 想要\"一个失败就取消其余\"怎么办？\n\n默认的 `gather` 不提供这个语义。Python 3.11+ 引入的 `asyncio.TaskGroup` 才有这个行为——任何子任务异常时，`TaskGroup` 会自动取消其余任务，并把所有异常汇总到 `ExceptionGroup` 里抛出。\n\n```python\nasync with asyncio.TaskGroup() as tg:\n    tg.create_task(coro1())\n    tg.create_task(coro2())\n    # 任何一个失败 → 其余被取消 → 退出时抛 ExceptionGroup\n```\n\n简单总结：`gather` 默认抛第一个异常但**不取消**其余任务；想要自动取消的话，用 `TaskGroup`。",
+            "B": "默认行为是：`asyncio.gather` 会**立即将那个异常传播出来**——也就是说，`await asyncio.gather(...)` 本身会抛出该异常。\n\n但有几个细节值得注意：\n\n1. **其余任务不会被取消。** 虽然异常被抛出了，其他还在运行的任务仍然会继续跑完（或者说它们变成了\"孤立\"任务，结果没人去收集了）。\n2. **如果有多个任务抛出异常，只会看到第一个。** `gather` 只传播最先被发现的那个异常，其余异常会被静默吞掉（可能触发 `asyncio` 的 \"Task exception was never retrieved\" 警告）。\n3. **`return_exceptions=True` 可以改变这个行为。** 加上这个参数后，异常不会被抛出，而是作为普通返回值出现在结果列表里，这样你就能拿到所有任务的结果和异常，统一处理。\n\n简单对比：\n\n```python\n# 默认——第一个异常直接炸出来\ntry:\n    results = await asyncio.gather(task_a(), task_b(), task_c())\nexcept Exception as e:\n    print(f\"捕获到: {e}\")\n    # 但 task_b、task_c 可能还在后台跑\n\n# return_exceptions=True——异常变成返回值\nresults = await asyncio.gather(task_a(), task_b(), task_c(), return_exceptions=True)\nfor r in results:\n    if isinstance(r, Exception):\n        print(f\"某个任务失败了: {r}\")\n```\n\n所以实际使用中，如果你希望\"全部跑完再统一看结果\"，一般都会加 `return_exceptions=True`。"
+          },
+          {
+            "turn_id": 2,
+            "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+            "A": "就是你刚才可能已经猜到的——把 `return_exceptions` 设为 `True`：\n\n```python\nresults = await asyncio.gather(\n    coro1(),\n    coro2(),\n    coro3(),\n    return_exceptions=True,\n)\n```\n\n这样 `gather` 会等所有任务跑完，返回一个列表，顺序和传入的协程一一对应。成功的位置放返回值，失败的位置放异常**对象**（不会被抛出）。\n\n处理结果时区分一下就行：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, BaseException):\n        print(f\"任务 {i} 失败: {r}\")\n    else:\n        print(f\"任务 {i} 成功: {r}\")\n```\n\n唯一要注意的点：这里判断用 `BaseException` 比 `Exception` 更稳妥，因为 `asyncio.CancelledError` 在 Python 3.9+ 是 `BaseException` 的子类，不被 `Exception` 捕获。",
+            "B": "就是刚才提到的 `return_exceptions=True`：\n\n```python\nresults = await asyncio.gather(\n    task_a(),\n    task_b(),\n    task_c(),\n    return_exceptions=True,\n)\n```\n\n这样每个任务的结果会按顺序出现在 `results` 列表里——成功的就是正常返回值，失败的就是对应的异常对象。所有任务都会跑完，互不影响。\n\n处理结果时可以这样区分：\n\n```python\nfor i, r in enumerate(results):\n    if isinstance(r, BaseException):\n        print(f\"任务 {i} 失败: {r}\")\n    else:\n        print(f\"任务 {i} 成功: {r}\")\n```\n\n用 `BaseException` 而不是 `Exception` 来判断会更稳妥，因为 `asyncio.CancelledError` 在 Python 3.9+ 继承自 `BaseException` 而非 `Exception`。"
+          },
+          {
+            "turn_id": 3,
+            "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+            "A": "\n\n```python\nimport asyncio\n\n\nasync def success_task():\n    await asyncio.sleep(0.5)\n    return \"ok\"\n\n\nasync def fail_task():\n    await asyncio.sleep(0.3)\n    raise ValueError(\"something went wrong\")\n\n\nasync def slow_task():\n    await asyncio.sleep(1)\n    return 42\n\n\nasync def main():\n    results = await asyncio.gather(\n        success_task(),\n        fail_task(),\n        slow_task(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i} 失败: {type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功: {r}\")\n\n\nasyncio.run(main())\n```\n\n运行输出：\n\n```\n任务 0 成功: ok\n任务 1 失败: ValueError: something went wrong\n任务 2 成功: 42\n```\n\n三个任务并发执行，`fail_task` 的异常不会中断其余两个，最终 `results` 按传入顺序排列，逐个判断类型就能区分成功和失败。",
+            "B": "\n\n```python\nimport asyncio\n\n\nasync def fetch_data(name: str, should_fail: bool = False) -> str:\n    await asyncio.sleep(0.5)\n    if should_fail:\n        raise ValueError(f\"{name} 出错了\")\n    return f\"{name} 的数据\"\n\n\nasync def main():\n    results = await asyncio.gather(\n        fetch_data(\"A\"),\n        fetch_data(\"B\", should_fail=True),\n        fetch_data(\"C\"),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i} 失败: {type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功: {r}\")\n\n\nasyncio.run(main())\n```\n\n运行输出：\n\n```\n任务 0 成功: A 的数据\n任务 1 失败: ValueError: B 出错了\n任务 2 成功: C 的数据\n```\n\n三个任务并发执行，任务 B 抛异常也不影响 A 和 C 正常返回，最后统一拿到所有结果。"
+          },
+          {
+            "turn_id": 4,
+            "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+            "A": "直接就是原始的异常实例，没有任何额外封装。\n\n比如你的任务里 `raise ValueError(\"something went wrong\")`，列表对应位置拿到的就是那个 `ValueError` 对象本身。你可以直接访问它的 `args`、用 `traceback` 模块提取堆栈，或者 `raise r` 重新抛出，跟你在 `except` 块里捕获到的完全一样。\n\n```python\nr = results[1]\ntype(r)        # <class 'ValueError'>\nr.args         # ('something went wrong',)\nr.__traceback__  # 原始的 traceback 对象，可用 traceback.print_exception 打印\n```\n\n所以判断类型时直接 `isinstance(r, ValueError)` 或更宽泛的 `isinstance(r, BaseException)` 就够了，不需要拆什么包装层。",
+            "B": "是直接作为元素返回的，不会额外封装。\n\n列表里拿到的就是任务抛出的那个原始异常实例本身，比如 `ValueError(\"B 出错了\")`，你可以直接访问它的 `args`、`__traceback__` 等属性，和你在 `except` 里捕获到的是同一个对象，没有任何中间包装层。"
+          }
+        ]
+      }
+    ]
+  },
+  "revealed_key": {
+    "m1-r0": {
+      "model": "gemini-3.8-flash-high",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m1-r1": {
+      "model": "gemini-3.8-flash-high",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m1-r2": {
+      "model": "gemini-3.8-flash-high",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m2-r0": {
+      "model": "claude-sonnet-4-6",
+      "labels": {
+        "A": "baseline_v5",
+        "B": "candidate_v6"
+      }
+    },
+    "m2-r1": {
+      "model": "claude-sonnet-4-6",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m2-r2": {
+      "model": "claude-sonnet-4-6",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m3-r0": {
+      "model": "claude-opus-4-6-thinking",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m3-r1": {
+      "model": "claude-opus-4-6-thinking",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    },
+    "m3-r2": {
+      "model": "claude-opus-4-6-thinking",
+      "labels": {
+        "A": "candidate_v6",
+        "B": "baseline_v5"
+      }
+    }
+  },
+  "program_execution": {
+    "python": "3.12.14 (main, Aug 14 2026, 15:24:41) [Clang 22.1.3 ]",
+    "method": "27 manually reviewed synthetic asyncio-only programs; isolated subprocess, empty task environment, 10 second timeout each",
+    "expected_output_normalization": "strip surrounding whitespace and explanatory inline # annotations in output fences; preserve source code",
+    "script_sha256": "738560b21da70eea29431ee05bd954090a8327b7fca66d8e5ec6ffa608a945d4",
+    "masked_pack_sha256": "15558e2b5b2d7fa9f41c77cf3f6483f3cd191a0f2c29194638999777938f45dc",
+    "programs": [
+      {
+        "sample": "m1-r0-t3-A-b0",
+        "group_id": "m1-r0",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "79208533e98aa85990448833a14f4c7527e90935813d2e542a39774cb7f83474",
+        "returncode": 0,
+        "stdout": "[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 处理失败！\n[3] 成功: 任务 3 的数据\n",
+        "stderr": "",
+        "claimed_output": "[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 处理失败！\n[3] 成功: 任务 3 的数据",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m1-r0-t3-B-b0",
+        "group_id": "m1-r0",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "8663b9de09b79d762297c402005e1c309f1923581b0811666588a93ae105fe1c",
+        "returncode": 0,
+        "stdout": "[1] 成功，获取到结果: 任务 1 成功结果\n[2] 失败，捕获到异常: ValueError -> 任务 2 发生错误！\n[3] 成功，获取到结果: 任务 3 成功结果\n",
+        "stderr": "",
+        "claimed_output": "[1] 成功，获取到结果: 任务 1 成功结果\n[2] 失败，捕获到异常: ValueError -> 任务 2 发生错误！\n[3] 成功，获取到结果: 任务 3 成功结果",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m1-r1-t3-A-b0",
+        "group_id": "m1-r1",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "db67a773085b4af0025bb386f6b2e2ac806b5d9718b01456e9c6a5680531f036",
+        "returncode": 0,
+        "stdout": "[1] 正常结果: 任务 1 成功\n[2] 捕获到异常: ValueError - 任务 2 发生错误\n[3] 正常结果: 任务 3 成功\n",
+        "stderr": "",
+        "claimed_output": "[1] 正常结果: 任务 1 成功\n[2] 捕获到异常: ValueError - 任务 2 发生错误\n[3] 正常结果: 任务 3 成功",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m1-r1-t3-B-b0",
+        "group_id": "m1-r1",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "cbdd6ac983821e9be768e4b6fb7c77cf72a61778e2a92fc147753dbf5376efeb",
+        "returncode": 0,
+        "stdout": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败: ValueError -> 任务 2 发生错误！\n[3] 执行成功: 任务 3 的结果\n",
+        "stderr": "",
+        "claimed_output": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败: ValueError -> 任务 2 发生错误！\n[3] 执行成功: 任务 3 的结果",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m1-r2-t3-A-b0",
+        "group_id": "m1-r2",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "e5b0cc875f4016d15d22b50b97c3ca89ec5200b25b77f19e9a1a30454c464f99",
+        "returncode": 0,
+        "stdout": "[成功] 任务 1 正常返回: 任务 1 的结果\n[失败] 任务 2 抛出异常: ValueError - 数据请求失败：404\n[成功] 任务 3 正常返回: 任务 3 的结果\n",
+        "stderr": "",
+        "claimed_output": "[成功] 任务 1 正常返回: 任务 1 的结果\n[失败] 任务 2 抛出异常: ValueError - 数据请求失败：404\n[成功] 任务 3 正常返回: 任务 3 的结果",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m1-r2-t3-B-b0",
+        "group_id": "m1-r2",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "de7d0d6be97ee61e282df2be5560ace35a0d651e750da7bc336aa740e1d08899",
+        "returncode": 0,
+        "stdout": "[1] 成功: 任务 1 顺利完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 顺利完成\n",
+        "stderr": "",
+        "claimed_output": "[1] 成功: 任务 1 顺利完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 顺利完成",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r0-t1-A-b0",
+        "group_id": "m2-r0",
+        "turn_id": 1,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "c611e830ce12660ad8ce3968c5267749671db8ebf10347fe6e8dc7b204a6ff6e",
+        "returncode": 0,
+        "stdout": "捕获到异常：出错了\n",
+        "stderr": "",
+        "claimed_output": null,
+        "claimed_output_matches": null
+      },
+      {
+        "sample": "m2-r0-t1-B-b0",
+        "group_id": "m2-r0",
+        "turn_id": 1,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "fc7ef7ef06b4fa37abf5659896209b3cdf3b44f4c809243a25db9cb33a64e916",
+        "returncode": 0,
+        "stdout": "捕获到异常: 出错了\n",
+        "stderr": "",
+        "claimed_output": "捕获到异常: 出错了\nok_task 完成        # 仍然执行完了",
+        "claimed_output_matches": false
+      },
+      {
+        "sample": "m2-r0-t2-A-b0",
+        "group_id": "m2-r0",
+        "turn_id": 2,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "9fc8c419e0b087f453ef2d28ca81a7e5a2b278f04ecbf20426ede53c09411985",
+        "returncode": 0,
+        "stdout": "任务 0 结果：成功\n任务 1 异常：失败了\n任务 2 结果：42\n",
+        "stderr": "",
+        "claimed_output": "任务 0 结果：成功\n任务 1 异常：失败了\n任务 2 结果：42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r0-t3-A-b0",
+        "group_id": "m2-r0",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "752a7067f8fd07d91484978566f976a26a0ebe2ed23f13efb390487685a25a10",
+        "returncode": 0,
+        "stdout": "[成功] 任务 0：task_a 完成\n[异常] 任务 1：ValueError: task_b 出错\n[异常] 任务 2：RuntimeError: task_c 也出错\n",
+        "stderr": "",
+        "claimed_output": "[成功] 任务 0：task_a 完成\n[异常] 任务 1：ValueError: task_b 出错\n[异常] 任务 2：RuntimeError: task_c 也出错",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r0-t3-B-b0",
+        "group_id": "m2-r0",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "a584df56858cf6ca12d39e40dbb4dae98c190ce19417b017294c2245c9be0c2b",
+        "returncode": 0,
+        "stdout": "任务 0 成功: 成功结果\n任务 1 异常: ValueError: 任务失败了\n任务 2 成功: 42\n",
+        "stderr": "",
+        "claimed_output": "任务 0 成功: 成功结果\n任务 1 异常: ValueError: 任务失败了\n任务 2 成功: 42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r1-t1-A-b0",
+        "group_id": "m2-r1",
+        "turn_id": 1,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "b8c0ebb19b301e84206a4e9b44013e8dceb11eebd6c2de539d81296d6baf0e9b",
+        "returncode": 0,
+        "stdout": "捕获到: 出错了\n",
+        "stderr": "",
+        "claimed_output": "捕获到: 出错了\nok 完成          # 仍然执行完了",
+        "claimed_output_matches": false
+      },
+      {
+        "sample": "m2-r1-t2-A-b0",
+        "group_id": "m2-r1",
+        "turn_id": 2,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "111262bbfc4cdc34857eac4dc067b6ceaa3e11aa9db30f6183f8140177f9386f",
+        "returncode": 0,
+        "stdout": "任务 0 结果: a 完成\n任务 1 异常: b 出错了\n任务 2 结果: c 完成\n",
+        "stderr": "",
+        "claimed_output": "任务 0 结果: a 完成\n任务 1 异常: b 出错了\n任务 2 结果: c 完成",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r1-t2-B-b0",
+        "group_id": "m2-r1",
+        "turn_id": 2,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "6247fc6643e6f52f8b07a33abdbd46a3c736c45a9de96c25cbffc57676d2aa33",
+        "returncode": 0,
+        "stdout": "task 1 结果：task 1 完成\ntask 2 异常：task 2 出错\ntask 3 结果：task 3 完成\n",
+        "stderr": "",
+        "claimed_output": "task 1 结果：task 1 完成\ntask 2 异常：task 2 出错\ntask 3 结果：task 3 完成",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r1-t3-A-b0",
+        "group_id": "m2-r1",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "7be9f405aa334422f827a3144be6e4c21b5175f964e9719c0d102c37fa93ff40",
+        "returncode": 0,
+        "stdout": "任务 0 结果: 成功\n任务 1 异常 [RuntimeError]: 任务失败\n任务 2 结果: 也成功\n",
+        "stderr": "",
+        "claimed_output": "任务 0 结果: 成功\n任务 1 异常 [RuntimeError]: 任务失败\n任务 2 结果: 也成功",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r1-t3-B-b0",
+        "group_id": "m2-r1",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "62fc581443a88fef96521c589b6a6fde3f64cd7ffca80023b40ab39d01758595",
+        "returncode": 0,
+        "stdout": "[正常] task 1: task 1 成功\n[异常] task 2: task 2 失败\n[正常] task 3: task 3 成功\n[异常] task 4: task 4 失败\n[正常] task 5: task 5 成功\n",
+        "stderr": "",
+        "claimed_output": "[正常] task 1: task 1 成功\n[异常] task 2: task 2 失败\n[正常] task 3: task 3 成功\n[异常] task 4: task 4 失败\n[正常] task 5: task 5 成功",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r2-t3-A-b0",
+        "group_id": "m2-r2",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "9300eee510fa99d79ecc6db9de6afb8e61398f0f6192e596e4eb093d65d0b14f",
+        "returncode": 0,
+        "stdout": "task1 结果：成功\ntask2 异常：ValueError: 出错了\ntask3 结果：42\n",
+        "stderr": "",
+        "claimed_output": "task1 结果：成功\ntask2 异常：ValueError: 出错了\ntask3 结果：42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m2-r2-t3-B-b0",
+        "group_id": "m2-r2",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "a1d3ceebefbd5cbcf62defebefdb903ef6fb6e0c85e1bd1a8525b419e791f0c3",
+        "returncode": 0,
+        "stdout": "任务 1 结果：成功\n任务 2 异常：ValueError: 出错了\n任务 3 结果：42\n",
+        "stderr": "",
+        "claimed_output": "任务 1 结果：成功\n任务 2 异常：ValueError: 出错了\n任务 3 结果：42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r0-t1-A-b0",
+        "group_id": "m3-r0",
+        "turn_id": 1,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "1c8b2f4f00f11cc29c6833cbf0bd0c13326da7701a33a993ccdaef306dc2f06a",
+        "returncode": 0,
+        "stdout": "捕获到异常: 出错了\nok 完成\n",
+        "stderr": "",
+        "claimed_output": "捕获到异常: 出错了\nok 完成",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r0-t3-A-b0",
+        "group_id": "m3-r0",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "e8b992ed97a5d27c79ab7b9d0d44e977c93efef707a52842e174a36093f6e070",
+        "returncode": 0,
+        "stdout": "[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] score: TimeoutError: 请求超时\n[成功] status: online\n",
+        "stderr": "",
+        "claimed_output": "[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] score: TimeoutError: 请求超时\n[成功] status: online",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r0-t3-B-b0",
+        "group_id": "m3-r0",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "5ba51f93fa69f2e3e049f09ab4ff36eda4303f3c77a246091cc7b6b5c5679be5",
+        "returncode": 0,
+        "stdout": "任务 0: 成功 — A 的数据\n任务 1: 失败 — ValueError('B 出错了')\n任务 2: 成功 — C 的数据\n",
+        "stderr": "",
+        "claimed_output": "任务 0: 成功 — A 的数据\n任务 1: 失败 — ValueError('B 出错了')\n任务 2: 成功 — C 的数据",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r1-t1-A-b0",
+        "group_id": "m3-r1",
+        "turn_id": 1,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "cebb97349d06c8600bbdcab5f43ea2466b854379fd97004b265ba7bb37e8a869",
+        "returncode": 0,
+        "stdout": "捕获异常: 出错了\nok 完成\n",
+        "stderr": "",
+        "claimed_output": null,
+        "claimed_output_matches": null
+      },
+      {
+        "sample": "m3-r1-t1-B-b0",
+        "group_id": "m3-r1",
+        "turn_id": 1,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "847c989892d5f2609028e41c8341492a935f2dd945a7c9c5f45699c45ca544e0",
+        "returncode": 0,
+        "stdout": "捕获到异常: 出错了\n",
+        "stderr": "",
+        "claimed_output": "捕获到异常: 出错了\nok 完成",
+        "claimed_output_matches": false
+      },
+      {
+        "sample": "m3-r1-t3-A-b0",
+        "group_id": "m3-r1",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "5d79b866e6b693213a23887151220f09d530a55f147ba6e3deea184b6511b6e1",
+        "returncode": 0,
+        "stdout": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败: ValueError: 请求超时\n任务 2 成功: 42\n",
+        "stderr": "",
+        "claimed_output": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败: ValueError: 请求超时\n任务 2 成功: 42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r1-t3-B-b0",
+        "group_id": "m3-r1",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "221b505f6f54f3a23f8f2e116eddf427bc65b358727c9ef45cde062bc9654ab7",
+        "returncode": 0,
+        "stdout": "[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] config: TimeoutError: 配置服务超时\n[成功] status: running\n",
+        "stderr": "",
+        "claimed_output": "[成功] data: {'id': 1, 'name': '宁宁'}\n[失败] config: TimeoutError: 配置服务超时\n[成功] status: running",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r2-t3-A-b0",
+        "group_id": "m3-r2",
+        "turn_id": 3,
+        "label": "A",
+        "block_index": 0,
+        "code_sha256": "99d7632b48b5ba581792e7223916ed10759951b75b2ff68ce258a9b2b3929741",
+        "returncode": 0,
+        "stdout": "任务 0 成功: ok\n任务 1 失败: ValueError: something went wrong\n任务 2 成功: 42\n",
+        "stderr": "",
+        "claimed_output": "任务 0 成功: ok\n任务 1 失败: ValueError: something went wrong\n任务 2 成功: 42",
+        "claimed_output_matches": true
+      },
+      {
+        "sample": "m3-r2-t3-B-b0",
+        "group_id": "m3-r2",
+        "turn_id": 3,
+        "label": "B",
+        "block_index": 0,
+        "code_sha256": "865262d842ba6cdaeb512abd201addbbca13c8066ae6c70bf3ddedfa726272fa",
+        "returncode": 0,
+        "stdout": "任务 0 成功: A 的数据\n任务 1 失败: ValueError: B 出错了\n任务 2 成功: C 的数据\n",
+        "stderr": "",
+        "claimed_output": "任务 0 成功: A 的数据\n任务 1 失败: ValueError: B 出错了\n任务 2 成功: C 的数据",
+        "claimed_output_matches": true
+      }
+    ]
+  },
+  "technical_oracle": {
+    "python": "3.12.14 (main, Aug 14 2026, 15:24:41) [Clang 22.1.3 ]",
+    "default_scope": {
+      "ordinary_error_propagated_before_sibling_finished": true,
+      "gather_did_not_cancel_sibling": true,
+      "sibling_finished_when_loop_kept_running": true
+    },
+    "runner_shutdown": {
+      "runner_shutdown_state": [
+        "main_returned_after_catch",
+        "cancelled_during_shutdown"
+      ]
+    },
+    "late_error": {
+      "later_exception_retrieved_by_gather_callback": true,
+      "loop_exception_notices": 0,
+      "inspection_scope": "CPython Task._log_traceback after the gather callback; not a cross-implementation guarantee"
+    },
+    "return_exceptions": {
+      "ordered_normal_result": 17,
+      "ordinary_exception_object_returned_directly": true
+    },
+    "script_sha256": "b2cbd0eae49ff5279c3bd9a7f73d526e5858bc6f3a5e070c1ac70ae3bb77398c",
+    "installed_gather_source_sha256": "9c3649973cb080d6444ea880450c8642b5a99b8e5bfe48e367558a8798eeaed9",
+    "official_sources": [
+      "https://docs.python.org/3.12/library/asyncio-task.html#asyncio.gather",
+      "https://docs.python.org/3.12/library/asyncio-runner.html",
+      "https://github.com/python/cpython/blob/3.12/Lib/asyncio/tasks.py"
+    ]
+  },
+  "technical_extra_oracle": {
+    "python": "3.12.14 (main, Aug 14 2026, 15:24:41) [Clang 22.1.3 ]",
+    "scope": "CPython 3.12 default coroutine/Task execution under asyncio.run; special exceptions confined to child processes; no custom pre-completed Future claims",
+    "ordinary_return_and_child_cancel": {
+      "normally_returned_exception_is_same_object": true,
+      "normally_returned_exception_passes_exception_typecheck": true,
+      "value_error_has_message_attribute": false,
+      "cancelled_child_result_type": "CancelledError",
+      "cancelled_child_result_is_exception": false,
+      "cancelled_child_result_is_base_exception": true
+    },
+    "special_exception_processes": [
+      {
+        "exception": "KeyboardInterrupt",
+        "source_sha256": "81b7709f202f70c068ad90437fce57e6ea84acdf45c2c228f6906535dbe5b774",
+        "returncode": 0,
+        "stdout": "{\"outer_exception\": \"KeyboardInterrupt\", \"returned_state\": []}\n",
+        "stderr": "",
+        "observed": {
+          "outer_exception": "KeyboardInterrupt",
+          "returned_state": []
+        }
+      },
+      {
+        "exception": "SystemExit",
+        "source_sha256": "a11f41770862211e0e19a6c454d804122c4f0562629581ebeabfb59a36c35f9a",
+        "returncode": 0,
+        "stdout": "{\"outer_exception\": \"SystemExit\", \"returned_state\": []}\n",
+        "stderr": "",
+        "observed": {
+          "outer_exception": "SystemExit",
+          "returned_state": []
+        }
+      }
+    ],
+    "script_sha256": "1cd531beb78744de7e0107835d92f4c40d3968fef41d00fc2d4760958e8b971f"
+  },
+  "opus_resume": {
+    "before_saved_replies": 15,
+    "missing_replies": 9,
+    "resume_script_sha256": "78a34276c31ed989a5936df1037349fbdfb842b7fafb0d0c3d1c5ed2f679aeb2",
+    "before_artifact_sha256": {
+      "metadata.json": "723f0ca812beadeb93f9ea58fd262d9545501da26246a9a12b619930c06d2e0e",
+      "results.jsonl": "1473686b19d5fe7a62d2e4c5fc59eef6388fefeb0679a65e9f64444e5ee9cdd3",
+      "provider-rounds.jsonl": "6fd191e36b034c4b05f50413da14f2c30273a74f84a5c52dfb54174501a4ee69",
+      "incomplete.jsonl": "913ea04be507d4cd7c62526f3cefbb109c112420bca2b79128f0d25725483169"
+    },
+    "initial15_reply_bytes_preserved": true,
+    "metadata_identity_unchanged": true,
+    "failed_runtime_attempts_retained": 3,
+    "adapter_max_http_attempts_per_runtime_attempt": 3,
+    "attempt_limit_includes_initial_request": true,
+    "billing_caveat": "HTTP retries are not counted as free or inferred billed model completions; failed usage unknown"
+  },
+  "availability_control_separate_from_quality_samples": {
+    "scope": "single tiny availability control after two retained HTTP503 failures; not a quality sample",
+    "model": "claude-opus-4-6-thinking",
+    "started_at": "2026-09-30T20:36:11.531444+00:00",
+    "text": "READY_Q02",
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 25,
+      "completion_tokens": 8,
+      "total_tokens": 33,
+      "reasoning_tokens": null
+    },
+    "error_type": null,
+    "status_code": null,
+    "dollar_cost": null,
+    "finished_at": "2026-09-30T20:36:13.887157+00:00"
+  },
+  "script_sha256": {
+    "technical-scope-ab-20261001.py": "caf9904a639e9e817796e1854960171ab61eb1ff1212b16b5115c68e94d7a64b",
+    "technical-scope-ab-resume-opus-20261001.py": "78a34276c31ed989a5936df1037349fbdfb842b7fafb0d0c3d1c5ed2f679aeb2",
+    "prepare-technical-scope-review-20261001.py": "17c5d882b705018bb43ab8abeee797fc969be1104eec12d5ec34ec042eccf1f2",
+    "execute-technical-scope-examples-20261001.py": "738560b21da70eea29431ee05bd954090a8327b7fca66d8e5ec6ffa608a945d4",
+    "technical-scope-oracle-20261001.py": "b2cbd0eae49ff5279c3bd9a7f73d526e5858bc6f3a5e070c1ac70ae3bb77398c",
+    "technical-scope-extra-oracle-20261001.py": "1cd531beb78744de7e0107835d92f4c40d3968fef41d00fc2d4760958e8b971f",
+    "publish-technical-scope-evidence-20261001.py": "b81be19673bb1f4fa63678e3d6d0b890d6bbbd7b15ff0164a543d30a8fa686cc"
+  }
+}
