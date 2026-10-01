@@ -20,7 +20,7 @@ from chatwaifu_runtime.agent.input_budget import (
     estimate_input_tokens,
     fit_input_budget,
 )
-from chatwaifu_runtime.agent.source_context import project_source_context
+from chatwaifu_runtime.agent.source_context import can_reuse_prior_sources, project_source_context
 from chatwaifu_runtime.conversation.source_context import SourceContextPacket
 from chatwaifu_runtime.providers.contracts import (
     LlmEmptyResponseError,
@@ -351,6 +351,23 @@ class AgentTurnOrchestrator:
                 allow_tools=allow_tools,
                 supports_tool_calling=effective_llm.supports_tool_calling,
             )
+        if (
+            projections
+            and source_context is not None
+            and can_reuse_prior_sources(request.user_text, source_context)
+        ):
+            # Relevant schemas can include "reminder"/"checklist" writes even
+            # when the user only asks to format an already-read document. Such
+            # exposure is not an execution request. Explicit fresh operations
+            # are excluded by the source-transformation eligibility check.
+            logger.info(
+                "agent.prior_sources_reused generation=%s receipts=%d tools_omitted=%d",
+                request.generation_id,
+                len(source_context.receipts),
+                len(projections),
+            )
+            projections = ()
+            request = replace(request, tools=(), tool_choice="auto")
         if not projections:
             if source_context is not None:
                 ensure_current()

@@ -82,6 +82,9 @@ async def _turn(container: RuntimeContainer, session_id: UUID, text: str) -> Non
     "mode",
     [
         "available",
+        "source_summary",
+        "source_summary_fresh",
+        "source_summary_write",
         "history_budget",
         "restart",
         "evicted",
@@ -202,9 +205,24 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
                 "UPDATE generations SET state = ? WHERE generation_id = ?",
                 (mode, str(runs[0].generation_id)),
             )
-        await _turn(container, session.session_id, "把刚才的要求整理成出发前清单。")
+        followup = (
+            "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，"
+            "以及当前规则仍需要再核实的提醒。"
+            if mode == "source_summary"
+            else "把刚才的公告整理成清单，并重新查询今天的最新规定。"
+            if mode == "source_summary_fresh"
+            else "把刚才的公告整理成清单，并提醒我明天上午检查。"
+            if mode == "source_summary_write"
+            else "把刚才的要求整理成出发前清单。"
+        )
+        await _turn(container, session.session_id, followup)
         final = provider.requests[-1]
         supplied = "\n".join(text for _role, text in final.context)
+        if mode == "source_summary":
+            assert len(provider.requests) == 3
+            assert final.tools == ()
+        elif mode in {"source_summary_fresh", "source_summary_write"}:
+            assert final.tools and final.tool_choice == "required"
         if mode == "history_budget":
             assert final.history == ()
             reports = await container.database.fetchall(
@@ -215,7 +233,13 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
                 json.loads(str(reports[0]["payload_json"]))["report"]["dropped_history_turns"] == 2
             )
             assert runs[0].skill_run_id in container.runtime_skills._ephemeral_results
-        if mode in {"available", "history_budget"}:
+        if mode in {
+            "available",
+            "history_budget",
+            "source_summary",
+            "source_summary_fresh",
+            "source_summary_write",
+        }:
             assert _BODY in supplied and _URL in supplied
             assert "2026-10-01T00:00:00+00:00" in supplied
             assert any(role == "user" and _BODY in text for role, text in final.context)
@@ -227,7 +251,13 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         elif mode == "denied":
             assert '"error_code": "permission_denied"' in supplied
             assert '"original_result": "not_succeeded"' in supplied
-        elif mode not in {"available", "history_budget"}:
+        elif mode not in {
+            "available",
+            "history_budget",
+            "source_summary",
+            "source_summary_fresh",
+            "source_summary_write",
+        }:
             assert "[PUBLIC SOURCE DATA]" not in supplied
         assert final.tool_exchanges == ()
         assert executions == ([] if mode == "denied" else [{"url": _URL}])

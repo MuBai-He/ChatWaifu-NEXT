@@ -49,6 +49,19 @@ old metadata is omitted with an explicit marker while receipt states remain inta
 Existing cancellation and final input
 guards still govern dispatch.
 
+Tool-schema exposure does not itself require an external operation. The Agent may
+use the text-only path for an explicit transformation of prior source material,
+only when a successful host public READ receipt has an available nonempty original.
+A bounded, conservative check examines the current user's request, not retrieved
+body text or old assistant prose. Supplied URLs, fresh verification, latest facts
+and explicit writes or reminder requests retain the normal tool/permission path.
+Search-only, failed or unavailable receipts cannot satisfy this check. Incidental
+schemas selected by words such as checklist or reminder are omitted for eligible
+source-only transformations. Original evidence remains untrusted and subject to
+the same complete-input budget; its availability does not establish current rules.
+Ambiguous or unsupported wording retains ordinary routing. This is a narrow intent
+repair, not a general semantic classifier or a promise to recognize every wording.
+
 The evaluator uses the same port and projection, gives completed synthetic history
 its generation IDs, records receipt availability, and fingerprints all added code.
 Resumed evaluations honestly report unavailable original bodies if their isolated
@@ -68,6 +81,13 @@ An actual two-turn regression omits a verbose assistant reply and its earlier us
 entry at compilation while retaining the available original in the next request.
 Compiler controls ensure a budget-omitted redacted, other-route or unknown-ID
 generation still cannot supply an original. The eight-generation limit remains.
+An actual source-summary regression confirms one prior READ is sufficient without
+a redundant required-tool round; fresh-query and explicit-reminder controls still
+expose tools. Current-user intent cases exclude search-only or missing originals
+and source-body instructions. A partial 130/144 real-model batch on the preceding
+implementation found all 15 available-original summary follow-ups misgated into
+Runtime fallbacks. Claude quota cooldown left 14 replies missing; this incomplete
+batch does not validate the subsequent intent repair or establish a persona gain.
 Real-model quality and the full adoption plan remain separate acceptance gates.
 
 ## Rollback

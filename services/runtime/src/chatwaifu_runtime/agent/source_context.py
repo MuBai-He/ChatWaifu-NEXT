@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import replace
 
 from chatwaifu_protocol.base import JsonObject
@@ -25,6 +26,79 @@ _POLICY = (
     "A failed, unavailable or budget-omitted original cannot be reconstructed from assistant prose "
     "or presented as checked. Never repeat an earlier operation merely because its receipt exists."
 )
+
+_SOURCE_REFERENCE = re.compile(
+    r"刚才|刚刚|上述|前面|此前|之前|先前|前轮|已读|已读取|"
+    r"\b(?:previous(?:ly)?|prior|above|earlier)\b|(?:already|just)\s+read",
+    re.IGNORECASE,
+)
+_SOURCE_TRANSFORM = re.compile(
+    r"整理|总结|摘要|简表|清单|核对表|改写|\b(?:summari[sz]e|summary|checklist|reformat|rewrite)\b",
+    re.IGNORECASE,
+)
+_SOURCE_SUBJECT = re.compile(
+    r"资料|文档|报告|公告|网页|来源|原文|"
+    r"\b(?:sources?|documents?|reports?|pages?|articles?|announcements?|notices?)\b",
+    re.IGNORECASE,
+)
+_EXTERNAL_OPERATION_COMMAND = re.compile(
+    r"(?:^|[，,。\uff1b;！？!?\n]|并|同时|然后)\s*"
+    r"(?:还要|也请|请|帮我|现在|再|再次|重新|顺便|先|继续|接着|一并){0,3}\s*"
+    r"(?:查询|搜索|查阅|读取|核实|核查|核对|验证|确认最新|检查最新|联网|上网|"
+    r"保存|写入|创建|新增|删除|修改|更新|发送|发给|发布|执行|启动|关闭)"
+    r"|(?:^|[\n,.;!?]|\b(?:and|then|also)\b)\s*"
+    r"(?:please\s+|now\s+|again\s+){0,3}"
+    r"(?:search|browse|fetch|read|recheck|verify|look\s+up|check|save|write|create|"
+    r"delete|modify|update|send|email|publish|execute|start|stop)\b",
+    re.IGNORECASE,
+)
+_LATEST_SOURCE_TARGET = re.compile(
+    r"(?:最新|现行|实时)(?:的)?(?:规定|规则|法规|信息|状态|要求)|\b(?:latest|up[- ]to[- ]date)\b",
+    re.IGNORECASE,
+)
+_MUTATION_VERB = re.compile(
+    r"保存|写入|创建|新增|添加|设置|设定|调整|取消|移除|删除|修改|更新|提醒我|"
+    r"发送|发给|发邮件|发布|执行|启动|关闭|"
+    r"\b(?:save|saving|write|writing|create|creating|delete|deleting|modify|modifying|"
+    r"update|updating|send|sending|email|publish|publishing|execute|start|stop|"
+    r"add|adding|schedule|scheduling|set|setting|remove|removing|cancel|cancelling|remind\s+me)\b",
+    re.IGNORECASE,
+)
+
+
+def can_reuse_prior_sources(user_text: str, packet: SourceContextPacket) -> bool:
+    """Existing-source transformations do not request another external operation.
+
+    Only explicit references to prior source material with an available READ body
+    qualify. Fresh operations, latest facts and supplied URLs stay on the normal
+    tool path. Source bodies and assistant prose never determine this intent.
+    """
+    available_read = False
+    for receipt in packet.receipts:
+        run = receipt.run
+        if (
+            not receipt.original_result_available
+            or run.skill_id != "web.read"
+            or run.capability != "read"
+            or run.state is not SkillRunState.SUCCEEDED
+            or run.result is None
+        ):
+            continue
+        data = run.result.data
+        text = data.get("text") if isinstance(data, dict) else None
+        if isinstance(text, str) and text.strip():
+            available_read = True
+            break
+    return bool(
+        available_read
+        and _SOURCE_REFERENCE.search(user_text)
+        and _SOURCE_TRANSFORM.search(user_text)
+        and _SOURCE_SUBJECT.search(user_text)
+        and not _EXTERNAL_OPERATION_COMMAND.search(user_text)
+        and not _MUTATION_VERB.search(user_text)
+        and not _LATEST_SOURCE_TARGET.search(user_text)
+        and not re.search(r"https?://|\bwww\.", user_text, re.IGNORECASE)
+    )
 
 
 def project_source_context(request: LlmRequest, packet: SourceContextPacket) -> LlmRequest:

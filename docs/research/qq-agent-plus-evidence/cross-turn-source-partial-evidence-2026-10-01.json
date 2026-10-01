@@ -1,0 +1,349 @@
+{
+  "schema_version": "1.0",
+  "code_commit": "c036872074a214f3f50724757bfa95f7d01ee600",
+  "status": "partial batch: 130/144 completed, Claude quota cooldown",
+  "full_quality_review_complete": false,
+  "targeted_source_followup_audit": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "original_read_bodies_projected": 3,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "本轮工具查询没有取得成功结果，因此这些信息尚未核实。请查看工具结果后再决定是否重试。",
+      "provider_rounds": 3
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "original_read_bodies_projected": 3,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "本轮工具查询没有取得成功结果，因此这些信息尚未核实。请查看工具结果后再决定是否重试。",
+      "provider_rounds": 3
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r1:t2:candidate_v7",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "source_followup_boundary:r2:t2:candidate_v7",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "original_read_bodies_projected": 3,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "本轮工具查询没有取得成功结果，因此这些信息尚未核实。请查看工具结果后再决定是否重试。",
+      "provider_rounds": 3
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "source_followup_boundary:r1:t2:candidate_v7",
+      "original_read_bodies_projected": 3,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "本轮工具查询没有取得成功结果，因此这些信息尚未核实。请查看工具结果后再决定是否重试。",
+      "provider_rounds": 3
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "source_followup_boundary:r0:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "source_followup_boundary:r1:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "source_followup_boundary:r2:t2:baseline_v6",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "source_followup_boundary:r0:t2:candidate_v7",
+      "original_read_bodies_projected": 2,
+      "source_body_sha256": [
+        "d26587c6427671abdc5c2dd0df69f44e18545bb90dd6cb14b47099e73683f4ec"
+      ],
+      "reply_origin": "runtime_fallback",
+      "raw_reply": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "provider_rounds": 2
+    }
+  ],
+  "provider_attempts": 203,
+  "tool_runs": 66,
+  "tool_run_states": {
+    "succeeded": 21,
+    "failed": 45
+  },
+  "usage": {
+    "prompt_tokens": {
+      "reported_sum": 753362,
+      "reported_calls": 195,
+      "unknown_calls": 8
+    },
+    "completion_tokens": {
+      "reported_sum": 65674,
+      "reported_calls": 195,
+      "unknown_calls": 8
+    },
+    "total_tokens": {
+      "reported_sum": 846925,
+      "reported_calls": 195,
+      "unknown_calls": 8
+    },
+    "reasoning_tokens": {
+      "reported_sum": 27889,
+      "reported_calls": 57,
+      "unknown_calls": 146
+    }
+  },
+  "dollar_bill": null,
+  "healthy_control_usage_separate": true,
+  "quality_approved": false,
+  "reviewer": "primary; aware of candidate design; not independent blind review",
+  "batch_plan": {
+    "schema_version": "1.0",
+    "code_commit": "c036872074a214f3f50724757bfa95f7d01ee600",
+    "evaluator_version": "1.8.1",
+    "prompt_as_of": "2026-10-01T04:02:49.873524+00:00",
+    "fixtures_sha256": "006fff05a339e5682037e7f6141c572b9253d3e81723d897d4c8ef90af4d8365",
+    "models": [
+      "gemini-3.8-flash-high",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6-thinking"
+    ],
+    "variants": ["baseline_v6", "candidate_v7"],
+    "repeats": 3,
+    "logical_replies_per_model": 48,
+    "maximum_provider_rounds_per_model": 288,
+    "port": 8318,
+    "no_cost_ceiling": true,
+    "live_channel_sends": false,
+    "persistent_grants": false,
+    "quality_approval": false,
+    "scenarios": ["detailed_answer", "source_followup_boundary"],
+    "turns_per_scenario": 4,
+    "initial_preflight_failure": "Six-turn scenario rejected by existing four-turn fixture validation; zero Provider journals/calls. Preserve failed plan/logs and use two independently valid four-turn scenarios."
+  },
+  "frozen_partial_audit": {
+    "code_commit": "c036872074a214f3f50724757bfa95f7d01ee600",
+    "source_archive_sha256": "8a95d3ebf98036612527d40240dff2104c6c4417bae9a479b473d5d40fad1de1",
+    "status": "incomplete: Claude model quota cooldown; all current processes terminal",
+    "records": 130,
+    "expected": 144,
+    "quality_approved": false,
+    "models": [
+      {
+        "model": "gemini-3.8-flash-high",
+        "saved": 48,
+        "missing": 0,
+        "failed_attempts": 0,
+        "provider_rounds": 68,
+        "original_available_followups": 6,
+        "source_followups_completed": 6,
+        "source_followups_runtime_fallback": 6,
+        "results_sha256": "97211bf9e9ac95406604f07e06afc675599157378cfcde441ac21cbdb51ba956",
+        "journal_sha256": "96b3dd8533208b022f0b418f219728203d670522edb8ec78c142baf7fc29bb08",
+        "captures_sha256": "ab833bef683ebc9ecf67372e15dd39f0d571f635b47f59c27b8a75de211a00c4"
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "saved": 45,
+        "missing": 3,
+        "failed_attempts": 4,
+        "provider_rounds": 76,
+        "original_available_followups": 5,
+        "source_followups_completed": 5,
+        "source_followups_runtime_fallback": 5,
+        "results_sha256": "c6e8ba07a2a01bc50bbdaabadb35a6badd45148cb7849fc547eb27124b903476",
+        "journal_sha256": "2a1297e415d4891f8427a94ebfba3467451b4ef7b946bb50ac05640f35dcbe69",
+        "captures_sha256": "c57c8cb6a1fa64b283c3056b672b1ddca92735eb3b5c9ef83c344d3d0087c280"
+      },
+      {
+        "model": "claude-opus-4-6-thinking",
+        "saved": 37,
+        "missing": 11,
+        "failed_attempts": 4,
+        "provider_rounds": 59,
+        "original_available_followups": 4,
+        "source_followups_completed": 4,
+        "source_followups_runtime_fallback": 4,
+        "results_sha256": "ec291593065ef2b6b76fd8b3e5bfeda6ccc2b7dd2fdadc4740d50d1781882e3d",
+        "journal_sha256": "e30dfd8b2a1624f93ef7d00ca9025fc024be2b9802c246404df51861513d2922",
+        "captures_sha256": "20978eaa2cc353d61c30e0fd5bc79c84b674cb2f7fe057fb2d19f05a2ec80c46"
+      }
+    ]
+  },
+  "short_health_controls": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "control": "short text without tools; not a quality sample",
+      "text": "READY_SOURCE_CHECK",
+      "usage": {
+        "prompt_tokens": 14,
+        "completion_tokens": 5,
+        "total_tokens": 134,
+        "reasoning_tokens": 115
+      },
+      "finish_reason": "stop",
+      "error_type": null
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "control": "short text without tools; not a quality sample",
+      "text": "",
+      "usage": null,
+      "finish_reason": null,
+      "error_type": "HTTPStatusError",
+      "http_status": 429,
+      "error_payload_sha256": "1d6301417a2f4ab18b74ed914c45e3ac1c8b4bbe002bc322a39ecf9febde2aef",
+      "message_flags": {
+        "quota": true,
+        "account": false,
+        "available": false,
+        "capacity": false,
+        "rate": false,
+        "auth": false,
+        "token": false,
+        "timeout": false,
+        "cooldown": true
+      }
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "control": "short text without tools; not a quality sample",
+      "text": "",
+      "usage": null,
+      "finish_reason": null,
+      "error_type": "HTTPStatusError",
+      "http_status": 429,
+      "error_payload_sha256": "234f457f7e47fb4cde24217b4f29be682414f1d6381e25e6c784fde1631db15f",
+      "message_flags": {
+        "quota": true,
+        "account": false,
+        "available": false,
+        "capacity": false,
+        "rate": false,
+        "auth": false,
+        "token": false,
+        "timeout": false,
+        "cooldown": true
+      }
+    }
+  ],
+  "isolated_database_grants": {
+    "gemini-3.8-flash-high": 0,
+    "claude-sonnet-4-6": 0,
+    "claude-opus-4-6-thinking": 0
+  },
+  "method_limits": [
+    "Two four-turn scenarios only; not the full twelve-scenario or three-presentation gate.",
+    "Original read-body presence was inspected in actual Provider requests; repeated projections do not imply multiple independent originals.",
+    "Primary knew candidate design; no independent blind evaluation and no completed full quality grading.",
+    "Each variant follows its generated history and live read results; not a single-variable causal estimate.",
+    "Old batch uses c036872 and evaluator 1.8.1; it cannot resume in the modified 1.8.2 tree.",
+    "Unknown usage and dollar prices are not zero; reasoning is already included in reported total tokens.",
+    "New local intent fix is not evaluated by this old batch."
+  ]
+}

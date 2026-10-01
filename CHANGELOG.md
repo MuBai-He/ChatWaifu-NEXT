@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Format explicitly referenced, available prior public READ sources without forcing
+  a new external operation. Fresh verification, supplied URLs, latest-rule requests
+  and explicit mutations retain the normal tool and permission path. Preserve the
+  incomplete 130/144 real-model batch and its 15 misgated source follow-ups;
+  evaluator 1.8.2 prevents mixed resumes. Q02 quality remains unapproved.
+
 - Keep bounded source generations eligible when old assistant prose is omitted by
   the conversation budget. Select from prepared/redacted history and retain route,
   completion, session and whole-source input guards; evaluator 1.8.1 fingerprints
