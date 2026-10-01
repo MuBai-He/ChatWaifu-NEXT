@@ -160,8 +160,8 @@ class LlmRequest:
     tool_choice: Literal["required", "auto"] = "required"
     tool_exchanges: tuple[LlmToolExchange, ...] = ()
     images: tuple[LlmInputImage, ...] = field(default=(), repr=False)
-    # Optional trusted safety/time prompt for the initial required tool decision.
-    # Subsequent responses retain system_prompt and the full character contract.
+    # Trusted safety/time prompt for a required initial operation decision.
+    # Native optional decisions and later responses retain the full character contract.
     tool_decision_system_prompt: str | None = None
     input_budget: LlmInputBudget | None = None
     input_budget_report: LlmInputBudgetReport | None = None

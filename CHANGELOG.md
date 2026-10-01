@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Separate relevant capabilities from required external operations. Ordinary
+  dialogue uses native automatic tool decisions with the full character contract;
+  explicit operations retain mandatory calls, permissions and truthful failure
+  handling. Preserve the complete 288-reply Gemini v4/v7 review and the repaired
+  source follow-up's 24 replies; Q02 remains unapproved. ADR 0061, prompt identity
+  v6 and evaluator 1.9.0 record the changed policy without a schema migration.
+
 - Format explicitly referenced, available prior public READ sources without forcing
   a new external operation. Fresh verification, supplied URLs, latest-rule requests
   and explicit mutations retain the normal tool and permission path. Preserve the

@@ -289,6 +289,10 @@ class RuntimeSourceEvaluation:
         request = replace(
             request,
             system_prompt=request.system_prompt + evaluation_policy,
+            tool_choice=self._agent.tool_choice_for(
+                request.user_text,
+                routing_previous_user_text=request.routing_previous_user_text,
+            ),
             tool_decision_system_prompt=(
                 request.tool_decision_system_prompt + evaluation_policy
                 if request.tool_decision_system_prompt is not None

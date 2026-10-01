@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 import httpx2
 import pytest
 from chatwaifu_protocol.base import JsonObject, JsonValue, SideEffect
+from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.skills import (
     McpConnectionConfiguration,
     SkillInvocation,
@@ -590,6 +591,192 @@ async def test_read_then_final_answer_does_not_require_another_tool_call() -> No
     assert llm.requests[1].tool_choice == "auto"
     assert len(gateway.invocations) == 1
     assert "<runtime_tool_phase_closed>" not in llm.requests[1].system_prompt
+
+
+@pytest.mark.asyncio
+async def test_optional_tools_preserve_character_answer_without_an_external_operation() -> None:
+    request = replace(
+        _request("听说你很容易害羞，是不是真的呀？"),
+        system_prompt="FULL_CHARACTER_STYLE_AND_BOUNDARIES",
+        tool_decision_system_prompt="TRUSTED_SAFETY_AND_CLOCK",
+        tool_choice="auto",
+        history=(("user", "你好"), ("assistant", "你好呀")),
+    )
+    llm = _ScriptedLlm(
+        [(LlmTextDelta("别"), LlmTextDelta("逗我啦。"), LlmResponseCompleted("stop"))]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    chunks = await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    )
+    assert chunks == ["别", "逗我啦。"]
+    assert len(llm.requests) == 1 and not gateway.invocations
+    actual = llm.requests[0]
+    assert actual.tool_choice == "auto" and actual.tools
+    assert request.system_prompt in actual.system_prompt
+    assert actual.history == request.history
+    assert "<runtime_initial_tool_decision>" not in actual.system_prompt
+
+
+@pytest.mark.asyncio
+async def test_optional_native_call_still_uses_permission_gateway_and_recorded_results() -> None:
+    call = LlmToolCall("optional_read", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (
+                LlmTextDelta("我先查。"),
+                LlmToolCallRequested(call),
+                LlmResponseCompleted("tool_calls"),
+            ),
+            (LlmTextDelta("实际结果。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    request = replace(_request("Runtime 怎么样"), tool_choice="auto")
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    ) == ["实际结果。"]
+    assert len(gateway.invocations) == 1
+    assert len(llm.requests[1].tool_exchanges) == 1
+
+
+@pytest.mark.asyncio
+async def test_empty_optional_answer_is_not_accepted_as_success() -> None:
+    from chatwaifu_runtime.providers.contracts import LlmEmptyResponseError
+
+    llm = _ScriptedLlm([(LlmResponseCompleted("stop"),)])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    with pytest.raises(LlmEmptyResponseError):
+        await _collect(
+            AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+            replace(_request("晚安"), tool_choice="auto"),
+            uuid4(),
+        )
+    assert len(llm.requests) == 1 and not gateway.invocations
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("finish", [None, "tool_calls"])
+async def test_optional_answer_needs_a_valid_terminal_before_any_dialogue_is_emitted(
+    finish: Literal["tool_calls"] | None,
+) -> None:
+    events: tuple[LlmStreamEvent, ...] = (LlmTextDelta("UNFINISHED_DIALOGUE"),)
+    if finish is not None:
+        events += (LlmResponseCompleted(finish),)
+    llm = _ScriptedLlm([events])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    with pytest.raises(RuntimeError, match="optional tool decision"):
+        await _collect(
+            AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+            replace(_request("晚安"), tool_choice="auto"),
+            uuid4(),
+        )
+    assert len(llm.requests) == 1 and not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_optional_answer_cannot_escape_after_generation_becomes_stale() -> None:
+    entered, release = asyncio.Event(), asyncio.Event()
+    stale = False
+
+    class Provider(_ScriptedLlm):
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            self.requests.append(request)
+            yield LlmTextDelta("STALE_DIALOGUE")
+            entered.set()
+            await release.wait()
+            yield LlmResponseCompleted("stop")
+
+    def ensure_current() -> None:
+        if stale:
+            raise asyncio.CancelledError()
+
+    llm = Provider([])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    agent = AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),)))
+    emitted: list[str] = []
+
+    async def collect() -> None:
+        async for text in agent.stream(
+            replace(_request("晚安"), tool_choice="auto"),
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            ensure_current=ensure_current,
+        ):
+            emitted.append(text)
+
+    task = asyncio.create_task(collect())
+    await asyncio.wait_for(entered.wait(), timeout=2)
+    stale = True
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(task, timeout=2)
+    assert not emitted and not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_optional_tool_budget_overflow_never_dispatches_an_unbounded_input() -> None:
+    from chatwaifu_runtime.agent.tool_calling import TOOL_INPUT_BUDGET_REPLY
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    llm = _ScriptedLlm([])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    request = replace(
+        _request("CURRENT_USER_INPUT " * 2000),
+        tool_choice="auto",
+        input_budget=LlmInputBudget(1000),
+    )
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    ) == [TOOL_INPUT_BUDGET_REPLY]
+    assert not llm.requests and not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_optional_denied_read_never_uses_the_unverified_model_answer() -> None:
+    call = LlmToolCall("read", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("UNVERIFIED_FACT"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(
+        _snapshot(SkillRunState.FAILED).model_copy(
+            update={
+                "error": StructuredError(
+                    code="permission_denied",
+                    message="Permission rejected",
+                    retryable=False,
+                    component="runtime.skills",
+                )
+            }
+        )
+    )
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))),
+        replace(_request("Runtime 怎么样"), tool_choice="auto"),
+        uuid4(),
+    ) == [TOOL_QUERY_DENIED_REPLY]
+    assert len(gateway.invocations) == 1
+
+
+def test_contextual_read_correction_does_not_capture_a_character_question() -> None:
+    agent = AgentTurnOrchestrator(
+        _ScriptedLlm([]), _Gateway(_snapshot(SkillRunState.SUCCEEDED)), _Router((_Projection(),))
+    )
+    assert (
+        agent.tool_choice_for("没有一个叫测试的吗", routing_previous_user_text="看下我的日程有什么")
+        == "required"
+    )
+    assert (
+        agent.tool_choice_for(
+            "听说宁宁很容易害羞，是不是真的呀？",
+            routing_previous_user_text="请读取 https://example.org/source",
+        )
+        == "auto"
+    )
+    assert agent.tool_choice_for("真的？", routing_previous_user_text="你好") == "auto"
 
 
 @pytest.mark.asyncio

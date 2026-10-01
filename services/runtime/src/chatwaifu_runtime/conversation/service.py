@@ -1217,6 +1217,12 @@ class ConversationService:
                 routing_previous_user_text=_previous_local_user_text(
                     history, options.source_context
                 ),
+                tool_choice=self._agent.tool_choice_for(
+                    user_text,
+                    routing_previous_user_text=_previous_local_user_text(
+                        history, options.source_context
+                    ),
+                ),
                 recalled_memory_texts=compilation.recalled_memory_texts,
                 trigger=trigger,
                 images=loaded_images,

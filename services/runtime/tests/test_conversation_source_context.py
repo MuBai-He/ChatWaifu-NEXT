@@ -85,6 +85,8 @@ async def _turn(container: RuntimeContainer, session_id: UUID, text: str) -> Non
         "source_summary",
         "source_summary_fresh",
         "source_summary_write",
+        "goodbye",
+        "teasing",
         "history_budget",
         "restart",
         "evicted",
@@ -213,6 +215,10 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             if mode == "source_summary_fresh"
             else "把刚才的公告整理成清单，并提醒我明天上午检查。"
             if mode == "source_summary_write"
+            else "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。"
+            if mode == "goodbye"
+            else "听说宁宁很容易害羞，是不是真的呀？"
+            if mode == "teasing"
             else "把刚才的要求整理成出发前清单。"
         )
         await _turn(container, session.session_id, followup)
@@ -223,6 +229,16 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             assert final.tools == ()
         elif mode in {"source_summary_fresh", "source_summary_write"}:
             assert final.tools and final.tool_choice == "required"
+        elif mode in {"goodbye", "teasing"}:
+            assert len(provider.requests) == 3, [
+                (request.user_text, request.tool_choice) for request in provider.requests
+            ]
+            assert final.tool_choice == "auto"
+            assert final.tools
+            assert "<runtime_initial_tool_decision>" not in final.system_prompt
+            character = container.characters.get("default")
+            assert character is not None and character.system_prompt in final.system_prompt
+            assert len(await container.runtime_skills.list_runs(session.session_id)) == 1
         if mode == "history_budget":
             assert final.history == ()
             reports = await container.database.fetchall(
@@ -239,6 +255,8 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             "source_summary",
             "source_summary_fresh",
             "source_summary_write",
+            "goodbye",
+            "teasing",
         }:
             assert _BODY in supplied and _URL in supplied
             assert "2026-10-01T00:00:00+00:00" in supplied
@@ -257,6 +275,8 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             "source_summary",
             "source_summary_fresh",
             "source_summary_write",
+            "goodbye",
+            "teasing",
         }:
             assert "[PUBLIC SOURCE DATA]" not in supplied
         assert final.tool_exchanges == ()
