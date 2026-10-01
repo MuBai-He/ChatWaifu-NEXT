@@ -241,13 +241,41 @@ class RuntimeSourceEvaluation:
         self.last_trace: dict[str, Any] | None = None
 
     async def run(
-        self, request: LlmRequest, *, session_id: UUID, turn_id: UUID, sample_key: str
+        self,
+        request: LlmRequest,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        sample_key: str,
+        source_generation_ids: tuple[UUID, ...] = (),
     ) -> RuntimeSourceOutcome:
         if self._running:
             raise RuntimeError("evaluation helper permits one turn at a time")
+        self._running = True
+        try:
+            return await self._run_current(
+                request,
+                session_id=session_id,
+                turn_id=turn_id,
+                sample_key=sample_key,
+                source_generation_ids=source_generation_ids,
+            )
+        finally:
+            self._running = False
+
+    async def _run_current(
+        self,
+        request: LlmRequest,
+        *,
+        session_id: UUID,
+        turn_id: UUID,
+        sample_key: str,
+        source_generation_ids: tuple[UUID, ...],
+    ) -> RuntimeSourceOutcome:
         self._provider.calls = []
         self._provider.sample_key = sample_key
         self._gateway.runs = []
+        sources = await self._gateway.service.load_source_context(session_id, source_generation_ids)
         projections = self._agent.select_tools(
             request.user_text,
             routing_previous_user_text=request.routing_previous_user_text,
@@ -276,34 +304,43 @@ class RuntimeSourceEvaluation:
             "provider_calls": self._provider.calls,
             "tool_runs": self._gateway.runs,
             "reply_origin": None,
+            "source_context": {
+                "schema_version": sources.schema_version,
+                "truncated": sources.truncated,
+                "receipts": [
+                    {
+                        "skill_run_id": str(receipt.run.skill_run_id),
+                        "generation_id": str(receipt.run.generation_id),
+                        "state": receipt.run.state.value,
+                        "original_result_available": receipt.original_result_available,
+                    }
+                    for receipt in sources.receipts
+                ],
+            },
         }
         reply = ""
-        self._running = True
-        try:
-            async for text in self._agent.stream(
-                request,
-                session_id=session_id,
-                turn_id=turn_id,
-                ensure_current=lambda: None,
-                tools=projections,
-            ):
-                reply += text
-            last = self._provider.calls[-1] if self._provider.calls else {}
-            if last and last.get("finish_reason") is None and last.get("error_type") is None:
-                raise RuntimeMissingTerminal("provider stream ended without its terminal event")
-            origin: Literal["provider", "runtime_fallback"] = (
-                "provider"
-                if last.get("finish_reason") not in {None, "tool_calls"}
-                and last.get("text") == reply
-                else "runtime_fallback"
-            )
-            self.last_trace["reply_origin"] = origin
-            return RuntimeSourceOutcome(
-                reply,
-                str(last["finish_reason"]) if origin == "provider" else "other",
-                origin,
-                self._provider.aggregate_usage(),
-                self.last_trace,
-            )
-        finally:
-            self._running = False
+        async for text in self._agent.stream(
+            request,
+            session_id=session_id,
+            turn_id=turn_id,
+            ensure_current=lambda: None,
+            tools=projections,
+            source_context=sources,
+        ):
+            reply += text
+        last = self._provider.calls[-1] if self._provider.calls else {}
+        if last and last.get("finish_reason") is None and last.get("error_type") is None:
+            raise RuntimeMissingTerminal("provider stream ended without its terminal event")
+        origin: Literal["provider", "runtime_fallback"] = (
+            "provider"
+            if last.get("finish_reason") not in {None, "tool_calls"} and last.get("text") == reply
+            else "runtime_fallback"
+        )
+        self.last_trace["reply_origin"] = origin
+        return RuntimeSourceOutcome(
+            reply,
+            str(last["finish_reason"]) if origin == "provider" else "other",
+            origin,
+            self._provider.aggregate_usage(),
+            self.last_trace,
+        )

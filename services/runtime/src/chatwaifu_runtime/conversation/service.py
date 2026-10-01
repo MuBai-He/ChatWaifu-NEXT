@@ -60,6 +60,7 @@ from chatwaifu_runtime.conversation.repository import (
     ConversationRepository,
 )
 from chatwaifu_runtime.conversation.reset import ExperienceResetRepository
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket, SourceContextPort
 from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -119,6 +120,7 @@ class ConversationService:
         models: ModelConfigurationService,
         photo_recall: PhotoRecallService | None = None,
         photo_annotations: PhotoAnnotationService | None = None,
+        source_context: SourceContextPort | None = None,
     ) -> None:
         self._repository = repository
         self._reset_repository = reset_repository
@@ -134,6 +136,7 @@ class ConversationService:
         self._agent = agent
         self._photo_annotations = photo_annotations
         self._photo_recall = photo_recall
+        self._source_context = source_context
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._models = models
         self._active: dict[UUID, _ActiveGeneration] = {}
@@ -1219,6 +1222,30 @@ class ConversationService:
                 images=loaded_images,
                 input_budget=LlmInputBudget(compilation.report.budget),
             )
+            sources = SourceContextPacket()
+            if self._source_context is not None and trigger == "user":
+                eligible: list[UUID] = []
+                for generation_id in compilation.source_generation_ids:
+                    prior = await self._repository.generation_result(generation_id)
+                    if (
+                        prior is not None
+                        and prior.session_id == accepted.session_id
+                        and prior.state is GenerationState.COMPLETED
+                    ):
+                        eligible.append(generation_id)
+                sources = await self._source_context.load_source_context(
+                    accepted.session_id, tuple(eligible)
+                )
+                self._ensure_current(accepted)
+                if sources.receipts or sources.truncated:
+                    logger.info(
+                        "conversation.source_context_loaded generation=%s receipts=%d "
+                        "originals=%d truncated=%s",
+                        accepted.generation_id,
+                        len(sources.receipts),
+                        sum(receipt.original_result_available for receipt in sources.receipts),
+                        sources.truncated,
+                    )
             async for delta in self._agent.stream(
                 request,
                 session_id=accepted.session_id,
@@ -1227,6 +1254,7 @@ class ConversationService:
                 allow_tools=trigger == "user" and options.allow_tools,
                 llm=snapshot.chat_provider,
                 tools=snapshot.visible_tools,
+                source_context=sources,
             ):
                 self._ensure_current(accepted)
                 output += delta

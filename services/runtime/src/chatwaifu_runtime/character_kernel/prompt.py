@@ -25,6 +25,7 @@ from chatwaifu_runtime.conversation.models import (
     ConversationSourceContext,
     GenerationContextSnapshot,
 )
+from chatwaifu_runtime.conversation.source_context import source_generation_ids
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 _SAFETY = (
@@ -56,6 +57,7 @@ class PromptCompilation:
     selected_memory_ids: tuple[UUID, ...]
     report: PromptBudgetReport
     identity: PromptContextIdentity | None
+    source_generation_ids: tuple[UUID, ...]
 
 
 class PromptCompiler:
@@ -272,6 +274,7 @@ class PromptCompiler:
                 dropped_history_turns=dropped,
             ),
             identity=identity,
+            source_generation_ids=source_generation_ids(tuple(selected_entries), source_context),
         )
 
 

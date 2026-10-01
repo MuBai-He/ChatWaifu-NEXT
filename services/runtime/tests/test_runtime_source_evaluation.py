@@ -6,12 +6,13 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx2
 import pytest
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket
 from chatwaifu_runtime.providers.contracts import (
     LlmInputBudget,
     LlmRequest,
@@ -171,6 +172,86 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
                 request, session_id=session.session_id, turn_id=uuid4(), sample_key="two"
             )
         assert len(provider.requests) == expected_rounds
+        followup = RuntimeSourceEvaluation(
+            provider,
+            container.runtime_skills,
+            trace_path=tmp_path / "followup.jsonl",
+            max_provider_requests=1,
+            allow_once=allow_once,
+        )
+        outcome = await followup.run(
+            LlmRequest(
+                uuid4(), "把刚才的条件整理成简表。", "Persona", input_budget=LlmInputBudget(7292)
+            ),
+            session_id=session.session_id,
+            turn_id=uuid4(),
+            sample_key="followup",
+            source_generation_ids=(request.generation_id,),
+        )
+        context = "\n".join(text for _role, text in provider.requests[-1].context)
+        assert outcome.trace["tool_runs"] == []
+        assert len(outcome.trace["source_context"]["receipts"]) == 1
+        assert (
+            outcome.trace["source_context"]["receipts"][0]["original_result_available"]
+            is allow_once
+        )
+        if allow_once:
+            assert "Actual body" in context
+        else:
+            assert '"error_code": "permission_denied"' in context
+        assert len(requests) == int(allow_once)
+        assert await container.database.fetchall("SELECT * FROM permission_grants") == []
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_source_loading_keeps_single_turn_guard_and_cancel_releases_it(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    entered, release = asyncio.Event(), asyncio.Event()
+    original = container.runtime_skills.load_source_context
+
+    async def paused(session_id: UUID, generation_ids: tuple[UUID, ...]) -> SourceContextPacket:
+        entered.set()
+        await release.wait()
+        return await original(session_id, generation_ids)
+
+    monkeypatch.setattr(container.runtime_skills, "load_source_context", paused)
+    try:
+        session = await container.sessions.create_session("default")
+        provider = _Provider()
+        evaluation = RuntimeSourceEvaluation(
+            provider,
+            container.runtime_skills,
+            trace_path=tmp_path / "source-load.jsonl",
+            max_provider_requests=1,
+            allow_once=False,
+        )
+        request = LlmRequest(uuid4(), "你好", "Persona", input_budget=LlmInputBudget(7292))
+        first = asyncio.create_task(
+            evaluation.run(
+                request, session_id=session.session_id, turn_id=uuid4(), sample_key="first"
+            )
+        )
+        await asyncio.wait_for(entered.wait(), timeout=2)
+        with pytest.raises(RuntimeError, match="one turn at a time"):
+            await evaluation.run(
+                request, session_id=session.session_id, turn_id=uuid4(), sample_key="second"
+            )
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        assert provider.requests == []
+        monkeypatch.setattr(container.runtime_skills, "load_source_context", original)
+        outcome = await evaluation.run(
+            request, session_id=session.session_id, turn_id=uuid4(), sample_key="recovery"
+        )
+        assert outcome.reply_origin == "provider" and len(provider.requests) == 1
     finally:
         await container.stop()
 

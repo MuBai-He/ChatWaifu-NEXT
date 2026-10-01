@@ -20,6 +20,8 @@ from chatwaifu_runtime.agent.input_budget import (
     estimate_input_tokens,
     fit_input_budget,
 )
+from chatwaifu_runtime.agent.source_context import project_source_context
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket
 from chatwaifu_runtime.providers.contracts import (
     LlmEmptyResponseError,
     LlmProvider,
@@ -336,6 +338,7 @@ class AgentTurnOrchestrator:
         allow_tools: bool = True,
         llm: LlmProvider | None = None,
         tools: tuple[ProjectedAgentTool, ...] | None = None,
+        source_context: SourceContextPacket | None = None,
     ) -> AsyncIterator[str]:
         effective_llm = llm if llm is not None else self._llm
         projections: tuple[ProjectedAgentTool, ...] = ()
@@ -349,6 +352,9 @@ class AgentTurnOrchestrator:
                 supports_tool_calling=effective_llm.supports_tool_calling,
             )
         if not projections:
+            if source_context is not None:
+                ensure_current()
+                request = project_source_context(request, source_context)
             async for text in self._stream_text_only(request, ensure_current, llm=effective_llm):
                 yield text
             return
@@ -362,6 +368,22 @@ class AgentTurnOrchestrator:
             for projection in projections
         )
         mapped = {projection.name: projection for projection in projections}
+        if source_context is not None:
+            ensure_current()
+            projected = project_source_context(
+                replace(
+                    request,
+                    system_prompt=request.system_prompt + _TOOL_POLICY,
+                    tools=tool_definitions,
+                ),
+                source_context,
+            )
+            request = replace(
+                request,
+                context=projected.context,
+                history=projected.history,
+                input_budget_report=projected.input_budget_report,
+            )
         original_tool_prompt = request.system_prompt + _TOOL_POLICY
         initial_tool_prompt = (
             request.tool_decision_system_prompt + _INITIAL_TOOL_DECISION_POLICY + _TOOL_POLICY

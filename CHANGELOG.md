@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Carry bounded prior public READ receipts through actual Conversation follow-ups,
+  using completed generations, stable source routes and the existing ephemeral
+  result store. Preserve whole originals or explicit budget/unavailable states,
+  without adding audit plaintext or replaying tools. Evaluator 1.8.0 uses the same
+  projection and guards source loading against concurrent/cancelled runs; ADR 0060
+  records retention and scope. Q02 model quality remains unapproved.
+
 - Apply frozen whole-input budgets to no-tool text replies before Provider
   dispatch, including disabled/unsupported tools, and count each initial quoted
   history candidate without converting tokens back to characters. Preserve

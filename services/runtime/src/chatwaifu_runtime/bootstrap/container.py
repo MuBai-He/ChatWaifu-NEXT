@@ -269,6 +269,7 @@ class RuntimeContainer:
             photo_recall=self.photo_recall,
             photo_annotations=self.photo_annotations,
             models=self.model_configurations,
+            source_context=self.runtime_skills,
         )
         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
         self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)

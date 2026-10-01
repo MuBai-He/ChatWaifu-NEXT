@@ -120,7 +120,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.7.1"
+TOOL_VERSION = "1.8.0"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -816,6 +816,11 @@ class EvaluationRunner:
                 "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
                 "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
+                "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+                "services/runtime/src/chatwaifu_runtime/conversation/source_context.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/service.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/repository.py",
+                "services/runtime/src/chatwaifu_runtime/persistence/sqlite_runtime_skills.py",
                 "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
                 "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
                 "services/runtime/src/chatwaifu_runtime/providers/data/cl100k_base.tiktoken",
@@ -1100,7 +1105,9 @@ class EvaluationRunner:
                                 )
                                 history.append(
                                     ConversationHistoryEntry(
-                                        role="assistant", text=previous.raw_reply
+                                        role="assistant",
+                                        text=previous.raw_reply,
+                                        generation_id=uuid5(NAMESPACE_URL, key),
                                     )
                                 )
                                 continue
@@ -1175,6 +1182,9 @@ class EvaluationRunner:
                                 current_req: LlmRequest,
                                 current_session: UUID = session_id,
                                 current_key: str = key,
+                                current_source_generations: tuple[
+                                    UUID, ...
+                                ] = compilation.source_generation_ids,
                             ) -> None:
                                 nonlocal \
                                     output_text, \
@@ -1187,6 +1197,7 @@ class EvaluationRunner:
                                         session_id=current_session,
                                         turn_id=uuid5(NAMESPACE_URL, current_key + ":turn"),
                                         sample_key=current_key,
+                                        source_generation_ids=current_source_generations,
                                     )
                                     output_text, finish_reason = (
                                         outcome.reply,
@@ -1322,7 +1333,11 @@ class EvaluationRunner:
                                 ConversationHistoryEntry(role="user", text=turn.user_text)
                             )
                             history.append(
-                                ConversationHistoryEntry(role="assistant", text=output_text)
+                                ConversationHistoryEntry(
+                                    role="assistant",
+                                    text=output_text,
+                                    generation_id=req.generation_id,
+                                )
                             )
 
         finally:
