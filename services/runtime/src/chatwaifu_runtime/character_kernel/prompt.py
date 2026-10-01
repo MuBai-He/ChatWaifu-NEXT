@@ -274,7 +274,10 @@ class PromptCompiler:
                 dropped_history_turns=dropped,
             ),
             identity=identity,
-            source_generation_ids=source_generation_ids(tuple(selected_entries), source_context),
+            # Prose omission is a budget decision, not source revocation. The
+            # prepared history already carries redactions; source selection is
+            # separately bounded and fenced before whole-result projection.
+            source_generation_ids=source_generation_ids(normalized_history, source_context),
         )
 
 

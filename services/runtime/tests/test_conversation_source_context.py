@@ -38,9 +38,10 @@ class _Provider:
     kind = "demo"
     supports_tool_calling = True
 
-    def __init__(self) -> None:
+    def __init__(self, *, verbose_first_reply: bool = False) -> None:
         self.requests: list[LlmRequest] = []
         self.read_tool_name = ""
+        self.verbose_first_reply = verbose_first_reply
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         self.requests.append(request)
@@ -51,7 +52,11 @@ class _Provider:
             yield LlmResponseCompleted("tool_calls")
         else:
             # Deliberately omit the original conditions from assistant prose.
-            yield LlmTextDelta("读过了。")
+            yield LlmTextDelta(
+                "已读网页，旧助手长篇措辞。" * 4000
+                if self.verbose_first_reply and len(self.requests) == 2
+                else "读过了。"
+            )
             yield LlmResponseCompleted("stop")
 
 
@@ -77,6 +82,7 @@ async def _turn(container: RuntimeContainer, session_id: UUID, text: str) -> Non
     "mode",
     [
         "available",
+        "history_budget",
         "restart",
         "evicted",
         "reset",
@@ -96,7 +102,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
     events = container.event_hub.subscribe(
         lambda event: event.get("event_type") == "skill.confirmation_requested", queue_size=2
     )
-    provider = _Provider()
+    provider = _Provider(verbose_first_reply=mode == "history_budget")
     executions: list[JsonObject] = []
 
     async def read(arguments: JsonObject) -> JsonObject:
@@ -199,7 +205,17 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         await _turn(container, session.session_id, "把刚才的要求整理成出发前清单。")
         final = provider.requests[-1]
         supplied = "\n".join(text for _role, text in final.context)
-        if mode == "available":
+        if mode == "history_budget":
+            assert final.history == ()
+            reports = await container.database.fetchall(
+                "SELECT payload_json FROM events WHERE event_type = 'character.prompt_compiled' "
+                "ORDER BY sequence DESC LIMIT 1"
+            )
+            assert (
+                json.loads(str(reports[0]["payload_json"]))["report"]["dropped_history_turns"] == 2
+            )
+            assert runs[0].skill_run_id in container.runtime_skills._ephemeral_results
+        if mode in {"available", "history_budget"}:
             assert _BODY in supplied and _URL in supplied
             assert "2026-10-01T00:00:00+00:00" in supplied
             assert any(role == "user" and _BODY in text for role, text in final.context)
@@ -211,7 +227,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         elif mode == "denied":
             assert '"error_code": "permission_denied"' in supplied
             assert '"original_result": "not_succeeded"' in supplied
-        elif mode != "available":
+        elif mode not in {"available", "history_budget"}:
             assert "[PUBLIC SOURCE DATA]" not in supplied
         assert final.tool_exchanges == ()
         assert executions == ([] if mode == "denied" else [{"url": _URL}])

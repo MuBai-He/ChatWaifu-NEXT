@@ -14,9 +14,12 @@ answers as verified memory would violate the existing privacy boundary.
 
 ## Decision
 
-Conversation owns eligibility. After history redaction and prompt selection, it
-selects up to eight prior assistant generations from the same stable source route,
-then verifies they completed in the current session. Friendly labels and received
+Conversation owns eligibility. From prepared, redacted history, it selects up to
+eight prior assistant generations from the same stable source route, independently
+of the text budget's selection of assistant prose, then verifies they completed in
+the current session. A verbose reply omitted for text budget does not revoke the
+original source; the complete source projection has its own frozen input guard.
+Friendly labels and received
 timestamps do not establish identity. Cross-session ledgers, other senders or
 audiences, interrupted generations, reset history and redacted generations cannot
 supply source bodies.
@@ -61,6 +64,10 @@ separate retention/consent/deletion design. No public API or database migration 
 introduced. Regression gates cover actual Conversation/permission/SkillRun flow,
 unavailable and failed receipts, route isolation, reset/cancellation, full-result
 budget omission, and unchanged absence of source plaintext in durable audit rows.
+An actual two-turn regression omits a verbose assistant reply and its earlier user
+entry at compilation while retaining the available original in the next request.
+Compiler controls ensure a budget-omitted redacted, other-route or unknown-ID
+generation still cannot supply an original. The eight-generation limit remains.
 Real-model quality and the full adoption plan remain separate acceptance gates.
 
 ## Rollback

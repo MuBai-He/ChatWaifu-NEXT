@@ -56,7 +56,11 @@ def source_generation_ids(
     history: tuple[ConversationHistoryEntry, ...],
     source_context: ConversationSourceContext | None,
 ) -> tuple[UUID, ...]:
-    """Labels/time never grant access; redacted or other-route history is ineligible."""
+    """Select from prepared history, independently of prose budget omission.
+
+    Labels/time never grant access; redacted or other-route history is ineligible.
+    The caller still verifies completed generations in the current session.
+    """
     from chatwaifu_runtime.conversation.models import REDACTED_ASSISTANT_PLACEHOLDER
 
     selected: list[UUID] = []

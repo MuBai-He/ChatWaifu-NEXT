@@ -1,4 +1,5 @@
 # pyright: reportPrivateUsage=false
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,6 +22,7 @@ from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptC
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.models import (
+    REDACTED_ASSISTANT_PLACEHOLDER,
     ConversationHistoryEntry,
     ConversationSourceContext,
 )
@@ -146,6 +148,48 @@ class _PromptModels:
         assert role == "memory_summary"
         self.summary_inputs.append(user)
         return "较早对话摘要"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["available", "redacted", "foreign_route", "unknown"])
+async def test_budget_omitted_history_keeps_only_eligible_source_generations(mode: str) -> None:
+    models = _PromptModels()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    source = ConversationSourceContext(
+        "wechat", uuid4(), "owner", "local", "direct", "chat", "sender"
+    )
+    generation_id = uuid4()
+    history = (
+        ConversationHistoryEntry(
+            "assistant",
+            REDACTED_ASSISTANT_PLACEHOLDER if mode == "redacted" else "读过了。",
+            replace(source, sender_key="other") if mode == "foreign_route" else source,
+            None if mode == "unknown" else generation_id,
+        ),
+        ConversationHistoryEntry("user", "当前此前用户事实。" * 1000, source),
+    )
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=history,
+        user_text="请按已读原文整理清单。",
+        source_context=source,
+    )
+    assert result.history == () and result.report.dropped_history_turns == 2
+    assert len(models.summary_inputs) == 1
+    assert result.source_generation_ids == ((generation_id,) if mode == "available" else ())
 
 
 @pytest.mark.asyncio

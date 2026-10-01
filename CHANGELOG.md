@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Keep bounded source generations eligible when old assistant prose is omitted by
+  the conversation budget. Select from prepared/redacted history and retain route,
+  completion, session and whole-source input guards; evaluator 1.8.1 fingerprints
+  the same path. Actual two-turn and compiler privacy controls cover the gap.
+
 - Wait for the embedding warning dialog's actual focus transfer before checking
   its keyboard trap. Keep exact text/focus/Tab assertions and the default deadline;
   a suppressed-production-focus control still fails. Preserve the Ubuntu CI
