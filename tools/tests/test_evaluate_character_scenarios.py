@@ -49,6 +49,58 @@ from tools.evaluate_character_scenarios import (
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("runtime_tools", [False, True])
+async def test_empty_model_answer_is_incomplete_with_reported_usage_retained(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool
+) -> None:
+    from collections.abc import AsyncIterator
+
+    class Provider:
+        kind = "openai_compatible"
+        supports_tool_calling = True
+
+        def __init__(self, **kwargs: object) -> None:
+            pass
+
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            yield LlmTextDelta(" \n")
+            yield LlmResponseCompleted("stop", LlmUsage(7711, 8, 7719, None))
+
+    monkeypatch.setattr("tools.evaluate_character_scenarios.OpenAiCompatibleLlmProvider", Provider)
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="openai_compatible",
+        base_url="https://example.test",
+        model_name="synthetic-empty-model",
+        no_cost_ceiling=True,
+        max_requests=2,
+        max_provider_requests=2 if runtime_tools else None,
+        runtime_source_tools=runtime_tools,
+        allow_source_tools_once=runtime_tools,
+    )
+    samples = await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
+    assert samples == []
+    assert not (tmp_path / "results.jsonl").exists() or not (tmp_path / "results.jsonl").read_text()
+    failures = [
+        json.loads(line)
+        for line in (tmp_path / "incomplete.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(failures) == 1 and failures[0]["reason"] == "empty_model_response"
+    if runtime_tools:
+        calls = failures[0]["runtime_source_trace"]["provider_calls"]
+        assert len(calls) == 1 and calls[0]["text"] == " \n"
+        assert calls[0]["usage"] == {
+            "prompt_tokens": 7711,
+            "completion_tokens": 8,
+            "total_tokens": 7719,
+            "reasoning_tokens": None,
+        }
+    else:
+        assert failures[0]["raw_reply"] == " \n"
+        assert failures[0]["provider_usage"]["total_tokens"] == 7719
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runtime_tools", [False, True])
 async def test_prompt_clock_is_explicit_frozen_and_checked_on_resume(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool
 ) -> None:

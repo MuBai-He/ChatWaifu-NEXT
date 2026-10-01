@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fail completed LLM responses that contain no visible answer text, preserving
+  recorded tool results and avoiding automatic operation replay. Evaluation 1.6.2
+  records empty answers as incomplete with actual usage retained. Real Opus
+  controls confirm upstream empty string deltas; their cause and Q02 quality
+  acceptance remain unresolved.
+
 - Separate the initial required-tool decision from character expression in prompt
   template v4, quote prior assistant replies as bounded untrusted data, and restore
   the full context after a real tool exchange. Evaluation 1.5.2 records context and

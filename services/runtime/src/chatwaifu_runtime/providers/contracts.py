@@ -19,6 +19,14 @@ class LlmImageInputUnavailableError(RuntimeError):
     """The selected provider cannot honor an image input."""
 
 
+class LlmEmptyResponseError(RuntimeError):
+    """A completed response has no answer; recorded tool results remain valid."""
+
+    def __init__(self, *, has_tool_results: bool = False) -> None:
+        super().__init__("LLM completed without visible answer text")
+        self.has_tool_results = has_tool_results
+
+
 @dataclass(frozen=True, slots=True)
 class LlmInputImage:
     """One provider-neutral raster image input attached to a turn."""

@@ -68,6 +68,7 @@ from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
 from chatwaifu_runtime.providers.contracts import (
+    LlmEmptyResponseError,
     LlmInputBudget,
     LlmRequest,
     LlmResponseCompleted,
@@ -119,7 +120,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.6.1"
+TOOL_VERSION = "1.6.2"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -1227,13 +1228,30 @@ class EvaluationRunner:
                             except Exception as error:
                                 self._record_incomplete(
                                     key,
-                                    type(error).__name__,
+                                    "empty_model_response"
+                                    if isinstance(error, LlmEmptyResponseError)
+                                    else type(error).__name__,
                                     source_evaluation.last_trace if source_evaluation else None,
+                                    provider_usage=captured_usage,
+                                    raw_reply=output_text
+                                    if source_evaluation is None
+                                    and isinstance(error, LlmEmptyResponseError)
+                                    else None,
                                 )
                                 return samples_collected
 
                             if finish_reason is None:
                                 self._record_incomplete(key, "missing_terminal_event")
+                                return samples_collected
+
+                            if not output_text.strip():
+                                self._record_incomplete(
+                                    key,
+                                    "empty_model_response",
+                                    runtime_source_trace,
+                                    provider_usage=captured_usage,
+                                    raw_reply=output_text,
+                                )
                                 return samples_collected
 
                             latency_ms = int((time.perf_counter() - start_time) * 1000)
@@ -1318,12 +1336,22 @@ class EvaluationRunner:
         return samples_collected
 
     def _record_incomplete(
-        self, sample_key: str, reason: str, runtime_source_trace: dict[str, Any] | None = None
+        self,
+        sample_key: str,
+        reason: str,
+        runtime_source_trace: dict[str, Any] | None = None,
+        *,
+        provider_usage: LlmUsage | None = None,
+        raw_reply: str | None = None,
     ) -> None:
         with self._incomplete_file.open("a", encoding="utf-8") as out:
             record: dict[str, Any] = {"sample_key": sample_key, "reason": reason}
             if runtime_source_trace is not None:
                 record["runtime_source_trace"] = runtime_source_trace
+            if provider_usage is not None:
+                record["provider_usage"] = asdict(provider_usage)
+            if raw_reply is not None:
+                record["raw_reply"] = raw_reply
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     def generate_blinded_review_template(self, variant_a: str, variant_b: str) -> Path:

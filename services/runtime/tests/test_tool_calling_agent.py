@@ -221,6 +221,83 @@ async def test_no_relevant_tools_preserves_incremental_text_streaming() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("chunks", [(), (LlmTextDelta(""),), (LlmTextDelta(" \n\t"),)])
+async def test_completed_empty_text_response_is_an_error_without_retry(
+    chunks: tuple[LlmStreamEvent, ...],
+) -> None:
+    llm = _ScriptedLlm([(*chunks, LlmResponseCompleted("stop"))])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    with pytest.raises(RuntimeError, match="visible answer") as error:
+        await _collect(AgentTurnOrchestrator(llm, gateway, _Router(())), _request("问题"), uuid4())
+    assert getattr(error.value, "has_tool_results", None) is False
+    assert len(llm.requests) == 1 and not gateway.invocations
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("close_reason", ["after_read", "after_write", "read_limit"])
+async def test_empty_final_reply_preserves_executed_tools_and_does_not_retry(
+    close_reason: str,
+) -> None:
+    count = 4 if close_reason == "read_limit" else 1
+    llm = _ScriptedLlm(
+        [
+            (
+                *(
+                    LlmToolCallRequested(LlmToolCall(f"read_{n}", "runtime_status_read", {"n": n}))
+                    for n in range(count)
+                ),
+                LlmResponseCompleted("tool_calls"),
+            ),
+            (LlmTextDelta(" \n"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data={"actual": "result"}))
+    effect = SideEffect.WRITE if close_reason == "after_write" else SideEffect.READ
+    with pytest.raises(RuntimeError, match="visible answer") as error:
+        await _collect(
+            AgentTurnOrchestrator(llm, gateway, _Router((_Projection(side_effect=effect),))),
+            _request("执行请求"),
+            uuid4(),
+        )
+    assert getattr(error.value, "has_tool_results", None) is True
+    assert len(llm.requests) == 2 and len(gateway.invocations) == count
+    assert not gateway.cancelled
+    results = llm.requests[-1].tool_exchanges[0].results
+    assert len(results) == count and all(not result.is_error for result in results)
+    assert all(isinstance(result.content, dict) and result.content["ok"] for result in results)
+    assert bool(llm.requests[-1].tools) is (close_reason == "after_read")
+
+
+@pytest.mark.asyncio
+async def test_stale_completion_is_cancelled_instead_of_reported_as_empty() -> None:
+    current = True
+
+    class Provider:
+        kind = "scripted"
+        supports_tool_calling = False
+
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            nonlocal current
+            yield LlmResponseCompleted("stop")
+            current = False
+
+    def ensure_current() -> None:
+        if not current:
+            raise asyncio.CancelledError("stale generation")
+
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    agent = AgentTurnOrchestrator(Provider(), gateway, _Router(()))
+    with pytest.raises(asyncio.CancelledError, match="stale generation"):
+        _ = [
+            text
+            async for text in agent.stream(
+                _request("问题"), session_id=uuid4(), turn_id=uuid4(), ensure_current=ensure_current
+            )
+        ]
+    assert not gateway.invocations
+
+
+@pytest.mark.asyncio
 async def test_immediate_calendar_correction_routes_previous_subject_as_read_only() -> None:
     call = LlmToolCall(call_id="calendar", name="runtime_status_read", arguments={})
     llm = _ScriptedLlm(

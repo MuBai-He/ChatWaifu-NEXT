@@ -68,6 +68,7 @@ from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
 from chatwaifu_runtime.providers.contracts import (
+    LlmEmptyResponseError,
     LlmInputBudget,
     LlmInputImage,
     LlmProvider,
@@ -1251,7 +1252,9 @@ class ConversationService:
             raise
         except Exception as error:
             error_code = (
-                "image_input_error" if options.image_loader is not None else "provider_error"
+                "empty_model_response"
+                if isinstance(error, LlmEmptyResponseError)
+                else ("image_input_error" if options.image_loader is not None else "provider_error")
             )
             await self._failed(
                 accepted,
@@ -1448,6 +1451,9 @@ class ConversationService:
         source_context: ConversationSourceContext | None = None,
     ) -> None:
         now = datetime.now(UTC)
+        if isinstance(error, LlmEmptyResponseError) and error.has_tool_results:
+            # A failed summary must not encourage replaying recorded operations.
+            retryable = False
         if isinstance(error, StructuredError):
             structured = error
         else:

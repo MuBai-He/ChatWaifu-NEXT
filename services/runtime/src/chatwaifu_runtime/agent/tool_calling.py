@@ -21,6 +21,7 @@ from chatwaifu_runtime.agent.input_budget import (
     fit_input_budget,
 )
 from chatwaifu_runtime.providers.contracts import (
+    LlmEmptyResponseError,
     LlmProvider,
     LlmRequest,
     LlmTextDelta,
@@ -210,6 +211,7 @@ class _ToolRound:
     text_chunks: list[str]
     calls: list[LlmToolCall]
     finish_reason: str = "other"
+    terminal_received: bool = False
 
 
 def _has_successful_tool_result(exchanges: tuple[LlmToolExchange, ...]) -> bool:
@@ -451,6 +453,11 @@ class AgentTurnOrchestrator:
                     ensure_current()
                     yield _failed_query_reply(exchanges)
                     return
+                if decision.terminal_received and not any(
+                    text.strip() for text in decision.text_chunks
+                ):
+                    ensure_current()
+                    raise LlmEmptyResponseError(has_tool_results=True)
                 for text in decision.text_chunks:
                     ensure_current()
                     yield text
@@ -548,15 +555,22 @@ class AgentTurnOrchestrator:
         llm: LlmProvider | None = None,
     ) -> AsyncIterator[str]:
         provider = llm if llm is not None else self._llm
+        completed = False
+        has_answer = False
         async for event in provider.stream(replace(request, tools=())):
             ensure_current()
             if isinstance(event, LlmTextDelta):
+                has_answer = has_answer or bool(event.text.strip())
                 yield event.text
             elif isinstance(event, LlmToolCallRequested):
                 raise RuntimeError("LLM requested a tool during a text-only response")
             else:
                 if event.finish_reason == "tool_calls":
                     raise RuntimeError("LLM ended a text-only response with tool calls")
+                completed = True
+        ensure_current()
+        if completed and not has_answer:
+            raise LlmEmptyResponseError(has_tool_results=bool(request.tool_exchanges))
 
     async def _collect_tool_round(
         self,
@@ -575,6 +589,7 @@ class AgentTurnOrchestrator:
                 result.calls.append(event.call)
             else:
                 result.finish_reason = event.finish_reason
+                result.terminal_received = True
         return result
 
     async def _execute_calls(
