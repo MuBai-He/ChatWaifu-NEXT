@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Preserve the three-model v6/v7 source/checklist comparison: 72 synthetic replies,
+  all 106 Provider attempts, primary masked-label review and safe Sonnet resume.
+  V7 remains evaluation-only; source continuity and native input-budget gaps are
+  recorded rather than treated as Q02 acceptance.
+
 - Replace whole-tool-input half-character estimates with a bundled, checksum-pinned
   offline cl100k chat JSON reference. Recompute complete projections when omitting
   old history, preserve task/source/action facts, and tag estimates explicitly.
