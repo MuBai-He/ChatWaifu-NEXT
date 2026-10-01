@@ -1653,7 +1653,7 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
         session = await container.sessions.create_session("ayachi_nene")
         definitions = container.runtime_skills.list()
         definition = next(item for item in definitions if item.skill_id == "web.read")
-        assert definition.version == "1.2.0"
+        assert definition.version == "1.3.0"
         assert definition.capabilities[0].required_permissions == ["web.public.read"]
         assert definition.interruptible is True
         assert all(

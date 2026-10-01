@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Preserve bounded actual source links when the whole body exceeds input budget,
+  declare the reader HTTPS constraint in results, and honor explicit existing-content
+  analysis without fresh tools. Compound external operations retain confirmation.
+  Reader 1.3.0/template v8/evaluator 1.10.0 freeze the repair; the completed
+  twelve-reply Gemini failure batch stays immutable and Q02 remains unapproved.
+
 - Add opt-in bounded anchor links to public source reads, preserving actual
   schemes, final-page/base resolution and separate confirmation for each target.
   Skill 1.2.0/evaluator 1.9.2 retain compatibility and immutable batch identity.

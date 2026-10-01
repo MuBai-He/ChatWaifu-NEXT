@@ -57,6 +57,16 @@ historical version values remain compatible.
 The local-content follow-up advances the evaluator to 1.9.1 and prompt identity to
 v7; older 4a80465 paid samples retain their original 1.9.0/v6 identity.
 
+An actual source-index consumption batch also reproduced mandatory decisions for
+questions restricted to existing pages with an explicit no-new-tools instruction.
+Both scope signals now suppress fresh-fact necessity and projected schemas; an
+affirmative compound operation still takes precedence. Missing originals remain
+an evidence gap, not authority to fetch again. Bounded actual link metadata can
+remain when a whole source body is omitted, without representing a target read or
+inheriting permission. Reader results preserve the accepted-scheme limitation even
+after function schemas close. This follow-up uses template v8/evaluator 1.10.0;
+prior paid batches retain their captured identities.
+
 ## Consequences and validation
 
 This is a bounded language policy, not an exhaustive semantic intent classifier.

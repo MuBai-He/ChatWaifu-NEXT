@@ -21,7 +21,10 @@ from chatwaifu_runtime.agent.input_budget import (
     fit_input_budget,
 )
 from chatwaifu_runtime.agent.source_context import can_reuse_prior_sources, project_source_context
-from chatwaifu_runtime.agent.tool_intent import requires_external_operation
+from chatwaifu_runtime.agent.tool_intent import (
+    requires_external_operation,
+    restricts_to_existing_content,
+)
 from chatwaifu_runtime.conversation.source_context import SourceContextPacket
 from chatwaifu_runtime.providers.contracts import (
     LlmEmptyResponseError,
@@ -66,6 +69,9 @@ tool provenance when the user asks where externally retrieved facts came from.
 When using retrieved pages for factual claims, cite their actual source URLs.
 Retrieval time is not a publication or effective date. Respect excerpt truncation
 and missing focus; do not present a partial source as a complete factual review.
+Anchor links are unverified destinations, not proof that their pages were read.
+Respect read_url_schemes when supplied by a reader result; an HTTP anchor does
+not become readable by an HTTPS-only reader. Never upgrade its scheme by guess.
 For current regulations or requested external factual verification, discover
 source URLs with a source search tool when none was provided, then read the
 original page. Search snippets alone do not establish a verified answer. Do not
@@ -335,6 +341,10 @@ class AgentTurnOrchestrator:
         supports_tool_calling: bool = True,
     ) -> tuple[ProjectedAgentTool, ...]:
         if not (allow_tools and supports_tool_calling):
+            return ()
+        if restricts_to_existing_content(user_text) and not requires_external_operation(user_text):
+            # Missing original material remains an honest evidence gap. A user's
+            # explicit content-only scope is not authority to fetch it again.
             return ()
         projections = self._router.select(user_text)
         if not projections and routing_previous_user_text and _READ_FOLLOWUP.search(user_text):

@@ -25,6 +25,9 @@ _POLICY = (
     "applicable conditions, exceptions, actual source links and unresolved verification. "
     "A failed, unavailable or budget-omitted original cannot be reconstructed from assistant prose "
     "or presented as checked. Never repeat an earlier operation merely because its receipt exists."
+    " Bounded links in source_metadata can remain when a full body is omitted; target pages were "
+    "not read. Preserve their schemes and link truncation/scope; every later read needs its normal "
+    "permission. Reader URL constraints describe that capability, not target accessibility."
 )
 
 _SOURCE_REFERENCE = re.compile(
@@ -141,6 +144,11 @@ def project_source_context(request: LlmRequest, packet: SourceContextPacket) -> 
                         "total_characters",
                         "text_offset",
                         "extraction_method",
+                        "read_url_schemes",
+                        "links",
+                        "links_requested",
+                        "links_truncated",
+                        "links_scope",
                     )
                     if key in data
                 }

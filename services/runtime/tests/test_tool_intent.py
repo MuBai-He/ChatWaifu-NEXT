@@ -74,3 +74,41 @@ def test_dialogue_explanation_and_closure_do_not_require_an_operation(text: str)
 )
 def test_explicit_operation_or_external_fact_request_requires_results(text: str) -> None:
     assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "只根据刚才实际读到的两页，截至今天能否完整确认充电宝登机要求？不要再调用工具。",
+        "仅依据已读原文分析现行规定还缺哪些证据，别再联网。",
+        "只使用前面的文档解释这个价格是否有依据，不要再次读取或搜索。",
+        "Using only the previously read pages, what evidence is missing for current regulations? "
+        "Do not call tools again.",
+        "Based solely on the supplied text, which weather claims are unsupported? "
+        "Don't browse again.",
+    ],
+)
+def test_exclusive_existing_content_analysis_does_not_demand_fresh_facts(text: str) -> None:
+    assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "只根据刚才的原文说明缺口，不要再调用工具。然后读取 https://example.org/new 。",
+        "仅依据已读文档分析现行规定，不要联网，并保存到笔记。",
+        "只使用前面的资料分析价格，不要再调用工具，然后提醒我明天核实。",
+        "Using only the previous source, what is missing? Do not call tools again; "
+        "also check my calendar.",
+        "Based solely on supplied text, explain the regulations. Don't browse again, "
+        "then send it to Alex.",
+        "只根据刚才原文分析规定，不要再调用工具，但是读取 https://example.org/new 。",
+        "Using only prior pages, explain regulations. Don't call tools, but save it to my files.",
+        "只根据刚才的网页，今天有哪些现行规定？",
+        "哪些现行规定尚未核实？不要再调用工具。",
+    ],
+)
+def test_source_scope_cannot_hide_an_affirmative_operation_or_unrestricted_question(
+    text: str,
+) -> None:
+    assert requires_external_operation(text)

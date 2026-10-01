@@ -11,7 +11,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from chatwaifu_protocol.base import JsonObject
+from chatwaifu_protocol.base import JsonObject, JsonValue
 from chatwaifu_protocol.session import GenerationState
 from chatwaifu_protocol.skills import SkillResult
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -83,6 +83,8 @@ async def _turn(container: RuntimeContainer, session_id: UUID, text: str) -> Non
     [
         "available",
         "source_summary",
+        "source_evidence_gap",
+        "source_evidence_gap_unavailable",
         "source_summary_fresh",
         "source_summary_write",
         "goodbye",
@@ -186,7 +188,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             monkeypatch.setattr(
                 container.model_configurations, "create_chat_provider", create_provider
             )
-        elif mode == "evicted":
+        elif mode in {"evicted", "source_evidence_gap_unavailable"}:
             for _ in range(65):
                 container.runtime_skills._remember_result(
                     uuid4(), SkillResult(status="succeeded", data="unrelated")
@@ -211,6 +213,9 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             "把刚才这份公告整理成简明核对清单，保留适用范围、所有禁止类别，"
             "以及当前规则仍需要再核实的提醒。"
             if mode == "source_summary"
+            else "只根据刚才实际读到的网页，截至今天能否完整确认所有现行规定？"
+            "不要再调用工具，也不要把未核实的条件写成通过。"
+            if mode in {"source_evidence_gap", "source_evidence_gap_unavailable"}
             else "把刚才的公告整理成清单，并重新查询今天的最新规定。"
             if mode == "source_summary_fresh"
             else "把刚才的公告整理成清单，并提醒我明天上午检查。"
@@ -224,9 +229,13 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         await _turn(container, session.session_id, followup)
         final = provider.requests[-1]
         supplied = "\n".join(text for _role, text in final.context)
-        if mode == "source_summary":
+        if mode in {"source_summary", "source_evidence_gap", "source_evidence_gap_unavailable"}:
             assert len(provider.requests) == 3
             assert final.tools == ()
+            assert final.tool_choice == "auto"
+            assert "<runtime_initial_tool_decision>" not in final.system_prompt
+            character = container.characters.get("default")
+            assert character is not None and character.system_prompt in final.system_prompt
         elif mode in {"source_summary_fresh", "source_summary_write"}:
             assert final.tools and final.tool_choice == "required"
         elif mode in {"goodbye", "teasing"}:
@@ -253,6 +262,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             "available",
             "history_budget",
             "source_summary",
+            "source_evidence_gap",
             "source_summary_fresh",
             "source_summary_write",
             "goodbye",
@@ -264,7 +274,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             assert all(_BODY not in text for role, text in final.context if role == "system")
         else:
             assert _BODY not in supplied
-        if mode in {"restart", "evicted"}:
+        if mode in {"restart", "evicted", "source_evidence_gap_unavailable"}:
             assert '"original_result": "unavailable"' in supplied
         elif mode == "denied":
             assert '"error_code": "permission_denied"' in supplied
@@ -273,6 +283,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
             "available",
             "history_budget",
             "source_summary",
+            "source_evidence_gap",
             "source_summary_fresh",
             "source_summary_write",
             "goodbye",
@@ -284,6 +295,137 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         rows = await container.database.fetchall("SELECT result_json FROM skill_runs")
         persisted = json.dumps([str(row["result_json"]) for row in rows])
         assert _BODY not in persisted and "private-query-value" not in persisted
+    finally:
+        events.close()
+        await container.stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("child_decision", ["allow_once", "deny"])
+async def test_budget_omitted_index_keeps_actual_child_for_separate_confirmation(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, child_decision: str
+) -> None:
+    settings = runtime_settings.model_copy(
+        update={
+            "personal_assistant": runtime_settings.personal_assistant.model_copy(
+                update={"enabled": True}
+            )
+        }
+    )
+    container = RuntimeContainer(settings)
+    await container.start()
+    events = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "skill.confirmation_requested", queue_size=2
+    )
+    child_url = "https://other.example.org/info#requirements"
+    links: list[JsonValue] = []
+    for index in range(19):
+        links.append(
+            {"url": f"http://example.org/news/{index}", "label": "News", "label_truncated": False}
+        )
+    links.append({"url": child_url, "label": "Info", "label_truncated": False})
+    assert sum(len(json.dumps(link, ensure_ascii=False).encode()) for link in links) <= 3000
+    body = "这是原始目录正文，不得从模型旧回复重建条件。" * 250
+    assert len(body) <= 6000
+    executions: list[str] = []
+    requests: list[LlmRequest] = []
+    read_tool_name = next(
+        tool.name
+        for tool in RuntimeSkillRouter(container.runtime_skills.list).select(f"读取网页 {_URL}")
+        if tool.skill_id == "web.read"
+    )
+
+    class Provider:
+        kind = "demo"
+        supports_tool_calling = True
+
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            requests.append(request)
+            if request.tool_exchanges:
+                yield LlmTextDelta("读取结果已经返回。")
+                yield LlmResponseCompleted("stop")
+                return
+            if "打开刚才" in request.user_text:
+                assert request.tool_choice == "required"
+                source_data = next(
+                    text.split("\n", 1)[1]
+                    for role, text in request.context
+                    if role == "user" and text.startswith("[PUBLIC SOURCE DATA]\n")
+                )
+                receipt = json.loads(source_data)["receipts"][0]
+                assert receipt["original_result"] == "omitted_for_input_budget"
+                assert "data" not in receipt
+                metadata = receipt["source_metadata"]
+                assert metadata["read_url_schemes"] == ["https"]
+                assert metadata["links_truncated"] is False
+                assert metadata["links"] == links
+                assert metadata["links"][-1]["url"] == child_url
+                assert body not in source_data
+                arguments: JsonObject = {"url": metadata["links"][-1]["url"]}
+            else:
+                arguments = {"url": _URL, "max_links": 20}
+            yield LlmToolCallRequested(LlmToolCall("read_source", read_tool_name, arguments))
+            yield LlmResponseCompleted("tool_calls")
+
+    provider = Provider()
+
+    async def read(arguments: JsonObject) -> JsonObject:
+        url = str(arguments["url"])
+        executions.append(url)
+        text = body if url == _URL else "独立子页面正文。"
+        return {
+            "url": url,
+            "title": "Index" if url == _URL else "Info",
+            "text": text,
+            "retrieved_at": "2026-10-01T00:00:00+00:00",
+            "content_type": "text/html",
+            "body_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "total_characters": len(text),
+            "text_offset": 0,
+            "truncated": False,
+            "focus_matched": None,
+            "dns_resolver": "system",
+            "extraction_method": "main_content",
+            "document_characters": len(text),
+            "read_url_schemes": ["https"],
+            "links": links if url == _URL else [],
+            "links_requested": url == _URL,
+            "links_truncated": False,
+            "links_scope": "selected_source",
+        }
+
+    def create_provider(_: ModelRoleConfig) -> LlmProvider:
+        return provider
+
+    monkeypatch.setattr(container.model_configurations, "create_chat_provider", create_provider)
+    monkeypatch.setitem(container.runtime_skills._builtin._handlers, "public_web_read", read)
+    try:
+        session = await container.sessions.create_session("default")
+        assert len(container.runtime_skills.list()) == 12
+        for text, decision in (
+            (f"请读取网页 {_URL}，保留目录链接。", "allow_once"),
+            ("请打开刚才目录实际返回的 Info 网页，不要猜地址。", child_decision),
+        ):
+            before_executions = list(executions)
+            task = asyncio.create_task(_turn(container, session.session_id, text))
+            event = await asyncio.wait_for(events.receive(), timeout=2)
+            assert executions == before_executions
+            payload = cast(dict[str, object], event["payload"])
+            assert payload["skill_id"] == "web.read"
+            await container.runtime_skills.decide_confirmation(
+                UUID(str(payload["request_id"])), decision
+            )
+            await task
+        runs = await container.runtime_skills.list_runs(session.session_id)
+        assert len(runs) == 2
+        assert executions == ([_URL, child_url] if child_decision == "allow_once" else [_URL])
+        child_requests = [request for request in requests if "打开刚才" in request.user_text]
+        assert child_requests and child_requests[0].tools
+        assert child_requests[0].input_budget_report is not None
+        grants = await container.database.fetchone("SELECT COUNT(*) AS n FROM permission_grants")
+        assert grants is not None and int(grants["n"]) == 0
+        persisted = await container.database.fetchall("SELECT result_json FROM skill_runs")
+        assert body not in str(persisted) and child_url not in str(persisted)
     finally:
         events.close()
         await container.stop()

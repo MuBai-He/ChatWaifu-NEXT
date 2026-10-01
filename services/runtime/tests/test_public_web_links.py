@@ -42,6 +42,7 @@ async def test_links_are_opt_in_and_never_followed(public_dns: None) -> None:
     assert result["text"] == "Next source"
     assert result["links_requested"] is False
     assert result["links"] == [] and result["links_truncated"] is False
+    assert result["read_url_schemes"] == ["https"]
     assert requests == ["https://example.org/index"]
 
 
@@ -74,6 +75,7 @@ async def test_actual_links_use_final_url_and_selected_body_only(public_dns: Non
     assert result["url"] == "https://example.org/docs/index.html"
     assert result["extraction_method"] == "main_content"
     assert result["links_scope"] == "selected_source"
+    assert result["read_url_schemes"] == ["https"]
     assert result["links"] == [
         {
             "url": "https://example.org/docs/next.html#rules",

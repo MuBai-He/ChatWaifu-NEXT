@@ -250,6 +250,7 @@ class PublicWebReader:
             "links_requested": maximum_links > 0,
             "links_truncated": links_truncated,
             "links_scope": "selected_source",
+            "read_url_schemes": ["https"],
         }
 
     async def fetch(

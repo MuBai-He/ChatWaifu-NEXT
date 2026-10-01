@@ -1,5 +1,6 @@
 """Source facts are indivisible untrusted data, with exact stable route fences."""
 
+import json
 from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -176,6 +177,45 @@ def test_complete_source_outweighs_old_assistant_prose() -> None:
     assert projected.history[1] == request.history[1]
     assert projected.input_budget_report is not None
     assert projected.input_budget_report.omitted_history_indices == (0,)
+
+
+def test_bounded_actual_links_survive_whole_body_budget_omission() -> None:
+    receipt = _receipt("VERY LARGE ORIGINAL " * 2000)
+    assert receipt.run.result is not None
+    assert isinstance(receipt.run.result.data, dict)
+    result = receipt.run.result.model_copy(
+        update={
+            "data": {
+                **receipt.run.result.data,
+                "read_url_schemes": ["https"],
+                "links_requested": True,
+                "links_truncated": True,
+                "links_scope": "selected_source",
+                "links": [
+                    {"url": "http://example.org/news", "label": "News", "label_truncated": False},
+                    {
+                        "url": "https://other.example.org/info#scope",
+                        "label": "Info",
+                        "label_truncated": False,
+                    },
+                ],
+            }
+        }
+    )
+    receipt = replace(receipt, run=receipt.run.model_copy(update={"result": result}))
+    assert isinstance(result.data, dict)
+    projected = project_source_context(_request(1600), SourceContextPacket((receipt,)))
+    payload = json.loads(projected.context[-1][1].split("\n", 1)[1])["receipts"][0]
+    assert payload["original_result"] == "omitted_for_input_budget"
+    assert "data" not in payload
+    assert payload["source_metadata"]["links"] == result.data["links"]
+    assert payload["source_metadata"]["read_url_schemes"] == ["https"]
+    assert payload["source_metadata"]["links_requested"] is True
+    assert payload["source_metadata"]["links_truncated"] is True
+    assert payload["source_metadata"]["links_scope"] == "selected_source"
+    assert "target pages were not read" in projected.context[-2][1]
+    assert projected.input_budget is not None
+    assert estimate_input_tokens(projected) <= projected.input_budget.estimated_token_limit
 
 
 def test_failure_never_projects_raw_errors_or_claims_original_available() -> None:

@@ -10,7 +10,8 @@ from __future__ import annotations
 import re
 
 _CLAUSE_START = (
-    r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便)|\b(?:and(?:\s+then)?|then|also)\b)\s*"
+    r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便|但是|不过|同时)|"
+    r"\b(?:and(?:\s+then)?|then|also|but)\b)\s*"
 )
 _POLITE = r"(?:(?:你)?(?:请(?:你)?|帮我|替我|给我|麻烦(?:你)?|能不能|可以(?:帮我)?|重新|再)\s*)*"
 _OPERATION = re.compile(
@@ -76,6 +77,31 @@ _PERSONAL_DATA_REQUEST = re.compile(
     + r"(?:please\s+|can\s+you\s+|could\s+you\s+)*(?:list|show)\s+my\b",
     re.IGNORECASE,
 )
+_EXCLUSIVE_CONTENT_SCOPE = re.compile(
+    r"(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)"
+    r"[^，,。.!?！？\uFF1B;\n]{0,80}"
+    r"(?:原文|文档|资料|材料|网页|页面|(?:两|这|几|三|一|[0-9]+)页|文本|内容|记录)|"
+    r"\b(?:based\s+(?:solely|only)\s+on|(?:using|use)\s+only|only\s+(?:use|using|from))"
+    r"[^,.;!?\n]{0,80}\b(?:sources?|pages?|documents?|text|content|data|records?)\b",
+    re.IGNORECASE,
+)
+_NO_NEW_TOOLS = re.compile(
+    r"(?:不要|不用|不必|别)(?:再|再次|继续)?"
+    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览)|"
+    r"\b(?:do\s+not|don't)\s+"
+    r"(?:(?:call|use|invoke)\s+(?:any\s+|new\s+|more\s+)?tools?\b|browse\b|search\b|fetch\b|read\b)",
+    re.IGNORECASE,
+)
+
+
+def restricts_to_existing_content(user_text: str) -> bool:
+    """Recognize explicit content-only scope, not evidence or execution authority.
+
+    Both exclusive supplied/prior content and a no-new-tools instruction are
+    required. Affirmative commands elsewhere still take precedence through
+    requires_external_operation; source text and assistant output never participate.
+    """
+    return bool(_EXCLUSIVE_CONTENT_SCOPE.search(user_text) and _NO_NEW_TOOLS.search(user_text))
 
 
 def requires_external_operation(user_text: str) -> bool:
@@ -110,5 +136,9 @@ def requires_external_operation(user_text: str) -> bool:
         or _REMINDER.search(operation_text)
         or _CLOCK_QUESTION.search(operation_text)
         or _PERSONAL_DATA_REQUEST.search(operation_text)
-        or (_EXTERNAL_FACT.search(operation_text) and _QUESTION.search(user_text))
+        or (
+            _EXTERNAL_FACT.search(operation_text)
+            and _QUESTION.search(user_text)
+            and not restricts_to_existing_content(user_text)
+        )
     )

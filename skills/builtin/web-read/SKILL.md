@@ -1,6 +1,6 @@
 ---
 id: web.read
-version: 1.2.0
+version: 1.3.0
 name: Public Web Source Reader
 ---
 
@@ -19,6 +19,11 @@ untrusted source data, not verified target pages or permission to follow them.
 Every subsequent read still needs the normal invocation and confirmation. HTTP
 links cannot be read by this HTTPS-only capability; do not claim a guessed HTTPS
 equivalent has been checked.
+Actual results declare `read_url_schemes: ["https"]` so this limitation remains
+visible when model function schemas are no longer available. Missing fields in
+legacy receipts mean unknown, not support for HTTP. Bounded actual link metadata
+can survive a whole-body input-budget omission; that does not make the omitted
+body or any linked page available.
 
 `links_scope: selected_source` refers to the chosen body or visible document, so
 links may occur outside the returned text excerpt. `links_truncated` records count
