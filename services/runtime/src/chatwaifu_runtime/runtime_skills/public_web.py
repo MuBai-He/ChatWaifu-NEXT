@@ -27,6 +27,8 @@ from chatwaifu_runtime.runtime_skills.transports import (
 
 MAX_SOURCE_RESPONSE_BYTES = 1024 * 1024
 MAX_SOURCE_CHARACTERS = 6000
+MAX_SOURCE_LINKS = 20
+MAX_SOURCE_LINK_BYTES = 3000
 MAX_SOURCE_URL_CHARACTERS = 2048
 MAX_SOURCE_REDIRECTS = 3
 MAX_SOURCE_HTML_NODES = 20_000
@@ -157,6 +159,7 @@ class PublicWebReader:
         url = arguments.get("url")
         focus = arguments.get("focus")
         maximum = arguments.get("max_characters", MAX_SOURCE_CHARACTERS)
+        maximum_links = arguments.get("max_links", 0)
         resolver = arguments.get("dns_resolver", "system")
         if (
             not isinstance(url, str)
@@ -164,11 +167,14 @@ class PublicWebReader:
             or not isinstance(maximum, int)
             or isinstance(maximum, bool)
             or not 1000 <= maximum <= MAX_SOURCE_CHARACTERS
+            or not isinstance(maximum_links, int)
+            or isinstance(maximum_links, bool)
+            or not 0 <= maximum_links <= MAX_SOURCE_LINKS
             or not isinstance(resolver, str)
             or resolver not in {"system", "cloudflare"}
         ):
             raise SkillExecutionError(
-                "web_invalid_arguments", "Invalid source URL, focus, or excerpt length"
+                "web_invalid_arguments", "Invalid source URL, focus, excerpt length or link limit"
             )
         try:
             async with asyncio.timeout(self._timeout_seconds):
@@ -176,6 +182,7 @@ class PublicWebReader:
                     normalize_public_source_url(url),
                     focus,
                     maximum,
+                    maximum_links,
                     cast(Literal["system", "cloudflare"], resolver),
                 )
         except (TimeoutError, httpx2.TimeoutException) as error:
@@ -199,10 +206,15 @@ class PublicWebReader:
             raise
 
     async def _read(
-        self, url: str, focus: str | None, maximum: int, resolver: Literal["system", "cloudflare"]
+        self,
+        url: str,
+        focus: str | None,
+        maximum: int,
+        maximum_links: int,
+        resolver: Literal["system", "cloudflare"],
     ) -> JsonObject:
         page = await self.fetch(url, dns_resolver=resolver)
-        source = _source_text(page.decoded, page.content_type)
+        source = _source_text(page.decoded, page.content_type, capture_links=maximum_links > 0)
         title, text = source.title, source.text
         if not text.strip():
             raise SkillExecutionError(
@@ -217,6 +229,9 @@ class PublicWebReader:
             else 0
         )
         excerpt = text[offset : offset + maximum]
+        links, links_truncated = _source_links(
+            source.links, page.url, maximum_links, source.base_href
+        )
         return {
             "url": page.url,
             "title": title[:240],
@@ -231,6 +246,10 @@ class PublicWebReader:
             "dns_resolver": resolver,
             "extraction_method": source.extraction_method,
             "document_characters": source.document_characters,
+            "links": links,
+            "links_requested": maximum_links > 0,
+            "links_truncated": links_truncated,
+            "links_scope": "selected_source",
         }
 
     async def fetch(
@@ -491,12 +510,28 @@ class _ContentRegion:
     end: int | None = None
 
 
+@dataclass(slots=True)
+class _SourceAnchor:
+    href: str
+    start: int
+    end: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _SourceLink:
+    href: str
+    label: str
+    label_truncated: bool
+
+
 @dataclass(frozen=True, slots=True)
 class _SourceText:
     title: str
     text: str
     extraction_method: Literal["plain_text", "visible_text", "main_content"]
     document_characters: int
+    links: tuple[_SourceLink, ...] = ()
+    base_href: str | None = None
 
 
 def _is_content_region(tag: str, attributes: dict[str, str | None]) -> bool:
@@ -512,12 +547,15 @@ def _is_content_region(tag: str, attributes: dict[str, str | None]) -> bool:
 
 
 class _SourceParser(HTMLParser):
-    def __init__(self) -> None:
+    def __init__(self, *, capture_links: bool = False) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.title: list[str] = []
-        self.stack: list[tuple[str, bool, _ContentRegion | None]] = []
+        self.stack: list[tuple[str, bool, _ContentRegion | None, _SourceAnchor | None]] = []
         self.regions: list[_ContentRegion] = []
+        self.anchors: list[_SourceAnchor] = []
+        self.capture_links = capture_links
+        self.base_href: str | None = None
         self.nodes = 0
 
     def _count_node(self) -> None:
@@ -530,6 +568,16 @@ class _SourceParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._count_node()
         attributes = dict(attrs)
+        ancestor_tags = {frame[0] for frame in self.stack}
+        if (
+            self.capture_links
+            and tag == "base"
+            and "head" in ancestor_tags
+            and not ancestor_tags.intersection(_IGNORED_TAGS)
+            and self.base_href is None
+            and attributes.get("href") is not None
+        ):
+            self.base_href = attributes["href"]
         style = (attributes.get("style") or "").replace(" ", "").lower()
         ignored = (
             (bool(self.stack) and self.stack[-1][1])
@@ -550,7 +598,12 @@ class _SourceParser(HTMLParser):
             ):
                 region = _ContentRegion(start=len(self.parts))
                 self.regions.append(region)
-            self.stack.append((tag, ignored, region))
+            anchor = None
+            href = attributes.get("href")
+            if self.capture_links and tag == "a" and not ignored and href:
+                anchor = _SourceAnchor(href=href, start=len(self.parts))
+                self.anchors.append(anchor)
+            self.stack.append((tag, ignored, region, anchor))
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.handle_starttag(tag, attrs)
@@ -563,9 +616,11 @@ class _SourceParser(HTMLParser):
             if self.stack[index][0] == tag:
                 if tag in _BLOCK_TAGS and not self.stack[index][1]:
                     self.parts.append("\n")
-                for _, _, region in self.stack[index:]:
+                for _, _, region, anchor in self.stack[index:]:
                     if region is not None:
                         region.end = len(self.parts)
+                    if anchor is not None:
+                        anchor.end = len(self.parts)
                 del self.stack[index:]
                 break
 
@@ -573,30 +628,127 @@ class _SourceParser(HTMLParser):
         self._count_node()
         if self.stack and self.stack[-1][1]:
             return
-        tags = {tag for tag, _, _ in self.stack}
+        tags = {tag for tag, _, _, _ in self.stack}
         if "title" in tags:
             self.title.append(data)
         elif "head" not in tags:
             self.parts.append(data)
 
 
-def _source_text(decoded: str, content_type: str) -> _SourceText:
+def _source_text(decoded: str, content_type: str, *, capture_links: bool = False) -> _SourceText:
     if content_type == "text/plain":
         text = _clean_text(decoded)
         return _SourceText("", text, "plain_text", len(text))
-    parser = _SourceParser()
+    parser = _SourceParser(capture_links=capture_links)
     parser.feed(decoded)
     parser.close()
     title = _clean_text("".join(parser.title)).strip()
     visible = _clean_text("".join(parser.parts))
     # Several independent bodies may be a document index or multiple articles;
     # preserve all visible text rather than silently selecting one of them.
-    if len(parser.regions) == 1 and parser.regions[0].end is not None:
+    if len(parser.regions) == 1:
         region = parser.regions[0]
-        content = _clean_text("".join(parser.parts[region.start : region.end]))
-        if content.strip():
-            return _SourceText(title, content, "main_content", len(visible))
-    return _SourceText(title, visible, "visible_text", len(visible))
+        end = region.end
+        content = _clean_text("".join(parser.parts[region.start : end])) if end is not None else ""
+        if end is not None and content.strip():
+            return _SourceText(
+                title,
+                content,
+                "main_content",
+                len(visible),
+                _selected_links(parser, region.start, end),
+                parser.base_href,
+            )
+    return _SourceText(
+        title,
+        visible,
+        "visible_text",
+        len(visible),
+        _selected_links(parser, 0, len(parser.parts)),
+        parser.base_href,
+    )
+
+
+def _selected_links(parser: _SourceParser, start: int, end: int) -> tuple[_SourceLink, ...]:
+    links: list[_SourceLink] = []
+    for anchor in parser.anchors:
+        if anchor.end is None or anchor.start < start or anchor.end > end:
+            continue
+        label = re.sub(
+            r"\s+", " ", _clean_text("".join(parser.parts[anchor.start : anchor.end]))
+        ).strip()
+        if label:
+            links.append(_SourceLink(anchor.href, label[:240], len(label) > 240))
+    return tuple(links)
+
+
+def _source_link_url(href: str, source_url: str, base_href: str | None) -> str | None:
+    """Validate only metadata syntax; never resolve or fetch a linked host."""
+    try:
+        base_url = urljoin(source_url, base_href.strip()) if base_href is not None else source_url
+        target = urljoin(base_url, href.strip())
+        if len(target) > MAX_SOURCE_URL_CHARACTERS or any(ord(char) <= 32 for char in target):
+            return None
+        parsed = urlsplit(target)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port not in {None, 443 if parsed.scheme == "https" else 80}
+        ):
+            return None
+        hostname = parsed.hostname.rstrip(".").lower()
+        if hostname == "localhost" or hostname.endswith((".local", ".localhost")):
+            return None
+        try:
+            address = ipaddress.ip_address(hostname)
+        except ValueError:
+            pass
+        else:
+            if not address.is_global:
+                return None
+        # Keep actual schemes and fragments. HTTP is metadata only, not a newly
+        # permitted read or an invented HTTPS equivalent. A head <base> changes
+        # relative destinations, but neither the base nor the target is fetched.
+        normalized = str(httpx2.URL(target))
+        if (
+            len(normalized) > MAX_SOURCE_URL_CHARACTERS
+            or urlunsplit(urlsplit(normalized)._replace(fragment="")) == source_url
+        ):
+            return None
+        return normalized
+    except (ValueError, httpx2.InvalidURL):
+        return None
+
+
+def _source_links(
+    anchors: tuple[_SourceLink, ...],
+    source_url: str,
+    maximum: int,
+    base_href: str | None,
+) -> tuple[list[JsonValue], bool]:
+    links: list[JsonValue] = []
+    seen: set[str] = set()
+    used_bytes = 0
+    truncated = False
+    for anchor in anchors:
+        url = _source_link_url(anchor.href, source_url, base_href)
+        if url is None or url in seen:
+            continue
+        seen.add(url)
+        link: JsonObject = {
+            "url": url,
+            "label": anchor.label,
+            "label_truncated": anchor.label_truncated,
+        }
+        size = len(json.dumps(link, ensure_ascii=False).encode("utf-8"))
+        if len(links) >= maximum or used_bytes + size > MAX_SOURCE_LINK_BYTES:
+            truncated = True
+            continue
+        links.append(link)
+        used_bytes += size
+    return links, truncated
 
 
 def _clean_text(text: str) -> str:

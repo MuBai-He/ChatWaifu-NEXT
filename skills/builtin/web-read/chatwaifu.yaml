@@ -4,9 +4,9 @@
   "definition":
     {
       "skill_id": "web.read",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "name": "Public Web Source Reader 公开网页来源核查",
-      "description": "Read a public HTTPS URL to check an external source, latest information, documentation or regulations. 读取公开网页链接，核查来源、最新资料、文档或法规。 Does not discover URLs.",
+      "description": "Read a public HTTPS URL to check an external source, latest information, documentation or regulations. 读取公开网页链接，核查来源、最新资料、文档或法规。 Does not search the web.",
       "capabilities":
         [
           {
@@ -45,6 +45,14 @@
                         "minimum": 1000,
                         "maximum": 6000,
                         "default": 6000,
+                      },
+                    "max_links":
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                        "default": 0,
+                        "description": "Optional bounded anchor links from the selected source body, including index pages. Zero disables extraction. Linked pages are not fetched or verified; every further read needs normal permission. Actual HTTP URLs remain HTTP and are not readable by this HTTPS-only capability.",
                       },
                   },
                 "additionalProperties": false,
@@ -92,6 +100,38 @@
                         "enum": ["plain_text", "visible_text", "main_content"],
                       },
                     "document_characters": { "type": "integer", "minimum": 1 },
+                    "links":
+                      {
+                        "type": "array",
+                        "maxItems": 20,
+                        "description": "Untrusted actual anchor destinations and bounded visible labels from the selected source, possibly outside the text excerpt. At most 3000 UTF-8 bytes across serialized entries. No target page was fetched or verified.",
+                        "items":
+                          {
+                            "type": "object",
+                            "required": ["url", "label", "label_truncated"],
+                            "properties":
+                              {
+                                "url":
+                                  {
+                                    "type": "string",
+                                    "maxLength": 2048,
+                                    "format": "uri",
+                                    "pattern": "^https?://",
+                                  },
+                                "label":
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 240,
+                                  },
+                                "label_truncated": { "type": "boolean" },
+                              },
+                            "additionalProperties": false,
+                          },
+                      },
+                    "links_requested": { "type": "boolean" },
+                    "links_truncated": { "type": "boolean" },
+                    "links_scope": { "enum": ["selected_source"] },
                   },
                 "additionalProperties": false,
               },

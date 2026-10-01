@@ -1653,7 +1653,7 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
         session = await container.sessions.create_session("ayachi_nene")
         definitions = container.runtime_skills.list()
         definition = next(item for item in definitions if item.skill_id == "web.read")
-        assert definition.version == "1.1.0"
+        assert definition.version == "1.2.0"
         assert definition.capabilities[0].required_permissions == ["web.public.read"]
         assert definition.interruptible is True
         assert all(
@@ -1721,6 +1721,105 @@ async def test_public_web_source_passes_real_permission_gateway_and_private_audi
             )
         assert source_body not in persisted
         assert "private-query-value" not in persisted
+    finally:
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        container.event_hub.unsubscribe(events)
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_source_index_link_needs_its_own_confirmation_and_stays_out_of_audit(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requested: list[str] = []
+    source_url = "https://source.example/index"
+    child_url = "https://source.example/next?private-linked-value=yes"
+    label = "Actual linked source label"
+
+    async def resolve(
+        *args: object, **kwargs: object
+    ) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        return [(2, 1, 6, "", ("93.184.216.34", 443))]
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requested.append(str(request.url))
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/html"},
+            text=f'<main><a href="{child_url}">{label}</a></main>',
+        )
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", resolve)
+
+    def transport(_: ValidatedMcpEndpoint) -> httpx2.AsyncBaseTransport:
+        return httpx2.MockTransport(handle)
+
+    monkeypatch.setattr(
+        "chatwaifu_runtime.runtime_skills.public_web.PinnedAsyncHTTPTransport", transport
+    )
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    events = container.event_hub.subscribe(
+        lambda event: event.get("event_type") == "skill.confirmation_requested", queue_size=2
+    )
+    task: asyncio.Task[list[str]] | None = None
+    try:
+        session = await container.sessions.create_session("ayachi_nene")
+        router = RuntimeSkillRouter(container.runtime_skills.list)
+        user_text = f"请读取目录链接再核查下一页: {source_url}"
+        projection = next(tool for tool in router.select(user_text) if tool.skill_id == "web.read")
+        final_text = "目录已读取，下一页请求被拒绝，未核查其正文。"
+        llm = _ScriptedLlm(
+            [
+                (
+                    LlmToolCallRequested(
+                        LlmToolCall("index", projection.name, {"url": source_url, "max_links": 2})
+                    ),
+                    LlmResponseCompleted("tool_calls"),
+                ),
+                (
+                    LlmToolCallRequested(LlmToolCall("child", projection.name, {"url": child_url})),
+                    LlmResponseCompleted("tool_calls"),
+                ),
+                (LlmTextDelta(final_text), LlmResponseCompleted("stop")),
+            ]
+        )
+        agent = AgentTurnOrchestrator(llm, container.runtime_skills, router)
+        task = asyncio.create_task(_collect(agent, _request(user_text), session.session_id))
+        event = await asyncio.wait_for(events.receive(), timeout=5)
+        assert requested == []
+        await container.runtime_skills.decide_confirmation(
+            UUID(str(cast(dict[str, object], event["payload"])["request_id"])), "allow_once"
+        )
+        child_event = await asyncio.wait_for(events.receive(), timeout=5)
+        assert requested == [source_url]
+        content = llm.requests[1].tool_exchanges[0].results[0].content
+        assert isinstance(content, dict) and content["untrusted"] is True
+        data = content["data"]
+        assert isinstance(data, dict)
+        assert data["links"] == [{"url": child_url, "label": label, "label_truncated": False}]
+        await container.runtime_skills.decide_confirmation(
+            UUID(str(cast(dict[str, object], child_event["payload"])["request_id"])), "deny"
+        )
+        assert await asyncio.wait_for(task, timeout=5) == [final_text]
+        assert requested == [source_url]
+        runs = await container.runtime_skills.list_runs(session.session_id)
+        by_call = {run.provider_tool_call_id: run for run in runs}
+        assert by_call["index"].state is SkillRunState.SUCCEEDED
+        assert by_call["child"].state is SkillRunState.FAILED
+        assert by_call["child"].error is not None
+        assert by_call["child"].error.code == "permission_denied"
+        with sqlite3.connect(cast(Path, runtime_settings.storage.database_path)) as database:
+            persisted = json.dumps(
+                database.execute(
+                    "SELECT arguments_json, result_json FROM skill_runs WHERE skill_id = 'web.read'"
+                ).fetchall()
+            )
+            assert database.execute("SELECT COUNT(*) FROM permission_grants").fetchone()[0] == 0
+        assert label not in persisted and "private-linked-value" not in persisted
     finally:
         if task is not None and not task.done():
             task.cancel()

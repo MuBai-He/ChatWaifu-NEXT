@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add opt-in bounded anchor links to public source reads, preserving actual
+  schemes, final-page/base resolution and separate confirmation for each target.
+  Skill 1.2.0/evaluator 1.9.2 retain compatibility and immutable batch identity.
+  Actual index reads and Python HTTP 503 failures are recorded separately;
+  model source quality and Q02 remain unapproved.
+
 - Separate each initial image admission from Provider readiness in the burst
   overflow test, preserving stop and dispatch deadlines. Delayed-intake and
   suppressed-dispatch controls retain the historical Windows CI failure.
