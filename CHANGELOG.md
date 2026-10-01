@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Strengthen the Runtime Skill event-failure check by registering a real terminal
+  waiter before execution and separating durable setup from its existing signal
+  deadline. A held-signal control and notification-suppression experiment verify
+  the check; shutdown timing assertions are unchanged. Input-count investigation
+  retains proxy/reference discrepancies without changing production budgets.
+
 - Fail completed LLM responses that contain no visible answer text, preserving
   recorded tool results and avoiding automatic operation replay. Evaluation 1.6.2
   records empty answers as incomplete with actual usage retained. Real Opus
