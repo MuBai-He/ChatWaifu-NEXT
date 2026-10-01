@@ -764,8 +764,11 @@ async def test_schema_overflow_closes_tools_and_preserves_acquired_source() -> N
     from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
     from chatwaifu_runtime.providers.contracts import LlmInputBudget
 
-    projection = _Projection(input_schema={"description": "schema " * 1200})
-    source: JsonObject = {"text": "verified condition " * 250, "truncated": False}
+    # BPE compresses repeated English words more than the previous half-character
+    # heuristic. Keep the 6000 allowance; make the fixture actually overflow only
+    # after the complete acquired result is added.
+    projection = _Projection(input_schema={"description": "schema " * 4000})
+    source: JsonObject = {"text": "verified condition " * 800, "truncated": False}
     call = LlmToolCall("source", projection.name, {})
     llm = _ScriptedLlm(
         [

@@ -139,7 +139,8 @@ class LlmInputBudgetReport:
     omitted_history_indices: tuple[int, ...] = ()
     omitted_tool_preamble_indices: tuple[int, ...] = ()
     estimated_image_tokens: int = 0
-    version: Literal["1.0"] = "1.0"
+    estimator: Literal["cl100k_chat_json_v1"] = "cl100k_chat_json_v1"
+    version: Literal["1.1"] = "1.1"
 
 
 @dataclass(frozen=True, slots=True)

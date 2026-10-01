@@ -15,6 +15,7 @@ from nltk_resources import configure_nltk_data_environment, ensure_punkt_tab
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "packaging" / "runtime" / "chatwaifu-runtime.spec"
+INPUT_VOCABULARY_SHA256 = "223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7"
 
 
 def main() -> int:
@@ -76,6 +77,8 @@ def _verify_bundle(bundle: Path, executable: Path) -> None:
         bundle / "_internal" / "config" / "default.toml",
         bundle / "_internal" / "characters" / "default" / "character.yaml",
         bundle / "_internal" / "skills" / "builtin" / "runtime-status" / "chatwaifu.yaml",
+        bundle / "_internal" / "chatwaifu_runtime" / "providers" / "data" / "cl100k_base.tiktoken",
+        bundle / "_internal" / "chatwaifu_runtime" / "providers" / "data" / "LICENSE.tiktoken",
         bundle
         / "_internal"
         / "nltk_data"
@@ -88,6 +91,11 @@ def _verify_bundle(bundle: Path, executable: Path) -> None:
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise RuntimeError(f"Frozen Runtime is missing required files: {missing}")
+    vocabulary = (
+        bundle / "_internal" / "chatwaifu_runtime" / "providers" / "data" / "cl100k_base.tiktoken"
+    )
+    if hashlib.sha256(vocabulary.read_bytes()).hexdigest() != INPUT_VOCABULARY_SHA256:
+        raise RuntimeError("Frozen input reference vocabulary checksum mismatch")
     _verify_pinned_nltk_root(bundle / "_internal" / "nltk_data")
 
 

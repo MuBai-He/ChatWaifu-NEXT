@@ -21,13 +21,17 @@ def test_budget_accounts_for_tools_arguments_and_results() -> None:
     base = estimate_input_tokens(request)
     tool_request = replace(
         request,
-        tools=(LlmToolDefinition("read", "source", {"description": "schema" * 1000}),),
+        tools=(
+            LlmToolDefinition(
+                "read", "source", {"description": "完整的参数约束与来源条件，" * 1000}
+            ),
+        ),
     )
     assert estimate_input_tokens(tool_request) > base + 2500
     exchange = LlmToolExchange(
         "unexecuted narrative" * 200,
-        (LlmToolCall("one", "read", {"focus": "argument" * 1000}),),
-        (LlmToolResult("one", "read", {"text": "source" * 1000}),),
+        (LlmToolCall("one", "read", {"focus": "核查请求中的每项适用条件，" * 1000}),),
+        (LlmToolResult("one", "read", {"text": "已经核对的完整来源与限制，" * 1000}),),
     )
     assert estimate_input_tokens(replace(tool_request, tool_exchanges=(exchange,))) > (
         estimate_input_tokens(tool_request) + 6500

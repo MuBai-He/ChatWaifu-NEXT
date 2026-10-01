@@ -1,19 +1,19 @@
 """Budget complete tool inputs without rewriting task, source or action facts.
 
-The character compiler's character-count heuristic is an estimate. This module
-extends it to tool schemas, exchanges and message overhead; it does not pretend
-to implement any provider's tokenizer. Image input reserves are estimates too.
+Use the Provider domain's bundled chat-wire reference for complete requests.
+This is an estimate, not a native provider tokenizer or universal upper bound.
 """
 
 from __future__ import annotations
 
-import json
 from dataclasses import replace
 
 from chatwaifu_runtime.providers.contracts import LlmInputBudgetReport, LlmRequest
+from chatwaifu_runtime.providers.input_estimation import (
+    ESTIMATED_IMAGE_TOKENS,
+    estimate_reference_input_tokens,
+)
 
-_MESSAGE_TOKENS = 16
-_IMAGE_TOKENS = 1024
 _PREAMBLE_OMITTED = (
     "[Runtime omitted the model's pre-tool narrative for the input budget. "
     "The executed calls and results follow unchanged.]"
@@ -26,42 +26,9 @@ class InputBudgetExceeded(RuntimeError):
         self.report = report
 
 
-def _tokens(text: str) -> int:
-    return (len(text) + 1) // 2
-
-
-def _json_tokens(value: object) -> int:
-    return _tokens(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
-
-
 def estimate_input_tokens(request: LlmRequest) -> int:
     """Include every transmitted text, schema, argument and result once."""
-    messages = 2 + len(request.context) + len(request.history)
-    used = _tokens(request.system_prompt) + _tokens(request.user_text)
-    used += sum(_tokens(text) for _role, text in (*request.context, *request.history))
-    for exchange in request.tool_exchanges:
-        messages += 1 + len(exchange.results)
-        used += _tokens(exchange.assistant_text)
-        used += _json_tokens(
-            [
-                {"id": call.call_id, "name": call.name, "arguments": call.arguments}
-                for call in exchange.calls
-            ]
-        )
-        for result in exchange.results:
-            used += _tokens(result.call_id) + _json_tokens(result.content)
-    if request.tools:
-        used += _json_tokens(
-            [
-                {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.input_schema,
-                }
-                for tool in request.tools
-            ]
-        ) + 16 * len(request.tools)
-    return used + _MESSAGE_TOKENS * messages + _IMAGE_TOKENS * len(request.images)
+    return estimate_reference_input_tokens(request)
 
 
 def fit_input_budget(request: LlmRequest) -> LlmRequest:
@@ -85,10 +52,14 @@ def fit_input_budget(request: LlmRequest) -> LlmRequest:
     for index, exchange in enumerate(exchanges):
         if used <= limit:
             break
-        saving = _tokens(exchange.assistant_text) - _tokens(_PREAMBLE_OMITTED)
-        if saving > 0:
-            exchanges[index] = replace(exchange, assistant_text=_PREAMBLE_OMITTED)
-            used -= saving
+        candidate = list(exchanges)
+        candidate[index] = replace(exchange, assistant_text=_PREAMBLE_OMITTED)
+        candidate_used = estimate_input_tokens(
+            replace(request, history=tuple(history), tool_exchanges=tuple(candidate))
+        )
+        if candidate_used < used:
+            exchanges = candidate
+            used = candidate_used
             omitted_preambles.add(index)
 
     latest_user = next(
@@ -104,15 +75,19 @@ def fit_input_budget(request: LlmRequest) -> LlmRequest:
     for index in order:
         if used <= limit:
             break
-        role, text = history[index]
+        role, _text = history[index]
         marker = (
             f"[Runtime omitted an earlier {role} message for the input budget. "
             "Its details are unavailable; do not reconstruct them.]"
         )
-        saving = _tokens(text) - _tokens(marker)
-        if saving > 0:
-            history[index] = role, marker
-            used -= saving
+        candidate_history = list(history)
+        candidate_history[index] = role, marker
+        candidate_used = estimate_input_tokens(
+            replace(request, history=tuple(candidate_history), tool_exchanges=tuple(exchanges))
+        )
+        if candidate_used < used:
+            history = candidate_history
+            used = candidate_used
             omitted_history.add(index)
 
     fitted = replace(request, history=tuple(history), tool_exchanges=tuple(exchanges))
@@ -124,7 +99,7 @@ def fit_input_budget(request: LlmRequest) -> LlmRequest:
         estimated_input_tokens=estimate_input_tokens(fitted),
         omitted_history_indices=tuple(sorted(omitted_history)),
         omitted_tool_preamble_indices=tuple(sorted(omitted_preambles)),
-        estimated_image_tokens=_IMAGE_TOKENS * len(request.images),
+        estimated_image_tokens=ESTIMATED_IMAGE_TOKENS * len(request.images),
     )
     if report.estimated_input_tokens > limit:
         raise InputBudgetExceeded(report)

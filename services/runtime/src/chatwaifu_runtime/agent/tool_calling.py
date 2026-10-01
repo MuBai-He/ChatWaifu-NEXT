@@ -237,12 +237,13 @@ def _budgeted_tool_request(request: LlmRequest) -> LlmRequest:
         report = error.report
         logger.info(
             "agent.input_budget_exceeded generation=%s estimated_input_tokens=%d "
-            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d",
+            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d estimator=%s",
             request.generation_id,
             report.estimated_input_tokens,
             report.estimated_token_limit,
             len(report.omitted_history_indices),
             len(report.omitted_tool_preamble_indices),
+            report.estimator,
         )
         raise
     if report is not None and (
@@ -250,12 +251,13 @@ def _budgeted_tool_request(request: LlmRequest) -> LlmRequest:
     ):
         logger.info(
             "agent.input_budget_applied generation=%s estimated_input_tokens=%d "
-            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d",
+            "estimated_token_limit=%d omitted_history=%d omitted_preambles=%d estimator=%s",
             request.generation_id,
             report.estimated_input_tokens,
             report.estimated_token_limit,
             len(report.omitted_history_indices),
             len(report.omitted_tool_preamble_indices),
+            report.estimator,
         )
     return fitted
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replace whole-tool-input half-character estimates with a bundled, checksum-pinned
+  offline cl100k chat JSON reference. Recompute complete projections when omitting
+  old history, preserve task/source/action facts, and tag estimates explicitly.
+  Evaluation 1.7.0 fingerprints the vocabulary/dependency; three final-only real
+  model replays fit the reserved allowance, while factual quality remains unapproved.
+
 - Strengthen the Runtime Skill event-failure check by registering a real terminal
   waiter before execution and separating durable setup from its existing signal
   deadline. A held-signal control and notification-suppression experiment verify

@@ -258,6 +258,44 @@ async def test_runtime_mode_preserves_trace_and_refuses_direct_path_resume(tmp_p
         await direct.execute(variants, ["greeting"])
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+        "services/runtime/src/chatwaifu_runtime/providers/data/cl100k_base.tiktoken",
+        "services/runtime/pyproject.toml",
+    ],
+)
+async def test_runtime_resume_rejects_changed_input_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: str
+) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+    )
+    variants = [("baseline", runner.variant_a_persona_path)]
+    await runner.execute(variants, ["greeting"])
+    journal = tmp_path / "provider-rounds.jsonl"
+    before = journal.read_bytes()
+    original_read = Path.read_bytes
+    target = DEFAULT_CHARACTERS_DIR.parent / relative
+
+    def changed_read(path: Path) -> bytes:
+        data = original_read(path)
+        return data + b"changed input reference" if path == target else data
+
+    monkeypatch.setattr(Path, "read_bytes", changed_read)
+    with pytest.raises(ValueError, match="differ"):
+        await runner.execute(variants, ["greeting"])
+    assert journal.read_bytes() == before
+
+
 def test_pricing_estimation_known_and_unknown_models() -> None:
     cost, text = estimate_pricing(
         "specified-model",
