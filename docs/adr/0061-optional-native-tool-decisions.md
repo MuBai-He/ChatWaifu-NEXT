@@ -75,6 +75,18 @@ compression permits clipping a body, replaying a tool or increasing permissions.
 Template v9/evaluator 1.11.0 identify this representation change. Full source
 availability in captured inputs is budget evidence, not a behavioral quality gate.
 
+A completed actual native reminder round trip exposed another bounded intent gap:
+Chinese sequencing and verification modifiers such as 先/再次/实际/直接 made explicit
+queries optional. The shared command prefix now recognizes these modifiers and
+also applies to negated URL reads and objectless conversational follow-up closure.
+Local composition, supplied-content review and method explanations remain local;
+affirmative compound operations and dated/named reminders still require results.
+Before/after publisher controls reject an initial unverified completion claim and
+allow the final answer after actual READ and WRITE results. Template v10/evaluator
+1.12.0 identify the repair. Completed v9/1.11.0 native auto samples remain unchanged
+and do not validate the subsequent required-mode behavior. Required selection is
+not a guarantee that every requested write follows a successful read.
+
 ## Consequences and validation
 
 This is a bounded language policy, not an exhaustive semantic intent classifier.

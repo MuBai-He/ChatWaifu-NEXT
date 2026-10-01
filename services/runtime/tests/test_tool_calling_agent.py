@@ -570,6 +570,39 @@ async def test_read_then_write_uses_same_bounded_tool_projection_and_stops_after
 
 
 @pytest.mark.asyncio
+async def test_sequenced_operation_corrects_unverified_initial_text_before_read_and_write() -> None:
+    text = "先查询本地提醒，再用查到的设备 ID 创建一次本地定时提醒。"
+    read = LlmToolCall("read", "organizer_read", {})
+    write = LlmToolCall("write", "schedule_create", {"title": "检查充电宝"})
+    llm = _ScriptedLlm(
+        [
+            (LlmTextDelta("UNVERIFIED_SAVED"), LlmResponseCompleted("stop")),
+            (LlmToolCallRequested(read), LlmResponseCompleted("tool_calls")),
+            (LlmToolCallRequested(write), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("保存操作成功。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data={"ok": True}))
+    agent = AgentTurnOrchestrator(
+        llm,
+        gateway,
+        _Router(
+            (
+                _Projection(name="organizer_read"),
+                _Projection(name="schedule_create", side_effect=SideEffect.WRITE),
+            )
+        ),
+    )
+    request = replace(_request(text), tool_choice=agent.tool_choice_for(text))
+
+    assert await _collect(agent, request, uuid4()) == ["保存操作成功。"]
+    assert len(gateway.invocations) == 2
+    assert [r.tool_choice for r in llm.requests[:3]] == ["required", "required", "auto"]
+    assert llm.requests[-1].tools == ()
+    assert len(llm.requests[-1].tool_exchanges) == 2
+
+
+@pytest.mark.asyncio
 async def test_read_then_final_answer_does_not_require_another_tool_call() -> None:
     llm = _ScriptedLlm(
         [

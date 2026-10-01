@@ -120,7 +120,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.11.0"
+TOOL_VERSION = "1.12.0"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:

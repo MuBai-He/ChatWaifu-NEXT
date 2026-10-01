@@ -13,7 +13,13 @@ _CLAUSE_START = (
     r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便|但是|不过|同时)|"
     r"\b(?:and(?:\s+then)?|then|also|but)\b)\s*"
 )
-_POLITE = r"(?:(?:你)?(?:请(?:你)?|帮我|替我|给我|麻烦(?:你)?|能不能|可以(?:帮我)?|重新|再)\s*)*"
+# Command sequencing/verification modifiers do not turn an imperative into a
+# mention. Share this prefix with explicit negations so "请先不要读取 URL"
+# remains content, rather than gaining authority from the URL it names.
+_POLITE = (
+    r"(?:(?:你)?(?:请(?:你)?|帮我|替我|给我|麻烦(?:你)?|能不能|可以(?:帮我)?|"
+    r"重新|再(?:次)?|先|实际|直接)\s*)*"
+)
 _OPERATION = re.compile(
     _CLAUSE_START
     + _POLITE
@@ -28,7 +34,7 @@ _OPERATION = re.compile(
 )
 _REMINDER = re.compile(r"提醒我|叫醒我|\b(?:remind|wake)\s+me\b", re.IGNORECASE)
 _NO_CONVERSATIONAL_FOLLOWUP = re.compile(
-    r"^(?:(?:不(?:用|必|要)|别)(?:再|继续)?(?:提醒我|追问我|跟进)(?:了|啦)?|"
+    r"^" + _POLITE + r"(?:(?:不(?:用|必|要)|别)(?:再|继续)?(?:提醒我|追问我|跟进)(?:了|啦)?|"
     r"no (?:further|more) (?:reminders|follow[- ]ups))$",
     re.IGNORECASE,
 )

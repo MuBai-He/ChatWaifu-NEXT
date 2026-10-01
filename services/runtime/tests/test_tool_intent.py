@@ -112,3 +112,33 @@ def test_source_scope_cannot_hide_an_affirmative_operation_or_unrestricted_quest
     text: str,
 ) -> None:
     assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    ("text", "required"),
+    [
+        (
+            "先查询可用桌宠设备和本地提醒状态，再用查到的唯一设备 ID 创建一次本地定时提醒\uff1a"
+            "2026-10-03 09:00，时区 Asia/Shanghai，标题检查充电宝，不重复。告诉我真实保存结果。",
+            True,
+        ),
+        ("请实际查询本地提醒，核对刚才保存的事项\uff1b不要修改任何任务。", True),
+        ("请再次实际查询本地提醒，确认刚才那条事项的当前状态。", True),
+        ("请再次读取我的日历。", True),
+        ("请直接保存刚才的内容到笔记。", True),
+        ("先读取我的待办，再修改截止日期。", True),
+        ("请先列出我的待办。", True),
+        ("请先不用再提醒我明天上午的会议。", True),
+        ("我应该先查询本地提醒吗？", False),
+        ("请解释怎么再次读取日历。", False),
+        ("请先创建一首关于雨的短诗。", False),
+        ("请实际核实这段代码是否有错误。", False),
+        ("请先不要打开 https://example.org/guide，只解释 URL 的组成。", False),
+        ("请先别再提醒我了。", False),
+        ("先不要再跟进了。", False),
+    ],
+)
+def test_chinese_command_modifiers_preserve_operation_and_local_scope(
+    text: str, required: bool
+) -> None:
+    assert requires_external_operation(text) is required
