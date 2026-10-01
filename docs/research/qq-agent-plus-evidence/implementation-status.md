@@ -251,6 +251,10 @@ e34edb1证据头CI单独核验18成功/1部署跳过，见[准确快照](ci-e34e
 
 固定70065d2/源码5eed1ae/v9/1.11.0的三展示Gemini实际完整目录往返完成12回复/30Provider回合/30HTTP尝试：12 READ、3创建、3取消和18次allow_once。设备和任务ID取自真实READ，第四轮独立查证cancelled revision1先于夹具清理；零有效提醒/投递/operation/持久授权、Runtime全停止、原始delta匹配。主代理12符合，知道设计且非人工验收；单任务/单重复不代替完整Q02或设备播放。详见[原文、状态、限制与修正](q02-native-schedule-success-and-command-modifiers-2026-10-01.md)。
 
-该批创建/读回/最后查证初始模式实际为auto。新回归复现中文“先、再次、实际、直接”使明确操作漏判，旧策略8失败/7通过，另一项发布控制直接放出未经操作的完成声明。共享前缀现修正，同时保留明确禁止URL读取、无对象停止跟进和本地写作/代码审阅；required READ不保证全部请求WRITE。v10/1.12.0保留旧身份且禁止混续，旧成功样本不证明新模式；新required真实往返另行冻结补验。
+该批创建/读回/最后查证初始模式实际为auto。新回归复现中文“先、再次、实际、直接”使明确操作漏判，旧策略8失败/7通过，另一项发布控制直接放出未经操作的完成声明。共享前缀现修正，同时保留明确禁止URL读取、无对象停止跟进和本地写作/代码审阅；required READ不保证全部请求WRITE。v10/1.12.0保留旧身份且禁止混续，旧成功样本不证明新模式；修正归档时新required真实往返待独立冻结补验，随后完成结果见下段。
 
 最终173项定向、60评测项、Python1918/46平台跳过、Ruff/格式/Pyright0/架构、协议生成无差异及协议36/Web/正式桌面UI构建通过。中文标点仅改等价Unicode spelling，AST及最后局部回归不变；文档及提交快照另验。70065d2准确CI18成功/1部署跳过仅覆盖原证据头，见[快照](ci-70065d2-validation-2026-10-01.json)，新源码提交另验。默认v4、Q02未通过、Claude十四条旧缺项、草稿PR及完整质量/来源/设备验收保持，没有AGY。
+
+后续固定841de48/v10/1.12.0的新控制及真实Gemini各完成12条；真实30Provider/30HTTP、12初始required，12 READ/3创建/3取消/18allow_once，真实ID/字段/最后独立cancelled revision1、零有效提醒/投递/operation/授权、raw delta与Runtime停止均审计通过。源码在生成及审计结束前冻结。主代理11符合/1部分/0不符合：voice-origin创建在准确排期后保证未来设备按时提醒，缺到点/物理证据；不把本地保存当整条交付通过。用量106591/最大prompt4464/参考5241，reasoning九回合未知，旧新采样不作因果A/B。详见[新required证据](gemini-native-schedule-required-evidence-2026-10-01.json)及[复核与剩余门槛](q02-native-schedule-success-and-command-modifiers-2026-10-01.md)。默认v4/Q02未通过及人工/完整质量/真实设备门槛保持，旧auto成功和Claude十四条缺项不回写。
+
+源码841de48准确远端CI终态18成功/1部署跳过，见[独立源码快照](ci-841de48-validation-2026-10-01.json)；它覆盖前缀修正源码，后续仅证据/状态归档头另验。未替代Q02或真实设备门槛。
