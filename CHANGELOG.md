@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Separate each initial image admission from Provider readiness in the burst
+  overflow test, preserving stop and dispatch deadlines. Delayed-intake and
+  suppressed-dispatch controls retain the historical Windows CI failure.
+  Archive Gemini source-policy A/B (18 ties; candidate not adopted) and actual
+  READ-to-native-WRITE denial across three presentations; Q02 remains unapproved.
+
 - Preserve local writing, supplied-content review and explicitly negated URL reads
   without forcing an external operation; compound save/send/read requests retain
   the required path. Actual Conversation regressions cover all four prior

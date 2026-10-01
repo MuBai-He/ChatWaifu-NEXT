@@ -214,3 +214,9 @@ c036872/评测器 1.8.1 的新批次保存 130/144 条：Gemini 48、Sonnet 45�
 另四类真实 Conversation 请求（写诗、算式、代码检查、明确不打开 URL）在 4a 被强制操作；新语言与集成回归在旧代码为 10 失败/48 通过，修复保留本地正常文字与复合外部操作要求。提示模板 v7、评测器 1.9.1；默认 persona v4、Q02 未通过、草稿 PR 与 Claude 14 条旧缺项保持。见[边界修复](q02-local-content-tool-intent-2026-10-01.md)。
 
 固定 3ef23da 后的新 Gemini 四类本地请求三展示补测完成 12/12，全部一次 auto 正常回答、零操作，原始 Provider delta 与可见回复一致；总量 36300、最大输入 3388。软件检查 Python 1863/46 平台跳过及 Web 312、静态/协议/架构和 Web/桌面 UI/文档构建通过。这是定向一次采样，来源条件与原生 WRITE 门槛仍开放，详见[新补测证据](q02-local-content-tool-intent-2026-10-01.md)。
+
+### 2026-10-01：来源候选无改善与原生写入拒绝
+
+固定 2943178 的 Gemini 来源政策文本重放共 18 对/36 条：九份实际历史来源输入、九份合成说明，唯一 rendered policy 差异、原始 delta/用量和冻结判断均核验。双方核心条件各 18/18、18 对全平手，候选不采用；两条发布日期推断另列风险，原 Conversation 的来源混淆失败继续保留。另三种 presentation 的实际 Conversation 都在成功隔离 organizer READ 后提交原生 schedule.create，三次 WRITE 确认拒绝、零适配器写入/持久授权/提醒/投递；九次 Provider 用量齐全。初始模式实际为 auto，不冒充 required 控制或成功创建。见[原文与范围](q02-source-scope-and-write-denial-2026-10-01.md)。默认 v4、Q02 未通过、完整门槛、草稿 PR 和 Claude 十四条旧缺项保持。
+
+2943178 CI 终态 17 成功/1 Windows Python 失败/1 部署跳过，失败在初始四图片准备后的五秒 Provider 等待。只在测试分开逐条持久化准备，延迟注入从同点失败变为通过，禁用真实派发仍在原五秒等待失败；停止/溢出断言与生产实现不变。71 项定向和 Python 全集 1863/46 平台跳过、Ruff/格式/Pyright/架构通过，见[失败、控制与限制](q02-ci-burst-readiness-2026-10-01.md)。新提交远端 CI 另验，没有 AGY。
