@@ -22,10 +22,22 @@ prompt identity 为 **v9**、评测器 **1.11.0**，旧批不混续。协议 sch
 
 旧实现两项有效控制失败：即时消息规则开销超过已定上限；仅 JSON 空白使原本能完整容纳的来源被整份省略。修正后来源的引号、反斜线、换行、Unicode、原文条件和例外完整保留，来源仍为不可信 user 数据。其余已有测试的 JSON 字段改为解析后判断，权限拒绝/不可用/截断断言保持，避免依赖空白。
 
-五文件定向 **151 passed**。完整 Python 修正后的 **1902 passed/46 平台跳过**、Ruff、624 文件格式、全量 Pyright、架构、Web 与正确的 Desktop UI 构建、协议生成通过；生成协议无差异。首次完整检查的三项旧措辞/空白断言失败已保留并修正。最初误用不存在的 desktop-ui package filter 没有执行构建，不计通过；随后按 Makefile 的 `@chatwaifu/web build:desktop` 实际构建成功。
+五文件定向 **151 passed**。完整 Python 修正后的 **1902 passed/46 平台跳过**、Ruff、全量格式、全量 Pyright、架构、Web 与正确的 Desktop UI 构建、协议生成通过；生成协议无差异。首次完整检查的三项旧措辞/空白断言失败已保留并修正。最初误用不存在的 desktop-ui package filter 没有执行构建，不计通过；随后按 Makefile 的 `@chatwaifu/web build:desktop` 实际构建成功。
 
 父证据提交 `21d1600` 的[远端终态](ci-21d1600-validation-2026-10-01.json)为 **17 success/1 Windows Python failure/1 deployment skip**：主动回应审计测试的两秒轮询后没有找到完成事件。代码提交 `ab8dca7` 的旧 18 success/1 skip 不覆盖这次失败。该测试检查持久审计与不伪造 user turn，现于提交前订阅本会话实际 completed/cancelled/system-error 终态并有界等待，仍逐项核对完成、消息、文本、主动状态和没有 user turn。没有生产主动行为或 CI/TTS 文件修改。
 
 [独立慢 Demo/失败生成控制](proactive-terminal-sync-controls-2026-10-01.json)使用 400ms 的已支持 Demo chunk delay，旧测试 StopIteration、新测试通过；注入实际失败生成，新测试仍 AssertionError。原初控制误订阅不存在的 generation_failed 事件而超时，已保留私有初版并按实际 system.error_raised 修正，没有把该超时说成产品缺陷。此控制说明审计等待与固定两秒期限的耦合，不证明 Windows 主机具体 I/O 根因。
 
-最后的测试同步修正后，完整 Python 再次 **1902 passed/46 平台跳过**，全量 Pyright 零错误；没有用此前成功替代最终检查。后续冻结提交，再做三展示实际来源控制及旧/新输出规则的十二场景 Gemini 比较。原文可用不保证正确归属或最终条件保真；完整三展示、受控 Runtime 和人工复核门槛保留，默认 v4、草稿 PR 状态不变。
+最后的测试同步修正后，完整 Python 再次 **1902 passed/46 平台跳过**，全量 Pyright 零错误；没有用此前成功替代最终检查。冻结提交后的三展示实际来源控制已完成，见下节；旧/新输出规则的十二场景 Gemini 比较仍待执行。原文可用不保证正确归属或最终条件保真；完整三展示、受控 Runtime 和人工复核门槛保留，默认 v4、草稿 PR 状态不变。
+
+代码提交 `5eed1ae` 的[远端 CI 终态](ci-5eed1ae-validation-2026-10-01.json)为 **18 success/1 deployment skip**，包括 Windows Python；此快照仅覆盖该源码提交，不借用给后续证据提交，也不替代质量门槛。父 `21d1600` 的失败快照保持。
+
+## 冻结提交后的实际 Gemini 验证
+
+固定 `5eed1ae`、v9/1.11.0、默认 v4，按原四轮/三展示输入和同一预注册 rubric，完成 **12 回复/18 Provider 回合、六次实际公开 READ**。目录 raw body SHA 与此前批次相同，三个实际返回子链接各经独立 allow_once 读取；零重放、持久授权或隔离适配器越界。后三展示共六个分析/清单请求，均一次 auto、零 schemas/操作，两个完整来源结果逐字段等于当次实际 READ 数据；可见输出均与末个原始 delta 一致，所有 Runtime 停止。见[逐条原文、输入 hash 和完整审计](gemini-source-links-compact-evidence-2026-10-01.json)。voice-origin 仅文本。
+
+主代理逐条复核为 **10 符合/2 部分符合/0 不符合**，知道设计，非独立盲评或人工验收。旧即时消息两条缺正文后的检查过度断言，在本批有完整原文支持；voice-origin 清单也没有再把栏目归到两个页面。即时消息清单额外给出没有已定完整要求集合/分母的“0%通过率”；普通文本清单提出实际返回原文未提供的“政策法规”栏目（实际有民航规章/政策解读/服务指南和政策法规司），分别列部分符合。HTTPS 导航项仅协议合格，目标访问/权限未知；普通文本与 voice-origin 的泛化追问列次要风险，没有当成用户明确告别/叫停违约。
+
+本批输入/输出/总用量为 **89811/4631/102308 token**，reasoning 十二回合已报告7866，六回合未知，已含总量。最大实际 prompt6414、最大参考7272。每展示四样本，p50/p95（ms）为即时消息12237/14514、普通文本10266/14455、voice-origin10243.5/14164；p95是本组最大值，不能推导实时音频或因果提速，美元账单未知。
+
+这批证明既有来源在本次实际链路中保留，不证明完整现行法规或所有场景质量通过。代码、时间和采样均不同，不将前后等级当作单变量因果 A/B；尚需十二场景旧/新输出规则的三重复比较和完整门槛。Q02未通过、默认v4、草稿PR不变。
