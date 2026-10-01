@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Supply trusted public ChatWaifu NEXT architecture without guessing the selected
+  provider's deployment or exposing private model configuration. Retain history,
+  ownership and privacy rules within the unchanged full-source input budget;
+  template v11/evaluator 1.13.0 preserve prior identities. Real identity/greeting
+  quality remains to be verified, default persona v4 and Q02 unapproved.
+
+- Require results for Chinese operation modifiers such as sequencing and repeated
+  verification, preserving negated URL reads and objectless follow-up closure.
+  Template v10/evaluator 1.12.0 retain old samples. Archive separate actual Gemini
+  native create/read/cancel/read controls across three presentations; correct
+  saved states do not prove future device delivery, and Q02 remains unapproved.
+
 - Compact the instant-chat output contract and lossless source JSON so the six
   archived follow-up controls retain full originals within the same input budget.
   Keep default persona v4 and permission/source fences; template v9/evaluator

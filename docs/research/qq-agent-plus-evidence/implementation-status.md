@@ -258,3 +258,9 @@ e34edb1证据头CI单独核验18成功/1部署跳过，见[准确快照](ci-e34e
 后续固定841de48/v10/1.12.0的新控制及真实Gemini各完成12条；真实30Provider/30HTTP、12初始required，12 READ/3创建/3取消/18allow_once，真实ID/字段/最后独立cancelled revision1、零有效提醒/投递/operation/授权、raw delta与Runtime停止均审计通过。源码在生成及审计结束前冻结。主代理11符合/1部分/0不符合：voice-origin创建在准确排期后保证未来设备按时提醒，缺到点/物理证据；不把本地保存当整条交付通过。用量106591/最大prompt4464/参考5241，reasoning九回合未知，旧新采样不作因果A/B。详见[新required证据](gemini-native-schedule-required-evidence-2026-10-01.json)及[复核与剩余门槛](q02-native-schedule-success-and-command-modifiers-2026-10-01.md)。默认v4/Q02未通过及人工/完整质量/真实设备门槛保持，旧auto成功和Claude十四条缺项不回写。
 
 源码841de48准确远端CI终态18成功/1部署跳过，见[独立源码快照](ci-841de48-validation-2026-10-01.json)；它覆盖前缀修正源码，后续仅证据/状态归档头另验。未替代Q02或真实设备门槛。
+
+### 2026-10-01：可信产品架构输入
+
+身份拒答的一部分缺口来自输入缺少公开产品事实。共享SAFETY现提供本地优先ChatWaifu NEXT Runtime及可替换本地/远程模型和语音Provider，并明确产品设计不能证明当前后端部署；不投影私人配置。原历史/经历归属/隐私省略规则保留，重复措辞合并后仅增16参考token；六份旧完整来源输入的两个正文及所有context/history逐项相同，最大7288/7292。v11/1.13.0保留旧身份并防混续，默认persona v4不变。详见[输入修正、预算与待验行为](q02-public-product-facts-2026-10-01.md)。
+
+六项新回归旧代码失败；首轮完整1923通过/1历史措辞断言失败/46平台跳过，保持原测试并恢复边界表达后27局部与完整1924/46跳过通过，另105初始定向及Ruff/格式/Pyright0/架构/协议36/Web/桌面构建通过。新身份/问候三展示真实比较仍待；未以编译断言批准Q02或未来设备交付。前证据头eed8cd8准确CI18成功/1部署跳过见[快照](ci-eed8cd8-validation-2026-10-01.json)，新源码头另验，草稿PR与Claude十四条旧缺项保持，没有AGY。

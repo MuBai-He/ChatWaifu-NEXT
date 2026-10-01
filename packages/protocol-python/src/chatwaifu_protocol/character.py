@@ -65,7 +65,7 @@ class PromptBudgetReport(ProtocolModel):
     dropped_history_turns: int = Field(ge=0)
 
 
-PROMPT_TEMPLATE_VERSION: str = "v10"
+PROMPT_TEMPLATE_VERSION: str = "v11"
 
 
 class NonsecretModelRoute(ProtocolModel):

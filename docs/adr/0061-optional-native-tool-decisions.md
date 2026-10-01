@@ -87,6 +87,16 @@ allow the final answer after actual READ and WRITE results. Template v10/evaluat
 and do not validate the subsequent required-mode behavior. Required selection is
 not a guarantee that every requested write follows a successful read.
 
+Shared trusted safety context also supplies the public ChatWaifu NEXT architecture:
+a local-first character Runtime with replaceable local/remote model and voice
+providers. This design is not evidence of the selected provider's deployment.
+Neither private configuration nor a character's guess supplies these facts.
+Existing history/ownership/redaction rules remain, with repeated wording merged
+to preserve full-source input budgets. Template v11/evaluator 1.13.0 record this
+context repair; compiler assertions and archived input fits do not approve identity
+quality or absence of greeting regressions. Persona and operation authority remain
+unchanged.
+
 ## Consequences and validation
 
 This is a bounded language policy, not an exhaustive semantic intent classifier.

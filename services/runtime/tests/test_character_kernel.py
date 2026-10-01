@@ -152,6 +152,61 @@ class _PromptModels:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("presentation", ["instant_message", "single_text", None])
+@pytest.mark.parametrize("window", [4096, 8192])
+async def test_prompt_compiler_supplies_public_product_facts_without_private_deployment(
+    presentation: str | None, window: int
+) -> None:
+    class Models(_PromptModels):
+        def get(self, role: str) -> SimpleNamespace:
+            assert role == "chat"
+            return SimpleNamespace(
+                context_window=window,
+                base_url="https://private-config.invalid:8318",
+                api_key="PRIVATE_CONFIG_SENTINEL",
+                model="PRIVATE_MODEL_SENTINEL",
+            )
+
+    models = Models()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime(2026, 10, 2, tzinfo=UTC)
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=(),
+        user_text="你背后是什么系统？本地还是云端？",
+        presentation_profile=presentation,
+        as_of=now,
+    )
+
+    # Product architecture is trusted Runtime context, not a character's guess
+    # about this particular provider. Both native decisions and final answers
+    # receive it without borrowing private adapter configuration.
+    for prompt in (result.system_prompt, result.tool_decision_system_prompt):
+        safety = prompt.split("[CURRENT TIME]", 1)[0]
+        assert "ChatWaifu NEXT" in safety
+        assert "local-first character Runtime" in safety
+        assert "replaceable local or remote model/voice providers" in safety
+        assert "does not establish current provider deployment" in safety
+        assert "private-config.invalid" not in prompt
+        assert "PRIVATE_CONFIG_SENTINEL" not in prompt
+        assert "PRIVATE_MODEL_SENTINEL" not in prompt
+    assert character.system_prompt in result.system_prompt
+    assert models.summary_inputs == []
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("mode", ["available", "redacted", "foreign_route", "unknown"])
 async def test_budget_omitted_history_keeps_only_eligible_source_generations(mode: str) -> None:
     models = _PromptModels()
