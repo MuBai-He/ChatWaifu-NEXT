@@ -147,7 +147,7 @@ round. Follow-up tool unavailability cannot be described as a completed query. A
 Provider usage and tool results remain in evaluation traces. A successful but incomplete
 or outdated source does not activate this guard and still requires quality acceptance.
 
-### 8. Complete Tool Input Estimate
+### 8. Complete Input Estimate
 
 Template `v5` passes an internal versioned `LlmInputBudget` from the same frozen
 compilation report to the Agent. Every initial decision, correction, subsequent
@@ -156,17 +156,26 @@ results and message overhead. The scenario evaluator follows the same path.
 The original compiler report now exposes its actual assembled-text estimate,
 including wrappers and summaries, instead of clamping `used` to `budget`.
 
-The estimate extends the existing two-characters-per-token heuristic. It is not
-a provider tokenizer or a hard native-token guarantee; image reserves also remain
-estimates. Real provider usage is separately measured. Ordinary no-tool text
-generation retains its existing compiler allocation path.
+The complete-request estimate uses a checksum-pinned, bundled offline cl100k
+chat JSON reference (internal report 1.1), replacing the earlier half-character
+heuristic. It is not a native provider tokenizer or a hard native-token guarantee;
+image reserves also remain estimates. Real provider usage is separately measured.
+The compiler's allocation and frozen allowance remain unchanged. Ordinary no-tool
+text generation now applies the same complete-request guard before dispatch,
+including when tools are disabled or the provider does not support them.
+Mandatory overflow returns the existing factual input-budget notice without a
+Provider call. Cancellation/current-generation checks apply before both dispatch
+and fallback output.
 
 If an input exceeds its estimate allowance, unexecuted model narratives and old
 assistant messages can be omitted with explicit markers, followed by older user
 history. Current input, the latest prior user turn, full character/safety rules,
 context and existing bounded tool result facts are preserved. Replacing history
-in place retains source-ledger positions. Initial quoted assistant data is bounded
-against schemas too. Tool call/result pairing, source bodies, fingerprints, errors,
+in place retains source-ledger positions. Initial quoted assistant data keeps its
+original character-size ceiling and counts each complete candidate against the
+frozen reference allowance, including schemas and JSON wrappers. Whole older
+assistant messages can be omitted; converting a token remainder to characters is
+not used. Tool call/result pairing, source bodies, fingerprints, errors,
 permissions and images are not rewritten by this projection.
 
 If schemas cannot fit after successful results, the Agent closes the tool phase
@@ -177,11 +186,14 @@ four-tool/six-provider limits still apply. Nonsecret budget metadata and source
 projection hashes are available in opt-in evaluation traces; production logs
 contain only generation IDs and numbers.
 
-The frozen-source replay of 2026-10-01 reports Gemini input 6538 tokens, but both
+The earlier frozen-source replay of 2026-10-01 reports Gemini input 6538 tokens, but both
 Claude models report 8393 with the same 7255-token estimate and an 8192 configured
 window. This contradicts any claim of native budget compliance across providers.
 Provider-aware counting and factual-answer acceptance remain unresolved; the
-estimate guard alone does not approve Q02.
+estimate guard alone does not approve Q02. Later cl100k reference replays fit three
+final-only inputs, while the subsequent four-turn A/B still records Sonnet/Opus
+tool inputs exceeding the reserved allowance by 20/650 tokens. These observations
+are preserved separately from the deterministic guard's correctness.
 
 ## Consequences
 

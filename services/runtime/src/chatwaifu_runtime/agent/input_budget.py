@@ -1,4 +1,4 @@
-"""Budget complete tool inputs without rewriting task, source or action facts.
+"""Budget complete inputs without rewriting task, source or action facts.
 
 Use the Provider domain's bundled chat-wire reference for complete requests.
 This is an estimate, not a native provider tokenizer or universal upper bound.
@@ -22,7 +22,7 @@ _PREAMBLE_OMITTED = (
 
 class InputBudgetExceeded(RuntimeError):
     def __init__(self, report: LlmInputBudgetReport) -> None:
-        super().__init__("mandatory tool input exceeds its estimated budget")
+        super().__init__("mandatory input exceeds its estimated budget")
         self.report = report
 
 

@@ -221,6 +221,151 @@ async def test_no_relevant_tools_preserves_incremental_text_streaming() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("route", ["no_projection", "disabled", "unsupported"])
+async def test_text_only_route_applies_frozen_whole_input_budget(route: str) -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(
+        _request("请保留当前问题并继续回答"),
+        system_prompt="FULL_CHARACTER_AND_SAFETY",
+        context=(("system", "Original source body and provenance must remain complete."),),
+        history=(
+            ("user", "older topic"),
+            ("assistant", "obsolete assistant detail " * 1000),
+            ("user", "latest prior user conditions"),
+        ),
+        input_budget=LlmInputBudget(800),
+    )
+    llm = _ScriptedLlm([(LlmTextDelta("逐"), LlmTextDelta("段回答"), LlmResponseCompleted("stop"))])
+    llm.supports_tool_calling = route != "unsupported"
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    agent = AgentTurnOrchestrator(
+        llm, gateway, _Router(() if route == "no_projection" else (_Projection(),))
+    )
+    chunks = [
+        text
+        async for text in agent.stream(
+            request,
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            ensure_current=lambda: None,
+            allow_tools=route != "disabled",
+        )
+    ]
+    assert chunks == ["逐", "段回答"]
+    assert len(llm.requests) == 1 and not gateway.invocations
+    fitted = llm.requests[0]
+    assert estimate_input_tokens(request) > 800 >= estimate_input_tokens(fitted)
+    assert fitted.input_budget == request.input_budget
+    assert fitted.input_budget_report is not None
+    assert fitted.input_budget_report.omitted_history_indices == (1,)
+    assert fitted.generation_id == request.generation_id
+    assert fitted.user_text == request.user_text
+    assert fitted.system_prompt == request.system_prompt and fitted.context == request.context
+    assert len(fitted.history) == len(request.history)
+    assert fitted.history[0] == request.history[0] and fitted.history[-1] == request.history[-1]
+    assert fitted.tools == () and fitted.tool_exchanges == ()
+
+
+@pytest.mark.asyncio
+async def test_text_only_mandatory_overflow_does_not_dispatch_or_log_private_text(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from chatwaifu_runtime.agent.tool_calling import TOOL_INPUT_BUDGET_REPLY
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(_request("PRIVATE_TASK_CONTENT " * 2000), input_budget=LlmInputBudget(800))
+    llm = _ScriptedLlm([(LlmTextDelta("unbudgeted"), LlmResponseCompleted("stop"))])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    with caplog.at_level("INFO"):
+        chunks = await _collect(AgentTurnOrchestrator(llm, gateway, _Router(())), request, uuid4())
+    assert chunks == [TOOL_INPUT_BUDGET_REPLY]
+    assert not llm.requests and not gateway.invocations
+    assert "PRIVATE_TASK_CONTENT" not in caplog.text
+    assert "estimated_input_tokens" in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("overflow", [False, True])
+async def test_stale_text_only_generation_never_dispatches_or_emits_budget_notice(
+    overflow: bool,
+) -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    request = replace(
+        _request("private current task " * (2000 if overflow else 1)),
+        input_budget=LlmInputBudget(800),
+    )
+    llm = _ScriptedLlm([(LlmTextDelta("late answer"), LlmResponseCompleted("stop"))])
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+
+    def ensure_current() -> None:
+        raise asyncio.CancelledError("generation superseded")
+
+    with pytest.raises(asyncio.CancelledError, match="generation superseded"):
+        _ = [
+            text
+            async for text in AgentTurnOrchestrator(llm, gateway, _Router(())).stream(
+                request, session_id=uuid4(), turn_id=uuid4(), ensure_current=ensure_current
+            )
+        ]
+    assert not llm.requests and not gateway.invocations
+
+
+@pytest.mark.asyncio
+async def test_budgeted_text_stream_drops_late_delta_after_invalidation() -> None:
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    waiting, release = asyncio.Event(), asyncio.Event()
+    current = True
+    requests: list[LlmRequest] = []
+    observed: list[str] = []
+
+    class Provider:
+        kind = "scripted"
+        supports_tool_calling = False
+
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            requests.append(request)
+            yield LlmTextDelta("first")
+            waiting.set()
+            await release.wait()
+            yield LlmTextDelta("late")
+            yield LlmResponseCompleted("stop")
+
+    def ensure_current() -> None:
+        if not current:
+            raise asyncio.CancelledError("generation superseded")
+
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    agent = AgentTurnOrchestrator(Provider(), gateway, _Router(()))
+
+    async def consume() -> None:
+        async for text in agent.stream(
+            replace(_request("问题"), input_budget=LlmInputBudget(800)),
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            ensure_current=ensure_current,
+        ):
+            observed.append(text)
+
+    task = asyncio.create_task(consume())
+    try:
+        await asyncio.wait_for(waiting.wait(), 1)
+        current = False
+        release.set()
+        with pytest.raises(asyncio.CancelledError, match="generation superseded"):
+            await task
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+    assert observed == ["first"] and len(requests) == 1
+    assert requests[0].input_budget_report is not None and not gateway.invocations
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("chunks", [(), (LlmTextDelta(""),), (LlmTextDelta(" \n\t"),)])
 async def test_completed_empty_text_response_is_an_error_without_retry(
     chunks: tuple[LlmStreamEvent, ...],
@@ -817,6 +962,59 @@ async def test_initial_quoted_history_shares_schema_budget() -> None:
     assert "OLD_UNTRUSTED_REPLY" not in llm.requests[0].context[-1][1]
     assert llm.requests[-1].system_prompt.startswith(request.system_prompt)
     assert llm.requests[-1].history[0] == request.history[0]
+
+
+@pytest.mark.asyncio
+async def test_initial_quote_counts_unicode_whole_request_before_dispatch() -> None:
+    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+    from chatwaifu_runtime.agent.tool_calling import (
+        _INITIAL_TOOL_DECISION_POLICY,  # pyright: ignore[reportPrivateUsage]
+        _TOOL_POLICY,  # pyright: ignore[reportPrivateUsage]
+    )
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmToolDefinition
+
+    projection = _Projection()
+    request = replace(
+        _request("核查当前主题"),
+        system_prompt="FULL_CHARACTER" + " " * 4000,
+        tool_decision_system_prompt="Safety and frozen time",
+        history=(
+            ("user", "latest prior user fact"),
+            ("assistant", "𠮷" * 100),
+            ("assistant", "recent assistant detail 7"),
+        ),
+    )
+    assert request.tool_decision_system_prompt is not None
+    base = replace(
+        request,
+        system_prompt=request.tool_decision_system_prompt
+        + _INITIAL_TOOL_DECISION_POLICY
+        + _TOOL_POLICY,
+        history=(request.history[0],),
+        tools=(
+            LlmToolDefinition(projection.name, projection.description, projection.input_schema),
+        ),
+    )
+    limit = estimate_input_tokens(base) + 200
+    request = replace(request, input_budget=LlmInputBudget(limit))
+    call = LlmToolCall("one", projection.name, {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("完整回复。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((projection,))), request, uuid4()
+    ) == ["完整回复。"]
+    initial = llm.requests[0]
+    assert initial.history == (request.history[0],)
+    assert "recent assistant detail 7" in initial.context[-1][1]
+    assert "Some earlier assistant messages were omitted" in initial.context[-1][1]
+    assert "𠮷" not in initial.context[-1][1]
+    assert all(estimate_input_tokens(req) <= limit for req in llm.requests)
+    assert len(gateway.invocations) == 1
 
 
 @pytest.mark.asyncio

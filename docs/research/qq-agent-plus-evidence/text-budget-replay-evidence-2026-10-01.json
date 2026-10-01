@@ -1,0 +1,254 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-01",
+  "source_base_commit": "efa9afef240b97eb4f7955a1174018d0856ecce7",
+  "scope": "three final-only preserved v6 checklist inputs; no original tool-source carryover, no new queries; updated no-tool budget code identified by hashes",
+  "implementation_hashes": [
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+      "sha256": "90ee84de8ef38ea296f7711a0865e8e8b855bbb8e6a40e72dc70c1e472572c8d"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
+      "sha256": "abee9384aca7d008233196e5d14c6a6bfe5486f8cc9073cec87975732037557f"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+      "sha256": "d22ce6ec7fdbb1259e8c54b38a41dc69a47b6453135d54ad52e0e6226633acf8"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
+      "sha256": "329fbd298863182034d0366e5e2580f4d1e13a415e6792d3b1b5674c7e50eedb"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
+      "sha256": "c1483e6f8cfbbfaf8d5ae1cf6deea13d27f9bdfb8ba0cce0ffb5b18474564002"
+    },
+    {
+      "path": "tools/runtime_source_evaluation.py",
+      "sha256": "a19e4fc3ada36ff794c68de427c1747157462dbb62712c694eabdba59d4ac3b6"
+    },
+    {
+      "path": "tools/evaluate_character_scenarios.py",
+      "sha256": "82d2b4e6221a85fdbe035a635ff986b4f33cf13b76e17219b365442000a7f58f"
+    }
+  ],
+  "sampling": "temperature/top_p/seed not sent; endpoint defaults",
+  "runtime_provider_attempts": 3,
+  "http_attempts_observed": null,
+  "http_attempt_upper_bound": 9,
+  "dollar_cost": null,
+  "q02_accepted": false,
+  "results": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "original_sample_key": "detailed_answer:r0:t4:baseline_v6",
+      "original_call_id": "94e21243-60e8-4fc9-9de8-ff38eaa59e44",
+      "raw_reply": "好的，为你把之前的准备要点和应急方案汇总成了一份简明核对表，出发前对照勾选即可：\n\n---\n\n### 出发前检查核对表（Checklist）\n\n**【证件与资金】**\n- [ ] **有效身份证件**：二代身份证原件（如需特惠带学生证等），手机存有电子备份。\n- [ ] **应急现金**：准备 200–300 元小额纸币，应对无信号或特殊收费场景。\n- [ ] **行程凭证**：车票/机票、酒店预订信息及门票预约码已截图保存至相册。\n\n**【衣物与穿搭】**\n- [ ] **日常穿搭**：2–3 套便于穿脱的常服，额外备一件防风/保暖轻外套。\n- [ ] **贴身衣物**：足量内衣裤、袜子（或一次性纯棉款）及舒适睡衣。\n- [ ] **出行鞋履与雨具**：已磨合好的合脚运动鞋；包内常备晴雨两用折叠伞。\n\n**【电子设备与航规注意】**\n- [ ] **移动电源**：容量 ≤100Wh（或 ≤160Wh 且经航司批准），外壳标识清晰。\n  - *提醒：必须随身携带，严禁托运；乘机全程严禁使用及开启。*\n- [ ] **快充插头**：多口充电头（满足夜间多设备同时补电需求）。\n- [ ] **配件收纳**：降噪耳机、各设备充电短线统一放入收纳包。\n\n**【雨天/突发应急备忘】**\n- [ ] **备选方案一（博物馆/美术馆）**：遇雨立即查看官方小程序预约余票，注意闭馆及止票时间。\n- [ ] **备选方案二（地标书店/茶馆）**：优先选择近地铁站、空间开阔的复合书店，避开交通拥堵。\n\n---\n\n全部确认无误就可以安心出发了。路上注意安全，祝你玩得开心。",
+      "error_type": null,
+      "reference_input_estimate": 5098,
+      "unchanged_system_context_history": true,
+      "provider_calls": [
+        {
+          "call_id": "92dbd05e-0f1b-4991-b033-51b8196f5cf6",
+          "sample_key": "no-tool-budget-control-gemini-3.8-flash-high",
+          "generation_id": "87845f6e-a9cd-5bd7-94e1-cd8da82681f0",
+          "started_at": "2026-10-01T02:16:34.108228+00:00",
+          "system_prompt_sha256": "eb55fd541f93349a452e1398ff4f68f8fa7daf25333bdf564b632f40766926c7",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "bb0e5572ab855530d4e4f812fab46c9cc725839f16f803f7f0adb187ba330970",
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 5098,
+            "estimated_input_tokens": 5098,
+            "omitted_history_indices": [],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "estimator": "cl100k_chat_json_v1",
+            "version": "1.1"
+          },
+          "usage": {
+            "prompt_tokens": 3306,
+            "completion_tokens": 485,
+            "total_tokens": 4242,
+            "reasoning_tokens": 451
+          },
+          "finish_reason": "stop",
+          "error_type": null,
+          "latency_ms": 6168
+        }
+      ],
+      "new_tools": 0
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "original_sample_key": "detailed_answer:r0:t4:baseline_v6",
+      "original_call_id": "11cef308-38bb-4157-b18c-cb93cabf4f9f",
+      "raw_reply": "好，整理如下。\n\n---\n\n# 三天周末短途旅行 · 出发前检查核对表\n\n## 📋 证件与资金\n- [ ] 身份证 / 驾照有效期确认，随身包与行李箱分开存放\n- [ ] 银行卡（主卡 + 备用卡）+ 现金 200–500 元零钱\n- [ ] 会员卡 / 景区年卡 / 公交 IC 卡余额检查\n\n## 👕 衣物与穿搭\n- [ ] 换洗衣物按天数准备，三天三套即可\n- [ ] 运动鞋 + 拖鞋或备用平底鞋，共两双\n- [ ] 查好目的地天气，温差 >8°C 带薄外套或防风壳\n\n## 📱 电子设备与配件\n- [ ] 手机 / 相机电量充足，存储空间清理完毕\n- [ ] 充电宝容量确认，航班携带需符合民航规定（建议出发前查询最新官方规定）\n- [ ] 充电头 + 多口数据线 + 耳机统一装入收纳袋\n\n## 🌧️ 应急备选方案\n- [ ] 提前查好目的地博物馆 / 文化馆官网，确认是否需要预约\n- [ ] 查好附近大型商业综合体，记下电影场次和热门餐厅\n- [ ] 手机里存好景区、酒店、医院等常用电话，以备突发情况\n\n---\n\n对照打勾，出发就放心多了。",
+      "error_type": null,
+      "reference_input_estimate": 4152,
+      "unchanged_system_context_history": true,
+      "provider_calls": [
+        {
+          "call_id": "63c111f7-6d07-4ed1-9422-e355b440a8fc",
+          "sample_key": "no-tool-budget-control-claude-sonnet-4-6",
+          "generation_id": "87845f6e-a9cd-5bd7-94e1-cd8da82681f0",
+          "started_at": "2026-10-01T02:16:34.116651+00:00",
+          "system_prompt_sha256": "eb55fd541f93349a452e1398ff4f68f8fa7daf25333bdf564b632f40766926c7",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "f2f39d828cc392d3ff638a736b83f07bccd878dcabe45712496ca521d46db5b9",
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 4152,
+            "estimated_input_tokens": 4152,
+            "omitted_history_indices": [],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "estimator": "cl100k_chat_json_v1",
+            "version": "1.1"
+          },
+          "usage": {
+            "prompt_tokens": 3856,
+            "completion_tokens": 479,
+            "total_tokens": 4335,
+            "reasoning_tokens": null
+          },
+          "finish_reason": "stop",
+          "error_type": null,
+          "latency_ms": 11299
+        }
+      ],
+      "new_tools": 0
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "original_sample_key": "detailed_answer:r0:t4:baseline_v6",
+      "original_call_id": "736c2ec4-77c8-4770-baa4-d10f71786560",
+      "raw_reply": "好的，把前面聊到的内容都整合进来，给你一份出发前的核对表：\n\n---\n\n# 🧳 三天短途旅行 · 出发前检查核对表\n\n---\n\n## 一、证件与资金\n\n- [ ] 身份证（跨境另备护照/签证）\n- [ ] 手机里存好证件照片备份\n- [ ] 银行卡 + 现金 300–500 元零钱\n- [ ] 手机支付确认可用（微信/支付宝余额或绑卡）\n- [ ] 酒店确认单截图 / 离线保存\n- [ ] 车票/机票电子凭证截图\n- [ ] 景区预约码截图\n\n---\n\n## 二、衣物与穿搭\n\n- [ ] 每天一套换洗衣物（共 3 套）\n- [ ] 轻薄外套或冲锋衣 × 1（应对温差/室内空调）\n- [ ] 舒适运动鞋/徒步鞋（主力鞋）\n- [ ] 内衣袜子按天数 +1 准备\n- [ ] 备用袜子/鞋套一副（应对雨天）\n- [ ] 收纳袋若干（干净/换下衣物分开装）\n\n---\n\n## 三、电子设备与配件\n\n- [ ] 手机充电器\n- [ ] 充电宝（≤100Wh 可直接登机，100–160Wh 需航司批准，＞160Wh 禁带）\n- [ ] 充电宝确认有标注额定能量，且仅随身携带不托运\n- [ ] 数据线 × 2\n- [ ] 拍照辅助（小三脚架/手机稳定器，按需）\n- [ ] 转换插头（如目的地插座制式不同）\n- [ ] 云同步已开启 / 备用 U 盘\n\n---\n\n## 四、雨天应急预案\n\n- [ ] 出发前查好目的地博物馆/展馆开放时间与预约渠道\n- [ ] 确认博物馆当天是否闭馆（注意周一闭馆）\n- [ ] 备选餐厅清单 1–2 家（提前收藏，可线上取号）\n- [ ] 餐厅与商圈尽量选同一片区，减少雨天奔波\n- [ ] 雨天通勤预留额外时间（打车/公交易拥堵）\n\n---\n\n## 五、登机专项提醒（如乘坐国内航班）\n\n- [ ] 充电宝放入随身行李，不托运\n- [ ] 确认额定能量标注清晰可算\n- [ ] 每人限带 ≤2 个（100–160Wh 档需审批）\n- [ ] 飞行全程充电宝关闭，不使用\n\n---\n\n出发前对照勾一遍，基本不会漏东西。祝旅途顺利呀。",
+      "error_type": null,
+      "reference_input_estimate": 5070,
+      "unchanged_system_context_history": true,
+      "provider_calls": [
+        {
+          "call_id": "1b2d6927-aac8-4eca-9fc6-2b2987622a19",
+          "sample_key": "no-tool-budget-control-claude-opus-4-6-thinking",
+          "generation_id": "87845f6e-a9cd-5bd7-94e1-cd8da82681f0",
+          "started_at": "2026-10-01T02:16:34.120731+00:00",
+          "system_prompt_sha256": "eb55fd541f93349a452e1398ff4f68f8fa7daf25333bdf564b632f40766926c7",
+          "input_context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "input_history_sha256": "d1c1cc09ee73d34821f657f6a9a2fa1eb8114765a43c05b18ed7c69d086ac391",
+          "input_budget": {
+            "estimated_token_limit": 7292,
+            "version": "1.0"
+          },
+          "input_budget_report": {
+            "estimated_token_limit": 7292,
+            "estimated_original_tokens": 5070,
+            "estimated_input_tokens": 5070,
+            "omitted_history_indices": [],
+            "omitted_tool_preamble_indices": [],
+            "estimated_image_tokens": 0,
+            "estimator": "cl100k_chat_json_v1",
+            "version": "1.1"
+          },
+          "usage": {
+            "prompt_tokens": 4698,
+            "completion_tokens": 870,
+            "total_tokens": 5568,
+            "reasoning_tokens": null
+          },
+          "finish_reason": "stop",
+          "error_type": null,
+          "latency_ms": 21419
+        }
+      ],
+      "new_tools": 0
+    }
+  ],
+  "primary_review": {
+    "blind": false,
+    "scope": "three final-only controls; primary reviewer knows preserved input and implementation; no A/B or human acceptance",
+    "findings": [
+      {
+        "model": "gemini-3.8-flash-high",
+        "grade": "partial",
+        "reason": "Keeps energy approval and carry/use restrictions but loses personal-use and recall conditions already in its preserved second-turn answer, and omits the two-device limit."
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "grade": "conforms",
+        "reason": "For this checklist input, preserves a predeparture official-verification item after the earlier budget fallback; does not supply invented numerical rules. This is not successful completion of the prior regulatory query."
+      },
+      {
+        "model": "claude-opus-4-6-thinking",
+        "grade": "partial",
+        "reason": "Keeps major energy/carry/use items but loses the old-source qualification and leaves the source marking/calculation exception unclear; no current update was verified."
+      }
+    ]
+  },
+  "journal_exactly_once": true,
+  "all_attempt_usage": {
+    "prompt_tokens": 11860,
+    "completion_tokens": 1834,
+    "total_tokens": 14145,
+    "reasoning_tokens": {
+      "reported": 451,
+      "known_calls": 1,
+      "unknown_calls": 2
+    }
+  },
+  "script_hashes": [
+    {
+      "path": "replay-text-budget-20261001.py",
+      "sha256": "94bf13e714265d454f5dbad0641b9ee65b57a978511daddd131678185b8b4667"
+    }
+  ],
+  "deterministic_validation": {
+    "targeted_passed": 116,
+    "full_python_passed": 1733,
+    "full_python_skipped": 46,
+    "web_passed": 312,
+    "log_hashes": [
+      {
+        "path": "budget-path-regression-before-20261001.log",
+        "sha256": "06a60a790d5b6229ca4cba9adcb88e007fe591e3b5716599091eada510d411b2"
+      },
+      {
+        "path": "quote-regression-before-corrected-20261001.log",
+        "sha256": "a5f14e5111a297ccb33f99c6b58414fad59e85bb9606066251d63a5303447f8a"
+      },
+      {
+        "path": "budget-path-targeted-final2-20261001.log",
+        "sha256": "85caba3470e3a00407ac94494cc52d1a9d951966ed6abd8554f5f52ed77ce5a3"
+      },
+      {
+        "path": "budget-path-python-full-final-20261001.log",
+        "sha256": "6ab897d8cee45fff4b049a2aa29876615aeb3e6f8e863a6d902a5b27a883fe35"
+      },
+      {
+        "path": "budget-path-pyright-final2-20261001.log",
+        "sha256": "f552d237ad0bd249c05f97eb62dbc65d2d0e4a5fe2346608e10fb7838dba9ed1"
+      },
+      {
+        "path": "budget-path-web-tests-20261001.log",
+        "sha256": "02917a8b40cd95da7dd76f133152829290e5adebe56509f9ecf8486327195f31"
+      },
+      {
+        "path": "budget-path-web-build-20261001.log",
+        "sha256": "25df28d062f771858b85bdc0bdeb90d32422810341e293da3e8b2c1304ec408e"
+      },
+      {
+        "path": "budget-path-desktop-ui-build-20261001.log",
+        "sha256": "6063e7793ca6bbb935f106ef2514b73b655bdcba769fc583b016941552168952"
+      }
+    ]
+  }
+}

@@ -130,31 +130,30 @@ def _initial_decision_history(
         - len(initial_prompt)
         - sum(len(text) for _role, text in history),
     )
-    if request.input_budget is not None:
-        base = replace(
-            request,
-            system_prompt=initial_prompt,
-            history=history,
-            tools=tools,
-            tool_exchanges=(),
-        )
-        # A quote is one extra context message. Keep the existing character-size
-        # ceiling as well as the complete schema-aware input allowance.
-        remaining = request.input_budget.estimated_token_limit - estimate_input_tokens(base) - 16
-        available = min(available, max(0, remaining * 2))
-    body_length = 2 + sum(len(text) for text in encoded) + len(encoded) - 1
     omitted = "Some earlier assistant messages were omitted to fit the decision input budget.\n"
-    prefix = _PRIOR_ASSISTANT_DATA
-    start = 0
-    if len(prefix) + body_length > available:
-        prefix += omitted
-        while start < len(encoded) and len(prefix) + body_length > available:
-            body_length -= len(encoded[start]) + int(start + 1 < len(encoded))
-            start += 1
-    if len(prefix) + body_length > available:
-        return request.context, history
-    quoted = prefix + "[" + ",".join(encoded[start:]) + "]"
-    return (*request.context, ("system", quoted)), history
+    # Keep the original character-size ceiling and independently count the whole
+    # candidate request. Token/character ratios and JSON wrappers vary; converting
+    # a token remainder back to characters can make an optional quote mandatory
+    # overflow. Drop whole older assistant messages, never partial source text.
+    for start in range(len(encoded) + 1):
+        prefix = _PRIOR_ASSISTANT_DATA + (omitted if start else "")
+        quoted = prefix + "[" + ",".join(encoded[start:]) + "]"
+        if len(quoted) > available:
+            continue
+        context = (*request.context, ("system", quoted))
+        if request.input_budget is not None:
+            candidate = replace(
+                request,
+                system_prompt=initial_prompt,
+                context=context,
+                history=history,
+                tools=tools,
+                tool_exchanges=(),
+            )
+            if estimate_input_tokens(candidate) > request.input_budget.estimated_token_limit:
+                continue
+        return context, history
+    return request.context, history
 
 
 _READ_FOLLOWUP = re.compile(
@@ -229,7 +228,7 @@ def _failed_query_reply(exchanges: tuple[LlmToolExchange, ...]) -> str:
     return TOOL_QUERY_FAILED_REPLY
 
 
-def _budgeted_tool_request(request: LlmRequest) -> LlmRequest:
+def _budgeted_request(request: LlmRequest) -> LlmRequest:
     try:
         fitted = fit_input_budget(request)
         report = fitted.input_budget_report
@@ -391,7 +390,7 @@ class AgentTurnOrchestrator:
         while True:
             ensure_current()
             try:
-                tool_request = _budgeted_tool_request(tool_request)
+                tool_request = _budgeted_request(tool_request)
             except InputBudgetExceeded:
                 if exchanges and _has_successful_tool_result(exchanges):
                     # Closing the phase frees schemas without dropping source or
@@ -540,12 +539,6 @@ class AgentTurnOrchestrator:
             tool_exchanges=exchanges,
             input_budget_report=None,
         )
-        try:
-            final_request = _budgeted_tool_request(final_request)
-        except InputBudgetExceeded:
-            ensure_current()
-            yield TOOL_RESULT_BUDGET_REPLY
-            return
         async for text in self._stream_text_only(final_request, ensure_current, llm=llm):
             yield text
 
@@ -556,10 +549,18 @@ class AgentTurnOrchestrator:
         *,
         llm: LlmProvider | None = None,
     ) -> AsyncIterator[str]:
+        ensure_current()
+        try:
+            request = _budgeted_request(replace(request, tools=()))
+        except InputBudgetExceeded:
+            ensure_current()
+            yield TOOL_RESULT_BUDGET_REPLY if request.tool_exchanges else TOOL_INPUT_BUDGET_REPLY
+            return
+        ensure_current()
         provider = llm if llm is not None else self._llm
         completed = False
         has_answer = False
-        async for event in provider.stream(replace(request, tools=())):
+        async for event in provider.stream(request):
             ensure_current()
             if isinstance(event, LlmTextDelta):
                 has_answer = has_answer or bool(event.text.strip())

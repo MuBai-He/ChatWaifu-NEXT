@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Apply frozen whole-input budgets to no-tool text replies before Provider
+  dispatch, including disabled/unsupported tools, and count each initial quoted
+  history candidate without converting tokens back to characters. Preserve
+  source/task facts and cancellation; evaluator 1.7.1 rejects mixed resumes.
+
 - Preserve the three-model v6/v7 source/checklist comparison: 72 synthetic replies,
   all 106 Provider attempts, primary masked-label review and safe Sonnet resume.
   V7 remains evaluation-only; source continuity and native input-budget gaps are
