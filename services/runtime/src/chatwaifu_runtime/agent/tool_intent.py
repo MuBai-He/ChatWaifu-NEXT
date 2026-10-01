@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import re
 
-_CLAUSE_START = r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便))\s*"
+_CLAUSE_START = (
+    r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便)|\b(?:and(?:\s+then)?|then|also)\b)\s*"
+)
 _POLITE = r"(?:(?:你)?(?:请(?:你)?|帮我|替我|给我|麻烦(?:你)?|能不能|可以(?:帮我)?|重新|再)\s*)*"
 _OPERATION = re.compile(
     _CLAUSE_START
@@ -30,6 +32,26 @@ _NO_CONVERSATIONAL_FOLLOWUP = re.compile(
     re.IGNORECASE,
 )
 _URL = re.compile(r"https?://", re.IGNORECASE)
+_NEGATED_URL_READ = re.compile(
+    _CLAUSE_START + _POLITE + r"(?:(?:不要|不用|不必|别)(?:打开|读取|浏览|访问)|"
+    r"(?:please\s+)?(?:do\s+not|don't)\s+(?:open|read|browse|visit))\s*"
+    r"https?://[^\s，,。！？\uFF1B;]+",
+    re.IGNORECASE,
+)
+_LOCAL_COMPOSITION_VERB = re.compile(r"(?:\bcreate|创建|新建)$", re.IGNORECASE)
+_LOCAL_COMPOSITION_OBJECT = re.compile(
+    r"\s*(?:(?:an?\s+)?(?:short\s+)?(?:poem|story|paragraph|draft)\b|"
+    r"(?:一[首篇段])?(?:(?:关于|有关)[^，,。.!?！？\uFF1B;\n]{1,24}的)?(?:短)?(?:诗|故事|段落|文案))",
+    re.IGNORECASE,
+)
+_LOCAL_REVIEW_VERB = re.compile(
+    r"(?:\b(?:check|verify)|看看|看下|看一下|核查|核实)$", re.IGNORECASE
+)
+_LOCAL_REVIEW_OBJECT = re.compile(
+    r"\s*(?:(?:this|the\s+following|the\s+supplied)\s+(?:calculation|equation|code|text)\b|"
+    r"(?:这(?:段|个|份)|以下|所给)(?:代码|算式|计算|文本))",
+    re.IGNORECASE,
+)
 _QUESTION = re.compile(
     r"[?？]|哪些|有什么|多少|几点|几号|是否|\b(?:what|which|when|how|is|are)\b",
     re.IGNORECASE,
@@ -62,15 +84,29 @@ def requires_external_operation(user_text: str) -> bool:
     An objectless request to stop conversational follow-ups does not cancel saved
     reminders. A dated or named reminder request is left intact. Only the current
     user text participates; old dialogue, memories and source bodies cannot demand
-    an operation. Native auto still handles wording outside this bounded policy.
+    an operation. Creating text or reviewing supplied content is local; explicit
+    compound save/send/read commands remain operations. Native auto still handles
+    wording outside this bounded policy.
     """
-    clauses = re.split(r"[，,。.!?！？\uFF1B;\n]+", user_text)
+    # Only this explicitly negated URL use is data. A later affirmative URL or
+    # command in the same request remains eligible for mandatory verification.
+    intent_text = _NEGATED_URL_READ.sub(" ", user_text)
+    clauses = re.split(r"[，,。.!?！？\uFF1B;\n]+", intent_text)
     operation_text = "。".join(
         clause for clause in clauses if not _NO_CONVERSATIONAL_FOLLOWUP.fullmatch(clause.strip())
     )
+    external_command = False
+    for match in _OPERATION.finditer(operation_text):
+        command, target = match.group(), operation_text[match.end() :]
+        local_content = (
+            _LOCAL_COMPOSITION_VERB.search(command) and _LOCAL_COMPOSITION_OBJECT.match(target)
+        ) or (_LOCAL_REVIEW_VERB.search(command) and _LOCAL_REVIEW_OBJECT.match(target))
+        if not local_content:
+            external_command = True
+            break
     return bool(
-        _URL.search(user_text)
-        or _OPERATION.search(operation_text)
+        _URL.search(intent_text)
+        or external_command
         or _REMINDER.search(operation_text)
         or _CLOCK_QUESTION.search(operation_text)
         or _PERSONAL_DATA_REQUEST.search(operation_text)

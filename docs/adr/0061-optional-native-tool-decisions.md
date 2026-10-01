@@ -28,6 +28,14 @@ capability IDs, consult generated prose, source bodies or recalled memories, or
 grant permission. Objectless requests to stop conversational follow-ups do not
 cancel saved reminders; dated/named reminder requests retain the operation path.
 
+A subsequent actual Conversation control reproduced mandatory-tool fallbacks for
+local text composition, review of supplied calculation/code, and an explicitly
+negated URL read. These bounded local-content requests now use auto. A compound
+save/send/read request still requires results; English and/then/also commands are
+recognized alongside the existing Chinese clause boundaries. A URL explicitly
+introduced by a negated read command does not itself demand fetching. This does
+not suppress affirmative URLs or operations elsewhere in the same request.
+
 Required decisions retain the smaller trusted safety/time planner, one bounded
 missing-call correction and the existing refusal to publish unverified completion
 claims. Optional decisions retain the full character/context/history contract and
@@ -46,6 +54,8 @@ fingerprints the intent implementation, preventing mixed-code resumes.
 The prompt identity template tag advances from v5 to v6 so a subsequent
 generation records this prompt-policy change. Existing identity schema 1.0 and
 historical version values remain compatible.
+The local-content follow-up advances the evaluator to 1.9.1 and prompt identity to
+v7; older 4a80465 paid samples retain their original 1.9.0/v6 identity.
 
 ## Consequences and validation
 

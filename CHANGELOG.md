@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Preserve local writing, supplied-content review and explicitly negated URL reads
+  without forcing an external operation; compound save/send/read requests retain
+  the required path. Actual Conversation regressions cover all four prior
+  fallbacks. Prompt identity v7/evaluator 1.9.1 record the policy follow-up. Archive
+  two full-catalog Gemini three-presentation batches (144 visible replies); the
+  usage-enabled batch has one source-condition error and Q02 remains unapproved.
+
 - Separate relevant capabilities from required external operations. Ordinary
   dialogue uses native automatic tool decisions with the full character contract;
   explicit operations retain mandatory calls, permissions and truthful failure

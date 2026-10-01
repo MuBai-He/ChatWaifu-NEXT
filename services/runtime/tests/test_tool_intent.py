@@ -24,6 +24,12 @@ from chatwaifu_runtime.agent.tool_intent import requires_external_operation
         "你背后是用什么系统运行的？本地还是云端？",
         "今天外面的风挺大的，吹得窗户呼呼响。",
         "关于 Raft 的选举超时，请解释一下。",
+        "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+        "Don't open https://example.org/guide; explain its URL structure only.",
+        "Create a short poem about rain.",
+        "请创建一首关于雨的短诗。",
+        "Please check this calculation: 17 * 23 = 391.",
+        '请看看这段代码有没有语法错误\uff1aprint("hello")',
     ],
 )
 def test_dialogue_explanation_and_closure_do_not_require_an_operation(text: str) -> None:
@@ -56,6 +62,14 @@ def test_dialogue_explanation_and_closure_do_not_require_an_operation(text: str)
         "请修改我的待办。",
         "请发送这条消息。",
         "请删除这个文件。",
+        "Create a short poem about rain and save it to my files.",
+        "Create a short poem about rain, then send it to Alex.",
+        "请创建一首短诗，并保存到文件。",
+        "Please check this calculation: 17 * 23 = 391; also check my calendar.",
+        '请看看这段代码有没有语法错误\uff1aprint("hello")，然后读取网页。',
+        "不要打开 https://example.org/guide，然后读取 https://example.org/other 。",
+        "Please check my calendar.",
+        "请核实今天的最新规定。",
     ],
 )
 def test_explicit_operation_or_external_fact_request_requires_results(text: str) -> None:
