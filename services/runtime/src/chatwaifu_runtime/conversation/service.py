@@ -68,6 +68,7 @@ from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObserv
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.contracts import (
     LlmEmptyResponseError,
     LlmInputBudget,
@@ -611,8 +612,11 @@ class ConversationService:
                 accepted.turn_id,
                 character.character_id,
                 "轻声主动关心用户",
+                **_retrieval_budget_options(chat_config),
             )
-            history = await self._recent_history(session_id, accepted.turn_id)
+            history = await self._recent_history(
+                session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+            )
             character_context = await self._character_kernel.plan_proactive_turn(
                 session_id=session_id,
                 turn_id=accepted.turn_id,
@@ -716,8 +720,11 @@ class ConversationService:
                     accepted.turn_id,
                     character.character_id,
                     normalized,
+                    **_retrieval_budget_options(chat_config),
                 )
-                history = await self._recent_history(session_id, accepted.turn_id)
+                history = await self._recent_history(
+                    session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+                )
                 character_context = await self._character_kernel.observe_user_turn(
                     session_id=session_id,
                     turn_id=accepted.turn_id,
@@ -1227,6 +1234,8 @@ class ConversationService:
                 trigger=trigger,
                 images=loaded_images,
                 input_budget=LlmInputBudget(compilation.report.budget),
+                max_output_tokens=snapshot.chat_config.budget.max_output_tokens,
+                tool_result_max_bytes=snapshot.chat_config.budget.tool_result_max_bytes,
             )
             sources = SourceContextPacket()
             if self._source_context is not None and trigger == "user":
@@ -1610,6 +1619,14 @@ class ConversationService:
     def _is_current(self, accepted: GenerationAccepted) -> bool:
         active = self._active.get(accepted.session_id)
         return active is not None and active.generation_id == accepted.generation_id
+
+
+def _retrieval_budget_options(config: ModelRoleConfig) -> dict[str, int]:
+    limits = resolve_context_budget(config.context_window, config.budget)
+    options = {"token_budget": limits.retrieval_characters}
+    if config.budget.memory_candidate_limit != 12:
+        options["limit"] = config.budget.memory_candidate_limit
+    return options
 
 
 def _previous_local_user_text(

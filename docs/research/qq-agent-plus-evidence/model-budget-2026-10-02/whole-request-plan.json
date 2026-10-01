@@ -1,0 +1,44 @@
+{
+  "code_commit": "9b796938d3730651cb2e4ed0f9465e77f35175d1",
+  "driver_sha256": "5a2a56ed64a95e0ff739477a8b3272a4e7bcb13664eca5a1b864c3b55016c2e7",
+  "experimental_compiler_sha256": "a481779e1670e583bc756b51920ed43976987f6e7897e65c0e0c9455465f8bb4",
+  "materials_sha256": "5abbf5738c22cb7d6b2dd1f73592fda0d41af057e3bff64fe6fd0d632f52ecd5",
+  "requests_sha256": "8de921e81ef6365de5801a0a6b102482a8c6e55b420cbb4584bf36e05e43c3e0",
+  "models": [
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash-high"
+  ],
+  "repeats": 3,
+  "maximum_generation_requests": 12,
+  "maximum_http_attempts": 12,
+  "no_retries": true,
+  "source_hashes": [
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
+      "sha256": "57cd836fae713c34c80b493f39b2eb9cc75bb8edb59b97f8611c3d501a5c9059"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
+      "sha256": "abee9384aca7d008233196e5d14c6a6bfe5486f8cc9073cec87975732037557f"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+      "sha256": "2d98ea631dea1f9aca1cdcc57daaf67f260976b764ad93162a8756e075f2e2e0"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
+      "sha256": "c1483e6f8cfbbfaf8d5ae1cf6deea13d27f9bdfb8ba0cce0ffb5b18474564002"
+    },
+    {
+      "path": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+      "sha256": "d22ce6ec7fdbb1259e8c54b38a41dc69a47b6453135d54ad52e0e6226633acf8"
+    },
+    {
+      "path": "characters/default/persona.md",
+      "sha256": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808"
+    }
+  ],
+  "scope": "Synthetic focused budget stress tests; controlled summary; no live memory, tools, channel or production writes",
+  "output_limit": "unchanged/omitted in all three variants; separate capability probes",
+  "supplement_driver_sha256": "e280257840ebe51cc5dd3a14cc46b94d0beba38effd2a9fa48bb69b91ccda615"
+}

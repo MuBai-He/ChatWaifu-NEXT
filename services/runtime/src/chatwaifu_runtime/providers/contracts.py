@@ -165,8 +165,19 @@ class LlmRequest:
     tool_decision_system_prompt: str | None = None
     input_budget: LlmInputBudget | None = None
     input_budget_report: LlmInputBudgetReport | None = None
+    max_output_tokens: int | None = None
+    tool_result_max_bytes: int = 32_768
 
     def __post_init__(self) -> None:
+        if self.max_output_tokens is not None and (
+            type(self.max_output_tokens) is not int or self.max_output_tokens < 1
+        ):
+            raise ValueError("max_output_tokens must be a positive integer")
+        if (
+            type(self.tool_result_max_bytes) is not int
+            or not 1024 <= self.tool_result_max_bytes <= 1_048_576
+        ):
+            raise ValueError("tool_result_max_bytes must be within the supported projection limit")
         if len(self.images) > 4:
             raise ValueError("at most 4 images are currently supported")
         for image in self.images:

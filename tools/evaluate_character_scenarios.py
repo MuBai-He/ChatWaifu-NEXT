@@ -42,6 +42,7 @@ for _subpath in (
 from chatwaifu_protocol.character import (
     AffectState,
     CharacterKernelSnapshot,
+    ModelContextBudget,
     RelationshipState,
     ResponsePlan,
 )
@@ -67,6 +68,7 @@ from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSkillRepository
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.contracts import (
     LlmEmptyResponseError,
     LlmInputBudget,
@@ -120,7 +122,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.13.0"
+TOOL_VERSION = "1.14.0"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -477,7 +479,14 @@ class EvaluationRunner:
         max_provider_requests: int | None = None,
         source_dns_resolver: Literal["system", "cloudflare"] = "system",
         prompt_as_of: datetime | None = None,
+        context_window: int = 8192,
+        model_budget: ModelContextBudget | None = None,
     ) -> None:
+        if not 1024 <= context_window <= 2_000_000:
+            raise ValueError("context_window must be between 1024 and 2000000")
+        self.context_window = context_window
+        self.model_budget = model_budget or ModelContextBudget()
+        resolve_context_budget(context_window, self.model_budget)
         self.fixtures_path = fixtures_path
         self.characters_dir = characters_dir
         self.output_dir = output_dir
@@ -639,9 +648,13 @@ class EvaluationRunner:
         # Compile each selected persona and scenario. Later-turn history and
         # generated completion lengths remain unknown before execution.
 
+        evaluation_config = argparse.Namespace(
+            context_window=self.context_window, budget=self.model_budget
+        )
+
         class _DummyModelConfig:
             def get(self, role: str):
-                return argparse.Namespace(context_window=8192)
+                return evaluation_config
 
         compiler = PromptCompiler(_DummyModelConfig())  # pyright: ignore[reportArgumentType]
         sample_prompt_tokens: list[int] = []
@@ -720,11 +733,14 @@ class EvaluationRunner:
             "estimated_completion_tokens": total_completion_tokens,
             "estimated_total_tokens": total_tokens,
             "prompt_estimate_scope": (
-                "Each selected persona and scenario's first turn, compiled at an 8192-token "
+                "Each selected persona and scenario's first turn, compiled at a "
+                f"{self.context_window}-token "
                 "window, extrapolated to all turns and repeats without later-turn history."
             ),
             "provider": self.provider_kind,
             "model": self.model_name,
+            "context_window": self.context_window,
+            "model_budget": self.model_budget.model_dump(mode="json"),
             "estimated_cost_usd": cost_val,
             "estimated_cost_display": cost_str,
             "pricing_source": pricing_src,
@@ -792,6 +808,8 @@ class EvaluationRunner:
             "fixtures_hash": compute_file_hash(self.fixtures_path),
             "provider": self.provider_kind,
             "model": self.model_name,
+            "context_window": self.context_window,
+            "model_budget": self.model_budget.model_dump(mode="json"),
             "repeats": self.repeats,
             "base_url_hash": compute_text_hash(self.base_url) if self.base_url else None,
             "input_usd_per_million": self.input_usd_per_million,
@@ -824,6 +842,7 @@ class EvaluationRunner:
                 "services/runtime/src/chatwaifu_runtime/persistence/sqlite_runtime_skills.py",
                 "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
                 "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+                "services/runtime/src/chatwaifu_runtime/providers/context_budget.py",
                 "services/runtime/src/chatwaifu_runtime/providers/data/cl100k_base.tiktoken",
                 "services/runtime/pyproject.toml",
                 "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
@@ -926,6 +945,14 @@ class EvaluationRunner:
         )
         model_configs = ModelConfigurationService(database, settings)
         await model_configs.start()
+        await model_configs.update(
+            model_configs.get("chat").model_copy(
+                update={
+                    "context_window": self.context_window,
+                    "budget": self.model_budget,
+                }
+            )
+        )
         compiler = PromptCompiler(model_configs)
 
         # base_character already started during preflight
@@ -1142,7 +1169,11 @@ class EvaluationRunner:
                                     self.model_name,
                                     spent_prompt_tokens + multiplier * compilation.report.used,
                                     spent_completion_tokens
-                                    + multiplier * _RESERVED_COMPLETION_TOKENS,
+                                    + multiplier
+                                    * (
+                                        self.model_budget.max_output_tokens
+                                        or _RESERVED_COMPLETION_TOKENS
+                                    ),
                                     input_usd_per_million=self.input_usd_per_million,
                                     output_usd_per_million=self.output_usd_per_million,
                                 )
@@ -1159,6 +1190,8 @@ class EvaluationRunner:
                                 context=compilation.context,
                                 history=compilation.history,
                                 input_budget=LlmInputBudget(compilation.report.budget),
+                                max_output_tokens=self.model_budget.max_output_tokens,
+                                tool_result_max_bytes=self.model_budget.tool_result_max_bytes,
                                 recalled_memory_texts=compilation.recalled_memory_texts,
                                 routing_previous_user_text=next(
                                     (
@@ -1626,6 +1659,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Explicit OpenAI-compatible endpoint; never written to result metadata",
     )
     parser.add_argument(
+        "--context-window",
+        type=int,
+        default=8192,
+        help="Configured operational context window, not inferred model capability",
+    )
+    parser.add_argument(
+        "--model-budget-json",
+        type=Path,
+        help="ModelContextBudget JSON file; all settings are frozen in resume identity",
+    )
+    parser.add_argument(
         "--input-usd-per-million",
         type=float,
         default=None,
@@ -1779,6 +1823,12 @@ def main() -> int:
         max_provider_requests=args.max_provider_requests,
         source_dns_resolver=args.source_dns_resolver,
         prompt_as_of=args.prompt_as_of,
+        context_window=args.context_window,
+        model_budget=ModelContextBudget.model_validate_json(
+            args.model_budget_json.read_text(encoding="utf-8")
+        )
+        if args.model_budget_json
+        else None,
     )
 
     is_execute = args.execute and not args.dry_run

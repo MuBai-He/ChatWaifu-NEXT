@@ -23,6 +23,10 @@ import {
   SettingsStatus,
 } from "../settings/SettingsFields";
 import { useSettingsOperation } from "../settings/useSettingsOperation";
+import {
+  modelContextBudgetSchema,
+  type ModelContextBudget,
+} from "./runtime-client/contracts";
 
 const ROLE_ORDER: ModelRole[] = [
   "chat",
@@ -213,7 +217,16 @@ export function ModelSettingsPanel({ sessionId }: Props) {
   ) => {
     setConfigurations((current) =>
       current.map((item) =>
-        item.role === role ? { ...item, [field]: value } : item,
+        item.role === role
+          ? {
+              ...item,
+              [field]: value,
+              ...(["provider", "model", "base_url"].includes(field) &&
+              item[field] !== value
+                ? { budget: undefined }
+                : {}),
+            }
+          : item,
       ),
     );
   };
@@ -231,6 +244,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
           base_url: item.base_url,
           timeout_seconds: item.timeout_seconds,
           context_window: item.context_window,
+          budget: item.budget,
           enabled: item.enabled,
           ...(apiKey ? { api_key: apiKey } : {}),
           ...(clearApiKey ? { clear_api_key: true } : {}),
@@ -292,6 +306,25 @@ export function ModelSettingsPanel({ sessionId }: Props) {
         const item = byRole.get(role);
         if (!item) return null;
         const isOpenAi = item.provider === "openai_compatible";
+        const budget = item.budget ?? modelContextBudgetSchema.parse({});
+        const changeBudget = <K extends keyof ModelContextBudget>(
+          field: K,
+          value: ModelContextBudget[K],
+        ) =>
+          setConfigurations((current) =>
+            current.map((candidate) =>
+              candidate.role === role
+                ? { ...candidate, budget: { ...budget, [field]: value } }
+                : candidate,
+            ),
+          );
+        const availableInput = Math.floor(
+          Math.min(
+            item.context_window - budget.output_reserve_tokens,
+            budget.input_token_limit ?? Number.POSITIVE_INFINITY,
+          ) /
+            (1 + budget.estimate_margin_ratio),
+        );
         return (
           <section className="model-role-card" key={role}>
             <header>
@@ -368,7 +401,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
             ) : null}
             <div className="model-role-grid">
               <label>
-                <span>上下文窗口</span>
+                <span>运行上下文窗口</span>
                 <input
                   type="number"
                   min={1024}
@@ -390,6 +423,115 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                 />
               </label>
             </div>
+            {role !== "embedding" ? (
+              <details>
+                <summary>模型输入与输出预算</summary>
+                <p>
+                  预计可发送输入 {Math.max(0, availableInput)} 参考
+                  token。参考估算与供应商用量可能不同；请按当前端点验证能力填写，留空表示未知。
+                </p>
+                <div className="model-role-grid">
+                  {(
+                    [
+                      ["input_token_limit", "模型输入上限", 1, 2000000],
+                      ["output_token_limit", "模型输出上限", 1, 2000000],
+                      ["max_output_tokens", "请求输出上限", 1, 2000000],
+                    ] as const
+                  ).map(([field, label, min, max]) => (
+                    <label key={field}>
+                      <span>{label}</span>
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={budget[field] ?? ""}
+                        onChange={(event) =>
+                          changeBudget(
+                            field,
+                            event.target.value === ""
+                              ? null
+                              : Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
+                  ))}
+                  <label>
+                    <span>输出预留 token</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={2000000}
+                      value={budget.output_reserve_tokens}
+                      onChange={(event) =>
+                        changeBudget(
+                          "output_reserve_tokens",
+                          Number(event.target.value),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>输入估算余量（%）</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={budget.estimate_margin_ratio * 100}
+                      onChange={(event) =>
+                        changeBudget(
+                          "estimate_margin_ratio",
+                          Number(event.target.value) / 100,
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>分项预算</span>
+                    <select
+                      value={budget.section_policy}
+                      onChange={(event) =>
+                        changeBudget(
+                          "section_policy",
+                          event.target.value as "legacy" | "scaled",
+                        )
+                      }
+                    >
+                      <option value="legacy">保留原分项上限</option>
+                      <option value="scaled">随输入预算增长</option>
+                    </select>
+                  </label>
+                  {(
+                    [
+                      ["history_turn_limit", "本会话历史条数", 1, 128],
+                      ["memory_candidate_limit", "记忆候选上限", 1, 64],
+                      [
+                        "tool_result_max_bytes",
+                        "工具正文上限（字节）",
+                        1024,
+                        1048576,
+                      ],
+                    ] as const
+                  ).map(([field, label, min, max]) => (
+                    <label key={field}>
+                      <span>{label}</span>
+                      <input
+                        type="number"
+                        min={min}
+                        max={max}
+                        value={budget[field]}
+                        onChange={(event) =>
+                          changeBudget(field, Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+                <p>
+                  输出预留会减少输入额度；请求输出上限需要端点支持，不能保证代理执行。增加总窗口不会自动补回网页读取或隐私过滤省略的资料。
+                </p>
+              </details>
+            ) : null}
             <footer>
               <button
                 type="button"

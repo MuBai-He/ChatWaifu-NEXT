@@ -116,6 +116,61 @@ describe("ModelSettingsPanel", () => {
     });
   });
 
+  it("saves the selected model budget and shows the reference input allowance", async () => {
+    vi.mocked(runtimeClient.updateModelConfiguration).mockImplementation(
+      (role, update) =>
+        Promise.resolve({
+          ...configurations.find((entry) => entry.role === role)!,
+          ...update,
+        }),
+    );
+    render(<ModelSettingsPanel sessionId={null} />);
+    const chat = await screen.findByDisplayValue("demo-chat");
+    const card = chat.closest("section");
+    if (!card) throw new Error("expected chat model card");
+    const field = (label: string) => {
+      const node = Array.from(card.querySelectorAll("label"))
+        .find((item) => item.querySelector("span")?.textContent === label)
+        ?.querySelector("input,select");
+      if (!node) throw new Error(`missing ${label}`);
+      return node;
+    };
+    fireEvent.change(field("运行上下文窗口"), { target: { value: "32768" } });
+    fireEvent.change(field("输出预留 token"), { target: { value: "8192" } });
+    fireEvent.change(field("请求输出上限"), { target: { value: "8192" } });
+    fireEvent.change(field("输入估算余量（%）"), { target: { value: "15" } });
+    fireEvent.change(field("分项预算"), { target: { value: "scaled" } });
+    // An intermediate invalid numeric edit must not crash the settings panel.
+    fireEvent.change(field("本会话历史条数"), { target: { value: "0" } });
+    fireEvent.change(field("本会话历史条数"), { target: { value: "32" } });
+    fireEvent.change(field("记忆候选上限"), { target: { value: "24" } });
+    fireEvent.change(field("工具正文上限（字节）"), {
+      target: { value: "131072" },
+    });
+    expect(card.textContent).toContain("21370 参考 token");
+    const save = Array.from(card.querySelectorAll("button")).find(
+      (button) => button.textContent === "保存",
+    );
+    if (!save) throw new Error("missing save");
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(runtimeClient.updateModelConfiguration).toHaveBeenCalled(),
+    );
+    const [savedRole, saved] = vi.mocked(runtimeClient.updateModelConfiguration)
+      .mock.calls[0];
+    expect(savedRole).toBe("chat");
+    expect(saved.context_window).toBe(32768);
+    expect(saved.budget).toMatchObject({
+      output_reserve_tokens: 8192,
+      max_output_tokens: 8192,
+      estimate_margin_ratio: 0.15,
+      section_policy: "scaled",
+      history_turn_limit: 32,
+      memory_candidate_limit: 24,
+      tool_result_max_bytes: 131072,
+    });
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();

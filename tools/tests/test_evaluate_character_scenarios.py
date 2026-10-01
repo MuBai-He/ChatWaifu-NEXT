@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 from chatwaifu_protocol.character import (
+    ModelContextBudget,
     RelationshipState,
 )
 from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptCompiler
@@ -45,6 +46,56 @@ from tools.evaluate_character_scenarios import (
     parse_and_validate_initial_affect,
     parse_and_validate_initial_relationship,
 )
+
+
+@pytest.mark.asyncio
+async def test_evaluation_uses_configured_budget_and_rejects_mixed_budget_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def capture(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", capture)
+    budget = ModelContextBudget(
+        output_reserve_tokens=8192,
+        max_output_tokens=8192,
+        estimate_margin_ratio=0.15,
+        section_policy="scaled",
+        tool_result_max_bytes=131072,
+    )
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        context_window=32768,
+        model_budget=budget,
+    )
+    variants = [("baseline", DEFAULT_CHARACTERS_DIR / "default" / "persona.md")]
+    dry = await asyncio.to_thread(runner.estimate_dry_run, variants, ["greeting"])
+    assert dry["context_window"] == 32768
+    assert dry["model_budget"]["max_output_tokens"] == 8192
+    await runner.execute(variants, ["greeting"])
+    assert len(requests) == 1
+    assert requests[0].input_budget is not None
+    assert requests[0].input_budget.estimated_token_limit == 21370
+    assert requests[0].max_output_tokens == 8192 and requests[0].tool_result_max_bytes == 131072
+    changed = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        context_window=32768,
+        model_budget=budget.model_copy(update={"max_output_tokens": 4096}),
+    )
+    with pytest.raises(ValueError, match="resume"):
+        await changed.execute(variants, ["greeting"])
+    assert len(requests) == 1
 
 
 @pytest.mark.asyncio

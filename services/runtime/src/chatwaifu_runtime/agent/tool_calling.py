@@ -576,6 +576,7 @@ class AgentTurnOrchestrator:
                 projections=mapped,
                 seen=seen,
                 ensure_current=ensure_current,
+                result_max_bytes=request.tool_result_max_bytes,
             )
             call_count += len(calls)
             exchanges += (
@@ -702,6 +703,7 @@ class AgentTurnOrchestrator:
         projections: dict[str, ProjectedAgentTool],
         seen: set[str],
         ensure_current: Callable[[], None],
+        result_max_bytes: int = MAX_TOOL_RESULT_BYTES,
     ) -> tuple[LlmToolResult, ...]:
         if len(calls) > MAX_AGENT_TOOL_CALLS:
             return tuple(
@@ -752,7 +754,7 @@ class AgentTurnOrchestrator:
                     terminal = await self._skills.wait_for_terminal(active_run_id)
                     active_run_id = None
                     ensure_current()
-                    results.append(_snapshot_result(call, terminal))
+                    results.append(_snapshot_result(call, terminal, max_bytes=result_max_bytes))
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -867,9 +869,11 @@ def error_tool_result_payload(code: str, message: str) -> JsonObject:
     }
 
 
-def _snapshot_result(call: LlmToolCall, snapshot: SkillRunSnapshot) -> LlmToolResult:
+def _snapshot_result(
+    call: LlmToolCall, snapshot: SkillRunSnapshot, *, max_bytes: int = MAX_TOOL_RESULT_BYTES
+) -> LlmToolResult:
     payload, summary = format_tool_result_payload(snapshot)
-    bounded = bounded_tool_result_payload(payload, summary)
+    bounded = bounded_tool_result_payload(payload, summary, max_bytes=max_bytes)
     return LlmToolResult(
         call_id=call.call_id,
         name=call.name,

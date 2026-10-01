@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Configure input limits, output reserve/cap, estimation margin and upstream
+  section/history/memory/tool budgets per selected model route. Freeze budgets
+  at admission, retain legacy configurations, and expose shared settings;
+  migration 36, template v12, evaluator 1.14.0 and ADR 0062 record the change.
+  Archive 156 controlled comparison replies plus 10 output probes: missing
+  inputs recover, but Flash-Lite technical errors and proxy-ignored output caps
+  remain. No automatic production window change or Q02 quality approval.
+
 - Supply trusted public ChatWaifu NEXT architecture without guessing the selected
   provider's deployment or exposing private model configuration. Retain history,
   ownership and privacy rules within the unchanged full-source input budget;

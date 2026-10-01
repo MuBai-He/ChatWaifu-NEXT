@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from chatwaifu_protocol.character import PromptBudgetReport
+from chatwaifu_protocol.character import ModelContextBudget, PromptBudgetReport
 from chatwaifu_protocol.session import GenerationState
 from chatwaifu_runtime.conversation.models import (
     ConversationTurnOptions,
@@ -16,6 +16,10 @@ from chatwaifu_runtime.conversation.models import (
 )
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmRequest
+
+
+def _budgeted_snapshot() -> MagicMock:
+    return MagicMock(chat_config=MagicMock(budget=ModelContextBudget()))
 
 
 def _make_accepted() -> GenerationAccepted:
@@ -113,7 +117,7 @@ async def test_image_loaded_before_llm_and_request_has_images() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
-        snapshot=MagicMock(),
+        snapshot=_budgeted_snapshot(),
     )
 
     assert load_order == ["loaded"]
@@ -172,7 +176,7 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
-            snapshot=MagicMock(),
+            snapshot=_budgeted_snapshot(),
         )
 
     assert agent.stream.call_count == 0
@@ -228,7 +232,7 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
-        snapshot=MagicMock(),
+        snapshot=_budgeted_snapshot(),
     )
 
     assert agent.stream.call_count == 0
@@ -302,7 +306,7 @@ async def test_bytes_not_in_persisted_events() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
-        snapshot=MagicMock(),
+        snapshot=_budgeted_snapshot(),
     )
 
     for _event_type, payload in emitted_events:
@@ -363,7 +367,7 @@ async def test_stale_before_loader_prevents_image_load() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
-            snapshot=MagicMock(),
+            snapshot=_budgeted_snapshot(),
         )
 
     assert loader_called is False
@@ -427,7 +431,7 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
             memory_context=memory_context,
             history=(),
             options=options,
-            snapshot=MagicMock(),
+            snapshot=_budgeted_snapshot(),
         )
 
     assert loader_called is True
@@ -486,7 +490,7 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
         memory_context=memory_context,
         history=(),
         options=options,
-        snapshot=MagicMock(),
+        snapshot=_budgeted_snapshot(),
     )
 
     assert service._complete.await_count == 0

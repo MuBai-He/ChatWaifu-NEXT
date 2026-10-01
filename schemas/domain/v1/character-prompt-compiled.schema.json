@@ -1,7 +1,109 @@
 {
   "$defs": {
+    "ModelContextBudget": {
+      "description": "Operator-selected limits, not an assertion of provider capabilities.",
+      "properties": {
+        "estimate_margin_ratio": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Estimate Margin Ratio",
+          "type": "number"
+        },
+        "history_turn_limit": {
+          "default": 16,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "History Turn Limit",
+          "type": "integer"
+        },
+        "input_token_limit": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Token Limit"
+        },
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Output Tokens"
+        },
+        "memory_candidate_limit": {
+          "default": 12,
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Memory Candidate Limit",
+          "type": "integer"
+        },
+        "output_reserve_tokens": {
+          "default": 900,
+          "maximum": 2000000,
+          "minimum": 0,
+          "title": "Output Reserve Tokens",
+          "type": "integer"
+        },
+        "output_token_limit": {
+          "anyOf": [
+            {
+              "maximum": 2000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Token Limit"
+        },
+        "section_policy": {
+          "default": "legacy",
+          "enum": [
+            "legacy",
+            "scaled"
+          ],
+          "title": "Section Policy",
+          "type": "string"
+        },
+        "tool_result_max_bytes": {
+          "default": 32768,
+          "maximum": 1048576,
+          "minimum": 1024,
+          "title": "Tool Result Max Bytes",
+          "type": "integer"
+        },
+        "version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "title": "ModelContextBudget",
+      "type": "object"
+    },
     "NonsecretModelRoute": {
       "properties": {
+        "budget": {
+          "$ref": "#/$defs/ModelContextBudget"
+        },
         "context_window": {
           "default": 8192,
           "maximum": 2000000,
@@ -67,6 +169,19 @@
           "title": "Dropped History Turns",
           "type": "integer"
         },
+        "estimate_margin_ratio": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Estimate Margin Ratio",
+          "type": "number"
+        },
+        "estimator": {
+          "const": "character_half_v1",
+          "default": "character_half_v1",
+          "title": "Estimator",
+          "type": "string"
+        },
         "memory_tokens": {
           "minimum": 0,
           "title": "Memory Tokens",
@@ -82,9 +197,35 @@
           "title": "Model Role",
           "type": "string"
         },
+        "omitted_memory_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Omitted Memory Ids",
+          "type": "array"
+        },
+        "output_reserve_tokens": {
+          "default": 900,
+          "minimum": 0,
+          "title": "Output Reserve Tokens",
+          "type": "integer"
+        },
+        "persona_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Persona Omitted Characters",
+          "type": "integer"
+        },
         "persona_tokens": {
           "minimum": 0,
           "title": "Persona Tokens",
+          "type": "integer"
+        },
+        "photo_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Photo Omitted Characters",
           "type": "integer"
         },
         "relationship_tokens": {
@@ -102,9 +243,22 @@
           "title": "Scene Tokens",
           "type": "integer"
         },
+        "section_budget_limits": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Section Budget Limits",
+          "type": "object"
+        },
         "state_tokens": {
           "minimum": 0,
           "title": "State Tokens",
+          "type": "integer"
+        },
+        "summary_omitted_characters": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Summary Omitted Characters",
           "type": "integer"
         },
         "used": {

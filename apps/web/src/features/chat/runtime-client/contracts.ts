@@ -251,6 +251,20 @@ export const modelProviderKindSchema = z.enum([
   "disabled",
 ]);
 
+export const modelContextBudgetSchema = z.object({
+  version: z.literal("1.0").default("1.0"),
+  input_token_limit: z.number().int().positive().nullable().default(null),
+  output_token_limit: z.number().int().positive().nullable().default(null),
+  output_reserve_tokens: z.number().int().nonnegative().default(900),
+  max_output_tokens: z.number().int().positive().nullable().default(null),
+  estimate_margin_ratio: z.number().min(0).max(1).default(0),
+  section_policy: z.enum(["legacy", "scaled"]).default("legacy"),
+  history_turn_limit: z.number().int().min(1).max(128).default(16),
+  memory_candidate_limit: z.number().int().min(1).max(64).default(12),
+  tool_result_max_bytes: z.number().int().min(1024).max(1048576).default(32768),
+});
+export type ModelContextBudget = z.infer<typeof modelContextBudgetSchema>;
+
 export const modelRoleConfigurationSchema = z
   .object({
     role: modelRoleSchema,
@@ -259,6 +273,7 @@ export const modelRoleConfigurationSchema = z
     base_url: z.string(),
     timeout_seconds: z.number().positive(),
     context_window: z.number().int().positive(),
+    budget: modelContextBudgetSchema.optional(),
     enabled: z.boolean(),
     api_key_configured: z.boolean(),
     updated_at: dateTime,

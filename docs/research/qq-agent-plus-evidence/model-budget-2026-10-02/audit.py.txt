@@ -1,0 +1,32 @@
+import collections, hashlib,json,math,statistics
+from pathlib import Path
+root=Path(__file__).parent
+rows=[];groups=[];pairing=[]
+for folder in [root,root/'whole-request']:
+ req=json.loads((folder/'requests.json').read_text());responses=[json.loads(l) for l in (folder/'replies.jsonl').read_text().splitlines()];http=[json.loads(l) for l in (folder/'http-attempts.jsonl').read_text().splitlines()];events=[json.loads(l) for l in (folder/'stream-events.jsonl').read_text().splitlines()]
+ assert len(responses)==(108 if folder==root else 12)
+ assert len({x['key'] for x in responses})==len(responses)==len(http)
+ for x in responses:
+  material=next(y for y in req if x['case']==y['case'] and x['variant']==y['variant'])
+  attempt=next(y for y in http if y['key']==x['key'])
+  assert attempt['payload']==material['payload']|{'model':x['model']}
+  es=[y['data'] for y in events if y['key']==x['key']]
+  joined=''.join(c.get('delta',{}).get('content','') or '' for e in es for c in e.get('choices',[]))
+  assert joined==x['reply'] and x['status']==200 and x['error'] is None and x['finish_reason']=='stop'
+  assert next(e['usage'] for e in reversed(es) if e.get('usage'))==x['usage']
+  assert x['fact_covered']==(x['parsed'].get('fact')==material['gold'])
+  x['dataset']='sections' if folder==root else 'whole_request'
+  rows.append(x)
+ for model in sorted({x['model'] for x in responses}):
+  for variant in sorted({x['variant'] for x in responses}):
+   g=[x for x in responses if x['model']==model and x['variant']==variant];lat=sorted(x['elapsed_ms'] for x in g);ttft=sorted(x['ttft_ms'] for x in g)
+   error=[100*(x['reference_input_tokens']/x['usage']['prompt_tokens']-1) for x in g]
+   groups.append({'dataset':'sections' if folder==root else 'whole_request','model':model,'variant':variant,'samples':len(g),'fact_coverage':sum(x['fact_covered'] for x in g),'facts_present':sum(x['fact_available'] for x in g),'present_fact_errors':sum(x['available_fact_error'] for x in g),'input_token_sum':sum(x['usage']['prompt_tokens'] for x in g),'completion_token_sum':sum(x['usage']['completion_tokens'] for x in g),'total_token_sum':sum(x['usage']['total_tokens'] for x in g),'p50_ms':statistics.median(lat),'p95_ms':lat[math.ceil(.95*len(lat))-1],'ttft_p50_ms':statistics.median(ttft),'ttft_p95_ms':ttft[math.ceil(.95*len(ttft))-1],'reference_error_vs_reported_input_percent_range':[min(error),max(error)],'cache_reported_samples':sum(bool(x['usage'].get('prompt_tokens_details',{}).get('cached_tokens')) for x in g),'response_models':dict(collections.Counter(x['response_model'] for x in g))})
+ if folder==root:
+  for case in sorted({x['case'] for x in req}):
+   a,b,c=[next(x for x in req if x['case']==case and x['variant']==v) for v in ['current','window_only','scaled_sections']]
+   assert a['payload']==b['payload']
+   pairing.append({'case':case,'a_b_payload_identical':True,'facts_available':[a['fact_available'],b['fact_available'],c['fact_available']],'reference_input_tokens':[a['reference_tokens'],b['reference_tokens'],c['reference_tokens']],'retrieval_omitted':[a['retrieval_omitted'],b['retrieval_omitted'],c['retrieval_omitted']],'compiler_dropped_history':[a['compiler_report']['dropped_history_turns'],b['compiler_report']['dropped_history_turns'],c['compiler_report']['dropped_history_turns']]})
+result={'code_commit':json.loads((root/'plan.json').read_text())['code_commit'],'actual_generation_requests':130,'budget_comparison_replies':120,'metadata_gets':3,'output_probes':10,'provider_input_tokens_max_in_comparisons':max(x['usage']['prompt_tokens'] for x in rows),'groups':groups,'pairing':pairing,'scope':'Focused synthetic budget experiments; one controlled summary; technical fixture includes a correct-format hint. No full Q02 acceptance or general model ranking. Proxy returned multiple 3.8 model identifiers; usage is proxy-reported, not billing-confirmed. Primary review, not blind or independent human evaluation.','rows':rows}
+(root/'audit.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({k:v for k,v in result.items() if k not in {'rows','pairing'}},ensure_ascii=False))

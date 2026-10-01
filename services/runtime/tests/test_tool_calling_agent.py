@@ -1081,6 +1081,36 @@ async def test_non_tool_chat_keeps_full_character_prompt() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("result_limit,omitted", [(32768, True), (131072, False)])
+async def test_model_budget_reaches_tool_projection_and_later_provider_round(
+    result_limit: int, omitted: bool
+) -> None:
+    request = replace(
+        _request("读取状态"), tool_result_max_bytes=result_limit, max_output_tokens=8192
+    )
+    source: JsonObject = {"text": "合成资料。" * 5000 + "END-FACT"}
+    call = LlmToolCall("source", "runtime_status_read", {})
+    llm = _ScriptedLlm(
+        [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")),
+            (LlmTextDelta("核对完成。"), LlmResponseCompleted("stop")),
+        ]
+    )
+    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data=source))
+    assert await _collect(
+        AgentTurnOrchestrator(llm, gateway, _Router((_Projection(),))), request, uuid4()
+    ) == ["核对完成。"]
+    assert all(item.max_output_tokens == 8192 for item in llm.requests)
+    result = llm.requests[-1].tool_exchanges[0].results[0]
+    assert isinstance(result.content, dict)
+    if omitted:
+        assert result.content["truncated"] is True and "data" not in result.content
+    else:
+        assert result.content["data"] == source
+    assert len(gateway.invocations) == 1
+
+
+@pytest.mark.asyncio
 async def test_tool_inputs_fit_budget_without_clipping_source_results() -> None:
     from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
     from chatwaifu_runtime.providers.contracts import LlmInputBudget

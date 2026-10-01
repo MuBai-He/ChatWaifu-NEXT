@@ -1,0 +1,4087 @@
+{
+  "code_commit": "9b796938d3730651cb2e4ed0f9465e77f35175d1",
+  "actual_generation_requests": 130,
+  "budget_comparison_replies": 120,
+  "metadata_gets": 3,
+  "output_probes": 10,
+  "provider_input_tokens_max_in_comparisons": 15890,
+  "groups": [
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "current",
+      "samples": 18,
+      "fact_coverage": 3,
+      "facts_present": 6,
+      "present_fact_errors": 3,
+      "input_token_sum": 30810,
+      "completion_token_sum": 810,
+      "total_token_sum": 31620,
+      "p50_ms": 2418.5,
+      "p95_ms": 4569,
+      "ttft_p50_ms": 2417.0,
+      "ttft_p95_ms": 4568,
+      "reference_error_vs_reported_input_percent_range": [
+        38.2930168872661,
+        44.04688463911166
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.1-flash-lite": 18
+      }
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "scaled_sections",
+      "samples": 18,
+      "fact_coverage": 15,
+      "facts_present": 18,
+      "present_fact_errors": 3,
+      "input_token_sum": 104232,
+      "completion_token_sum": 965,
+      "total_token_sum": 105197,
+      "p50_ms": 2630.0,
+      "p95_ms": 3812,
+      "ttft_p50_ms": 2627.5,
+      "ttft_p95_ms": 3810,
+      "reference_error_vs_reported_input_percent_range": [
+        25.81274382314693,
+        40.90056285178236
+      ],
+      "cache_reported_samples": 1,
+      "response_models": {
+        "gemini-3.1-flash-lite": 18
+      }
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "window_only",
+      "samples": 18,
+      "fact_coverage": 3,
+      "facts_present": 6,
+      "present_fact_errors": 3,
+      "input_token_sum": 30810,
+      "completion_token_sum": 792,
+      "total_token_sum": 31602,
+      "p50_ms": 2894.5,
+      "p95_ms": 4677,
+      "ttft_p50_ms": 2893.0,
+      "ttft_p95_ms": 4676,
+      "reference_error_vs_reported_input_percent_range": [
+        38.2930168872661,
+        44.04688463911166
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.1-flash-lite": 18
+      }
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "current",
+      "samples": 18,
+      "fact_coverage": 6,
+      "facts_present": 6,
+      "present_fact_errors": 0,
+      "input_token_sum": 30810,
+      "completion_token_sum": 730,
+      "total_token_sum": 40776,
+      "p50_ms": 5608.5,
+      "p95_ms": 12491,
+      "ttft_p50_ms": 5607.0,
+      "ttft_p95_ms": 12489,
+      "reference_error_vs_reported_input_percent_range": [
+        38.2930168872661,
+        44.04688463911166
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.8-flash": 8,
+        "gemini-3.8-flash-control": 10
+      }
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "scaled_sections",
+      "samples": 18,
+      "fact_coverage": 18,
+      "facts_present": 18,
+      "present_fact_errors": 0,
+      "input_token_sum": 104232,
+      "completion_token_sum": 841,
+      "total_token_sum": 112935,
+      "p50_ms": 4792.5,
+      "p95_ms": 10636,
+      "ttft_p50_ms": 4791.0,
+      "ttft_p95_ms": 10635,
+      "reference_error_vs_reported_input_percent_range": [
+        25.81274382314693,
+        40.90056285178236
+      ],
+      "cache_reported_samples": 2,
+      "response_models": {
+        "gemini-3.8-flash": 9,
+        "gemini-3.8-flash-control": 9
+      }
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "window_only",
+      "samples": 18,
+      "fact_coverage": 6,
+      "facts_present": 6,
+      "present_fact_errors": 0,
+      "input_token_sum": 30810,
+      "completion_token_sum": 742,
+      "total_token_sum": 40163,
+      "p50_ms": 4940.0,
+      "p95_ms": 9959,
+      "ttft_p50_ms": 4939.5,
+      "ttft_p95_ms": 9958,
+      "reference_error_vs_reported_input_percent_range": [
+        38.2930168872661,
+        44.04688463911166
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.8-flash": 10,
+        "gemini-3.8-flash-control": 8
+      }
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "current",
+      "samples": 3,
+      "fact_coverage": 0,
+      "facts_present": 0,
+      "present_fact_errors": 0,
+      "input_token_sum": 4824,
+      "completion_token_sum": 100,
+      "total_token_sum": 4924,
+      "p50_ms": 2984,
+      "p95_ms": 3919,
+      "ttft_p50_ms": 2983,
+      "ttft_p95_ms": 3917,
+      "reference_error_vs_reported_input_percent_range": [
+        43.40796019900497,
+        43.40796019900497
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.1-flash-lite": 3
+      }
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "window_only",
+      "samples": 3,
+      "fact_coverage": 3,
+      "facts_present": 3,
+      "present_fact_errors": 0,
+      "input_token_sum": 31788,
+      "completion_token_sum": 127,
+      "total_token_sum": 31915,
+      "p50_ms": 2635,
+      "p95_ms": 3073,
+      "ttft_p50_ms": 2633,
+      "ttft_p95_ms": 3073,
+      "reference_error_vs_reported_input_percent_range": [
+        23.593808984522457,
+        23.593808984522457
+      ],
+      "cache_reported_samples": 1,
+      "response_models": {
+        "gemini-3.1-flash-lite": 3
+      }
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.8-flash-high",
+      "variant": "current",
+      "samples": 3,
+      "fact_coverage": 0,
+      "facts_present": 0,
+      "present_fact_errors": 0,
+      "input_token_sum": 4824,
+      "completion_token_sum": 109,
+      "total_token_sum": 6216,
+      "p50_ms": 3759,
+      "p95_ms": 5403,
+      "ttft_p50_ms": 3758,
+      "ttft_p95_ms": 5402,
+      "reference_error_vs_reported_input_percent_range": [
+        43.40796019900497,
+        43.40796019900497
+      ],
+      "cache_reported_samples": 0,
+      "response_models": {
+        "gemini-3.8-flash": 2,
+        "gemini-3.8-flash-control": 1
+      }
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.8-flash-high",
+      "variant": "window_only",
+      "samples": 3,
+      "fact_coverage": 3,
+      "facts_present": 3,
+      "present_fact_errors": 0,
+      "input_token_sum": 31788,
+      "completion_token_sum": 130,
+      "total_token_sum": 32955,
+      "p50_ms": 7339,
+      "p95_ms": 7904,
+      "ttft_p50_ms": 7338,
+      "ttft_p95_ms": 7903,
+      "reference_error_vs_reported_input_percent_range": [
+        23.593808984522457,
+        23.593808984522457
+      ],
+      "cache_reported_samples": 1,
+      "response_models": {
+        "gemini-3.8-flash-control": 2,
+        "gemini-3.8-flash": 1
+      }
+    }
+  ],
+  "pairing": [
+    {
+      "case": "history_literal",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        false,
+        false,
+        true
+      ],
+      "reference_input_tokens": [
+        2335,
+        2335,
+        9675
+      ],
+      "retrieval_omitted": [
+        [],
+        [],
+        []
+      ],
+      "compiler_dropped_history": [
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "case": "memory_retrieval",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        false,
+        false,
+        true
+      ],
+      "reference_input_tokens": [
+        3030,
+        3030,
+        3431
+      ],
+      "retrieval_omitted": [
+        [
+          "00000000-0000-0000-0000-000000000006",
+          "00000000-0000-0000-0000-000000000007",
+          "00000000-0000-0000-0000-000000000008"
+        ],
+        [
+          "00000000-0000-0000-0000-000000000006",
+          "00000000-0000-0000-0000-000000000007",
+          "00000000-0000-0000-0000-000000000008"
+        ],
+        []
+      ],
+      "compiler_dropped_history": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "persona_tail",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        false,
+        false,
+        true
+      ],
+      "reference_input_tokens": [
+        2224,
+        2224,
+        6862
+      ],
+      "retrieval_omitted": [
+        [],
+        [],
+        []
+      ],
+      "compiler_dropped_history": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "short_control",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        true,
+        true,
+        true
+      ],
+      "reference_input_tokens": [
+        2253,
+        2253,
+        2253
+      ],
+      "retrieval_omitted": [
+        [],
+        [],
+        []
+      ],
+      "compiler_dropped_history": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "technical_control",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        true,
+        true,
+        true
+      ],
+      "reference_input_tokens": [
+        2289,
+        2289,
+        2289
+      ],
+      "retrieval_omitted": [
+        [],
+        [],
+        []
+      ],
+      "compiler_dropped_history": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "tool_body",
+      "a_b_payload_identical": true,
+      "facts_available": [
+        false,
+        false,
+        true
+      ],
+      "reference_input_tokens": [
+        2359,
+        2359,
+        20353
+      ],
+      "retrieval_omitted": [
+        [],
+        [],
+        []
+      ],
+      "compiler_dropped_history": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "scope": "Focused synthetic budget experiments; one controlled summary; technical fixture includes a correct-format hint. No full Q02 acceptance or general model ranking. Proxy returned multiple 3.8 model identifiers; usage is proxy-reported, not billing-confirmed. Primary review, not blind or independent human evaluation.",
+  "rows": [
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的角色设定文本中未包含任何档案编号相关的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的角色设定文本中未包含任何档案编号相关的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 29,
+        "total_tokens": 1606,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2820,
+      "elapsed_ms": 2821,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前会话的上下文仅包含“较早资料没有形成可引用的逐字记录”这一摘要信息，未提供包含检查编号的原始日志内容。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前会话的上下文仅包含“较早资料没有形成可引用的逐字记录”这一摘要信息，未提供包含检查编号的原始日志内容。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 50,
+        "total_tokens": 1671,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2867,
+      "elapsed_ms": 2868,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的资料中未包含测试日志内容，无法获取最终检查编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料中未包含测试日志内容，无法获取最终检查编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 2163,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 511
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5070,
+      "elapsed_ms": 5070,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 导致 x 变为 [1, 2, 3, 4]（长度 4）；z 是 x 的浅拷贝 [1, 2, 3, 4]，执行 pop 后 z 变为 [1, 2, 3]（长度 3），题目要求最后 x 和 z 的长度，z pop 后变更为 3，修正为 x4-z3。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 导致 x 变为 [1, 2, 3, 4]（长度 4）；z 是 x 的浅拷贝 [1, 2, 3, 4]，执行 pop 后 z 变为 [1, 2, 3]（长度 3），题目要求最后 x 和 z 的长度，z pop 后变更为 3，修正为 x4-z3。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 114,
+        "total_tokens": 1753,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3005,
+      "elapsed_ms": 3006,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": \"SHORT-8621\", \"reason\": \"资料中明确注明会议编号为 SHORT-8621。\"}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "资料中明确注明会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 1991,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 362
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3741,
+      "elapsed_ms": 3742,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已提供的背景资料中仅包含关于 PROJECT-DELTA 的合成条目，并未记录或提及具体的验收编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的背景资料中仅包含关于 PROJECT-DELTA 的合成条目，并未记录或提及具体的验收编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2231,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2545,
+      "elapsed_ms": 2547,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"在用户提供的所有文本内容结尾处，明确提到了“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "在用户提供的所有文本内容结尾处，明确提到了“测试日志最终检查编号为 HISTORY-9362”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 49,
+        "total_tokens": 7739,
+        "prompt_tokens": 7690
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3810,
+      "elapsed_ms": 3812,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"资料中明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}\n```",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "资料中明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 2979,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 411
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5021,
+      "elapsed_ms": 5022,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前会话的上下文仅包含角色设置与初始状态，并未提供任何包含测试日志或检查编号的具体资料。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前会话的上下文仅包含角色设置与初始状态，并未提供任何包含测试日志或检查编号的具体资料。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 1662,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3888,
+      "elapsed_ms": 3889,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"依据提供的资料，明确指出了 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "依据提供的资料，明确指出了 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2566,
+        "prompt_tokens": 2522
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1997,
+      "elapsed_ms": 1998,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"资料明确提供会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "资料明确提供会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 2090,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 456
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5442,
+      "elapsed_ms": 5443,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的上下文信息中未包含任何测试日志内容或最终检查编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的上下文信息中未包含任何测试日志内容或最终检查编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1652,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2518,
+      "elapsed_ms": 2519,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 等同于修改 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的浅拷贝，初始化为 [1, 2, 3, 4]，执行 pop 后 z 为 [1, 2, 3]，长度为 3，但 z.pop() 移除最后一个元素后 z 变为 [1, 2]，长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 等同于修改 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的浅拷贝，初始化为 [1, 2, 3, 4]，执行 pop 后 z 为 [1, 2, 3]，长度为 3，但 z.pop() 移除最后一个元素后 z 变为 [1, 2]，长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 119,
+        "total_tokens": 1758,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2620,
+      "elapsed_ms": 2623,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"已提供资料中明确将 SHORT-8621 定义为会议编号。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "已提供资料中明确将 SHORT-8621 定义为会议编号。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1638,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2722,
+      "elapsed_ms": 2724,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x指向同一列表，append(4)后x长度变为4；z是x的切片浅拷贝，执行pop()后z长度为3，且不影响x。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x指向同一列表，append(4)后x长度变为4；z是x的切片浅拷贝，执行pop()后z长度为3，且不影响x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 61,
+        "total_tokens": 2781,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1081
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7469,
+      "elapsed_ms": 7472,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"本轮提供的资料中未包含任何档案编号信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "本轮提供的资料中未包含任何档案编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1839,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 229
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3219,
+      "elapsed_ms": 3220,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已执行工具返回的结果中未包含任何审批编号信息，内容已截断，缺乏相关资料。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具返回的结果中未包含任何审批编号信息，内容已截断，缺乏相关资料。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 43,
+        "total_tokens": 1906,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 220
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4931,
+      "elapsed_ms": 4934,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"在提供的角色设定文本中，并没有包含任何关于档案编号的描述或字段。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "在提供的角色设定文本中，并没有包含任何关于档案编号的描述或字段。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 1611,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4568,
+      "elapsed_ms": 4569,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x引用同一列表，执行y.append(4)后x变为[1, 2, 3, 4]，长度为4；z切片浅拷贝x得到独立列表，执行z.pop()后z变为[1, 2, 3]，长度为3且不影响x。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x引用同一列表，执行y.append(4)后x变为[1, 2, 3, 4]，长度为4；z切片浅拷贝x得到独立列表，执行z.pop()后z变为[1, 2, 3]，长度为3且不影响x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 89,
+        "total_tokens": 2783,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1055
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7361,
+      "elapsed_ms": 7362,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"会议编号由当前提供的资料明确给出。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "会议编号由当前提供的资料明确给出。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1630,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3113,
+      "elapsed_ms": 3113,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"执行 y=x 时 y 与 x 指向同一列表，y.append(4) 使 x 长度变为 4；z=x[:] 创建浅拷贝切片（初始长度为 4），z.pop() 移除一个元素后 z 长度变为 3。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "执行 y=x 时 y 与 x 指向同一列表，y.append(4) 使 x 长度变为 4；z=x[:] 创建浅拷贝切片（初始长度为 4），z.pop() 移除一个元素后 z 长度变为 3。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 80,
+        "total_tokens": 3763,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 2044
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 12489,
+      "elapsed_ms": 12491,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前提供的资料中未包含任何测试日志，无法获取最终检查编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前提供的资料中未包含任何测试日志，无法获取最终检查编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 32,
+        "total_tokens": 2081,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 428
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5565,
+      "elapsed_ms": 5566,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的资料中未包含角色设定的档案编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料中未包含角色设定的档案编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 21,
+        "total_tokens": 1993,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 395
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 6194,
+      "elapsed_ms": 6196,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已提供的资料中明确显示 approval_code 字段的值为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已提供的资料中明确显示 approval_code 字段的值为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 15932,
+        "prompt_tokens": 15890
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2304,
+      "elapsed_ms": 2304,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"工具执行结果中明确提供了 approval_code 为 TOOL-4073。\"\n}\n```",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "工具执行结果中明确提供了 approval_code 为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 16065,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 131
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4477,
+      "elapsed_ms": 4478,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已提供的 PROJECT-DELTA 背景条目 0 至 4 均明确说明不含验收编号相关数值。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的 PROJECT-DELTA 背景条目 0 至 4 均明确说明不含验收编号相关数值。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2231,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1983,
+      "elapsed_ms": 1985,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"提供的背景资料中均不包含 PROJECT-DELTA 的验收编号信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均不包含 PROJECT-DELTA 的验收编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 2360,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 133
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5198,
+      "elapsed_ms": 5200,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x指向同一列表，y.append(4)使x变为[1,2,3,4]，长度为4；z通过切片浅拷贝x，z.pop()移除末尾元素后z变为[1,2,3]，长度为3，且不影响x。\"\n}\n```",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x指向同一列表，y.append(4)使x变为[1,2,3,4]，长度为4；z通过切片浅拷贝x，z.pop()移除末尾元素后z变为[1,2,3]，长度为3，且不影响x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 90,
+        "total_tokens": 3071,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1342
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7615,
+      "elapsed_ms": 7617,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的背景资料中均明确未包含所问的验收编号，无相关信息。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均明确未包含所问的验收编号，无相关信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 2396,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 177
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4489,
+      "elapsed_ms": 4490,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"x 和 y 指向同一列表，y 追加 4 后 x 变为 [1,2,3,4]，长度为 4；z 是 x 的浅拷贝 [1,2,3,4]，pop 后变为 [1,2,3]，长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "x 和 y 指向同一列表，y 追加 4 后 x 变为 [1,2,3,4]，长度为 4；z 是 x 的浅拷贝 [1,2,3,4]，pop 后变为 [1,2,3]，长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 81,
+        "total_tokens": 1720,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2976,
+      "elapsed_ms": 2977,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的背景资料中均明确未包含所问的验收编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均明确未包含所问的验收编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 24,
+        "total_tokens": 2348,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 133
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4434,
+      "elapsed_ms": 4436,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的记忆资料仅包含五条 PROJECT-DELTA 背景条目，且均明确注明不含验收编号，因此无法从现有资料中获取该信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的记忆资料仅包含五条 PROJECT-DELTA 背景条目，且均明确注明不含验收编号，因此无法从现有资料中获取该信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 49,
+        "total_tokens": 2240,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2919,
+      "elapsed_ms": 2921,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"在提供的角色设定文本中，并未提及任何关于档案编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "在提供的角色设定文本中，并未提及任何关于档案编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1608,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2261,
+      "elapsed_ms": 2262,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已执行工具返回的结果被截断，未包含任何关于最终审批编号的信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具返回的结果被截断，未包含任何关于最终审批编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1865,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 183
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7056,
+      "elapsed_ms": 7057,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的记忆资料仅包含项目背景描述，未提及任何与验收编号相关的具体数值。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的记忆资料仅包含项目背景描述，未提及任何与验收编号相关的具体数值。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 2226,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3920,
+      "elapsed_ms": 3921,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"资料中明确提及“会议编号 SHORT-8621”。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "资料中明确提及“会议编号 SHORT-8621”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2083,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 447
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4540,
+      "elapsed_ms": 4541,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"资料末尾明确记录角色档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "资料末尾明确记录角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 5857,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 413
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 9415,
+      "elapsed_ms": 9416,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": \"x4-z3\", \"reason\": \"y 与 x 引用同一列表，y.append(4) 改变原列表使其长度变为 4；z 是 x 的浅拷贝副本，执行 z.pop() 移除末尾元素后长度变为 3。\"}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y 与 x 引用同一列表，y.append(4) 改变原列表使其长度变为 4；z 是 x 的浅拷贝副本，执行 z.pop() 移除末尾元素后长度变为 3。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 63,
+        "total_tokens": 2494,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 792
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5727,
+      "elapsed_ms": 5728,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"角色设定最后一行明确记载了档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "角色设定最后一行明确记载了档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5445,
+        "prompt_tokens": 5404
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2852,
+      "elapsed_ms": 2854,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的资料中明确标明了会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的资料中明确标明了会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1638,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2933,
+      "elapsed_ms": 2934,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"这是本轮对话中用户直接提供的会议编号数据。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "这是本轮对话中用户直接提供的会议编号数据。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 1633,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1883,
+      "elapsed_ms": 1885,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 会改变 x，故 x 变为 [1, 2, 3, 4]（长度 4）；z 是 x 的切片副本，执行 pop() 后移除最后一个元素，z 变为 [1, 2, 3]（长度 3），若指 pop 后的 z，则长度为 3；若题目指 z 操作结束后的状态，即 [1, 2]，长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 会改变 x，故 x 变为 [1, 2, 3, 4]（长度 4）；z 是 x 的切片副本，执行 pop() 后移除最后一个元素，z 变为 [1, 2, 3]（长度 3），若指 pop 后的 z，则长度为 3；若题目指 z 操作结束后的状态，即 [1, 2]，长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 121,
+        "total_tokens": 1760,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1880,
+      "elapsed_ms": 1881,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已执行工具结果中未包含任何与最终审批编号相关的具体信息\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具结果中未包含任何与最终审批编号相关的具体信息"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2096,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 416
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3671,
+      "elapsed_ms": 3672,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的背景资料中均明确标注不含所问编号，未提供 PROJECT-DELTA 的验收编号相关记录。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均明确标注不含所问编号，未提供 PROJECT-DELTA 的验收编号相关记录。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 2346,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 121
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3562,
+      "elapsed_ms": 3563,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的角色设定文本中未包含任何关于档案编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的角色设定文本中未包含任何关于档案编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 29,
+        "total_tokens": 1606,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2316,
+      "elapsed_ms": 2318,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"这是用户在当前对话中明确提供的会议编号资料。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "这是用户在当前对话中明确提供的会议编号资料。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 1633,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2826,
+      "elapsed_ms": 2827,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行的工具结果中并未包含审批编号的相关资料。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行的工具结果中并未包含审批编号的相关资料。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 29,
+        "total_tokens": 1672,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1822,
+      "elapsed_ms": 1823,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前会话上下文及提供的资料中未包含任何关于测试日志或检查编号的内容。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前会话上下文及提供的资料中未包含任何关于测试日志或检查编号的内容。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 1656,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1656,
+      "elapsed_ms": 1657,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": \"TOOL-4073\", \"reason\": \"已执行工具 study_read 返回结果中的 approval_code 字段值为 TOOL-4073。\"}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具 study_read 返回结果中的 approval_code 字段值为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 16127,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 199
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4203,
+      "elapsed_ms": 4205,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"提供的测试日志末尾明确记录最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "提供的测试日志末尾明确记录最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 8193,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 463
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3981,
+      "elapsed_ms": 3983,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料中明确指明会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料中明确指明会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1986,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 348
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3084,
+      "elapsed_ms": 3085,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"提供的测试日志末尾明确记录最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "提供的测试日志末尾明确记录最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 8110,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 380
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4037,
+      "elapsed_ms": 4038,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y=x 为引用赋值，y.append(4) 改变原列表，此时 x 长度为 4；z=x[:] 对列表进行了切片浅拷贝，后续 z.pop() 仅修改新列表 z，使其长度变为 3，不影响 x 的长度。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y=x 为引用赋值，y.append(4) 改变原列表，此时 x 长度为 4；z=x[:] 对列表进行了切片浅拷贝，后续 z.pop() 仅修改新列表 z，使其长度变为 3，不影响 x 的长度。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 83,
+        "total_tokens": 3224,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1502
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7418,
+      "elapsed_ms": 7419,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的资料中明确指出会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的资料中明确指出会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 1636,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2781,
+      "elapsed_ms": 2782,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"null\",\n  \"reason\": \"提供的资料中仅包含了关于 PROJECT-DELTA 的背景条目描述，并未包含任何具体的验收编号信息。\"\n}",
+      "parsed": {
+        "fact": "null",
+        "reason": "提供的资料中仅包含了关于 PROJECT-DELTA 的背景条目描述，并未包含任何具体的验收编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2231,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2257,
+      "elapsed_ms": 2258,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "persona_tail",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"已提供的角色设定及相关资料中未记载任何档案编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的角色设定及相关资料中未记载任何档案编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 24,
+        "total_tokens": 1985,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 384
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7582,
+      "elapsed_ms": 7583,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": \"TOOL-4073\", \"reason\": \"已执行工具返回结果中的 approval_code 字段明确记录为 TOOL-4073。\"}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具返回结果中的 approval_code 字段明确记录为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 16112,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 185
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 12255
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5602,
+      "elapsed_ms": 5603,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行工具的返回结果中未包含任何审批编号相关信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具的返回结果中未包含任何审批编号相关信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1875,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 201
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4645,
+      "elapsed_ms": 4646,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的资料中未包含测试日志，摘要亦记录无法恢复原始编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料中未包含测试日志，摘要亦记录无法恢复原始编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 32,
+        "total_tokens": 2021,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 368
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4558,
+      "elapsed_ms": 4559,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 影响 x 使其变为 [1,2,3,4]，故 x 长度为 4；z 是 x 的切片副本，执行 pop() 后 z 变为 [1,2]，故 z 长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 影响 x 使其变为 [1,2,3,4]，故 x 长度为 4；z 是 x 的切片副本，执行 pop() 后 z 变为 [1,2]，故 z 长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 80,
+        "total_tokens": 1719,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2767,
+      "elapsed_ms": 2769,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"资料中明确标注了会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "资料中明确标注了会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2140,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 504
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4809,
+      "elapsed_ms": 4810,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"角色设定末尾明确标注了档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "角色设定末尾明确标注了档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5445,
+        "prompt_tokens": 5404
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3037,
+      "elapsed_ms": 3039,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已提供的角色设定及相关资料中未包含任何档案编号信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的角色设定及相关资料中未包含任何档案编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1983,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 370
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 9958,
+      "elapsed_ms": 9959,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y 与 x 引用同一列表，y.append(4) 使 x 的长度变为 4；z = x[:] 创建了新列表（切片浅拷贝），z.pop() 移除末尾元素后 z 的长度变为 3，原列表 x 不受影响。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y 与 x 引用同一列表，y.append(4) 使 x 的长度变为 4；z = x[:] 创建了新列表（切片浅拷贝），z.pop() 移除末尾元素后 z 的长度变为 3，原列表 x 不受影响。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 81,
+        "total_tokens": 3189,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1469
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 8088,
+      "elapsed_ms": 8090,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"资料记录中明确提及 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "资料记录中明确提及 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 3046,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 482
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5053,
+      "elapsed_ms": 5054,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"设定末尾明确标注了角色档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "设定末尾明确标注了角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5445,
+        "prompt_tokens": 5404
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2212,
+      "elapsed_ms": 2213,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"资料中明确记载角色档案编号为 CANON-2749。\"\n}\n```",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "资料中明确记载角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 5606,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 158
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 10635,
+      "elapsed_ms": 10636,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的背景资料中均不包含 PROJECT-DELTA 的验收编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均不包含 PROJECT-DELTA 的验收编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 2722,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 501
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3364,
+      "elapsed_ms": 3365,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已执行的工具结果中并未包含审批编号相关的具体信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行的工具结果中并未包含审批编号相关的具体信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 1999,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 321
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7063,
+      "elapsed_ms": 7064,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 影响 x，故 x 变为 [1, 2, 3, 4]（长度4）；z 是 x 的切片副本，执行 pop() 后 z 变为 [1, 2]（长度2)。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 影响 x，故 x 变为 [1, 2, 3, 4]（长度4）；z 是 x 的切片副本，执行 pop() 后 z 变为 [1, 2]（长度2)。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 79,
+        "total_tokens": 1718,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2496,
+      "elapsed_ms": 2497,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"资料中明确给出了会议编号 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "资料中明确给出了会议编号 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1917,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 282
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3168,
+      "elapsed_ms": 3169,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "technical_control",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长度4）；z=x[:]切片浅拷贝生成独立新列表，z.pop()使其长度变为3，不影响x。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长度4）；z=x[:]切片浅拷贝生成独立新列表，z.pop()使其长度变为3，不影响x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 76,
+        "total_tokens": 2587,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 872
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5526,
+      "elapsed_ms": 5527,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"本轮提供的角色设定及上下文中未包含任何档案编号信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "本轮提供的角色设定及上下文中未包含任何档案编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1992,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 379
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5306,
+      "elapsed_ms": 5307,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "persona_tail",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"角色设定末尾明确记录了“角色档案编号为 CANON-2749”。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "角色设定末尾明确记录了“角色档案编号为 CANON-2749”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 5714,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 266
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4251,
+      "elapsed_ms": 4252,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已执行工具结果中明确标识了 approval_code 为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具结果中明确标识了 approval_code 为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 15931,
+        "prompt_tokens": 15890,
+        "prompt_tokens_details": {
+          "cached_tokens": 12257
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3529,
+      "elapsed_ms": 3531,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前可用的上下文资料中未包含关于审批编号的相关记录。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前可用的上下文资料中未包含关于审批编号的相关记录。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 1673,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3142,
+      "elapsed_ms": 3143,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行工具结果中未提供关于最终审批编号的相关信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具结果中未提供关于最终审批编号的相关信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 1673,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2597,
+      "elapsed_ms": 2598,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的角色设定文本中未包含档案编号相关信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的角色设定文本中未包含档案编号相关信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 1605,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2275,
+      "elapsed_ms": 2277,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:scaled_sections:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"提供的资料明确注明 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}\n```",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "提供的资料明确注明 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 2777,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 209
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4460,
+      "elapsed_ms": 4461,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"这是本轮对话中用户直接提供的关于会议编号的信息。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "这是本轮对话中用户直接提供的关于会议编号的信息。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 1634,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1551,
+      "elapsed_ms": 1553,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"用户在上一轮提供的文本末尾明确标注了“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "用户在上一轮提供的文本末尾明确标注了“测试日志最终检查编号为 HISTORY-9362”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 48,
+        "total_tokens": 7738,
+        "prompt_tokens": 7690
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3138,
+      "elapsed_ms": 3139,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行工具提供的资料中未包含任何关于审批编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具提供的资料中未包含任何关于审批编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 1673,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2555,
+      "elapsed_ms": 2556,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已提供的资料中明确包含了 approval_code 字段，其对应的值为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已提供的资料中明确包含了 approval_code 字段，其对应的值为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 45,
+        "total_tokens": 15935,
+        "prompt_tokens": 15890
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2355,
+      "elapsed_ms": 2356,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的资料中未包含测试日志，早前摘要亦说明无法恢复原始编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料中未包含测试日志，早前摘要亦说明无法恢复原始编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 2162,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 513
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5649,
+      "elapsed_ms": 5651,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:scaled_sections:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料中明确记录会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料中明确记录会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 1985,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 348
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4561,
+      "elapsed_ms": 4563,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长度4）；z=x[:]为切片浅拷贝，z.pop()仅移除z的末尾元素使z变为[1,2,3]（长度3）。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长度4）；z=x[:]为切片浅拷贝，z.pop()仅移除z的末尾元素使z变为[1,2,3]（长度3）。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 86,
+        "total_tokens": 2400,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 675
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 9984,
+      "elapsed_ms": 9986,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:scaled_sections:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "scaled_sections",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"已提供资料中明确将会议编号标注为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "已提供资料中明确将会议编号标注为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1638,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2079,
+      "elapsed_ms": 2081,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行工具结果中未提供关于最终审批编号的明确信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具结果中未提供关于最终审批编号的明确信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1674,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2010,
+      "elapsed_ms": 2011,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的切片副本，执行 pop() 后 z 为 [1, 2]，长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的切片副本，执行 pop() 后 z 为 [1, 2]，长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 78,
+        "total_tokens": 1717,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4045,
+      "elapsed_ms": 4047,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已提供的角色设定及相关资料中未包含任何档案编号信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的角色设定及相关资料中未包含任何档案编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 2092,
+        "prompt_tokens": 1577,
+        "completion_tokens_details": {
+          "reasoning_tokens": 479
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4292,
+      "elapsed_ms": 4293,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"当前会话上下文及提供的资料摘要中未包含任何关于测试日志或检查编号的内容。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "当前会话上下文及提供的资料摘要中未包含任何关于测试日志或检查编号的内容。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1657,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3755,
+      "elapsed_ms": 3756,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的角色设定文本中未包含任何档案编号信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的角色设定文本中未包含任何档案编号信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2224,
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 1605,
+        "prompt_tokens": 1577
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2678,
+      "elapsed_ms": 2679,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:scaled_sections:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"依据本轮提供的 Memory Context 中关于 PROJECT-DELTA 的记录，明确指出了验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "依据本轮提供的 Memory Context 中关于 PROJECT-DELTA 的记录，明确指出了验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 50,
+        "total_tokens": 2572,
+        "prompt_tokens": 2522
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2635,
+      "elapsed_ms": 2637,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已提供的资料中仅包含 PROJECT-DELTA 的背景条目，未记载具体的验收编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已提供的资料中仅包含 PROJECT-DELTA 的背景条目，未记载具体的验收编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 2227,
+        "prompt_tokens": 2191
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2531,
+      "elapsed_ms": 2533,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"用户在输入内容的最后一行明确指定了测试日志最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "用户在输入内容的最后一行明确指定了测试日志最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 7734,
+        "prompt_tokens": 7690
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2147,
+      "elapsed_ms": 2148,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料中明确指出了“会议编号 SHORT-8621”。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料中明确指出了“会议编号 SHORT-8621”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2151,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 512
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4095,
+      "elapsed_ms": 4096,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"已执行的工具返回结果中未包含任何关于最终审批编号的信息。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行的工具返回结果中未包含任何关于最终审批编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2036,
+        "prompt_tokens": 1643,
+        "completion_tokens_details": {
+          "reasoning_tokens": 356
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 8201,
+      "elapsed_ms": 8203,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的历史对话摘要中未记录任何具体的检查编号，且当前无其他资料来源。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的历史对话摘要中未记录任何具体的检查编号，且当前无其他资料来源。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 35,
+        "total_tokens": 1656,
+        "prompt_tokens": 1621
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2027,
+      "elapsed_ms": 2028,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "history_literal",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的资料中未包含测试日志或最终检查编号，且摘要说明无法恢复原始编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料中未包含测试日志或最终检查编号，且摘要说明无法恢复原始编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 30,
+        "total_tokens": 1808,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 157
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3893,
+      "elapsed_ms": 3894,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:scaled_sections:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "scaled_sections",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"提供的背景资料中明确列出了 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "提供的背景资料中明确列出了 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2566,
+        "prompt_tokens": 2522
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2153,
+      "elapsed_ms": 2154,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 会改变 x，故 x 变为 [1,2,3,4] 长度为 4。z 是 x 的切片拷贝，修改 z 不影响 x，执行 z.pop() 后 z 从 [1,2,3,4] 变为 [1,2,3]，长度为 3，移除末尾元素后长度变为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 会改变 x，故 x 变为 [1,2,3,4] 长度为 4。z 是 x 的切片拷贝，修改 z 不影响 x，执行 z.pop() 后 z 从 [1,2,3,4] 变为 [1,2,3]，长度为 3，移除末尾元素后长度变为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 107,
+        "total_tokens": 1746,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3175,
+      "elapsed_ms": 3177,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:scaled_sections:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "history_literal",
+      "variant": "scaled_sections",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"前文测试日志明确记录最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "前文测试日志明确记录最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 8136,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 407
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4303,
+      "elapsed_ms": 4304,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "memory_retrieval",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的背景资料中均明确标注不含所问编号，未记录 PROJECT-DELTA 的验收编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的背景资料中均明确标注不含所问编号，未记录 PROJECT-DELTA 的验收编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 3030,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 2416,
+        "prompt_tokens": 2191,
+        "completion_tokens_details": {
+          "reasoning_tokens": 187
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3393,
+      "elapsed_ms": 3394,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "history_literal",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\"fact\": null, \"reason\": \"提供的资料与摘要中未包含测试日志及最终检查编号。\"}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的资料与摘要中未包含测试日志及最终检查编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2335,
+      "usage": {
+        "completion_tokens": 24,
+        "total_tokens": 1965,
+        "prompt_tokens": 1621,
+        "completion_tokens_details": {
+          "reasoning_tokens": 320
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 6904,
+      "elapsed_ms": 6906,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "short_control",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"短资料中明确说明会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "短资料中明确说明会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2068,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 432
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 8366,
+      "elapsed_ms": 8367,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的浅拷贝 [1, 2, 3, 4]，执行 pop() 后 z 变为 [1, 2, 3]，长度为 3。修正：z 的长度应为 3，即 x4-z3。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1, 2, 3, 4]，长度为 4；z 是 x 的浅拷贝 [1, 2, 3, 4]，执行 pop() 后 z 变为 [1, 2, 3]，长度为 3。修正：z 的长度应为 3，即 x4-z3。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 109,
+        "total_tokens": 1748,
+        "prompt_tokens": 1639
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2277,
+      "elapsed_ms": 2279,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"已执行工具提供的资料中未包含任何关于最终审批编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "已执行工具提供的资料中未包含任何关于最终审批编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2359,
+      "usage": {
+        "completion_tokens": 31,
+        "total_tokens": 1674,
+        "prompt_tokens": 1643
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2767,
+      "elapsed_ms": 2768,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"会议编号由用户提供的当前资料中直接给出。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "会议编号由用户提供的当前资料中直接给出。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1632,
+        "prompt_tokens": 1599
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 4676,
+      "elapsed_ms": 4677,
+      "dataset": "sections"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:current:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"在现有的对话历史中，并未包含关于合成档案编号的任何记录或上下文信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "在现有的对话历史中，并未包含关于合成档案编号的任何记录或上下文信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1644,
+        "prompt_tokens": 1608
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3917,
+      "elapsed_ms": 3919,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:current:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的历史记录中未包含关于合成档案编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的历史记录中未包含关于合成档案编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 1636,
+        "prompt_tokens": 1608
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2144,
+      "elapsed_ms": 2145,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:window_only:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前文末尾明确记录档案编号为 WIRE-7528。\"\n}",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "前文末尾明确记录档案编号为 WIRE-7528。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 11046,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 412
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7338,
+      "elapsed_ms": 7339,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:window_only:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前文助手消息末尾明确记录了“档案编号为 WIRE-7528”。\"\n}\n```",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "前文助手消息末尾明确记录了“档案编号为 WIRE-7528”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 48,
+        "total_tokens": 10970,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 326
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 7903,
+      "elapsed_ms": 7904,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:window_only:1",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"合成档案末尾明确注明了档案编号为 WIRE-7528。\"\n}",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "合成档案末尾明确注明了档案编号为 WIRE-7528。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 10635,
+        "prompt_tokens": 10596
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3073,
+      "elapsed_ms": 3073,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:current:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"在现有的对话历史与运行上下文约束中，没有提供任何关于合成档案编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "在现有的对话历史与运行上下文约束中，没有提供任何关于合成档案编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1644,
+        "prompt_tokens": 1608
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2983,
+      "elapsed_ms": 2984,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:current:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"历史记录中早前的助手回复已被省略，未提供任何合成档案编号。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "历史记录中早前的助手回复已被省略，未提供任何合成档案编号。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1977,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 336
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3755,
+      "elapsed_ms": 3756,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:current:0",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": null,\n  \"reason\": \"提供的历史记录中先前的助手消息已被省略，未包含任何关于合成档案编号的信息。\"\n}",
+      "parsed": {
+        "fact": null,
+        "reason": "提供的历史记录中先前的助手消息已被省略，未包含任何关于合成档案编号的信息。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 2058,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 414
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 3758,
+      "elapsed_ms": 3759,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"在给出的合成档案信息中，明确记录了该档案的编号为 WIRE-7528。\"\n}",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "在给出的合成档案信息中，明确记录了该档案的编号为 WIRE-7528。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 45,
+        "total_tokens": 10641,
+        "prompt_tokens": 10596,
+        "prompt_tokens_details": {
+          "cached_tokens": 8164
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 2633,
+      "elapsed_ms": 2635,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:current:2",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "case": "whole_request_history",
+      "variant": "current",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": null,\n  \"reason\": \"历史记录中先前的助手消息已被省略，未提供任何合成档案编号的具体内容。\"\n}\n```",
+      "parsed": {
+        "fact": null,
+        "reason": "历史记录中先前的助手消息已被省略，未提供任何合成档案编号的具体内容。"
+      },
+      "fact_available": false,
+      "fact_covered": false,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 2306,
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2181,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 533
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5402,
+      "elapsed_ms": 5403,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.8-flash-high:whole_request_history:window_only:1",
+      "model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前文记录末尾明确提及档案编号为 WIRE-7528。\"\n}\n```",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "前文记录末尾明确提及档案编号为 WIRE-7528。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 10939,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 299
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 8162
+        }
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 5334,
+      "elapsed_ms": 5335,
+      "dataset": "whole_request"
+    },
+    {
+      "key": "gemini-3.1-flash-lite:whole_request_history:window_only:0",
+      "model": "gemini-3.1-flash-lite",
+      "response_model": "gemini-3.1-flash-lite",
+      "case": "whole_request_history",
+      "variant": "window_only",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"依据历史记录末尾处提供的明确文本，档案编号即为 WIRE-7528。\"\n}",
+      "parsed": {
+        "fact": "WIRE-7528",
+        "reason": "依据历史记录末尾处提供的明确文本，档案编号即为 WIRE-7528。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "unsupported_fact": false,
+      "available_fact_error": false,
+      "reference_input_tokens": 13096,
+      "usage": {
+        "completion_tokens": 43,
+        "total_tokens": 10639,
+        "prompt_tokens": 10596
+      },
+      "finish_reason": "stop",
+      "ttft_ms": 1880,
+      "elapsed_ms": 1883,
+      "dataset": "whole_request"
+    }
+  ]
+}

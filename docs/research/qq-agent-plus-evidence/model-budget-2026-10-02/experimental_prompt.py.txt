@@ -9,7 +9,6 @@ from uuid import UUID
 
 from chatwaifu_protocol.character import (
     CharacterKernelSnapshot,
-    ModelContextBudget,
     PromptBudgetReport,
     PromptContextIdentity,
     ResponsePlan,
@@ -27,7 +26,6 @@ from chatwaifu_runtime.conversation.models import (
     GenerationContextSnapshot,
 )
 from chatwaifu_runtime.conversation.source_context import source_generation_ids
-from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 _SAFETY = (
@@ -128,14 +126,10 @@ class PromptCompiler:
             summary_config = None
             identity = None
 
-        model_budget = getattr(chat_config, "budget", ModelContextBudget())
-        limits = resolve_context_budget(chat_config.context_window, model_budget)
-        total_budget = limits.input_tokens
-        persona_budget, memory_budget, conversation_budget = (
-            limits.persona,
-            limits.memory,
-            limits.history,
-        )
+        total_budget = max(1024, chat_config.context_window - 900)
+        persona_budget = max(700, total_budget * 18 // 100)
+        memory_budget = max(300, total_budget * 16 // 100)
+        conversation_budget = max(700, total_budget * 34 // 100)
 
         persona = _fit(character.system_prompt, persona_budget)
         state = _state_text(kernel)
@@ -170,8 +164,7 @@ class PromptCompiler:
         context: list[tuple[str, str]] = []
         # Photo observations are separate from extracted personal memory. Keep
         # their attribution and count their bounded evidence in the prompt budget.
-        original_photo = photo_evidence
-        photo_evidence = _fit(photo_evidence, limits.photo)
+        photo_evidence = _fit(photo_evidence, min(1000, max(250, total_budget // 12)))
         if photo_evidence:
             context.append(("system", photo_evidence))
         if memory_text:
@@ -189,11 +182,10 @@ class PromptCompiler:
         source_ledger = _source_ledger(
             selected_entries,
             source_context,
-            budget=limits.source_ledger,
+            budget=min(1_200, max(600, total_budget // 10)),
         )
         if source_ledger:
             context.append(("system", source_ledger))
-        summary_omitted = 0
         if dropped:
             dropped_history = normalized_history[:dropped]
             summary_system = (
@@ -215,9 +207,7 @@ class PromptCompiler:
                     "memory_summary", summary_system, summary_input, config=summary_config
                 )
             if summary:
-                fitted_summary = _fit(summary, limits.summary)
-                summary_omitted = _omitted_characters(summary, fitted_summary)
-                context.append(("system", f"Earlier Conversation Summary:\n{fitted_summary}"))
+                context.append(("system", f"Earlier Conversation Summary:\n{_fit(summary, 700)}"))
 
         if presentation_profile == "instant_message":
             output_contract = _INSTANT_MESSAGE_OUTPUT_CONTRACT
@@ -265,24 +255,6 @@ class PromptCompiler:
                 scene_tokens=_tokens(scene),
                 conversation_tokens=history_used,
                 dropped_history_turns=dropped,
-                output_reserve_tokens=model_budget.output_reserve_tokens,
-                estimate_margin_ratio=model_budget.estimate_margin_ratio,
-                section_budget_limits={
-                    "persona": limits.persona,
-                    "memory": limits.memory,
-                    "history": limits.history,
-                    "summary": limits.summary,
-                    "photo": limits.photo,
-                    "source_ledger": limits.source_ledger,
-                },
-                persona_omitted_characters=_omitted_characters(character.system_prompt, persona),
-                photo_omitted_characters=_omitted_characters(original_photo, photo_evidence),
-                summary_omitted_characters=summary_omitted,
-                omitted_memory_ids=[
-                    excerpt.memory_id
-                    for _label, excerpt in _memory_excerpts(memory)
-                    if excerpt.memory_id not in frozenset(selected_memory_ids)
-                ],
             ),
             identity=identity,
             # Prose omission is a budget decision, not source revocation. The
@@ -495,10 +467,6 @@ def _fit(text: str, budget: int) -> str:
     if _tokens(text) <= budget:
         return text
     return text[: max(1, budget * 2)].rsplit(" ", 1)[0].rstrip() + "…"
-
-
-def _omitted_characters(original: str, fitted: str) -> int:
-    return 0 if original == fitted else max(0, len(original) - len(fitted.removesuffix("…")))
 
 
 def _tokens(text: str) -> int:
