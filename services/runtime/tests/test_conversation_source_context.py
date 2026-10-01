@@ -275,10 +275,24 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         else:
             assert _BODY not in supplied
         if mode in {"restart", "evicted", "source_evidence_gap_unavailable"}:
-            assert '"original_result": "unavailable"' in supplied
+            packet = json.loads(
+                next(
+                    text
+                    for _role, text in final.context
+                    if text.startswith("[PUBLIC SOURCE DATA]\n")
+                ).split("\n", 1)[1]
+            )
+            assert packet["receipts"][0]["original_result"] == "unavailable"
         elif mode == "denied":
-            assert '"error_code": "permission_denied"' in supplied
-            assert '"original_result": "not_succeeded"' in supplied
+            packet = json.loads(
+                next(
+                    text
+                    for _role, text in final.context
+                    if text.startswith("[PUBLIC SOURCE DATA]\n")
+                ).split("\n", 1)[1]
+            )
+            assert packet["receipts"][0]["error_code"] == "permission_denied"
+            assert packet["receipts"][0]["original_result"] == "not_succeeded"
         elif mode not in {
             "available",
             "history_budget",

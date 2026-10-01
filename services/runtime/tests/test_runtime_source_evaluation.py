@@ -198,7 +198,15 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         if allow_once:
             assert "Actual body" in context
         else:
-            assert '"error_code": "permission_denied"' in context
+            packet = json.loads(
+                next(
+                    text
+                    for _role, text in provider.requests[-1].context
+                    if text.startswith("[PUBLIC SOURCE DATA]\n")
+                ).split("\n", 1)[1]
+            )
+            assert packet["receipts"][0]["error_code"] == "permission_denied"
+            assert packet["receipts"][0]["original_result"] == "not_succeeded"
         assert len(requests) == int(allow_once)
         assert await container.database.fetchall("SELECT * FROM permission_grants") == []
     finally:

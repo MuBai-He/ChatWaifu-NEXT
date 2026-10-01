@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Compact the instant-chat output contract and lossless source JSON so the six
+  archived follow-up controls retain full originals within the same input budget.
+  Keep default persona v4 and permission/source fences; template v9/evaluator
+  1.11.0 prevent mixed resumes. Real style/source quality remains unapproved.
+  Synchronize the proactive audit test on actual terminal events instead of a
+  fixed two-second poll, retaining failed-generation and historical CI evidence.
+
 - Preserve bounded actual source links when the whole body exceeds input budget,
   declare the reader HTTPS constraint in results, and honor explicit existing-content
   analysis without fresh tools. Compound external operations retain confirmation.

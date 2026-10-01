@@ -67,6 +67,14 @@ inheriting permission. Reader results preserve the accepted-scheme limitation ev
 after function schemas close. This follow-up uses template v8/evaluator 1.10.0;
 prior paid batches retain their captured identities.
 
+The instant-chat output contract subsequently merges repeated wording while
+retaining task, boundary, relationship and brevity priorities. Prior-source JSON
+uses compact punctuation whitespace with exactly the same parsed data. Whole
+results and the latest user facts still pass the unchanged input guard; neither
+compression permits clipping a body, replaying a tool or increasing permissions.
+Template v9/evaluator 1.11.0 identify this representation change. Full source
+availability in captured inputs is budget evidence, not a behavioral quality gate.
+
 ## Consequences and validation
 
 This is a bounded language policy, not an exhaustive semantic intent classifier.

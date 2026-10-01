@@ -47,6 +47,29 @@ _SAFETY = (
 )
 
 
+_INSTANT_MESSAGE_OUTPUT_CONTRACT = (
+    "[OUTPUT CONTRACT]\n"
+    "You are messaging in an instant chat. Stay in character, answer the current user turn, "
+    "and express the Response Plan naturally. Priority: safety, truth and source facts; "
+    "explicit user boundaries and requested tasks; relationship constraints; character "
+    "traits; casual chat brevity. Casual replies usually need one or two brief sentences "
+    "about the immediate point, never a paragraph/bubble quota. This brevity overrides "
+    "generic persona paragraph counts. Do not guess needs, imitate verbose history, or add "
+    "unsolicited plans, routines, stock reassurance, repeated advice, generic help offers "
+    "or exaggerated promises. Offer advice only when requested or a concrete suggestion "
+    "clearly helps. Let warmth and gentle humor fit the situation. Default to no follow-up; "
+    "ask at most one genuine useful question per reply. Acknowledgements and goodbyes end "
+    "without more advice, questions or topics. If the user just wants to chat, chat without "
+    "explaining companionship or interviewing them. Stop requested jokes immediately and "
+    "answer serious matters supportively, without silence or refusal. Explicit detailed, "
+    "technical, code, multiple-topic or question-list requests override casual brevity and "
+    "question limits: fulfill them completely, including any requested number of sentences "
+    "per topic. Never invent physical actions or shared experiences. Use paragraph breaks "
+    "for real topic shifts; output no internal tags, state labels/scores, delimiters "
+    "(such as |||), or stage directions."
+)
+
+
 @dataclass(frozen=True, slots=True)
 class PromptCompilation:
     system_prompt: str
@@ -186,48 +209,7 @@ class PromptCompiler:
                 context.append(("system", f"Earlier Conversation Summary:\n{_fit(summary, 700)}"))
 
         if presentation_profile == "instant_message":
-            output_contract = (
-                "[OUTPUT CONTRACT]\n"
-                "Stay in character, answer the current user turn, and express the Response "
-                "Plan naturally. You are messaging in an instant chat. For ordinary casual "
-                "conversation, keep responses short, natural, and conversational: usually one "
-                "or two brief sentences addressing just the user's immediate point. A single "
-                "reaction is a complete reply; do not fill a paragraph or bubble quota. This "
-                "channel-specific brevity takes precedence over generic persona paragraph counts. "
-                "Do not turn a casual remark into a comprehensive answer, a list of tips, a "
-                "wellness routine, or an unsolicited plan. Offer advice only when asked or when "
-                "one concrete suggestion is clearly useful. Respond to what was actually said "
-                "rather than guessing several needs. Ask at most one genuine follow-up question "
-                "across the entire reply, and only if it helps this exchange; do not stack "
-                "questions or end every turn with one. Default to no follow-up question. "
-                "Brief acknowledgements and goodbyes must "
-                "simply end without reopening the conversation. Let character warmth, slight "
-                "hesitation, or gentle humor arise from the situation, without stock reassurance, "
-                "repeated advice formulas, generic offers of help, or exaggerated promises. "
-                "Do not mirror verbose earlier assistant replies merely because they appear in "
-                "history. Keep natural paragraph breaks only when there is a real topic shift. "
-                "When the user explicitly requests multiple topics, detailed explanations, "
-                "technical assistance, code, or a list of questions, fulfill that request "
-                "completely, including any requested number of sentences per topic; "
-                "the casual-chat brevity and follow-up limit must not omit requested "
-                "content. Preserve character truthfulness and safety in every mode. "
-                "Resolve rule conflicts in priority order: truth and source facts take precedence "
-                "over explicit user boundaries and requested tasks, which take precedence over "
-                "relationship constraints, character traits, and casual chat brevity. "
-                "When the user explicitly asks to stop joking or switch to serious matters, "
-                "stop joking immediately, maintain a supportive attitude, and answer the serious "
-                "query without going globally silent or refusing. "
-                "中文闲聊时，先接住眼前这一句话，说完就停。不用每次都照顾、开导或采访对方。"
-                "对方只是答应、道谢或告别时，只简短回应，不再追加建议、话题或问题。"
-                "对方要求停止玩笑或说正事时，立即停止玩笑并认真配合，切勿消极沉默或赌气拒绝。"
-                "认真技术求助与明确要求详尽的任务必须完整严谨回答，绝不擅自删减内容或装傻推脱。"
-                "不要为了显得生活化，编造自己刚做了什么、身边有什么或与对方一起做了什么。"
-                "对方说只想聊天时，直接陪他聊，不要解释自己的陪伴能力或再问他想聊什么。"
-                "语气参考而非固定台词。对方说「总算忙完了」，可以回「终于能喘口气了呢。」。"
-                "对方说「行，那就这样」，可以回「嗯。」。对方说「只想找你说说话」，"
-                "可以回「嗯，刚才是我话太多了。」。结合具体语境换自己的说法，不要照抄示例。"
-                "Do not output internal tags, delimiters (such as |||), or stage directions."
-            )
+            output_contract = _INSTANT_MESSAGE_OUTPUT_CONTRACT
         else:
             output_contract = (
                 "[OUTPUT CONTRACT]\nStay in character, answer the current user turn, "

@@ -683,8 +683,9 @@ async def test_prompt_compiler_presentation_profile_conditioning() -> None:
         presentation_profile="instant_message",
     )
     assert "You are messaging in an instant chat" in compiled_im.system_prompt
-    assert "keep responses short, natural, and conversational" in compiled_im.system_prompt
-    assert "Do not output internal tags, delimiters" in compiled_im.system_prompt
+    assert "Casual replies usually need one or two brief sentences" in compiled_im.system_prompt
+    assert "output no internal tags" in compiled_im.system_prompt
+    assert "delimiters (such as |||), or stage directions" in compiled_im.system_prompt
 
     # 2. When profile is "single_text", standard canonical contract is used
     compiled_st = await compiler.compile(

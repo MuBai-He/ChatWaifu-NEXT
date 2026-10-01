@@ -26,6 +26,7 @@ from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
 )
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
@@ -573,11 +574,23 @@ async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() 
         presentation_profile="instant_message",
     )
     assert "You are messaging in an instant chat" in comp_im.system_prompt
-    assert "Resolve rule conflicts in priority order" in comp_im.system_prompt
-    assert "When the user explicitly asks to stop joking" in comp_im.system_prompt
-    assert "without going globally silent or refusing" in comp_im.system_prompt
-    assert "对方要求停止玩笑或说正事时，立即停止玩笑并认真配合" in comp_im.system_prompt
-    assert "认真技术求助与明确要求详尽的任务必须完整严谨回答" in comp_im.system_prompt
+    # Channel wording must leave room for actual source bodies in an 8192 window.
+    output_contract = comp_im.system_prompt.split("[OUTPUT CONTRACT]\n", 1)[1]
+    assert count_reference_tokens(output_contract) <= 330
+    assert (
+        "Priority: safety, truth and source facts; explicit user boundaries and requested tasks"
+        in output_contract
+    )
+    assert "Stop requested jokes immediately" in output_contract
+    assert "without silence or refusal" in output_contract
+    assert "question-list requests override casual brevity and question limits" in output_contract
+    assert "including any requested number of sentences per topic" in output_contract
+    assert "This brevity overrides generic persona paragraph counts" in output_contract
+    assert (
+        "Acknowledgements and goodbyes end without more advice, questions or topics"
+        in output_contract
+    )
+    assert "Never invent physical actions or shared experiences" in output_contract
     assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_im.system_prompt
     assert "通用知识不受 Memory Context 限制" in comp_im.system_prompt
     assert "无需机械声明缺乏物理实体" in comp_im.system_prompt

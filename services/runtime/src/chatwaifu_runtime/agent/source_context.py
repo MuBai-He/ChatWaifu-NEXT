@@ -165,7 +165,11 @@ def project_source_context(request: LlmRequest, packet: SourceContextPacket) -> 
             context=(
                 *request.context,
                 ("system", _POLICY),
-                ("user", "[PUBLIC SOURCE DATA]\n" + json.dumps(data, ensure_ascii=False)),
+                (
+                    "user",
+                    "[PUBLIC SOURCE DATA]\n"
+                    + json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+                ),
             ),
         )
 

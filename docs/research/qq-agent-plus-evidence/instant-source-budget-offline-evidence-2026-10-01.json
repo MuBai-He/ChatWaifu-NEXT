@@ -1,0 +1,339 @@
+{
+  "base_commit": "21d16004661f0f45ce6033f5292b074850e897a1",
+  "implementation_file_sha256": {
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "652019be8fd2ed99f9d0999e981a2ff70dfe5b7551fe8c9f3e991d41dc2efe4b",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "8be5c2af04d1120ff98623f696a2a48349f56f75dce597d9f211f48953ca172e",
+    "packages/protocol-python/src/chatwaifu_protocol/character.py": "f2c535c945bc3d2734298a5add5f1ec2c52311228b065928ca67268019ec1f05",
+    "tools/evaluate_character_scenarios.py": "1fbfa990642fc55e5a92665532daed391d69f4c7ea9107b2c8ae008c4b7ceb03"
+  },
+  "captured_source_commit": "ab8dca7cccc21dece04b13972f43c74f4a3fde16",
+  "candidate_contract": "[OUTPUT CONTRACT]\nYou are messaging in an instant chat. Stay in character, answer the current user turn, and express the Response Plan naturally. Priority: safety, truth and source facts; explicit user boundaries and requested tasks; relationship constraints; character traits; casual chat brevity. Casual replies usually need one or two brief sentences about the immediate point, never a paragraph/bubble quota. This brevity overrides generic persona paragraph counts. Do not guess needs, imitate verbose history, or add unsolicited plans, routines, stock reassurance, repeated advice, generic help offers or exaggerated promises. Offer advice only when requested or a concrete suggestion clearly helps. Let warmth and gentle humor fit the situation. Default to no follow-up; ask at most one genuine useful question per reply. Acknowledgements and goodbyes end without more advice, questions or topics. If the user just wants to chat, chat without explaining companionship or interviewing them. Stop requested jokes immediately and answer serious matters supportively, without silence or refusal. Explicit detailed, technical, code, multiple-topic or question-list requests override casual brevity and question limits: fulfill them completely, including any requested number of sentences per topic. Never invent physical actions or shared experiences. Use paragraph breaks for real topic shifts; output no internal tags, state labels/scores, delimiters (such as |||), or stage directions.",
+  "reports": [
+    {
+      "sample_key": "instant_message:legal_evidence_gap",
+      "captured_request_sha256": "7c7df48fc131ce1ebbcf353eb22b1f1abaed002d08dfbc96417bad54a0961d62",
+      "same_full_source_packet_sha256": "5820d9a8dade89dad8b1573720100ed037bf893e06385efcdec42a320ba8a97c",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 804,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 8777,
+          "after": 7876,
+          "omitted_history_indices": [0, 1, 3]
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 8579,
+          "after": 7678,
+          "omitted_history_indices": [0, 1, 3]
+        },
+        {
+          "compact_contract": true,
+          "compact_json": false,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 8248,
+          "after": 7347,
+          "omitted_history_indices": [0, 1, 3]
+        },
+        {
+          "compact_contract": true,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 8050,
+          "after": 7248,
+          "omitted_history_indices": [1, 3]
+        }
+      ]
+    },
+    {
+      "sample_key": "instant_message:final_checklist",
+      "captured_request_sha256": "080edb898e045041b02f11537bd9eb50a5b86e9613982eb11ad4b0a3c823b13d",
+      "same_full_source_packet_sha256": "5820d9a8dade89dad8b1573720100ed037bf893e06385efcdec42a320ba8a97c",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 804,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 9330,
+          "after": 7992,
+          "omitted_history_indices": [0, 1, 2, 3, 5]
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 9132,
+          "after": 7794,
+          "omitted_history_indices": [0, 1, 2, 3, 5]
+        },
+        {
+          "compact_contract": true,
+          "compact_json": false,
+          "fits": false,
+          "fitted_with_full_index_body": false,
+          "current_user_text_unchanged": null,
+          "latest_prior_user_unchanged": null,
+          "before": 8801,
+          "after": 7463,
+          "omitted_history_indices": [0, 1, 2, 3, 5]
+        },
+        {
+          "compact_contract": true,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 8603,
+          "after": 7265,
+          "omitted_history_indices": [0, 1, 2, 3, 5]
+        }
+      ]
+    },
+    {
+      "sample_key": "single_text:legal_evidence_gap",
+      "captured_request_sha256": "0ac68f7d445f276fc28c1fcf8fca5c5c2aa9aaf75f4b9bcf2f1fe60ad99aeb14",
+      "same_full_source_packet_sha256": "529b6d852bb9e2eabde1c50e12129b373d7fa169209171917b77605c292765bb",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 33,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7207,
+          "after": 7207,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7009,
+          "after": 7009,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7207,
+          "after": 7207,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7009,
+          "after": 7009,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "single_text:final_checklist",
+      "captured_request_sha256": "9c0505e55f63c0ff6223b9014612530c7b4961660399fb7e654b9d8b7f13ceee",
+      "same_full_source_packet_sha256": "529b6d852bb9e2eabde1c50e12129b373d7fa169209171917b77605c292765bb",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 33,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7275,
+          "after": 7275,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7077,
+          "after": 7077,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7275,
+          "after": 7275,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7077,
+          "after": 7077,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "default_voice:legal_evidence_gap",
+      "captured_request_sha256": "bb60726b0c7f051f2aa82fcdb795d37503413b5285e7bb10e704bf3552d1c72b",
+      "same_full_source_packet_sha256": "6604167965afbbe3d21c33e8d5387d897fce24184f48958ed5901b5603415192",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 33,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7207,
+          "after": 7207,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7009,
+          "after": 7009,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7207,
+          "after": 7207,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7009,
+          "after": 7009,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "default_voice:final_checklist",
+      "captured_request_sha256": "335da4f2a316e58fae3fefae22ed4f9143a0d8376c8ed72f38c797fd70a7ed56",
+      "same_full_source_packet_sha256": "6604167965afbbe3d21c33e8d5387d897fce24184f48958ed5901b5603415192",
+      "allowance": 7292,
+      "original_contract_reference_tokens": 33,
+      "candidate_contract_reference_tokens": 275,
+      "alternatives": [
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7275,
+          "after": 7275,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7077,
+          "after": 7077,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": false,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7275,
+          "after": 7275,
+          "omitted_history_indices": []
+        },
+        {
+          "compact_contract": false,
+          "compact_json": true,
+          "fits": true,
+          "fitted_with_full_index_body": true,
+          "current_user_text_unchanged": true,
+          "latest_prior_user_unchanged": true,
+          "before": 7077,
+          "after": 7077,
+          "omitted_history_indices": []
+        }
+      ]
+    }
+  ],
+  "scope": "Offline only: semantically identical archived source packet; current uncommitted compact output contract requires real behavior checks; exact implementation hashes are recorded, not represented by the base commit. No network, model, source writes or budget increase.",
+  "driver_sha256": "0dcbddb4612a1b3de266e7366276f0d4efbb8a2f567111270ee17b45a136a59f"
+}

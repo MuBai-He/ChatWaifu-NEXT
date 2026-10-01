@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import time
+import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import cast
 
 import pytest
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.companion.activity import ActivityTracker
 from chatwaifu_runtime.companion.ambient import decide_proactive, is_quiet_time
 from chatwaifu_runtime.companion.attention import evaluate_attention
@@ -16,6 +17,7 @@ from chatwaifu_runtime.companion.resources import ResourceLifecycleService
 from chatwaifu_runtime.companion.settings import CompanionSettingsService
 from chatwaifu_runtime.config.settings import StorageConfig
 from chatwaifu_runtime.persistence.database import Database
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
@@ -140,23 +142,40 @@ def test_manual_proactive_turn_is_audited_without_fabricating_user_text(
 ) -> None:
     created = cast(dict[str, object], client.post("/v1/sessions", json={}).json())
     session_id = str(created["session_id"])
+    portal = client.portal
+    assert portal is not None
+    container = cast(RuntimeContainer, cast(FastAPI, client.app).state.container)
+    # This checks durable audit semantics, not a two-second response-time gate.
+    # Subscribe before admission so an already-completed generation is retained.
+    subscription = portal.call(
+        lambda: container.event_hub.subscribe(
+            lambda event: (
+                str(event.get("session_id")) == session_id
+                and event.get("event_type")
+                in {
+                    "assistant.generation_completed",
+                    "system.error_raised",
+                    "assistant.generation_cancelled",
+                }
+            ),
+            queue_size=8,
+        )
+    )
+    try:
+        accepted = client.post(f"/v1/sessions/{session_id}/companion/proactive")
+        assert accepted.status_code == 200
+        generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
 
-    accepted = client.post(f"/v1/sessions/{session_id}/companion/proactive")
-    assert accepted.status_code == 200
-    generation_id = str(cast(dict[str, object], accepted.json())["generation_id"])
+        async def wait_for_terminal() -> dict[str, object]:
+            return await asyncio.wait_for(subscription.receive(), timeout=10)
 
-    events: list[dict[str, object]] = []
-    deadline = time.monotonic() + 2
-    while time.monotonic() < deadline:
-        payload = cast(dict[str, object], client.get(f"/v1/sessions/{session_id}/events").json())
-        events = cast(list[dict[str, object]], payload["items"])
-        if any(
-            item["event_type"] == "assistant.generation_completed"
-            and str(item.get("generation_id")) == generation_id
-            for item in events
-        ):
-            break
-        time.sleep(0.01)
+        terminal = portal.call(wait_for_terminal)
+    finally:
+        portal.call(subscription.close)
+    assert str(terminal.get("generation_id")) == generation_id
+    assert terminal["event_type"] == "assistant.generation_completed", terminal
+    payload = cast(dict[str, object], client.get(f"/v1/sessions/{session_id}/events").json())
+    events = cast(list[dict[str, object]], payload["items"])
 
     generation_events = [item for item in events if str(item.get("generation_id")) == generation_id]
     assert any(item["event_type"] == "companion.proactive_triggered" for item in events)
