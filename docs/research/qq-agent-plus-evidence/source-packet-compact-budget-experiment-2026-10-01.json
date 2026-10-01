@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0",
+  "source_commit": "ab8dca7cccc21dece04b13972f43c74f4a3fde16",
+  "requests": [
+    {
+      "sample_key": "instant_message:legal_evidence_gap",
+      "captured_request_sha256": "7c7df48fc131ce1ebbcf353eb22b1f1abaed002d08dfbc96417bad54a0961d62",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "5820d9a8dade89dad8b1573720100ed037bf893e06385efcdec42a320ba8a97c",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 8777,
+          "packet_utf8_bytes": 11171,
+          "fits": false,
+          "full_index_body_retained": false
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 8579,
+          "packet_utf8_bytes": 10932,
+          "fits": false,
+          "full_index_body_retained": false
+        }
+      ]
+    },
+    {
+      "sample_key": "instant_message:final_checklist",
+      "captured_request_sha256": "080edb898e045041b02f11537bd9eb50a5b86e9613982eb11ad4b0a3c823b13d",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "5820d9a8dade89dad8b1573720100ed037bf893e06385efcdec42a320ba8a97c",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 9330,
+          "packet_utf8_bytes": 11171,
+          "fits": false,
+          "full_index_body_retained": false
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 9132,
+          "packet_utf8_bytes": 10932,
+          "fits": false,
+          "full_index_body_retained": false
+        }
+      ]
+    },
+    {
+      "sample_key": "single_text:legal_evidence_gap",
+      "captured_request_sha256": "0ac68f7d445f276fc28c1fcf8fca5c5c2aa9aaf75f4b9bcf2f1fe60ad99aeb14",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "529b6d852bb9e2eabde1c50e12129b373d7fa169209171917b77605c292765bb",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 7207,
+          "packet_utf8_bytes": 11171,
+          "fits": true,
+          "estimated_after_fit": 7207,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 7009,
+          "packet_utf8_bytes": 10932,
+          "fits": true,
+          "estimated_after_fit": 7009,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "single_text:final_checklist",
+      "captured_request_sha256": "9c0505e55f63c0ff6223b9014612530c7b4961660399fb7e654b9d8b7f13ceee",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "529b6d852bb9e2eabde1c50e12129b373d7fa169209171917b77605c292765bb",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 7275,
+          "packet_utf8_bytes": 11171,
+          "fits": true,
+          "estimated_after_fit": 7275,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 7077,
+          "packet_utf8_bytes": 10932,
+          "fits": true,
+          "estimated_after_fit": 7077,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "default_voice:legal_evidence_gap",
+      "captured_request_sha256": "bb60726b0c7f051f2aa82fcdb795d37503413b5285e7bb10e704bf3552d1c72b",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "6604167965afbbe3d21c33e8d5387d897fce24184f48958ed5901b5603415192",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 7207,
+          "packet_utf8_bytes": 11171,
+          "fits": true,
+          "estimated_after_fit": 7207,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 7009,
+          "packet_utf8_bytes": 10932,
+          "fits": true,
+          "estimated_after_fit": 7009,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        }
+      ]
+    },
+    {
+      "sample_key": "default_voice:final_checklist",
+      "captured_request_sha256": "335da4f2a316e58fae3fefae22ed4f9143a0d8376c8ed72f38c797fd70a7ed56",
+      "captured_estimate_reproduced": true,
+      "allowance": 7292,
+      "same_full_packet_object_sha256": "6604167965afbbe3d21c33e8d5387d897fce24184f48958ed5901b5603415192",
+      "alternatives": [
+        {
+          "kind": "default_full_packet",
+          "estimated_before_fit": 7275,
+          "packet_utf8_bytes": 11171,
+          "fits": true,
+          "estimated_after_fit": 7275,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        },
+        {
+          "kind": "compact_identical_full_packet",
+          "estimated_before_fit": 7077,
+          "packet_utf8_bytes": 10932,
+          "fits": true,
+          "estimated_after_fit": 7077,
+          "full_index_body_retained": true,
+          "omitted_history_indices": []
+        }
+      ]
+    }
+  ],
+  "scope": "Offline captured-request experiment only; restores actual archived full index data then compares semantically identical JSON encodings under the same frozen allowance. No source edit, model/network call, budget increase or quality approval.",
+  "driver_sha256": "fcd7f138465dc297ceed6779b559311bada7d57caec66634a99993657fecf4fc"
+}
