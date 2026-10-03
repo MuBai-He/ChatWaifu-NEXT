@@ -19,7 +19,7 @@ from chatwaifu_model_worker import (
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from chatwaifu_asr_worker.config import WorkerSettings
-from chatwaifu_asr_worker.service import TranscriptionService
+from chatwaifu_asr_worker.service import TranscriptionCapacityError, TranscriptionService
 
 
 def create_app(
@@ -64,7 +64,13 @@ def create_app(
         dependencies=[Depends(authorize)],
     )
     async def transcribe(body: SttTranscriptionRequest) -> SttTranscriptionResult:
-        return await transcription.transcribe(body)
+        try:
+            return await transcription.transcribe(body)
+        except TranscriptionCapacityError:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="STT worker request capacity exceeded",
+            ) from None
 
     @app.post(
         "/v1/jobs/{generation_id}/cancel",

@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-03
 - Extends: ADR 0064; preserves its current-turn voice authorization and durable send fence.
-- Validation state: Automated integration acceptance is in progress; real QQ image and quote acceptance remains pending.
+- Validation state: Automated integration and dedicated Linux deployment verified; real QQ image, sticker and quote acceptance remains pending.
 
 ## Context
 

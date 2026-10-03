@@ -25,4 +25,5 @@ class WorkerSettings(BaseSettings):
     device: str = "cpu"
     compute_type: str = "int8"
     preload: bool = True
+    max_active_jobs: int = Field(default=4, ge=1, le=32)
     shutdown_timeout_seconds: float = Field(default=5.0, gt=0, le=30)

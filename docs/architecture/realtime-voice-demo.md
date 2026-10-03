@@ -85,6 +85,12 @@ The inference thread used by faster-whisper cannot be force-killed safely. Worke
 cancels the request task and the Runtime rejects a late result; an in-progress native inference may
 finish in the background before worker capacity is reclaimed.
 
+`CHATWAIFU_STT_WORKER_MAX_ACTIVE_JOBS` bounds the union of live request tasks
+and unfinished native jobs (default 4, configurable 1–32). A cancelled request's
+native job retains its slot until CPU work finishes; capacity exhaustion returns
+an authenticated HTTP 429 instead of growing the inference queue. The dedicated
+QQ stage uses one slot and preloads its offline model.
+
 ## Process and privacy boundary
 
 `make demo` keeps the ASR model out of the Runtime environment. It synchronizes the independently

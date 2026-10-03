@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from chatwaifu_asr_worker.config import WorkerSettings
 from chatwaifu_asr_worker.main import create_app
 from chatwaifu_asr_worker.service import (
+    TranscriptionCapacityError,
     TranscriptionEngine,
     TranscriptionService,
     _prepare_whisper_audio,
@@ -68,6 +69,28 @@ def test_worker_requires_ephemeral_token(client: TestClient) -> None:
         "supports_word_timestamps": False,
         "local_only": True,
     }
+
+
+def test_capacity_rejection_is_authenticated_http_429(tmp_path: Path) -> None:
+    class BusyService(TranscriptionService):
+        async def transcribe(self, request: SttTranscriptionRequest) -> SttTranscriptionResult:
+            del request
+            raise TranscriptionCapacityError("private implementation detail")
+
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+    )
+    service = BusyService(settings, engine_factory=lambda _: FakeEngine())
+    with TestClient(create_app(settings, service)) as client:
+        body = _request().model_dump(mode="json")
+        assert client.post("/v1/transcribe", json=body).status_code == 401
+        response = client.post(
+            "/v1/transcribe", json=body, headers={"Authorization": "Bearer test-token"}
+        )
+        assert response.status_code == 429
+        assert response.json() == {"detail": "STT worker request capacity exceeded"}
 
 
 def test_offline_pack_resolves_the_materialized_model_directory(tmp_path: Path) -> None:
@@ -313,4 +336,42 @@ async def test_cancelled_native_transcription_never_overlaps_next_generation(
             *(task for task in (first_task, second_task) if task is not None),
             return_exceptions=True,
         )
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_cancelled_native_job_keeps_capacity_until_cpu_finishes(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+        max_active_jobs=1,
+    )
+    engine = BlockingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    await service.start()
+    first = _request()
+    task = asyncio.create_task(service.transcribe(first))
+    try:
+        assert await asyncio.to_thread(engine.first_started.wait, 1)
+        native = service._native_jobs[first.generation_id]
+        assert service.cancel(first.generation_id)
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        for _ in range(5):
+            with pytest.raises(TranscriptionCapacityError):
+                await service.transcribe(_request())
+        assert service.health().queue_depth == 1
+        assert engine.second_started.is_set() is False
+        engine.release_first.set()
+        await asyncio.wait_for(asyncio.shield(native), timeout=1)
+        result = await service.transcribe(_request())
+        assert result.text == "第二轮"
+        assert service.health().queue_depth == 0
+        assert engine.max_concurrent == 1
+    finally:
+        engine.release_first.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
         await service.close()

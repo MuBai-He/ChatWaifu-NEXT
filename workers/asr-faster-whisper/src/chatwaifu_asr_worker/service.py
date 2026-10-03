@@ -26,6 +26,10 @@ from chatwaifu_asr_worker.config import WorkerSettings
 WHISPER_SAMPLE_RATE = 16_000
 
 
+class TranscriptionCapacityError(RuntimeError):
+    """A cancelled native inference continues to own its bounded worker slot."""
+
+
 class TranscriptionEngine(Protocol):
     def transcribe(
         self,
@@ -135,6 +139,16 @@ class TranscriptionService:
         typed_current = current  # narrowed for strict type checking
         if request.generation_id in self._jobs or request.generation_id in self._native_jobs:
             raise RuntimeError("generation already has an active STT job")
+        self._discard_finished_native_jobs()
+        active = {
+            generation_id for generation_id, task in self._jobs.items() if not task.done()
+        } | {
+            generation_id
+            for generation_id, future in self._native_jobs.items()
+            if not future.done()
+        }
+        if len(active) >= self._settings.max_active_jobs:
+            raise TranscriptionCapacityError("STT worker request capacity exceeded")
         self._jobs[request.generation_id] = typed_current
         try:
             engine = await self._ensure_loaded()
