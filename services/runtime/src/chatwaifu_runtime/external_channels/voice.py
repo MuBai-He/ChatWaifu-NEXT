@@ -35,7 +35,6 @@ from chatwaifu_runtime.providers.contracts import SynthesisRequest
 from chatwaifu_runtime.providers.tts_router import TtsRouter
 from chatwaifu_runtime.runtime_skills.adapters import GenerationSkillContext
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
-from chatwaifu_runtime.runtime_skills.voice_intent import requests_voice
 
 
 class ChannelVoiceSkill:
@@ -77,6 +76,7 @@ class ChannelVoiceSkill:
                 if (
                     connection is not None
                     and connection.configuration.enabled
+                    and connection.configuration.provider_id == "qq_napcat"
                     and self._supports_audio(connection.configuration.provider_id)
                     and turn.sender_key in connection.configuration.allowed_sender_keys
                 ):
@@ -87,13 +87,13 @@ class ChannelVoiceSkill:
         if await self._turn(context) is None or context.generation_id is None:
             return False
         source = await self._conversations.generation_user_input_context(context.generation_id)
-        return source is not None and requests_voice(source.user_text)
+        return source is not None and bool(source.user_text.strip())
 
     async def __call__(self, context: GenerationSkillContext, arguments: JsonObject) -> JsonObject:
         turn = await self._turn(context)
         text = arguments.get("text")
         if turn is None or not await self.authorize(context):
-            raise SkillExecutionError("voice_not_authorized", "当前轮次没有有效的语音请求。")
+            raise SkillExecutionError("voice_not_authorized", "当前轮次没有有效的私聊回复权限。")
         if not isinstance(text, str) or not text.strip() or len(text) > 2000:
             raise SkillExecutionError("voice_text_invalid", "语音内容须为 1-2000 字。")
         if turn.delivery_id is not None or turn.generation_id in self._executing:

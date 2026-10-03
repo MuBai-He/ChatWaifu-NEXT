@@ -89,7 +89,8 @@ async def test_real_gateway_resolves_same_binding_quotes_without_authorizing_old
             assert quoted_turn is not None
             await _plan_completed(subscription, quoted_turn.channel_turn_id)
             request = harness.model.requests[-1]
-            assert request.user_text == "刚才这句话是什么意思？" and not request.tools
+            assert request.user_text == "刚才这句话是什么意思？" and request.tools
+            assert request.tool_choice == "auto"
             assert len(harness.synthesis) == 1
             reference_context = next(
                 text for _, text in request.context if "Historical reply reference" in text

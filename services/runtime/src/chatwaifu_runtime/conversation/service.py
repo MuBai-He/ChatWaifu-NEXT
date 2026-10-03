@@ -163,6 +163,8 @@ class ConversationService:
             routing_previous_user_text=routing_previous_user_text,
             allow_tools=allow_tools,
             supports_tool_calling=chat_provider.supports_tool_calling,
+            contextual_skill_ids=options.contextual_skill_ids
+            & (options.allowed_skill_ids or frozenset()),
         )
 
         if options.allowed_skill_ids is not None:

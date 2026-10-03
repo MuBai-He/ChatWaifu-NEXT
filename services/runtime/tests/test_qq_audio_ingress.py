@@ -124,9 +124,9 @@ async def test_owner_record_is_admitted_before_stt_and_uses_fresh_transcript_onl
         await harness.peer.peers[-1].send(json.dumps(event))
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)
         assert request.user_text == transcript and not request.images
-        assert bool(request.tools) is (transcript == "请用语音回复我")
+        assert request.tools and request.tool_choice == "auto"
         sent = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
-        expected_kind = "record" if request.tools else "text"
+        expected_kind = "record" if transcript == "请用语音回复我" else "text"
         assert _segments(sent)[0]["type"] == expected_kind
         turn = await harness.container.external_channel_repository.find_turn_by_external_message(
             connection_id, "60"
@@ -152,10 +152,11 @@ async def test_owner_record_is_admitted_before_stt_and_uses_fresh_transcript_onl
         await harness.peer.peers[-1].send(json.dumps(event))
         await harness.peer.peers[-1].send(json.dumps(_event("继续用文字回答", 61)))
         following = await asyncio.wait_for(harness.model.received.get(), timeout=5)
-        assert following.user_text == "继续用文字回答" and not following.tools
+        assert following.user_text == "继续用文字回答" and following.tools
+        assert following.tool_choice == "auto"
         await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
         assert len(stt.requests) == 1 and downloads == ["owner-voice.silk"]
-        assert len(harness.synthesis) == int(bool(request.tools))
+        assert len(harness.synthesis) == int(transcript == "请用语音回复我")
 
 
 async def test_stt_failure_sends_one_durable_notice_without_conversation_placeholder(
@@ -223,7 +224,7 @@ async def test_new_text_cancels_stt_and_preparation_keeps_resource_unload_busy(
         await harness.peer.peers[-1].send(json.dumps(_event("取消录音，继续文字聊", 64)))
         await asyncio.wait_for(stt.cancelled.wait(), timeout=5)
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)
-        assert request.user_text == "取消录音，继续文字聊" and not request.tools
+        assert request.user_text == "取消录音，继续文字聊" and request.tools
         sent = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
         assert _segments(sent) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
         old = await harness.container.external_channel_repository.find_turn_by_external_message(

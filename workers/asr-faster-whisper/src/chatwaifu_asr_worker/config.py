@@ -26,4 +26,6 @@ class WorkerSettings(BaseSettings):
     compute_type: str = "int8"
     preload: bool = True
     max_active_jobs: int = Field(default=4, ge=1, le=32)
+    beam_size: int = Field(default=1, ge=1, le=10)
+    chinese_initial_prompt: str | None = Field(default=None, min_length=1, max_length=512)
     shutdown_timeout_seconds: float = Field(default=5.0, gt=0, le=30)

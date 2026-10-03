@@ -4,14 +4,14 @@
   "definition":
     {
       "skill_id": "channel.voice",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "name": "发送角色语音",
-      "description": "主人要求用语音说话、回复、朗读、读给我听时，发送当前角色的语音消息。send voice or read aloud.",
+      "description": "由角色根据当前私聊内容选择是否以自己的声音回复。普通聊天优先文字，也可在适合语音或主人想听声音时调用。send voice or read aloud.",
       "capabilities":
         [
           {
             "name": "send_voice",
-            "description": "将 text 作为本轮完整回复，用当前角色声音发送到当前已绑定私聊。只在用户明确要求本轮语音时调用。",
+            "description": "可选：将 text 作为本轮完整回复，用角色声音发送到当前已绑定私聊。根据本轮语义决定是否调用，无需固定关键词；尊重文字或语音偏好。只回复当前主人，不主动发送。",
             "input_schema":
               {
                 "type": "object",

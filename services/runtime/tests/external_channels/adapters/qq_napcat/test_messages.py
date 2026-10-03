@@ -1,4 +1,4 @@
-"""QQ private identity normalization and explicit voice-request admission."""
+"""QQ private identity normalization and structured media admission."""
 
 from copy import deepcopy
 from uuid import uuid4
@@ -8,7 +8,6 @@ from chatwaifu_protocol.base import JsonObject, JsonValue
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.messages import (
     normalize,
     normalize_inbound,
-    requests_voice,
 )
 
 ACCOUNT = "10001"
@@ -150,7 +149,6 @@ def test_owner_image_caption_and_reply_preserve_fresh_voice_request_and_order() 
     result = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
     assert result is not None
     assert result.message.text == "用语音解释这两张图片"
-    assert requests_voice(result.message.text)
     assert result.message.reply_to_external_message_id == "-90000"
     assert [image.file_ref for image in result.images] == ["first.png", "第二张.jpg"]
     assert [image.file_size for image in result.images] == [123, 456]
@@ -173,7 +171,6 @@ def test_image_only_uses_marker_without_trusting_provider_summary_url_or_path() 
     result = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
     assert result is not None
     assert result.message.text == "[图片]"
-    assert not requests_voice(result.message.text)
     assert "private.invalid" not in repr(result)
     assert "photo.png" not in repr(result)
     assert "用语音" not in result.message.text
@@ -247,7 +244,6 @@ def test_owner_record_keeps_signed_reply_and_marker_without_voice_authorization(
     inbound = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
     assert inbound is not None and inbound.record is not None
     assert inbound.message.text == "[语音]"
-    assert not requests_voice(inbound.message.text)
     assert inbound.message.external_message_id == "-123"
     assert inbound.message.reply_to_external_message_id == "-90000"
     assert inbound.record.file_ref == "主人语音.silk" and inbound.record.file_size == 123
@@ -299,45 +295,3 @@ def test_records_still_require_bound_owner_private_account(key: str, value: Json
     received["message"] = [{"type": "record", "data": {"file": "voice.silk"}}]
     received[key] = value
     assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "用语音说晚安",
-        "给我发一条语音",
-        "把这段读给我听",
-        "请用语音回答这个问题",
-        "来条语音",
-        "我希望你用语音回答",
-        "Please reply with voice",
-        "Read this aloud",
-    ],
-)
-def test_explicit_voice_request_admits_voice_tool(text: str) -> None:
-    assert requests_voice(text)
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "晚安",
-        "帮我查一下天气",
-        "不要用语音回答",
-        "不用语音，文字就好",
-        "别念给我听",
-        "Do not reply with voice",
-        "Don't read this aloud",
-        "停止语音回复",
-        "语音识别和语音合成有什么区别",
-        "你会用语音回答吗？",
-        "解释一下为什么要用语音回答",
-        "发送语音消息的代码怎么写？",
-        "他问“用语音说晚安”是什么意思？",
-        '请翻译 "Please reply with voice" 这句话',
-        "请解释 `send_voice` 和“用语音回答”的区别",
-        "搜索\u2018发语音\u2019功能的实现文档",
-    ],
-)
-def test_negated_quoted_and_nonrequested_voice_mentions_do_not_admit_tool(text: str) -> None:
-    assert not requests_voice(text)

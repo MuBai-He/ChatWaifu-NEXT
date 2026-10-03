@@ -43,6 +43,8 @@ class FasterWhisperEngine:
     def __init__(self, settings: WorkerSettings) -> None:
         from faster_whisper import WhisperModel
 
+        self._beam_size = settings.beam_size
+        self._chinese_initial_prompt = settings.chinese_initial_prompt
         model_source = _resolve_model_source(settings)
         self._model = WhisperModel(
             model_source,
@@ -61,7 +63,8 @@ class FasterWhisperEngine:
         segments, info = self._model.transcribe(
             audio,
             language=language,
-            beam_size=1,
+            beam_size=self._beam_size,
+            initial_prompt=self._chinese_initial_prompt if language == "zh" else None,
             condition_on_previous_text=False,
             vad_filter=False,
         )

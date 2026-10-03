@@ -116,6 +116,7 @@ async def test_character_planned_optional_image_preserves_qq_text_reply(
             assert harness.peer.sends.empty()
             assert not harness.synthesis
             assert len(harness.model.requests) == 1
-            assert not harness.model.requests[0].tools
+            assert harness.model.requests[0].tools
+            assert harness.model.requests[0].tool_choice == "auto"
         finally:
             container.event_hub.unsubscribe(completed)

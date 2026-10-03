@@ -7,8 +7,6 @@ from chatwaifu_protocol.channels import (
     ChannelProviderRegistration,
 )
 
-from .messages import requests_voice
-
 PROVIDER_ID = "qq_napcat"
 VOICE_SKILL_ID = "channel.voice"
 NAPCAT_PROVIDER = ChannelProviderRegistration(
@@ -32,6 +30,9 @@ NAPCAT_PROVIDER = ChannelProviderRegistration(
 
 
 def channel_tool_policy(configuration: ChannelConnectionConfiguration, text: str) -> frozenset[str]:
-    if configuration.provider_id == PROVIDER_ID and requests_voice(text):
+    # Reply medium is chosen by the model. This grants only the current owner
+    # reply surface; the executor still checks live scope and generation.
+    del text
+    if configuration.provider_id == PROVIDER_ID:
         return frozenset({VOICE_SKILL_ID})
     return frozenset()

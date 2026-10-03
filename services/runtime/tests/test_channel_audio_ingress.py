@@ -145,13 +145,23 @@ async def _assert_failure(harness: _Harness, connection_id: UUID, channel_turn_i
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("voice", [False, True])
+@pytest.mark.parametrize(
+    ("transcript", "voice"),
+    [
+        ("今天天气不错，用文字回答。", False),
+        ("请用语音说一句晚安。", True),
+        ("請用語音說一句晚安。", True),
+        ("Ｐｌｅａｓｅ ｒｅｐｌｙ ｗｉｔｈ ｖｏｉｃｅ", True),  # noqa: RUF001 - explicit NFKC fixture
+        ("用語間說一句話", False),
+    ],
+)
 async def test_audio_admits_before_load_uses_exact_identity_and_only_transcript_enters_history(
-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, voice: bool
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, transcript: str, voice: bool
 ) -> None:
     async with _audio_runtime(runtime_settings, monkeypatch) as (harness, connection_id, token):
         gateway = harness.container.external_channels
-        audio = _Audio("  请用语音说一句晚安。  " if voice else "  今天天气不错，用文字回答。  ")
+        audio = _Audio(f"  {transcript}  ")
+        harness.model.voice_decision = voice
         subscription = _completed_plans(harness.container)
         try:
             receipt = await gateway.ingest(
@@ -188,7 +198,8 @@ async def test_audio_admits_before_load_uses_exact_identity_and_only_transcript_
             assert [segment["type"] for segment in _segments(sent)] == [
                 "record" if voice else "text"
             ]
-            assert bool(harness.model.requests[0].tools) is voice
+            assert harness.model.requests[0].tools
+            assert harness.model.requests[0].tool_choice == "auto"
             assert len(harness.synthesis) == int(voice)
             if voice:
                 assert result.reply_text == SPOKEN
@@ -331,7 +342,8 @@ async def test_cancellation_joins_audio_and_never_submits_a_late_transcript_or_n
             elif action == "supersede":
                 current = await _ingest(harness, connection_id, "只用文字回复", 81)
                 await _terminal(harness, connection_id, current.channel_turn_id)
-                assert len(harness.model.requests) == 1 and not harness.model.requests[0].tools
+                assert len(harness.model.requests) == 1 and harness.model.requests[0].tools
+                assert not harness.synthesis
             elif action == "disable":
                 current = await gateway.get_connection(connection_id)
                 await gateway.update_connection(
@@ -561,7 +573,7 @@ async def test_audio_input_kind_migration_is_atomic_and_old_rows_default_to_text
 
 
 @pytest.mark.asyncio
-async def test_historical_voice_quote_cannot_authorize_current_transcribed_text(
+async def test_historical_voice_quote_remains_data_when_model_chooses_text(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async with _audio_runtime(runtime_settings, monkeypatch) as (harness, connection_id, token):
@@ -583,7 +595,8 @@ async def test_historical_voice_quote_cannot_authorize_current_transcribed_text(
             sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
             await _plan_completed(subscription, receipt.channel_turn_id)
             assert [segment["type"] for segment in _segments(sent)] == ["reply", "text"]
-            assert len(harness.synthesis) == 1 and not harness.model.requests[-1].tools
+            assert len(harness.synthesis) == 1 and harness.model.requests[-1].tools
+            assert harness.model.requests[-1].tool_choice == "auto"
             request = harness.model.requests[-1]
             assert request.user_text == audio.transcript
             reference = next(

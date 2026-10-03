@@ -1,4 +1,4 @@
-"""QQ pairing and request-only voice through the real Runtime and OneBot socket."""
+"""QQ pairing and model-selected replies through the real Runtime and OneBot socket."""
 
 # pyright: reportPrivateUsage=false
 
@@ -10,7 +10,7 @@ import io
 import json
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
@@ -34,12 +34,14 @@ from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import (
 )
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.messages import normalize
 from chatwaifu_runtime.external_channels.credentials import InMemoryChannelCredentialStore
+from chatwaifu_runtime.external_channels.models import ChannelConnectionRecord
 from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,
     LlmStreamEvent,
     LlmTextDelta,
     LlmToolCall,
+    LlmToolCallingUnavailableError,
     LlmToolCallRequested,
     SynthesisRequest,
     SynthesisResult,
@@ -161,16 +163,33 @@ class _Model:
     requests: list[LlmRequest] = field(default_factory=list[LlmRequest])
     received: asyncio.Queue[LlmRequest] = field(default_factory=asyncio.Queue[LlmRequest])
     release: asyncio.Event | None = None
+    voice_decision: bool | None = None
+    reject_voice_tools: bool = False
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         self.requests.append(request)
         self.received.put_nowait(request)
+        if request.tools and self.reject_voice_tools:
+            raise LlmToolCallingUnavailableError("test provider cannot accept voice function")
         if self.release is not None:
             await self.release.wait()
         if request.tool_exchanges:
             yield LlmTextDelta(f"语音发送失败，请看文字: {SPOKEN}")
             yield LlmResponseCompleted("stop")
-        elif request.tools:
+        elif request.tools and (
+            self.voice_decision
+            if self.voice_decision is not None
+            else request.user_text
+            in {
+                "请用语音回复我",
+                "请用语音说晚安",
+                "请用语音说一句晚安",
+                "请发一条语音",
+                "用语音回复我",
+                "用语音回复",
+            }
+        ):
+            # Scripted LLM decisions belong only to this protocol fixture.
             assert len(request.tools) == 1
             assert "语音" in request.tools[0].description
             yield LlmToolCallRequested(
@@ -326,7 +345,8 @@ async def test_pairing_requires_exact_private_code_and_owner_messages_only(
         params = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
         assert _segments(params) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
         assert len(harness.model.requests) == 1
-        assert not harness.model.requests[0].tools
+        assert harness.model.requests[0].tools
+        assert harness.model.requests[0].tool_choice == "auto"
         assert not harness.synthesis
         assert (
             await harness.container.external_channel_repository.find_turn_by_external_message(
@@ -386,6 +406,85 @@ async def test_explicit_voice_sends_one_cross_machine_record_and_records_actual_
         assert duplicate.duplicate is True
         assert duplicate.channel_turn_id == receipt.channel_turn_id
         assert len(harness.synthesis) == 1 and harness.peer.sends.empty()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("choose_voice", [False, True])
+async def test_model_chooses_reply_medium_for_the_same_input_without_voice_keywords(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, choose_voice: bool
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.voice_decision = choose_voice
+        receipt = await _ingest(harness, connection_id, "今天有点累", 101)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        request = harness.model.requests[0]
+        assert len(request.tools) == 1 and request.tool_choice == "auto"
+        assert "runtime_channel_reply_decision" in request.system_prompt
+        assert "do not require particular keywords" in request.system_prompt
+        assert _segments(sent)[0]["type"] == ("record" if choose_voice else "text")
+        result = await _terminal(harness, connection_id, receipt.channel_turn_id)
+        assert result.status is ChannelTurnStatus.COMPLETED
+        assert result.reply_text == (SPOKEN if choose_voice else TEXT_REPLY)
+        assert len(harness.synthesis) == int(choose_voice)
+        assert len(harness.model.requests) == 1
+        assert harness.peer.sends.empty()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", ["请用语音说晚安", "不要发语音", "只根据上面的内容回答"])
+async def test_model_can_choose_text_with_voice_tool_available_without_forced_retry(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, text: str
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.voice_decision = False
+        receipt = await _ingest(harness, connection_id, text, 102)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        request = harness.model.requests[0]
+        assert request.tools and request.tool_choice == "auto"
+        assert "Honor a request to hear your voice or to" in request.system_prompt
+        assert _segments(sent) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
+        assert (await _terminal(harness, connection_id, receipt.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
+        assert len(harness.model.requests) == 1 and not harness.synthesis
+
+
+@pytest.mark.asyncio
+async def test_model_without_function_calling_still_answers_in_text(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.supports_tool_calling = False
+        receipt = await _ingest(harness, connection_id, "想听听你的声音", 103)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert not harness.model.requests[0].tools
+        assert _segments(sent)[0] == {"type": "text", "data": {"text": TEXT_REPLY}}
+        assert not harness.synthesis
+        assert (await _terminal(harness, connection_id, receipt.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
+
+
+@pytest.mark.asyncio
+async def test_optional_voice_function_rejection_retries_plain_text_without_execution(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.reject_voice_tools = True
+        receipt = await _ingest(harness, connection_id, "想听听你的声音", 105)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert len(harness.model.requests) == 2
+        assert harness.model.requests[0].tools and not harness.model.requests[1].tools
+        assert "Voice delivery is unavailable" in harness.model.requests[1].system_prompt
+        assert _segments(sent)[0] == {"type": "text", "data": {"text": TEXT_REPLY}}
+        assert not harness.synthesis and harness.peer.sends.empty()
+        assert (await _terminal(harness, connection_id, receipt.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
 
 
 @pytest.mark.asyncio
@@ -548,7 +647,7 @@ async def test_current_text_turn_cannot_manually_escalate_to_voice(
         harness.model.release = asyncio.Event()
         receipt = await _ingest(harness, connection_id, "解释发语音是什么意思", 14)
         request = await asyncio.wait_for(harness.model.received.get(), timeout=3)
-        assert not request.tools
+        assert request.tools and request.tool_choice == "auto"
         with pytest.raises(PermissionError, match="current authorized channel request"):
             await harness.container.runtime_skills.invoke(
                 receipt.session_id,
@@ -557,12 +656,60 @@ async def test_current_text_turn_cannot_manually_escalate_to_voice(
                 ),
                 turn_id=receipt.turn_id,
                 generation_id=receipt.generation_id,
-                origin="agent",
+                origin="manual",
             )
         harness.model.release.set()
         params = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
         assert _segments(params)[0]["type"] == "text"
         assert not harness.synthesis
+
+
+@pytest.mark.asyncio
+async def test_model_voice_permission_does_not_expand_to_another_audio_provider(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.release = asyncio.Event()
+        receipt = await _ingest(harness, connection_id, "今天有点累", 104)
+        await asyncio.wait_for(harness.model.received.get(), 3)
+        connection = await harness.container.external_channel_repository.get_connection(
+            connection_id
+        )
+        assert connection is not None
+        other = replace(
+            connection,
+            configuration=connection.configuration.model_copy(
+                update={"provider_id": "other_audio"}
+            ),
+        )
+
+        async def other_connection(_connection_id: UUID) -> ChannelConnectionRecord:
+            return other
+
+        def supports_other_audio(_provider_id: str) -> bool:
+            return True
+
+        with monkeypatch.context() as scoped:
+            scoped.setattr(
+                harness.container.external_channel_repository, "get_connection", other_connection
+            )
+            scoped.setattr(harness.container.channel_voice, "_supports_audio", supports_other_audio)
+            with pytest.raises(PermissionError, match="current authorized channel request"):
+                await harness.container.runtime_skills.invoke(
+                    receipt.session_id,
+                    SkillInvocation(
+                        skill_id="channel.voice",
+                        capability="send_voice",
+                        arguments={"text": SPOKEN},
+                    ),
+                    turn_id=receipt.turn_id,
+                    generation_id=receipt.generation_id,
+                    origin="agent",
+                )
+        harness.model.release.set()
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert _segments(sent)[0]["type"] == "text" and not harness.synthesis
 
 
 @pytest.mark.asyncio
@@ -599,7 +746,7 @@ async def test_owner_image_reaches_vision_once_without_retention_or_voice_escala
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)
         assert request.user_text == (caption or "[图片]")
         assert len(request.images) == 1 and request.images[0].data == data
-        assert bool(request.tools) is bool(caption)
+        assert request.tools and request.tool_choice == "auto"
         sent = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
         expected_kind = "record" if caption else "text"
         assert _segments(sent)[0] == {"type": "reply", "data": {"id": "40"}}

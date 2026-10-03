@@ -10,8 +10,6 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import ChannelInboundTextMessage
 
-from chatwaifu_runtime.runtime_skills.voice_intent import requests_voice as requests_voice
-
 from .client import validate_image_file_ref
 
 

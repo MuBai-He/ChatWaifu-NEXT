@@ -2,15 +2,16 @@ schema_version: "1.0"
 updated_at: "2026-10-03"
 current_phase: "13.6"
 qq_napcat:
-  status: native_owner_direct_text_and_requested_voice_real_qq_happy_path_verified
+  status: model_selected_qq_voice_implemented_live_acceptance_pending_incoming_voice_text_verified
   adr: "0064"
   image_reply_adr: "0065"
   incoming_voice_adr: "0066"
+  voice_selection_adr: "0067"
   original_plan_stages:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
-    C: current_turn_requested_voice_and_unavailable_tts_text_fallback_real_verified
-    D: incoming_voice_stt_implemented_real_phone_pending_proactive_and_group_isolation_not_implemented
+    C: model_selected_current_reply_voice_implemented_real_model_acceptance_pending_previous_requested_voice_and_text_fallback_verified
+    D: incoming_voice_stt_real_text_reply_verified_proactive_and_group_isolation_not_implemented
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -30,12 +31,17 @@ qq_napcat:
     - Phase B source 359d080 deployed to the independent Linux stage with all 1449 tracked hashes matched; 278 Linux QQ checks passed, Web assets HTTP 200 and authenticated same-account OneBot RPC online; four existing turn and delivery identities and original services/resources preserved
     - Phase B independent review fixes raw-ID ambiguity before privacy filtering, rejects retention-disabled burst bypass and registers historical quote photo-deletion lineage
     - Phase B full Python passed 2219 checks with 46 platform skips; full Web passed 334 checks; Python strict typing, Ruff, TypeScript checks and lint, Web and desktop UI builds passed
-    - Phase D1 implements one bounded owner-private record, authenticated WAV stream, ephemeral local STT, exact request identity and final-transcript Conversation submission; ordinary voice input remains a text reply unless its current transcript explicitly requests channel.voice
+    - Phase D1 implements one bounded owner-private record, authenticated WAV stream, ephemeral local STT, exact request identity and final-transcript Conversation submission; ADR 0067 now leaves reply-medium selection to the model with text generally preferred
     - Phase D1 registration and owner-revocation races passed six independent checks; clean stop/disable/delete/interrupt prevent loader/model startup, and crash recovery fails orphan audio once without re-download
     - Phase D1 final full Python passed 2393 checks with 46 platform skips; isolated STT worker passed 22 checks; strict Pyright and Ruff passed, with the existing 334 Web checks, Web/desktop UI builds, lint and TypeScript checks retained
+    - Phase D1 source 02e5801 deployed with all 1457 tracked hashes matched; Linux QQ suite passed 452 and isolated worker suite passed 22; own loopback STT authenticated real adapter round trip passed without downloading models or changing original services/resources
+    - A real owner QQ record was transcribed and completed once with one confirmed TEXT part at attempt 1 and zero voice Skill runs; the owner confirmed correct understanding and no extra voice, while raw audio and the placeholder were not committed
+    - The next recording requesting voice was misrecognized as 用語間說一句話 and delivered TEXT with zero voice runs; the owner corrected an earlier playback confirmation, so this recording is explicitly not accepted as successful voice output
+    - ADR 0067 removes all voice text gates and mandatory reply-tool choice; each admitted QQ owner turn contextually provides only the trusted voice reply tool, with model auto choice and unchanged live owner/generation/manual/provider/cancellation boundaries
+    - Final model-selected-voice source passed 2382 Python checks with 46 platform skips and 514 focused integration checks; isolated ASR worker passed 31, strict Pyright and Ruff passed; scripted models prove both reply media for the same keyword-free input but do not prove live semantic preference or handset playback
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
-    - phase_d1_real_phone_incoming_voice_codec_and_transcription_acceptance
+    - model_selected_voice_real_qq_semantic_choice_recording_output_and_fault_acceptance
     - phase_d2_proactive_delivery_opt_in_and_phase_d3_group_permissions_participant_isolation_implementation
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery

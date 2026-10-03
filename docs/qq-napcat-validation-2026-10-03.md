@@ -307,6 +307,70 @@ passed. The unchanged frontend has **334 tests** passing, TypeScript/lint and
 Web/desktop UI builds passing. Existing native Rust packaging limits remain
 separate; these checks do not establish actual QQ speech decoding or accuracy.
 
-Deployment and real phone acceptance are recorded separately. D2 proactive
-text and D3 group/member isolation remain unimplemented. Their concrete scope,
-dependencies and acceptance package are [QQ next slices](qq-next-slices.md).
+Source `02e58018e403da209b102afcb0f34397d6e06a4f` deployed with all **1457**
+tracked file hashes matched. Linux QQ tests passed **452**, and the worker suite
+passed **22** with the existing production worker dependencies and read-only
+Runtime test tooling. No new dependencies or model downloads were needed.
+The dedicated CPU/int8 ASR unit is authenticated, loopback-only and enabled for
+restart; its configured capacity is one. A real adapter round trip with synthetic
+silence verified identity and authentication, without claiming speech recognition.
+The three pinned offline model hashes remain unchanged.
+
+Before/after captures preserved the four existing turns, generations, deliveries,
+parts, attempt counts, receipts and full send lifecycle journal. No unfinished
+work remained. NapCat and the dedicated TTS process retained their identities;
+the original three services and 22 protected resources remained unchanged.
+The new Runtime health confirmed the STT provider, and an active authenticated
+OneBot RPC confirmed the same account online. Private source/env/database backup
+is `backups/voice-20261003T104835Z`. Startup-failure recovery checks quiescence
+and business facts before restoring both code and its compatible database;
+newly accepted facts must never be overwritten by rollback.
+
+At `2026-10-03T10:53:41Z`, a real owner-initiated QQ record produced one completed
+audio input turn and one delivered TEXT part, attempt one, with a provider receipt
+and zero `channel.voice` runs. The nonempty final transcript was committed instead
+of the placeholder. The owner explicitly confirmed correct understanding and
+text-only output on the phone. This establishes the pinned codec/model happy path
+for this sample; it does not establish broad transcription accuracy or all voice
+fault behavior. Source evidence is `QQ-D1-PHONE-SNAPSHOT.json` and
+`QQ-D1-PHONE-ACCEPTANCE.json` in the private validation directory.
+
+The subsequent recording at `2026-10-03T10:57:30Z` requested spoken output but
+was transcribed as `用語間說一句話`. Its fresh voice gate was false, zero voice
+Skills ran and one TEXT part was delivered. The owner corrected an earlier
+playback confirmation: only text arrived. That correction is authoritative;
+this sample did **not** establish the recording-to-voice-output happy path.
+Evidence is `QQ-D1-REQUESTED-VOICE-SNAPSHOT.json`. It does not indicate a TTS
+or QQ audio-send failure, because neither was invoked.
+
+The owner subsequently requested model choice instead of keyword recognition.
+ADR 0067 removes the text gate, query-dependent voice availability and forced
+voice-tool choice. The host supplies the trusted reply capability for each
+admitted owner QQ turn; the model chooses direct text or `send_voice` under an
+optional channel-specific instruction. The original final transcript remains
+unchanged, including STT errors. No script conversion or guessed homophone
+controls authorization. Current user preference is interpreted semantically;
+historical content is data. Manual, non-QQ, owner and active-generation checks
+continue to constrain actual execution. This does not authorize proactive voice.
+
+The final source passed **2382 Python tests, 46 platform skips**, **514 focused
+integration tests** and zero strict Runtime/worker Pyright errors. Ruff and
+changed-source formatting passed. The isolated worker suite passed **31**.
+Scripted model tests exercise both media for the same keyword-free input,
+direct text without forced retries, contextual schema/budget/disabled/plugin
+boundaries, an unavailable function-calling provider, native function rejection
+followed by plain-text fallback, current manual denial and other audio-provider
+denial. Existing TTS/delivery failure, cancellation, duplicate and quote tests
+still pass. These fixtures establish control flow; real-model choice and
+fresh recording playback still require separate phone acceptance.
+
+The worker exposes bounded local decode settings, preserving beam 1/no prompt
+as defaults. The dedicated QQ stage may opt into beam 5 and a generic Chinese
+initial prompt without output-command vocabulary. The prompt is `zh`-only;
+VAD, temperature fallback and previous-window context remain unchanged.
+Configuration and synthetic fixtures do not prove recognition accuracy;
+a fresh owner-initiated recording must be checked after deployment.
+
+D2 proactive text and D3 group/member isolation remain unimplemented. Their
+concrete scope, dependencies and acceptance package are
+[QQ next slices](qq-next-slices.md).

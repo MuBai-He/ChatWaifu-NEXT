@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-03
 - Extends: ADRs 0064 and 0065.
-- Validation state: Implemented with deterministic regression checks; real QQ voice transcription pending.
+- Validation state: Implemented and independently deployed; one real QQ record was understood correctly and replied to by TEXT on the owner's phone. Further real-record fault checks remain scoped.
 
 ## Context
 
@@ -62,9 +62,10 @@ Task joins and callbacks run outside the lock. Constructor cleanup before startu
 does not access an unopened repository. A clean shutdown cancels durable audio;
 only an actual crash leaves orphaned preparation for restart failure recovery.
 
-Replies remain text by default. A clear voice-output request in this turn's
-final transcript uses the same `channel.voice` gate as typed text. Arrival of a
-record, quoted content and previous requests cannot authorize voice output.
+Reply-medium selection is superseded by ADR 0067: the model may choose the
+current reply's voice tool by semantics, with ordinary text preferred. Arrival
+of a record does not force voice, and quoted content and previous requests are
+not new medium instructions. Scope and live generation fences remain enforced.
 The external path does not use the local realtime playback command.
 
 QQ deployment uses its own loopback authenticated CPU/int8 STT worker, a new

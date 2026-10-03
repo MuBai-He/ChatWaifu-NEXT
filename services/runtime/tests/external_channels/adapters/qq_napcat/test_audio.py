@@ -20,7 +20,6 @@ from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCat
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.messages import NapCatRecordReference
 from chatwaifu_runtime.external_channels.models import ChannelTranscriptionIdentity
 from chatwaifu_runtime.realtime.contracts import SttRequest, SttResult
-from chatwaifu_runtime.runtime_skills.voice_intent import requests_voice
 
 
 def wav_data(*, rate: int = 24_000, channels: int = 1, width: int = 2, frames: int = 240) -> bytes:
@@ -110,7 +109,7 @@ async def test_lazy_preparation_preserves_identity_and_fresh_transcript() -> Non
     assert "voice.silk" not in repr(attachment)
     admitted = identity()
     text = await attachment.load(admitted)
-    assert text == "请用语音回复我" and requests_voice(text)
+    assert text == "请用语音回复我"
     assert transport.calls == [("voice.silk", 5 * 1024 * 1024)]
     assert len(backend.requests) == 1
     request = backend.requests[0]

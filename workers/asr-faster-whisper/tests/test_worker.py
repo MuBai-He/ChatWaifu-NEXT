@@ -3,19 +3,24 @@
 
 import asyncio
 import base64
+import sys
 import threading
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
 from chatwaifu_model_worker import SttTranscriptionRequest, SttTranscriptionResult
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from chatwaifu_asr_worker.config import WorkerSettings
 from chatwaifu_asr_worker.main import create_app
 from chatwaifu_asr_worker.service import (
+    FasterWhisperEngine,
     TranscriptionCapacityError,
     TranscriptionEngine,
     TranscriptionService,
@@ -121,6 +126,100 @@ def test_offline_pack_rejects_an_incomplete_model_directory(tmp_path: Path) -> N
 
     with pytest.raises(RuntimeError, match=r"config.json, model.bin, tokenizer.json"):
         _resolve_model_source(settings)
+
+
+@pytest.mark.parametrize(
+    ("configured", "language"),
+    [(False, "zh"), (True, "zh"), (True, "en"), (True, "ja"), (True, None)],
+)
+def test_whisper_decode_configuration_is_local_and_chinese_prompt_is_language_scoped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, configured: bool, language: str | None
+) -> None:
+    constructor: dict[str, object] = {}
+    transcription: dict[str, object] = {}
+    consumed: list[str] = []
+
+    @dataclass
+    class Segment:
+        text: str
+
+    @dataclass
+    class Info:
+        language: str | None
+
+    class SpyModel:
+        def __init__(self, model_source: str, **options: object) -> None:
+            constructor.update(model_source=model_source, **options)
+
+        def transcribe(
+            self, audio: np.ndarray, **options: object
+        ) -> tuple[Iterator[Segment], Info]:
+            assert audio.shape == (160,)
+            transcription.update(options)
+
+            def segments() -> Iterator[Segment]:
+                consumed.append("first")
+                yield Segment("  你好, ")
+                consumed.append("second")
+                yield Segment("晚安。 ")
+
+            return segments(), Info(language)
+
+    module = ModuleType("faster_whisper")
+    monkeypatch.setattr(module, "WhisperModel", SpyModel, raising=False)
+    monkeypatch.setitem(sys.modules, "faster_whisper", module)
+    for name in ("config.json", "model.bin", "tokenizer.json"):
+        (tmp_path / name).write_bytes(b"offline fixture")
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        local_files_only=True,
+        device="cpu",
+        compute_type="int8",
+    )
+    if configured:
+        settings = WorkerSettings(
+            token="test-token",  # pyright: ignore[reportArgumentType]
+            model_dir=tmp_path,
+            local_files_only=True,
+            device="cpu",
+            compute_type="int8",
+            beam_size=5,
+            chinese_initial_prompt="以下是简体中文普通话对话。",
+        )
+    engine = FasterWhisperEngine(settings)
+
+    assert engine.transcribe(np.zeros(160, dtype=np.float32), language=language) == (
+        "你好, 晚安。",
+        language,
+    )
+    assert constructor == {
+        "model_source": str(tmp_path.resolve()),
+        "device": "cpu",
+        "compute_type": "int8",
+        "download_root": str(tmp_path),
+        "local_files_only": True,
+    }
+    assert transcription == {
+        "language": language,
+        "beam_size": 5 if configured else 1,
+        "initial_prompt": "以下是简体中文普通话对话。" if configured and language == "zh" else None,
+        "condition_on_previous_text": False,
+        "vad_filter": False,
+    }
+    assert consumed == ["first", "second"]
+
+
+@pytest.mark.parametrize("beam_size", [0, 11])
+def test_whisper_beam_size_is_bounded(beam_size: int) -> None:
+    with pytest.raises(ValidationError):
+        WorkerSettings(token="test-token", beam_size=beam_size)  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize("prompt", ["", "字" * 513])
+def test_whisper_chinese_prompt_is_bounded(prompt: str) -> None:
+    with pytest.raises(ValidationError):
+        WorkerSettings(token="test-token", chinese_initial_prompt=prompt)  # pyright: ignore[reportArgumentType]
 
 
 def test_whisper_audio_resampler_preserves_24khz_duration_and_pitch() -> None:
