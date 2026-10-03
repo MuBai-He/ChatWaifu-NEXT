@@ -11,9 +11,13 @@ import secrets
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.base import JsonObject
+from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import (
+    ChannelChatType,
     ChannelConnectionConfiguration,
     ChannelConnectionSnapshot,
     ChannelConnectionStatus,
@@ -28,6 +32,7 @@ from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.credentials import ChannelCredentialStore
+from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
 from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
@@ -40,11 +45,15 @@ from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 from .audio import NapCatAudioTranscriber, audio_input
 from .client import NapCatClient, NapCatError, validate_endpoint
 from .delivery import NapCatDelivery, reconcile_known_sends
+from .groups import NapCatGroupMembershipNotice, normalize_group_notice, qq_group_identifier
 from .media import image_input
-from .messages import normalize, normalize_inbound
+from .messages import normalize, normalize_group_inbound, normalize_inbound
 from .registration import PROVIDER_ID
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 
 
 def credential_reference(connection_id: UUID) -> str:
@@ -70,6 +79,7 @@ class NapCatManagement:
         proactive_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]]
         | None = None,
         proactive_on_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]] | None = None,
+        groups: ChannelGroupService | None = None,
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -83,6 +93,7 @@ class NapCatManagement:
             proactive_authorization or gateway.authorize_proactive_delivery
         )
         self._proactive_on_terminal = proactive_on_terminal or gateway.proactive_delivery_terminal
+        self._groups = groups
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
@@ -98,6 +109,111 @@ class NapCatManagement:
         self._journal_locks: dict[UUID, asyncio.Lock] = {}
         self._journal_cursor: UUID | None = None
         self._journal_task: asyncio.Task[None] | None = None
+        self._group_ingress_tasks: dict[asyncio.Task[None], UUID] = {}
+        self._group_notice_pending: set[UUID] = set()
+        self._group_stop_reasons: dict[UUID, ChannelGroupPauseReason] = {}
+        if groups is not None:
+            groups.set_audience_reader(self._group_audience)
+            groups.set_transport_ready(self._group_transport_ready)
+            groups.set_scheduler_wake_callback(self._wake_scheduler)
+
+    def _wake_scheduler(self, connection_id: UUID) -> None:
+        scheduler = self._schedulers.get(connection_id)
+        if scheduler is not None:
+            scheduler.wake()
+
+    def _group_transport_ready(self, connection_id: UUID) -> bool:
+        client = self._clients.get(connection_id)
+        return (
+            connection_id not in self._group_notice_pending
+            and client is not None
+            and client.group_dispatch_ready
+        )
+
+    async def _group_audience(
+        self, connection_id: UUID, group_id: str
+    ) -> tuple[str, tuple[str, ...]]:
+        client = self._clients.get(connection_id)
+        if client is None or not self._group_transport_ready(connection_id):
+            raise NapCatError("QQ group transport is unavailable")
+        members = await client.get_group_member_list(group_id)
+        if self._clients.get(connection_id) is not client or not self._group_transport_ready(
+            connection_id
+        ):
+            raise NapCatError("QQ group transport changed during audience observation")
+        return members.account_key, members.member_ids
+
+    def _group_notice_observed(
+        self, connection_id: UUID, notice: NapCatGroupMembershipNotice
+    ) -> None:
+        self._group_notice_pending.add(connection_id)
+        if self._groups is not None:
+            self._groups.fence_connection(
+                connection_id, reason="membership_changed", group_id=notice.group_id
+            )
+
+    def _group_transport_invalidated(self, connection_id: UUID) -> None:
+        self._group_notice_pending.add(connection_id)
+        if self._groups is not None:
+            self._groups.fence_connection(connection_id, reason="reconnect")
+
+    async def _cancel_group_ingress(self, connection_id: UUID | None = None) -> None:
+        tasks = [
+            task
+            for task, owner in self._group_ingress_tasks.items()
+            if connection_id is None or owner == connection_id
+        ]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _dispatch_group(
+        self, event: JsonObject, connection_id: UUID, account: str, access_token: str
+    ) -> None:
+        if self._groups is None or not self._group_transport_ready(connection_id):
+            return
+        group_id = qq_group_identifier(event.get("group_id"))
+        if group_id is None:
+            return
+        message = normalize_group_inbound(
+            event,
+            connection_id=connection_id,
+            account=account,
+            group_id=group_id,
+            allowed_senders=None,
+        )
+        if message is None:
+            return
+        if len(self._group_ingress_tasks) >= 32:
+            logger.info("QQ group admission capacity exceeded")
+            return
+        descriptor = ChannelGroupInboundDescriptor(
+            message.connection_id,
+            message.account_key,
+            message.group_id,
+            message.sender_key,
+            message.external_message_id,
+            message.text,
+            message.received_at,
+        )
+        task = asyncio.create_task(
+            self._ingest_group(descriptor, access_token), name="qq-group-admission"
+        )
+        self._group_ingress_tasks[task] = connection_id
+        task.add_done_callback(lambda finished: self._group_ingress_tasks.pop(finished, None))
+
+    async def _ingest_group(
+        self, descriptor: ChannelGroupInboundDescriptor, access_token: str
+    ) -> None:
+        assert self._groups is not None
+        try:
+            await self._groups.ingest_group(descriptor, access_token=access_token)
+        except asyncio.CancelledError:
+            raise
+        except ExternalChannelError as error:
+            logger.info("QQ group admission rejected code=%s", error.code)
+        except Exception:
+            logger.error("QQ group admission failed")
 
     async def start(self) -> None:
         self._stopping = False
@@ -114,6 +230,9 @@ class NapCatManagement:
 
     async def stop(self) -> None:
         self._stopping = True
+        for connection_id in tuple(self._clients):
+            self._group_transport_invalidated(connection_id)
+        await self._cancel_group_ingress()
         tasks = set(self._pair_tasks.values()) | set(self._tasks.values())
         if self._journal_task is not None:
             tasks.add(self._journal_task)
@@ -123,12 +242,18 @@ class NapCatManagement:
         await asyncio.gather(*tasks, return_exceptions=True)
         self._tasks.clear()
         self._pair_tasks.clear()
+        self._group_notice_pending.clear()
+        self._group_stop_reasons.clear()
 
     async def _terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
         try:
             await self._on_terminal(plan)
         finally:
-            await self._proactive_on_terminal(plan)
+            try:
+                await self._proactive_on_terminal(plan)
+            finally:
+                if self._groups is not None:
+                    await self._groups.on_plan_terminal(plan)
 
     async def _reconcile_connection(self, connection_id: UUID) -> None:
         lock = self._journal_locks.setdefault(connection_id, asyncio.Lock())
@@ -347,9 +472,26 @@ class NapCatManagement:
                     return
                 private: dict[str, str] = json.loads(raw)
                 client = self._factory(private["endpoint"], private["token"])
+                if self._groups is not None:
+                    self._group_transport_invalidated(connection_id)
+                    await self._groups.pause_connection(
+                        connection_id, reason=ChannelGroupPauseReason.RECONNECT
+                    )
+                    self._group_notice_pending.discard(connection_id)
+                    client.set_group_observers(
+                        membership_notice=lambda notice: self._group_notice_observed(
+                            connection_id, notice
+                        ),
+                        transport_invalidated=lambda: self._group_transport_invalidated(
+                            connection_id
+                        ),
+                    )
                 await client.open()
                 account = await self._account(client)
                 if account != config.account_key:
+                    self._group_stop_reasons[connection_id] = (
+                        ChannelGroupPauseReason.ACCOUNT_CHANGED
+                    )
                     await self._health(
                         connection_id, ChannelConnectionStatus.ERROR, "qq_account_changed"
                     )
@@ -369,13 +511,18 @@ class NapCatManagement:
                         sticker_catalog=self._sticker_catalog,
                         sticker_library=self._sticker_library,
                         proactive_authorization=self._proactive_authorization,
+                        group_authorization=self._groups.authorize_delivery
+                        if self._groups is not None
+                        else None,
                         journal_lock=self._journal_locks.setdefault(connection_id, asyncio.Lock()),
                     ),
                     self._publisher,
                     event_hub=self._hub,
                     connection_id=connection_id,
                     on_plan_terminal=self._terminal,
-                    before_claim=self._proactive_authorization,
+                    before_claim=self._gateway.authorize_channel_delivery
+                    if self._groups is not None
+                    else self._proactive_authorization,
                     reconcile_receipts=lambda: self._reconcile_connection(connection_id),
                 )
                 self._schedulers[connection_id] = scheduler
@@ -387,8 +534,32 @@ class NapCatManagement:
                             event = await client.event()
                     except TimeoutError:
                         if await self._account(client) != account:
+                            self._group_stop_reasons[connection_id] = (
+                                ChannelGroupPauseReason.ACCOUNT_CHANGED
+                            )
                             raise NapCatError("QQ account changed") from None
                         await self._health(connection_id, ChannelConnectionStatus.READY)
+                        continue
+                    if self._groups is not None and event.get("post_type") == "notice":
+                        group_id = qq_group_identifier(event.get("group_id"))
+                        notice = (
+                            normalize_group_notice(event, account=account, group_id=group_id)
+                            if group_id is not None
+                            else None
+                        )
+                        if notice is not None:
+                            self._group_notice_observed(connection_id, notice)
+                            await self._groups.pause_connection(
+                                connection_id,
+                                reason=ChannelGroupPauseReason.MEMBERSHIP_CHANGED,
+                                group_id=notice.group_id,
+                            )
+                            self._group_notice_pending.discard(connection_id)
+                        continue
+                    if event.get("message_type") == "group":
+                        self._dispatch_group(
+                            event, connection_id, account, private["gateway_token"]
+                        )
                         continue
                     inbound = normalize_inbound(
                         event,
@@ -422,12 +593,29 @@ class NapCatManagement:
                     connection_id, ChannelConnectionStatus.DEGRADED, "qq_connection_lost"
                 )
             finally:
-                if scheduler:
-                    await scheduler.stop()
-                self._schedulers.pop(connection_id, None)
-                self._clients.pop(connection_id, None)
-                if client:
-                    await client.close()
+                if self._groups is not None:
+                    self._group_transport_invalidated(connection_id)
+                try:
+                    await self._cancel_group_ingress(connection_id)
+                    if self._groups is not None:
+                        await self._groups.pause_connection(
+                            connection_id,
+                            reason=self._group_stop_reasons.pop(
+                                connection_id, ChannelGroupPauseReason.RECONNECT
+                            ),
+                        )
+                finally:
+                    try:
+                        if scheduler:
+                            await scheduler.stop()
+                    finally:
+                        self._schedulers.pop(connection_id, None)
+                        self._clients.pop(connection_id, None)
+                        try:
+                            if client:
+                                await client.close()
+                        finally:
+                            self._group_notice_pending.discard(connection_id)
             retry += 1
             # Cancellable bounded reconnect backoff; not used for correctness synchronization.
             await asyncio.sleep(min(30, 2 ** min(retry, 5)))
@@ -456,7 +644,11 @@ class NapCatManagement:
     async def configuration_changed(self, connection: ChannelConnectionSnapshot) -> None:
         connection_id = connection.configuration.connection_id
         await self._stop_connection(
-            connection_id, cancel_pending=not connection.configuration.enabled
+            connection_id,
+            cancel_pending=not connection.configuration.enabled,
+            group_reason=ChannelGroupPauseReason.CONFIGURATION_CHANGED
+            if connection.configuration.enabled
+            else ChannelGroupPauseReason.CONNECTION_DISABLED,
         )
         if connection.configuration.enabled:
             self._start_connection(connection_id)
@@ -475,6 +667,11 @@ class NapCatManagement:
             try:
                 account = await self._account(client)
                 if account != snapshot.configuration.account_key:
+                    if self._groups is not None:
+                        self._group_transport_invalidated(connection_id)
+                        await self._groups.pause_connection(
+                            connection_id, reason=ChannelGroupPauseReason.ACCOUNT_CHANGED
+                        )
                     await self._health(
                         connection_id, ChannelConnectionStatus.ERROR, "qq_account_changed"
                     )
@@ -486,7 +683,18 @@ class NapCatManagement:
                 )
         return await self._gateway.get_connection(connection_id)
 
-    async def _stop_connection(self, connection_id: UUID, *, cancel_pending: bool = True) -> None:
+    async def _stop_connection(
+        self,
+        connection_id: UUID,
+        *,
+        cancel_pending: bool = True,
+        group_reason: ChannelGroupPauseReason = ChannelGroupPauseReason.RECONNECT,
+    ) -> None:
+        if self._groups is not None:
+            self._group_stop_reasons[connection_id] = group_reason
+            self._group_transport_invalidated(connection_id)
+            await self._groups.pause_connection(connection_id, reason=group_reason)
+            await self._cancel_group_ingress(connection_id)
         if cancel_pending:
             await self._gateway.cancel_proactive_connection(
                 connection_id, reason="qq_connection_stopped"
@@ -495,12 +703,17 @@ class NapCatManagement:
         if task:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+        self._group_stop_reasons.pop(connection_id, None)
+        self._group_notice_pending.discard(connection_id)
         if not cancel_pending:
             return
         raw = await self._credentials.get(credential_reference(connection_id))
         if raw:
             for turn in await self._repository.list_inflight_turns(connection_id):
-                if turn.status in {ChannelTurnStatus.ACCEPTED, ChannelTurnStatus.PROCESSING}:
+                if turn.chat_type is not ChannelChatType.GROUP and turn.status in {
+                    ChannelTurnStatus.ACCEPTED,
+                    ChannelTurnStatus.PROCESSING,
+                }:
                     await self._gateway.interrupt(
                         connection_id,
                         turn.channel_turn_id,
@@ -522,6 +735,8 @@ class NapCatManagement:
                 await self._terminal(terminal)
 
     async def remove(self, connection_id: UUID) -> None:
-        await self._stop_connection(connection_id)
+        await self._stop_connection(
+            connection_id, group_reason=ChannelGroupPauseReason.CONNECTION_DELETED
+        )
         await self._gateway.delete_connection(connection_id)
         await self._credentials.delete(credential_reference(connection_id))

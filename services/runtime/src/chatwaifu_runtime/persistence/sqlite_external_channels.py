@@ -136,12 +136,12 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         )
         return tuple(_connection_record(row) for row in rows)
 
-    async def get_connection(self, connection_id: UUID) -> ChannelConnectionRecord | None:
+    async def get_connection(
+        self, connection_id: UUID, *, include_deleted: bool = False
+    ) -> ChannelConnectionRecord | None:
         row = await self._database.fetchone(
-            """
-            SELECT * FROM channel_connections
-            WHERE connection_id = ? AND deleted_at IS NULL
-            """,
+            "SELECT * FROM channel_connections WHERE connection_id = ?"
+            + ("" if include_deleted else " AND deleted_at IS NULL"),
             (str(connection_id),),
         )
         return _connection_record(row) if row is not None else None

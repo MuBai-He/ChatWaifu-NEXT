@@ -41,9 +41,13 @@ def normalize_group_inbound(
     connection_id: UUID,
     account: str,
     group_id: str,
-    allowed_senders: frozenset[str],
+    allowed_senders: frozenset[str] | None,
 ) -> NapCatGroupInboundMessage | None:
-    """Admit a granted structured mention without resolving participant or scope."""
+    """Normalize a structured mention without granting participant or scope.
+
+    A supplied transport whitelist also filters senders. With None, the result
+    remains unresolved and must pass the group's durable application admission.
+    """
     sender = qq_group_identifier(event.get("user_id"))
     message_id = event.get("message_id")
     details = event.get("sender")
@@ -58,7 +62,7 @@ def normalize_group_inbound(
         or qq_group_identifier(event.get("group_id")) != group_id
         or sender is None
         or sender == account
-        or sender not in allowed_senders
+        or (allowed_senders is not None and sender not in allowed_senders)
         or not isinstance(details, dict)
         or qq_group_identifier(details.get("user_id")) != sender
         or type(message_id) not in {str, int}

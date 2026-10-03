@@ -178,6 +178,9 @@ class ChannelGroupService:
         self._started = True
 
     async def stop(self) -> None:
+        if not self._started and not self.active_count:
+            self._stopping = True
+            return
         self._stopping = True
         self._started = False
         # Fence registrations before the first database await, including auth/prepare.
@@ -197,7 +200,7 @@ class ChannelGroupService:
     async def _connection(
         self, connection_id: UUID, *, mutate: bool = False
     ) -> ChannelConnectionRecord:
-        connection = await self._channels.get_connection(connection_id)
+        connection = await self._channels.get_connection(connection_id, include_deleted=not mutate)
         if connection is None or connection.configuration.provider_id != "qq_napcat":
             raise ChannelNotFoundError("QQ connection unavailable")
         if mutate:

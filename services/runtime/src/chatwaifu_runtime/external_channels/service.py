@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
     ChannelChatType,
@@ -91,6 +92,7 @@ from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, s
 from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
 
 if TYPE_CHECKING:
+    from chatwaifu_runtime.external_channels.groups import ChannelGroupService
     from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 
 logger = logging.getLogger(__name__)
@@ -261,6 +263,7 @@ class ExternalChannelService:
         self._started = False
         self._on_wake_scheduler: Callable[[UUID], None] | None = None
         self._proactive: ChannelProactiveService | None = None
+        self._groups: ChannelGroupService | None = None
         self._burst_coordinator = ImageBurstCoordinator(
             repository=repository,
             scheduler=burst_scheduler,
@@ -285,6 +288,9 @@ class ExternalChannelService:
     def set_proactive_service(self, service: ChannelProactiveService) -> None:
         self._proactive = service
 
+    def set_group_service(self, service: ChannelGroupService) -> None:
+        self._groups = service
+
     def wake_delivery_scheduler(self, connection_id: UUID) -> None:
         if self._on_wake_scheduler is not None:
             self._on_wake_scheduler(connection_id)
@@ -293,6 +299,15 @@ class ExternalChannelService:
         if plan.outbound_intent_id is None:
             return True
         return self._proactive is not None and await self._proactive.authorize_delivery(plan)
+
+    async def authorize_channel_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.group_target is not None:
+            return self._groups is not None and await self._groups.authorize_delivery(plan)
+        if plan.channel_turn_id is not None:
+            turn = await self._repository.get_turn(plan.channel_turn_id)
+            if turn is None or turn.chat_type is ChannelChatType.GROUP:
+                return False
+        return await self.authorize_proactive_delivery(plan)
 
     async def proactive_delivery_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
         if self._proactive is not None:
@@ -440,6 +455,12 @@ class ExternalChannelService:
                     self._proactive.fence_route_revision(
                         configuration.connection_id, updated.revision
                     )
+                if self._groups is not None:
+                    # A rejected revision CAS must not cancel valid group work.
+                    # Revoke synchronously after the successful repository write.
+                    self._groups.fence_connection(
+                        configuration.connection_id, reason="configuration_changed"
+                    )
         except KeyError as error:
             raise ChannelNotFoundError(str(error)) from error
         except ValueError as error:
@@ -450,10 +471,23 @@ class ExternalChannelService:
             await self._proactive.connection_updated(
                 configuration.connection_id, revision=updated.revision
             )
+        if self._groups is not None:
+            await self._groups.pause_connection(
+                configuration.connection_id,
+                reason=ChannelGroupPauseReason.CONFIGURATION_CHANGED
+                if configuration.enabled
+                else ChannelGroupPauseReason.CONNECTION_DISABLED,
+            )
         snapshot = self._connection_snapshot(updated)
         return CreatedChannelConnection(snapshot, token) if token is not None else snapshot
 
     async def delete_connection(self, connection_id: UUID) -> None:
+        await self._required_connection(connection_id)
+        if self._groups is not None:
+            self._groups.fence_connection(connection_id, reason="connection_deleted")
+            await self._groups.pause_connection(
+                connection_id, reason=ChannelGroupPauseReason.CONNECTION_DELETED
+            )
         await self.cancel_proactive_connection(connection_id, reason="connection_deleted")
         await self._cancel_connection_audio(connection_id)
         try:
@@ -2119,6 +2153,21 @@ class ExternalChannelService:
             )
 
     async def _sync_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
+        if turn.chat_type is ChannelChatType.GROUP:
+            if turn.status not in {
+                ChannelTurnStatus.ACCEPTED,
+                ChannelTurnStatus.PROCESSING,
+                ChannelTurnStatus.CANCELLING,
+            }:
+                return turn
+            if self._groups is None or turn.group_lineage_version != 1:
+                return await self._set_turn_terminal(
+                    turn.channel_turn_id,
+                    status=ChannelTurnStatus.FAILED,
+                    error=_error("group_runtime_unavailable", "The group runtime is unavailable."),
+                    completed_at=datetime.now(UTC),
+                )
+            return await self._groups.sync_turn(turn)
         lock = self._turn_sync_locks.setdefault(turn.channel_turn_id, asyncio.Lock())
         async with lock:
             fresh_turn = await self._repository.get_turn(turn.channel_turn_id)

@@ -35,6 +35,7 @@ from chatwaifu_runtime.external_channels.credentials import KeyringChannelCreden
 from chatwaifu_runtime.external_channels.encrypted_credentials import (
     EncryptedFileChannelCredentialStore,
 )
+from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 from chatwaifu_runtime.external_channels.service import (
@@ -332,6 +333,17 @@ class RuntimeContainer:
             self.event_publisher,
         )
         self.external_channels.set_proactive_service(self.channel_proactive)
+        self.channel_groups = ChannelGroupService(
+            self.channel_group_repository,
+            self.external_channel_repository,
+            self.conversation,
+            self.sessions,
+            self.event_publisher,
+            conversation_repository=self.conversation_repository,
+        )
+        self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
+        self.external_channels.set_group_service(self.channel_groups)
+        self.conversation.set_before_scope_reset_hook(self.channel_groups.before_scope_reset)
         self.channel_credentials = (
             EncryptedFileChannelCredentialStore(
                 settings.data_dir / "channel-vault",
@@ -365,6 +377,7 @@ class RuntimeContainer:
             stt_backend=self.stt,
             proactive_authorization=self.external_channels.authorize_proactive_delivery,
             proactive_on_terminal=self.external_channels.proactive_delivery_terminal,
+            groups=self.channel_groups,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,
@@ -377,6 +390,7 @@ class RuntimeContainer:
                 self.conversation.active_count > 0
                 or self.providers.tts.active_jobs > 0
                 or self.external_channels.active_preprocessing_count > 0
+                or self.channel_groups.active_count > 0
             )
         )
         self.ambient = AmbientCompanionService(
@@ -489,6 +503,7 @@ class RuntimeContainer:
                 self.photo_annotations.start()
                 self.photo_observer.start()
                 await self.spoken_memory_observer.start()
+                await self.channel_groups.start()
                 await self.external_channels.start()
                 await self.channel_voice.cleanup()
                 await self.channel_management.start()
@@ -567,6 +582,7 @@ class RuntimeContainer:
         steps.extend(
             [
                 _CleanupStep("qq_channels", lambda: self.qq_channels.stop()),
+                _CleanupStep("channel_groups", lambda: self.channel_groups.stop()),
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
                 _CleanupStep("spoken_memory_observer", lambda: self.spoken_memory_observer.stop()),
