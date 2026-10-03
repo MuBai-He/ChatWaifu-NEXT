@@ -20,6 +20,7 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.errors import StructuredError
 
+from chatwaifu_runtime.conversation.models import ConversationQuotedMessage
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -90,6 +91,16 @@ class ExternalChannelRepository(Protocol):
     ) -> ChannelTurnRecord | None: ...
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None: ...
+
+    async def resolve_quoted_message(
+        self, connection_id: UUID, binding_id: UUID, external_message_id: str
+    ) -> ConversationQuotedMessage | None:
+        """Read this binding's retained text; outbound messages require confirmed delivery."""
+        ...
+
+    async def quoted_reply_target(self, channel_turn_id: UUID) -> str | None:
+        """Current inbound message ID when that committed turn carried a reply reference."""
+        ...
 
     async def list_inflight_turns(
         self, connection_id: UUID | None = None

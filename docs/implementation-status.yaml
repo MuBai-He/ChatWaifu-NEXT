@@ -4,6 +4,12 @@ current_phase: "13.6"
 qq_napcat:
   status: native_owner_direct_text_and_requested_voice_real_qq_happy_path_verified
   adr: "0064"
+  image_reply_adr: "0065"
+  original_plan_stages:
+    A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
+    B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
+    C: current_turn_requested_voice_and_unavailable_tts_text_fallback_real_verified
+    D: incoming_voice_proactive_and_group_participant_isolation_not_implemented
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -19,8 +25,13 @@ qq_napcat:
     - Five meaningful recovery regressions added; combined QQ adapter, complete Runtime and recovery suites passed 127 checks locally and 127 on Linux, with Ruff and strict Pyright passed
     - Dedicated NapCat container recreation preserved mounts, connection and full ledger identities/journal; role-account quick-login startup setting added, manual QQ reauthentication restored authenticated OneBot and existing Runtime connection without re-pairing or replay
     - Temporarily stopped only the dedicated staging TTS service; real owner voice request failed before audio publication and delivered one text reply with failure explanation, confirmed on phone; TTS service restored active
+    - Phase B adds authenticated bounded image streams, ephemeral owner image understanding, opt-in local sticker delivery and permissioned durable reply references; quoted history cannot authorize voice
+    - Phase B independent review fixes raw-ID ambiguity before privacy filtering, rejects retention-disabled burst bypass and registers historical quote photo-deletion lineage
+    - Phase B full Python passed 2219 checks with 46 platform skips; full Web passed 334 checks; Python strict typing, Ruff, TypeScript checks and lint, Web and desktop UI builds passed
   remaining:
-    - real_qq_denied_sender_group_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
+    - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
+    - phase_d_incoming_voice_stt_proactive_delivery_and_group_permissions_participant_isolation
+    - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
     - integration_with_concurrent_search_workstream_and_explicit_read_only_search_tool_policy

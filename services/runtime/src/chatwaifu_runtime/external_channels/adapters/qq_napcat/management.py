@@ -32,10 +32,13 @@ from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
 from chatwaifu_runtime.external_channels.service import ExternalChannelError, ExternalChannelService
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 from .client import NapCatClient, NapCatError, validate_endpoint
 from .delivery import NapCatDelivery
-from .messages import normalize
+from .media import image_input
+from .messages import normalize, normalize_inbound
 from .registration import PROVIDER_ID
 
 logger = logging.getLogger(__name__)
@@ -57,6 +60,9 @@ class NapCatManagement:
         audio_root: Path,
         on_plan_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]],
         client_factory: Callable[[str, str], NapCatClient] = NapCatClient,
+        *,
+        sticker_catalog: PresetStickerCatalog | None = None,
+        sticker_library: StickerLibraryService | None = None,
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -67,6 +73,8 @@ class NapCatManagement:
         self._audio_root = audio_root
         self._on_terminal = on_plan_terminal
         self._factory = client_factory
+        self._sticker_catalog = sticker_catalog
+        self._sticker_library = sticker_library
         self._pairings: dict[UUID, ChannelPairingSnapshot] = {}
         self._pair_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._tasks: dict[UUID, asyncio.Task[None]] = {}
@@ -306,6 +314,8 @@ class NapCatManagement:
                         connection_id,
                         config.allowed_sender_keys[0],
                         self._audio_root,
+                        sticker_catalog=self._sticker_catalog,
+                        sticker_library=self._sticker_library,
                     ),
                     self._publisher,
                     event_hub=self._hub,
@@ -324,17 +334,23 @@ class NapCatManagement:
                             raise NapCatError("QQ account changed") from None
                         await self._health(connection_id, ChannelConnectionStatus.READY)
                         continue
-                    message = normalize(
+                    inbound = normalize_inbound(
                         event,
                         connection_id=connection_id,
                         account=account,
                         owner=config.allowed_sender_keys[0],
                     )
-                    if message is None:
+                    if inbound is None:
                         continue
                     try:
                         await self._gateway.ingest(
-                            message, access_token=private["gateway_token"], supersede_inflight=True
+                            inbound.message,
+                            access_token=private["gateway_token"],
+                            supersede_inflight=True,
+                            image_input=image_input(client, inbound.images)
+                            if inbound.images
+                            else None,
+                            image_retention_allowed=False,
                         )
                     except ExternalChannelError as error:
                         logger.info(

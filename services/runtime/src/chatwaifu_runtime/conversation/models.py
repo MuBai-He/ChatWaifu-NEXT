@@ -45,6 +45,7 @@ class ConversationSourceContext:
     conversation_label: str | None = None
     sender_display_name: str | None = None
     audience_ids: tuple[str, ...] = ()
+    reply_to_external_message_id: str | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -59,6 +60,7 @@ class ConversationSourceContext:
             "conversation_label": self.conversation_label,
             "sender_display_name": self.sender_display_name,
             "audience_ids": list(self.audience_ids),
+            "reply_to_external_message_id": self.reply_to_external_message_id,
         }
 
     def to_json(self) -> str:
@@ -74,6 +76,11 @@ class ConversationSourceContext:
         if chat_type not in {"direct", "group"}:
             raise ValueError("unsupported conversation chat type")
         return cls(
+            reply_to_external_message_id=(
+                str(payload["reply_to_external_message_id"])
+                if payload.get("reply_to_external_message_id") is not None
+                else None
+            ),
             audience_ids=tuple(
                 str(item) for item in cast(list[object], payload.get("audience_ids", []))
             ),
@@ -141,6 +148,19 @@ class ConfirmedConversationTurn:
 
 
 @dataclass(frozen=True, slots=True)
+class ConversationQuotedMessage:
+    """Permissioned historical text, never a fresh instruction or tool authorization."""
+
+    role: Literal["user", "assistant"]
+    text: str
+    source_generation_id: UUID
+
+    def __post_init__(self) -> None:
+        if self.role not in {"user", "assistant"} or not 1 <= len(self.text) <= 2000:
+            raise ValueError("quoted message requires a supported role and bounded text")
+
+
+@dataclass(frozen=True, slots=True)
 class ConversationTurnOptions:
     """Surface-neutral controls for one submitted conversation turn.
 
@@ -157,6 +177,9 @@ class ConversationTurnOptions:
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
     image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(
+        default=None, repr=False, compare=False
+    )
+    quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
         default=None, repr=False, compare=False
     )
 

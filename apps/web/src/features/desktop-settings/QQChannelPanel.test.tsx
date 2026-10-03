@@ -48,6 +48,51 @@ describe("QQChannelPanel", () => {
     vi.resetAllMocks();
   });
 
+  it("persists sticker opt-in while keeping owner routing and voice request behavior", async () => {
+    const original: ChannelConnectionSnapshot = {
+      ...connection(),
+      capabilities: {
+        outbound_message_kinds: ["text", "audio", "image"],
+      },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      original,
+    ]);
+    vi.mocked(runtimeClient.updateChannelConnection).mockImplementation(
+      (_id, configuration) =>
+        Promise.resolve({
+          ...original,
+          configuration,
+          revision: 2,
+        }),
+    );
+    const view = render(<QQChannelPanel characterId="default" runtimeOnline />);
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "允许角色发送表情图片",
+    });
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.checked).toBe(true));
+    expect(runtimeClient.updateChannelConnection).toHaveBeenCalledWith(
+      original.configuration.connection_id,
+      {
+        ...original.configuration,
+        presentation_policy: {
+          profile: "instant_message",
+          stickers_enabled: true,
+        },
+      },
+      original.revision,
+    );
+    expect(screen.queryByRole("switch", { name: /语音/u })).toBeNull();
+    view.rerender(
+      <QQChannelPanel characterId="default" runtimeOnline={false} />,
+    );
+    expect(toggle.disabled).toBe(true);
+    fireEvent.click(toggle);
+    expect(runtimeClient.updateChannelConnection).toHaveBeenCalledTimes(1);
+  });
+
   it("clears token when starting and shows the exact owner pairing command", async () => {
     let resolveStart!: (value: QQPairingSnapshot) => void;
     vi.mocked(qqClient.startQQPairing).mockReturnValue(

@@ -223,3 +223,35 @@ real-account fault acceptance.
 
 See [setup and operations](qq-napcat-setup.md) and
 [ADR 0064](adr/0064-qq-napcat-current-turn-voice.md).
+
+## Original A/B/C/D plan and phase B extension
+
+The original stages are A private text, B images and reply references, C character
+voice, and D incoming voice transcription, proactive messages and group chat.
+Search/answer optimization is a separate workstream, not stage D. A's core text
+and restart path and C's current-turn voice and unavailable-TTS fallback have the
+real-account evidence above. Additional A/C access and fault gates remain scoped.
+D has not been enabled.
+
+Phase B now uses the same gateway and Conversation image loader. The authenticated
+pinned NapCat stream API transports bounded chunks without public URLs or shared
+paths; owner admission, account checks, batch limits, actual decoding, EXIF removal,
+cancellation and duplicate admission are tested. Incoming images remain ephemeral.
+Optional preset/learned sticker delivery uses existing scoped immutable assets and
+the original send fence. A dedicated settings toggle is opt-in.
+
+Reply references use durable same-binding admitted/confirmed messages and bounded
+untrusted historical context. Unknown references, scope reset, photo redaction and
+raw-ID ambiguity fail closed. Referenced text remains separate from fresh input and
+cannot authorize voice. Assistant references also register the existing history
+dependency so a later photo deletion redacts derived replies even outside recent
+history. A real local OneBot peer verifies the reply segment's fixed current-message
+target. These fixtures do not establish phone quote display.
+
+Root independently integrated and reviewed all files, including new tests. Full
+Python completed **2219 passed, 46 platform skips**; full Web **334 passed**;
+strict Pyright, Ruff, TypeScript checks, lint and both Web/desktop UI builds passed.
+The earlier native Rust packaging limitation is unchanged; no Rust code changed.
+Real phone visual understanding, received sticker display and reply display remain
+pending. Static PNG/JPEG and existing stickers do not claim arbitrary photo
+generation, animated market stickers, quote-image replay or phase D capability.

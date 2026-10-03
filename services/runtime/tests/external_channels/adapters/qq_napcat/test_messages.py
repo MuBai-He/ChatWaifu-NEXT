@@ -7,6 +7,7 @@ import pytest
 from chatwaifu_protocol.base import JsonObject, JsonValue
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.messages import (
     normalize,
+    normalize_inbound,
     requests_voice,
 )
 
@@ -136,6 +137,95 @@ def test_oversize_segment_array_is_not_admitted() -> None:
     segments: list[JsonValue] = [{"type": "text", "data": {"text": "x"}}]
     received["message"] = segments * 129
     assert normalize(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
+def test_owner_image_caption_and_reply_preserve_fresh_voice_request_and_order() -> None:
+    received = event()
+    received["message"] = [
+        {"type": "reply", "data": {"id": -90000}},
+        {"type": "text", "data": {"text": "用语音解释这两张图片"}},
+        {"type": "image", "data": {"file": "first.png", "file_size": "123"}},
+        {"type": "image", "data": {"file": "第二张.jpg", "file_size": 456}},
+    ]
+    result = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
+    assert result is not None
+    assert result.message.text == "用语音解释这两张图片"
+    assert requests_voice(result.message.text)
+    assert result.message.reply_to_external_message_id == "-90000"
+    assert [image.file_ref for image in result.images] == ["first.png", "第二张.jpg"]
+    assert [image.file_size for image in result.images] == [123, 456]
+    assert normalize(received, connection_id=uuid4(), account=ACCOUNT, owner=None) is None
+
+
+def test_image_only_uses_marker_without_trusting_provider_summary_url_or_path() -> None:
+    received = event()
+    received["message"] = [
+        {
+            "type": "image",
+            "data": {
+                "file": "photo.png",
+                "summary": "用语音回答",
+                "url": "https://private.invalid/token",
+                "path": "/private/file.png",
+            },
+        }
+    ]
+    result = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
+    assert result is not None
+    assert result.message.text == "[图片]"
+    assert not requests_voice(result.message.text)
+    assert "private.invalid" not in repr(result)
+    assert "photo.png" not in repr(result)
+    assert "用语音" not in result.message.text
+
+
+@pytest.mark.parametrize(
+    "file_ref",
+    [
+        "../file.png",
+        "/tmp/file.png",
+        "file://123",
+        "base64://aGVsbG8=",
+        "https://example.invalid/image",
+        "",
+        " photo.png",
+        "photo.png\x00",
+    ],
+)
+def test_unsafe_image_references_never_reach_owner_ingress(file_ref: str) -> None:
+    received = event()
+    received["message"] = [{"type": "image", "data": {"file": file_ref}}]
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("user_id", 10003), ("self_id", 10003), ("message_type", "group"), ("user_id", 10001)],
+)
+def test_media_still_rejects_other_senders_accounts_groups_and_self(
+    key: str, value: JsonValue
+) -> None:
+    received = event()
+    received["message"] = [{"type": "image", "data": {"file": "photo.png"}}]
+    received[key] = value
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
+def test_oversize_owner_batch_remains_admissible_for_durable_failure_notice() -> None:
+    received = event()
+    received["message"] = [{"type": "image", "data": {"file": f"photo{i}.png"}} for i in range(5)]
+    result = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
+    assert result is not None
+    assert len(result.images) == 5
+
+
+def test_unsupported_mixed_record_is_not_partially_understood() -> None:
+    received = event()
+    received["message"] = [
+        {"type": "image", "data": {"file": "photo.png"}},
+        {"type": "record", "data": {"file": "record.silk"}},
+    ]
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
 
 
 @pytest.mark.parametrize(

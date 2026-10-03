@@ -32,6 +32,7 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 from pydantic import TypeAdapter
 
+from chatwaifu_runtime.conversation.models import ConversationQuotedMessage
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -434,6 +435,83 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             (str(channel_turn_id),),
         )
         return _turn_record(row) if row is not None else None
+
+    async def resolve_quoted_message(
+        self, connection_id: UUID, binding_id: UUID, external_message_id: str
+    ) -> ConversationQuotedMessage | None:
+        rows = await self._database.fetchall(
+            """
+            WITH candidates AS (
+                SELECT 'user' AS role, u.committed_text AS text, t.session_id,
+                       t.generation_id, u.created_at
+                FROM channel_turns t
+                JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+                    AND u.role = 'user'
+                WHERE t.connection_id = ? AND t.binding_id = ? AND t.external_message_id = ?
+                UNION ALL
+                SELECT 'assistant' AS role,
+                       CASE WHEN p.kind = 'text' THEN json_extract(p.payload_json, '$.text')
+                            WHEN p.kind = 'audio' THEN t.reply_text
+                            ELSE '[Referenced image or sticker; image bytes are not attached.]'
+                       END AS text, t.session_id, t.generation_id, u.created_at
+                FROM channel_delivery_parts p
+                JOIN channel_deliveries d ON d.delivery_id = p.delivery_id
+                JOIN channel_turns t ON t.channel_turn_id = d.channel_turn_id
+                JOIN generations g ON g.generation_id = t.generation_id AND g.state = 'completed'
+                JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+                WHERE t.connection_id = ? AND t.binding_id = ?
+                    AND p.provider_message_id = ? AND p.status = 'delivered'
+            )
+            SELECT role, substr(text, 1, 2000) AS text, q.generation_id FROM candidates q
+            JOIN sessions s ON s.session_id = q.session_id
+            JOIN channel_connections c ON c.connection_id = ?
+            WHERE (SELECT count(*) FROM candidates) = 1
+                AND c.enabled = 1 AND c.deleted_at IS NULL AND q.text IS NOT NULL
+                AND trim(q.text) != ''
+                AND NOT EXISTS (SELECT 1 FROM photo_context_redactions r
+                                WHERE r.generation_id = q.generation_id)
+                AND NOT EXISTS (
+                    SELECT 1 FROM memory_scope_resets r
+                    WHERE ((r.character_id = s.character_id AND r.user_scope = s.user_scope)
+                           OR r.character_id = '__all__') AND q.created_at <= r.reset_at
+                )
+            LIMIT 2
+            """,
+            (
+                str(connection_id),
+                str(binding_id),
+                external_message_id,
+                str(connection_id),
+                str(binding_id),
+                external_message_id,
+                str(connection_id),
+            ),
+        )
+        # A provider-ID collision is unavailable rather than choosing a different message.
+        if len(rows) != 1:
+            return None
+        role = str(rows[0]["role"])
+        if role not in {"user", "assistant"}:
+            return None
+        return ConversationQuotedMessage(
+            role="user" if role == "user" else "assistant",
+            text=str(rows[0]["text"]),
+            source_generation_id=UUID(str(rows[0]["generation_id"])),
+        )
+
+    async def quoted_reply_target(self, channel_turn_id: UUID) -> str | None:
+        row = await self._database.fetchone(
+            """
+            SELECT t.external_message_id FROM channel_turns t
+            JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+            WHERE t.channel_turn_id = ? AND u.source_context_json IS NOT NULL
+                AND json_extract(
+                    u.source_context_json, '$.reply_to_external_message_id'
+                ) IS NOT NULL
+            """,
+            (str(channel_turn_id),),
+        )
+        return str(row["external_message_id"]) if row is not None else None
 
     async def list_inflight_turns(
         self, connection_id: UUID | None = None

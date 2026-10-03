@@ -50,6 +50,7 @@ from chatwaifu_runtime.character_kernel.service import USER_SCOPE
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.conversation.models import (
     EXTERNAL_TEXT_TURN_OPTIONS,
+    ConversationQuotedMessage,
     ConversationSourceContext,
 )
 from chatwaifu_runtime.conversation.repository import ConversationRepository
@@ -434,11 +435,14 @@ class ExternalChannelService:
         access_token: str,
         supersede_inflight: bool = False,
         image_input: ChannelInboundImageInput | None = None,
+        image_retention_allowed: bool = True,
         burst_intake: bool = False,
         raw_images: tuple[object, ...] = (),
         context_token: str | None = None,
         pending_contexts_count: int = 0,
     ) -> ChannelTurnReceipt:
+        if burst_intake and not image_retention_allowed:
+            raise ChannelPolicyError("Ephemeral ingress does not support image burst collection")
         connection, binding, turn, duplicate = await self._admit_ingress(
             message,
             access_token=access_token,
@@ -479,6 +483,7 @@ class ExternalChannelService:
             received_at=message.received_at,
             conversation_label=message.conversation_label,
             sender_display_name=message.sender_display_name,
+            reply_to_external_message_id=message.reply_to_external_message_id,
         )
         policy = connection.configuration.presentation_policy
         profile = (
@@ -496,6 +501,7 @@ class ExternalChannelService:
         photos = self._photo_observer
         if (
             image_loader is not None
+            and image_retention_allowed
             and (library is not None or photos is not None)
             and connection.configuration.character_id == "default"
             and message.chat_type is ChannelChatType.DIRECT
@@ -570,6 +576,11 @@ class ExternalChannelService:
             presentation_profile=profile,
             failure_recovery_text=recovery_text,
             image_loader=image_loader,
+            quoted_message_loader=(
+                self._quoted_message_loader(message, binding)
+                if message.reply_to_external_message_id is not None
+                else None
+            ),
         )
         generation_admitted = False
         try:
@@ -619,6 +630,21 @@ class ExternalChannelService:
             seen_at=datetime.now(UTC),
         )
         return self._turn_receipt(turn, duplicate=False)
+
+    def _quoted_message_loader(
+        self, message: ChannelInboundTextMessage, binding: ChannelBindingRecord
+    ) -> Callable[[], Awaitable[ConversationQuotedMessage | None]]:
+        async def load() -> ConversationQuotedMessage | None:
+            reference = message.reply_to_external_message_id
+            if reference is None or reference == message.external_message_id:
+                return None
+            # This port reads only admitted or confirmed messages from this exact route.
+            # It deliberately cannot fetch arbitrary provider history or other peers.
+            return await self._repository.resolve_quoted_message(
+                message.connection_id, binding.binding_id, reference
+            )
+
+        return load
 
     async def _dispatch_burst(self, batch: BurstBatch) -> None:
         connection = await self._repository.get_connection(batch.connection_id)

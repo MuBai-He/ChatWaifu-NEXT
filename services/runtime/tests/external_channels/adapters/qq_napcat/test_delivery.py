@@ -11,6 +11,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import cast
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -19,11 +21,14 @@ from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
     ChannelChatType,
     ChannelConnectionConfiguration,
+    ChannelDeliveryPartAcknowledgement,
     ChannelDeliveryPartClaimRequest,
     ChannelDeliveryPartDraft,
+    ChannelDeliveryPartKind,
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelImageDeliveryPartPayload,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -44,8 +49,13 @@ from chatwaifu_runtime.external_channels.scheduler import (
     ChannelDeliveryScheduler,
     DeliveryPartOutcome,
 )
+from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.sqlite_external_channels import SQLiteExternalChannelRepository
+from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
+from chatwaifu_runtime.sticker_library.ports import StickerLibraryRepository
+from chatwaifu_runtime.sticker_library.service import StickerLibraryService
+from PIL import Image
 from websockets.asyncio.server import ServerConnection, serve
 
 OWNER = "10002"
@@ -95,13 +105,21 @@ class State:
         await self.database.open()
         self.repository = SQLiteExternalChannelRepository(self.database)
 
-    def executor(self, client: NapCatClient) -> NapCatDelivery:
+    def executor(
+        self,
+        client: NapCatClient,
+        *,
+        sticker_catalog: PresetStickerCatalog | None = None,
+        sticker_library: StickerLibraryService | None = None,
+    ) -> NapCatDelivery:
         return NapCatDelivery(
             self.repository,
             client,
             self.connection_id,
             OWNER,
             self.audio_root,
+            sticker_catalog=sticker_catalog,
+            sticker_library=sticker_library,
         )
 
 
@@ -115,7 +133,14 @@ def claimed_part(
 
 async def setup(
     tmp_path: Path,
-    payload: ChannelTextDeliveryPartPayload | ChannelAudioDeliveryPartPayload | None = None,
+    payload: (
+        ChannelTextDeliveryPartPayload
+        | ChannelAudioDeliveryPartPayload
+        | ChannelImageDeliveryPartPayload
+        | None
+    ) = None,
+    *,
+    character_id: str = "ayachi_nene",
 ) -> State:
     path = tmp_path / "qq-delivery.db"
     storage = StorageConfig(database_path=path)
@@ -129,7 +154,7 @@ async def setup(
             connection_id=connection_id,
             provider_id="qq_napcat",
             name="QQ 私聊",
-            character_id="ayachi_nene",
+            character_id=character_id,
             principal_scope="local",
             account_key="10001",
             allowed_sender_keys=[OWNER],
@@ -142,8 +167,8 @@ async def setup(
             """INSERT INTO sessions(
                 session_id, character_id, state, conversation_state,
                 revision, next_sequence, created_at, updated_at
-            ) VALUES (?, 'ayachi_nene', 'ready', 'idle', 0, 1, ?, ?)""",
-            (str(session_id), now.isoformat(), now.isoformat()),
+            ) VALUES (?, ?, 'ready', 'idle', 0, 1, ?, ?)""",
+            (str(session_id), character_id, now.isoformat(), now.isoformat()),
         )
     await repository.create_binding(
         binding_id=binding_id,
@@ -185,6 +210,17 @@ async def setup(
     delivery_id = uuid4()
     try:
         drafts = (ChannelDeliveryPartDraft(ordinal=0, kind=payload.kind, payload=payload),)
+        if isinstance(payload, ChannelImageDeliveryPartPayload):
+            drafts = (
+                ChannelDeliveryPartDraft(
+                    ordinal=0,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(text="晚安"),
+                ),
+                ChannelDeliveryPartDraft(
+                    ordinal=1, kind=payload.kind, payload=payload, required=False
+                ),
+            )
         if isinstance(payload, ChannelAudioDeliveryPartPayload):
             await repository.create_delivery_plan(
                 turn.channel_turn_id,
@@ -213,6 +249,30 @@ async def setup(
     )
     assert claim is not None
     part = claimed_part(claim)
+    if isinstance(payload, ChannelImageDeliveryPartPayload):
+        assert part.lease_id is not None
+        await repository.acknowledge_delivery_part(
+            ChannelDeliveryPartAcknowledgement(
+                delivery_id=delivery_id,
+                part_id=part.part_id,
+                lease_id=part.lease_id,
+                status=ChannelDeliveryPartStatus.DELIVERED,
+                provider_message_id="fixture-text-receipt",
+                acknowledged_at=now,
+            ),
+            updated_at=now,
+        )
+        claim = await repository.claim_next_delivery_part(
+            ChannelDeliveryPartClaimRequest(
+                delivery_id=delivery_id, lease_id=uuid4(), lease_seconds=30
+            ),
+            claimed_at=now,
+        )
+        assert claim is not None
+        part = claimed_part(claim)
+        assert isinstance(part.payload, ChannelImageDeliveryPartPayload)
+        plan = await repository.get_delivery_plan(delivery_id)
+        assert plan is not None
     audio_root = tmp_path / "audio"
     audio_root.mkdir()
     return State(database, repository, connection_id, plan, part, audio_root, path, storage)
@@ -233,6 +293,39 @@ def audio_payload() -> tuple[ChannelAudioDeliveryPartPayload, bytes]:
         duration_ms=10,
         text="晚安",
     ), audio
+
+
+def image_bytes(*, format: str = "PNG", size: tuple[int, int] = (8, 8)) -> bytes:
+    output = io.BytesIO()
+    Image.new("RGB", size, (120, 180, 60)).save(output, format=format)
+    return output.getvalue()
+
+
+def image_catalog(
+    root: Path, data: bytes, *, mime: str = "image/png"
+) -> tuple[PresetStickerCatalog, ChannelImageDeliveryPartPayload]:
+    root.mkdir()
+    (root / "happy.png").write_bytes(data)
+    digest = hashlib.sha256(data).hexdigest()
+    (root / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "stickers": [
+                    {
+                        "sticker_id": "happy",
+                        "filename": "happy.png",
+                        "sha256": digest,
+                        "mime_type": mime,
+                        "expressions": ["happy"],
+                    }
+                ],
+            }
+        )
+    )
+    return PresetStickerCatalog(root), ChannelImageDeliveryPartPayload(
+        sticker_id="happy", sha256=digest, mime_type=mime
+    )
 
 
 @pytest.mark.asyncio
@@ -694,4 +787,265 @@ async def test_fresh_scheduler_reclaims_lease_without_repeating_fenced_onebot_se
             finally:
                 await recovered.close()
     finally:
+        await state.database.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("receipt", ["confirmed", "unknown"])
+@pytest.mark.parametrize("format", ["PNG", "JPEG"])
+async def test_image_cross_machine_wire_shape_and_restart_fence(
+    tmp_path: Path, receipt: str, format: str
+) -> None:
+    data = image_bytes(format=format)
+    catalog, payload = image_catalog(
+        tmp_path / "stickers", data, mime="image/png" if format == "PNG" else "image/jpeg"
+    )
+    state = await setup(tmp_path, payload, character_id="default")
+    actions: list[str] = []
+
+    async def peer(socket: ServerConnection) -> None:
+        assert socket.request is not None
+        assert socket.request.headers["Authorization"] == "Bearer fixture-token"
+        async for raw in socket:
+            message = json.loads(raw)
+            action = message["action"]
+            actions.append(action)
+            if action == "get_login_info":
+                response = {"user_id": 10001}
+            else:
+                assert action == "send_private_msg"
+                assert message["params"] == {
+                    "user_id": int(OWNER),
+                    "message": [
+                        {
+                            "type": "image",
+                            "data": {"file": "base64://" + base64.b64encode(data).decode("ascii")},
+                        }
+                    ],
+                }
+                assert str(catalog.root_path) not in json.dumps(message)
+                journal = json.loads(await state.repository.get_adapter_cursor(state.connection_id))
+                assert journal[state.part.provider_client_id] == "unknown"
+                if receipt == "unknown":
+                    await socket.close()
+                    return
+                response = {"message_id": 90009}
+            await socket.send(
+                json.dumps(
+                    {"status": "ok", "retcode": 0, "echo": message["echo"], "data": response}
+                )
+            )
+
+    try:
+        async with serve(peer, "127.0.0.1", 0) as server:
+            client = NapCatClient(
+                f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/onebot", "fixture-token"
+            )
+            await client.open()
+            client.bind_account("10001")
+            try:
+                result = await asyncio.wait_for(
+                    state.executor(client, sticker_catalog=catalog).execute_part(
+                        state.plan, state.part
+                    ),
+                    timeout=2,
+                )
+                if receipt == "confirmed":
+                    assert result.outcome is DeliveryPartOutcome.DELIVERED
+                    assert result.provider_message_id == "90009"
+                else:
+                    assert result.error is not None and result.error.code == "qq_delivery_unknown"
+                await state.reopen()
+                # Receipt reuse must work even if the catalog disappears after a send.
+                (catalog.root_path / "happy.png").unlink()
+                replay = await state.executor(client, sticker_catalog=catalog).execute_part(
+                    state.plan, state.part
+                )
+                assert replay.outcome is result.outcome
+                assert replay.provider_message_id == result.provider_message_id
+                assert actions == ["get_login_info", "send_private_msg"]
+            finally:
+                await client.close()
+    finally:
+        await state.database.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("problem", "code"),
+    [
+        ("changed", "qq_image_unavailable"),
+        ("missing", "qq_image_unavailable"),
+        ("symlink", "qq_image_unavailable"),
+        ("empty", "qq_image_unavailable"),
+        ("oversize", "qq_image_unavailable"),
+        ("mime", "qq_image_invalid"),
+        ("manifest_mime", "qq_image_unavailable"),
+        ("decoded_mime", "qq_image_invalid"),
+        ("corrupt", "qq_image_invalid"),
+        ("truncated", "qq_image_invalid"),
+        ("animated", "qq_image_invalid"),
+        ("dimension", "qq_image_invalid"),
+        ("pixel_limit", "qq_image_invalid"),
+        ("character", "qq_image_character_unsupported"),
+    ],
+)
+async def test_image_trust_boundary_fails_before_send_or_fence(
+    tmp_path: Path, problem: str, code: str
+) -> None:
+    data = image_bytes()
+    if problem == "empty":
+        data = b""
+    elif problem == "oversize":
+        data = b"x" * (5 * 1024 * 1024 + 1)
+    elif problem == "corrupt":
+        data = b"not an image"
+    elif problem == "truncated":
+        data = image_bytes(format="JPEG")[:-30]
+    elif problem == "dimension":
+        data = image_bytes(size=(8193, 1))
+    elif problem == "pixel_limit":
+        data = image_bytes(size=(4097, 4097))
+    elif problem == "animated":
+        output = io.BytesIO()
+        Image.new("RGB", (2, 2), "red").save(
+            output,
+            format="PNG",
+            save_all=True,
+            append_images=[Image.new("RGB", (2, 2), "blue")],
+        )
+        data = output.getvalue()
+    mime = "image/jpeg" if problem in {"decoded_mime", "truncated"} else "image/png"
+    catalog, payload = image_catalog(tmp_path / "stickers", data, mime=mime)
+    if problem == "mime":
+        payload = payload.model_copy(update={"mime_type": "image/gif"})
+    elif problem == "manifest_mime":
+        payload = payload.model_copy(update={"mime_type": "image/jpeg"})
+    path = catalog.root_path / "happy.png"
+    if problem == "changed":
+        path.write_bytes(image_bytes(size=(9, 9)))
+    elif problem == "missing":
+        path.unlink()
+    elif problem == "symlink":
+        external = tmp_path / "outside.png"
+        external.write_bytes(data)
+        path.unlink()
+        path.symlink_to(external)
+    state = await setup(
+        tmp_path, payload, character_id="ayachi_nene" if problem == "character" else "default"
+    )
+    client = RecordingClient()
+    try:
+        result = await state.executor(client, sticker_catalog=catalog).execute_part(
+            state.plan, state.part
+        )
+        assert result.outcome is DeliveryPartOutcome.FATAL_ERROR
+        assert result.error is not None and result.error.code == code
+        assert not client.calls
+        assert await state.repository.get_adapter_cursor(state.connection_id) == ""
+    finally:
+        await state.database.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("available", ["valid", "missing", "corrupt", "oversize"])
+async def test_learned_image_uses_current_connection_scope_and_hash(
+    tmp_path: Path, available: str
+) -> None:
+    data = b"x" * (5 * 1024 * 1024 + 1) if available == "oversize" else image_bytes()
+    payload = ChannelImageDeliveryPartPayload(
+        sticker_id="learned_scoped_image",
+        sha256=hashlib.sha256(data).hexdigest(),
+        mime_type="image/png",
+    )
+    state = await setup(tmp_path, payload, character_id="default")
+    repository = MagicMock()
+    returned = data if available != "missing" else None
+    if available == "corrupt":
+        returned = data + b"corrupted"
+    repository.get_image = AsyncMock(return_value=returned)
+    library = StickerLibraryService(
+        cast(StickerLibraryRepository, repository), cast(StickerClassifier, MagicMock())
+    )
+    client = RecordingClient()
+    try:
+        result = await state.executor(client, sticker_library=library).execute_part(
+            state.plan, state.part
+        )
+        repository.get_image.assert_awaited_once_with(
+            "local", "default", payload.sticker_id, expected_sha256=payload.sha256
+        )
+        if available == "valid":
+            assert result.outcome is DeliveryPartOutcome.DELIVERED
+            assert len(client.calls) == 1
+            assert client.calls[0][1][0]["type"] == "image"
+        else:
+            assert result.error is not None
+            assert result.error.code == (
+                "qq_image_invalid" if available == "oversize" else "qq_image_unavailable"
+            )
+            assert not client.calls
+            assert await state.repository.get_adapter_cursor(state.connection_id) == ""
+    finally:
+        await state.database.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stop", ["cancel", "disable", "task_cancel"])
+async def test_image_load_cancellation_never_publishes_late_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop: str
+) -> None:
+    data = image_bytes()
+    catalog, payload = image_catalog(tmp_path / "stickers", data)
+    state = await setup(tmp_path, payload, character_id="default")
+    client = RecordingClient()
+    read_started = asyncio.Event()
+    release_read = threading.Event()
+    loop = asyncio.get_running_loop()
+    load = catalog.load_sticker_bytes
+
+    def gated_load(sticker_id: str, expected_sha256: str) -> bytes | None:
+        loop.call_soon_threadsafe(read_started.set)
+        if not release_read.wait(timeout=5):
+            raise TimeoutError("test did not release image read")
+        return load(sticker_id, expected_sha256)
+
+    monkeypatch.setattr(catalog, "load_sticker_bytes", gated_load)
+    task = asyncio.create_task(
+        state.executor(client, sticker_catalog=catalog).execute_part(state.plan, state.part)
+    )
+    try:
+        await asyncio.wait_for(read_started.wait(), timeout=2)
+        if stop == "cancel":
+            await state.repository.cancel_remaining_delivery_parts(
+                state.plan.delivery_id,
+                ChannelDeliveryPartsCancelRequest(
+                    reason="interrupted", requested_at=datetime.now(UTC)
+                ),
+            )
+        elif stop == "disable":
+            connection = await state.repository.get_connection(state.connection_id)
+            assert connection is not None
+            await state.repository.update_connection(
+                connection.configuration.model_copy(update={"enabled": False}),
+                expected_revision=connection.revision,
+                access_token_hash=None,
+                updated_at=datetime.now(UTC),
+            )
+        else:
+            task.cancel()
+        release_read.set()
+        if stop == "task_cancel":
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        else:
+            result = await asyncio.wait_for(task, timeout=2)
+            assert result.error is not None and result.error.code == "qq_delivery_cancelled"
+        assert not client.calls
+        assert await state.repository.get_adapter_cursor(state.connection_id) == ""
+    finally:
+        release_read.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
         await state.database.close()

@@ -343,6 +343,8 @@ class RuntimeContainer:
             self.event_hub,
             self.channel_voice.audio_root,
             self.channel_voice.on_plan_terminal,
+            sticker_catalog=self.sticker_catalog,
+            sticker_library=self.sticker_library,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,

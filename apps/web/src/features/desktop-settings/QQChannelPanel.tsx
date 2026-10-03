@@ -18,7 +18,8 @@ import { SettingsIcon } from "./SettingsIcon";
 import { SettingsToggle } from "./SettingsPrimitives";
 import "./qq-channel-panel.css";
 
-type Operation = "start" | "cancel" | "test" | "toggle" | "disconnect";
+type Operation =
+  "start" | "cancel" | "test" | "toggle" | "stickers" | "disconnect";
 
 export function QQChannelPanel({
   characterId,
@@ -241,7 +242,7 @@ export function QQChannelPanel({
   };
 
   const operateConnection = async (
-    action: "test" | "toggle" | "disconnect",
+    action: "test" | "toggle" | "stickers" | "disconnect",
   ) => {
     if (!connection || operation || !runtimeOnline || !connectionVerified)
       return;
@@ -264,7 +265,15 @@ export function QQChannelPanel({
                 id,
                 {
                   ...connection.configuration,
-                  enabled: !connection.configuration.enabled,
+                  ...(action === "stickers"
+                    ? {
+                        presentation_policy: {
+                          ...connection.configuration.presentation_policy,
+                          profile: "instant_message" as const,
+                          stickers_enabled: !stickersEnabled,
+                        },
+                      }
+                    : { enabled: !connection.configuration.enabled }),
                 },
                 connection.revision,
               );
@@ -282,6 +291,10 @@ export function QQChannelPanel({
   };
 
   const busy = operation !== null || loading;
+  const stickersEnabled =
+    connection?.configuration.presentation_policy?.profile ===
+      "instant_message" &&
+    connection.configuration.presentation_policy.stickers_enabled === true;
   const pending = pairing?.status === "pending";
   const endpointValid = validEndpoint(endpoint);
   const health = !runtimeOnline
@@ -335,6 +348,16 @@ export function QQChannelPanel({
             disabled={!runtimeOnline || busy || !connectionVerified}
             onChange={() => void operateConnection("toggle")}
           />
+          {characterId === "default" &&
+          connection.capabilities?.outbound_message_kinds?.includes("image") ? (
+            <SettingsToggle
+              label="允许角色发送表情图片"
+              description="角色可以根据对话附上表情；关闭后仍可理解你发来的静态图片。"
+              checked={stickersEnabled}
+              disabled={!runtimeOnline || busy || !connectionVerified}
+              onChange={() => void operateConnection("stickers")}
+            />
+          ) : null}
           <div className="qq-channel-actions">
             <button
               className="channels-settings-primary-action"
