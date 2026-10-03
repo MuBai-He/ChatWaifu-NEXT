@@ -26,6 +26,7 @@ qq_napcat:
     - Dedicated NapCat container recreation preserved mounts, connection and full ledger identities/journal; role-account quick-login startup setting added, manual QQ reauthentication restored authenticated OneBot and existing Runtime connection without re-pairing or replay
     - Temporarily stopped only the dedicated staging TTS service; real owner voice request failed before audio publication and delivered one text reply with failure explanation, confirmed on phone; TTS service restored active
     - Phase B adds authenticated bounded image streams, ephemeral owner image understanding, opt-in local sticker delivery and permissioned durable reply references; quoted history cannot authorize voice
+    - Phase B source 359d080 deployed to the independent Linux stage with all 1449 tracked hashes matched; 278 Linux QQ checks passed, Web assets HTTP 200 and authenticated same-account OneBot RPC online; four existing turn and delivery identities and original services/resources preserved
     - Phase B independent review fixes raw-ID ambiguity before privacy filtering, rejects retention-disabled burst bypass and registers historical quote photo-deletion lineage
     - Phase B full Python passed 2219 checks with 46 platform skips; full Web passed 334 checks; Python strict typing, Ruff, TypeScript checks and lint, Web and desktop UI builds passed
   remaining:

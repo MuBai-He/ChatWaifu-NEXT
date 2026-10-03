@@ -255,3 +255,20 @@ The earlier native Rust packaging limitation is unchanged; no Rust code changed.
 Real phone visual understanding, received sticker display and reply display remain
 pending. Static PNG/JPEG and existing stickers do not claim arbitrary photo
 generation, animated market stickers, quote-image replay or phase D capability.
+
+Phase B commit `359d0808b0910a062110d5b65c97c1abe7075d3c` is now deployed to
+the dedicated Linux stage. All 1449 tracked file hashes matched the source
+manifest. The complete Linux QQ adapter, Runtime integration, recovery, outgoing
+image and quote suites passed **278 tests**. The refreshed Web index and both
+referenced assets returned HTTP 200. An authenticated active OneBot probe
+confirmed the same paired QQ account online, with no QQ sends from the probe.
+
+Before/after deployment captures retained the same four accepted turn,
+generation, delivery and part identities, attempt 1, receipts and send journal;
+no nonterminal work remained. Only the dedicated Runtime and Web units were
+restarted. The dedicated NapCat container and TTS process, the original three
+services, and all 22 protected model/reference/configuration hashes were
+unchanged. Source, database and Web backups are private to the stage. Evidence is
+`validation/QQ-PHASE-B-DEPLOY-RPC.json` and the `RECOVERY-before/after-phase-b-deploy`
+captures. These checks establish deployment and preserved state, not phone image
+understanding or quote/sticker display.
