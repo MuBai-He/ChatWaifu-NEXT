@@ -795,3 +795,67 @@ enabled revision one and preview reason `no_owner_activity`, with null owner
 anchor and zero reservations. All previously admitted private inputs preceded
 this policy revision; no old idle backlog was exposed by enabling. This is
 actual server policy/anchor evidence, not a proactive phone-receipt claim.
+
+## D2 first-window timeout corrected; same single test rearmed (2026-10-04)
+
+The owner correctly reported having sent the requested fresh private message.
+Root's earlier no-input summary was inaccurate: read-only SQLite showed the
+text "我先离开一会儿" admitted at **06:09:12.403915 Asia/Shanghai**, with a
+completed normal reply. The controller's original window ended at
+**06:09:49.093707**, leaving only **36.689792 seconds**. Two-minute eligibility
+would start at 06:11:12, after that operator window had already closed. This
+was an incomplete test window, not an inbound-message failure or a proactive
+phone acceptance. No outbound intent or proactive send was attempted.
+
+The terminal controller recorded `test_deadline_reached`, exit **one**, and
+`restored_off=true`. Independent authenticated policy, preview and history reads
+plus read-only SQLite verified exact restoration of the previous disabled
+policy at revision **two**, `disabled` preview, zero intents and valid foreign
+keys. The private connection remained ready, continuous preset stickers stayed
+enabled, and the selected group remained enabled at revision nine. The evidence
+under `validation/d2-live-plan-2y5vgln_/root-post-timeout-verification.json`
+explicitly corrects the earlier no-input summary. Only the already-terminal
+test controller's failed unit marker was reset; evidence was preserved.
+
+Under the existing explicit, still-unspent **one-test** approval, a new typed
+proposal used expected revision two and the same temporary policy. The reviewed
+operator controller now grants at least **five minutes after observing its
+first fresh owner anchor**, with a **fifteen-minute total hard limit**. It still
+restores the exact previous disabled policy, preserves any newer operator
+revision and calls neither model nor QQ send APIs. Syntax and early/middle/late
+anchor deadline calculations were checked before launch.
+
+The actual transient unit `cw2-qq-d2-once-test-dv8t6e4b.service` was verified
+active/running with a nonzero PID. Separate authenticated readback confirmed
+enabled revision **three**, empty intent history, zero reservations and
+`no_owner_activity`; a fresh owner input is required for this new revision.
+Private proposal, controller and readback evidence are retained under
+`validation/d2-live-retry-dv8t6e4b/`. The phone step was requested again;
+proactive receipt and this new revision's disabled cleanup remain pending.
+
+## D2 one real owner-idle proactive text accepted; default off restored (2026-10-04)
+
+The fresh private owner input was admitted at **06:21:02.299952 Asia/Shanghai**.
+Root independently observed `idle_threshold_not_reached` and a next-eligible
+time of 06:23:02 while the controller was still running. The owner subsequently
+confirmed **"收到额外的主动文字"**. Authenticated history and read-only SQLite
+matched this anchor to exactly **one** outbound intent at policy revision three,
+reserved after **120.057018 seconds**, with settled reason `delivered`, one
+delivered text part and a real provider message receipt. There were no image
+or voice parts in this proactive delivery.
+
+The bounded controller completed with `one_intent_terminal`, `ok=true`,
+`restored_off=true`, `Result=success`, normal exit **zero** and no running PID.
+Separate root authenticated readback verified exact restoration of the previous
+disabled policy at revision **four**, a `disabled` preview, and only the single
+settled intent in history. Private readiness, permanent preset stickers,
+the selected group at revision nine and valid foreign keys were preserved.
+Only this completed transient test unit was stopped after evidence capture.
+Private raw intent, owner input, text part/receipt and handset confirmation are
+retained in `validation/d2-live-retry-dv8t6e4b/root-phone-proactive-acceptance.json`.
+
+This accepts the **single owner-idle proactive text plus exact default-off
+cleanup** case. The original incomplete window remains recorded above.
+Quiet hours, revocation, input cancellation, restart and uncertain-send phone
+checks remain separate; this one-test opt-in does not authorize ongoing
+proactive delivery. Group-resume and private quote display are also pending.
