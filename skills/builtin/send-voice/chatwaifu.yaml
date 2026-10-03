@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "channel.voice",
+      "version": "1.0.0",
+      "name": "发送角色语音",
+      "description": "主人要求用语音说话、回复、朗读、读给我听时，发送当前角色的语音消息。send voice or read aloud.",
+      "capabilities":
+        [
+          {
+            "name": "send_voice",
+            "description": "将 text 作为本轮完整回复，用当前角色声音发送到当前已绑定私聊。只在用户明确要求本轮语音时调用。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "text":
+                      { "type": "string", "minLength": 1, "maxLength": 2000 },
+                  },
+                "required": ["text"],
+                "additionalProperties": false,
+              },
+            "output_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "delivery_status":
+                      { "enum": ["delivered", "text_fallback"] },
+                    "spoken_text": { "type": "string" },
+                    "delivery_id": { "type": "string" },
+                  },
+                "required": ["delivery_status", "spoken_text", "delivery_id"],
+                "additionalProperties": false,
+              },
+            "side_effect": "external_communication",
+            "required_permissions": ["channel.current_reply.voice"],
+            "confirmation_required": true,
+            "timeout_seconds": 120,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "channel_voice" },
+}

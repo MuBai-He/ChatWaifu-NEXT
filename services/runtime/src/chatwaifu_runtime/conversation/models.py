@@ -152,6 +152,7 @@ class ConversationTurnOptions:
     origin: ConversationOrigin = "local_text"
     output_modes: frozenset[ConversationOutputMode] = frozenset({"text", "audio", "avatar"})
     allow_tools: bool = True
+    allowed_skill_ids: frozenset[str] | None = None
     source_context: ConversationSourceContext | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None

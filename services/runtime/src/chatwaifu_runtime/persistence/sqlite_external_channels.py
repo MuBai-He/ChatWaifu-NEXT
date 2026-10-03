@@ -103,6 +103,9 @@ def _validate_delivery_part_drafts(parts: Sequence[ChannelDeliveryPartDraft]) ->
                     raise ValueError("image delivery part must follow required text parts")
                 if draft.required:
                     raise ValueError("image delivery part must be optional")
+            elif draft.kind is ChannelDeliveryPartKind.AUDIO:
+                if num_parts != 1 or not draft.required:
+                    raise ValueError("audio delivery must be the sole required part")
             else:
                 raise ValueError(f"unsupported delivery part kind {draft.kind}")
 
@@ -664,7 +667,19 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             # Both normal output and recovery notices lose to a prior interrupt.
             # Check in the same transaction that creates delivery parts.
             allowed_statuses = ("accepted", "processing")
-            if row["status"] not in allowed_statuses or row["delivery_id"] is not None:
+            existing_audio = False
+            if row["delivery_id"] is not None:
+                cursor = await connection.execute(
+                    "SELECT kind FROM channel_delivery_parts WHERE delivery_id = ? "
+                    "ORDER BY ordinal LIMIT 1",
+                    (str(row["delivery_id"]),),
+                )
+                first = await cursor.fetchone()
+                await cursor.close()
+                existing_audio = first is not None and first["kind"] == "audio"
+            if row["status"] not in allowed_statuses or (
+                row["delivery_id"] is not None and not existing_audio
+            ):
                 cursor = await connection.execute(
                     _TURN_SELECT + " WHERE t.channel_turn_id = ?", (str(channel_turn_id),)
                 )
@@ -751,6 +766,75 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                         persisted_events.append(persisted)
             else:
                 resolved_delivery = UUID(str(existing_delivery))
+                # A voice plan owns the reply; successful audio needs no duplicate text.
+                # Definite failure may append a text recovery under the same durable aggregate.
+                cursor = await connection.execute(
+                    "SELECT d.status, p.payload_json, p.last_error_json FROM channel_deliveries d "
+                    "JOIN channel_delivery_parts p ON p.delivery_id = d.delivery_id "
+                    "WHERE d.delivery_id = ? AND p.ordinal = 0",
+                    (str(resolved_delivery),),
+                )
+                voice = await cursor.fetchone()
+                await cursor.close()
+                if voice is not None and voice["status"] in {"failed", "cancelled"}:
+                    fallback = ChannelTextDeliveryPartPayload(text=reply_text)
+                    await connection.execute(
+                        "UPDATE channel_delivery_parts SET required = 0 "
+                        "WHERE delivery_id = ? AND ordinal = 0 "
+                        "AND status IN ('failed', 'cancelled')",
+                        (str(resolved_delivery),),
+                    )
+                    await connection.execute(
+                        "INSERT INTO channel_delivery_parts(part_id, delivery_id, ordinal, kind, "
+                        "payload_json, "
+                        "required, status, delay_after_ms, attempt, provider_client_id, "
+                        "created_at, updated_at) "
+                        "VALUES (?, ?, 1, 'text', ?, 1, 'pending', 0, 0, ?, ?, ?)",
+                        (
+                            str(uuid4()),
+                            str(resolved_delivery),
+                            fallback.model_dump_json(),
+                            f"chatwaifu-{resolved_delivery.hex}-001",
+                            completed_at.isoformat(),
+                            completed_at.isoformat(),
+                        ),
+                    )
+                    await connection.execute(
+                        "UPDATE channel_deliveries SET status = 'pending', last_error_json = NULL, "
+                        "plan_version = plan_version + 1, "
+                        "cancel_requested_at = NULL, "
+                        "lease_id = NULL, lease_expires_at = NULL, updated_at = ? "
+                        "WHERE delivery_id = ?",
+                        (completed_at.isoformat(), str(resolved_delivery)),
+                    )
+                    if self._event_store is not None:
+                        ctx = await self._get_turn_context_tx(connection, resolved_delivery)
+                        if ctx is not None:
+                            persisted_events.append(
+                                await self._event_store.append_in_transaction(
+                                    connection,
+                                    GenericCoreEvent.model_validate(
+                                        {
+                                            "event_id": uuid4(),
+                                            "event_type": "channel.delivery_plan_created",
+                                            "session_id": ctx.session_id,
+                                            "turn_id": ctx.turn_id,
+                                            "generation_id": ctx.generation_id,
+                                            "occurred_at": completed_at,
+                                            "source": "runtime.external_channels",
+                                            "privacy": PrivacyLevel.PRIVATE,
+                                            "payload": {
+                                                "connection_id": str(ctx.connection_id),
+                                                "channel_turn_id": str(ctx.channel_turn_id),
+                                                "delivery_id": str(resolved_delivery),
+                                                "part_count": 2,
+                                                "plan_version": 2,
+                                                "recovery": "voice_text_fallback",
+                                            },
+                                        }
+                                    ),
+                                )
+                            )
             await connection.execute(
                 """
                 UPDATE channel_turns SET status = ?, reply_text = ?,
@@ -806,7 +890,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         persisted_events: list[GenericCoreEvent] = []
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
-                "SELECT connection_id, delivery_id FROM channel_turns WHERE channel_turn_id = ?",
+                "SELECT connection_id, delivery_id, status FROM channel_turns "
+                "WHERE channel_turn_id = ?",
                 (str(channel_turn_id),),
             )
             turn_row = await cursor.fetchone()
@@ -814,6 +899,24 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if turn_row is None:
                 raise KeyError(f"unknown channel turn {channel_turn_id}")
             connection_id = str(turn_row["connection_id"])
+            if any(draft.kind is ChannelDeliveryPartKind.AUDIO for draft in parts):
+                if (
+                    turn_row["status"] not in {"accepted", "processing"}
+                    or turn_row["delivery_id"] is not None
+                ):
+                    raise ValueError("voice delivery requires an active turn without another plan")
+                cursor = await connection.execute(
+                    "SELECT enabled, deleted_at FROM channel_connections WHERE connection_id = ?",
+                    (connection_id,),
+                )
+                owner_connection = await cursor.fetchone()
+                await cursor.close()
+                if (
+                    owner_connection is None
+                    or not owner_connection["enabled"]
+                    or owner_connection["deleted_at"] is not None
+                ):
+                    raise ValueError("voice connection is disabled or removed")
 
             cursor = await connection.execute(
                 "SELECT delivery_id FROM channel_deliveries WHERE delivery_id = ?",
@@ -1232,6 +1335,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     ChannelDeliveryPartStatus.FAILED,
                     ChannelDeliveryPartStatus.CANCELLED,
                 }:
+                    if not prow["required"]:
+                        continue
                     return None
                 target_part = prow
                 break

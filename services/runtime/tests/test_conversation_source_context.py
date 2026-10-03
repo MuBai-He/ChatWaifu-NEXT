@@ -415,7 +415,7 @@ async def test_budget_omitted_index_keeps_actual_child_for_separate_confirmation
     monkeypatch.setitem(container.runtime_skills._builtin._handlers, "public_web_read", read)
     try:
         session = await container.sessions.create_session("default")
-        assert len(container.runtime_skills.list()) == 12
+        assert len(container.runtime_skills.list()) == 13
         for text, decision in (
             (f"请读取网页 {_URL}，保留目录链接。", "allow_once"),
             ("请打开刚才目录实际返回的 Info 网页，不要猜地址。", child_decision),

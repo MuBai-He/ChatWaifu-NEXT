@@ -221,6 +221,7 @@ class ExternalChannelService:
         sticker_library: StickerLibraryService | None = None,
         photo_observer: PhotoMemoryObserver | None = None,
         burst_scheduler: BurstScheduler | None = None,
+        tool_policy: Callable[[ChannelConnectionConfiguration, str], frozenset[str]] | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -230,6 +231,7 @@ class ExternalChannelService:
         self._event_hub = event_hub
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
+        self._tool_policy = tool_policy
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
         self._photo_observer = photo_observer
@@ -555,8 +557,15 @@ class ExternalChannelService:
                 return _normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
+        allowed_skills: frozenset[str] = (
+            self._tool_policy(connection.configuration, message.text)
+            if self._tool_policy is not None
+            else frozenset()
+        )
         options = replace(
             EXTERNAL_TEXT_TURN_OPTIONS,
+            allow_tools=bool(allowed_skills),
+            allowed_skill_ids=allowed_skills,
             source_context=source_context,
             presentation_profile=profile,
             failure_recovery_text=recovery_text,

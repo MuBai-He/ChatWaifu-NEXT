@@ -117,6 +117,74 @@
       "title": "ChannelConnectionConfiguration",
       "type": "object"
     },
+    "ChannelConnectionSnapshot": {
+      "description": "Persisted connection state safe to expose to local settings clients.\n\n``account_key`` and ``allowed_sender_keys`` remain local, non-secret,\nprovider-scoped identifiers. They are never credentials and should not be\nforwarded to a conversation peer.",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/ChannelProviderCapabilities"
+        },
+        "configuration": {
+          "$ref": "#/$defs/ChannelConnectionConfiguration"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Seen At"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelConnectionStatus",
+          "default": "untested"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "configuration",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelConnectionSnapshot",
+      "type": "object"
+    },
     "ChannelConnectionStatus": {
       "enum": [
         "untested",
@@ -399,21 +467,32 @@
       "type": "object"
     }
   },
-  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-connection-snapshot.schema.json",
-  "description": "Persisted connection state safe to expose to local settings clients.\n\n``account_key`` and ``allowed_sender_keys`` remain local, non-secret,\nprovider-scoped identifiers. They are never credentials and should not be\nforwarded to a conversation peer.",
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-pairing-snapshot.schema.json",
   "properties": {
-    "capabilities": {
-      "$ref": "#/$defs/ChannelProviderCapabilities"
+    "account_label": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Account Label"
     },
-    "configuration": {
-      "$ref": "#/$defs/ChannelConnectionConfiguration"
+    "connection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ChannelConnectionSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
-    "created_at": {
-      "format": "date-time",
-      "title": "Created At",
-      "type": "string"
-    },
-    "last_error": {
+    "error": {
       "anyOf": [
         {
           "$ref": "#/$defs/StructuredError"
@@ -424,10 +503,14 @@
       ],
       "default": null
     },
-    "last_seen_at": {
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "pairing_code": {
       "anyOf": [
         {
-          "format": "date-time",
           "type": "string"
         },
         {
@@ -435,12 +518,18 @@
         }
       ],
       "default": null,
-      "title": "Last Seen At"
+      "title": "Pairing Code"
     },
-    "revision": {
-      "minimum": 1,
-      "title": "Revision",
-      "type": "integer"
+    "pairing_id": {
+      "format": "uuid",
+      "title": "Pairing Id",
+      "type": "string"
+    },
+    "provider_id": {
+      "const": "qq_napcat",
+      "default": "qq_napcat",
+      "title": "Provider Id",
+      "type": "string"
     },
     "schema_version": {
       "const": "1.0",
@@ -449,22 +538,23 @@
       "type": "string"
     },
     "status": {
-      "$ref": "#/$defs/ChannelConnectionStatus",
-      "default": "untested"
-    },
-    "updated_at": {
-      "format": "date-time",
-      "title": "Updated At",
+      "enum": [
+        "pending",
+        "confirmed",
+        "cancelled",
+        "expired",
+        "failed"
+      ],
+      "title": "Status",
       "type": "string"
     }
   },
   "required": [
-    "configuration",
-    "revision",
-    "created_at",
-    "updated_at"
+    "pairing_id",
+    "status",
+    "expires_at"
   ],
-  "title": "ChannelConnectionSnapshot",
+  "title": "ChannelPairingSnapshot",
   "type": "object",
   "x-schema-version": "1.0"
 }

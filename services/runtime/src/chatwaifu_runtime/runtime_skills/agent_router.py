@@ -119,6 +119,7 @@ class ProjectedSkillTool:
     input_schema: JsonObject
     side_effect: SideEffect
     confirmation_required: bool
+    completes_channel_reply: bool = False
 
     def to_invocation(self, arguments: JsonObject) -> SkillInvocation:
         """Map provider arguments back to the permissioned Runtime Skill gateway."""
@@ -193,6 +194,8 @@ class RuntimeSkillRouter:
                 input_schema=deepcopy(candidate.input_schema),
                 side_effect=candidate.capability.side_effect,
                 confirmation_required=candidate.capability.confirmation_required,
+                completes_channel_reply=candidate.skill.source == "builtin"
+                and candidate.skill.skill_id == "channel.voice",
             )
             for candidate, name in zip(selected, names, strict=True)
         )

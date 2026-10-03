@@ -391,8 +391,12 @@ class AgentTurnOrchestrator:
                 allow_tools=allow_tools,
                 supports_tool_calling=effective_llm.supports_tool_calling,
             )
+        channel_reply = any(getattr(tool, "completes_channel_reply", False) for tool in projections)
+        if channel_reply:
+            request = replace(request, tool_choice="required")
         if (
             projections
+            and not channel_reply
             and source_context is not None
             and can_reuse_prior_sources(request.user_text, source_context)
         ):
@@ -586,6 +590,21 @@ class AgentTurnOrchestrator:
                     results=results,
                 ),
             )
+            for result in results:
+                projection = mapped.get(result.name)
+                if not getattr(projection, "completes_channel_reply", False) or result.is_error:
+                    continue
+                if isinstance(result.content, dict) and result.content.get("ok") is True:
+                    data = result.content.get("data")
+                    if isinstance(data, dict) and data.get("delivery_status") in {
+                        "delivered",
+                        "text_fallback",
+                    }:
+                        spoken = data.get("spoken_text")
+                        if isinstance(spoken, str) and spoken.strip():
+                            ensure_current()
+                            yield spoken
+                            return
             # The correction is only for the missing initial call, not a lasting
             # instruction to keep calling tools after a result or write.
             tool_request = replace(

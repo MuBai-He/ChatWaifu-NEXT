@@ -164,6 +164,19 @@ class ConversationService:
             supports_tool_calling=chat_provider.supports_tool_calling,
         )
 
+        if options.allowed_skill_ids is not None:
+            visible_tools = tuple(
+                tool
+                for tool in visible_tools
+                if tool.to_invocation({}).skill_id in options.allowed_skill_ids
+            )
+        else:
+            # Current channel replies require an explicit channel capability policy.
+            visible_tools = tuple(
+                tool
+                for tool in visible_tools
+                if not getattr(tool, "completes_channel_reply", False)
+            )
         tools_digest = compute_tools_digest(visible_tools)
         chat_route = extract_nonsecret_route(chat_config)
         summary_route = extract_nonsecret_route(summary_config)

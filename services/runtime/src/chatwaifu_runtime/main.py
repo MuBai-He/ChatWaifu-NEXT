@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from chatwaifu_runtime.api.channel_pairing_routes import router as channel_pairing_router
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
 from chatwaifu_runtime.api.interaction_diagnostics_routes import (
     router as interaction_diagnostics_router,
@@ -87,6 +88,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> JSONResponse:
         if _request.url.path.startswith("/v1/personal-assistant/oauth/"):
             return JSONResponse(status_code=422, content={"detail": "授权请求格式无效"})
+        if _request.url.path.startswith("/v1/channel-pairing-sessions"):
+            return JSONResponse(status_code=422, content={"detail": "QQ 配对请求格式无效。"})
         if _request.url.path != "/v1/realtime/configuration":
             return await request_validation_exception_handler(_request, exc)
         # Both error locations and custom messages can contain submitted text.
@@ -127,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ticket_store=container.ws_ticket_store,
     )
     app.include_router(router)
+    app.include_router(channel_pairing_router)
     app.include_router(interaction_diagnostics_router)
     app.include_router(personal_assistant_router)
     app.include_router(sticker_library_router)

@@ -1340,6 +1340,61 @@
       "title": "AvatarInteractionEvent",
       "type": "object"
     },
+    "ChannelAudioDeliveryPartPayload": {
+      "properties": {
+        "asset_id": {
+          "format": "uuid",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "maximum": 120000,
+          "minimum": 1,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "audio",
+          "default": "audio",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "default": "audio/wav",
+          "enum": [
+            "audio/wav",
+            "audio/mpeg"
+          ],
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "sha256",
+        "duration_ms",
+        "text"
+      ],
+      "title": "ChannelAudioDeliveryPartPayload",
+      "type": "object"
+    },
     "ChannelAuthorizationMethod": {
       "description": "Interactive authorization methods exposed to trusted local clients.",
       "enum": [
@@ -1985,7 +2040,8 @@
     "ChannelDeliveryPartKind": {
       "enum": [
         "text",
-        "image"
+        "image",
+        "audio"
       ],
       "title": "ChannelDeliveryPartKind",
       "type": "string"
@@ -2095,6 +2151,7 @@
         "payload": {
           "discriminator": {
             "mapping": {
+              "audio": "#/$defs/ChannelAudioDeliveryPartPayload",
               "image": "#/$defs/ChannelImageDeliveryPartPayload",
               "text": "#/$defs/ChannelTextDeliveryPartPayload"
             },
@@ -2106,6 +2163,9 @@
             },
             {
               "$ref": "#/$defs/ChannelImageDeliveryPartPayload"
+            },
+            {
+              "$ref": "#/$defs/ChannelAudioDeliveryPartPayload"
             }
           ],
           "title": "Payload"
@@ -2739,10 +2799,144 @@
       "description": "Message payload kinds understood by this schema major.",
       "enum": [
         "text",
-        "image"
+        "image",
+        "audio"
       ],
       "title": "ChannelMessageKind",
       "type": "string"
+    },
+    "ChannelPairingSnapshot": {
+      "properties": {
+        "account_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Label"
+        },
+        "connection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelConnectionSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "pairing_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pairing Code"
+        },
+        "pairing_id": {
+          "format": "uuid",
+          "title": "Pairing Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "const": "qq_napcat",
+          "default": "qq_napcat",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "confirmed",
+            "cancelled",
+            "expired",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pairing_id",
+        "status",
+        "expires_at"
+      ],
+      "title": "ChannelPairingSnapshot",
+      "type": "object"
+    },
+    "ChannelPairingStartRequest": {
+      "properties": {
+        "access_token": {
+          "format": "password",
+          "maxLength": 4096,
+          "minLength": 16,
+          "title": "Access Token",
+          "type": "string",
+          "writeOnly": true
+        },
+        "character_id": {
+          "default": "default",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Character Id",
+          "type": "string"
+        },
+        "endpoint": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "provider_id": {
+          "const": "qq_napcat",
+          "default": "qq_napcat",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "endpoint",
+        "access_token"
+      ],
+      "title": "ChannelPairingStartRequest",
+      "type": "object"
     },
     "ChannelPresentationPolicy": {
       "description": "Provider-neutral cadence and bubble planning rules for channel outbound deliveries.",
@@ -10542,6 +10736,12 @@
     "channel_inbound_text": {
       "$ref": "#/$defs/ChannelInboundTextMessage"
     },
+    "channel_pairing": {
+      "$ref": "#/$defs/ChannelPairingSnapshot"
+    },
+    "channel_pairing_start_request": {
+      "$ref": "#/$defs/ChannelPairingStartRequest"
+    },
     "channel_presentation_policy": {
       "$ref": "#/$defs/ChannelPresentationPolicy"
     },
@@ -10751,6 +10951,8 @@
     "channel_authorization_start_request",
     "channel_authorization_verification_request",
     "channel_authorization",
+    "channel_pairing_start_request",
+    "channel_pairing",
     "channel_provider",
     "channel_presentation_policy",
     "channel_connection_configuration",
