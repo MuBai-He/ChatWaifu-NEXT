@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as runtimeEndpoint from "../runtimeEndpoint";
 
 import {
   cancelQQPairing,
@@ -8,7 +9,86 @@ import {
 } from "./qqClient";
 
 describe("QQ pairing client", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    runtimeEndpoint.setRemoteRuntimeConnection(null);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["start", "poll", "cancel", "health"] as const)(
+    "pins %s to the originating Runtime during slow endpoint resolution",
+    async (kind) => {
+      const first = {
+        baseUrl: "https://runtime-a.example",
+        token: "private-a",
+      };
+      runtimeEndpoint.setRemoteRuntimeConnection(first);
+      const expectedContext = await runtimeEndpoint.readRuntimeRequestContext();
+      let finish!: (value: runtimeEndpoint.RuntimeConnection) => void;
+      vi.spyOn(runtimeEndpoint, "resolveRuntimeConnection").mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const options = { expectedContext };
+      const request =
+        kind === "start"
+          ? startQQPairing(
+              "ws://127.0.0.1:3001",
+              "test-access-token",
+              "default",
+              options,
+            )
+          : kind === "poll"
+            ? getQQPairing(pending().pairing_id, 20, undefined, options)
+            : kind === "cancel"
+              ? cancelQQPairing(pending().pairing_id, options)
+              : testQQChannelConnection(
+                  connection().configuration.connection_id,
+                  undefined,
+                  options,
+                );
+      const second = {
+        baseUrl: "https://runtime-b.example",
+        token: "private-b",
+      };
+      runtimeEndpoint.setRemoteRuntimeConnection(second);
+      finish(second);
+      await expect(request).rejects.toThrow("上下文已变化");
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses the origin credential and discards a late successful pairing response", async () => {
+    const first = { baseUrl: "https://runtime-a.example", token: "private-a" };
+    runtimeEndpoint.setRemoteRuntimeConnection(first);
+    const expectedContext = await runtimeEndpoint.readRuntimeRequestContext();
+    let finish!: (value: Response) => void;
+    const fetchMock = vi.fn<typeof fetch>().mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const request = getQQPairing(pending().pairing_id, 0, undefined, {
+      expectedContext,
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `https://runtime-a.example/v1/channel-pairing-sessions/${pending().pairing_id}?wait_seconds=0`,
+    );
+    expect(
+      new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization"),
+    ).toBe("Bearer private-a");
+    runtimeEndpoint.setRemoteRuntimeConnection({
+      baseUrl: "https://runtime-b.example",
+      token: "private-b",
+    });
+    finish(jsonResponse(pending()));
+    await expect(request).rejects.toThrow("上下文已变化");
+  });
 
   it("sends an authenticated Runtime pairing request without manual owner identifiers", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(pending()));

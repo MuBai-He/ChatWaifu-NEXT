@@ -7,7 +7,17 @@ import {
 } from "@chatwaifu/protocol";
 import { z } from "zod";
 
-import { mutationReceiptSchema, requestRuntime, runtimeParser } from "./http";
+import {
+  mutationReceiptSchema,
+  requestRuntime,
+  runtimeParser,
+  type RuntimeRequestInit,
+} from "./http";
+
+export type ChannelRequestOptions = Pick<
+  RuntimeRequestInit,
+  "expectedContext" | "signal"
+>;
 
 const channelAuthorizationSnapshotParser = runtimeParser(
   parseChannelAuthorizationSnapshot,
@@ -29,11 +39,12 @@ export type ChannelPresentationPolicy = ProtocolChannelPresentationPolicy;
 
 export async function getChannelConnections(
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelConnectionSnapshot[]> {
   const response = await requestRuntime(
     "/v1/channel-connections",
     channelConnectionsResponseSchema,
-    { signal },
+    { ...options, signal: signal ?? options.signal },
   );
   return response.items.map(parseChannelConnectionSnapshot);
 }
@@ -98,11 +109,12 @@ export async function cancelChannelAuthorization(
 
 export async function deleteChannelConnection(
   connectionId: string,
+  options: ChannelRequestOptions = {},
 ): Promise<void> {
   await requestRuntime(
     `/v1/channel-connections/${encodeURIComponent(connectionId)}`,
     mutationReceiptSchema,
-    { method: "DELETE" },
+    { method: "DELETE", ...options },
   );
 }
 
@@ -111,6 +123,7 @@ export async function updateChannelConnection(
   configuration: ChannelConnectionSnapshot["configuration"],
   expectedRevision: number,
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelConnectionSnapshot> {
   const response = await requestRuntime(
     `/v1/channel-connections/${encodeURIComponent(connectionId)}?expected_revision=${encodeURIComponent(expectedRevision)}`,
@@ -118,7 +131,8 @@ export async function updateChannelConnection(
     {
       method: "PUT",
       body: JSON.stringify(configuration),
-      signal,
+      ...options,
+      signal: signal ?? options.signal,
     },
   );
   return parseChannelConnectionSnapshot(response.connection);
@@ -128,6 +142,7 @@ export async function updateChannelPresentationPolicy(
   connection: ChannelConnectionSnapshot,
   presentationPolicy: ChannelPresentationPolicy,
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelConnectionSnapshot> {
   const configuration: ChannelConnectionSnapshot["configuration"] = {
     ...connection.configuration,
@@ -138,5 +153,6 @@ export async function updateChannelPresentationPolicy(
     configuration,
     connection.revision,
     signal,
+    options,
   );
 }

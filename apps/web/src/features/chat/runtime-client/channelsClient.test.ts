@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as runtimeEndpoint from "../runtimeEndpoint";
 
 import {
   cancelChannelAuthorization,
   deleteChannelConnection,
   getChannelAuthorization,
+  getChannelConnections,
   startChannelAuthorization,
   updateChannelConnection,
   updateChannelPresentationPolicy,
@@ -12,8 +14,62 @@ import {
 
 describe("external channels client", () => {
   afterEach(() => {
+    runtimeEndpoint.setRemoteRuntimeConnection(null);
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+
+  it.each(["read", "update", "presentation", "delete"] as const)(
+    "guards optional %s context without changing legacy endpoint behavior",
+    async (kind) => {
+      const first = {
+        baseUrl: "https://runtime-a.example",
+        token: "private-a",
+      };
+      runtimeEndpoint.setRemoteRuntimeConnection(first);
+      const expectedContext = await runtimeEndpoint.readRuntimeRequestContext();
+      let finish!: (value: runtimeEndpoint.RuntimeConnection) => void;
+      vi.spyOn(runtimeEndpoint, "resolveRuntimeConnection").mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const original = sampleConnection();
+      const options = { expectedContext };
+      const request =
+        kind === "read"
+          ? getChannelConnections(undefined, options)
+          : kind === "update"
+            ? updateChannelConnection(
+                original.configuration.connection_id,
+                original.configuration,
+                original.revision,
+                undefined,
+                options,
+              )
+            : kind === "presentation"
+              ? updateChannelPresentationPolicy(
+                  original,
+                  { profile: "instant_message", stickers_enabled: true },
+                  undefined,
+                  options,
+                )
+              : deleteChannelConnection(
+                  original.configuration.connection_id,
+                  options,
+                );
+      const second = {
+        baseUrl: "https://runtime-b.example",
+        token: "private-b",
+      };
+      runtimeEndpoint.setRemoteRuntimeConnection(second);
+      finish(second);
+      await expect(request).rejects.toThrow("上下文已变化");
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("starts QR authorization with only provider and local character context", async () => {
     const fetchMock = vi
