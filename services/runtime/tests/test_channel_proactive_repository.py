@@ -360,9 +360,13 @@ async def test_fixed_authorization_and_atomic_claim_fences(tmp_path: Path, fence
                 (at.isoformat(), str(intent.generation_id)),
             )
         assert not (await p.authorize_intent(intent.request_id, as_of=at)).allowed
-        assert (
-            await p.claim_generation(intent.request_id, expected_revision=0, claimed_at=at) is None
-        )
+        refused = await p.claim_generation(intent.request_id, expected_revision=0, claimed_at=at)
+        if fence == "policy":
+            assert refused is None  # Policy PUT already settled and returned that event.
+        else:
+            assert refused is not None and refused.status is ChannelOutboundIntentStatus.SETTLED
+            assert len(refused.persisted_events) == 1
+            assert refused.persisted_events[0].event_type == "channel.outbound_intent_settled"
         settled = await p.get_intent(intent.request_id)
         assert settled is not None and settled.status is ChannelOutboundIntentStatus.SETTLED
         assert (await p.get_context(c, as_of=at)).reserved_today == 1
@@ -805,5 +809,196 @@ async def test_cancel_without_intent_fences_existing_episode_until_new_owner(
         ).reason is ChannelProactiveReason.EPISODE_ALREADY_RESERVED
         await _input(d, c, s, b, at=NOW + timedelta(minutes=3))
         assert (await p.reserve_intent(c, as_of=NOW + timedelta(minutes=5))).created
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_atomic_sanitized_lifecycle_events_and_failed_audit_roll_back_budget(
+    tmp_path: Path,
+) -> None:
+    db = await _open(tmp_path / "audit.db")
+    try:
+        d, p, c, s, b = await _owner(db, policy=_enabled())
+        await _input(d, c, s, b)
+        await db.execute(
+            "CREATE TRIGGER reject_reserved_audit BEFORE INSERT ON events "
+            "WHEN NEW.event_type='channel.outbound_intent_reserved' "
+            "BEGIN SELECT RAISE(ABORT,'injected audit failure'); END"
+        )
+        with pytest.raises(aiosqlite.IntegrityError, match="injected audit failure"):
+            await p.reserve_intent(c, as_of=NOW + timedelta(minutes=2))
+        assert (await p.get_context(c, as_of=NOW + timedelta(minutes=2))).reserved_today == 0
+        assert await p.list_active_intents() == ()
+        await db.execute("DROP TRIGGER reject_reserved_audit")
+        intent = await _reserved(p, c)
+        assert [event.event_type for event in intent.persisted_events] == [
+            "channel.outbound_intent_reserved"
+        ]
+        claimed = await p.claim_generation(
+            intent.request_id, expected_revision=0, claimed_at=NOW + timedelta(minutes=2)
+        )
+        assert claimed is not None and [event.event_type for event in claimed.persisted_events] == [
+            "channel.outbound_intent_generating"
+        ]
+        settled = await p.settle_intent(
+            intent.request_id,
+            reason="operator_cancelled",
+            settled_at=NOW + timedelta(minutes=3),
+            cancel=True,
+        )
+        assert [event.event_type for event in settled.persisted_events] == [
+            "channel.outbound_intent_settled"
+        ]
+        duplicate = await p.settle_intent(
+            intent.request_id, reason="ignored", settled_at=NOW + timedelta(minutes=4), cancel=True
+        )
+        assert duplicate.persisted_events == () and duplicate.settled_reason == "operator_cancelled"
+        rows = await db.fetchall(
+            "SELECT event_type,payload_json FROM events WHERE session_id=? ORDER BY sequence",
+            (str(s),),
+        )
+        assert [row["event_type"] for row in rows] == [
+            "channel.proactive_policy_updated",
+            "channel.outbound_intent_reserved",
+            "channel.outbound_intent_generating",
+            "channel.outbound_intent_settled",
+        ]
+        for row in rows:
+            payload = json.loads(str(row["payload_json"]))
+            assert set(payload) <= {
+                "connection_id",
+                "binding_id",
+                "outbound_intent_id",
+                "source_event_key",
+                "policy_revision",
+                "route_revision",
+                "revision",
+                "status",
+                "reason",
+                "enabled",
+            }
+            assert (
+                "account" not in payload and "owner" not in payload and "reply_text" not in payload
+            )
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_false_policy_without_binding_has_durable_revision_and_no_fabricated_event_session(
+    tmp_path: Path,
+) -> None:
+    db = await _open(tmp_path / "no_binding.db")
+    try:
+        d = SQLiteExternalChannelRepository(db)
+        p = SQLiteChannelProactiveRepository(db, EventStore(db))
+        c = uuid4()
+        await d.create_connection(
+            ChannelConnectionConfiguration(
+                connection_id=c,
+                provider_id="qq_napcat",
+                name="unpaired",
+                character_id="character",
+                principal_scope="local",
+                allowed_sender_keys=[],
+            ),
+            access_token_hash="hash",
+            created_at=NOW,
+        )
+        result = await p.update_policy(
+            c,
+            ChannelProactivePolicyUpdate(expected_revision=0, policy=ChannelProactivePolicy()),
+            updated_at=NOW,
+        )
+        assert result.revision == 1 and result.binding_id is None and result.persisted_events == ()
+        assert await db.fetchall("SELECT * FROM events") == []
+        row = await db.fetchone(
+            "SELECT revision FROM channel_proactive_policies WHERE connection_id=?", (str(c),)
+        )
+        assert row is not None and row["revision"] == 1
+        with pytest.raises(ValueError, match="fixed paired owner"):
+            await p.update_policy(
+                c,
+                ChannelProactivePolicyUpdate(expected_revision=1, policy=_enabled()),
+                updated_at=NOW,
+            )
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_expired_outbound_part_claim_returns_its_settlement_events_without_claim(
+    tmp_path: Path,
+) -> None:
+    db = await _open(tmp_path / "part_claim.db")
+    try:
+        d, p, c, s, b = await _owner(db, policy=_enabled())
+        await _input(d, c, s, b)
+        intent = await _reserved(p, c)
+        await p.claim_generation(
+            intent.request_id, expected_revision=0, claimed_at=NOW + timedelta(minutes=2)
+        )
+        await _completed(db, intent)
+        plan = await p.create_outbound_text_plan(
+            intent.request_id, reply_text="local test reply", created_at=NOW + timedelta(minutes=2)
+        )
+        result = await d.claim_next_delivery_part(
+            ChannelDeliveryPartClaimRequest(delivery_id=plan.plan.delivery_id, lease_id=uuid4()),
+            claimed_at=intent.expires_at.astimezone(ZoneInfo("Asia/Shanghai")),
+        )
+        assert result is not None and result.part is None and not result.applied
+        assert result.plan.status is ChannelDeliveryStatus.CANCELLED
+        assert (
+            len(result.persisted_events) == 1
+            and result.persisted_events[0].event_type == "channel.outbound_intent_settled"
+        )
+        assert all(part.attempt == 0 for part in result.plan.parts)
+        assert (
+            await d.claim_next_delivery_part(
+                ChannelDeliveryPartClaimRequest(
+                    delivery_id=plan.plan.delivery_id, lease_id=uuid4()
+                ),
+                claimed_at=intent.expires_at,
+            )
+            is None
+        )
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_terminal_cancel_cas_requires_current_revision_even_after_settlement(
+    tmp_path: Path,
+) -> None:
+    db = await _open(tmp_path / "terminal_cas.db")
+    try:
+        d, p, c, s, b = await _owner(db, policy=_enabled())
+        await _input(d, c, s, b)
+        intent = await _reserved(p, c)
+        settled = await p.settle_intent(
+            intent.request_id,
+            reason="operator_cancelled",
+            settled_at=NOW + timedelta(minutes=2),
+            cancel=True,
+            expected_revision=0,
+        )
+        assert settled.revision == 1
+        with pytest.raises(ValueError, match="revision conflict"):
+            await p.settle_intent(
+                intent.request_id,
+                reason="operator_cancelled",
+                settled_at=NOW + timedelta(minutes=3),
+                cancel=True,
+                expected_revision=0,
+            )
+        same = await p.settle_intent(
+            intent.request_id,
+            reason="operator_cancelled",
+            settled_at=NOW + timedelta(minutes=3),
+            cancel=True,
+            expected_revision=1,
+        )
+        assert same.revision == settled.revision and same.persisted_events == ()
     finally:
         await db.close()

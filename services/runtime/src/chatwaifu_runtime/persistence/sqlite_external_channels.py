@@ -1470,14 +1470,17 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     connection, intent, claimed_at.astimezone(UTC)
                 )
                 if not authorization.allowed:
-                    await proactive._settle_tx(
+                    settled = await proactive._settle_tx(
                         connection,
                         intent.request_id,
                         authorization.reason,
                         claimed_at.astimezone(UTC),
                         cancel=True,
                     )
-                    return None
+                    plan = await self._get_delivery_plan_tx(connection, claim.delivery_id)
+                    if plan is None:
+                        raise RuntimeError("unauthorized proactive plan disappeared")
+                    return DeliveryTransitionResult(plan, None, False, settled.persisted_events)
 
             cursor = await connection.execute(
                 """

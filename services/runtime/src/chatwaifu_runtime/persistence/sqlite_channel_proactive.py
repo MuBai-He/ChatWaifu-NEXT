@@ -253,8 +253,8 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
                     episode = await _one(
                         connection,
                         (
-                            "SELECT * FROM channel_proactive_episodes WHERE binding_id=? AND source"
-                            "='idle_check_in' AND anchor_channel_turn_id=?"
+                            "SELECT * FROM channel_proactive_episodes WHERE binding_id=? "
+                            "AND source='idle_check_in' AND anchor_channel_turn_id=?"
                         ),
                         (str(binding.binding_id), str(anchor.channel_turn_id)),
                     )
@@ -262,8 +262,8 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
                         await _one(
                             connection,
                             (
-                                "SELECT 1 FROM channel_outbound_intents WHERE binding_id=? AND source='"
-                                "idle_check_in' AND anchor_channel_turn_id=?"
+                                "SELECT 1 FROM channel_outbound_intents WHERE binding_id=? "
+                                "AND source='idle_check_in' AND anchor_channel_turn_id=?"
                             ),
                             (str(binding.binding_id), str(anchor.channel_turn_id)),
                         )
@@ -359,9 +359,9 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
                 persisted_events.extend(settled.persisted_events)
             await connection.execute(
                 (
-                    "UPDATE channel_proactive_episodes SET revoked_at=COALESCE(revoked_at,?"
-                    ") WHERE binding_id IN (SELECT binding_id FROM channel_bindings WHERE c"
-                    "onnection_id=?)"
+                    "UPDATE channel_proactive_episodes SET revoked_at=COALESCE(revoked_at,?) "
+                    "WHERE binding_id IN (SELECT binding_id FROM channel_bindings "
+                    "WHERE connection_id=?)"
                 ),
                 (updated_at.isoformat(), str(connection_id)),
             )
@@ -657,10 +657,9 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
                 return None
             allowed = await self._authorize_tx(connection, intent, claimed_at)
             if not allowed.allowed:
-                await self._settle_tx(
+                return await self._settle_tx(
                     connection, request_id, allowed.reason, claimed_at, cancel=True
                 )
-                return None
             await connection.execute(
                 "UPDATE channel_outbound_intents SET status='generating', "
                 "revision=revision+1,updated_at=? WHERE request_id=?",
@@ -853,10 +852,10 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
             raise ValueError("settlement reason must contain 1 to 128 characters")
         async with self._database.transaction() as connection:
             current = await self._required_tx(connection, request_id)
-            if current.status is ChannelOutboundIntentStatus.SETTLED:
-                return current
             if expected_revision is not None and current.revision != expected_revision:
                 raise ValueError("proactive intent revision conflict")
+            if current.status is ChannelOutboundIntentStatus.SETTLED:
+                return current
             return await self._settle_tx(
                 connection, request_id, reason, _now(settled_at), cancel=cancel, error=error
             )
