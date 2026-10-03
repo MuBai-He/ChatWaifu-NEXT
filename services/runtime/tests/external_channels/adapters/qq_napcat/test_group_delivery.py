@@ -75,7 +75,9 @@ class GroupRepository(SQLiteExternalChannelRepository):
         self.quoted_reads = 0
         self.on_turn_read: Callable[[], Awaitable[None]] | None = None
 
-    async def get_connection(self, connection_id: UUID) -> ChannelConnectionRecord | None:
+    async def get_connection(
+        self, connection_id: UUID, *, include_deleted: bool = False
+    ) -> ChannelConnectionRecord | None:
         assert connection_id == self._fixture_connection_id()
         return self.connection
 

@@ -58,7 +58,7 @@ class ConversationSourceContext:
     def __post_init__(self) -> None:
         if self.group_route_id is not None:
             if (
-                not isinstance(self.group_route_id, UUID)
+                not isinstance(cast(object, self.group_route_id), UUID)
                 or self.chat_type != "group"
                 or not isinstance(self.participant_id, str)
                 or not self.participant_id
