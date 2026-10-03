@@ -148,6 +148,7 @@ async def test_late_start_failure_closes_every_owned_component_and_is_terminal(
 
     for name, owner, method_name in (
         ("ambient", container.ambient, "stop"),
+        ("channel_proactive", container.channel_proactive, "stop"),
         ("resources", container.resources, "stop"),
         ("voice_media", container.voice_media, "close"),
         ("conversation", container.conversation, "stop"),
@@ -173,6 +174,7 @@ async def test_late_start_failure_closes_every_owned_component_and_is_terminal(
 
     assert closed == [
         "ambient",
+        "channel_proactive",
         "resources",
         "voice_media",
         "conversation",
@@ -194,6 +196,49 @@ async def test_late_start_failure_closes_every_owned_component_and_is_terminal(
     with pytest.raises(RuntimeError, match="terminal"):
         await container.start()
     await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_channel_proactive_is_wired_and_stops_before_delivery_and_conversation(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    calls: list[str] = []
+    for name, owner in (
+        ("qq", container.qq_channels),
+        ("proactive", container.channel_proactive),
+        ("resources", container.resources),
+        ("ambient", container.ambient),
+        ("conversation", container.conversation),
+    ):
+        for method in ("start", "stop") if name != "conversation" else ("stop",):
+            original = getattr(owner, method)
+
+            async def observe(
+                _original: object = original, _label: str = f"{name}.{method}"
+            ) -> None:
+                calls.append(_label)
+                await _original()  # type: ignore[operator]
+
+            monkeypatch.setattr(owner, method, observe)
+    try:
+        await container.start()
+        assert calls == ["qq.start", "proactive.start", "resources.start", "ambient.start"]
+        assert container.channel_proactive.active_count == 0
+        row = await container.database.fetchone(
+            "SELECT count(*) AS n FROM channel_outbound_intents"
+        )
+        assert row is not None and row["n"] == 0
+        assert await container._desktop_proactive_session_allowed(uuid4())  # type: ignore[reportPrivateUsage]
+    finally:
+        await container.stop()
+    assert calls[4:] == [
+        "ambient.stop",
+        "proactive.stop",
+        "resources.stop",
+        "qq.stop",
+        "conversation.stop",
+    ]
 
 
 @pytest.mark.asyncio

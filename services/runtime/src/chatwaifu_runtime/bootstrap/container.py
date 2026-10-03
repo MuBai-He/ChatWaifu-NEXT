@@ -36,6 +36,7 @@ from chatwaifu_runtime.external_channels.encrypted_credentials import (
     EncryptedFileChannelCredentialStore,
 )
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
+from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 from chatwaifu_runtime.external_channels.service import (
     WEIXIN_ILINK_PROVIDER,
     ExternalChannelService,
@@ -49,6 +50,7 @@ from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
+from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
@@ -181,6 +183,9 @@ class RuntimeContainer:
         self.external_channel_repository = SQLiteExternalChannelRepository(
             self.database, self.event_store
         )
+        self.channel_proactive_repository = SQLiteChannelProactiveRepository(
+            self.database, self.event_store, deliveries=self.external_channel_repository
+        )
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
         )
@@ -200,7 +205,7 @@ class RuntimeContainer:
             self.providers.tts,
             self.event_publisher,
             settings.data_dir / "channel-audio",
-            lambda session_id: self.conversation.active_generation_id(session_id),
+            self._channel_active_generation,
             lambda provider_id: any(
                 item.provider_id == provider_id
                 and "audio" in item.capabilities.outbound_message_kinds
@@ -315,6 +320,14 @@ class RuntimeContainer:
             sticker_library=self.sticker_library,
             photo_observer=self.photo_observer,
         )
+        self.channel_proactive = ChannelProactiveService(
+            self.channel_proactive_repository,
+            self.conversation,
+            self.conversation_repository,
+            self.external_channels,
+            self.event_publisher,
+        )
+        self.external_channels.set_proactive_service(self.channel_proactive)
         self.channel_credentials = (
             EncryptedFileChannelCredentialStore(
                 settings.data_dir / "channel-vault",
@@ -346,6 +359,8 @@ class RuntimeContainer:
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
             stt_backend=self.stt,
+            proactive_authorization=self.external_channels.authorize_proactive_delivery,
+            proactive_on_terminal=self.external_channels.proactive_delivery_terminal,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,
@@ -369,6 +384,7 @@ class RuntimeContainer:
             self.event_publisher,
             self.resources.status,
             on_trigger=self.resources.touch,
+            session_allowed=self._desktop_proactive_session_allowed,
         )
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
         self.cloud_realtime_backend: CloudRealtimeBackend | None = None
@@ -473,6 +489,7 @@ class RuntimeContainer:
                 await self.channel_voice.cleanup()
                 await self.channel_management.start()
                 await self.qq_channels.start()
+                await self.channel_proactive.start()
                 await self.resources.start()
                 await self.ambient.start()
             except BaseException as error:
@@ -486,6 +503,12 @@ class RuntimeContainer:
                 raise
 
             self._state = "started"
+
+    async def _desktop_proactive_session_allowed(self, session_id: UUID) -> bool:
+        return not await self.channel_proactive_repository.is_channel_session(session_id)
+
+    def _channel_active_generation(self, session_id: UUID) -> UUID | None:
+        return self.conversation.active_generation_id(session_id)
 
     async def _drain_pending_outbox(self, page_size: int = 100) -> None:
         """Republish every durable event left by an interrupted Runtime.
@@ -521,6 +544,7 @@ class RuntimeContainer:
         steps = [
             _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
+            _CleanupStep("channel_proactive", lambda: self.channel_proactive.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),
         ]
