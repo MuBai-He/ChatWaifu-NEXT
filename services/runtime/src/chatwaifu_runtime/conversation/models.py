@@ -17,6 +17,7 @@ from chatwaifu_runtime.providers.model_config import ModelRoleConfig
 
 if TYPE_CHECKING:
     from chatwaifu_runtime.agent.tool_calling import ProjectedAgentTool
+    from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
@@ -50,8 +51,32 @@ class ConversationSourceContext:
     source_event_key: str | None = None
     policy_revision: int | None = None
     route_revision: int | None = None
+    group_route_id: UUID | None = None
+    participant_id: str | None = None
+    scene_id: str | None = None
 
     def __post_init__(self) -> None:
+        if self.group_route_id is not None:
+            if (
+                not isinstance(self.group_route_id, UUID)
+                or self.chat_type != "group"
+                or not isinstance(self.participant_id, str)
+                or not self.participant_id
+                or not isinstance(self.scene_id, str)
+                or not self.scene_id
+                or self.principal_scope != f"scene:{self.scene_id}"
+                or self.participant_id not in self.audience_ids
+                or type(self.route_revision) is not int
+                or self.route_revision < 0
+                or self.outbound_intent_id is not None
+                or self.source_event_key is not None
+                or self.policy_revision is not None
+                or self.reply_to_external_message_id is not None
+            ):
+                raise ValueError("group source requires complete trusted identity and route")
+            return
+        if self.participant_id is not None or self.scene_id is not None:
+            raise ValueError("member identity requires a fixed group route")
         metadata = (
             self.outbound_intent_id,
             self.source_event_key,
@@ -96,6 +121,13 @@ class ConversationSourceContext:
                 policy_revision=self.policy_revision,
                 route_revision=self.route_revision,
             )
+        if self.group_route_id is not None:
+            result.update(
+                group_route_id=str(self.group_route_id),
+                route_revision=self.route_revision,
+                participant_id=self.participant_id,
+                scene_id=self.scene_id,
+            )
         return result
 
     def to_json(self) -> str:
@@ -111,6 +143,13 @@ class ConversationSourceContext:
         if chat_type not in {"direct", "group"}:
             raise ValueError("unsupported conversation chat type")
         return cls(
+            group_route_id=(
+                UUID(str(payload["group_route_id"]))
+                if payload.get("group_route_id") is not None
+                else None
+            ),
+            participant_id=cast(str | None, payload.get("participant_id")),
+            scene_id=cast(str | None, payload.get("scene_id")),
             outbound_intent_id=(
                 UUID(str(payload["outbound_intent_id"]))
                 if payload.get("outbound_intent_id") is not None
@@ -222,6 +261,7 @@ class ConversationTurnOptions:
     allowed_skill_ids: frozenset[str] | None = None
     contextual_skill_ids: frozenset[str] = frozenset()
     source_context: ConversationSourceContext | None = None
+    trusted_identity: TrustedConversationIdentity | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
     image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(

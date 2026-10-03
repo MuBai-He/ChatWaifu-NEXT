@@ -768,6 +768,16 @@ class ConversationService:
         normalized = text.strip()
         if not normalized:
             raise ValueError("message text must not be blank")
+        if options.trusted_identity is not None:
+            return await self._submit_shared_external(
+                session_id,
+                normalized,
+                turn_id=turn_id,
+                generation_id=generation_id,
+                options=options,
+            )
+        if options.source_context is not None and options.source_context.group_route_id is not None:
+            raise ValueError("group input requires persisted conversational identity")
         async with self._start_lock:
             await self.cancel(session_id, "superseded_by_new_turn")
             session = await self._sessions.get_session(session_id)
@@ -886,6 +896,194 @@ class ConversationService:
                 )
                 raise
             return accepted
+
+    async def _submit_shared_external(
+        self,
+        session_id: UUID,
+        text: str,
+        *,
+        turn_id: UUID,
+        generation_id: UUID,
+        options: ConversationTurnOptions,
+    ) -> GenerationAccepted:
+        """Register cancellable shared preparation without holding the start lock."""
+        accepted = GenerationAccepted(
+            session_id, turn_id, generation_id, uuid4(), GenerationState.RUNNING
+        )
+        async with self._start_lock:
+            session = await self._sessions.get_session(session_id)
+            if session is None:
+                raise KeyError(f"unknown session {session_id}")
+            if session.state is not SessionState.READY:
+                raise RuntimeError(f"session is not ready: {session.state}")
+            identity = await self._sessions.conversation_identity(session_id)
+            source = options.source_context
+            if (
+                options.trusted_identity != identity
+                or identity.scene_id is None
+                or source is None
+                or source.group_route_id is None
+                or source.principal_scope != identity.memory_scope
+                or source.participant_id != identity.participant_id
+                or source.scene_id != identity.scene_id
+                or source.audience_ids != identity.audience_ids
+                or options.origin != "external_channel"
+                or options.before_generation is None
+                or options.image_loader is not None
+                or options.quoted_message_loader is not None
+            ):
+                raise ValueError("external input does not match persisted shared identity")
+            character = self._characters.get(session.character_id)
+            if character is None:
+                raise RuntimeError(f"character is not installed: {session.character_id}")
+            options = replace(
+                options,
+                output_modes=frozenset({"text"}),
+                allow_tools=False,
+                allowed_skill_ids=frozenset(),
+                contextual_skill_ids=frozenset(),
+            )
+            # Invalid identity never cancels another valid generation. Cancellation
+            # joins owned work before replacing its active-generation entry.
+            await self.cancel(session_id, "superseded_by_new_turn")
+            chat_config = self._models.get("chat")
+            summary_config = self._models.get("memory_summary")
+            chat_provider = self._models.create_chat_provider(chat_config)
+            self._active[session_id] = _ActiveGeneration(
+                accepted.generation_id,
+                asyncio.current_task(),
+                accepted.turn_id,
+                accepted.audio_stream_id,
+            )
+            try:
+                _, events = await self._commit_user_turn(
+                    session_id,
+                    text,
+                    turn_id=turn_id,
+                    generation_id=generation_id,
+                    options=options,
+                    backend_kind=chat_provider.kind,
+                    audio_stream_id=accepted.audio_stream_id,
+                )
+                current = asyncio.current_task()
+                if current is not None and current.cancelling():
+                    raise asyncio.CancelledError("generation admission cancelled")
+                self._ensure_current(accepted)
+                task = asyncio.create_task(
+                    self._prepare_shared_external(
+                        accepted,
+                        text,
+                        character,
+                        chat_config,
+                        summary_config,
+                        chat_provider,
+                        options,
+                        events,
+                    ),
+                    name=f"shared-generation-{accepted.generation_id}",
+                )
+                self._active[session_id] = _ActiveGeneration(
+                    accepted.generation_id, task, accepted.turn_id, accepted.audio_stream_id
+                )
+            except asyncio.CancelledError:
+                await self._cancelled(accepted, "generation_admission_cancelled")
+                if self._is_current(accepted):
+                    self._active.pop(session_id, None)
+                raise
+            except Exception as error:
+                await self._failed(accepted, error, error_code="generation_admission_failed")
+                if self._is_current(accepted):
+                    self._active.pop(session_id, None)
+                raise
+        return accepted
+
+    async def _prepare_shared_external(
+        self,
+        accepted: GenerationAccepted,
+        text: str,
+        character: CharacterProfile,
+        chat_config: ModelRoleConfig,
+        summary_config: ModelRoleConfig,
+        chat_provider: LlmProvider,
+        options: ConversationTurnOptions,
+        events: tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent],
+    ) -> None:
+        running = False
+        try:
+            await self._check_generation_guard(accepted, options)
+            for event in events:
+                await self._publisher.publish_persisted(event)
+            observation: UserTurnMemoryObservation | None = None
+            if self._memory.parse_explicit_command(text) is not None:
+                await self._memory.observe_user_turn(
+                    accepted.session_id,
+                    accepted.turn_id,
+                    events[0].event_id,
+                    character.character_id,
+                    text,
+                )
+            else:
+                observation = UserTurnMemoryObservation(
+                    session_id=accepted.session_id,
+                    turn_id=accepted.turn_id,
+                    source_event_id=events[0].event_id,
+                    character_id=character.character_id,
+                    text=text,
+                )
+            await self._check_generation_guard(accepted, options)
+            memory = await self._memory.retrieve_context(
+                accepted.session_id,
+                accepted.turn_id,
+                character.character_id,
+                text,
+                **_retrieval_budget_options(chat_config),
+            )
+            await self._check_generation_guard(accepted, options)
+            history = await self._recent_history(
+                accepted.session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+            )
+            await self._check_generation_guard(accepted, options)
+            character_context = await self._character_kernel.observe_user_turn(
+                session_id=accepted.session_id,
+                turn_id=accepted.turn_id,
+                generation_id=accepted.generation_id,
+                character_id=character.character_id,
+                text=text,
+            )
+            await self._check_generation_guard(accepted, options)
+            snapshot = self._capture_generation_snapshot(
+                character=character,
+                user_text=text,
+                options=options,
+                trigger="user",
+                chat_config=chat_config,
+                summary_config=summary_config,
+                chat_provider=chat_provider,
+                admitted_at=events[0].occurred_at,
+            )
+            running = True
+            await self._run_generation(
+                accepted,
+                text,
+                character,
+                character_context,
+                memory,
+                history,
+                memory_observation=observation,
+                options=options,
+                snapshot=snapshot,
+            )
+        except asyncio.CancelledError as error:
+            if not running:
+                await self._cancelled(
+                    accepted, str(error.args[0]) if error.args else "shared_preparation_cancelled"
+                )
+            raise
+        except Exception as error:
+            await self._failed(accepted, error, error_code="generation_preparation_failed")
+        finally:
+            if self._is_current(accepted):
+                self._active.pop(accepted.session_id, None)
 
     def request_cancel(
         self, session_id: UUID, *, expected_generation_id: UUID, reason: str
@@ -1109,9 +1307,10 @@ class ConversationService:
         generation_id: UUID,
         options: ConversationTurnOptions,
         backend_kind: str,
+        audio_stream_id: UUID | None = None,
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
-        audio_stream_id = uuid4()
+        audio_stream_id = audio_stream_id or uuid4()
         user_event = UserTurnCommittedEvent(
             event_id=uuid4(),
             session_id=session_id,
@@ -1277,6 +1476,7 @@ class ConversationService:
             photo_recall = PhotoRecall()
             if (
                 self._photo_recall is not None
+                and options.trusted_identity is None
                 and trigger == "user"
                 and options.image_loader is None
             ):
@@ -1413,7 +1613,11 @@ class ConversationService:
                     ),
                 )
             sources = SourceContextPacket()
-            if self._source_context is not None and trigger == "user":
+            if (
+                self._source_context is not None
+                and trigger == "user"
+                and options.trusted_identity is None
+            ):
                 eligible: list[UUID] = []
                 for generation_id in compilation.source_generation_ids:
                     prior = await self._repository.generation_result(generation_id)
@@ -1483,7 +1687,11 @@ class ConversationService:
                 source_context=options.source_context,
             )
         finally:
-            if self._photo_annotations is not None and options.image_loader is None:
+            if (
+                self._photo_annotations is not None
+                and options.image_loader is None
+                and options.trusted_identity is None
+            ):
                 self._photo_annotations.observe(accepted.generation_id)
             if not memory_projection_submitted and memory_observation is not None:
                 try:
