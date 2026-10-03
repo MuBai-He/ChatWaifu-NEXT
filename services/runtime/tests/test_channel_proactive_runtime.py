@@ -39,6 +39,7 @@ from chatwaifu_runtime.external_channels.proactive import ChannelProactiveServic
 from chatwaifu_runtime.external_channels.proactive_models import (
     ChannelOutboundIntentRecord,
     ChannelOutboundReservationResult,
+    ChannelProactivePolicyRecord,
 )
 from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
 from test_qq_channels import (
@@ -251,9 +252,11 @@ async def test_owner_input_cancels_prepare_and_late_return_without_proactive_mod
         assert result is not None and result.state is GenerationState.CANCELLED
 
 
-async def test_stop_during_durable_reservation_return_gap_does_not_start_model(
+@pytest.mark.parametrize("action", ["stop", "owner_input"])
+async def test_lifecycle_during_durable_reservation_return_gap_does_not_start_model(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
+    action: str,
 ) -> None:
     async with configured(runtime_settings, monkeypatch) as h:
         await enable_and_anchor(h)
@@ -272,13 +275,149 @@ async def test_stop_during_durable_reservation_return_gap_does_not_start_model(
         monkeypatch.setattr(h.repository, "reserve_intent", reserve)
         evaluation = asyncio.create_task(h.service.evaluate_once())
         await asyncio.wait_for(committed.wait(), 3)
-        await asyncio.wait_for(h.service.stop(), 3)
+        if action == "stop":
+            await asyncio.wait_for(h.service.stop(), 3)
+        else:
+            await owner_activity(h.qq, h.connection_id, "主人刚发来新消息", 13)
         release.set()
         assert await asyncio.wait_for(evaluation, 3) == 0
         assert h.service.active_count == 0
         assert not [r for r in h.qq.model.requests if r.trigger == "proactive"]
         page = await h.service.list_intents(h.connection_id)
         assert len(page.items) == 1 and page.items[0].status is ChannelOutboundIntentStatus.SETTLED
+
+
+async def test_durable_audio_preprocessing_defers_proactive_generation(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+
+    from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import (
+        credential_reference,
+    )
+    from test_channel_audio_ingress import _Audio, _message
+
+    async with configured(runtime_settings, monkeypatch) as h:
+        await enable_and_anchor(h)
+        audio = _Audio()
+        raw = await h.qq.credentials.get(credential_reference(h.connection_id))
+        assert raw is not None
+        receipt = await h.qq.container.external_channels.ingest(
+            _message(h.connection_id, 81),
+            access_token=str(json.loads(raw)["gateway_token"]),
+            audio_input=audio.input(),
+            supersede_inflight=True,
+        )
+        try:
+            await asyncio.wait_for(audio.entered.wait(), 3)
+            assert h.qq.container.external_channels.active_preprocessing_count == 1
+            assert h.qq.container.conversation.active_generation_id(receipt.session_id) is None
+            assert (await h.service.preview(h.connection_id)).reason is (
+                ChannelProactiveReason.CONVERSATION_BUSY
+            )
+            assert await h.service.evaluate_once() == 0
+            assert not [r for r in h.qq.model.requests if r.trigger == "proactive"]
+            assert (await h.service.list_intents(h.connection_id)).items == []
+        finally:
+            audio.release.set()
+            await _terminal(h.qq, h.connection_id, receipt.channel_turn_id)
+
+
+async def test_scope_reset_fences_planned_delivery_and_old_owner_anchor_after_restart(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async with configured(runtime_settings, monkeypatch) as h:
+        await enable_and_anchor(h)
+        scheduler = h.qq.container.qq_channels._schedulers[h.connection_id]
+        await scheduler.stop()
+        request_id = await planned(h)
+        intent = await h.repository.get_intent(request_id)
+        assert intent is not None
+        subscription = h.qq.container.event_hub.subscribe(
+            lambda event: event.get("event_type") == "channel.outbound_intent_settled",
+            queue_size=8,
+        )
+        try:
+            await h.qq.container.conversation.reset(intent.session_id)
+            await asyncio.wait_for(subscription.receive(), 3)
+        finally:
+            subscription.close()
+        updated = await h.repository.get_intent(request_id)
+        assert updated is not None and updated.status is ChannelOutboundIntentStatus.SETTLED
+        assert not (await h.repository.authorize_intent(request_id, as_of=h.clock())).allowed
+        assert h.qq.peer.sends.empty()
+        before = len(h.qq.model.requests)
+        await h.service.stop()
+        await h.service.start()
+        assert await h.service.evaluate_once() == 0
+        assert len(h.qq.model.requests) == before
+        assert (await h.service.preview(h.connection_id)).reason is (
+            ChannelProactiveReason.NO_OWNER_ACTIVITY
+        )
+
+
+@pytest.mark.parametrize("boundary", ["generation_claim", "part_claim"])
+async def test_expired_claim_publishes_durable_settlement_without_provider_send(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    boundary: str,
+) -> None:
+    async with configured(runtime_settings, monkeypatch) as h:
+        await enable_and_anchor(h)
+        subscription = h.qq.container.event_hub.subscribe(
+            lambda event: event.get("event_type") == "channel.outbound_intent_settled",
+            queue_size=8,
+        )
+        scheduler = h.qq.container.qq_channels._schedulers[h.connection_id]
+        if boundary == "generation_claim":
+            original = h.repository.reserve_intent
+
+            async def reserve(
+                connection_id: UUID, *, as_of: datetime, generation_active: bool = False
+            ) -> ChannelOutboundReservationResult:
+                result = await original(
+                    connection_id, as_of=as_of, generation_active=generation_active
+                )
+                if result.created and result.intent is not None:
+                    h.clock.now = result.intent.expires_at
+                return result
+
+            monkeypatch.setattr(h.repository, "reserve_intent", reserve)
+        else:
+            await scheduler.stop()
+            request_id = await planned(h)
+            intent = await h.repository.get_intent(request_id)
+            assert intent is not None
+
+            async def advance_at_claim(_plan: ChannelDeliveryPlanRecord) -> bool:
+                h.clock.now = intent.expires_at
+                return True
+
+            monkeypatch.setattr(scheduler, "_before_claim", advance_at_claim)
+        try:
+            if boundary == "generation_claim":
+                assert await h.service.evaluate_once() == 1
+            else:
+                assert not await scheduler.step()
+            event = await asyncio.wait_for(subscription.receive(), 3)
+            payload = cast(dict[str, object], event["payload"])
+            updated = await h.repository.get_intent(UUID(str(payload["outbound_intent_id"])))
+            assert updated is not None and updated.status is ChannelOutboundIntentStatus.SETTLED
+            assert updated.settled_reason == ChannelProactiveReason.IDLE_WINDOW_EXPIRED.value
+            assert h.qq.peer.sends.empty()
+            if boundary == "generation_claim":
+                assert not [r for r in h.qq.model.requests if r.trigger == "proactive"]
+            else:
+                assert updated.delivery_id is not None
+                plan = await h.qq.container.external_channel_repository.get_delivery_plan(
+                    updated.delivery_id
+                )
+                assert plan is not None and plan.status is ChannelDeliveryStatus.CANCELLED
+                assert plan.parts[0].attempt == 0
+        finally:
+            subscription.close()
 
 
 async def test_fixed_expiry_cancels_live_prepare_and_does_not_reserve_old_anchor_again(
@@ -395,6 +534,56 @@ async def test_confirmed_send_is_reconciled_after_policy_cancel_without_another_
             release.set()
         assert await h.service.evaluate_once() == 0
         assert len([r for r in h.qq.model.requests if r.trigger == "proactive"]) == 1
+
+
+async def test_unknown_provider_result_survives_service_restart_without_send_or_regeneration(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+
+    from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCatUncertain
+
+    async with configured(runtime_settings, monkeypatch) as h:
+        await enable_and_anchor(h)
+        client = h.qq.container.qq_channels._clients[h.connection_id]
+        original = client.call
+
+        async def lose_response(action: str, params: JsonObject) -> JsonObject:
+            response = await original(action, params)
+            if action == "send_private_msg":
+                raise NapCatUncertain("fixture response lost")
+            return response
+
+        monkeypatch.setattr(client, "call", lose_response)
+        subscription = h.qq.container.event_hub.subscribe(
+            lambda event: event.get("event_type") == "channel.outbound_intent_settled",
+            queue_size=8,
+        )
+        try:
+            request_id = await planned(h)
+            await asyncio.wait_for(h.qq.peer.sends.get(), 3)
+            await asyncio.wait_for(subscription.receive(), 3)
+        finally:
+            subscription.close()
+        updated = await h.repository.get_intent(request_id)
+        assert updated is not None and updated.status is ChannelOutboundIntentStatus.SETTLED
+        assert updated.delivery_id is not None and not updated.provider_receipt_present
+        deliveries = h.qq.container.external_channel_repository
+        plan = await deliveries.get_delivery_plan(updated.delivery_id)
+        assert plan is not None and plan.parts[0].last_error is not None
+        assert plan.parts[0].last_error.code == "qq_delivery_unknown"
+        journal = json.loads(await deliveries.get_adapter_cursor(h.connection_id))
+        assert journal[plan.parts[0].provider_client_id] == "unknown"
+        before_calls, before_models = len(h.qq.peer.calls), len(h.qq.model.requests)
+        await h.service.stop()
+        await h.service.start()
+        await h.qq.container.qq_channels._reconcile_connection(h.connection_id)
+        assert await h.service.evaluate_once() == 0
+        assert len(h.qq.peer.calls) == before_calls
+        assert len(h.qq.model.requests) == before_models
+        assert h.qq.peer.sends.empty()
+        assert json.loads(await deliveries.get_adapter_cursor(h.connection_id)) == journal
 
 
 async def test_restart_recovers_completed_generation_once_without_regeneration(
@@ -519,6 +708,111 @@ async def test_rejected_revision_write_preserves_existing_proactive_work(
         )
         assert h.qq.container.conversation.active_generation_id(before.session_id) == active_before
         assert h.qq.peer.sends.empty()
+
+
+async def test_policy_commit_return_gap_preserves_new_revision_owner_work(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async with configured(runtime_settings, monkeypatch) as h:
+        await enable_and_anchor(h)
+        scheduler = h.qq.container.qq_channels._schedulers[h.connection_id]
+
+        async def hold_outbound(plan: ChannelDeliveryPlanRecord) -> bool:
+            return plan.outbound_intent_id is None
+
+        monkeypatch.setattr(scheduler, "_before_claim", hold_outbound)
+        old_id = await planned(h)
+        policy = await h.service.get_policy(h.connection_id)
+        committed, return_policy = asyncio.Event(), asyncio.Event()
+        preparing, release_prepare = asyncio.Event(), asyncio.Event()
+        original_update = h.repository.update_policy
+
+        async def update(
+            connection_id: UUID,
+            body: ChannelProactivePolicyUpdate,
+            *,
+            updated_at: datetime,
+        ) -> ChannelProactivePolicyRecord:
+            record = await original_update(connection_id, body, updated_at=updated_at)
+            committed.set()
+            await return_policy.wait()
+            return record
+
+        original_memory = h.qq.container.memory.retrieve_context
+
+        async def memory(
+            sid: UUID,
+            tid: UUID,
+            character: str,
+            query: str,
+            *,
+            token_budget: int = 700,
+            limit: int = 12,
+        ) -> MemoryContextPacket:
+            if query == "轻声主动关心用户":
+                preparing.set()
+                await release_prepare.wait()
+            return await original_memory(
+                sid, tid, character, query, token_budget=token_budget, limit=limit
+            )
+
+        monkeypatch.setattr(h.repository, "update_policy", update)
+        monkeypatch.setattr(h.qq.container.memory, "retrieve_context", memory)
+        # Policy activation must precede the real accepted timestamp below.
+        h.clock.now = datetime.now(UTC)
+        saving = asyncio.create_task(
+            h.service.update_policy(
+                h.connection_id,
+                ChannelProactivePolicyUpdate(
+                    expected_revision=policy.revision,
+                    policy=policy.policy.model_copy(update={"idle_minutes": 2}),
+                ),
+            )
+        )
+        subscription = h.qq.container.event_hub.subscribe(
+            lambda event: event.get("event_type") == "channel.delivery_plan_created", queue_size=8
+        )
+        try:
+            await asyncio.wait_for(committed.wait(), 3)
+            fresh = await owner_activity(h.qq, h.connection_id, "新策略保存后的一条主人输入", 14)
+            owner = await h.qq.container.external_channel_repository.get_turn(fresh.channel_turn_id)
+            assert owner is not None
+            h.clock.now = owner.accepted_at + timedelta(minutes=2, seconds=1)
+            assert await h.service.evaluate_once() == 1
+            await asyncio.wait_for(preparing.wait(), 3)
+            new = next(
+                intent
+                for intent in (await h.repository.list_intents(h.connection_id)).items
+                if intent.request_id != old_id
+            )
+            assert new.policy_revision == policy.revision + 1
+            return_policy.set()
+            saved = await asyncio.wait_for(saving, 3)
+            assert saved.revision == new.policy_revision
+            assert not h.service._workflows[new.request_id][1].cancelling()
+            release_prepare.set()
+            # The earlier normal owner delivery also emitted a plan event.
+            while True:
+                event = await asyncio.wait_for(subscription.receive(), 3)
+                payload = cast(dict[str, object], event["payload"])
+                if payload.get("outbound_intent_id") == str(new.request_id):
+                    break
+            current = await h.repository.get_intent(new.request_id)
+            assert current is not None and current.status is ChannelOutboundIntentStatus.PLANNED
+            assert current.delivery_id is not None
+            plan = await h.qq.container.external_channel_repository.get_delivery_plan(
+                current.delivery_id
+            )
+            assert plan is not None and await h.service.authorize_delivery(plan)
+            old = await h.repository.get_intent(old_id)
+            assert old is not None and old.status is ChannelOutboundIntentStatus.SETTLED
+            assert h.qq.peer.sends.empty()
+        finally:
+            return_policy.set()
+            release_prepare.set()
+            subscription.close()
+            await asyncio.gather(saving, return_exceptions=True)
 
 
 async def test_unknown_connection_public_reads_return_not_found(
