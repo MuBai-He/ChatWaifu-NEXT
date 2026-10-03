@@ -543,3 +543,59 @@ records `467bb7d`. This read did not recheck every source hash. Migration on an
 online-backup copy, a verified default-off D3 deployment and a user-selected
 two-member real QQ acceptance remain separate pending steps. No real group send
 or proactive opt-in was performed for these checks.
+
+## D3 Linux gate and default-off deployment (2026-10-04)
+
+Frozen source/Web `f0588d1dad2a516eea2ac2489fcee33fd5e6e639` passed
+**394 Linux group/private QQ fixtures, zero failures/skips**, with normal pytest
+and runner exits. All **1535** source files and **259** loaded project modules
+matched the candidate hashes. Python audit admitted only the fixtures' own
+**180** ephemeral peer ports; blocked attempts and protected-port intersection
+were zero. The nine unit identities and independent NapCat container identity
+remained unchanged throughout. Null keyring, private logs/cache/tmp and the one
+exact read-only `ldconfig -p` probe plus `/dev/null` open were explicit fixture
+parameters. Two unaccepted runner attempts remain retained; neither is recorded
+as a passing gate. These checks use a controlled model and OneBot peer.
+
+Root independently reviewed all frozen executor/helpers/tests and passed
+**71** real SQLite and simulated service/HTTP fault checks with normal exit,
+Ruff and formatting. Fresh preflight reverified all **1484** old tracked source
+hashes, no new-file untracked collisions and the five shared Web hashes/modes.
+The separately verified source/Web archives both identify `f0588d1`.
+
+The owned stage then completed an actual normal-exit rollout. Only
+`chatwaifu-qq-stage.service` stopped and started. SQLite online backups and a
+candidate rehearsal preceded the stopped in-place **38→39→40→40 reopen**.
+Migration retained **76 old tables, 646 old columns and 385 typed rows**, all
+38 old migration checksums/timestamps, delivery metadata and receipt/journal
+facts without exceptions. Foreign keys were on, integrity passed, state scope
+was backfilled and new group/proactive tables remained empty. No database was
+restored. Private backups and the successful rollout evidence are under
+`backups/d3-20261003T195622Z-f9e4a264/`.
+
+Root's separate deployed-state verification matched all **1535 tracked source
+files**, **60** preserved untracked files, **seven** candidate Web files on disk
+and HTTP and **12** preserved cached Web assets. It verified **111** migration
+module origins/hashes and **76-table, 642-column, 385-row** typed startup facts;
+only the four documented transient connection health columns were excluded.
+Checkpoint journal changes were **zero**, and all **eight** delivered receipts
+were retained. Configuration, own unit enablement, eight protected unit process
+identities, NapCat identity and **22** resource hashes were unchanged. Own
+Runtime has a new process identity, healthy database and the persisted private
+connection ready. Authenticated management reads show group routes, links,
+observations and new group turns empty, policy **revision zero/off**, empty
+proactive history and a disabled read-only preview.
+
+The first supplemental root readback referenced the wrong D2 table name and
+failed before writing its result. The corrected read-only verifier passed with
+the actual `channel_proactive_episodes` catalog name; the failed-probe metadata
+is retained separately. This was a verifier error, not a rollout or database
+failure. Root's successful evidence is
+`validation/d3-release-f0588d1-0vymhcy1/root-postdeployment-verification.json`.
+
+No group audience observation, route enablement, real model request or QQ send
+API call was made by these scripts. Runtime restart restored its normal private
+connection. Actual new-version phone receipt, Phase B image/sticker/quote
+behavior, D2 explicit opt-in and D3 user-selected two-member group acceptance
+remain separate. This deployment is in the owned QQ stage; the source remains
+in the isolated QQ branch rather than the primary checkout.

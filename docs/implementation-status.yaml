@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-10-04"
 current_phase: "13.6"
 qq_napcat:
-  status: model_selected_voice_and_default_off_proactive_text_deployed_real_opt_in_pending
+  status: model_selected_voice_default_off_proactive_and_controlled_groups_deployed_real_acceptance_pending
   adr: "0064"
   image_reply_adr: "0065"
   incoming_voice_adr: "0066"
@@ -13,9 +13,9 @@ qq_napcat:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
     C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
-    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_text_deployed_default_off_group_source_integrated_acceptance_pending
+    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_and_group_text_deployed_default_off_real_acceptance_pending
     D2: fixed_owner_proactive_text_deployed_default_off_real_opt_in_phone_acceptance_pending
-    D3: group_source_and_local_runtime_verified_default_off_deployment_and_real_qq_acceptance_pending
+    D3: group_source_linux_runtime_and_default_off_deployment_verified_operator_selected_two_member_real_qq_acceptance_pending
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -61,12 +61,16 @@ qq_napcat:
     - Root then strengthened the membership-notice test to await the owned generation without invoking another cancellation from the test; the reader fence alone rejects uncancelled late output, and the 37 group/private QQ checks, strict typing, lint and formatting passed again without production source changes
     - Independent real SQLite 39 to 40 probes verified legacy GROUP bindings remain quarantined while a fresh isolated private binding can be created and D2 no longer selects the old polluted owner context; retained facts and reserved-intent denial are covered separately
     - Read-only Linux observation on 2026-10-04 found the four owned QQ stage services active, schema 38, a ready connection last seen 14 seconds earlier, no proactive policies or intents, and no D3 application source at the verified source root; source provenance still records 467bb7d, but its complete file inventory was not reverified in this observation; no D3 rollout, real group messages or proactive opt-in were performed
+    - Frozen f0588d1 completed 394 Linux group/private QQ fixtures with normal runner and pytest exit, no failures or skips, all 1535 source hashes and 259 loaded project module origins/hashes matching; connections used only 180 owned ephemeral peer ports, with zero blocked attempts or protected-port intersection and unchanged nine unit and NapCat identities; null keyring and one exact read-only ldconfig metadata probe were explicit fixture boundaries
+    - Root independently reviewed the frozen deployment executor and passed all 71 real SQLite and simulated service/HTTP fault checks, Ruff and formatting; a fresh read-only preflight reverified all 1484 old tracked source hashes, zero new-source untracked collisions, five shared Web hashes/modes and schema 38 before execution
+    - Source and seven matching Web files at f0588d1 deployed to the owned Linux QQ stage with real stopped Database migration 38 to 39 to 40 and reopen; all 76 old tables, 646 old columns and 385 typed rows plus 38 ledger checksums/timestamps were preserved, foreign keys and integrity passed, and new group and proactive tables remained empty
+    - Root independently verified deployed full source/Web inventories including 60 preserved untracked source files and 12 cached Web assets, all seven HTTP-served candidate Web hashes, 111 migration module origins/hashes, 76-table 642-column 385-row startup facts with only four transient connection health columns excluded and zero journal changes, eight retained delivered receipts, unchanged configuration, eight protected unit identities, NapCat container identity and 22 resource hashes
+    - Only the owned QQ Runtime restarted with its enablement unchanged; health and authenticated read-only management confirmed group routes/links/observations/turns empty, proactive policy revision zero/off with empty history and disabled preview, and the same persisted private connection ready; no group route was enabled, no audience observed and no model or QQ send API was called by the rollout or root verifier; real phone acceptance remains separate
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
     - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
     - phase_d2_real_opt_in_phone_quiet_hours_disable_new_input_and_restart_acceptance
-    - phase_d3_verified_schema38_to40_preserving_deployment_preflight
-    - phase_d3_verified_default_off_deployment_and_operator_selected_two_member_phone_acceptance
+    - phase_d3_operator_selected_two_member_real_qq_at_trigger_isolation_disable_and_resume_acceptance
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
