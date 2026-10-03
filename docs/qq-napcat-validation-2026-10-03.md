@@ -599,3 +599,37 @@ connection. Actual new-version phone receipt, Phase B image/sticker/quote
 behavior, D2 explicit opt-in and D3 user-selected two-member group acceptance
 remain separate. This deployment is in the owned QQ stage; the source remains
 in the isolated QQ branch rather than the primary checkout.
+
+## Selected two-member group: real at/text acceptance (2026-10-04)
+
+The operator selected one exact test group and named its second human member.
+Read-only NapCat metadata confirmed the role account, existing bound owner and
+exactly one other human. The owner's registered participant came from its
+existing trusted private binding. The second member received a separate
+registered participant; QQ nicknames did not grant identity or permission.
+
+Operator APIs created two explicit links and a new two-member shared scene.
+The route was created disabled at revision one, then enabled at revision two
+using a second fresh account-matched audience observation. Only this group
+became enabled. Private sender admission and the default-off proactive policy
+were unchanged. Operator scripts called neither model nor QQ send APIs.
+
+The owner confirmed that ordinary non-at input received no reply and both
+members' actual at messages received text. Independent operator/SQLite reads
+found **three completed group turns, three delivered text parts and provider
+receipts** covering both participants. Two separate member sessions use one
+shared `scene:` memory scope and distinct `scene_member:` state scopes. No
+private binding points to the group scene. Runtime health, the persisted
+private connection and foreign-key checks passed. The private source inputs,
+replies and root verification are retained under
+`validation/d3-selected-group-nmheduli/` rather than public documentation.
+
+The selected route was then temporarily disabled at revision three. The owner
+confirmed group silence and working private replies. Root verified the same
+three completed group turns/receipts and a new delivered owner-private turn
+after disabling. A new account-matched audience observation restored only this
+route at revision four with the same scene and member mapping; proactive
+delivery remained off. Phone receipt after resume remains pending. This proves
+one real group's core at/text flow and operator disable; membership changes,
+reconnect behavior and additional real memory-isolation scenarios remain
+separate acceptance gates.
