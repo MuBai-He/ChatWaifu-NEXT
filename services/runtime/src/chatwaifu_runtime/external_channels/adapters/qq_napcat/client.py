@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from chatwaifu_protocol.base import JsonObject, JsonValue
 from websockets.asyncio.client import ClientConnection, connect
+from websockets.protocol import State
 
 from .groups import (
     GROUP_NOTICE_TYPES,
@@ -151,6 +152,29 @@ class NapCatClient:
     def bind_account(self, account: str) -> None:
         self._account = account
         self._account_revision += 1
+
+    @property
+    def bound_account(self) -> str | None:
+        """Transport binding only; this does not prove login or route authority."""
+        return self._account
+
+    @property
+    def group_dispatch_ready(self) -> bool:
+        """Fail closed on disconnected transport or unconsumed membership notices.
+
+        The host must separately authorize its fixed route and audience. This
+        observation cannot prove current QQ membership or atomic send safety.
+        """
+        return (
+            self._account is not None
+            and qq_group_identifier(self._account) == self._account
+            and self._socket is not None
+            and self._socket.state is State.OPEN
+            and self._reader is not None
+            and not self._reader.done()
+            and not self._reader.cancelling()
+            and self._pending_group_notices == 0
+        )
 
     async def open(self) -> None:
         self._socket = await connect(
