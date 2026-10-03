@@ -17,6 +17,13 @@ from uuid import uuid4
 from chatwaifu_protocol.base import JsonObject, JsonValue
 from websockets.asyncio.client import ClientConnection, connect
 
+from .groups import (
+    GROUP_NOTICE_TYPES,
+    NapCatGroupMemberList,
+    normalize_group_notice,
+    qq_group_identifier,
+)
+
 _SOCKET_LOGGER = logging.getLogger("qq.websocket")
 _SOCKET_LOGGER.disabled = (
     True  # WebSocket debug frames contain credentials and private message content.
@@ -29,6 +36,8 @@ _RECORD_MAX_CHUNKS = 256
 _IMAGE_MAX_FRAME_BYTES = 90 * 1024
 # A complete 5 MiB response can arrive before its consumer is scheduled.
 _IMAGE_QUEUE_FRAMES = _IMAGE_MAX_BYTES // _IMAGE_CHUNK_BYTES + 2
+_RPC_TIMEOUT_SECONDS = 10
+_GROUP_TIMEOUT_SECONDS = 20
 
 
 class NapCatError(RuntimeError):
@@ -135,9 +144,13 @@ class NapCatClient:
         self._streams: dict[str, _ImageStream] = {}
         self._events: asyncio.Queue[JsonObject | None] = asyncio.Queue(maxsize=64)
         self._account: str | None = None
+        self._account_revision = 0
+        self._group_observation_epoch = 0
+        self._pending_group_notices = 0
 
     def bind_account(self, account: str) -> None:
         self._account = account
+        self._account_revision += 1
 
     async def open(self) -> None:
         self._socket = await connect(
@@ -219,6 +232,23 @@ class NapCatClient:
                 elif event.get("post_type") == "message":
                     # Overflow closes the connection instead of dropping an admitted event silently.
                     self._events.put_nowait(event)
+                elif (
+                    event.get("post_type") == "notice"
+                    and isinstance(event.get("notice_type"), str)
+                    and event.get("notice_type") in GROUP_NOTICE_TYPES
+                    and self._account is not None
+                ):
+                    group_id = qq_group_identifier(event.get("group_id"))
+                    notice = (
+                        normalize_group_notice(event, account=self._account, group_id=group_id)
+                        if group_id is not None
+                        else None
+                    )
+                    if notice is None:
+                        raise NapCatError("QQ returned an invalid group membership notice")
+                    self._group_observation_epoch += 1
+                    self._events.put_nowait(notice.to_event())
+                    self._pending_group_notices += 1
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -227,18 +257,42 @@ class NapCatClient:
             self._fail_pending()
             if not self._events.full():
                 self._events.put_nowait(None)
-            elif self._socket:
+            if self._socket:
                 await self._socket.close()
 
     async def event(self) -> JsonObject:
+        """Read one event; fence group routes synchronously before awaiting notice work."""
         if self._reader and self._reader.done() and self._events.empty():
             raise NapCatError("QQ connection closed")
         value = await self._events.get()
         if value is None:
             raise NapCatError("QQ connection closed")
+        if value.get("post_type") == "notice" and value.get("notice_type") in GROUP_NOTICE_TYPES:
+            self._pending_group_notices -= 1
         return value
 
     async def call(self, action: str, params: JsonObject) -> JsonObject:
+        response = await self._request(action, params)
+        data = response.get("data")
+        return cast(JsonObject, data) if isinstance(data, dict) else {}
+
+    async def call_array(
+        self, action: str, params: JsonObject, *, max_items: int = 33
+    ) -> tuple[JsonObject, ...]:
+        """Bounded object arrays share the ordinary RPC capacity and deadlines."""
+        if type(max_items) is not int or not 1 <= max_items <= 33:
+            raise ValueError("QQ array limit must be between 1 and 33")
+        response = await self._request(action, params)
+        data = response.get("data")
+        if (
+            not isinstance(data, list)
+            or len(data) > max_items
+            or any(not isinstance(item, dict) for item in data)
+        ):
+            raise NapCatError("QQ returned an invalid bounded array")
+        return tuple(cast(JsonObject, item) for item in data)
+
+    async def _request(self, action: str, params: JsonObject) -> JsonObject:
         if self._socket is None or (self._reader and self._reader.done()):
             raise NapCatRejected("QQ connection is unavailable before request")
         if len(self._pending) + len(self._streams) >= 32:
@@ -247,15 +301,14 @@ class NapCatClient:
         future: asyncio.Future[JsonObject] = asyncio.get_running_loop().create_future()
         self._pending[echo] = future
         try:
-            async with asyncio.timeout(10):
+            async with asyncio.timeout(_RPC_TIMEOUT_SECONDS):
                 await self._socket.send(
                     json.dumps({"action": action, "params": params, "echo": echo})
                 )
                 response = await future
             if response.get("status") != "ok" or response.get("retcode") != 0:
                 raise NapCatRejected("QQ rejected the requested operation")
-            data = response.get("data")
-            return cast(JsonObject, data) if isinstance(data, dict) else {}
+            return response
         except asyncio.CancelledError:
             raise
         except NapCatError:
@@ -266,6 +319,60 @@ class NapCatClient:
             self._pending.pop(echo, None)
             if not future.done():
                 future.cancel()
+
+    def _account_matches(self, account: str | None, revision: int) -> bool:
+        return self._account == account and self._account_revision == revision
+
+    def _check_group_observation(self, epoch: int) -> None:
+        if self._pending_group_notices or self._group_observation_epoch != epoch:
+            raise NapCatRejected("QQ group membership observation changed or is pending")
+
+    async def _account_preflight(self, account: str | None, revision: int) -> None:
+        if not self._account_matches(account, revision):
+            raise NapCatRejected("QQ account binding changed before operation")
+        if account is not None:
+            login = await self.call("get_login_info", {})
+            if qq_group_identifier(login.get("user_id")) != account or not self._account_matches(
+                account, revision
+            ):
+                raise NapCatRejected("QQ account changed before operation")
+
+    async def get_group_member_list(self, group_id: str) -> NapCatGroupMemberList:
+        """Observe a small audience; no_cache is not proof of fresh membership."""
+        if qq_group_identifier(group_id) != group_id:
+            raise ValueError("QQ group must be a canonical identifier")
+        account, revision = self._account, self._account_revision
+        if account is None or qq_group_identifier(account) != account:
+            raise NapCatRejected("QQ group operations require a bound account")
+        epoch = self._group_observation_epoch
+        self._check_group_observation(epoch)
+        try:
+            async with asyncio.timeout(_GROUP_TIMEOUT_SECONDS):
+                await self._account_preflight(account, revision)
+                self._check_group_observation(epoch)
+                members = await self.call_array(
+                    "get_group_member_list", {"group_id": group_id, "no_cache": True}
+                )
+                ids: set[str] = set()
+                for member in members:
+                    user_id = qq_group_identifier(member.get("user_id"))
+                    if (
+                        qq_group_identifier(member.get("group_id")) != group_id
+                        or user_id is None
+                        or user_id in ids
+                    ):
+                        raise NapCatError("QQ returned inconsistent group membership")
+                    ids.add(user_id)
+                if account not in ids or not 2 <= len(ids) - 1 <= 32:
+                    raise NapCatError("QQ group requires self and 2 to 32 other members")
+                self._check_group_observation(epoch)
+                await self._account_preflight(account, revision)
+                self._check_group_observation(epoch)
+                return NapCatGroupMemberList(
+                    account, group_id, tuple(sorted(ids - {account}, key=int))
+                )
+        except TimeoutError:
+            raise NapCatError("QQ group observation did not complete") from None
 
     async def download_image(self, file_ref: str, *, max_bytes: int = _IMAGE_MAX_BYTES) -> bytes:
         """Download bounded image bytes over the authenticated pinned NapCat stream API.
@@ -488,16 +595,59 @@ class NapCatClient:
         *,
         before_send: Callable[[], Awaitable[bool]] | None = None,
     ) -> str:
-        if self._account is not None:
-            login = await self.call("get_login_info", {})
-            if str(login.get("user_id")) != self._account:
-                raise NapCatRejected("QQ account changed before send")
+        account, revision = self._account, self._account_revision
+        await self._account_preflight(account, revision)
         if before_send is not None and not await before_send():
             raise NapCatRejected("QQ delivery cancelled before send")
+        if not self._account_matches(account, revision):
+            raise NapCatRejected("QQ account binding changed before send")
         response = await self.call(
             "send_private_msg",
             {"user_id": int(recipient), "message": cast(list[JsonValue], segments)},
         )
+        message_id = response.get("message_id")
+        if type(message_id) not in {str, int} or not re.fullmatch(
+            r"-?[0-9]{1,20}", str(message_id)
+        ):
+            raise NapCatUncertain("QQ returned no stable message identifier")
+        return str(message_id)
+
+    async def send_group(
+        self,
+        group_id: str,
+        segments: list[JsonObject],
+        *,
+        before_send: Callable[[], Awaitable[bool]],
+    ) -> str:
+        """Send only captured text to a fixed group, after the caller's final guard."""
+        if qq_group_identifier(group_id) != group_id:
+            raise ValueError("QQ group must be a canonical identifier")
+        if not 1 <= len(segments) <= 128:
+            raise ValueError("QQ group replies require bounded text segments")
+        captured: list[JsonValue] = []
+        size = 0
+        for segment in segments:
+            data = segment.get("data")
+            text = data.get("text") if isinstance(data, dict) else None
+            if segment.get("type") != "text" or not isinstance(text, str) or not text.strip():
+                raise ValueError("QQ group replies support nonempty text only")
+            size += len(text)
+            if size > 20_000:
+                raise ValueError("QQ group reply exceeds its text limit")
+            captured.append({"type": "text", "data": {"text": text}})
+        account, revision = self._account, self._account_revision
+        if account is None or qq_group_identifier(account) != account:
+            raise NapCatRejected("QQ group operations require a bound account")
+        epoch = self._group_observation_epoch
+        self._check_group_observation(epoch)
+        await self._account_preflight(account, revision)
+        self._check_group_observation(epoch)
+        if not await before_send():
+            raise NapCatRejected("QQ group delivery cancelled before send")
+        if not self._account_matches(account, revision):
+            raise NapCatRejected("QQ account binding changed before group send")
+        self._check_group_observation(epoch)
+        response = await self.call("send_group_msg", {"group_id": group_id, "message": captured})
         message_id = response.get("message_id")
         if type(message_id) not in {str, int} or not re.fullmatch(
             r"-?[0-9]{1,20}", str(message_id)

@@ -11,6 +11,7 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import ChannelInboundTextMessage
 
 from .client import validate_image_file_ref
+from .groups import NapCatGroupInboundMessage, qq_group_identifier
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,70 @@ class NapCatInboundMessage:
     message: ChannelInboundTextMessage
     images: tuple[NapCatImageReference, ...] = field(default=(), repr=False)
     record: NapCatRecordReference | None = field(default=None, repr=False)
+
+
+def normalize_group_inbound(
+    event: JsonObject,
+    *,
+    connection_id: UUID,
+    account: str,
+    group_id: str,
+    allowed_senders: frozenset[str],
+) -> NapCatGroupInboundMessage | None:
+    """Admit a granted structured mention without resolving participant or scope."""
+    sender = qq_group_identifier(event.get("user_id"))
+    message_id = event.get("message_id")
+    details = event.get("sender")
+    if (
+        qq_group_identifier(account) != account
+        or qq_group_identifier(group_id) != group_id
+        or event.get("post_type") != "message"
+        or event.get("message_type") != "group"
+        or event.get("sub_type") != "normal"
+        or event.get("anonymous") is not None
+        or qq_group_identifier(event.get("self_id")) != account
+        or qq_group_identifier(event.get("group_id")) != group_id
+        or sender is None
+        or sender == account
+        or sender not in allowed_senders
+        or not isinstance(details, dict)
+        or qq_group_identifier(details.get("user_id")) != sender
+        or type(message_id) not in {str, int}
+        or not re.fullmatch(r"-?[0-9]{1,20}", str(message_id))
+        or str(int(str(message_id))) != str(message_id)
+        or int(str(message_id)) == 0
+    ):
+        return None
+    segments = event.get("message")
+    if not isinstance(segments, list) or not 1 <= len(segments) <= 128:
+        return None
+    texts: list[str] = []
+    mentions = 0
+    size = 0
+    for segment in segments:
+        if not isinstance(segment, dict) or not isinstance(segment.get("data"), dict):
+            return None
+        data = segment["data"]
+        assert isinstance(data, dict)
+        if segment.get("type") == "at":
+            if qq_group_identifier(data.get("qq")) != account:
+                return None
+            mentions += 1
+        elif segment.get("type") == "text" and isinstance(data.get("text"), str):
+            value = data["text"]
+            assert isinstance(value, str)
+            size += len(value)
+            if size > 20_000:
+                return None
+            texts.append(value)
+        else:
+            return None
+    text = "".join(texts).strip()
+    if mentions != 1 or not text:
+        return None
+    return NapCatGroupInboundMessage(
+        connection_id, account, group_id, sender, str(message_id), text, datetime.now(UTC)
+    )
 
 
 def normalize(
