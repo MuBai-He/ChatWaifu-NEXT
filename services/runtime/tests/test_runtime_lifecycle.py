@@ -125,6 +125,7 @@ async def test_conversation_cancel_does_not_swallow_its_callers_cancellation() -
             generation_id=generation_id,
             task=generation_task,
             completing=False,
+            revoked=False,
         )
     }
     cancelling = asyncio.create_task(service.cancel(session_id, "test cancellation"))

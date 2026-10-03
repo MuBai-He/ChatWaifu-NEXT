@@ -1316,7 +1316,9 @@ class ExternalChannelService:
                 message, image_fingerprint=image_fingerprint, audio_fingerprint=audio_fingerprint
             )
             duplicate = await self._repository.find_turn_by_external_message(
-                message.connection_id, message.external_message_id
+                message.connection_id,
+                message.external_message_id,
+                conversation_key=message.conversation_key,
             )
             if duplicate is not None:
                 if duplicate.content_sha256 != digest:

@@ -389,14 +389,27 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
     async def find_binding(
         self, connection_id: UUID, conversation_key: str
     ) -> ChannelBindingRecord | None:
-        row = await self._database.fetchone(
+        rows = await self._database.fetchall(
             """
-            SELECT * FROM channel_bindings
-            WHERE connection_id = ? AND conversation_key = ?
+            SELECT b.* FROM channel_bindings b
+            WHERE b.connection_id = ? AND b.conversation_key = ?
+              AND NOT EXISTS (
+                SELECT 1 FROM channel_turns t
+                WHERE t.binding_id=b.binding_id AND t.chat_type='group'
+              )
+            LIMIT 34
             """,
             (str(connection_id), conversation_key),
         )
-        return _binding_record(row) if row is not None else None
+        # Schema 39 has no binding chat_type; its legacy GROUP records are
+        # excluded by retained turn provenance. Schema 40 also admits new group
+        # bindings, which must never be reused by the owner-private gateway.
+        direct = tuple(
+            record
+            for row in rows
+            if (record := _binding_record(row)).chat_type is ChannelChatType.DIRECT
+        )
+        return direct[0] if len(direct) == 1 else None
 
     async def create_binding(
         self,
@@ -431,13 +444,19 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         return created
 
     async def find_turn_by_external_message(
-        self, connection_id: UUID, external_message_id: str
+        self, connection_id: UUID, external_message_id: str, *, conversation_key: str | None = None
     ) -> ChannelTurnRecord | None:
-        row = await self._database.fetchone(
-            _TURN_SELECT + " WHERE t.connection_id = ? AND t.external_message_id = ?",
-            (str(connection_id), external_message_id),
+        sql = _TURN_SELECT + (
+            " WHERE t.connection_id = ? AND t.external_message_id = ? AND t.chat_type='direct'"
         )
-        return _turn_record(row) if row is not None else None
+        parameters: tuple[str, ...] = (str(connection_id), external_message_id)
+        if conversation_key is not None:
+            sql += " AND t.conversation_key = ?"
+            parameters += (conversation_key,)
+        rows = await self._database.fetchall(sql + " LIMIT 2", parameters)
+        # Legacy callers without a conversation key cannot resolve an ambiguous
+        # provider ID by choosing whichever conversation SQLite returned first.
+        return _turn_record(rows[0]) if len(rows) == 1 else None
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None:
         row = await self._database.fetchone(
@@ -2977,8 +2996,8 @@ def _binding_record(row: object) -> ChannelBindingRecord:
         scene_id=str(item["scene_id"])
         if "scene_id" in columns and item["scene_id"] is not None
         else None,
-        link_id=UUID(str(item["link_id"]))
-        if "link_id" in columns and item["link_id"] is not None
+        link_id=UUID(str(item["participant_link_id"]))
+        if "participant_link_id" in columns and item["participant_link_id"] is not None
         else None,
         participant_id=str(item["participant_id"])
         if "participant_id" in columns and item["participant_id"] is not None
