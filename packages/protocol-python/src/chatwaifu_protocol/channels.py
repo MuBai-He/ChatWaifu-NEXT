@@ -523,9 +523,11 @@ class ChannelDeliveryAcknowledgement(ChannelVersionedModel):
         return self
 
 
-class ChannelDeliverySnapshot(ChannelVersionedModel):
+class ChannelDeliverySnapshot(ProtocolModel):
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     delivery_id: UUID
-    channel_turn_id: UUID
+    channel_turn_id: UUID | None = None
+    outbound_intent_id: UUID | None = None
     connection_id: UUID
     status: ChannelDeliveryStatus
     attempt: int = Field(default=1, ge=1)
@@ -547,6 +549,17 @@ class ChannelDeliverySnapshot(ChannelVersionedModel):
             self.lease_id is None or self.lease_expires_at is None
         ):
             raise ValueError("sending delivery snapshots require an active lease")
+        return self
+
+    @model_validator(mode="after")
+    def validate_delivery_source(self) -> ChannelDeliverySnapshot:
+        inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
+        outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
+        if not (
+            (self.schema_version == "1.0" and inbound)
+            or (self.schema_version == "1.1" and outbound)
+        ):
+            raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
         return self
 
 
@@ -687,9 +700,11 @@ class ChannelDeliveryPartDraft(ChannelVersionedModel):
         return self
 
 
-class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
+class ChannelDeliveryPlanSnapshot(ProtocolModel):
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     delivery_id: UUID
-    channel_turn_id: UUID
+    channel_turn_id: UUID | None = None
+    outbound_intent_id: UUID | None = None
     connection_id: UUID
     status: ChannelDeliveryStatus
     plan_version: int = Field(default=1, ge=1)
@@ -703,6 +718,17 @@ class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     delivered_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_delivery_source(self) -> ChannelDeliveryPlanSnapshot:
+        inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
+        outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
+        if not (
+            (self.schema_version == "1.0" and inbound)
+            or (self.schema_version == "1.1" and outbound)
+        ):
+            raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
+        return self
 
 
 class ChannelDeliveryPartClaimRequest(ChannelVersionedModel):
