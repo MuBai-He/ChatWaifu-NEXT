@@ -633,3 +633,63 @@ delivery remained off. Phone receipt after resume remains pending. This proves
 one real group's core at/text flow and operator disable; membership changes,
 reconnect behavior and additional real memory-isolation scenarios remain
 separate acceptance gates.
+
+## Phase B private sticker opt-in and group revalidation (2026-10-04)
+
+An authenticated read-only preflight verified the ready paired owner, advertised
+image input and three preset assets with matching hashes and decoded static
+PNG/JPEG formats. The connection initially had no presentation override, no
+sticker opt-in, no learned stickers and no private image turns. This does not
+prove real image understanding or sticker display.
+
+The owner then explicitly requested that sticker replies remain enabled.
+Operator management saved a presentation override for the existing default
+character and private owner. A typed controlled `celebrate`/`happy` plan first
+verified a complete short text plus one optional preset image, with no model or
+QQ send call. The override uses the instant-message profile, two maximum text
+parts, a 500-character preferred size, a 1000-character soft size and no cadence
+delay or typing indicator. Technical/structured bypass remains enabled. Account,
+character, principal and admitted private sender were retained; neither learning
+nor proactive delivery was enabled. This opt-in is continuous, not a temporary
+test toggle to be closed automatically.
+
+Saving the connection configuration refreshed its existing QQ transport and
+paused the selected group. An initial restore used a route revision that had
+changed during reconnect and returned **409**; that failed attempt is retained.
+Root then read current authority, obtained another account-matched two-member
+observation and enabled the same selected route at revision **seven**. Scene,
+member identity and all three original group text receipts were unchanged.
+Private readiness, authenticated readback and foreign-key checks passed. No
+service or source deployment was performed by these operator scripts.
+
+Private evidence is under
+`validation/phase-b-sticker-opt-in-y3sw8mya/`, with the original failure and
+successful recovery recorded separately. Actual phone sticker display, incoming
+image understanding and quote display remain pending, as does phone receipt
+after group resume. The existing model-selected voice policy is unchanged.
+
+## Phase B first phone sticker failure and planning repair (2026-10-04)
+
+The owner reported **text only** for the approved celebration test. Root matched
+the exact committed input and retained its failed evidence in
+`validation/phase-b-missing-sticker-jd3sqgem/`: the completed generation planned
+`answer`/`neutral`, and its two required text parts were delivered with provider
+receipts. There was no image part or image-send attempt. Continuous sticker
+opt-in remained saved; this is a planning failure, not a verified transport failure.
+
+Two deterministic Character omissions reproduced locally: the intensifier
+`特别` was mistaken for the negation `别`, and an admitted positive signal did
+not otherwise produce a celebration plan. The narrow repair preserves negation
+before an intensifier and all higher-priority response branches, then plans the
+current positive signal as `celebrate`/`happy`. Generic answers remain undecorated
+even when background affect is happy. This follows ADR 0015 and 0034; it does
+not claim a new model-selected sticker tool or change model-selected voice.
+
+The strengthened QQ regression removes its supplied response-plan fixture and
+runs real Character planning, durable plan storage and the local OneBot socket
+for enabled, disabled and missing-image cases. The failed-first planning checks
+are retained in the turn history. After repair, 121 related checks passed and
+the complete Python suite passed **3039**, with **46** platform skips and normal
+exit in **151.69 s**. Full strict Pyright and targeted Ruff/format checks passed.
+New-version server deployment and actual phone sticker display remain separate
+gates; the first failed phone result is not promoted to a pass by these checks.
