@@ -415,11 +415,6 @@ class ExternalChannelService:
                 "principal_scope is immutable after channel connection creation"
             )
         self._validate_configuration(configuration)
-        if self._proactive is not None:
-            self._proactive.fence_connection(configuration.connection_id, "connection_changed")
-            await self._proactive.cancel_for_connection(
-                configuration.connection_id, reason="connection_changed"
-            )
         token = secrets.token_urlsafe(32) if rotate_access_token else None
         records: list[ChannelTurnRecord] = []
         tasks: list[asyncio.Task[None]] = []
@@ -440,12 +435,20 @@ class ExternalChannelService:
                     access_token_hash=_token_hash(token) if token is not None else None,
                     updated_at=datetime.now(UTC),
                 )
+                if self._proactive is not None:
+                    self._proactive.fence_route_revision(
+                        configuration.connection_id, updated.revision
+                    )
         except KeyError as error:
             raise ChannelNotFoundError(str(error)) from error
         except ValueError as error:
             raise ChannelConflictError(str(error)) from error
         finally:
             await self._finish_audio_cancellation(records, tasks)
+        if self._proactive is not None:
+            await self._proactive.connection_updated(
+                configuration.connection_id, revision=updated.revision
+            )
         snapshot = self._connection_snapshot(updated)
         return CreatedChannelConnection(snapshot, token) if token is not None else snapshot
 

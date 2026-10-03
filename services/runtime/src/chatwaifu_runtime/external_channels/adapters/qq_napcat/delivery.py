@@ -217,11 +217,8 @@ class NapCatDelivery:
                         return _failed("qq_reply_invalid", "QQ 引用标识不可用。")
                     segments = [{"type": "reply", "data": {"id": reply_target}}, *segments]
             # echo only correlates RPCs. A persisted fence prevents restart replay.
-            if len(journal) >= 128:
-                keep = await self._repository.retained_send_journal_keys(
-                    self._connection_id, tuple(journal)
-                )
-                journal = {k: v for k, v in journal.items() if k in keep or v == "unknown"}
+            # Receipt reconciliation owns garbage collection: a delivered
+            # part alone cannot prove a cursor's different receipt is resolved.
             if len(journal) >= 256:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
             # File reads can overlap cancellation or disabling the connection.

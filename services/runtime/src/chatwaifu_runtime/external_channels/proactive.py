@@ -148,13 +148,34 @@ class ChannelProactiveService:
             if intent.binding_id == binding_id:
                 self._fence_workflow(intent, task, reason)
 
+    def fence_route_revision(self, connection_id: UUID, revision: int) -> None:
+        for intent, task in tuple(self._workflows.values()):
+            if intent.connection_id == connection_id and intent.route_revision != revision:
+                self._fence_workflow(intent, task, "connection_changed")
+
+    async def connection_updated(self, connection_id: UUID, *, revision: int) -> None:
+        self.fence_route_revision(connection_id, revision)
+        for intent in await self._repository.list_active_intents(connection_id, limit=32):
+            if intent.route_revision != revision:
+                await self._cancel_record(intent, "connection_changed")
+        tasks = [
+            task
+            for intent, task in tuple(self._workflows.values())
+            if intent.connection_id == connection_id
+            and intent.route_revision != revision
+            and task is not asyncio.current_task()
+        ]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self.wake()
+
     def _fence_workflow(
         self, intent: ChannelOutboundIntentRecord, task: asyncio.Task[None], reason: str
     ) -> None:
         self._conversation.request_cancel(
             intent.session_id, expected_generation_id=intent.generation_id, reason=reason
         )
-        if task is not asyncio.current_task():
+        if task is not asyncio.current_task() and not task.cancelling():
             task.cancel(reason)
 
     async def cancel_for_connection(self, connection_id: UUID, *, reason: str) -> None:
@@ -201,6 +222,8 @@ class ChannelProactiveService:
     async def get_policy(self, connection_id: UUID) -> ChannelProactivePolicySnapshot:
         try:
             context = await self._repository.get_context(connection_id, as_of=self._clock())
+            if context.connection is None:
+                raise ChannelNotFoundError("unknown channel connection")
             snapshot = _policy_snapshot(context.policy)
             return snapshot.model_copy(
                 update={
@@ -215,9 +238,6 @@ class ChannelProactiveService:
     async def update_policy(
         self, connection_id: UUID, body: ChannelProactivePolicyUpdate
     ) -> ChannelProactivePolicySnapshot:
-        # Synchronous cancellation precedes even the first policy database await.
-        self.fence_connection(connection_id, "policy_changed")
-        await self.cancel_for_connection(connection_id, reason="policy_changed")
         try:
             result = await self._repository.update_policy(
                 connection_id, body, updated_at=self._clock()
@@ -226,6 +246,22 @@ class ChannelProactiveService:
             raise ChannelNotFoundError("unknown channel connection") from error
         except ValueError as error:
             raise ChannelConflictError("proactive policy revision conflict") from error
+        # CAS and revocation commit atomically. A rejected write must have no
+        # cancellation side effects. New-revision work admitted while this
+        # repository call was returning remains valid.
+        revoked = [
+            (intent, task)
+            for intent, task in tuple(self._workflows.values())
+            if intent.connection_id == connection_id and intent.policy_revision != result.revision
+        ]
+        for intent, task in revoked:
+            self._fence_workflow(intent, task, "policy_changed")
+        for intent, task in revoked:
+            await self._conversation.cancel(
+                intent.session_id, "policy_changed", expected_generation_id=intent.generation_id
+            )
+            if task is not asyncio.current_task():
+                await asyncio.gather(task, return_exceptions=True)
         self.wake()
         await self._publish_record(result)
         context = await self._repository.get_context(connection_id, as_of=self._clock())
@@ -241,6 +277,8 @@ class ChannelProactiveService:
             context = await self._repository.get_context(connection_id, as_of=now)
         except KeyError as error:
             raise ChannelNotFoundError("unknown channel connection") from error
+        if context.connection is None:
+            raise ChannelNotFoundError("unknown channel connection")
         active = (
             context.binding is not None
             and self._conversation.active_generation_id(context.binding.session_id) is not None
