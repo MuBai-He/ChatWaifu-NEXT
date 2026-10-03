@@ -859,3 +859,172 @@ cleanup** case. The original incomplete window remains recorded above.
 Quiet hours, revocation, input cancellation, restart and uncertain-send phone
 checks remain separate; this one-test opt-in does not authorize ongoing
 proactive delivery. Group-resume and private quote display are also pending.
+
+## D2 disabled Runtime restart and selected-group revalidation (2026-10-04)
+
+Fresh authenticated readback found policy revision **four** disabled and exactly
+the single delivered proactive intent. Private input count was fourteen and group
+input count was three, with no new quoted or post-resume group phone test input.
+The concurrent search checkout remained at committed `e609345`, with forty-one
+tracked changes and seventy-nine untracked paths; no stable integrated release
+or search permission was inferred from that state.
+
+Before restarting, root verified zero nonterminal channel turns/intents, saved a
+private online SQLite backup, and captured exact typed row/column hashes for
+six channel/proactive business tables: **17** channel turns, **18** deliveries,
+**21** delivery parts, **1** outbound intent, **1** policy and **2** episodes.
+Only `chatwaifu-qq-stage.service` was restarted. It returned active with a new
+process/invocation, healthy Runtime and ready private connection. Every captured
+business table retained its exact hash and row count; policy revision four,
+the single settled delivered intent, connection configuration and the reviewed
+Character overlay hash were unchanged. The other eight unit identities/states
+and the NapCat container identity/process/start time were unchanged.
+
+Reconnect correctly paused the selected group at revision **ten** with reason
+`reconnect`. The operator then observed only that selected group's audience
+through the authenticated management API, verified the same account and exact
+two-member sender set, and used current-revision CAS to restore it at revision
+**eleven**. The shared scene, participant links and speaker grants were preserved;
+foreign keys passed. No operator model or QQ message-send API was called. Raw
+backup, before/paused/after readbacks and typed fact hashes are retained under
+`validation/d2-real-disabled-restart-0nm7e0dn/`.
+
+This proves the captured live restart/cleanup facts, without substituting for
+phone absence or display observations. Resumed real group text, no repeated
+private proactive greeting and correct same-binding quote/display checks were
+requested together. Those phone results remain pending at this checkpoint.
+
+The owner subsequently confirmed **"群里收到新文字，私聊无重复主动消息"**.
+Root matched the exact new group input "恢复测试，你好", admitted at
+**06:33:41.907700 Asia/Shanghai**, to a completed turn at route revision eleven
+in the same shared scene. Its sender matched a granted linked participant and
+it had exactly one delivered text part with provider receipt. Group history
+now contains four turns; the previous three remain intact. The private policy
+snapshot at revision four and single delivered proactive intent history were
+exactly unchanged. Raw handset confirmation and matching turn/part evidence
+are retained in `root-phone-restart-group-acceptance.json` in that same folder.
+This accepts the resumed selected-group text and absence of repeated private
+proactive greeting after the real restart; quote display remains pending.
+
+## B real same-binding quote text and QQ display accepted (2026-10-04)
+
+The owner confirmed **"结论正确，显示引用标记"**. Root read-only SQLite
+verification matched the quoted private input admitted at **06:35:20.484716
+Asia/Shanghai** to the unique previously delivered image-answer text part from
+the same connection and binding. The referenced generation was completed,
+the provider ID did not collide with an admitted user message, and no photo
+redaction applied. Its text was the previously confirmed left-red-square and
+right-blue-circle image answer.
+
+The new completed answer was "左侧：红色的正方形\n右侧：蓝色的圆形", with exactly
+one delivered text part and provider receipt and no image or voice part.
+The persisted fresh input contained its reply-reference metadata. The adapter
+derives the first part's reply segment target from that current admitted message;
+the model cannot choose it. The QQ marker was observed on the handset, while a
+raw outgoing packet capture is not claimed. Foreign keys passed. Private exact
+input, referenced part, matching reply/receipt and handset confirmation are
+retained under `validation/phase-b-phone-quote-8cuetj5h/`.
+
+This accepts one owner-private same-binding quote text/display case. Together
+with the separately recorded static image and preset-display cases, B's core
+real phone checks are now verified. Animation, photo retention, sticker learning,
+cross-binding history and general image-answer quality are not added by this
+acceptance. Additional A/C fault, D2 quiet/revocation/input-cancellation, D3
+privacy/membership and search-integration gates remain open.
+
+## D2 quiet-hours negative check prepared, not enabled (2026-10-04)
+
+After the separately confirmed one-test authorization was consumed, a new typed
+quiet-hours proposal was prepared without applying it. Current policy remains
+disabled at revision **four**. The proposal preserves `Asia/Shanghai` and the
+23:00–08:00 quiet window, with one-minute idle/cooldown, two local-day reservations
+(one is already used) and two-minute TTL. The latter bounds avoid daily budget or
+the completed check-in's cooldown masking the quiet-hours decision. The intended
+result is **zero new proactive intents/sends**, after a newly admitted owner input.
+
+The reviewed policy-only controller has a five-minute initial input window,
+at least three minutes after its first fresh anchor and an eight-minute total
+limit. It requires the entire possible window plus margin to remain inside quiet
+hours and the same local date, observes the actual `quiet_hours` preview for
+thirty seconds after idle eligibility while history remains exactly unchanged,
+then restores the exact previous disabled policy through current-revision CAS.
+It preserves newer operator revisions and calls no model or QQ send API.
+
+Private typed proposal/controller are retained under
+`validation/d2-quiet-negative-plan-77e153o5/`. Syntax and early/middle/late anchor
+deadline calculations passed. A real unapproved-run guard check rejected the
+controller before policy/credential calls; independent authenticated readback
+confirmed the prior disabled snapshot unchanged and no armed/result file.
+Its approved source hash is
+`9f4475adc1d1abdc01345fe3744659543957aa8ed92b545377647d5ff8ff0101`.
+New explicit opt-in was requested under ADR 0068; no controller unit was started
+and no quiet-hours phone acceptance is claimed at this checkpoint.
+
+The owner subsequently separately approved **"临时启用静默检查"**. The saved
+proposal records that direct approval, and the deployed controller hash still
+matches the reviewed hash above. Actual transient unit
+`cw2-qq-quiet-test-77e153o5.service` was verified active/running with a nonzero
+PID. Separate authenticated readback confirmed temporary enabled revision
+**five**, the proposed quiet window, `no_owner_activity`, one existing reservation,
+one remaining budget slot, and the exactly unchanged single-intent history.
+The initial fresh-input window ends at **06:51:56.816810 Asia/Shanghai**; a
+first owner input grants enough additional observation time within the stated
+eight-minute hard limit. The phone fresh-input/no-extra-text step was requested.
+This is an armed checkpoint, not quiet-hours phone acceptance or cleanup proof.
+
+## D2 actual quiet-hours block accepted; default off restored (2026-10-04)
+
+The owner confirmed **"只有正常回复，没有额外主动文字"**. The actual private
+text was "静默测试，我先离开一会", admitted at **06:47:44.135424 Asia/Shanghai**
+and completed with one delivered normal text part and provider receipt. At
+06:48:44 the episode became due; the controller observed `quiet_hours`, not
+budget exhaustion or cooldown, continuously for **30.46842296 seconds**. One
+budget slot remained and the old reservation's one-minute cooldown had elapsed.
+There were zero new proactive intents and the original delivered intent history
+was exactly unchanged.
+
+The controller ended with `quiet_hours_blocked_without_new_intent`, `ok=true`,
+`restored_off=true`, no running PID, `Result=success` and normal exit zero.
+Independent policy/preview/history reads and read-only SQLite verified the exact
+previous disabled policy restored at revision **six**, `disabled` preview,
+one unchanged existing intent, valid foreign keys, ready private connection,
+permanent stickers enabled and the selected group unchanged at revision eleven.
+Only the completed transient test unit was stopped. Private raw phone/input,
+due preview and cleanup evidence is retained in
+`validation/d2-quiet-negative-plan-77e153o5/root-phone-quiet-acceptance.json`.
+An initial root verifier expected the suggested prompt's trailing "儿"; the
+actual input omitted it. That probe mismatch is retained separately and the
+passing verification matches the exact admitted owner timestamp and actual text.
+It was not a Runtime failure.
+
+The owner then requested a wake-up-readable acceptance document and instructed
+this chat to keep future commits outside the other chat's repository. Six owned
+documentary changes were hash-verified into independent clone
+`/Users/mubai/Desktop/CW2-QQ-integration`, whose Git common directory is its own
+`.git`, with no object alternates or remotes. Only the verified transferred edits
+were restored in the old worktree, leaving its HEAD unchanged and worktree clean.
+Subsequent changes and commits use the independent repository. Transfer evidence
+is retained under `/private/tmp/cw2-qq-independent-3wv7obn5/`.
+
+## Independent repository checks and wake-up acceptance document (2026-10-04)
+
+The independent clone installed locked Python/Node dependencies using offline
+caches into its own virtual environment/workspace. Protocol, Runtime and worker
+SDK package imports were verified to originate in that repository. The focused
+private QQ adapter/Runtime, group application/API/store/migration/host and
+proactive Runtime/repository/API campaign passed **838** with zero failures,
+errors or skips, one audioop deprecation warning, and normal pytest exit zero.
+Full strict Pyright, relevant Ruff, Web typecheck/build, documentary Prettier
+and diff checks passed. The Web build retains its existing bundle-size warning.
+The first test invocation named a nonexistent repository test file and exited
+four without running tests; its log was preserved separately, then the actual
+file inventory was used for the passing campaign. Raw JUnit/logs, module origins
+and independent root review are under the transfer evidence directory above.
+
+No production source changed in this checkpoint, and no new version was
+deployed merely for documentary edits. All three completed transient proactive
+test units were independently observed inactive/not-found with zero PID.
+The remaining phone and controlled-fault steps are organized in
+[QQ phone acceptance](qq-phone-acceptance.md), including what can be tested
+without enabling another policy and what needs a prepared operator window.
+These automated checks do not claim the still-pending real phone fault cases.

@@ -4,6 +4,7 @@
 - Date: 2026-10-03
 - Scope: D3, registered participants, shared memory, member character state,
   fixed external group routes
+- Validation state: Automated checks, dedicated Linux deployment, two-member real at/text replies and temporary disable/private continuity are verified. Fresh audience observation restored the same selected group after Runtime restart, with resumed text confirmed on the phone and in the delivery ledger. Further privacy/membership fault acceptance remains pending.
 
 ## Decision
 
