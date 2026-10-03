@@ -173,6 +173,50 @@ async def test_failed_transport_observer_cannot_prevent_socket_cleanup() -> None
         assert client._socket is None and not client.group_dispatch_ready
 
 
+@pytest.mark.parametrize("during", ["close", "reader_disconnect"])
+async def test_cancelled_transport_observer_preserves_cleanup_and_pending_rpc(during: str) -> None:
+    arrived, disconnect = asyncio.Event(), asyncio.Event()
+
+    async def peer(socket: ServerConnection) -> None:
+        await request(socket)
+        arrived.set()
+        if during == "reader_disconnect":
+            await disconnect.wait()
+            await socket.close()
+        else:
+            await socket.wait_closed()
+
+    async with connected(peer) as client:
+
+        def cancelled() -> None:
+            raise asyncio.CancelledError()
+
+        client.set_group_observers(
+            membership_notice=lambda notice: None, transport_invalidated=cancelled
+        )
+        pending = asyncio.create_task(client.call("get_status", {}))
+        try:
+            await asyncio.wait_for(arrived.wait(), 2)
+            if during == "close":
+                with pytest.raises(asyncio.CancelledError):
+                    await client.close()
+                assert client._socket is None
+            else:
+                disconnect.set()
+                assert client._reader is not None
+                with pytest.raises(asyncio.CancelledError):
+                    await asyncio.wait_for(client._reader, 2)
+            assert client._reader is not None and client._reader.done()
+            assert not client.group_dispatch_ready
+            with pytest.raises(NapCatUncertain):
+                await pending
+            assert client._pending == {}
+        finally:
+            disconnect.set()
+            pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
+
+
 @pytest.mark.parametrize("count", [2, 32])
 async def test_group_member_array_excludes_self_and_has_no_freshness_claim(count: int) -> None:
     actions: list[str] = []

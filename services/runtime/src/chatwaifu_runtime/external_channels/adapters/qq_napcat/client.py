@@ -230,15 +230,19 @@ class NapCatClient:
         self._reader = asyncio.create_task(self._read(), name="qq-onebot-reader")
 
     async def close(self) -> None:
-        self._revoke_group_transport()
-        if self._reader:
-            self._reader.cancel()
-        if self._socket:
-            await self._socket.close()
-        if self._reader:
-            await asyncio.gather(self._reader, return_exceptions=True)
-        self._socket = None
-        self._fail_pending()
+        try:
+            self._revoke_group_transport()
+        finally:
+            if self._reader:
+                self._reader.cancel()
+            try:
+                if self._socket:
+                    await self._socket.close()
+            finally:
+                if self._reader:
+                    await asyncio.gather(self._reader, return_exceptions=True)
+                self._socket = None
+                self._fail_pending()
 
     def _fail_pending(self) -> None:
         for future in self._pending.values():
@@ -324,12 +328,14 @@ class NapCatClient:
         except Exception:
             pass
         finally:
-            self._revoke_group_transport()
-            self._fail_pending()
-            if not self._events.full():
-                self._events.put_nowait(None)
-            if self._socket:
-                await self._socket.close()
+            try:
+                self._revoke_group_transport()
+            finally:
+                self._fail_pending()
+                if not self._events.full():
+                    self._events.put_nowait(None)
+                if self._socket:
+                    await self._socket.close()
 
     async def event(self) -> JsonObject:
         """Read one event; fence group routes synchronously before awaiting notice work."""
