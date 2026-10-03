@@ -145,7 +145,10 @@ async def test_shared_input_keeps_durable_qq_identity_and_has_no_tools_or_photo_
             restored.provider_id == "qq_napcat" and restored.participant_id == alice.participant_id
         )
         assert restored.to_json() == options.source_context.to_json()
-        audio = await container.database.fetchone("SELECT COUNT(*) AS n FROM audio_assets")
+        assert list((runtime_settings.data_dir / "audio").glob("*.wav")) == []
+        audio = await container.database.fetchone(
+            "SELECT COUNT(*) AS n FROM events WHERE event_type='assistant.audio_stream_started'"
+        )
         assert audio is not None and int(audio["n"]) == 0
         assert await container.runtime_skills.list_runs(alice.session_id) == []
     finally:

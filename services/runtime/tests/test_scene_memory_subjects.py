@@ -584,7 +584,7 @@ async def test_migration_39_failure_rolls_back_backfill_trigger_and_index(
             (sid, now, now),
         )
     await legacy.close()
-    version, script = MIGRATIONS[-1]
+    version, script = next(item for item in MIGRATIONS if item[0] == 39)
     assert version == 39
     broken = Database(
         runtime_settings.database_path,
