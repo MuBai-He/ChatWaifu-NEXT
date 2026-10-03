@@ -55,8 +55,22 @@ class ExtractedMemoryCandidate:
 
 def is_first_person_statement(text: str) -> bool:
     """Conservative self-statements; ambiguous third-party narration stays in review."""
+    if (
+        len(
+            re.findall(
+                r"我叫|是|喜欢|讨厌|\b(?:am|is|are|like|likes|love|loves|prefer|prefers|want|wants|have|has)\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+        )
+        > 1
+    ):
+        return False
     return (
-        any(pattern.match(text.strip()) for pattern in (_NAME, _PROFILE, _PREFERENCE, _PROSPECTIVE))
+        any(
+            pattern.fullmatch(text.strip())
+            for pattern in (_NAME, _PROFILE, _PREFERENCE, _PROSPECTIVE)
+        )
         or bool(
             re.match(
                 r"^(?:I\s+(?:am|like|love|prefer|want|have)|my\s+(?:name|age|favorite|job)\b)",
@@ -66,6 +80,44 @@ def is_first_person_statement(text: str) -> bool:
         )
         or bool(re.match(r"^(?:以后|下次)(?:请|要)?(?:用.+和我|和我|对我|给我)", text.strip()))
     )
+
+
+def scene_statement_fragments(text: str) -> tuple[str, ...]:
+    """Bounded independent clauses; reported/quoted speech stays ambiguous."""
+    content = text.strip()
+    if re.search(
+        r"[\"'\u201c\u201d\u2018\u2019「」『』]|(?:说|表示|告诉|said|says|wrote)\s*(?:[:\uff1a]|\n)",
+        content,
+    ):
+        return (content,) if content else ()
+    parts = re.split(
+        r"[，。！？.,!?;\uff1b\n]+|(?:但是|而且|同时|不过|然而|而)|\b(?:and|but|while)\b",
+        content,
+        maxsplit=255,
+        flags=re.IGNORECASE,
+    )
+    return tuple(part.strip(" \t\r\n。.!?！？") for part in parts if part.strip(" \t\r\n。.!?！？"))
+
+
+def is_grounded_first_person(candidate_text: str, source_text: str) -> bool:
+    """A candidate must itself be one self-statement present in the source."""
+    if re.search(
+        r"[\"'\u201c\u201d\u2018\u2019「」『』]|(?:说|表示|告诉|said|says|wrote)\s*(?:[:\uff1a]|\n)",
+        source_text,
+    ):
+        return False
+    candidate_parts = scene_statement_fragments(candidate_text)
+    if len(candidate_parts) != 1 or not is_first_person_statement(candidate_parts[0]):
+        return False
+    key = _statement_key(candidate_parts[0])
+    return any(
+        is_first_person_statement(part) and _statement_key(part) == key
+        for part in scene_statement_fragments(source_text)
+    )
+
+
+def _statement_key(text: str) -> str:
+    return "".join(character for character in text.casefold() if character.isalnum())
 
 
 class DeterministicMemoryExtractor:
