@@ -239,7 +239,7 @@ export type SchemaVersion5 = '1.0'
 export type VerificationCode = string
 export type Attempt = number
 export type CancelRequestedAt = string | null
-export type ChannelTurnId = string
+export type ChannelTurnId = string | null
 export type ConnectionId1 = string
 export type CreatedAt2 = string
 export type DeliveredAt = string | null
@@ -247,10 +247,11 @@ export type DeliveredPartCount = number
 export type DeliveryId = string
 export type LeaseExpiresAt = string | null
 export type LeaseId = string | null
+export type OutboundIntentId = string | null
 export type PartCount = number
 export type PlanVersion = number
 export type ProviderMessageId = string | null
-export type SchemaVersion6 = '1.0'
+export type SchemaVersion6 = '1.0' | '1.1'
 export type ChannelDeliveryStatus = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled'
 export type UpdatedAt2 = string
 export type AcknowledgedAt = string
@@ -320,17 +321,18 @@ export type LeaseSeconds1 = number
 export type PartId2 = string | null
 export type SchemaVersion14 = '1.0'
 export type CancelRequestedAt1 = string | null
-export type ChannelTurnId3 = string
+export type ChannelTurnId3 = string | null
 export type ConnectionId2 = string
 export type CreatedAt4 = string
 export type DeliveredAt2 = string | null
 export type DeliveredPartCount1 = number
 export type DeliveryId6 = string
 export type NextPendingOrdinal = number | null
+export type OutboundIntentId1 = string | null
 export type PartCount1 = number
 export type Parts = ChannelDeliveryPartSnapshot[]
 export type PlanVersion1 = number
-export type SchemaVersion15 = '1.0'
+export type SchemaVersion15 = '1.0' | '1.1'
 export type UpdatedAt4 = string
 export type ChannelTurnId4 = string | null
 export type ExternalMessageId = string | null
@@ -1786,7 +1788,7 @@ export interface ChannelAuthorizationVerificationRequest {
 export interface ChannelDeliverySnapshot {
   attempt?: Attempt
   cancel_requested_at?: CancelRequestedAt
-  channel_turn_id: ChannelTurnId
+  channel_turn_id?: ChannelTurnId
   connection_id: ConnectionId1
   created_at: CreatedAt2
   delivered_at?: DeliveredAt
@@ -1795,6 +1797,7 @@ export interface ChannelDeliverySnapshot {
   last_error?: StructuredError | null
   lease_expires_at?: LeaseExpiresAt
   lease_id?: LeaseId
+  outbound_intent_id?: OutboundIntentId
   part_count?: PartCount
   plan_version?: PlanVersion
   provider_message_id?: ProviderMessageId
@@ -1895,13 +1898,14 @@ export interface ChannelDeliveryPartClaimRequest {
 }
 export interface ChannelDeliveryPlanSnapshot {
   cancel_requested_at?: CancelRequestedAt1
-  channel_turn_id: ChannelTurnId3
+  channel_turn_id?: ChannelTurnId3
   connection_id: ConnectionId2
   created_at: CreatedAt4
   delivered_at?: DeliveredAt2
   delivered_part_count?: DeliveredPartCount1
   delivery_id: DeliveryId6
   next_pending_ordinal?: NextPendingOrdinal
+  outbound_intent_id?: OutboundIntentId1
   part_count: PartCount1
   parts?: Parts
   plan_version?: PlanVersion1

@@ -22,20 +22,29 @@ from chatwaifu_protocol.errors import StructuredError
 class ChannelProactivePolicy(ChannelVersionedModel):
     model_config = ConfigDict(extra="forbid")
 
-    enabled: bool = False
+    enabled: bool = Field(default=False, strict=True)
     source: Literal["idle_check_in"] = "idle_check_in"
     timezone: str = Field(default="Asia/Shanghai", min_length=1, max_length=128)
     idle_minutes: int = Field(default=45, ge=1, le=1440)
     cooldown_minutes: int = Field(default=60, ge=1, le=10080)
     daily_budget: int = Field(default=3, ge=1, le=20)
-    quiet_hours_enabled: bool = True
+    quiet_hours_enabled: bool = Field(default=True, strict=True)
     quiet_start: str = Field(default="23:00", pattern=r"^\d{2}:\d{2}$")
     quiet_end: str = Field(default="08:00", pattern=r"^\d{2}:\d{2}$")
     ttl_minutes: int = Field(default=15, ge=1, le=60)
 
+    @field_validator(
+        "idle_minutes", "cooldown_minutes", "daily_budget", "ttl_minutes", mode="before"
+    )
+    @classmethod
+    def validate_numeric_input(cls, value: object) -> object:
+        return _numeric_input(value)
+
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, value: str) -> str:
+        if value in {"Factory", "localtime", "posixrules"}:
+            raise ValueError("timezone must name an installed IANA time zone")
         try:
             ZoneInfo(value)
         except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -54,6 +63,11 @@ class ChannelProactivePolicyUpdate(ChannelVersionedModel):
 
     expected_revision: int = Field(ge=0)
     policy: ChannelProactivePolicy
+
+    @field_validator("expected_revision", mode="before")
+    @classmethod
+    def validate_numeric_input(cls, value: object) -> object:
+        return _numeric_input(value)
 
 
 class ChannelProactivePolicySnapshot(ChannelVersionedModel):
@@ -149,3 +163,16 @@ class ChannelOutboundIntentCancelRequest(ChannelVersionedModel):
     model_config = ConfigDict(extra="forbid")
 
     expected_revision: int = Field(ge=0)
+
+    @field_validator("expected_revision", mode="before")
+    @classmethod
+    def validate_numeric_input(cls, value: object) -> object:
+        return _numeric_input(value)
+
+
+def _numeric_input(value: object) -> object:
+    # JSON has one numeric type; 45.0 is an integer value, while true and "45"
+    # are different types. Keep the public Python/JavaScript boundary aligned.
+    if type(value) not in {int, float}:
+        raise ValueError("integer fields require a JSON number")
+    return value

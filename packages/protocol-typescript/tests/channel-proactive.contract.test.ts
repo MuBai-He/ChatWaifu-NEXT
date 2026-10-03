@@ -43,9 +43,16 @@ describe("fixed-owner proactive control contracts", () => {
     { quiet_start: "24:00" },
     { quiet_end: "08:60" },
     { timezone: "Not/A_Timezone" },
+    { timezone: "Factory" },
+    { timezone: "localtime" },
+    { timezone: "posixrules" },
     { timezone: "+03:00" },
     { source: "calendar" },
     { enabled: "true" },
+    { idle_minutes: true },
+    { idle_minutes: "45" },
+    { enabled: "false" },
+    { quiet_hours_enabled: 1 },
     { recipient: "other-owner" },
   ])("rejects invalid or expanded policy %j", (policy) => {
     expect(() => parseChannelProactivePolicy(policy)).toThrow();

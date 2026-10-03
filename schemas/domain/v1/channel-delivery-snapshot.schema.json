@@ -117,9 +117,17 @@
       "title": "Cancel Requested At"
     },
     "channel_turn_id": {
-      "format": "uuid",
-      "title": "Channel Turn Id",
-      "type": "string"
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Channel Turn Id"
     },
     "connection_id": {
       "format": "uuid",
@@ -192,6 +200,19 @@
       "default": null,
       "title": "Lease Id"
     },
+    "outbound_intent_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outbound Intent Id"
+    },
     "part_count": {
       "default": 1,
       "minimum": 1,
@@ -219,8 +240,11 @@
       "title": "Provider Message Id"
     },
     "schema_version": {
-      "const": "1.0",
       "default": "1.0",
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
       "title": "Schema Version",
       "type": "string"
     },
@@ -235,7 +259,6 @@
   },
   "required": [
     "delivery_id",
-    "channel_turn_id",
     "connection_id",
     "status",
     "created_at",
