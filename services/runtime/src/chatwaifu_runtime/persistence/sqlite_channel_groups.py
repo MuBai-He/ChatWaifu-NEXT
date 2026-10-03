@@ -1305,6 +1305,8 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 (str(lineage.channel_turn_id),),
             )
             if existing:
+                if turn["reply_text"] != reply_text:
+                    raise ChannelConflictError("group plan reply differs from its fixed generation")
                 return ChannelGroupPlanResult(
                     UUID(existing["delivery_id"]),
                     ChannelGroupDeliveryTarget.model_validate_json(existing["group_target_json"]),

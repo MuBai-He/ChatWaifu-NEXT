@@ -1904,10 +1904,12 @@ END;
 CREATE TRIGGER channel_group_text_only BEFORE INSERT ON channel_delivery_parts
  WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=NEW.delivery_id) IS
  NOT NULL
- AND (NEW.kind!='text' OR NEW.ordinal!=0 OR NEW.required!=1 OR NEW.delay_after_ms!=0)
+ AND (NEW.kind!='text' OR NEW.ordinal!=0 OR NEW.required!=1
+  OR NEW.delay_after_ms!=0 OR NEW.not_before_at IS NOT NULL)
 BEGIN SELECT RAISE(ABORT,'group delivery requires one immediate text part'); END;
 CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordinal,
- required,delay_after_ms,payload_json ON channel_delivery_parts
+ required,delay_after_ms,not_before_at,payload_json,part_id,delivery_id,provider_client_id
+ ON channel_delivery_parts
  WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=OLD.delivery_id) IS
  NOT NULL
 BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;

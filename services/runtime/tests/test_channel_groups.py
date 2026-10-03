@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sqlite3
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
@@ -14,6 +15,7 @@ from uuid import UUID, uuid4
 import pytest
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import (
+    ChannelChatType,
     ChannelConnectionConfiguration,
     ChannelConnectionStatus,
     ChannelDeliveryPartClaimRequest,
@@ -347,6 +349,33 @@ async def test_plan_is_fixed_single_text_and_requires_canonical_generation(group
         await group.database.execute(
             "UPDATE channel_delivery_parts SET payload_json='{}' WHERE delivery_id=?",
             (str(plan.delivery_id),),
+        )
+    repeated = await group.repository.create_group_plan(
+        a.lineage, reply_text="reply", delivery_id=uuid4(), completed_at=NOW
+    )
+    assert repeated.delivery_id == plan.delivery_id and repeated.target == plan.target
+    with pytest.raises(ChannelConflictError, match="fixed generation"):
+        await group.repository.create_group_plan(
+            a.lineage, reply_text="altered", delivery_id=uuid4(), completed_at=NOW
+        )
+    deliveries = SQLiteExternalChannelRepository(group.database, EventStore(group.database))
+    readback = await deliveries.get_delivery_plan(plan.delivery_id)
+    assert readback is not None and readback.group_target == plan.target
+    assert a.binding.chat_type.value == "group" and a.binding.group_route_id == group.route.route_id
+    assert (
+        a.binding.scene_id == group.route.scene_id
+        and a.binding.link_id == group.route.members[0].link_id
+    )
+    assert a.turn.group_lineage_version == 1 and a.turn.group_route_id == group.route.route_id
+    assert a.turn.group_route_revision == group.route.revision
+    assert (
+        await group.repository.find_group_binding(group.route.route_id, group.route.scene_id, "111")
+        == a.binding
+    )
+    with pytest.raises(sqlite3.IntegrityError, match="content is immutable"):
+        await group.database.execute(
+            "UPDATE channel_delivery_parts SET not_before_at=? WHERE delivery_id=?",
+            (NOW.isoformat(), str(plan.delivery_id)),
         )
 
 
@@ -754,3 +783,173 @@ async def test_scene_ownership_precedes_any_binding_and_survives_soft_delete(gro
     )
     assert await group.repository.is_group_scene(group.route.scene_id)
     assert await group.database.fetchall("SELECT * FROM channel_bindings") == []
+
+
+async def test_two_sqlite_handles_serialize_duplicate_and_cas(group: Group, tmp_path: Path) -> None:
+    other_database = await _open(tmp_path / "groups.db")
+    try:
+        other = SQLiteChannelGroupRepository(other_database, EventStore(other_database))
+        admission = group.admission("111", "1")
+        redelivery = replace(
+            admission,
+            channel_turn_id=uuid4(),
+            message=replace(admission.message, received_at=NOW + timedelta(seconds=1)),
+        )
+        results = await asyncio.gather(
+            group.repository.admit_group_turn(admission), other.admit_group_turn(redelivery)
+        )
+        assert sum(result.duplicate for result in results) == 1
+        assert sum(result.dispatch_now for result in results) == 1
+        assert results[0].turn.channel_turn_id == results[1].turn.channel_turn_id
+        assert len(await group.database.fetchall("SELECT * FROM channel_turns")) == 1
+
+        async def disable(repository: SQLiteChannelGroupRepository) -> object:
+            try:
+                return await repository.update_route(
+                    group.route.route_id,
+                    expected_revision=group.route.revision,
+                    enabled=False,
+                    observation_id=None,
+                    members=group.route.members,
+                    scene_id=group.route.scene_id,
+                    updated_at=NOW,
+                )
+            except ChannelConflictError as error:
+                return error
+
+        transitions = await asyncio.gather(disable(group.repository), disable(other))
+        assert sum(isinstance(result, ChannelConflictError) for result in transitions) == 1
+        assert not (await other.authorize_group_turn(results[0].lineage)).allowed
+        assert await other_database.fetchall("PRAGMA foreign_key_check") == []
+    finally:
+        await other_database.close()
+
+
+async def test_two_sqlite_handles_plan_and_revoke_never_leave_sendable_work(
+    group: Group, tmp_path: Path
+) -> None:
+    other_database = await _open(tmp_path / "groups.db")
+    try:
+        other = SQLiteChannelGroupRepository(other_database, EventStore(other_database))
+        admission = group.admission("111", "1")
+        first = await group.repository.admit_group_turn(admission)
+        await group.repository.begin_group_turn(first.lineage, updated_at=NOW)
+        await _generation(group, admission)
+
+        async def plan() -> object:
+            try:
+                return await group.repository.create_group_plan(
+                    first.lineage, reply_text="reply", delivery_id=uuid4(), completed_at=NOW
+                )
+            except ChannelPolicyError as error:
+                return error
+
+        _, paused = await asyncio.gather(
+            plan(),
+            other.pause_routes(
+                reason=ChannelGroupPauseReason.MEMBERSHIP_CHANGED,
+                connection_id=group.connection_id,
+                updated_at=NOW,
+            ),
+        )
+        assert paused[0].route is not None and not paused[0].route.enabled
+        assert not (await other.authorize_group_turn(first.lineage)).allowed
+        assert (
+            await other_database.fetchall(
+                "SELECT * FROM channel_delivery_parts WHERE status IN ('pending','sending')"
+            )
+            == []
+        )
+        assert await other_database.fetchall("PRAGMA foreign_key_check") == []
+    finally:
+        await other_database.close()
+
+
+async def test_legacy_private_lookup_never_reads_group_binding_or_raw_id(group: Group) -> None:
+    admitted = await group.repository.admit_group_turn(group.admission("111", "1"))
+    deliveries = SQLiteExternalChannelRepository(group.database, EventStore(group.database))
+    assert await deliveries.find_binding(group.connection_id, "group:500") is None
+    assert await deliveries.find_turn_by_external_message(group.connection_id, "1") is None
+    sessions = SessionService(group.database, EventStore(group.database), EventHub())
+    private_session = await sessions.create_session("default")
+    private_binding = await deliveries.create_binding(
+        binding_id=uuid4(),
+        connection_id=group.connection_id,
+        conversation_key="group:500",
+        sender_key="999",
+        session_id=private_session.session_id,
+        created_at=NOW,
+    )
+    assert private_binding.chat_type is ChannelChatType.DIRECT
+    private_turn = await deliveries.create_turn(
+        replace(
+            admitted.turn,
+            channel_turn_id=uuid4(),
+            binding_id=private_binding.binding_id,
+            sender_key="999",
+            chat_type=ChannelChatType.DIRECT,
+            principal_scope="local",
+            session_id=private_session.session_id,
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            group_lineage_version=0,
+            group_route_id=None,
+            group_route_revision=None,
+        )
+    )
+    assert await deliveries.find_binding(group.connection_id, "group:500") == private_binding
+    assert await deliveries.find_turn_by_external_message(group.connection_id, "1") == private_turn
+    group_result = await group.repository.find_group_turn(group.connection_id, "500", "1")
+    assert (
+        group_result is not None
+        and group_result.turn.channel_turn_id == admitted.turn.channel_turn_id
+    )
+    assert group_result.binding.binding_id != private_binding.binding_id
+
+
+async def test_group_target_and_unknown_send_fence_survive_reopen_then_known_receipt(
+    group: Group, tmp_path: Path
+) -> None:
+    admission = group.admission("111", "1")
+    accepted = await group.repository.admit_group_turn(admission)
+    await group.repository.begin_group_turn(accepted.lineage, updated_at=NOW)
+    await _generation(group, admission)
+    plan = await group.repository.create_group_plan(
+        accepted.lineage, reply_text="reply", delivery_id=uuid4(), completed_at=NOW
+    )
+    deliveries = SQLiteExternalChannelRepository(group.database, EventStore(group.database))
+    claimed = await deliveries.claim_next_delivery_part(
+        ChannelDeliveryPartClaimRequest(delivery_id=plan.delivery_id, lease_id=uuid4()),
+        claimed_at=NOW,
+    )
+    assert claimed is not None and claimed.part is not None
+    client_id = claimed.part.provider_client_id
+    journal = json.dumps({client_id: "-77", "unknown-client": None})
+    await deliveries.set_adapter_cursor(group.connection_id, cursor=journal, updated_at=NOW)
+    await group.repository.pause_routes(
+        reason=ChannelGroupPauseReason.RECONNECT, connection_id=group.connection_id, updated_at=NOW
+    )
+    await group.database.close()
+    reopened = await _open(tmp_path / "groups.db")
+    try:
+        group_repository = SQLiteChannelGroupRepository(reopened, EventStore(reopened))
+        deliveries = SQLiteExternalChannelRepository(reopened, EventStore(reopened))
+        readback = await deliveries.get_delivery_plan(plan.delivery_id)
+        assert readback is not None and readback.group_target == plan.target
+        assert readback.parts[0].attempt == 1 and readback.parts[0].status.value == "cancelled"
+        assert not (await group_repository.authorize_group_turn(accepted.lineage)).allowed
+        assert await deliveries.get_adapter_cursor(group.connection_id) == journal
+        assert await deliveries.retained_send_journal_keys(
+            group.connection_id, [client_id, "unknown-client"]
+        ) == frozenset({client_id, "unknown-client"})
+        result = await deliveries.reconcile_known_delivery_part_receipt(
+            group.connection_id, client_id, "-77", observed_at=NOW
+        )
+        assert result.part is not None and result.part.attempt == 1
+        assert result.plan.group_target == plan.target and result.plan.status.value == "delivered"
+        assert await deliveries.retained_send_journal_keys(
+            group.connection_id, [client_id, "unknown-client"]
+        ) == frozenset({"unknown-client"})
+        assert await reopened.fetchall("PRAGMA foreign_key_check") == []
+    finally:
+        await reopened.close()
