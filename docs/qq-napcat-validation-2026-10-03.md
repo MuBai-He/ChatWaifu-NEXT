@@ -482,8 +482,8 @@ All **38** migration checksums, foreign-key/integrity checks, default-off empty
 tables and seven original receipts passed. The strict startup comparison preserved
 **73 old tables, 597 compared columns and 345 typed rows**; its only allowed change
 was the independently proven collection of seven already-confirmed journal keys.
-The copied-database migration comparison above includes one additional old schema
-column; these are separate comparison inventories. Eight protected unit identities,
+The migration inventory counts schema columns; the startup projection also
+compares FTS row IDs and excludes four transient connection fields. Eight protected unit identities,
 22 resource hashes and configuration were unchanged. Root independently passed
 **37** verifier tests, including rejection of removed unknown/unacknowledged keys,
 changed receipts, retained-key mutations and timestamp-only checkpoint changes.
