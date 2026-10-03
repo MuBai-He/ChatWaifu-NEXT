@@ -63,6 +63,7 @@ from chatwaifu_runtime.external_channels.burst import (
     ImageBurstCoordinator,
     combine_burst_captions,
 )
+from chatwaifu_runtime.external_channels.group_models import qq_id
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -2423,6 +2424,26 @@ class ExternalChannelService:
             connection.access_token_hash, _token_hash(access_token)
         ):
             raise ChannelAuthenticationError("invalid channel connection access token")
+        return connection
+
+    async def authenticate_group_transport(
+        self, connection_id: UUID, access_token: str
+    ) -> ChannelConnectionRecord:
+        """Authenticate the QQ transport; only the group domain grants speakers."""
+        connection = await self._authenticate(connection_id, access_token)
+        configuration = connection.configuration
+        if (
+            configuration.provider_id != "qq_napcat"
+            or not configuration.enabled
+            or connection.deleted_at is not None
+            or connection.status is not ChannelConnectionStatus.READY
+            or configuration.account_key is None
+        ):
+            raise ChannelPolicyError("group transport must be enabled and ready")
+        try:
+            qq_id(configuration.account_key)
+        except ValueError as error:
+            raise ChannelPolicyError("group transport requires a canonical QQ account") from error
         return connection
 
     async def _required_connection(self, connection_id: UUID) -> ChannelConnectionRecord:

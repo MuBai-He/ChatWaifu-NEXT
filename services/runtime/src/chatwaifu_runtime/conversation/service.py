@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Literal
@@ -31,7 +32,7 @@ from chatwaifu_protocol.events import (
     UserTurnCommittedPayload,
 )
 from chatwaifu_protocol.memory import MemoryContextPacket
-from chatwaifu_protocol.session import GenerationState, SessionState
+from chatwaifu_protocol.session import GenerationState, SessionSnapshot, SessionState
 
 from chatwaifu_runtime.agent.tool_calling import (
     AgentTurnOrchestrator,
@@ -144,6 +145,17 @@ class ConversationService:
         self._models = models
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
+        self._before_scope_reset: Callable[[SessionSnapshot], Awaitable[None]] | None = None
+
+    def set_before_scope_reset_hook(
+        self, callback: Callable[[SessionSnapshot], Awaitable[None]] | None
+    ) -> None:
+        """Fence external shared work before deleting its scope.
+
+        The hook runs under the admission lock and must not join tasks waiting
+        for that lock. It may synchronously revoke and persist that revocation.
+        """
+        self._before_scope_reset = callback
 
     def _capture_generation_snapshot(
         self,
@@ -1192,6 +1204,8 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
+            if self._before_scope_reset is not None:
+                await self._before_scope_reset(session)
             for active_session in await self._sessions.list_ready_sessions():
                 if (active_session.character_id, active_session.user_scope) == (
                     session.character_id,
