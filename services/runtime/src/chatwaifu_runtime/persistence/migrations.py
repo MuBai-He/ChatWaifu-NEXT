@@ -1458,4 +1458,23 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             ON channel_delivery_parts(status,lease_expires_at) WHERE status = 'sending';
         """,
     ),
+    (
+        39,
+        """
+        ALTER TABLE sessions ADD COLUMN state_scope TEXT NOT NULL DEFAULT 'local';
+        UPDATE sessions SET state_scope=user_scope;
+        DROP TRIGGER sessions_scope_immutable;
+        CREATE TRIGGER sessions_scope_immutable
+        BEFORE UPDATE OF participant_id, scene_id, scene_kind, audience_json,
+            user_scope, state_scope ON sessions
+        WHEN NEW.participant_id IS NOT OLD.participant_id OR NEW.scene_id IS NOT OLD.scene_id
+          OR NEW.scene_kind IS NOT OLD.scene_kind OR NEW.audience_json IS NOT OLD.audience_json
+          OR NEW.user_scope IS NOT OLD.user_scope OR NEW.state_scope IS NOT OLD.state_scope
+        BEGIN SELECT RAISE(ABORT, 'session conversation scope is immutable'); END;
+        DROP INDEX memory_records_active_text_unique_idx;
+        CREATE UNIQUE INDEX memory_records_active_text_unique_idx
+            ON memory_records(namespace, COALESCE(subject_id,''), normalized_text)
+            WHERE state='active';
+        """,
+    ),
 )

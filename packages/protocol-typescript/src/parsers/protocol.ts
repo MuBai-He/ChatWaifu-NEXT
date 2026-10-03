@@ -515,6 +515,7 @@ const sessionSnapshotSchema = z
     scene_kind: z.enum(["private", "shared"]).default("private"),
     audience_ids: z.array(z.string()).min(1).default(["local"]),
     user_scope: z.string().min(1).default("local"),
+    state_scope: z.string().min(1).optional(),
     state: z.enum([
       "created",
       "connecting",
@@ -1759,7 +1760,11 @@ export function parseAvatarInteractionEvent(
 }
 
 export function parseSessionSnapshot(input: unknown): SessionSnapshot {
-  return sessionSnapshotSchema.parse(input) as SessionSnapshot;
+  const session = sessionSnapshotSchema.parse(input);
+  return {
+    ...session,
+    state_scope: session.state_scope ?? session.user_scope,
+  } as SessionSnapshot;
 }
 
 export function parseCharacterKernelSnapshot(

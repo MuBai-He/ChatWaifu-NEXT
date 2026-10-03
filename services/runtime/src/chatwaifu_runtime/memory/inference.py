@@ -67,6 +67,7 @@ class LlmMemoryCandidateExtractor:
             {
                 "memory_id": str(item.memory_id),
                 "kind": item.kind,
+                "subject_id": item.subject_id,
                 "predicate": item.predicate,
                 "text": item.text,
             }

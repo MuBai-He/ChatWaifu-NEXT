@@ -50,6 +50,22 @@ class ExtractedMemoryCandidate:
     rationale: str
     evidence_event_ids: tuple[UUID, ...] = ()
     auto_commit: bool = False
+    requires_review: bool = False
+
+
+def is_first_person_statement(text: str) -> bool:
+    """Conservative self-statements; ambiguous third-party narration stays in review."""
+    return (
+        any(pattern.match(text.strip()) for pattern in (_NAME, _PROFILE, _PREFERENCE, _PROSPECTIVE))
+        or bool(
+            re.match(
+                r"^(?:I\s+(?:am|like|love|prefer|want|have)|my\s+(?:name|age|favorite|job)\b)",
+                text.strip(),
+                re.IGNORECASE,
+            )
+        )
+        or bool(re.match(r"^(?:以后|下次)(?:请|要)?(?:用.+和我|和我|对我|给我)", text.strip()))
+    )
 
 
 class DeterministicMemoryExtractor:

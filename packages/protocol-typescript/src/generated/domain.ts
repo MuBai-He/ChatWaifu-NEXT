@@ -1196,6 +1196,7 @@ export type SemanticRelevance = number
  * @minItems 1
  */
 export type SourceEventIds1 = [string, ...string[]]
+export type SubjectId1 = string | null
 export type TemporalRelevance = number
 export type Text8 = string
 export type OpenCommitments = MemoryExcerpt[]
@@ -1211,7 +1212,7 @@ export type Namespace1 = string
 export type ObservedAt1 = string
 export type Predicate1 = string | null
 export type PrivacyLevel17 = 'public' | 'local' | 'private' | 'sensitive'
-export type SubjectId1 = string | null
+export type SubjectId2 = string | null
 export type Text9 = string
 export type Confidence2 = number
 export type CreatedAt9 = string
@@ -1401,6 +1402,7 @@ export type SceneId1 = string | null
 export type SceneKind = 'private' | 'shared'
 export type SessionId28 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
+export type StateScope = string
 export type UpdatedAt13 = string
 export type UserScope1 = string
 export type BackgroundAllowed = boolean
@@ -2981,6 +2983,7 @@ export interface MemoryExcerpt {
   retrieval_sources?: RetrievalSources
   semantic_relevance?: SemanticRelevance
   source_event_ids: SourceEventIds1
+  subject_id?: SubjectId1
   temporal_relevance?: TemporalRelevance
   text: Text8
   [k: string]: unknown
@@ -3006,7 +3009,7 @@ export interface MemoryRecordDraft {
   observed_at: ObservedAt1
   predicate?: Predicate1
   sensitivity?: PrivacyLevel17
-  subject_id?: SubjectId1
+  subject_id?: SubjectId2
   text: Text9
   value?:
     | string
@@ -3228,6 +3231,7 @@ export interface SessionSnapshot {
   scene_kind?: SceneKind
   session_id: SessionId28
   state: SessionState
+  state_scope?: StateScope
   updated_at: UpdatedAt13
   user_scope?: UserScope1
   [k: string]: unknown

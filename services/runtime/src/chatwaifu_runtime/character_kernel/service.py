@@ -52,11 +52,12 @@ class CharacterKernelService:
 
     async def _session_scope(self, session_id: UUID, character_id: str) -> str:
         row = await self._database.fetchone(
-            "SELECT character_id, user_scope FROM sessions WHERE session_id = ?", (str(session_id),)
+            "SELECT character_id, state_scope FROM sessions WHERE session_id = ?",
+            (str(session_id),),
         )
         if row is None or row["character_id"] != character_id:
             raise KeyError("unknown character session")
-        return str(row["user_scope"])
+        return str(row["state_scope"])
 
     async def snapshot(
         self, character_id: str, *, user_scope: str = USER_SCOPE

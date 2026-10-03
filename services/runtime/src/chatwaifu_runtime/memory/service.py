@@ -27,6 +27,7 @@ from chatwaifu_runtime.memory.extractor import (
     DeterministicMemoryExtractor,
     ExplicitMemoryCommand,
     ExtractedMemoryCandidate,
+    is_first_person_statement,
 )
 from chatwaifu_runtime.memory.inference import LlmMemoryCandidateExtractor
 from chatwaifu_runtime.memory.policy import MemoryPolicy, MemoryWriteDecision
@@ -60,6 +61,7 @@ def serialize_candidates(candidates: Sequence[ExtractedMemoryCandidate]) -> str:
             "rationale": item.rationale,
             "evidence_event_ids": [str(eid) for eid in item.evidence_event_ids],
             "auto_commit": item.auto_commit,
+            "requires_review": item.requires_review,
         }
         for item in candidates
     ]
@@ -81,6 +83,7 @@ def deserialize_candidates(raw_json: str) -> list[ExtractedMemoryCandidate]:
                 rationale=str(item.get("rationale", "")),
                 evidence_event_ids=evidence_ids,
                 auto_commit=bool(item.get("auto_commit", False)),
+                requires_review=bool(item.get("requires_review", False)),
             )
         )
     return result
@@ -273,6 +276,16 @@ class MemoryService:
             raise ValueError("memory source event does not exist")
         command = self.parse_explicit_command(text)
         namespaces = await self.namespaces_for_session(session_id, character_id)
+        evidence = await self._repository.event_evidence(source_event_id)
+        if evidence is None:
+            raise ValueError("memory source event disappeared")
+        if evidence.session_id != session_id:
+            raise ValueError("memory source session mismatch")
+        scene_subject = (
+            f"participant:{evidence.identity.participant_id}"
+            if evidence.identity is not None and evidence.identity.scene_id is not None
+            else None
+        )
         if command is not None and command.operation == "forget":
             await self.forget_matching(
                 session_id,
@@ -280,13 +293,11 @@ class MemoryService:
                 source_event_id,
                 command.content,
                 namespaces,
+                subject_id=scene_subject,
             )
             return []
         content = command.content if command is not None else text
         explicit = command is not None and command.operation == "remember"
-        evidence = await self._repository.event_evidence(source_event_id)
-        if evidence is None:
-            raise ValueError("memory source event disappeared")
         deterministic = self._extractor.extract(
             content,
             namespace=namespaces[0],
@@ -520,6 +531,9 @@ class MemoryService:
         )
         if extracted is None:
             raise ValueError("corrected memory text must not be blank")
+        extracted = replace(
+            extracted, draft=extracted.draft.model_copy(update={"subject_id": current.subject_id})
+        )
         proposal = await self._process_candidate(
             session_id,
             None,
@@ -600,10 +614,19 @@ class MemoryService:
         source_event_id: UUID,
         query: str,
         namespaces: list[str],
+        *,
+        subject_id: str | None = None,
     ) -> int:
-        hits = await self._repository.search_fts(query, namespaces, limit=20)
+        evidence = await self._repository.event_evidence(source_event_id)
+        if evidence is None or evidence.session_id != session_id:
+            raise ValueError("memory source session mismatch")
+        if evidence.identity is not None and evidence.identity.scene_id is not None:
+            subject_id = f"participant:{evidence.identity.participant_id}"
+        hits = await self._repository.search_fts(query, namespaces, limit=20, subject_id=subject_id)
         count = 0
         for hit in hits:
+            if subject_id is not None and hit.record.subject_id != subject_id:
+                continue
             if await self.forget(
                 session_id,
                 hit.record.memory_id,
@@ -956,8 +979,48 @@ class MemoryService:
         source_id_override: UUID | None = None,
     ) -> MemoryProposal:
         now = datetime.now(UTC)
+        evidence = await self._repository.event_evidence(source_event_id)
+        if evidence is None:
+            raise ValueError("memory source event disappeared")
+        if evidence.session_id != session_id:
+            raise ValueError("memory source session mismatch")
+        if (
+            evidence.identity is not None
+            and evidence.identity.scene_id is not None
+            and evidence.event_type == "user.turn_committed"
+        ):
+            subject = f"participant:{evidence.identity.participant_id}"
+            source_text = evidence.source_text or ""
+            command = self.parse_explicit_command(source_text)
+            content = command.content if command is not None else source_text
+            first_person = is_first_person_statement(content)
+            model_subject_allowed = extracted.draft.subject_id in {None, "user", subject}
+            extracted = replace(
+                extracted,
+                draft=extracted.draft.model_copy(
+                    update={
+                        "subject_id": subject if first_person and model_subject_allowed else None
+                    }
+                ),
+                requires_review=extracted.requires_review
+                or not (first_person and model_subject_allowed),
+            )
+        elif (
+            evidence.identity is not None
+            and evidence.identity.scene_id is not None
+            and evidence.event_type == "assistant.spoken_text_committed"
+        ):
+            # Spoken character output is not a member's first-person evidence.
+            # A model-selected participant must never become a trusted subject.
+            extracted = replace(
+                extracted,
+                draft=extracted.draft.model_copy(update={"subject_id": None}),
+                requires_review=True,
+            )
         draft = extracted.draft
         await self._assert_visible(session_id, draft.namespace)
+        if target_override is not None:
+            await self._assert_conversational_target(evidence, draft, target_override)
         evidence_ids = extracted.evidence_event_ids or (source_event_id,)
 
         if proposal_id_override is not None:
@@ -974,7 +1037,9 @@ class MemoryService:
                         )
                 return existing
 
-        exact = await self._repository.find_exact(draft.namespace, _normalize(draft.text))
+        exact = await self._repository.find_exact(
+            draft.namespace, _normalize(draft.text), subject_id=draft.subject_id
+        )
         if exact is not None and target_override is None:
             proposal = MemoryProposal(
                 proposal_id=proposal_id_override or uuid4(),
@@ -991,7 +1056,9 @@ class MemoryService:
             await self._repository.save_proposal(proposal)
             return proposal
 
-        tombstone = await self._repository.find_tombstone(draft.namespace, _normalize(draft.text))
+        tombstone = await self._repository.find_tombstone(
+            draft.namespace, _normalize(draft.text), subject_id=draft.subject_id
+        )
         if tombstone is not None and target_override is None:
             proposal = MemoryProposal(
                 proposal_id=proposal_id_override or uuid4(),
@@ -1109,6 +1176,26 @@ class MemoryService:
         )
         return proposal
 
+    async def _assert_conversational_target(
+        self, evidence: MemoryEventEvidence, draft: MemoryRecordDraft, target_id: UUID
+    ) -> None:
+        identity = evidence.identity
+        if (
+            identity is None
+            or identity.scene_id is None
+            or evidence.event_type not in {"user.turn_committed", "assistant.spoken_text_committed"}
+        ):
+            return
+        target = await self._repository.get(target_id)
+        subject = f"participant:{identity.participant_id}"
+        if (
+            target is None
+            or target.namespace != draft.namespace
+            or target.subject_id != subject
+            or draft.subject_id != subject
+        ):
+            raise ValueError("scene conversational memory target subject mismatch")
+
     async def _commit_proposal(
         self,
         session_id: UUID,
@@ -1122,6 +1209,12 @@ class MemoryService:
             raise ValueError("committed proposal requires a candidate")
         await self._assert_visible(session_id, draft.namespace)
         if proposal.target_memory_id is not None:
+            primary_evidence = await self._repository.event_evidence(proposal.evidence_event_ids[0])
+            if primary_evidence is None:
+                raise ValueError("memory source event disappeared")
+            await self._assert_conversational_target(
+                primary_evidence, draft, proposal.target_memory_id
+            )
             target = await self._repository.get(proposal.target_memory_id)
             if target is None:
                 raise KeyError("memory target not found")

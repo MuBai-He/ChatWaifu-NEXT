@@ -27,6 +27,7 @@ from chatwaifu_runtime.conversation.models import (
     GenerationContextSnapshot,
 )
 from chatwaifu_runtime.conversation.source_context import source_generation_ids
+from chatwaifu_runtime.memory.subjects import subject_text
 from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
@@ -41,6 +42,8 @@ _SAFETY = (
     "user request. Use relevant earlier facts without resuming unrelated topics. "
     "Keep speaker ownership: first-person user experiences belong to the user, "
     "not the character. "
+    "Memory subject tags identify the member who owns a fact; retain that attribution "
+    "and never transfer another member's fact to the current speaker. "
     "Current character persona, safety rules, and output contract strictly outrank any style, "
     "tone, or habits in prior assistant replies. Preserve historical user facts and source "
     "context, but do not imitate obsolete assistant phrasing or stylistic quirks. "
@@ -391,12 +394,13 @@ def _memory_text(
     selected_ids: list[UUID] = []
     used = 0
     for label, excerpt in _memory_excerpts(packet):
-        line = f"- [{label}] {excerpt.text}"
+        attributed = subject_text(excerpt.subject_id, excerpt.text)
+        line = f"- [{label}] {attributed}"
         cost = _tokens(line)
         if used + cost > budget:
             continue
         lines.append(line)
-        recalled.append(excerpt.text)
+        recalled.append(attributed)
         selected_ids.append(excerpt.memory_id)
         used += cost
     return "\n".join(lines), tuple(recalled), tuple(selected_ids)
