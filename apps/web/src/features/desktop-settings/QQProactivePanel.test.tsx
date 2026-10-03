@@ -185,7 +185,85 @@ describe("QQ proactive operator panel", () => {
       screen.getByRole<HTMLButtonElement>("button", {
         name: "检查主动问候资格",
       }).disabled,
-    ).toBe(true);
+    ).toBe(false);
+  });
+  it("keeps unbound history and eligibility readable without permitting mutations", async () => {
+    vi.mocked(client.getChannelProactivePolicy).mockResolvedValue({
+      ...snapshot(),
+      binding_id: null,
+    });
+    const receipt = {
+      ...intent(),
+      delivery_status: "sending" as const,
+      provider_receipt_present: true,
+    };
+    vi.mocked(client.getChannelOutboundIntents)
+      .mockResolvedValueOnce({
+        schema_version: "1.0",
+        items: [receipt],
+        next_cursor: "older-receipts",
+      })
+      .mockResolvedValue({
+        schema_version: "1.0",
+        items: [
+          {
+            ...receipt,
+            request_id: otherId,
+            reply_text: "older confirmed text",
+            cancelable: false,
+          },
+        ],
+        next_cursor: null,
+      });
+    vi.mocked(client.previewChannelProactivePolicy).mockResolvedValue(
+      parseChannelProactivePreview({
+        connection_id: id,
+        binding_id: null,
+        policy_revision: 0,
+        eligible: false,
+        reason: "owner_binding_required",
+        evaluated_at: now,
+      }),
+    );
+    render(<QQProactivePanel {...props} />);
+    await screen.findByText(/已记录服务端接受回执，无法撤回/u);
+    const toggle = screen.getByRole<HTMLInputElement>("switch", {
+      name: "允许角色主动发送 QQ 文字",
+    });
+    const save = screen.getByRole<HTMLButtonElement>("button", {
+      name: "保存 QQ 问候设置",
+    });
+    const cancel = screen.getByRole<HTMLButtonElement>("button", {
+      name: "停止未发送请求",
+    });
+    expect(toggle.disabled).toBe(true);
+    expect(save.disabled).toBe(true);
+    expect(cancel.disabled).toBe(true);
+    fireEvent.click(toggle);
+    fireEvent.click(save);
+    fireEvent.click(cancel);
+    expect(client.updateChannelProactivePolicy).not.toHaveBeenCalled();
+    expect(client.cancelChannelOutboundIntent).not.toHaveBeenCalled();
+    const older = screen.getByRole<HTMLButtonElement>("button", {
+      name: "查看更早请求",
+    });
+    expect(older.disabled).toBe(false);
+    fireEvent.click(older);
+    await screen.findByText("older confirmed text");
+    expect(client.getChannelOutboundIntents).toHaveBeenLastCalledWith(
+      id,
+      "older-receipts",
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByText(/已记录服务端接受回执，无法撤回/u)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "检查主动问候资格" }));
+    await screen.findByText("需要确认主人绑定");
+    expect(client.updateChannelProactivePolicy).not.toHaveBeenCalled();
+    expect(client.cancelChannelOutboundIntent).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "刷新主动文字状态" }));
+    await waitFor(() =>
+      expect(client.getChannelProactivePolicy).toHaveBeenCalledTimes(2),
+    );
   });
   it("refreshes on policy conflict without retrying an old enable", async () => {
     vi.mocked(client.getChannelProactivePolicy)

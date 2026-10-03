@@ -112,8 +112,10 @@ function QQProactiveContent({
     setPreview(null);
     setReadRevision((value) => value + 1);
   };
-  const available = active && fresh && Boolean(snapshot?.binding_id);
-  const disabled = !available || operation !== null;
+  const readAvailable = active && fresh;
+  const mutationAvailable = readAvailable && Boolean(snapshot?.binding_id);
+  const disabled = !mutationAvailable || operation !== null;
+  const readDisabled = !readAvailable || operation !== null;
   let policy: ChannelProactivePolicy | null = null;
   if (draft) {
     try {
@@ -139,8 +141,12 @@ function QQProactiveContent({
     action: (signal: AbortSignal) => Promise<void>,
   ) => {
     const controller = controllerRef.current;
+    const permitted =
+      kind === "history" || kind === "preview"
+        ? readAvailable
+        : mutationAvailable;
     if (
-      !available ||
+      !permitted ||
       operationRef.current ||
       !controller ||
       controller.signal.aborted
@@ -263,6 +269,7 @@ function QQProactiveContent({
     });
   };
   const updateDraft = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    if (disabled) return;
     setDraft((current) => (current ? { ...current, [key]: value } : current));
   };
 
@@ -378,7 +385,9 @@ function QQProactiveContent({
       )}
       {!active || !fresh || !snapshot?.binding_id ? (
         <p role="status">
-          设置尚未确认，管理操作暂不可用。请恢复连接或重新确认主人绑定后刷新。
+          {!active || !fresh
+            ? "连接或设置尚未确认，管理操作暂不可用。请恢复连接后刷新。"
+            : "主人绑定未确认，保存与取消暂不可用；可查看历史或检查资格。"}
         </p>
       ) : null}
       <div className="qq-channel-actions">
@@ -393,7 +402,7 @@ function QQProactiveContent({
         <button
           type="button"
           className="qq-channel-secondary-action"
-          disabled={disabled || !policy || dirty}
+          disabled={readDisabled || !policy || dirty}
           onClick={checkEligibility}
         >
           {operation === "preview" ? "正在检查…" : "检查主动问候资格"}
@@ -496,7 +505,7 @@ function QQProactiveContent({
         <button
           type="button"
           className="qq-channel-secondary-action"
-          disabled={disabled}
+          disabled={readDisabled}
           onClick={() => readHistory()}
         >
           读取最近 25 条
@@ -505,7 +514,7 @@ function QQProactiveContent({
           <button
             type="button"
             className="qq-channel-secondary-action"
-            disabled={disabled || !pageFresh}
+            disabled={readDisabled || !pageFresh}
             onClick={() => readHistory(page.next_cursor ?? undefined)}
           >
             查看更早请求
