@@ -693,3 +693,26 @@ the complete Python suite passed **3039**, with **46** platform skips and normal
 exit in **151.69 s**. Full strict Pyright and targeted Ruff/format checks passed.
 New-version server deployment and actual phone sticker display remain separate
 gates; the first failed phone result is not promoted to a pass by these checks.
+
+The reviewed repair commit `d6ba8137e4a5dcceb66033382d970b0d60b328ee`
+was subsequently promoted as a **one-file overlay** on the frozen `f0588d1`
+Linux QQ source. This is not a complete deployment of every file at the newer
+commit. The executor first matched the exact prior source hash and passed seven
+pure Character planning checks on Linux, without starting a test Runtime or
+calling a model/send API. It backed up the source and consistent SQLite 40 state,
+then restarted only the owned QQ Runtime. A fresh account-matched observation
+restored the same authorized group at revision **nine** with the same scene and
+two participant mappings.
+
+Complete source-inventory comparison found only the reviewed planning file
+changed, to SHA-256
+`e3322b90ec125b0b32658c54b2998a2fea1edb48f6927a4b14ccda4f7a8fd9a9`.
+Eight other unit identities, NapCat identity, 22 protected resource hashes and
+configuration hashes were unchanged. All 14 prior delivered part receipts were
+preserved; database integrity and foreign keys passed. Root separately re-read
+authenticated connection/group/proactive state and the imported source path/hash:
+private connection ready, continuous sticker opt-in saved, selected group enabled,
+and proactive policy off. Private rollback copies, executor evidence and the
+separate root readback are under `validation/phase-b-positive-plan-i5mwabx_/`.
+The new celebration phone retry was requested; sticker and group-resume phone
+acceptance are still pending at this checkpoint.
