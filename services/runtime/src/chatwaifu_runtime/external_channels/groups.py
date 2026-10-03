@@ -81,6 +81,7 @@ _TERMINAL_EVENTS = frozenset(
     {"assistant.generation_completed", "assistant.generation_cancelled", "system.error_raised"}
 )
 _JOIN_SECONDS = 5.0
+_MAX_TRACKED_GROUP_EPOCHS = 128
 
 
 @dataclass(slots=True)
@@ -690,13 +691,21 @@ class ChannelGroupService:
     def fence_connection(
         self, connection_id: UUID, reason: str, group_id: str | None = None
     ) -> None:
+        if group_id is not None:
+            group_id = qq_id(group_id)
+            if (connection_id, group_id) not in self._group_epochs and len(
+                self._group_epochs
+            ) >= _MAX_TRACKED_GROUP_EPOCHS:
+                # Never evict/reuse epochs: an old suspended guard could otherwise
+                # compare equal again. Unknown groups at capacity revoke the connection.
+                group_id = None
         if group_id is None:
             self._connection_epochs[connection_id] = (
                 self._connection_epochs.get(connection_id, 0) + 1
             )
             self._blocked_connections.add(connection_id)
         else:
-            key = (connection_id, qq_id(group_id))
+            key = (connection_id, group_id)
             self._group_epochs[key] = self._group_epochs.get(key, 0) + 1
             self._blocked_groups.add(key)
         for item in (
@@ -761,10 +770,19 @@ class ChannelGroupService:
         self, connection_id: UUID, reason: ChannelGroupPauseReason, group_id: str | None = None
     ) -> None:
         self.fence_connection(connection_id, reason.value, group_id)
+        if group_id is not None and (connection_id, group_id) not in self._group_epochs:
+            # The synchronous fence fell back to the connection at capacity.
+            # Persist the same scope, then clear only that connection's captured epoch.
+            group_id = None
         epoch = (
             self._connection_epochs.get(connection_id, 0)
             if group_id is None
             else self._group_epochs[(connection_id, group_id)]
+        )
+        group_epochs = (
+            {key: value for key, value in self._group_epochs.items() if key[0] == connection_id}
+            if group_id is None
+            else {}
         )
         transitions = await self._repository.pause_routes(
             connection_id=connection_id, group_id=group_id, reason=reason, updated_at=self._clock()
@@ -778,6 +796,9 @@ class ChannelGroupService:
                         await self._release(record)
         if group_id is None and self._connection_epochs.get(connection_id, 0) == epoch:
             self._blocked_connections.discard(connection_id)
+            for key, value in group_epochs.items():
+                if self._group_epochs.get(key) == value:
+                    self._blocked_groups.discard(key)
         elif group_id is not None and self._group_epochs.get((connection_id, group_id), 0) == epoch:
             self._blocked_groups.discard((connection_id, group_id))
 

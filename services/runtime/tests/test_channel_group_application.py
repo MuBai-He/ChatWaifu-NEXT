@@ -43,12 +43,14 @@ from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupInboundDescriptor,
     ChannelGroupPlanResult,
     ChannelGroupRouteLineage,
+    ChannelGroupTransition,
 )
 from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.service import (
     ChannelAuthenticationError,
     ChannelBusyError,
     ChannelConflictError,
+    ChannelNotFoundError,
     ChannelPolicyError,
 )
 from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
@@ -1089,3 +1091,357 @@ async def test_reconnect_requires_new_observation_even_when_previous_one_is_unex
         )
     await app.enable()
     assert app.route.enabled and app.route.observation_id != previous
+
+
+def _fill_group_epochs(app: App, *, start: int = 1000, count: int = 128) -> None:
+    for group in range(start, start + count):
+        app.service.fence_connection(app.connection_id, "membership_changed", str(group))
+
+
+async def test_unknown_group_cap_pauses_real_route_then_requires_explicit_resume(
+    app: App,
+) -> None:
+    await app.enable()
+    app.provider.hold = asyncio.Event()
+    receipt = await app.ingest()
+    await asyncio.wait_for(app.provider.started.get(), 2)
+    _fill_group_epochs(app)
+    assert len(app.service._group_epochs) == len(app.service._blocked_groups) == 128
+    app.service.fence_connection(app.connection_id, "membership_changed", "9000")
+    assert (app.connection_id, "9000") not in app.service._group_epochs
+    assert app.connection_id in app.service._blocked_connections
+    assert app.service._workflows[receipt.channel_turn_id].revoked
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "9000"
+    )
+    route = await app.repository.get_route(app.route.route_id)
+    assert (
+        route is not None
+        and not route.enabled
+        and route.pause_reason is ChannelGroupPauseReason.MEMBERSHIP_CHANGED
+    )
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert (
+        turn is not None and turn.status is ChannelTurnStatus.CANCELLED and turn.delivery_id is None
+    )
+    assert app.connection_id not in app.service._blocked_connections
+    app.route = app.route.model_copy(update={"revision": route.revision})
+    await app.enable()
+    app.provider.hold.set()
+    fresh = await app.ingest("2")
+    await app.join(fresh.channel_turn_id)
+    latest = await app.container.external_channel_repository.get_turn(fresh.channel_turn_id)
+    assert latest is not None and latest.status is ChannelTurnStatus.COMPLETED
+    # Further unknown notices cannot create metadata entries or silently resume any route.
+    for group in range(9001, 9011):
+        await app.service.pause_connection(
+            app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, str(group)
+        )
+    assert len(app.service._group_epochs) == 128 and not app.service._blocked_groups
+    assert app.connection_id not in app.service._blocked_connections
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None and not route.enabled
+
+
+async def test_existing_epoch_at_capacity_keeps_group_specific_cancellation(app: App) -> None:
+    await app.enable()
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "500"
+    )
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None
+    app.route = app.route.model_copy(update={"revision": route.revision})
+    await app.enable()
+    observation = await app.service.observe_audience(
+        app.connection_id, ChannelGroupAudienceRequest(group_id="600")
+    )
+    other = await app.service.create_route(
+        app.connection_id,
+        ChannelGroupRouteCreate(
+            observation_id=observation.observation_id,
+            display_name="other actual group",
+            speaker_sender_keys=["111", "222"],
+        ),
+    )
+    other = await app.service.update_route(
+        app.connection_id,
+        other.route_id,
+        ChannelGroupRouteUpdate(
+            enabled=True,
+            expected_revision=other.revision,
+            observation_id=observation.observation_id,
+            speaker_sender_keys=["111", "222"],
+        ),
+    )
+    _fill_group_epochs(app, count=127)
+    app.provider.hold = asyncio.Event()
+    first = await app.ingest()
+    second = await app.service.ingest_group(
+        replace(app.message("2", text="other"), group_id="600"), access_token=TOKEN
+    )
+    for _ in range(2):
+        await asyncio.wait_for(app.provider.started.get(), 2)
+    connection_epoch = app.service._connection_epochs.get(app.connection_id, 0)
+    app.service.fence_connection(app.connection_id, "membership_changed", "500")
+    assert app.service._connection_epochs.get(app.connection_id, 0) == connection_epoch
+    assert app.connection_id not in app.service._blocked_connections
+    assert not app.service._workflows[second.channel_turn_id].revoked
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "500"
+    )
+    other_fresh = await app.repository.get_route(other.route_id)
+    assert other_fresh is not None and other_fresh.enabled
+    app.provider.hold.set()
+    await app.join(second.channel_turn_id)
+    old = await app.container.external_channel_repository.get_turn(first.channel_turn_id)
+    latest = await app.container.external_channel_repository.get_turn(second.channel_turn_id)
+    assert old is not None and old.status is ChannelTurnStatus.CANCELLED and old.delivery_id is None
+    assert latest is not None and latest.status is ChannelTurnStatus.COMPLETED
+    assert len(app.service._group_epochs) == 128
+
+
+async def test_overflow_epoch_prevents_late_admission_after_durable_pause_and_resume(
+    app: App,
+) -> None:
+    await app.enable()
+    entered, caught, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    original = app.container.external_channels.authenticate_group_transport
+
+    async def authenticate(connection_id: UUID, token: str):
+        entered.set()
+        try:
+            await release.wait()
+        except asyncio.CancelledError:
+            caught.set()
+            task = asyncio.current_task()
+            assert task is not None
+            task.uncancel()
+            await release.wait()
+        return await original(connection_id, token)
+
+    app.service.set_authenticator(authenticate)
+    incoming = asyncio.create_task(app.ingest())
+    await asyncio.wait_for(entered.wait(), 2)
+    _fill_group_epochs(app)
+    app.service.fence_connection(app.connection_id, "membership_changed", "9000")
+    await asyncio.wait_for(caught.wait(), 2)
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "9000"
+    )
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None
+    app.route = app.route.model_copy(update={"revision": route.revision})
+    await app.enable()
+    assert app.connection_id not in app.service._blocked_connections
+    release.set()
+    with pytest.raises(ChannelPolicyError):
+        await incoming
+    assert not app.provider.requests and app.service.active_count == 0
+    assert not (await app.service.list_turns(app.connection_id, app.route.route_id)).items
+
+
+async def test_overflow_epoch_prevents_late_observation_after_pause_and_resume(app: App) -> None:
+    await app.enable()
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def held_reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
+        entered.set()
+        await release.wait()
+        return "900", ("111", "222")
+
+    app.service.set_audience_reader(held_reader)
+    incoming = asyncio.create_task(
+        app.service.observe_audience(app.connection_id, ChannelGroupAudienceRequest(group_id="500"))
+    )
+    await asyncio.wait_for(entered.wait(), 2)
+    _fill_group_epochs(app)
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "9000"
+    )
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None
+    app.route = app.route.model_copy(update={"revision": route.revision})
+
+    async def fresh_reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
+        return "900", ("111", "222")
+
+    app.service.set_audience_reader(fresh_reader)
+    await app.enable()
+    release.set()
+    with pytest.raises(ChannelConflictError):
+        await incoming
+    assert app.route.enabled and app.connection_id not in app.service._blocked_connections
+
+
+async def test_overflow_epoch_prevents_late_delivery_authorization_after_pause_and_resume(
+    app: App, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await app.enable()
+    receipt = await app.ingest()
+    await app.join(receipt.channel_turn_id)
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert turn is not None and turn.delivery_id is not None
+    plan = await app.container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+    assert plan is not None
+    entered, release = asyncio.Event(), asyncio.Event()
+    original = app.repository.authorize_group_turn
+
+    async def authorize(lineage: ChannelGroupRouteLineage) -> ChannelGroupAuthorization:
+        authorized = await original(lineage)
+        assert authorized.allowed
+        entered.set()
+        await release.wait()
+        return authorized
+
+    monkeypatch.setattr(app.repository, "authorize_group_turn", authorize)
+    pending = asyncio.create_task(app.service.authorize_delivery(plan))
+    await asyncio.wait_for(entered.wait(), 2)
+    _fill_group_epochs(app)
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "9000"
+    )
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None
+    app.route = app.route.model_copy(update={"revision": route.revision})
+    await app.enable()
+    release.set()
+    assert not await pending
+    assert app.connection_id not in app.service._blocked_connections
+
+
+async def test_unbound_history_keeps_confirmed_receipt_but_all_mutations_deny(app: App) -> None:
+    await app.enable()
+    receipt = await app.ingest()
+    await app.join(receipt.channel_turn_id)
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert turn is not None and turn.delivery_id is not None
+    claim = await app.container.external_channel_repository.claim_next_delivery_part(
+        ChannelDeliveryPartClaimRequest(delivery_id=turn.delivery_id, lease_id=uuid4()),
+        claimed_at=datetime.now(UTC),
+    )
+    assert claim is not None and claim.part is not None and claim.part.lease_id is not None
+    await app.container.external_channel_repository.acknowledge_delivery_part(
+        ChannelDeliveryPartAcknowledgement(
+            delivery_id=turn.delivery_id,
+            part_id=claim.part.part_id,
+            lease_id=claim.part.lease_id,
+            status=ChannelDeliveryPartStatus.DELIVERED,
+            provider_message_id="fixture-confirmed-unbind-receipt",
+            acknowledged_at=datetime.now(UTC),
+        ),
+        updated_at=datetime.now(UTC),
+    )
+    await app.service.pause_connection(
+        app.connection_id, ChannelGroupPauseReason.CONNECTION_DELETED
+    )
+    assert await app.container.external_channel_repository.soft_delete_connection(
+        app.connection_id, deleted_at=datetime.now(UTC)
+    )
+    assert await app.container.external_channel_repository.get_connection(app.connection_id) is None
+    routes = await app.service.list_routes(app.connection_id)
+    links = await app.service.list_links(app.connection_id)
+    history = await app.service.list_turns(app.connection_id, app.route.route_id)
+    assert len(routes.items) == 1 and len(links.items) == 2 and len(history.items) == 1
+    assert history.items[0].provider_receipt_present and not history.items[0].cancelable
+    assert history.items[0].turn.status is ChannelTurnStatus.COMPLETED
+    with pytest.raises(ChannelNotFoundError):
+        await app.service.observe_audience(
+            app.connection_id, ChannelGroupAudienceRequest(group_id="500")
+        )
+    with pytest.raises(ChannelNotFoundError):
+        await app.service.update_route(
+            app.connection_id,
+            app.route.route_id,
+            ChannelGroupRouteUpdate(
+                enabled=False, expected_revision=routes.items[0].revision, speaker_sender_keys=[]
+            ),
+        )
+    with pytest.raises(ChannelNotFoundError):
+        await app.service.update_link(
+            app.connection_id,
+            links.items[0].link_id,
+            ChannelParticipantLinkUpdate(enabled=True, expected_revision=links.items[0].revision),
+        )
+    with pytest.raises(ChannelNotFoundError):
+        await app.service.cancel_turn(
+            app.connection_id,
+            app.route.route_id,
+            receipt.channel_turn_id,
+            ChannelGroupTurnCancelRequest(expected_revision=history.items[0].turn.revision),
+        )
+    with pytest.raises(ChannelNotFoundError):
+        await app.ingest("2")
+    assert len(app.provider.requests) == 1
+
+
+async def test_constructor_safe_stop_uses_no_unopened_database(runtime_settings: Settings) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.channel_groups.stop()
+    await container.channel_groups.stop()
+    assert not container.channel_groups._started and container.channel_groups.active_count == 0
+
+
+@pytest.mark.parametrize("later_notice", [False, True])
+async def test_wide_pause_clears_only_captured_group_blocks_and_keeps_epochs(
+    app: App, monkeypatch: pytest.MonkeyPatch, later_notice: bool
+) -> None:
+    await app.enable()
+    app.service.fence_connection(app.connection_id, "membership_changed", "500")
+    _fill_group_epochs(app, count=127)
+    assert len(app.service._group_epochs) == 128
+    captured_group_epoch = app.service._group_epochs[(app.connection_id, "500")]
+    entered, release = asyncio.Event(), asyncio.Event()
+    original = app.repository.pause_routes
+
+    async def pause(
+        *,
+        reason: ChannelGroupPauseReason,
+        updated_at: datetime,
+        connection_id: UUID | None = None,
+        group_id: str | None = None,
+        scene_id: str | None = None,
+        link_id: UUID | None = None,
+    ) -> tuple[ChannelGroupTransition, ...]:
+        result = await original(
+            reason=reason,
+            updated_at=updated_at,
+            connection_id=connection_id,
+            group_id=group_id,
+            scene_id=scene_id,
+            link_id=link_id,
+        )
+        entered.set()
+        await release.wait()
+        return result
+
+    monkeypatch.setattr(app.repository, "pause_routes", pause)
+    pending = asyncio.create_task(
+        app.service.pause_connection(
+            app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "9000"
+        )
+    )
+    await asyncio.wait_for(entered.wait(), 2)
+    if later_notice:
+        app.service.fence_connection(app.connection_id, "membership_changed", "500")
+    release.set()
+    await pending
+    assert app.connection_id not in app.service._blocked_connections
+    assert len(app.service._group_epochs) == 128
+    assert app.service._group_epochs[(app.connection_id, "500")] == captured_group_epoch + int(
+        later_notice
+    )
+    if later_notice:
+        assert (app.connection_id, "500") in app.service._blocked_groups
+        with pytest.raises(ChannelPolicyError):
+            await app.service.observe_audience(
+                app.connection_id, ChannelGroupAudienceRequest(group_id="500")
+            )
+        await app.service.pause_connection(
+            app.connection_id, ChannelGroupPauseReason.MEMBERSHIP_CHANGED, "500"
+        )
+    assert (app.connection_id, "500") not in app.service._blocked_groups
+    route = await app.repository.get_route(app.route.route_id)
+    assert route is not None and not route.enabled
+    app.route = app.route.model_copy(update={"revision": route.revision})
+    await app.enable()
+    assert app.route.enabled
