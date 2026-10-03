@@ -1,6 +1,7 @@
-"""NapCat's deliberately narrow first CW2 capability profile."""
+"""NapCat capabilities; group text still requires explicit trusted local policy."""
 
 from chatwaifu_protocol.channels import (
+    ChannelChatType,
     ChannelConnectionConfiguration,
     ChannelMessageKind,
     ChannelProviderCapabilities,
@@ -11,10 +12,11 @@ PROVIDER_ID = "qq_napcat"
 VOICE_SKILL_ID = "channel.voice"
 NAPCAT_PROVIDER = ChannelProviderRegistration(
     provider_id=PROVIDER_ID,
-    version="1.0.0",
+    version="1.1.0",
     name="QQ (NapCat)",
-    description="连接已登录的 NapCat，通过一次性配对码绑定主人私聊。",
+    description="连接已登录的 NapCat，绑定主人私聊。群聊需确认成员并单独启用，仅回复文字。",
     capabilities=ChannelProviderCapabilities(
+        chat_types=[ChannelChatType.DIRECT, ChannelChatType.GROUP],
         supports_proactive_messages=True,
         inbound_message_kinds=[
             ChannelMessageKind.TEXT,
