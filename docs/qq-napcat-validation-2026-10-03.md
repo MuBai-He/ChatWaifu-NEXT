@@ -371,6 +371,33 @@ VAD, temperature fallback and previous-window context remain unchanged.
 Configuration and synthetic fixtures do not prove recognition accuracy;
 a fresh owner-initiated recording must be checked after deployment.
 
+The model-choice source `b21fcbc5a1fc5876077bc6915c7e7a6976f7f095` is deployed
+with all **1457** tracked hashes matched. Linux QQ regressions passed **439**;
+the isolated worker suite passed **31** using the existing dependencies. Private
+backup `backups/chinese-voice-20261003T115437Z` was read back and checked for
+source inventory/hashes, environment integrity and SQLite `quick_check` before
+any source was overwritten. The rollout restarts only its own Runtime and ASR,
+preserves their existing enabled/disabled settings and never restores the
+database. The first preflight attempt changed nothing because it unnecessarily
+required Runtime autostart; the corrected rollout preserves that existing setting.
+An independent fake rollout suite passed **21** failure/preservation scenarios.
+
+Before/after captures `RECOVERY-before-voice-deploy-20261003T114729450520Z.json`
+and `RECOVERY-after-voice-deploy-20261003T115629093746Z.json` preserved all six
+prior turn/generation/delivery/part identities, receipts, attempt counts and full
+send journal. Both were quiescent; the same connection/configuration, NapCat and
+TTS identities, original three services and 22 protected resources remained
+unchanged. Active authenticated OneBot confirms the same account online. The
+live dedicated ASR process environment confirms beam 5, the exact generic Chinese
+prompt, offline CPU/int8 and capacity one. No model download occurred; only the
+old keyword module was removed. The probe loads settings without instantiating
+or calling a model and makes no QQ sends. Evidence is `QQ-CHINESE-VOICE-DEPLOY.json`,
+`QQ-MODEL-VOICE-CONFIG.json`, `QQ-MODEL-VOICE-ONLINE.json` and the Linux test logs.
+
+These are source and runtime configuration checks. A new owner-initiated recording
+and real model decision/handset playback remain pending; the previous failed
+recording is not retrospectively counted as success or resent.
+
 D2 proactive text and D3 group/member isolation remain unimplemented. Their
 concrete scope, dependencies and acceptance package are
 [QQ next slices](qq-next-slices.md).

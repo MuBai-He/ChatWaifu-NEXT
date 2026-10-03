@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-10-03"
 current_phase: "13.6"
 qq_napcat:
-  status: model_selected_qq_voice_implemented_live_acceptance_pending_incoming_voice_text_verified
+  status: model_selected_qq_voice_deployed_phone_acceptance_pending_incoming_voice_text_verified
   adr: "0064"
   image_reply_adr: "0065"
   incoming_voice_adr: "0066"
@@ -39,6 +39,7 @@ qq_napcat:
     - The next recording requesting voice was misrecognized as 用語間說一句話 and delivered TEXT with zero voice runs; the owner corrected an earlier playback confirmation, so this recording is explicitly not accepted as successful voice output
     - ADR 0067 removes all voice text gates and mandatory reply-tool choice; each admitted QQ owner turn contextually provides only the trusted voice reply tool, with model auto choice and unchanged live owner/generation/manual/provider/cancellation boundaries
     - Final model-selected-voice source passed 2382 Python checks with 46 platform skips and 514 focused integration checks; isolated ASR worker passed 31, strict Pyright and Ruff passed; scripted models prove both reply media for the same keyword-free input but do not prove live semantic preference or handset playback
+    - Source b21fcbc deployed with all 1457 tracked hashes matched; Linux QQ checks passed 439 and isolated worker checks passed 31; live ASR process confirms beam 5 with a generic Chinese prompt, same authenticated QQ remains online, and all six prior ledger facts plus original services/resources were preserved
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
     - model_selected_voice_real_qq_semantic_choice_recording_output_and_fault_acceptance
