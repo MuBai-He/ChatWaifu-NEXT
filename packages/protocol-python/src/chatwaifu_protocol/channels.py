@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, Field, SecretStr, model_validator
+from pydantic import AwareDatetime, ConfigDict, Field, SecretStr, model_validator
 
 from chatwaifu_protocol.base import ProtocolModel
 from chatwaifu_protocol.errors import StructuredError
@@ -700,12 +700,29 @@ class ChannelDeliveryPartDraft(ChannelVersionedModel):
         return self
 
 
+class ChannelGroupDeliveryTarget(ChannelVersionedModel):
+    """Fixed admitted group target; field values cannot grant sending authority."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["group"] = "group"
+    connection_id: UUID
+    account_key: str = Field(min_length=1, max_length=20, pattern=r"^[1-9][0-9]{0,19}$")
+    group_id: str = Field(min_length=1, max_length=20, pattern=r"^[1-9][0-9]{0,19}$")
+    route_id: UUID
+    route_revision: int = Field(strict=True, ge=1)
+    channel_turn_id: UUID
+    scene_id: str = Field(min_length=1, max_length=128)
+    audience_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class ChannelDeliveryPlanSnapshot(ProtocolModel):
     schema_version: Literal["1.0", "1.1"] = "1.0"
     delivery_id: UUID
     channel_turn_id: UUID | None = None
     outbound_intent_id: UUID | None = None
     connection_id: UUID
+    group_target: ChannelGroupDeliveryTarget | None = None
     status: ChannelDeliveryStatus
     plan_version: int = Field(default=1, ge=1)
     part_count: int = Field(ge=1)
@@ -728,6 +745,18 @@ class ChannelDeliveryPlanSnapshot(ProtocolModel):
             or (self.schema_version == "1.1" and outbound)
         ):
             raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
+        if self.group_target is not None and (
+            not inbound
+            or self.group_target.connection_id != self.connection_id
+            or self.group_target.channel_turn_id != self.channel_turn_id
+            or self.part_count != 1
+            or len(self.parts) != 1
+            or self.parts[0].kind != ChannelDeliveryPartKind.TEXT
+            or self.parts[0].delivery_id != self.delivery_id
+            or self.parts[0].ordinal != 0
+            or not self.parts[0].required
+        ):
+            raise ValueError("group delivery requires one text part and its fixed inbound target")
         return self
 
 

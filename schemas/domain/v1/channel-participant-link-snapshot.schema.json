@@ -1,0 +1,66 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-participant-link-snapshot.schema.json",
+  "properties": {
+    "account_key": {
+      "title": "Account Key",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "link_id": {
+      "format": "uuid",
+      "title": "Link Id",
+      "type": "string"
+    },
+    "participant_id": {
+      "title": "Participant Id",
+      "type": "string"
+    },
+    "provider_id": {
+      "const": "qq_napcat",
+      "default": "qq_napcat",
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sender_key": {
+      "title": "Sender Key",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "link_id",
+    "account_key",
+    "sender_key",
+    "participant_id",
+    "enabled",
+    "revision",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "ChannelParticipantLinkSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -16,6 +16,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartPayload,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelGroupDeliveryTarget,
     ChannelMessageKind,
     ChannelTurnStatus,
 )
@@ -88,6 +89,11 @@ class ChannelBindingRecord:
     session_id: UUID
     created_at: datetime
     updated_at: datetime
+    chat_type: ChannelChatType = ChannelChatType.DIRECT
+    group_route_id: UUID | None = None
+    scene_id: str | None = None
+    link_id: UUID | None = None
+    participant_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +124,9 @@ class ChannelTurnRecord:
     updated_at: datetime
     completed_at: datetime | None
     input_kind: ChannelMessageKind = ChannelMessageKind.TEXT
+    group_route_id: UUID | None = None
+    group_route_revision: int | None = None
+    group_lineage_version: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +191,7 @@ class ChannelDeliveryPartRecord:
 class ChannelDeliveryPlanRecord:
     delivery: ChannelDeliveryRecord
     parts: tuple[ChannelDeliveryPartRecord, ...]
+    group_target: ChannelGroupDeliveryTarget | None = None
 
     @property
     def delivery_id(self) -> UUID:

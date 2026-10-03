@@ -9,7 +9,13 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, ConfigDict, Field, field_validator, model_validator
 
-from chatwaifu_protocol.channels import ChannelTurnSnapshot, ChannelVersionedModel
+from chatwaifu_protocol.channels import (
+    ChannelGroupDeliveryTarget as ChannelGroupDeliveryTarget,
+)
+from chatwaifu_protocol.channels import (
+    ChannelTurnSnapshot,
+    ChannelVersionedModel,
+)
 
 
 class ChannelGroupPauseReason(StrEnum):
@@ -171,20 +177,6 @@ class ChannelGroupTurnPage(ChannelVersionedModel):
         default_factory=list[ChannelGroupTurnSnapshot], max_length=50
     )
     next_cursor: str | None = Field(default=None, min_length=1, max_length=256)
-
-
-class ChannelGroupDeliveryTarget(ChannelVersionedModel):
-    model_config = ConfigDict(extra="forbid")
-
-    kind: Literal["group"] = "group"
-    connection_id: UUID
-    account_key: str
-    group_id: str
-    route_id: UUID
-    route_revision: int = Field(strict=True, ge=1)
-    channel_turn_id: UUID
-    scene_id: str
-    audience_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 def _speakers(value: list[str]) -> list[str]:

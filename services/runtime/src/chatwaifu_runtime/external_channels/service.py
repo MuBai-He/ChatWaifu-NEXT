@@ -2465,6 +2465,8 @@ class ExternalChannelService:
         provider = self._providers[configuration.provider_id]
         if not configuration.enabled:
             raise ChannelPolicyError("channel connection is disabled")
+        if message.chat_type is not ChannelChatType.DIRECT:
+            raise ChannelPolicyError("group messages require a registered group route")
         if message.chat_type not in provider.capabilities.chat_types:
             raise ChannelPolicyError(
                 f"provider does not allow {message.chat_type.value} conversations"
@@ -2617,6 +2619,7 @@ def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliver
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,
+        group_target=record.group_target,
         status=record.status,
         plan_version=record.plan_version,
         part_count=record.part_count,

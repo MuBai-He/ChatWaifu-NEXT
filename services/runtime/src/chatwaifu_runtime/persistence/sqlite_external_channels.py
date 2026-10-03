@@ -25,6 +25,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelGroupDeliveryTarget,
     ChannelMessageKind,
     ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
@@ -1270,7 +1271,17 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             part_count=len(parts),
             delivered_part_count=delivered_count,
         )
-        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts)
+        target_json = (
+            delivery_row["group_target_json"]
+            if "group_target_json" in delivery_row.keys()
+            else None
+        )
+        target = (
+            ChannelGroupDeliveryTarget.model_validate_json(str(target_json))
+            if target_json is not None
+            else None
+        )
+        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts, group_target=target)
 
     async def _derive_delivery_plan_state_tx(
         self,
@@ -2947,7 +2958,8 @@ def _connection_record(row: object) -> ChannelConnectionRecord:
 
 
 def _binding_record(row: object) -> ChannelBindingRecord:
-    item = row
+    item = cast(aiosqlite.Row, row)
+    columns = frozenset(item.keys())
     return ChannelBindingRecord(
         binding_id=UUID(str(item["binding_id"])),  # type: ignore[index]
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
@@ -2956,13 +2968,38 @@ def _binding_record(row: object) -> ChannelBindingRecord:
         session_id=UUID(str(item["session_id"])),  # type: ignore[index]
         created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
         updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
+        chat_type=ChannelChatType(str(item["chat_type"]))
+        if "chat_type" in columns
+        else ChannelChatType.DIRECT,
+        group_route_id=UUID(str(item["group_route_id"]))
+        if "group_route_id" in columns and item["group_route_id"] is not None
+        else None,
+        scene_id=str(item["scene_id"])
+        if "scene_id" in columns and item["scene_id"] is not None
+        else None,
+        link_id=UUID(str(item["link_id"]))
+        if "link_id" in columns and item["link_id"] is not None
+        else None,
+        participant_id=str(item["participant_id"])
+        if "participant_id" in columns and item["participant_id"] is not None
+        else None,
     )
 
 
 def _turn_record(row: object) -> ChannelTurnRecord:
     item = cast(aiosqlite.Row, row)
+    columns = frozenset(item.keys())
     return ChannelTurnRecord(
         channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
+        group_route_id=UUID(str(item["group_route_id"]))
+        if "group_route_id" in columns and item["group_route_id"] is not None
+        else None,
+        group_route_revision=int(item["group_route_revision"])
+        if "group_route_revision" in columns and item["group_route_revision"] is not None
+        else None,
+        group_lineage_version=int(item["group_lineage_version"])
+        if "group_lineage_version" in columns
+        else 0,
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
         binding_id=UUID(str(item["binding_id"])),  # type: ignore[index]
         external_message_id=str(item["external_message_id"]),  # type: ignore[index]

@@ -7,6 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from typing import cast
 from uuid import UUID
 
 from chatwaifu_protocol.channel_groups import (
@@ -25,7 +26,7 @@ def qq_id(value: object) -> str:
 
 
 def aware(value: datetime) -> datetime:
-    raw: object = value
+    raw = cast(object, value)
     if not isinstance(raw, datetime) or raw.tzinfo is None or raw.utcoffset() is None:
         raise ValueError("timestamp must be timezone aware")
     return value
@@ -54,13 +55,16 @@ class ChannelGroupInboundDescriptor:
     received_at: datetime
 
     def __post_init__(self) -> None:
-        raw: object = self.connection_id
+        raw = cast(object, self.connection_id)
         if not isinstance(raw, UUID):
             raise ValueError("connection must be UUID")
         for value in (self.account_key, self.group_id, self.sender_key):
             qq_id(value)
-        if type(self.external_message_id) is not str or not re.fullmatch(
-            r"-?[0-9]{1,20}", self.external_message_id
+        if (
+            type(self.external_message_id) is not str
+            or not re.fullmatch(r"-?[0-9]{1,20}", self.external_message_id)
+            or str(int(self.external_message_id)) != self.external_message_id
+            or int(self.external_message_id) == 0
         ):
             raise ValueError("raw provider message ID must be a signed numeric string")
         if type(self.text) is not str or not self.text.strip() or len(self.text) > 20000:
@@ -77,7 +81,6 @@ class ChannelGroupInboundDescriptor:
             self.sender_key,
             self.external_message_id,
             self.text,
-            self.received_at.isoformat(),
         )
         return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
 
