@@ -1028,3 +1028,35 @@ The remaining phone and controlled-fault steps are organized in
 [QQ phone acceptance](qq-phone-acceptance.md), including what can be tested
 without enabling another policy and what needs a prepared operator window.
 These automated checks do not claim the still-pending real phone fault cases.
+
+## Complete Runtime voice receipt fault coverage (2026-10-04)
+
+Three new protocol cases send a successful OneBot response with a missing,
+malformed or boolean message id. The actual Runtime, SQLite repository and
+loopback WebSocket are exercised with scripted model/TTS providers. Each case
+verifies exactly one AUDIO send attempt, one TEXT fallback saying the voice
+result is unconfirmed, and the same durable delivery plan revised to version two.
+The failed optional audio part retains `qq_delivery_unknown`, its journal entry
+remains `unknown`, the required text part has a confirmed receipt, assistant
+history contains the actual fallback, and the temporary audio asset is removed.
+
+After a complete Runtime shutdown/startup on the same state, the prior plan and
+unknown fence survive. Re-ingesting the same input is rejected as a duplicate;
+a fresh owner text reply completes without replaying the old voice or fallback.
+The focused private Runtime and delivery campaign passed **81**, zero failures
+or skips, normal exit zero, with only the existing audioop deprecation warning.
+An initial test-only missing enum import produced three failures and is retained
+in `uncertain-voice-receipt.xml`; the corrected full checks and raw log are
+`voice-receipt-final.xml` and `voice-receipt-final.log` in the independent evidence
+directory. This checkpoint changes tests and documents, not production behavior
+or deployed source. Strict types, Ruff and formatting are checked independently.
+
+ADR 0064 now points explicitly to ADR 0067 and describes its current optional,
+model-selected voice policy, removing contradictory keyword-gate prose. This is
+a documentary correction to the already implemented decision. Real phone
+send-failure and uncertain-receipt cases remain pending.
+
+A read-only server check at **2026-10-04 07:20:29 Asia/Shanghai** again found the
+private channel ready, proactive policy off at revision six, exactly unchanged
+single-intent history, the selected group enabled at revision eleven, and all
+three completed temporary controllers inactive/not-found with zero PID.

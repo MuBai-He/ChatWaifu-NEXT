@@ -19,6 +19,7 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryPartKind,
+    ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelPairingStartRequest,
     ChannelTurnReceipt,
@@ -115,6 +116,7 @@ class _OneBot:
 
     account: str = ACCOUNT
     reject_records: bool = False
+    record_response_data: JsonObject | None = None
     peers: list[ServerConnection] = field(default_factory=list[ServerConnection])
     connected: asyncio.Queue[ServerConnection] = field(
         default_factory=asyncio.Queue[ServerConnection]
@@ -142,6 +144,8 @@ class _OneBot:
                 segments = cast(list[JsonObject], params["message"])
                 rejected = self.reject_records and segments[0]["type"] == "record"
                 data = {"message_id": 90000 + len(self.calls)}
+                if segments[0]["type"] == "record" and self.record_response_data is not None:
+                    data = self.record_response_data
             else:
                 raise AssertionError(f"Unexpected OneBot action: {action}")
             await peer.send(
@@ -529,6 +533,94 @@ async def test_rejected_voice_gets_one_truthful_text_fallback(
         assert isinstance(data, dict)
         assert data["delivery_status"] == "text_fallback"
         assert data["spoken_text"] == sent_text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response_data",
+    [{}, {"message_id": "invalid-receipt"}, {"message_id": True}],
+    ids=["missing-id", "invalid-id", "boolean-id"],
+)
+async def test_uncertain_voice_receipt_falls_back_once_and_survives_runtime_restart(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, response_data: JsonObject
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        harness.peer.record_response_data = response_data
+        connection_id = await _pair(harness)
+        receipt = await _ingest(harness, connection_id, "请发一条语音", 106)
+        audio_send = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
+        fallback_send = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
+        assert _segments(audio_send)[0]["type"] == "record"
+        fallback = _segments(fallback_send)
+        assert len(fallback) == 1 and fallback[0]["type"] == "text"
+        fallback_text = cast(JsonObject, fallback[0]["data"])["text"]
+        assert fallback_text == f"这条语音的发送结果未确认，先把内容发成文字: {SPOKEN}"
+        result = await _terminal(harness, connection_id, receipt.channel_turn_id)
+        assert result.status is ChannelTurnStatus.COMPLETED
+        assert result.reply_text == fallback_text
+        assert result.delivery_id is not None
+        repository = harness.container.external_channel_repository
+        plan = await repository.get_delivery_plan(result.delivery_id)
+        assert plan is not None and plan.status is ChannelDeliveryStatus.DELIVERED
+        assert plan.plan_version == 2 and len(plan.parts) == 2
+        audio, text = plan.parts
+        assert audio.kind is ChannelDeliveryPartKind.AUDIO and not audio.required
+        assert audio.status is ChannelDeliveryPartStatus.FAILED
+        assert audio.last_error is not None and audio.last_error.code == "qq_delivery_unknown"
+        assert audio.provider_message_id is None
+        assert text.kind is ChannelDeliveryPartKind.TEXT and text.required
+        assert text.status is ChannelDeliveryPartStatus.DELIVERED
+        assert text.provider_message_id is not None
+        cursor = await repository.get_adapter_cursor(connection_id)
+        assert cursor is not None and json.loads(cursor)[audio.provider_client_id] == "unknown"
+        history = await harness.container.conversation_repository.recent_history(
+            result.session_id, uuid4(), limit=8
+        )
+        assert [item.text for item in history if item.role == "assistant"] == [fallback_text]
+        assert len(harness.model.requests) == 1 and len(harness.synthesis) == 1
+        assert harness.peer.sends.empty()
+        assert not list(harness.container.channel_voice.audio_root.glob("*.wav"))
+
+        await harness.container.stop()
+        restarted = RuntimeContainer(runtime_settings)
+        health = _configure(restarted, monkeypatch, harness.credentials)
+
+        def create_model(_configuration: ModelRoleConfig) -> _Model:
+            return harness.model
+
+        monkeypatch.setattr(restarted.model_configurations, "create_chat_provider", create_model)
+        await restarted.start()
+        try:
+            await asyncio.wait_for(harness.peer.connected.get(), timeout=3)
+            current_id, status, code = await asyncio.wait_for(health.get(), timeout=3)
+            assert current_id == connection_id and status is ChannelConnectionStatus.READY
+            assert code is None
+            duplicate = await _ingest(
+                replace(harness, container=restarted), connection_id, "请发一条语音", 106
+            )
+            assert duplicate.duplicate and duplicate.channel_turn_id == receipt.channel_turn_id
+            restored = await restarted.external_channel_repository.get_delivery_plan(
+                result.delivery_id
+            )
+            assert restored == plan
+            cursor = await restarted.external_channel_repository.get_adapter_cursor(connection_id)
+            assert cursor is not None and json.loads(cursor)[audio.provider_client_id] == "unknown"
+            assert len(harness.model.requests) == 1
+            resumed = replace(harness, container=restarted)
+            fresh = await _ingest(resumed, connection_id, "这次请文字回复", 107)
+            sent = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
+            assert _segments(sent) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
+            fresh_result = await _terminal(resumed, connection_id, fresh.channel_turn_id)
+            assert fresh_result.status is ChannelTurnStatus.COMPLETED
+            assert len(harness.model.requests) == 2 and len(harness.synthesis) == 1
+            assert (
+                len([call for call in harness.peer.calls if call["action"] == "send_private_msg"])
+                == 3
+            )
+        finally:
+            await restarted.stop()
+        assert harness.peer.sends.empty()
+        assert not restarted.qq_channels._tasks and not restarted.qq_channels._schedulers
 
 
 @pytest.mark.asyncio
