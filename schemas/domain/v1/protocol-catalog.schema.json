@@ -2805,6 +2805,287 @@
       "title": "ChannelMessageKind",
       "type": "string"
     },
+    "ChannelOutboundIntentCancelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "title": "ChannelOutboundIntentCancelRequest",
+      "type": "object"
+    },
+    "ChannelOutboundIntentPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ChannelOutboundIntentSnapshot"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ChannelOutboundIntentPage",
+      "type": "object"
+    },
+    "ChannelOutboundIntentSnapshot": {
+      "description": "Intent lifecycle and actual provider facts remain separate.\n\nA settled cancellation does not erase a provider success which arrived\nduring cancellation. UI must also display delivery_status/receipt presence.",
+      "properties": {
+        "binding_id": {
+          "format": "uuid",
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "cancel_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancel Reason"
+        },
+        "cancel_requested_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancel Requested At"
+        },
+        "cancelable": {
+          "default": false,
+          "title": "Cancelable",
+          "type": "boolean"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivery_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivery Id"
+        },
+        "delivery_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelDeliveryStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "not_before_at": {
+          "format": "date-time",
+          "title": "Not Before At",
+          "type": "string"
+        },
+        "policy_revision": {
+          "minimum": 0,
+          "title": "Policy Revision",
+          "type": "integer"
+        },
+        "provider_receipt_present": {
+          "default": false,
+          "title": "Provider Receipt Present",
+          "type": "boolean"
+        },
+        "reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply Text"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "route_revision": {
+          "minimum": 0,
+          "title": "Route Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "settled_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settled At"
+        },
+        "settled_reason": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settled Reason"
+        },
+        "source": {
+          "const": "idle_check_in",
+          "default": "idle_check_in",
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ChannelOutboundIntentStatus"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "connection_id",
+        "binding_id",
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "status",
+        "policy_revision",
+        "route_revision",
+        "revision",
+        "not_before_at",
+        "expires_at",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelOutboundIntentSnapshot",
+      "type": "object"
+    },
+    "ChannelOutboundIntentStatus": {
+      "enum": [
+        "pending",
+        "generating",
+        "planned",
+        "settled"
+      ],
+      "title": "ChannelOutboundIntentStatus",
+      "type": "string"
+    },
     "ChannelPairingSnapshot": {
       "properties": {
         "account_label": {
@@ -3041,6 +3322,313 @@
         "single_text"
       ],
       "title": "ChannelPresentationProfile",
+      "type": "string"
+    },
+    "ChannelProactivePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "cooldown_minutes": {
+          "default": 60,
+          "maximum": 10080,
+          "minimum": 1,
+          "title": "Cooldown Minutes",
+          "type": "integer"
+        },
+        "daily_budget": {
+          "default": 3,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Daily Budget",
+          "type": "integer"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "idle_minutes": {
+          "default": 45,
+          "maximum": 1440,
+          "minimum": 1,
+          "title": "Idle Minutes",
+          "type": "integer"
+        },
+        "quiet_end": {
+          "default": "08:00",
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "Quiet End",
+          "type": "string"
+        },
+        "quiet_hours_enabled": {
+          "default": true,
+          "title": "Quiet Hours Enabled",
+          "type": "boolean"
+        },
+        "quiet_start": {
+          "default": "23:00",
+          "pattern": "^\\d{2}:\\d{2}$",
+          "title": "Quiet Start",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "const": "idle_check_in",
+          "default": "idle_check_in",
+          "title": "Source",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "ttl_minutes": {
+          "default": 15,
+          "maximum": 60,
+          "minimum": 1,
+          "title": "Ttl Minutes",
+          "type": "integer"
+        }
+      },
+      "title": "ChannelProactivePolicy",
+      "type": "object"
+    },
+    "ChannelProactivePolicySnapshot": {
+      "properties": {
+        "binding_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Binding Id"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/ChannelProactivePolicy"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "connection_id"
+      ],
+      "title": "ChannelProactivePolicySnapshot",
+      "type": "object"
+    },
+    "ChannelProactivePolicyUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/$defs/ChannelProactivePolicy"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "policy"
+      ],
+      "title": "ChannelProactivePolicyUpdate",
+      "type": "object"
+    },
+    "ChannelProactivePreview": {
+      "properties": {
+        "binding_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Binding Id"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "eligible": {
+          "title": "Eligible",
+          "type": "boolean"
+        },
+        "evaluated_at": {
+          "format": "date-time",
+          "title": "Evaluated At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "last_owner_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Owner At"
+        },
+        "last_reserved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Reserved At"
+        },
+        "next_eligible_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Eligible At"
+        },
+        "pending_request_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pending Request Id"
+        },
+        "policy_revision": {
+          "minimum": 0,
+          "title": "Policy Revision",
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/$defs/ChannelProactiveReason"
+        },
+        "remaining_daily_budget": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Remaining Daily Budget",
+          "type": "integer"
+        },
+        "reserved_today": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Reserved Today",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_id",
+        "policy_revision",
+        "eligible",
+        "reason",
+        "evaluated_at"
+      ],
+      "title": "ChannelProactivePreview",
+      "type": "object"
+    },
+    "ChannelProactiveReason": {
+      "enum": [
+        "eligible",
+        "disabled",
+        "unsupported_provider",
+        "connection_unavailable",
+        "owner_binding_required",
+        "no_owner_activity",
+        "idle_threshold_not_reached",
+        "idle_window_expired",
+        "quiet_hours",
+        "conversation_busy",
+        "cooldown_active",
+        "daily_budget_exhausted",
+        "episode_already_reserved",
+        "capacity_reached"
+      ],
+      "title": "ChannelProactiveReason",
       "type": "string"
     },
     "ChannelProviderCapabilities": {
@@ -10736,6 +11324,15 @@
     "channel_inbound_text": {
       "$ref": "#/$defs/ChannelInboundTextMessage"
     },
+    "channel_outbound_intent": {
+      "$ref": "#/$defs/ChannelOutboundIntentSnapshot"
+    },
+    "channel_outbound_intent_cancel_request": {
+      "$ref": "#/$defs/ChannelOutboundIntentCancelRequest"
+    },
+    "channel_outbound_intent_page": {
+      "$ref": "#/$defs/ChannelOutboundIntentPage"
+    },
     "channel_pairing": {
       "$ref": "#/$defs/ChannelPairingSnapshot"
     },
@@ -10744,6 +11341,18 @@
     },
     "channel_presentation_policy": {
       "$ref": "#/$defs/ChannelPresentationPolicy"
+    },
+    "channel_proactive_policy": {
+      "$ref": "#/$defs/ChannelProactivePolicy"
+    },
+    "channel_proactive_policy_snapshot": {
+      "$ref": "#/$defs/ChannelProactivePolicySnapshot"
+    },
+    "channel_proactive_policy_update": {
+      "$ref": "#/$defs/ChannelProactivePolicyUpdate"
+    },
+    "channel_proactive_preview": {
+      "$ref": "#/$defs/ChannelProactivePreview"
     },
     "channel_provider": {
       "$ref": "#/$defs/ChannelProviderRegistration"
@@ -10958,6 +11567,13 @@
     "channel_connection_configuration",
     "channel_connection",
     "channel_gateway_status",
+    "channel_proactive_policy",
+    "channel_proactive_policy_update",
+    "channel_proactive_policy_snapshot",
+    "channel_proactive_preview",
+    "channel_outbound_intent",
+    "channel_outbound_intent_page",
+    "channel_outbound_intent_cancel_request",
     "channel_inbound_text",
     "channel_turn_receipt",
     "channel_turn",

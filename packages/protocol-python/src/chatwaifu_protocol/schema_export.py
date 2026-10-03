@@ -8,6 +8,15 @@ from pydantic import BaseModel, TypeAdapter
 
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
+from chatwaifu_protocol.channel_proactive import (
+    ChannelOutboundIntentCancelRequest,
+    ChannelOutboundIntentPage,
+    ChannelOutboundIntentSnapshot,
+    ChannelProactivePolicy,
+    ChannelProactivePolicySnapshot,
+    ChannelProactivePolicyUpdate,
+    ChannelProactivePreview,
+)
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationSnapshot,
     ChannelAuthorizationStartRequest,
@@ -126,6 +135,13 @@ class ProtocolCatalog(ProtocolModel):
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
     channel_gateway_status: ChannelGatewayStatusSnapshot
+    channel_proactive_policy: ChannelProactivePolicy
+    channel_proactive_policy_update: ChannelProactivePolicyUpdate
+    channel_proactive_policy_snapshot: ChannelProactivePolicySnapshot
+    channel_proactive_preview: ChannelProactivePreview
+    channel_outbound_intent: ChannelOutboundIntentSnapshot
+    channel_outbound_intent_page: ChannelOutboundIntentPage
+    channel_outbound_intent_cancel_request: ChannelOutboundIntentCancelRequest
     channel_inbound_text: ChannelInboundTextMessage
     channel_turn_receipt: ChannelTurnReceipt
     channel_turn: ChannelTurnSnapshot
@@ -195,6 +211,13 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "channel-delivery-snapshot": ChannelDeliverySnapshot,
     "channel-error-response": ChannelErrorResponse,
     "channel-gateway-status-snapshot": ChannelGatewayStatusSnapshot,
+    "channel-proactive-policy": ChannelProactivePolicy,
+    "channel-proactive-policy-update": ChannelProactivePolicyUpdate,
+    "channel-proactive-policy-snapshot": ChannelProactivePolicySnapshot,
+    "channel-proactive-preview": ChannelProactivePreview,
+    "channel-outbound-intent-snapshot": ChannelOutboundIntentSnapshot,
+    "channel-outbound-intent-page": ChannelOutboundIntentPage,
+    "channel-outbound-intent-cancel-request": ChannelOutboundIntentCancelRequest,
     "channel-inbound-text-message": ChannelInboundTextMessage,
     "channel-provider-registration": ChannelProviderRegistration,
     "channel-turn-cancel-receipt": ChannelTurnCancelReceipt,
