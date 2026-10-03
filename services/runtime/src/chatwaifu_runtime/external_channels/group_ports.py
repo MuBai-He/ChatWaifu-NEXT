@@ -48,6 +48,8 @@ class ChannelGroupRepository(Protocol):
         self, connection_id: UUID, group_id: str
     ) -> ChannelGroupRouteRecord | None: ...
 
+    async def is_group_scene(self, scene_id: str) -> bool: ...
+
     async def list_routes(
         self, connection_id: UUID, *, limit: int = 25, cursor: str | None = None
     ) -> tuple[tuple[ChannelGroupRouteRecord, ...], str | None]: ...
@@ -90,6 +92,10 @@ class ChannelGroupRepository(Protocol):
     async def find_group_turn(
         self, connection_id: UUID, group_id: str, external_message_id: str
     ) -> ChannelGroupAdmissionResult | None: ...
+
+    async def list_group_turns(
+        self, route_id: UUID, *, limit: int = 25, cursor: str | None = None
+    ) -> tuple[tuple[ChannelGroupAdmissionResult, ...], str | None]: ...
 
     async def begin_group_turn(
         self, lineage: ChannelGroupRouteLineage, *, updated_at: datetime

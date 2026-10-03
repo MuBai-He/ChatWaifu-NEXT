@@ -1478,3 +1478,439 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         """,
     ),
 )
+
+
+# Prepared separately until migration 39 is integrated.
+GROUP_MIGRATION40_SQL = r"""
+
+CREATE TABLE channel_participant_links (
+ link_id TEXT PRIMARY KEY, provider_id TEXT NOT NULL CHECK(provider_id='qq_napcat'),
+ account_key TEXT NOT NULL, sender_key TEXT NOT NULL,
+ participant_id TEXT NOT NULL REFERENCES participants(participant_id),
+ enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), revision INTEGER NOT NULL CHECK(revision>=1),
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ UNIQUE(provider_id,account_key,sender_key), UNIQUE(link_id,participant_id,sender_key),
+ UNIQUE(link_id,account_key,sender_key,participant_id)
+);
+CREATE TRIGGER channel_participant_identity_immutable
+BEFORE UPDATE OF provider_id,account_key,sender_key,participant_id ON channel_participant_links
+BEGIN SELECT RAISE(ABORT,'participant link identity is immutable'); END;
+CREATE TABLE channel_group_audience_observations (
+ observation_id TEXT PRIMARY KEY,
+ connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id),
+ connection_revision INTEGER NOT NULL CHECK(connection_revision>=1),
+ account_key TEXT NOT NULL, group_id TEXT NOT NULL,
+ member_ids_json TEXT NOT NULL CHECK(json_valid(member_ids_json)),
+ observed_at TEXT NOT NULL, expires_at TEXT NOT NULL CHECK(expires_at>observed_at)
+);
+CREATE INDEX channel_group_observation_idx
+ ON channel_group_audience_observations(connection_id,observed_at DESC,observation_id DESC);
+CREATE TABLE channel_group_routes (
+ route_id TEXT PRIMARY KEY,
+ connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id),
+ account_key TEXT NOT NULL, group_id TEXT NOT NULL, character_id TEXT NOT NULL,
+ scene_id TEXT NOT NULL REFERENCES conversation_scenes(scene_id),
+ display_name TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1),
+ enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)), pause_reason TEXT,
+ observation_id TEXT NOT NULL REFERENCES channel_group_audience_observations(observation_id),
+ audience_fingerprint TEXT NOT NULL CHECK(length(audience_fingerprint)=64),
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT,
+ UNIQUE(connection_id,group_id), UNIQUE(route_id,connection_id),
+ CHECK(enabled=0 OR (deleted_at IS NULL AND pause_reason IS NULL))
+);
+CREATE TRIGGER channel_group_route_identity_immutable
+BEFORE UPDATE OF connection_id,account_key,group_id,character_id ON channel_group_routes
+BEGIN SELECT RAISE(ABORT,'group route identity is immutable'); END;
+CREATE TABLE channel_group_route_versions (
+ route_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1),
+ connection_id TEXT NOT NULL, account_key TEXT NOT NULL, group_id TEXT NOT NULL,
+ character_id TEXT NOT NULL, scene_id TEXT NOT NULL REFERENCES conversation_scenes(scene_id),
+ observation_id TEXT NOT NULL REFERENCES channel_group_audience_observations(observation_id),
+ audience_fingerprint TEXT NOT NULL, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)),
+ pause_reason TEXT, created_at TEXT NOT NULL,
+ PRIMARY KEY(route_id,revision), UNIQUE(route_id,revision,account_key),
+ UNIQUE(route_id,revision,connection_id),
+ FOREIGN KEY(route_id,connection_id) REFERENCES channel_group_routes(route_id,connection_id)
+);
+CREATE TRIGGER channel_group_version_no_update BEFORE UPDATE ON channel_group_route_versions
+BEGIN SELECT RAISE(ABORT,'group route versions are immutable'); END;
+CREATE TRIGGER channel_group_version_no_delete BEFORE DELETE ON channel_group_route_versions
+BEGIN SELECT RAISE(ABORT,'group route versions are immutable'); END;
+CREATE TABLE channel_group_route_members (
+ route_id TEXT NOT NULL, route_revision INTEGER NOT NULL, account_key TEXT NOT NULL,
+ link_id TEXT NOT NULL, sender_key TEXT NOT NULL, participant_id TEXT NOT NULL,
+ can_speak INTEGER NOT NULL CHECK(can_speak IN (0,1)),
+ PRIMARY KEY(route_id,route_revision,sender_key), UNIQUE(route_id,route_revision,participant_id),
+ FOREIGN KEY(route_id,route_revision,account_key)
+   REFERENCES channel_group_route_versions(route_id,revision,account_key),
+ FOREIGN KEY(link_id,account_key,sender_key,participant_id)
+   REFERENCES channel_participant_links(link_id,account_key,sender_key,participant_id)
+);
+CREATE TRIGGER channel_group_member_no_update BEFORE UPDATE ON channel_group_route_members
+BEGIN SELECT RAISE(ABORT,'group route members are immutable'); END;
+CREATE TRIGGER channel_group_member_no_delete BEFORE DELETE ON channel_group_route_members
+BEGIN SELECT RAISE(ABORT,'group route members are immutable'); END;
+
+CREATE TABLE channel_bindings_v40 (
+            binding_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            conversation_key TEXT NOT NULL,
+            sender_key TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            chat_type TEXT NOT NULL DEFAULT 'direct' CHECK(chat_type IN ('direct','group')),
+ group_route_id TEXT REFERENCES channel_group_routes(route_id),
+ scene_id TEXT REFERENCES conversation_scenes(scene_id),
+ participant_link_id TEXT, participant_id TEXT,
+ FOREIGN KEY(group_route_id,connection_id)
+  REFERENCES channel_group_routes(route_id,connection_id),
+ FOREIGN KEY(participant_link_id,participant_id,sender_key)
+  REFERENCES channel_participant_links(link_id,participant_id,sender_key),
+ CHECK((chat_type='direct' AND group_route_id IS NULL AND scene_id IS NULL
+   AND participant_link_id IS NULL AND participant_id IS NULL) OR
+  (chat_type='group' AND group_route_id IS NOT NULL AND scene_id IS NOT NULL
+   AND participant_link_id IS NOT NULL AND participant_id IS NOT NULL)),
+            UNIQUE(connection_id, session_id)
+        );
+CREATE UNIQUE INDEX channel_bindings_identity_idx_v40
+            ON channel_bindings_v40(binding_id, connection_id);
+CREATE UNIQUE INDEX channel_bindings_group_identity_idx_v40
+ ON channel_bindings_v40(binding_id,connection_id,group_route_id);
+INSERT INTO channel_bindings_v40(binding_id,connection_id,conversation_key,sender_key,
+ session_id,created_at,updated_at) SELECT binding_id,connection_id,conversation_key,sender_key,
+ session_id,created_at,updated_at FROM channel_bindings;
+
+CREATE TABLE channel_turns_v40 (
+            channel_turn_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL
+                REFERENCES channel_connections(connection_id) ON DELETE CASCADE,
+            binding_id TEXT NOT NULL REFERENCES channel_bindings_v40(binding_id) ON DELETE CASCADE,
+            external_message_id TEXT NOT NULL,
+            content_sha256 TEXT NOT NULL,
+            account_key TEXT,
+            conversation_key TEXT NOT NULL,
+            chat_type TEXT NOT NULL DEFAULT 'direct'
+                CHECK(chat_type IN ('direct', 'group')),
+            conversation_label TEXT,
+            sender_key TEXT NOT NULL,
+            sender_display_name TEXT,
+            principal_scope TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            turn_id TEXT NOT NULL,
+            generation_id TEXT NOT NULL,
+            status TEXT NOT NULL
+                CHECK(status IN (
+                    'accepted', 'processing', 'completed', 'cancelling',
+                    'cancelled', 'failed', 'timed_out'
+                )),
+            reply_text TEXT,
+            error_json TEXT,
+            delivery_id TEXT UNIQUE,
+            revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+            accepted_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            completed_at TEXT, input_kind TEXT NOT NULL DEFAULT 'text'
+            CHECK(input_kind IN ('text', 'image', 'audio')),
+            group_lineage_version INTEGER NOT NULL DEFAULT 0 CHECK(group_lineage_version IN (0,1)),
+ group_route_id TEXT, group_route_revision INTEGER,
+ FOREIGN KEY(group_route_id,group_route_revision,connection_id)
+  REFERENCES channel_group_route_versions(route_id,revision,connection_id),
+ FOREIGN KEY(binding_id,connection_id,group_route_id)
+  REFERENCES channel_bindings_v40(binding_id,connection_id,group_route_id),
+ CHECK((group_lineage_version=0 AND group_route_id IS NULL AND group_route_revision IS NULL)
+ OR (group_lineage_version=1 AND chat_type='group' AND group_route_id IS NOT NULL
+ AND group_route_revision>=1)),
+ UNIQUE(channel_turn_id,connection_id,group_route_id,group_route_revision),
+ UNIQUE(connection_id,chat_type,conversation_key,external_message_id)
+        );
+CREATE UNIQUE INDEX channel_turns_identity_idx_v40
+            ON channel_turns_v40(channel_turn_id, binding_id, connection_id);
+INSERT INTO channel_turns_v40(channel_turn_id,connection_id,binding_id,external_message_id,
+ content_sha256,account_key,conversation_key,chat_type,conversation_label,sender_key,
+ sender_display_name,principal_scope,session_id,turn_id,generation_id,status,reply_text,
+ error_json,delivery_id,revision,accepted_at,created_at,updated_at,completed_at,input_kind)
+ SELECT channel_turn_id,connection_id,binding_id,external_message_id,content_sha256,account_key,
+ conversation_key,chat_type,conversation_label,sender_key,sender_display_name,principal_scope,
+ session_id,turn_id,generation_id,status,reply_text,error_json,delivery_id,revision,accepted_at,
+ created_at,updated_at,completed_at,input_kind FROM channel_turns;
+
+CREATE TABLE channel_turn_burst_members_v40 (
+            burst_id TEXT NOT NULL,
+            leader_channel_turn_id TEXT NOT NULL
+                REFERENCES channel_turns_v40(channel_turn_id) ON DELETE CASCADE,
+            member_channel_turn_id TEXT NOT NULL PRIMARY KEY
+                REFERENCES channel_turns_v40(channel_turn_id) ON DELETE CASCADE,
+            ordinal INTEGER NOT NULL CHECK(ordinal >= 0 AND ordinal < 4),
+            received_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+INSERT INTO channel_turn_burst_members_v40(burst_id,leader_channel_turn_id,
+ member_channel_turn_id,ordinal,received_at,created_at) SELECT burst_id,leader_channel_turn_id,
+ member_channel_turn_id,ordinal,received_at,created_at FROM channel_turn_burst_members;
+
+CREATE TABLE channel_proactive_policies_v40 (
+            connection_id TEXT PRIMARY KEY REFERENCES channel_connections(connection_id),
+            policy_json TEXT NOT NULL CHECK(json_valid(policy_json)),
+            revision INTEGER NOT NULL CHECK(revision >= 1),
+            binding_id TEXT REFERENCES channel_bindings_v40(binding_id),
+            authorized_route_revision INTEGER,
+            updated_at TEXT NOT NULL
+        );
+INSERT INTO channel_proactive_policies_v40(connection_id,policy_json,revision,binding_id,
+ authorized_route_revision,updated_at) SELECT connection_id,policy_json,revision,binding_id,
+ authorized_route_revision,updated_at FROM channel_proactive_policies;
+
+CREATE TABLE channel_proactive_episodes_v40 (
+            binding_id TEXT NOT NULL REFERENCES channel_bindings_v40(binding_id),
+            source TEXT NOT NULL CHECK(source = 'idle_check_in'),
+            anchor_channel_turn_id TEXT NOT NULL REFERENCES channel_turns_v40(channel_turn_id),
+            not_before_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+            revoked_at TEXT,
+            PRIMARY KEY(binding_id, source, anchor_channel_turn_id)
+        );
+INSERT INTO channel_proactive_episodes_v40(binding_id,source,anchor_channel_turn_id,
+ not_before_at,expires_at,revoked_at) SELECT binding_id,source,anchor_channel_turn_id,
+ not_before_at,expires_at,revoked_at FROM channel_proactive_episodes;
+
+CREATE TABLE channel_outbound_intents_v40 (
+            request_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id),
+            binding_id TEXT NOT NULL,
+            source TEXT NOT NULL CHECK(source = 'idle_check_in'),
+            source_event_key TEXT NOT NULL UNIQUE,
+            anchor_channel_turn_id TEXT NOT NULL,
+            account_key TEXT NOT NULL, sender_key TEXT NOT NULL, conversation_key TEXT NOT NULL,
+            character_id TEXT NOT NULL, principal_scope TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            turn_id TEXT NOT NULL UNIQUE, generation_id TEXT NOT NULL UNIQUE,
+            audio_stream_id TEXT NOT NULL UNIQUE,
+            policy_revision INTEGER NOT NULL CHECK(policy_revision >= 1),
+            route_revision INTEGER NOT NULL CHECK(route_revision >= 1),
+            revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+            status TEXT NOT NULL CHECK(status IN ('pending','generating','planned','settled')),
+            budget_day TEXT NOT NULL,
+            not_before_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            settled_at TEXT, settled_reason TEXT, cancel_requested_at TEXT, cancel_reason TEXT,
+            reply_text TEXT, reply_sha256 TEXT, error_json TEXT,
+            UNIQUE(binding_id, source, anchor_channel_turn_id),
+            UNIQUE(request_id, binding_id, connection_id),
+            FOREIGN KEY(binding_id, connection_id)
+                REFERENCES channel_bindings_v40(binding_id, connection_id),
+            FOREIGN KEY(anchor_channel_turn_id, binding_id, connection_id)
+                REFERENCES channel_turns_v40(channel_turn_id, binding_id, connection_id),
+            CHECK(expires_at > not_before_at),
+            CHECK((status = 'settled') = (settled_at IS NOT NULL)),
+            CHECK(reply_text IS NULL OR length(reply_text) BETWEEN 1 AND 2000)
+        );
+CREATE UNIQUE INDEX channel_outbound_active_binding_idx_v40
+            ON channel_outbound_intents_v40(binding_id) WHERE status != 'settled';
+INSERT INTO channel_outbound_intents_v40(request_id,connection_id,binding_id,source,
+ source_event_key,anchor_channel_turn_id,account_key,sender_key,conversation_key,character_id,
+ principal_scope,session_id,turn_id,generation_id,audio_stream_id,policy_revision,
+ route_revision,revision,status,budget_day,not_before_at,expires_at,created_at,updated_at,
+ settled_at,settled_reason,cancel_requested_at,cancel_reason,reply_text,reply_sha256,
+ error_json) SELECT request_id,connection_id,binding_id,source,source_event_key,
+ anchor_channel_turn_id,account_key,sender_key,conversation_key,character_id,principal_scope,
+ session_id,turn_id,generation_id,audio_stream_id,policy_revision,route_revision,revision,
+ status,budget_day,not_before_at,expires_at,created_at,updated_at,settled_at,settled_reason,
+ cancel_requested_at,cancel_reason,reply_text,reply_sha256,error_json FROM channel_outbound_intents;
+
+CREATE TABLE "channel_deliveries_v40" (
+            delivery_id TEXT PRIMARY KEY,
+            channel_turn_id TEXT UNIQUE,
+            outbound_intent_id TEXT UNIQUE,
+            connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id)
+                ON DELETE CASCADE,
+            binding_id TEXT NOT NULL,
+            status TEXT NOT NULL
+                CHECK(status IN ('pending','sending','delivered','failed','cancelled')),
+            attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt >= 1),
+            provider_message_id TEXT, last_error_json TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, delivered_at TEXT,
+            lease_id TEXT, lease_expires_at TEXT,
+            plan_version INTEGER NOT NULL DEFAULT 1 CHECK(plan_version >= 1),
+            cancel_requested_at TEXT,
+ group_target_json TEXT CHECK(group_target_json IS NULL OR json_valid(group_target_json)),
+ group_route_id TEXT, group_route_revision INTEGER,
+            CHECK((channel_turn_id IS NULL) != (outbound_intent_id IS NULL)),
+            FOREIGN KEY(channel_turn_id, binding_id, connection_id)
+                REFERENCES channel_turns_v40(channel_turn_id, binding_id, connection_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY(outbound_intent_id, binding_id, connection_id)
+                REFERENCES channel_outbound_intents_v40(request_id, binding_id, connection_id)
+        , CHECK((group_target_json IS NULL AND group_route_id IS NULL AND group_route_revision
+ IS NULL)
+ OR (group_target_json IS NOT NULL AND group_route_id IS NOT NULL AND group_route_revision>=1
+ AND channel_turn_id IS NOT NULL AND outbound_intent_id IS NULL)),
+ FOREIGN KEY(channel_turn_id,connection_id,group_route_id,group_route_revision)
+ REFERENCES channel_turns_v40(channel_turn_id,connection_id,group_route_id,group_route_revision)
+);
+INSERT INTO channel_deliveries_v40(delivery_id,channel_turn_id,outbound_intent_id,connection_id,
+ binding_id,status,attempt,provider_message_id,last_error_json,created_at,updated_at,
+ delivered_at,lease_id,lease_expires_at,plan_version,cancel_requested_at) SELECT delivery_id,
+ channel_turn_id,outbound_intent_id,connection_id,binding_id,status,attempt,provider_message_id,
+ last_error_json,created_at,updated_at,delivered_at,lease_id,lease_expires_at,plan_version,
+ cancel_requested_at FROM channel_deliveries;
+
+CREATE TABLE "channel_delivery_parts_v40" (
+            part_id TEXT PRIMARY KEY,
+            delivery_id TEXT NOT NULL REFERENCES "channel_deliveries_v40"(delivery_id)
+                ON DELETE CASCADE,
+            ordinal INTEGER NOT NULL CHECK(ordinal >= 0), kind TEXT NOT NULL,
+            payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
+            required INTEGER NOT NULL DEFAULT 1 CHECK(required IN (0,1)),
+            status TEXT NOT NULL
+                CHECK(status IN ('pending','sending','delivered','failed','cancelled','skipped')),
+            delay_after_ms INTEGER NOT NULL DEFAULT 0 CHECK(delay_after_ms >= 0),
+            not_before_at TEXT, attempt INTEGER NOT NULL DEFAULT 0 CHECK(attempt >= 0),
+            lease_id TEXT, lease_expires_at TEXT, provider_client_id TEXT NOT NULL UNIQUE,
+            provider_message_id TEXT, last_error_json TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, delivered_at TEXT,
+            CHECK(status != 'sending' OR (lease_id IS NOT NULL AND lease_expires_at IS NOT NULL)),
+            CHECK(status != 'delivered' OR delivered_at IS NOT NULL),
+            UNIQUE(delivery_id,ordinal)
+        );
+INSERT INTO channel_delivery_parts_v40(part_id,delivery_id,ordinal,kind,payload_json,required,
+ status,delay_after_ms,not_before_at,attempt,lease_id,lease_expires_at,provider_client_id,
+ provider_message_id,last_error_json,created_at,updated_at,delivered_at) SELECT part_id,
+ delivery_id,ordinal,kind,payload_json,required,status,delay_after_ms,not_before_at,attempt,
+ lease_id,lease_expires_at,provider_client_id,provider_message_id,last_error_json,created_at,
+ updated_at,delivered_at FROM channel_delivery_parts;
+DROP TABLE channel_delivery_parts;
+DROP TABLE channel_deliveries;
+DROP TABLE channel_outbound_intents;
+DROP TABLE channel_proactive_episodes;
+DROP TABLE channel_proactive_policies;
+DROP TABLE channel_turn_burst_members;
+DROP TABLE channel_turns;
+DROP TABLE channel_bindings;
+ALTER TABLE channel_bindings_v40 RENAME TO channel_bindings;
+ALTER TABLE channel_turns_v40 RENAME TO channel_turns;
+ALTER TABLE channel_turn_burst_members_v40 RENAME TO channel_turn_burst_members;
+ALTER TABLE channel_proactive_policies_v40 RENAME TO channel_proactive_policies;
+ALTER TABLE channel_proactive_episodes_v40 RENAME TO channel_proactive_episodes;
+ALTER TABLE channel_outbound_intents_v40 RENAME TO channel_outbound_intents;
+ALTER TABLE channel_deliveries_v40 RENAME TO channel_deliveries;
+ALTER TABLE channel_delivery_parts_v40 RENAME TO channel_delivery_parts;
+CREATE INDEX channel_bindings_connection_idx
+            ON channel_bindings(connection_id, updated_at DESC);
+CREATE INDEX channel_turns_connection_status_idx
+            ON channel_turns(connection_id, status, updated_at DESC);
+CREATE INDEX channel_turns_generation_idx
+            ON channel_turns(generation_id);
+CREATE INDEX channel_turns_owner_idle_idx
+            ON channel_turns(binding_id, accepted_at DESC, channel_turn_id DESC);
+CREATE INDEX channel_turns_binding_status_idx ON channel_turns(binding_id,status);
+CREATE INDEX channel_turn_burst_members_leader_idx
+            ON channel_turn_burst_members(leader_channel_turn_id);
+CREATE INDEX channel_turn_burst_members_burst_idx
+            ON channel_turn_burst_members(burst_id);
+CREATE INDEX channel_outbound_active_idx
+            ON channel_outbound_intents(status, created_at, request_id);
+CREATE INDEX channel_outbound_budget_idx
+            ON channel_outbound_intents(connection_id, budget_day, created_at);
+CREATE INDEX channel_outbound_history_idx
+            ON channel_outbound_intents(connection_id, created_at DESC, request_id DESC);
+CREATE TRIGGER channel_outbound_capacity
+        BEFORE INSERT ON channel_outbound_intents WHEN NEW.status != 'settled'
+          AND (SELECT count(*) FROM channel_outbound_intents WHERE status != 'settled') >= 32
+        BEGIN SELECT RAISE(ABORT, 'proactive global capacity exceeded'); END;
+CREATE INDEX channel_deliveries_connection_status_idx
+            ON channel_deliveries(connection_id,status,updated_at DESC);
+CREATE INDEX channel_deliveries_binding_status_idx
+            ON channel_deliveries(binding_id,status,created_at);
+CREATE INDEX channel_deliveries_lease_idx ON channel_deliveries(status,lease_expires_at)
+            WHERE status = 'sending';
+CREATE INDEX channel_delivery_parts_delivery_idx
+            ON channel_delivery_parts(delivery_id,ordinal ASC);
+CREATE INDEX channel_delivery_parts_claim_idx
+            ON channel_delivery_parts(delivery_id,status,ordinal ASC,not_before_at ASC);
+CREATE INDEX channel_delivery_parts_lease_idx
+            ON channel_delivery_parts(status,lease_expires_at) WHERE status = 'sending';
+
+DROP INDEX channel_bindings_identity_idx_v40;
+CREATE UNIQUE INDEX channel_bindings_identity_idx ON channel_bindings(binding_id,connection_id);
+DROP INDEX channel_bindings_group_identity_idx_v40;
+CREATE UNIQUE INDEX channel_bindings_group_identity_idx
+ ON channel_bindings(binding_id,connection_id,group_route_id);
+DROP INDEX channel_turns_identity_idx_v40;
+CREATE UNIQUE INDEX channel_turns_identity_idx ON channel_turns(channel_turn_id,binding_id,
+ connection_id);
+DROP INDEX channel_outbound_active_binding_idx_v40;
+CREATE UNIQUE INDEX channel_outbound_active_binding_idx ON channel_outbound_intents(binding_id)
+ WHERE status != 'settled';
+CREATE UNIQUE INDEX channel_bindings_direct_route_idx
+ ON channel_bindings(connection_id,conversation_key) WHERE chat_type='direct';
+CREATE UNIQUE INDEX channel_bindings_group_member_idx
+ ON channel_bindings(connection_id,group_route_id,scene_id,sender_key) WHERE chat_type='group';
+CREATE INDEX channel_group_turns_idx ON channel_turns(group_route_id,status,accepted_at);
+CREATE UNIQUE INDEX channel_group_turn_route_identity_idx
+ ON channel_turns(channel_turn_id,group_route_id);
+CREATE TABLE channel_group_route_heads (
+ route_id TEXT PRIMARY KEY REFERENCES channel_group_routes(route_id),
+ latest_channel_turn_id TEXT,
+ active_channel_turn_id TEXT,
+ pending_channel_turn_id TEXT,
+ updated_at TEXT NOT NULL,
+ CHECK(active_channel_turn_id IS NULL OR active_channel_turn_id!=pending_channel_turn_id),
+ FOREIGN KEY(latest_channel_turn_id,route_id)
+  REFERENCES channel_turns(channel_turn_id,group_route_id),
+ FOREIGN KEY(active_channel_turn_id,route_id)
+  REFERENCES channel_turns(channel_turn_id,group_route_id),
+ FOREIGN KEY(pending_channel_turn_id,route_id)
+  REFERENCES channel_turns(channel_turn_id,group_route_id)
+);
+CREATE TRIGGER channel_group_heads_capacity BEFORE UPDATE OF active_channel_turn_id
+ ON channel_group_route_heads WHEN NEW.active_channel_turn_id IS NOT NULL
+ AND OLD.active_channel_turn_id IS NULL
+ AND (SELECT count(*) FROM channel_group_route_heads WHERE active_channel_turn_id IS NOT NULL)>=32
+BEGIN SELECT RAISE(ABORT,'group work capacity exceeded'); END;
+CREATE TRIGGER channel_group_heads_insert_capacity BEFORE INSERT ON channel_group_route_heads
+ WHEN NEW.active_channel_turn_id IS NOT NULL
+ AND (SELECT count(*) FROM channel_group_route_heads WHERE active_channel_turn_id IS NOT NULL)>=32
+BEGIN SELECT RAISE(ABORT,'group work capacity exceeded'); END;
+CREATE TRIGGER channel_group_target_immutable BEFORE UPDATE OF group_target_json,group_route_id,
+ group_route_revision ON channel_deliveries
+BEGIN SELECT RAISE(ABORT,'group delivery target is immutable'); END;
+CREATE TRIGGER channel_group_delivery_guard BEFORE INSERT ON channel_deliveries
+ WHEN (SELECT group_lineage_version FROM channel_turns WHERE channel_turn_id=NEW.channel_turn_id)=1
+BEGIN
+ SELECT CASE WHEN NEW.group_target_json IS NULL OR NOT EXISTS (
+  SELECT 1 FROM channel_turns t
+  JOIN channel_group_routes r ON r.route_id=t.group_route_id
+  JOIN channel_group_route_heads h ON h.route_id=r.route_id
+  JOIN channel_connections c ON c.connection_id=r.connection_id
+  WHERE t.channel_turn_id=NEW.channel_turn_id AND t.connection_id=NEW.connection_id
+  AND NEW.group_route_id=t.group_route_id AND NEW.group_route_revision=t.group_route_revision
+  AND r.revision=t.group_route_revision AND r.enabled=1 AND r.deleted_at IS NULL
+  AND r.pause_reason IS NULL AND c.enabled=1 AND c.deleted_at IS NULL AND c.status='ready'
+  AND c.account_key=r.account_key AND c.character_id=r.character_id
+  AND h.latest_channel_turn_id=t.channel_turn_id
+  AND json_extract(NEW.group_target_json,'$.kind')='group'
+  AND json_extract(NEW.group_target_json,'$.connection_id')=t.connection_id
+  AND json_extract(NEW.group_target_json,'$.channel_turn_id')=t.channel_turn_id
+  AND json_extract(NEW.group_target_json,'$.route_id')=r.route_id
+  AND json_extract(NEW.group_target_json,'$.route_revision')=r.revision
+  AND json_extract(NEW.group_target_json,'$.account_key')=r.account_key
+  AND json_extract(NEW.group_target_json,'$.group_id')=r.group_id
+  AND json_extract(NEW.group_target_json,'$.scene_id')=r.scene_id
+  AND json_extract(NEW.group_target_json,'$.audience_fingerprint')=r.audience_fingerprint
+ ) THEN RAISE(ABORT,'group delivery is no longer authorized') END;
+END;
+CREATE TRIGGER channel_group_text_only BEFORE INSERT ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=NEW.delivery_id) IS
+ NOT NULL
+ AND (NEW.kind!='text' OR NEW.ordinal!=0 OR NEW.required!=1 OR NEW.delay_after_ms!=0)
+BEGIN SELECT RAISE(ABORT,'group delivery requires one immediate text part'); END;
+CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordinal,
+ required,delay_after_ms,payload_json ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=OLD.delivery_id) IS
+ NOT NULL
+BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
+"""
+
+MIGRATIONS += ((40, GROUP_MIGRATION40_SQL),)
