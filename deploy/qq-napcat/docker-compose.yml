@@ -3,6 +3,7 @@ services:
     image: ${NAPCAT_IMAGE:?Set a reviewed NapCat image release or digest in .env}
     restart: unless-stopped
     environment:
+      ACCOUNT: ${NAPCAT_ACCOUNT:-}
       NAPCAT_UID: ${NAPCAT_UID:?Set the deployment user UID in .env}
       NAPCAT_GID: ${NAPCAT_GID:?Set the deployment user GID in .env}
       WEBUI_TOKEN: ${NAPCAT_WEBUI_TOKEN:?Set a strong private WebUI token in .env}

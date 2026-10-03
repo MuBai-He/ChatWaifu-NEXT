@@ -22,6 +22,8 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartClaimRequest,
     ChannelDeliveryPartDraft,
     ChannelDeliveryPartsCancelRequest,
+    ChannelDeliveryPartStatus,
+    ChannelDeliveryStatus,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -38,7 +40,10 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
     DeliveryTransitionResult,
 )
-from chatwaifu_runtime.external_channels.scheduler import DeliveryPartOutcome
+from chatwaifu_runtime.external_channels.scheduler import (
+    ChannelDeliveryScheduler,
+    DeliveryPartOutcome,
+)
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.sqlite_external_channels import SQLiteExternalChannelRepository
 from websockets.asyncio.server import ServerConnection, serve
@@ -595,4 +600,98 @@ async def test_stopped_delivery_during_audio_read_prevents_late_send(
         if not task.done():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+        await state.database.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("receipt", ["unknown", "provider_ack_without_scheduler_ack"])
+async def test_fresh_scheduler_reclaims_lease_without_repeating_fenced_onebot_send(
+    tmp_path: Path, receipt: str
+) -> None:
+    """A new scheduler must ACK the recovered part using the durable QQ journal."""
+    state = await setup(tmp_path)
+    actions: list[str] = []
+
+    async def peer(socket: ServerConnection) -> None:
+        async for raw in socket:
+            received = json.loads(raw)
+            action = received["action"]
+            actions.append(action)
+            if action == "get_login_info":
+                data = {"user_id": 10001}
+            else:
+                assert action == "send_private_msg"
+                if receipt == "unknown":
+                    # The provider accepted the frame, then lost its response.
+                    await socket.close()
+                    return
+                data = {"message_id": 90009}
+            await socket.send(
+                json.dumps({"status": "ok", "retcode": 0, "echo": received["echo"], "data": data})
+            )
+
+    try:
+        async with serve(peer, "127.0.0.1", 0) as server:
+            endpoint = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/onebot"
+            original = NapCatClient(endpoint, "fixture-token")
+            await original.open()
+            original.bind_account("10001")
+            try:
+                result = await asyncio.wait_for(
+                    state.executor(original).execute_part(state.plan, state.part), timeout=2
+                )
+                expected_outcome = (
+                    DeliveryPartOutcome.FATAL_ERROR
+                    if receipt == "unknown"
+                    else DeliveryPartOutcome.DELIVERED
+                )
+                assert result.outcome is expected_outcome
+                assert actions == ["get_login_info", "send_private_msg"]
+                pending_ack = await state.repository.get_delivery_plan(state.plan.delivery_id)
+                assert pending_ack is not None
+                assert pending_ack.parts[0].status is ChannelDeliveryPartStatus.SENDING
+            finally:
+                await original.close()
+
+            await state.reopen()
+            journal = json.loads(await state.repository.get_adapter_cursor(state.connection_id))
+            expected_id = "unknown" if receipt == "unknown" else "90009"
+            assert journal[state.part.provider_client_id] == expected_id
+            recovered = NapCatClient(endpoint, "fixture-token")
+            await recovered.open()
+            recovered.bind_account("10001")
+            try:
+                scheduler = ChannelDeliveryScheduler(
+                    state.repository,
+                    state.executor(recovered),
+                    connection_id=state.connection_id,
+                )
+                # Advance only the repository/scheduler clock, preserving the original lease.
+                after_expiry = datetime.now(UTC) + timedelta(minutes=2)
+                assert await asyncio.wait_for(scheduler.step(now=after_expiry), timeout=2)
+                completed = await state.repository.get_delivery_plan(state.plan.delivery_id)
+                assert completed is not None
+                part = completed.parts[0]
+                assert part.part_id == state.part.part_id
+                assert part.provider_client_id == state.part.provider_client_id
+                assert part.attempt == state.part.attempt + 1
+                assert part.lease_id is None
+                if receipt == "unknown":
+                    assert completed.status is ChannelDeliveryStatus.FAILED
+                    assert part.status is ChannelDeliveryPartStatus.FAILED
+                    assert part.last_error is not None
+                    assert part.last_error.code == "qq_delivery_unknown"
+                    assert part.provider_message_id is None
+                else:
+                    assert completed.status is ChannelDeliveryStatus.DELIVERED
+                    assert part.status is ChannelDeliveryPartStatus.DELIVERED
+                    assert part.provider_message_id == "90009"
+                assert not await scheduler.step(now=after_expiry)
+                assert actions == ["get_login_info", "send_private_msg"]
+                assert not await state.repository.list_nonterminal_delivery_plans(
+                    state.connection_id
+                )
+            finally:
+                await recovered.close()
+    finally:
         await state.database.close()

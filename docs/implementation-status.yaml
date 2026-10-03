@@ -16,9 +16,12 @@ qq_napcat:
     - Real QR login and authenticated OneBot RPC verified; exact owner-private pairing confirmed with one allowed sender, enabled durable connection and ready status
     - Three real owner-initiated QQ turns verified text then channel.voice audio then text, each with one delivered part and a provider receipt; owner confirmed text receipt, playable voice and no voice on the following ordinary turn
     - Independent staging Runtime restart restored the same enabled connection with one allowed owner and ready status; confirmed delivery records retained attempt 1
+    - Five meaningful recovery regressions added; combined QQ adapter, complete Runtime and recovery suites passed 127 checks locally and 127 on Linux, with Ruff and strict Pyright passed
+    - Dedicated NapCat container recreation preserved mounts, connection and full ledger identities/journal; role-account quick-login startup setting added, manual QQ reauthentication restored authenticated OneBot and existing Runtime connection without re-pairing or replay
+    - Temporarily stopped only the dedicated staging TTS service; real owner voice request failed before audio publication and delivered one text reply with failure explanation, confirmed on phone; TTS service restored active
   remaining:
-    - real_qq_denied_sender_group_media_interruption_transport_reconnect_and_uncertain_receipt_acceptance
-    - napcat_container_recreation_and_qq_session_recovery
+    - real_qq_denied_sender_group_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
+    - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
     - integration_with_concurrent_search_workstream_and_explicit_read_only_search_tool_policy
 personal_assistant:

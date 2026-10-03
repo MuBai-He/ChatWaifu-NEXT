@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-03
-- Validation state: Deterministic checks are recorded with the implementation; Linux deployment, QQ login and real-account text/voice acceptance remain pending.
+- Validation state: Automated checks, isolated Linux deployment, QQ login, owner pairing, real text/voice/text playback and Runtime restart are verified. Additional fault and access-boundary acceptance remains scoped in [the validation record](../qq-napcat-validation-2026-10-03.md).
 
 ## Context
 

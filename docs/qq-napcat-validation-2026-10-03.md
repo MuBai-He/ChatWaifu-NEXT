@@ -34,6 +34,16 @@ results and from the concurrent search/answer evaluation.
 | Frontend artifacts          | `pnpm build:web`; `pnpm build:desktop-ui`                                      | passed                                                   |
 | Linux QQ fixture acceptance | stage Python pytest, same two QQ test paths                                    | 122 passed                                               |
 
+Continuation checks added five recovery regressions: full supervisor reconnect,
+successful Runtime reconstruction for text/audio with binding/session/history
+retention, and a fresh scheduler reclaiming a lease after lost provider or internal
+ACK. The combined adapter, Runtime and recovery suite passed **127 checks locally
+and 127 on Linux**; Ruff check/format and strict Pyright passed. These tests use
+real local WebSockets/SQLite with controlled providers. Runtime object rebuilding
+uses test in-memory credentials and does not replace independent-process or real
+QQ acceptance. The full repository/frontend results above are the initial
+implementation checks; they were not inferred from the focused continuation run.
+
 The native packaging command `pnpm build` additionally attempted the unchanged
 Rust shell and failed to load `thiserror_impl` from the local Cargo artifacts.
 Native app packaging is not counted as a passed check. The Web and desktop UI
@@ -139,10 +149,77 @@ snapshots omit delivery/part UUIDs and cannot independently establish their exac
 identity across restart or exclude platform-side duplication.
 
 Remaining real-account acceptance: denied senders/groups/media, interruptions,
-transport fault reconnect, NapCat container recreation and QQ session recovery,
 and an actual send/receipt interruption window. Real character-voice quality,
 answer quality, long-term memory behavior and integration with the concurrent
 search workstream still need their own acceptance.
+
+## Container recreation and reconnect continuation
+
+Before mutation, a full read-only connection snapshot found no nonterminal turns,
+deliveries, parts, generations or skills. Only the dedicated Compose service was
+stopped. The two mounted data directories were backed up while stopped, with
+`0600` permissions, before recreating the pinned container. The first recreation
+preserved all Runtime ledger metadata and mounts, but QQ entered `waiting_qrcode`;
+neither a healthy container nor retained login files established automatic login.
+
+Inspection of the pinned image found `/app/entrypoint.sh` passes `-q $ACCOUNT`
+only when `ACCOUNT` is set. The deployment lacked that setting. The generic
+template now maps private `NAPCAT_ACCOUNT` to `ACCOUNT`, and the private stage
+configuration takes the role account from the existing durable connection.
+The effective container setting was checked for presence and equality without
+printing it. This enables a saved-account quick-login attempt; it does not promise
+that QQ credentials remain valid or that scanning can always be avoided.
+Read-only inspection found consistent process HOME/UID and writable persistent
+paths, no entrypoint removal of QQ login files, and no eligible quick-login entries
+from the two supported list APIs. It did not establish why those entries were
+ineligible or that all cached state was lost.
+
+After this change QQ still required manual authentication. The owner scanned a
+new QR; the active WebUI then reported logged-in/core-ready, and authenticated
+OneBot `get_login_info`/`get_status` confirmed the same role account online. Runtime
+automatically recovered the existing enabled connection to `ready`, with one
+owner. It was not re-paired or restarted for this recovery.
+
+The pre-recreation and post-login full-connection ledger hashes matched, including
+internal turn/generation/delivery/part/skill identities, attempts, receipt presence
+and the send lifecycle journal. Counts remained three turns, three deliveries,
+three parts and one voice run. This closes the earlier snapshot's delivery/part
+identity limitation for this particular quiet recreation window. It still does
+not independently rule out platform-side duplication. Image, mount and port
+settings stayed the same; the Compose config hash changed when `ACCOUNT` was
+added. The original three service identities and all 22 resource hashes remained
+unchanged. Stage Runtime and TTS process identities were unchanged during this
+container test.
+
+Private sanitized evidence is in staging `validation/`:
+`RECOVERY-before-napcat-recreate-20261003T074410922614Z.json`,
+`RECOVERY-after-napcat-recreate-20261003T074841427047Z.json`,
+`RECOVERY-relogged-after-napcat-recreate-20261003T080053971347Z.json`, and
+`QQ-RELOGIN-AFTER-RECREATE-RPC.json`. Automatic login without scanning remains
+unverified; the demonstrated recovery includes manual QQ reauthentication.
+
+## Real unavailable-TTS fallback
+
+Only the dedicated stage TTS unit was temporarily stopped in a five-minute,
+bounded fault window. The owner initiated a fresh voice request on QQ. Its
+`channel.voice` run failed with `skill_internal_error` before creating an audio
+part; the generation completed and sent exactly one text part with a provider
+receipt, attempt 1 and plan version 1. The owner confirmed receiving the failure
+explanation and text reply. This is synthesis-unavailable fallback, distinct from
+the plan-version-2 fallback after an actual audio-delivery failure.
+
+The fault-window guard restored the dedicated TTS service after the terminal
+result, and a separate service check confirmed active state.
+The restored worker's authenticated `/v1/health` also returned HTTP 200, `ready`,
+empty queue and a not-yet-loaded model; this was a health check, not another synthesis.
+Sanitized evidence is `validation/QQ-TTS-FAILURE.json` (including the owner's observation) and
+`QQ-TTS-FAILURE-TURN.json`. The final capture
+`RECOVERY-after-tts-failure-restored-20261003T080728868100Z.json` reports ready,
+four completed turns/deliveries, one audio and three text parts, no active work,
+and unchanged original services/resources. This test does not establish behavior
+during an actual QQ send/receipt interruption or a stale audio result after
+cancellation; those have controlled regression evidence but still need
+real-account fault acceptance.
 
 See [setup and operations](qq-napcat-setup.md) and
 [ADR 0064](adr/0064-qq-napcat-current-turn-voice.md).
