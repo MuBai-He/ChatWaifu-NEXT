@@ -371,13 +371,21 @@ class SQLiteInteractionDiagnosticsReader:
         ]
         delivery = await self._database.fetchone(
             """
-            SELECT delivery.delivery_id, delivery.status
-            FROM channel_turns AS turn
-            JOIN channel_deliveries AS delivery ON delivery.channel_turn_id = turn.channel_turn_id
-            WHERE turn.session_id = ? AND turn.generation_id = ?
-            ORDER BY delivery.created_at DESC LIMIT 1
+            SELECT delivery_id, status FROM (
+                SELECT delivery.delivery_id, delivery.status, delivery.created_at
+                FROM channel_turns AS turn
+                JOIN channel_deliveries AS delivery
+                    ON delivery.channel_turn_id = turn.channel_turn_id
+                WHERE turn.session_id = ? AND turn.generation_id = ?
+                UNION ALL
+                SELECT delivery.delivery_id, delivery.status, delivery.created_at
+                FROM channel_outbound_intents AS intent
+                JOIN channel_deliveries AS delivery
+                    ON delivery.outbound_intent_id = intent.request_id
+                WHERE intent.session_id = ? AND intent.generation_id = ?
+            ) ORDER BY created_at DESC, delivery_id DESC LIMIT 1
             """,
-            (session_key, generation_key),
+            (session_key, generation_key, session_key, generation_key),
         )
         part_rows = (
             await self._database.fetchall(
