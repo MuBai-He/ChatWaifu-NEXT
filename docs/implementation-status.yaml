@@ -11,10 +11,10 @@ qq_napcat:
   group_member_identity_adr: "0069"
   original_plan_stages:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
-    B: bounded_static_images_stickers_and_scoped_quotes_implemented_owner_preset_display_verified_image_and_quote_phone_pending
+    B: bounded_static_images_stickers_and_scoped_quotes_implemented_owner_static_image_and_preset_display_verified_quote_phone_pending
     C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
     D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_default_off_controlled_group_two_member_at_text_real_verified_further_acceptance_pending
-    D2: fixed_owner_proactive_text_deployed_default_off_real_opt_in_phone_acceptance_pending
+    D2: fixed_owner_proactive_text_deployed_temporary_single_test_optin_armed_cleanup_and_phone_acceptance_pending
     D3: group_source_linux_and_deployment_verified_two_member_real_at_text_and_disable_verified_resume_phone_pending
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
@@ -78,8 +78,11 @@ qq_napcat:
     - Repair d6ba813 was deployed as only one reviewed Character file over frozen f0588d1, not a full new-commit release; seven pure Linux planning checks passed, source inventory showed only this file changed, SQLite 40 and 14 prior delivered receipts were preserved, eight other units and NapCat identities plus 22 resource hashes and configuration hashes were unchanged, and a fresh member observation restored the same selected group at revision nine
     - Separate root authenticated readback verified the repaired source import path/hash, ready private connection, permanent sticker policy, unchanged group scene/member mapping and disabled proactive policy; post-repair celebration phone retry and group-resume phone acceptance remain pending
     - The owner confirmed text and normally displayed kitten on the post-repair celebration retry; root matched that exact new input to its completed celebrate-happy generation, two required delivered text parts and one optional final delivered kitten-happy image with the immutable preset hash and provider receipts, accepting only this owner-private preset display while preserving the initial failed test
+    - Frozen repair source 76290f9 passed 478 Linux Character, sticker, private QQ and group fixture checks with normal runner and pytest exit and zero failures/skips; all 1536 source files and 268 loaded module origins/hashes matched, including the live overlay file, connections used only 183 owned ephemeral peers with zero blocked attempts/protected-port intersection, and all nine existing unit and NapCat identities were unchanged
+    - The owner confirmed the static image answer was correct; root matched the exact approved image-question input to a completed image turn whose answer was left red square and right blue circle, with one delivered text part and provider receipt and no voice or extra image; this single real owner-private image understanding case is accepted, while quote display remains pending
+    - The owner explicitly approved one temporary proactive-text test; after a revision-zero disabled readback and side-effect-free preview with empty history, operator policy revision one enabled two-minute idle, one reservation per local day, five-minute TTL and a temporary quiet-hours override; a verified live bounded controller restores the prior disabled policy after the first terminal intent or timeout, and a new owner input was requested before any episode may open
   remaining:
-    - phase_b_real_phone_static_image_understanding_and_quote_display_acceptance
+    - phase_b_real_phone_quote_display_acceptance
     - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
     - phase_d2_real_opt_in_phone_quiet_hours_disable_new_input_and_restart_acceptance
     - phase_d3_real_phone_fresh_observation_resume_acceptance

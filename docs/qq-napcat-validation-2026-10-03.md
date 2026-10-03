@@ -727,3 +727,71 @@ hash. The private raw turn, parts and human acknowledgement are retained in
 This single owner-direct preset display is now accepted. The initial text-only
 failure remains retained; inbound image understanding, quote display, learned
 stickers and post-resume group phone acceptance are not implied by this result.
+
+## Post-repair Linux fixtures and real image understanding (2026-10-04)
+
+The complete committed source at `76290f942c8218d9701d5e0bd74df0572f983069`
+was frozen into a new isolated Linux fixture directory. Relative to `f0588d1`,
+its only production-code change is the reviewed Character planning repair.
+The previously reviewed child fences and launcher were retained; only frozen
+identities/inventory counts and five additional Character/sticker test files
+changed. No production source, service or database was changed by this run.
+
+All **478** selected cases passed, with zero failures/skips and normal pytest
+and runner exit. Before/after inventory matched all **1536** frozen files, and
+all **268** loaded project module origins and hashes matched that candidate.
+Root separately checked raw evidence, the repaired module's live-overlay hash,
+and exact before/after service/NapCat identities. Connections reached only
+**183** owned ephemeral peers, with no blocked attempt or protected-port
+intersection. Null keyring, one exact read-only `ldconfig -p` probe and one
+`/dev/null` write-open were explicit fixture boundaries; Python audit fences
+are not an OS sandbox or real-phone proof.
+
+Server evidence is `validation/positive-plan-linux-qomzecal/`; the frozen source
+archive SHA-256 is
+`c95bdb2c9e860d0619d6c0e3f138fe697d5535cb251c39b8576cdba6f1e618a1`,
+and the manifest hash is
+`f6a69c002dcca107aad948ef6e59a78fa0b3f286f2a1315e26153ef9b40403e7`.
+Root's independent evidence review is in the corresponding local private
+`cw2-qq-positive-linux-x2pgyoo1` directory. This does not imply a full new-commit
+deployment; the live source still uses the previously recorded one-file overlay.
+
+The owner then confirmed the static test image was understood correctly. Root
+matched the exact approved question to a completed **image** turn admitted at
+`2026-10-03T21:47:22.001905Z`. Its actual answer identified a red square on the
+left and a blue circle on the right, agreeing with the deterministic oracle.
+One text part was delivered with a provider receipt, with no voice or extra
+image. The private accepted turn, part and human acknowledgement are under
+`validation/phase-b-phone-image-h3zsqqt6/` alongside the oracle manifest. Its
+local PNG hash identifies the test oracle, not provider-transcoded bytes.
+This one owner-private static image understanding case is accepted; quote
+display and general vision quality are separate. The phone quote test was
+requested next.
+
+## D2 explicitly approved single proactive-text test, armed (2026-10-04)
+
+Authenticated readback and policy-only preview verified policy revision zero,
+disabled state and empty intent history. A typed reviewable proposal was saved
+under `validation/d2-live-plan-2y5vgln_/` without applying it or calling a model
+or send API. The owner subsequently explicitly approved **one temporary test**.
+The operator saved revision **one** with two-minute idle, 60-minute cooldown,
+one local-day reservation, five-minute TTL, `Asia/Shanghai`, and a temporary
+quiet-hours override. Voice, stickers and tools remain excluded from proactive
+generation/delivery regardless of private inbound reply settings.
+
+A bounded operator controller is actually running as
+`cw2-qq-d2-once-test-2y5vgln.service`, with verified nonzero PID and running state.
+It only uses policy management and intent reads, and never chooses a recipient
+or calls model/message-send APIs. The existing Runtime supplies any authorized
+generation and send. The controller restores the exact previous disabled policy
+after the first terminal intent or its ten-minute test window, including signal
+cleanup, and does not overwrite a newer operator policy revision. A newly
+admitted owner input after saving is required; enabling does not authorize old
+idle backlog. That fresh-input phone step was requested. At this checkpoint
+actual proactive phone receipt and disabled-policy cleanup are still pending.
+
+Separate root readback while the controller PID was still running confirmed
+enabled revision one and preview reason `no_owner_activity`, with null owner
+anchor and zero reservations. All previously admitted private inputs preceded
+this policy revision; no old idle backlog was exposed by enabling. This is
+actual server policy/anchor evidence, not a proactive phone-receipt claim.
