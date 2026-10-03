@@ -35,6 +35,12 @@ prevents startup or enabling a policy from sending old idle backlogs. One episod
 may reserve at most one intent regardless of policy updates or a local midnight.
 Quiet hours, cooldown, busy generation and daily budget can defer only within
 this episode window. Only a new owner input creates a new episode.
+Every saved policy revision fences the current owner anchor and cancels the old
+episode. A new owner input after saving is required before another idle episode
+can open, including first opt-in and re-enabling. Due/expiry are durable episode
+facts; changing idle duration or TTL cannot give an unreserved old anchor a fresh
+window. GET and preview never create an episode. Scoped experience reset also
+invalidates old owner activity and unsent intents without deleting send facts.
 
 A channel-owned persistence port atomically reserves policy/route revisions,
 fixed connection/account/binding/character/scope, source key, local budget day,
@@ -51,7 +57,10 @@ result is retained even if cancellation or expiry settled the intent meanwhile.
 Channel delivery records select exactly one source: a real inbound channel turn
 or an outbound intent. Preserve existing part/lease/ACK/journal state machines,
 identities and provider success facts. Outbound plans have no inbound reply
-reference. Migration 38 rebuilds parent/part tables safely with foreign keys on,
+reference. Existing inbound delivery snapshots keep schema 1.0; outbound snapshots
+use schema 1.1 with null `channel_turn_id` and an `outbound_intent_id`. Validate
+the version/source pairing and leave legacy parent claim/ACK inbound-only.
+Migration 38 rebuilds parent/part tables safely with foreign keys on,
 copies existing facts, verifies them and recreates indexes; no synthetic inbound
 message or destructive down migration is permitted.
 
