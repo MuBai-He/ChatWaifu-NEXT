@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,10 +16,16 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartKind,
     ChannelTextDeliveryPartPayload,
 )
+from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
-from chatwaifu_runtime.persistence.sqlite_external_channels import SQLiteExternalChannelRepository
+from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
+from chatwaifu_runtime.persistence.sqlite_external_channels import (
+    SQLiteExternalChannelRepository,
+    _binding_record,
+)
+from chatwaifu_runtime.sessions.service import SessionService
 from test_channel_groups import _open
 from test_channel_proactive_repository import NOW, _completed, _enabled, _input, _owner, _reserved
 
@@ -47,6 +53,71 @@ async def _snapshot(
         rows = await database.fetchall(f'SELECT {select} FROM "{name}"{condition}')
         facts[name] = tuple(sorted((tuple(row) for row in rows), key=repr))
     return columns, facts
+
+
+async def test_migrated_legacy_group_binding_allows_fresh_private_without_proactive_reuse(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "legacy-private39.db"
+    old = await _open(path, through=39)
+    try:
+        deliveries, old_proactive, connection_id, session_id, old_binding_id = await _owner(
+            old, policy=_enabled()
+        )
+        source = await _input(deliveries, connection_id, session_id, old_binding_id)
+        intent = await _reserved(old_proactive, connection_id)
+        group = await deliveries.create_turn(
+            replace(
+                source,
+                channel_turn_id=uuid4(),
+                external_message_id="90001",
+                chat_type=ChannelChatType.GROUP,
+                conversation_key="group:500",
+                turn_id=uuid4(),
+                generation_id=uuid4(),
+            )
+        )
+        columns, facts = await _snapshot(old)
+    finally:
+        await old.close()
+    db = await _open(path)
+    try:
+        deliveries = SQLiteExternalChannelRepository(db, EventStore(db))
+        proactive = SQLiteChannelProactiveRepository(db, EventStore(db), deliveries=deliveries)
+        assert await _snapshot(db, columns) == (columns, facts)
+        retained_row = await db.fetchone(
+            "SELECT * FROM channel_bindings WHERE binding_id=?", (str(old_binding_id),)
+        )
+        assert retained_row is not None and _binding_record(retained_row).legacy_group_provenance
+        assert await deliveries.find_binding(connection_id, "direct:owner") is None
+        assert (await proactive.get_context(connection_id, as_of=NOW)).binding is None
+        sessions = SessionService(db, EventStore(db), EventHub())
+        private = await sessions.create_session("character")
+        fresh = await deliveries.create_binding(
+            binding_id=uuid4(),
+            connection_id=connection_id,
+            conversation_key="direct:owner",
+            sender_key="owner",
+            session_id=private.session_id,
+            created_at=datetime.now(UTC),
+        )
+        assert fresh.session_id != session_id and not fresh.legacy_group_provenance
+        assert await deliveries.find_binding(connection_id, "direct:owner") == fresh
+        context = await proactive.get_context(connection_id, as_of=NOW)
+        assert context.binding == fresh and context.last_owner_turn is None
+        authorization = await proactive.authorize_intent(
+            intent.request_id, as_of=NOW + timedelta(minutes=2)
+        )
+        assert not authorization.allowed
+        assert authorization.reason == "owner_binding_changed"
+        assert await proactive.get_intent(intent.request_id) == intent
+        assert await deliveries.get_turn(group.channel_turn_id) is not None
+        # Historical bindings still block desktop proactive even when quarantined.
+        assert await proactive.is_channel_session(session_id)
+        assert await db.fetchall("PRAGMA foreign_key_check") == []
+        assert (await db.fetchone("PRAGMA integrity_check"))[0] == "ok"  # type: ignore[index]
+    finally:
+        await db.close()
 
 
 async def test_populated39_to40_preserves_all_old_columns_ledger_and_receipts(

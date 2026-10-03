@@ -389,27 +389,20 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
     async def find_binding(
         self, connection_id: UUID, conversation_key: str
     ) -> ChannelBindingRecord | None:
+        columns = {
+            str(row["name"])
+            for row in await self._database.fetchall("PRAGMA table_info(channel_bindings)")
+        }
         rows = await self._database.fetchall(
-            """
+            f"""
             SELECT b.* FROM channel_bindings b
             WHERE b.connection_id = ? AND b.conversation_key = ?
-              AND NOT EXISTS (
-                SELECT 1 FROM channel_turns t
-                WHERE t.binding_id=b.binding_id AND t.chat_type='group'
-              )
-            LIMIT 34
+              AND {_private_binding_predicate(columns)}
+            LIMIT 2
             """,
             (str(connection_id), conversation_key),
         )
-        # Schema 39 has no binding chat_type; its legacy GROUP records are
-        # excluded by retained turn provenance. Schema 40 also admits new group
-        # bindings, which must never be reused by the owner-private gateway.
-        direct = tuple(
-            record
-            for row in rows
-            if (record := _binding_record(row)).chat_type is ChannelChatType.DIRECT
-        )
-        return direct[0] if len(direct) == 1 else None
+        return _binding_record(rows[0]) if len(rows) == 1 else None
 
     async def create_binding(
         self,
@@ -2976,6 +2969,20 @@ def _connection_record(row: object) -> ChannelConnectionRecord:
     )
 
 
+def _private_binding_predicate(columns: set[str]) -> str:
+    # Apply the isolation before LIMIT, including when many historical member
+    # bindings share a provider conversation key. Schema 39 has no typed columns.
+    result = (
+        "NOT EXISTS (SELECT 1 FROM channel_turns legacy "
+        "WHERE legacy.binding_id=b.binding_id AND legacy.chat_type='group')"
+    )
+    if "chat_type" in columns:
+        result += " AND b.chat_type='direct'"
+    if "legacy_group_provenance" in columns:
+        result += " AND b.legacy_group_provenance=0"
+    return result
+
+
 def _binding_record(row: object) -> ChannelBindingRecord:
     item = cast(aiosqlite.Row, row)
     columns = frozenset(item.keys())
@@ -3002,6 +3009,9 @@ def _binding_record(row: object) -> ChannelBindingRecord:
         participant_id=str(item["participant_id"])
         if "participant_id" in columns and item["participant_id"] is not None
         else None,
+        legacy_group_provenance=bool(item["legacy_group_provenance"])
+        if "legacy_group_provenance" in columns
+        else False,
     )
 
 

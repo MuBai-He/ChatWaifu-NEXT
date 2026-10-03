@@ -94,6 +94,7 @@ class ChannelBindingRecord:
     scene_id: str | None = None
     link_id: UUID | None = None
     participant_id: str | None = None
+    legacy_group_provenance: bool = False
 
 
 @dataclass(frozen=True, slots=True)

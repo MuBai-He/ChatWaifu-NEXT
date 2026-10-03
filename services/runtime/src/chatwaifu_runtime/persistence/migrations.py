@@ -1,6 +1,6 @@
 """Ordered SQLite migrations for the local Runtime."""
 
-MIGRATIONS: tuple[tuple[int, str], ...] = (
+_BASE_MIGRATIONS: tuple[tuple[int, str], ...] = (
     (
         1,
         """
@@ -1561,6 +1561,7 @@ CREATE TABLE channel_bindings_v40 (
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             chat_type TEXT NOT NULL DEFAULT 'direct' CHECK(chat_type IN ('direct','group')),
+ legacy_group_provenance INTEGER NOT NULL DEFAULT 0 CHECK(legacy_group_provenance IN (0,1)),
  group_route_id TEXT REFERENCES channel_group_routes(route_id),
  scene_id TEXT REFERENCES conversation_scenes(scene_id),
  participant_link_id TEXT, participant_id TEXT,
@@ -1571,7 +1572,8 @@ CREATE TABLE channel_bindings_v40 (
  CHECK((chat_type='direct' AND group_route_id IS NULL AND scene_id IS NULL
    AND participant_link_id IS NULL AND participant_id IS NULL) OR
   (chat_type='group' AND group_route_id IS NOT NULL AND scene_id IS NOT NULL
-   AND participant_link_id IS NOT NULL AND participant_id IS NOT NULL)),
+   AND participant_link_id IS NOT NULL AND participant_id IS NOT NULL
+   AND legacy_group_provenance=0)),
             UNIQUE(connection_id, session_id)
         );
 CREATE UNIQUE INDEX channel_bindings_identity_idx_v40
@@ -1579,8 +1581,11 @@ CREATE UNIQUE INDEX channel_bindings_identity_idx_v40
 CREATE UNIQUE INDEX channel_bindings_group_identity_idx_v40
  ON channel_bindings_v40(binding_id,connection_id,group_route_id);
 INSERT INTO channel_bindings_v40(binding_id,connection_id,conversation_key,sender_key,
- session_id,created_at,updated_at) SELECT binding_id,connection_id,conversation_key,sender_key,
- session_id,created_at,updated_at FROM channel_bindings;
+ session_id,created_at,updated_at,legacy_group_provenance)
+ SELECT b.binding_id,b.connection_id,b.conversation_key,b.sender_key,
+ b.session_id,b.created_at,b.updated_at,EXISTS(
+  SELECT 1 FROM channel_turns t WHERE t.binding_id=b.binding_id AND t.chat_type='group'
+ ) FROM channel_bindings b;
 
 CREATE TABLE channel_turns_v40 (
             channel_turn_id TEXT PRIMARY KEY,
@@ -1844,7 +1849,11 @@ DROP INDEX channel_outbound_active_binding_idx_v40;
 CREATE UNIQUE INDEX channel_outbound_active_binding_idx ON channel_outbound_intents(binding_id)
  WHERE status != 'settled';
 CREATE UNIQUE INDEX channel_bindings_direct_route_idx
- ON channel_bindings(connection_id,conversation_key) WHERE chat_type='direct';
+ ON channel_bindings(connection_id,conversation_key)
+ WHERE chat_type='direct' AND legacy_group_provenance=0;
+CREATE TRIGGER channel_bindings_legacy_provenance_immutable
+ BEFORE UPDATE OF legacy_group_provenance ON channel_bindings
+BEGIN SELECT RAISE(ABORT,'legacy group provenance is immutable'); END;
 CREATE UNIQUE INDEX channel_bindings_group_member_idx
  ON channel_bindings(connection_id,group_route_id,scene_id,sender_key) WHERE chat_type='group';
 CREATE INDEX channel_group_turns_idx ON channel_turns(group_route_id,status,accepted_at);
@@ -1915,4 +1924,4 @@ CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordina
 BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
 """
 
-MIGRATIONS += ((40, GROUP_MIGRATION40_SQL),)
+MIGRATIONS = (*_BASE_MIGRATIONS, (40, GROUP_MIGRATION40_SQL))
