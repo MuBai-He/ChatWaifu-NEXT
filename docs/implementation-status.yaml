@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-10-03"
 current_phase: "13.6"
 qq_napcat:
-  status: native_owner_direct_text_and_requested_voice_automated_verified_real_qq_pending
+  status: native_owner_direct_text_and_requested_voice_real_qq_happy_path_verified
   adr: "0064"
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
@@ -13,10 +13,13 @@ qq_napcat:
     - Independent Linux staging Runtime and encrypted credential vault run in separate source/state directories; existing search test environment is preserved
     - Official NapCat v4.18.28 amd64 image verified by layer/config hashes, loaded offline and running healthy; WebUI HTTP 200 and host ports bound only to loopback
     - Staging chat configured from the existing current server model parameters; separate CPU GPT-SoVITS worker on 8773 passed actual Runtime-adapter WAV synthesis with no chat inference or QQ sends
+    - Real QR login and authenticated OneBot RPC verified; exact owner-private pairing confirmed with one allowed sender, enabled durable connection and ready status
+    - Three real owner-initiated QQ turns verified text then channel.voice audio then text, each with one delivered part and a provider receipt; owner confirmed text receipt, playable voice and no voice on the following ordinary turn
+    - Independent staging Runtime restart restored the same enabled connection with one allowed owner and ready status; confirmed delivery records retained attempt 1
   remaining:
-    - owner_qq_login_and_private_pairing
-    - real_qq_text_voice_reconnect_restart_and_phone_playback
-    - configured_real_chat_model_and_character_voice_acceptance
+    - real_qq_denied_sender_group_media_interruption_transport_reconnect_and_uncertain_receipt_acceptance
+    - napcat_container_recreation_and_qq_session_recovery
+    - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
     - integration_with_concurrent_search_workstream_and_explicit_read_only_search_tool_policy
 personal_assistant:
   status: unified_agenda_google_apple_provider_writes_and_text_chat_verified_offline_acceptance_pending
