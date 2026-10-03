@@ -19,6 +19,12 @@
 原实例，正在进行搜索优化的 Runtime 与服务继续运行。
 这些路径与端口是隔离配置，创建目录并不表示真实 QQ 已经接通。
 
+本次测试 Runtime 已使用现有聊天模型参数和独立凭据。新的
+`chatwaifu-qq-stage-tts.service` 在回环 `8773` 提供 GPT-SoVITS，代码配置、
+工作目录和缓存独立，模型权重及参考音频供读取复用；一次真实本地合成
+已生成有效 WAV。记忆提取/摘要暂用 demo，embedding 用 local-hash，
+本次联调先验收 QQ 文字与按需语音，不据此判断记忆或回答质量。
+
 2026-10-03 的现场部署位于 `/home/mubai/cw2-qq-napcat-stage/napcat/`。
 NapCat 容器为 `cw2-qq-stage-napcat-napcat-1`，健康检查通过，WebUI 返回
 HTTP 200。完整官方镜像经过逐层哈希校验后离线装载；部署目录中的

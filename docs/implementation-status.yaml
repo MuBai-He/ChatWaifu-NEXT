@@ -12,6 +12,7 @@ qq_napcat:
     - Protocol 36 checks, Web 333 checks, TypeScript typecheck and ESLint, Python strict typing and Ruff, Web and desktop UI builds verified
     - Independent Linux staging Runtime and encrypted credential vault run in separate source/state directories; existing search test environment is preserved
     - Official NapCat v4.18.28 amd64 image verified by layer/config hashes, loaded offline and running healthy; WebUI HTTP 200 and host ports bound only to loopback
+    - Staging chat configured from the existing current server model parameters; separate CPU GPT-SoVITS worker on 8773 passed actual Runtime-adapter WAV synthesis with no chat inference or QQ sends
   remaining:
     - owner_qq_login_and_private_pairing
     - real_qq_text_voice_reconnect_restart_and_phone_playback
