@@ -18,6 +18,7 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
+    ChannelDeliveryStatus,
     ChannelImageDeliveryPartPayload,
     ChannelTextDeliveryPartPayload,
 )
@@ -90,7 +91,12 @@ async def reconcile_known_sends(
                 for event in transition.persisted_events:
                     await publisher.publish_persisted(event)
             finally:
-                await on_terminal(transition.plan)
+                if transition.plan.status in {
+                    ChannelDeliveryStatus.DELIVERED,
+                    ChannelDeliveryStatus.FAILED,
+                    ChannelDeliveryStatus.CANCELLED,
+                }:
+                    await on_terminal(transition.plan)
         retained = await repository.retained_send_journal_keys(connection_id, tuple(journal))
         kept = {
             key: receipt
@@ -155,6 +161,7 @@ class NapCatDelivery:
         if (
             connection is None
             or not connection.configuration.enabled
+            or connection.configuration.allowed_sender_keys != [self._owner]
             or current is None
             or current.cancel_requested_at is not None
         ):
@@ -227,6 +234,7 @@ class NapCatDelivery:
             if (
                 connection is None
                 or not connection.configuration.enabled
+                or connection.configuration.allowed_sender_keys != [self._owner]
                 or current is None
                 or current.cancel_requested_at is not None
             ):
@@ -243,6 +251,7 @@ class NapCatDelivery:
                     return (
                         connection is not None
                         and connection.configuration.enabled
+                        and connection.configuration.allowed_sender_keys == [self._owner]
                         and current is not None
                         and current.cancel_requested_at is None
                         and await self._authorized(plan)

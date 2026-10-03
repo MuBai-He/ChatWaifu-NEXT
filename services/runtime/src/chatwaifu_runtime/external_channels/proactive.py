@@ -309,11 +309,7 @@ class ChannelProactiveService:
             raise ChannelConflictError("outbound intent revision conflict")
         if intent.status is ChannelOutboundIntentStatus.SETTLED:
             return _intent_snapshot(intent)
-        owned = self._workflows.get(request_id)
-        self._operator_cancelling.add(request_id)
         try:
-            if owned is not None:
-                self._fence_workflow(intent, owned[1], "operator_cancelled")
             result = await self._repository.settle_intent(
                 request_id,
                 reason="operator_cancelled",
@@ -321,15 +317,22 @@ class ChannelProactiveService:
                 cancel=True,
                 expected_revision=body.expected_revision,
             )
-            await self._publish_record(result)
+        except ValueError as error:
+            raise ChannelConflictError("outbound intent revision conflict") from error
+        # Only a committed CAS may revoke owned work. A generation can advance
+        # while the SQL lock is awaited; a rejected cancellation has no effects.
+        owned = self._workflows.get(request_id)
+        self._operator_cancelling.add(request_id)
+        try:
+            if owned is not None:
+                self._fence_workflow(intent, owned[1], "operator_cancelled")
             self._intent_epochs.pop(request_id, None)
             await self._conversation.cancel(
                 intent.session_id, "operator_cancelled", expected_generation_id=intent.generation_id
             )
             if owned is not None and owned[1] is not asyncio.current_task():
                 await asyncio.gather(owned[1], return_exceptions=True)
-        except ValueError as error:
-            raise ChannelConflictError("outbound intent revision conflict") from error
+            await self._publish_record(result)
         finally:
             self._operator_cancelling.discard(request_id)
         self._gateway.wake_delivery_scheduler(connection_id)
