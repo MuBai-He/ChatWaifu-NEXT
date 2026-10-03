@@ -716,3 +716,14 @@ and proactive policy off. Private rollback copies, executor evidence and the
 separate root readback are under `validation/phase-b-positive-plan-i5mwabx_/`.
 The new celebration phone retry was requested; sticker and group-resume phone
 acceptance are still pending at this checkpoint.
+
+The owner then confirmed **text plus a normally displayed kitten sticker**.
+Root matched the second exact celebration input, admitted after this overlay,
+to its completed generation and durable `celebrate`/`happy` response plan. Two
+required text parts and one optional final `kitten_happy` image all had delivered
+status and provider receipts; the image payload matched the immutable preset
+hash. The private raw turn, parts and human acknowledgement are retained in
+`validation/phase-b-positive-plan-i5mwabx_/private-phone-sticker-acceptance.json`.
+This single owner-direct preset display is now accepted. The initial text-only
+failure remains retained; inbound image understanding, quote display, learned
+stickers and post-resume group phone acceptance are not implied by this result.
