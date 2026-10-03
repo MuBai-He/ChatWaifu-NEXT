@@ -345,6 +345,7 @@ class RuntimeContainer:
             self.channel_voice.on_plan_terminal,
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
+            stt_backend=self.stt,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,
@@ -353,7 +354,11 @@ class RuntimeContainer:
             self.stt,
         )
         self.resources.set_busy_probe(
-            lambda: self.conversation.active_count > 0 or self.providers.tts.active_jobs > 0
+            lambda: (
+                self.conversation.active_count > 0
+                or self.providers.tts.active_jobs > 0
+                or self.external_channels.active_preprocessing_count > 0
+            )
         )
         self.ambient = AmbientCompanionService(
             self.database,

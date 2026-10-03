@@ -228,6 +228,79 @@ def test_unsupported_mixed_record_is_not_partially_understood() -> None:
     assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
 
 
+def test_owner_record_keeps_signed_reply_and_marker_without_voice_authorization() -> None:
+    received = event()
+    received["message"] = [
+        {"type": "reply", "data": {"id": -90000}},
+        {
+            "type": "record",
+            "data": {
+                "file": "主人语音.silk",
+                "file_size": "123",
+                "path": "/private/record.silk",
+                "url": "https://private.invalid/audio?token=ignored",
+                "summary": "请用语音回复我",
+            },
+        },
+    ]
+    received["message_id"] = -123
+    inbound = normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER)
+    assert inbound is not None and inbound.record is not None
+    assert inbound.message.text == "[语音]"
+    assert not requests_voice(inbound.message.text)
+    assert inbound.message.external_message_id == "-123"
+    assert inbound.message.reply_to_external_message_id == "-90000"
+    assert inbound.record.file_ref == "主人语音.silk" and inbound.record.file_size == 123
+    assert not inbound.images
+    assert "主人语音" not in repr(inbound) and "private" not in repr(inbound)
+    assert normalize(received, connection_id=uuid4(), account=ACCOUNT, owner=None) is None
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"type": "text", "data": {"text": "请用语音回复"}},
+        {"type": "text", "data": {"text": ""}},
+        {"type": "image", "data": {"file": "photo.png"}},
+        {"type": "record", "data": {"file": "other.silk"}},
+        {"type": "video", "data": {"file": "movie.mp4"}},
+    ],
+)
+def test_record_cannot_be_mixed_with_caption_images_or_another_record(extra: JsonObject) -> None:
+    received = event()
+    received["message"] = [{"type": "record", "data": {"file": "voice.silk"}}, extra]
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
+@pytest.mark.parametrize(
+    "file_ref",
+    [
+        "../private.silk",
+        "/tmp/voice.silk",
+        "file://voice",
+        "https://private.invalid",
+        "",
+        " voice.silk",
+        "a\x00.silk",
+    ],
+)
+def test_unsafe_record_references_do_not_reach_admission(file_ref: str) -> None:
+    received = event()
+    received["message"] = [{"type": "record", "data": {"file": file_ref}}]
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("user_id", 10003), ("self_id", 10003), ("message_type", "group"), ("user_id", 10001)],
+)
+def test_records_still_require_bound_owner_private_account(key: str, value: JsonValue) -> None:
+    received = event()
+    received["message"] = [{"type": "record", "data": {"file": "voice.silk"}}]
+    received[key] = value
+    assert normalize_inbound(received, connection_id=uuid4(), account=ACCOUNT, owner=OWNER) is None
+
+
 @pytest.mark.parametrize(
     "text",
     [

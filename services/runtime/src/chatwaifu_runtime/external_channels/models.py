@@ -16,12 +16,37 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartPayload,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelMessageKind,
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 
 from chatwaifu_runtime.providers.contracts import LlmInputImage
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelTranscriptionIdentity:
+    session_id: UUID
+    turn_id: UUID
+    generation_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelInboundAudioInput:
+    source_fingerprint: str
+    load: Callable[[ChannelTranscriptionIdentity], Awaitable[str]] = field(
+        repr=False, compare=False
+    )
+
+    def __post_init__(self) -> None:
+        raw_fp = cast(object, self.source_fingerprint)
+        if (
+            not isinstance(raw_fp, str)
+            or len(self.source_fingerprint) != 64
+            or any(c not in "0123456789abcdef" for c in self.source_fingerprint)
+        ):
+            raise ValueError("source_fingerprint must be a 64-character lowercase hex string")
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +117,7 @@ class ChannelTurnRecord:
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
+    input_kind: ChannelMessageKind = ChannelMessageKind.TEXT
 
 
 @dataclass(frozen=True, slots=True)

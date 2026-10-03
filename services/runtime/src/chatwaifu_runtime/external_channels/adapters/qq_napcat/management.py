@@ -33,8 +33,11 @@ from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
 from chatwaifu_runtime.external_channels.service import ExternalChannelError, ExternalChannelService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.realtime.contracts import SttBackend
+from chatwaifu_runtime.realtime.stt import DisabledSttBackend
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
+from .audio import NapCatAudioTranscriber, audio_input
 from .client import NapCatClient, NapCatError, validate_endpoint
 from .delivery import NapCatDelivery
 from .media import image_input
@@ -63,6 +66,7 @@ class NapCatManagement:
         *,
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
+        stt_backend: SttBackend | None = None,
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -75,6 +79,7 @@ class NapCatManagement:
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
+        self._audio_transcriber = NapCatAudioTranscriber(stt_backend or DisabledSttBackend())
         self._pairings: dict[UUID, ChannelPairingSnapshot] = {}
         self._pair_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._tasks: dict[UUID, asyncio.Task[None]] = {}
@@ -351,6 +356,9 @@ class NapCatManagement:
                             if inbound.images
                             else None,
                             image_retention_allowed=False,
+                            audio_input=audio_input(client, inbound.record, self._audio_transcriber)
+                            if inbound.record is not None
+                            else None,
                         )
                     except ExternalChannelError as error:
                         logger.info(

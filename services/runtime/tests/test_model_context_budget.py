@@ -88,7 +88,12 @@ async def test_model_budget_migration_and_restart_keep_old_rows_and_new_settings
     tmp_path: Path, runtime_settings: Settings
 ) -> None:
     path = tmp_path / "legacy.sqlite"
-    old = Database(path, runtime_settings.storage, migrations=MIGRATIONS[:-1])
+    # This fixture predates budget migration 36, regardless of later channel migrations.
+    old = Database(
+        path,
+        runtime_settings.storage,
+        migrations=tuple(item for item in MIGRATIONS if item[0] < 36),
+    )
     await old.open()
     async with old.transaction() as connection:
         await connection.execute(

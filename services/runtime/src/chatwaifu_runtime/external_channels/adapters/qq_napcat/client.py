@@ -24,6 +24,8 @@ _SOCKET_LOGGER.disabled = (
 _IMAGE_MAX_BYTES = 5 * 1024 * 1024
 _IMAGE_CHUNK_BYTES = 64 * 1024
 _IMAGE_TIMEOUT_SECONDS = 20
+_RECORD_TIMEOUT_SECONDS = 20
+_RECORD_MAX_CHUNKS = 256
 _IMAGE_MAX_FRAME_BYTES = 90 * 1024
 # A complete 5 MiB response can arrive before its consumer is scheduled.
 _IMAGE_QUEUE_FRAMES = _IMAGE_MAX_BYTES // _IMAGE_CHUNK_BYTES + 2
@@ -68,13 +70,14 @@ class _ImageStream:
     frames: asyncio.Queue[JsonObject]
     failure: asyncio.Future[NapCatError]
     terminal_received: bool = False
+    media_kind: str = "image"
 
     def fail(self, error: NapCatError) -> None:
         if not self.failure.done():
             self.failure.set_result(error)
 
     async def next_frame(self) -> JsonObject:
-        queued = asyncio.create_task(self.frames.get(), name="qq-image-frame")
+        queued = asyncio.create_task(self.frames.get(), name=f"qq-{self.media_kind}-frame")
         try:
             await asyncio.wait((queued, self.failure), return_when=asyncio.FIRST_COMPLETED)
             if self.failure.done():
@@ -86,23 +89,23 @@ class _ImageStream:
             await asyncio.gather(queued, return_exceptions=True)
 
 
-def _image_integer(data: JsonObject, key: str) -> int:
+def _image_integer(data: JsonObject, key: str, *, media_kind: str = "image") -> int:
     value = data.get(key)
     if type(value) is not int:
-        raise NapCatError("QQ returned invalid image stream metadata")
+        raise NapCatError(f"QQ returned invalid {media_kind} stream metadata")
     return value
 
 
-def _image_packet(response: JsonObject) -> JsonObject:
+def _image_packet(response: JsonObject, *, media_kind: str = "image") -> JsonObject:
     if (
         response.get("status") != "ok"
         or type(response.get("retcode")) is not int
         or response.get("retcode") != 0
     ):
-        raise NapCatRejected("QQ rejected the image download")
+        raise NapCatRejected(f"QQ rejected the {media_kind} download")
     data = response.get("data")
     if response.get("stream") != "stream-action" or not isinstance(data, dict):
-        raise NapCatError("QQ returned an invalid image stream response")
+        raise NapCatError(f"QQ returned an invalid {media_kind} stream response")
     return cast(JsonObject, data)
 
 
@@ -166,7 +169,7 @@ class NapCatClient:
                 future.set_exception(NapCatUncertain("QQ connection lost during request"))
         for stream in self._streams.values():
             if not stream.terminal_received:
-                stream.fail(NapCatError("QQ connection lost during image download"))
+                stream.fail(NapCatError(f"QQ connection lost during {stream.media_kind} download"))
 
     async def _read(self) -> None:
         try:
@@ -186,12 +189,14 @@ class NapCatClient:
                         continue
                     frame_size = len(raw.encode("utf-8")) if isinstance(raw, str) else len(raw)
                     if frame_size > _IMAGE_MAX_FRAME_BYTES:
-                        stream.fail(NapCatError("QQ image stream frame exceeds its limit"))
+                        stream.fail(
+                            NapCatError(f"QQ {stream.media_kind} stream frame exceeds its limit")
+                        )
                         continue
                     try:
                         stream.frames.put_nowait(event)
                     except asyncio.QueueFull:
-                        stream.fail(NapCatError("QQ image stream capacity exceeded"))
+                        stream.fail(NapCatError(f"QQ {stream.media_kind} stream capacity exceeded"))
                     else:
                         packet = event.get("data")
                         if event.get("status") == "failed" or (
@@ -358,6 +363,119 @@ class NapCatClient:
             raise
         except Exception:
             raise NapCatError("QQ image download did not complete") from None
+        finally:
+            self._streams.pop(echo, None)
+            if stream is not None and not stream.failure.done():
+                stream.failure.cancel()
+
+    async def download_record(self, file_ref: str, *, max_bytes: int = _IMAGE_MAX_BYTES) -> bytes:
+        """Read bounded converted WAV bytes from an owner-admitted provider reference.
+
+        NapCat's header may report compressed source size. Validate the returned
+        chunk totals independently; WAV decoding and duration limits belong to
+        the media loader. No provider filename is opened by Runtime.
+        """
+        validate_image_file_ref(file_ref)
+        if type(max_bytes) is not int or not 0 < max_bytes <= _IMAGE_MAX_BYTES:
+            raise ValueError("QQ record byte limit must be between 1 byte and 5 MiB")
+        if self._socket is None or (self._reader and self._reader.done()):
+            raise NapCatRejected("QQ connection is unavailable before record download")
+        account = self._account
+        echo = uuid4().hex
+        stream: _ImageStream | None = None
+        try:
+            async with asyncio.timeout(_RECORD_TIMEOUT_SECONDS):
+                if self._streams or len(self._pending) >= 32:
+                    raise NapCatRejected("QQ request capacity exceeded")
+                if account is not None:
+                    login = await self.call("get_login_info", {})
+                    if str(login.get("user_id")) != account or self._account != account:
+                        raise NapCatRejected("QQ account changed before record download")
+                if self._streams or len(self._pending) >= 32:
+                    raise NapCatRejected("QQ request capacity exceeded")
+                stream = _ImageStream(
+                    asyncio.Queue(maxsize=_IMAGE_QUEUE_FRAMES),
+                    asyncio.get_running_loop().create_future(),
+                    media_kind="record",
+                )
+                self._streams[echo] = stream
+                await self._socket.send(
+                    json.dumps(
+                        {
+                            "action": "download_file_record_stream",
+                            "params": {
+                                "file": file_ref,
+                                "chunk_size": _IMAGE_CHUNK_BYTES,
+                                "out_format": "wav",
+                            },
+                            "echo": echo,
+                        }
+                    )
+                )
+                header = _image_packet(await stream.next_frame(), media_kind="record")
+                if header.get("type") != "stream" or header.get("data_type") != "file_info":
+                    raise NapCatError("QQ record stream has no file header")
+                source_size = _image_integer(header, "file_size", media_kind="record")
+                if not 0 < source_size <= max_bytes:
+                    raise NapCatError("QQ record source size exceeds its limit or is empty")
+                if _image_integer(header, "chunk_size", media_kind="record") != _IMAGE_CHUNK_BYTES:
+                    raise NapCatError("QQ record stream has an invalid chunk size")
+                if header.get("out_format") != "wav":
+                    raise NapCatError("QQ record stream returned an invalid output format")
+                name = header.get("file_name")
+                if not isinstance(name, str) or len(name) > 1024:
+                    raise NapCatError("QQ record stream returned an invalid display filename")
+                decoded = bytearray()
+                chunks = 0
+                while True:
+                    packet = _image_packet(await stream.next_frame(), media_kind="record")
+                    kind = packet.get("data_type")
+                    if packet.get("type") == "response" and kind == "file_complete":
+                        if (
+                            chunks == 0
+                            or _image_integer(packet, "total_chunks", media_kind="record") != chunks
+                            or _image_integer(packet, "total_bytes", media_kind="record")
+                            != len(decoded)
+                        ):
+                            raise NapCatError("QQ record stream ended with inconsistent totals")
+                        if account is not None:
+                            login = await self.call("get_login_info", {})
+                            if str(login.get("user_id")) != account or self._account != account:
+                                raise NapCatRejected("QQ account changed during record download")
+                        return bytes(decoded)
+                    if packet.get("type") != "stream" or kind != "file_chunk":
+                        raise NapCatError("QQ record stream has an invalid packet sequence")
+                    size = _image_integer(packet, "size", media_kind="record")
+                    if (
+                        _image_integer(packet, "index", media_kind="record") != chunks
+                        or not 0 < size <= _IMAGE_CHUNK_BYTES
+                        or chunks >= _RECORD_MAX_CHUNKS
+                    ):
+                        raise NapCatError("QQ record stream has an invalid chunk sequence")
+                    if len(decoded) + size > max_bytes:
+                        raise NapCatError("QQ converted record exceeds its byte limit")
+                    encoded = packet.get("data")
+                    if (
+                        not isinstance(encoded, str)
+                        or len(encoded) != ((size + 2) // 3) * 4
+                        or _image_integer(packet, "base64_size", media_kind="record")
+                        != len(encoded)
+                    ):
+                        raise NapCatError("QQ record stream has an invalid encoded length")
+                    try:
+                        chunk = base64.b64decode(encoded, validate=True)
+                    except (ValueError, binascii.Error):
+                        raise NapCatError("QQ record stream contains invalid base64") from None
+                    if len(chunk) != size or base64.b64encode(chunk).decode("ascii") != encoded:
+                        raise NapCatError("QQ record stream contains invalid base64")
+                    decoded.extend(chunk)
+                    chunks += 1
+        except asyncio.CancelledError:
+            raise
+        except NapCatError:
+            raise
+        except Exception:
+            raise NapCatError("QQ record download did not complete") from None
         finally:
             self._streams.pop(echo, None)
             if stream is not None and not stream.failure.done():

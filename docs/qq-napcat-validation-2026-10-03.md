@@ -231,7 +231,7 @@ voice, and D incoming voice transcription, proactive messages and group chat.
 Search/answer optimization is a separate workstream, not stage D. A's core text
 and restart path and C's current-turn voice and unavailable-TTS fallback have the
 real-account evidence above. Additional A/C access and fault gates remain scoped.
-D has not been enabled.
+D1 incoming voice is tracked separately below; D2/D3 remain unimplemented.
 
 Phase B now uses the same gateway and Conversation image loader. The authenticated
 pinned NapCat stream API transports bounded chunks without public URLs or shared
@@ -272,3 +272,41 @@ unchanged. Source, database and Web backups are private to the stage. Evidence i
 `validation/QQ-PHASE-B-DEPLOY-RPC.json` and the `RECOVERY-before/after-phase-b-deploy`
 captures. These checks establish deployment and preserved state, not phone image
 understanding or quote/sticker display.
+
+## Phase D1: incoming owner voice
+
+Implemented the ADR 0066 slice: one owner-private structured record, bounded
+authenticated WAV download, strict in-memory PCM16 validation and the existing
+local STT backend. Durable admission allocates identity before IO, returns
+immediately and deduplicates without repeating download. Only the complete final
+transcript enters Conversation; raw audio, partial text and the internal audio
+placeholder are not retained. Replies use TEXT unless this current transcript
+explicitly requests the existing voice tool.
+
+Independent review reproduced and then verified fixes for admission/registration
+lifecycle cancellation and owner revocation during Conversation preparation.
+Six separate root-source race fixtures passed: stop/disable/delete/interrupt
+start no loader, old owner text starts no model, and supersession starts only the
+new text with no voice. The original evidence scripts asserted the old defect;
+the repaired checks reverse those assertions. The crash-recovery fixture uses
+a committed-WAL crash snapshot, since clean shutdown now cancels durable audio.
+An existing pre-start cleanup regression also verifies that an unopened
+database is not queried during constructor teardown.
+
+The pinned stream producer can emit legal short reads. A real Node file-stream
+fixture `[1024, 65536, 29484]` is accepted, while the 256-chunk, 5-MiB, 20-second
+and shared bounded-queue limits remain enforced. The STT worker retains capacity
+for cancelled native inference and shared model loading; repeated cancellations
+do not launch unbounded model initialization. All five worker response identity
+fields are checked.
+
+Root's final full Python command completed **2393 passed, 46 platform skips**.
+The isolated STT worker suite passed **22 tests** and strict worker typing;
+full Runtime Pyright reported zero errors, Ruff and changed-source format checks
+passed. The unchanged frontend has **334 tests** passing, TypeScript/lint and
+Web/desktop UI builds passing. Existing native Rust packaging limits remain
+separate; these checks do not establish actual QQ speech decoding or accuracy.
+
+Deployment and real phone acceptance are recorded separately. D2 proactive
+text and D3 group/member isolation remain unimplemented. Their concrete scope,
+dependencies and acceptance package are [QQ next slices](qq-next-slices.md).

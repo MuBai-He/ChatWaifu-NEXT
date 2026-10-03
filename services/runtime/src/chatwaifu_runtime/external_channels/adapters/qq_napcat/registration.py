@@ -17,7 +17,11 @@ NAPCAT_PROVIDER = ChannelProviderRegistration(
     name="QQ (NapCat)",
     description="连接已登录的 NapCat，通过一次性配对码绑定主人私聊。",
     capabilities=ChannelProviderCapabilities(
-        inbound_message_kinds=[ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE],
+        inbound_message_kinds=[
+            ChannelMessageKind.TEXT,
+            ChannelMessageKind.IMAGE,
+            ChannelMessageKind.AUDIO,
+        ],
         outbound_message_kinds=[
             ChannelMessageKind.TEXT,
             ChannelMessageKind.AUDIO,

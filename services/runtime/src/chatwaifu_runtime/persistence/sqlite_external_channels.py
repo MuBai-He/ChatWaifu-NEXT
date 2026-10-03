@@ -24,6 +24,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelMessageKind,
     ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
@@ -551,8 +552,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 content_sha256, account_key, conversation_key, chat_type,
                 conversation_label, sender_key, sender_display_name, principal_scope,
                 session_id, turn_id, generation_id, status, reply_text, error_json,
-                delivery_id, revision, accepted_at, created_at, updated_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                delivery_id, revision, accepted_at, created_at, updated_at, completed_at, input_kind
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(turn.channel_turn_id),
@@ -579,6 +580,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 turn.created_at.isoformat(),
                 turn.updated_at.isoformat(),
                 turn.completed_at.isoformat() if turn.completed_at is not None else None,
+                turn.input_kind.value,
             ),
         )
         created = await self.get_turn(turn.channel_turn_id)
@@ -2732,7 +2734,7 @@ def _binding_record(row: object) -> ChannelBindingRecord:
 
 
 def _turn_record(row: object) -> ChannelTurnRecord:
-    item = row
+    item = cast(aiosqlite.Row, row)
     return ChannelTurnRecord(
         channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
@@ -2777,6 +2779,11 @@ def _turn_record(row: object) -> ChannelTurnRecord:
         created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
         updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
         completed_at=_datetime(item["completed_at"]),  # type: ignore[index]
+        input_kind=(
+            ChannelMessageKind(str(item["input_kind"]))
+            if "input_kind" in item.keys()
+            else ChannelMessageKind.TEXT
+        ),
     )
 
 

@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-03
 - Extends: ADRs 0064 and 0065.
-- Validation state: Implementation in progress; real QQ voice transcription pending.
+- Validation state: Implemented with deterministic regression checks; real QQ voice transcription pending.
 
 ## Context
 
@@ -35,7 +35,9 @@ Use pinned NapCat `download_file_record_stream` with `out_format: wav`, 64 KiB
 chunks, account preflight/postflight, a 20-second download deadline and one
 active stream shared with images. File references are admitted safe basenames,
 never model-selected paths or URLs. Validate ordered chunks, canonical Base64,
-bounded actual bytes and exact terminal totals. NapCat's record header can
+bounded actual bytes and exact terminal totals. Accept at most 256 chunks;
+short reads before the final chunk are valid. The receiver retains the shared
+bounded 82-frame queue and fails on overflow. NapCat's record header can
 describe the original compressed size; it need not equal the converted WAV's
 size. No provider guarantee of atomic peer-qualified fetching or durable cache
 is implied.
@@ -53,6 +55,13 @@ a generation or failure notice. On failure or restart with orphaned audio
 preparation, create one durable text notice asking the owner to resend; never
 automatically re-download or transcribe the old record.
 
+A short lifecycle lock protects registration and durable cancellation, including
+admissions committed before their background task is registered. Before any
+database await, permission revocation synchronously cancels registered preparation.
+Task joins and callbacks run outside the lock. Constructor cleanup before startup
+does not access an unopened repository. A clean shutdown cancels durable audio;
+only an actual crash leaves orphaned preparation for restart failure recovery.
+
 Replies remain text by default. A clear voice-output request in this turn's
 final transcript uses the same `channel.voice` gate as typed text. Arrival of a
 record, quoted content and previous requests cannot authorize voice output.
@@ -62,7 +71,9 @@ QQ deployment uses its own loopback authenticated CPU/int8 STT worker, a new
 credential and private state, and a fixed offline model snapshot. The existing
 worker remains separate. Bound accepted worker jobs using the union of live
 request tasks and unfinished native inference: a cancelled native job keeps
-its capacity slot until it finishes. The dedicated stage sets capacity to one;
+its capacity slot until it finishes. Model initialization is also a shared,
+shielded operation that retains its slot after cancellation, including reload
+after idle unload. The dedicated stage sets capacity to one;
 further requests fail promptly with a fixed HTTP 429 response. Resource idle
 unload must treat preprocessing as busy.
 

@@ -122,6 +122,8 @@ class TranscriptionService:
         self._settings = settings
         self._engine_factory = engine_factory
         self._engine: TranscriptionEngine | None = None
+        self._load_future: asyncio.Future[TranscriptionEngine] | None = None
+        self._closed = False
         self._load_lock = asyncio.Lock()
         self._run_lock = asyncio.Lock()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=settings.worker_id)
@@ -133,21 +135,15 @@ class TranscriptionService:
             await self._ensure_loaded()
 
     async def transcribe(self, request: SttTranscriptionRequest) -> SttTranscriptionResult:
+        if self._closed:
+            raise RuntimeError("transcription service is closed")
         current = asyncio.current_task()
         if current is None:
             raise RuntimeError("transcription request is not running in an asyncio task")
         typed_current = current  # narrowed for strict type checking
         if request.generation_id in self._jobs or request.generation_id in self._native_jobs:
             raise RuntimeError("generation already has an active STT job")
-        self._discard_finished_native_jobs()
-        active = {
-            generation_id for generation_id, task in self._jobs.items() if not task.done()
-        } | {
-            generation_id
-            for generation_id, future in self._native_jobs.items()
-            if not future.done()
-        }
-        if len(active) >= self._settings.max_active_jobs:
+        if self._active_job_count() >= self._settings.max_active_jobs:
             raise TranscriptionCapacityError("STT worker request capacity exceeded")
         self._jobs[request.generation_id] = typed_current
         try:
@@ -194,47 +190,53 @@ class TranscriptionService:
         return True
 
     async def unload(self) -> bool:
-        self._discard_finished_native_jobs()
-        if any(not task.done() for task in self._jobs.values()) or any(
-            not future.done() for future in self._native_jobs.values()
-        ):
+        if self._active_job_count():
             return False
         async with self._load_lock:
-            if self._engine is None:
+            if self._active_job_count() or self._engine is None:
                 return False
             self._engine = None
             await asyncio.to_thread(gc.collect)
         return True
 
     async def close(self) -> None:
-        for generation_id in tuple(self._jobs):
-            self.cancel(generation_id)
-        tasks = tuple(self._jobs.values())
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-        pending = tuple(future for future in self._native_jobs.values() if not future.done())
-        still_running: set[asyncio.Future[tuple[str, str | None]]]
-        if pending:
-            _, still_running = await asyncio.wait(
-                pending,
-                timeout=self._settings.shutdown_timeout_seconds,
-            )
-        else:
-            still_running = set()
-        if not still_running:
-            await self.unload()
-        self._executor.shutdown(wait=not still_running, cancel_futures=True)
+        if self._closed:
+            return
+        self._closed = True
+        native_finished = False
+        try:
+            for generation_id in tuple(self._jobs):
+                self.cancel(generation_id)
+            tasks = tuple(self._jobs.values())
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            pending: list[
+                asyncio.Future[TranscriptionEngine] | asyncio.Future[tuple[str, str | None]]
+            ] = [future for future in self._native_jobs.values() if not future.done()]
+            if self._load_future is not None and not self._load_future.done():
+                pending.append(self._load_future)
+            still_running: set[
+                asyncio.Future[TranscriptionEngine] | asyncio.Future[tuple[str, str | None]]
+            ]
+            if pending:
+                _, still_running = await asyncio.wait(
+                    pending,
+                    timeout=self._settings.shutdown_timeout_seconds,
+                )
+            else:
+                still_running = set()
+            native_finished = not still_running
+            if native_finished:
+                await self.unload()
+        finally:
+            # Outstanding native calls retain their own bound engine/factory. A
+            # late initialization cannot repopulate the cache after shutdown.
+            # Even cancellation of close must stop accepting executor work.
+            self._engine = None
+            self._executor.shutdown(wait=native_finished, cancel_futures=True)
 
     def health(self) -> WorkerHealth:
-        self._discard_finished_native_jobs()
-        active = {
-            generation_id for generation_id, task in self._jobs.items() if not task.done()
-        } | {
-            generation_id
-            for generation_id, future in self._native_jobs.items()
-            if not future.done()
-        }
-        queue_depth = len(active)
+        queue_depth = self._active_job_count()
         return WorkerHealth(
             status="busy" if queue_depth else "ready",
             worker_id=self._settings.worker_id,
@@ -257,13 +259,47 @@ class TranscriptionService:
         )
 
     async def _ensure_loaded(self) -> TranscriptionEngine:
+        if self._closed:
+            raise RuntimeError("transcription service is closed")
         if self._engine is not None:
             return self._engine
         async with self._load_lock:
-            if self._engine is None:
+            if self._closed:
+                raise RuntimeError("transcription service is closed")
+            self._discard_finished_native_jobs()
+            if self._engine is not None:
+                return self._engine
+            if self._load_future is None:
                 self._settings.model_dir.mkdir(parents=True, exist_ok=True)
-                self._engine = await asyncio.to_thread(self._engine_factory, self._settings)
-        return self._engine
+                self._load_future = asyncio.get_running_loop().run_in_executor(
+                    self._executor, self._engine_factory, self._settings
+                )
+                self._load_future.add_done_callback(self._model_load_finished)
+            future = self._load_future
+        # All callers await the same native operation. Cancellation only removes
+        # that logical waiter; the unfinished initialization retains one slot.
+        return await asyncio.shield(future)
+
+    def _model_load_finished(self, future: asyncio.Future[TranscriptionEngine]) -> None:
+        error = None if future.cancelled() else future.exception()
+        if self._load_future is future:
+            self._load_future = None
+            if not future.cancelled() and error is None and not self._closed:
+                self._engine = future.result()
+
+    def _active_job_count(self) -> int:
+        self._discard_finished_native_jobs()
+        active = {
+            generation_id for generation_id, task in self._jobs.items() if not task.done()
+        } | {
+            generation_id
+            for generation_id, future in self._native_jobs.items()
+            if not future.done()
+        }
+        # Logical waiters already cover the shared initialization. Once all
+        # withdraw, the still-running load continues to reserve one slot.
+        loading = self._load_future is not None and not self._load_future.done()
+        return max(len(active), int(loading))
 
     def _native_job_finished(
         self,
@@ -276,6 +312,8 @@ class TranscriptionService:
             self._native_jobs.pop(generation_id, None)
 
     def _discard_finished_native_jobs(self) -> None:
+        if self._load_future is not None and self._load_future.done():
+            self._model_load_finished(self._load_future)
         for generation_id, future in tuple(self._native_jobs.items()):
             if future.done() and self._native_jobs.get(generation_id) is future:
                 self._native_jobs.pop(generation_id, None)

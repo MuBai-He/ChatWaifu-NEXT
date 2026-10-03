@@ -5,11 +5,12 @@ qq_napcat:
   status: native_owner_direct_text_and_requested_voice_real_qq_happy_path_verified
   adr: "0064"
   image_reply_adr: "0065"
+  incoming_voice_adr: "0066"
   original_plan_stages:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
     C: current_turn_requested_voice_and_unavailable_tts_text_fallback_real_verified
-    D: incoming_voice_proactive_and_group_participant_isolation_not_implemented
+    D: incoming_voice_stt_implemented_real_phone_pending_proactive_and_group_isolation_not_implemented
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -29,9 +30,13 @@ qq_napcat:
     - Phase B source 359d080 deployed to the independent Linux stage with all 1449 tracked hashes matched; 278 Linux QQ checks passed, Web assets HTTP 200 and authenticated same-account OneBot RPC online; four existing turn and delivery identities and original services/resources preserved
     - Phase B independent review fixes raw-ID ambiguity before privacy filtering, rejects retention-disabled burst bypass and registers historical quote photo-deletion lineage
     - Phase B full Python passed 2219 checks with 46 platform skips; full Web passed 334 checks; Python strict typing, Ruff, TypeScript checks and lint, Web and desktop UI builds passed
+    - Phase D1 implements one bounded owner-private record, authenticated WAV stream, ephemeral local STT, exact request identity and final-transcript Conversation submission; ordinary voice input remains a text reply unless its current transcript explicitly requests channel.voice
+    - Phase D1 registration and owner-revocation races passed six independent checks; clean stop/disable/delete/interrupt prevent loader/model startup, and crash recovery fails orphan audio once without re-download
+    - Phase D1 final full Python passed 2393 checks with 46 platform skips; isolated STT worker passed 22 checks; strict Pyright and Ruff passed, with the existing 334 Web checks, Web/desktop UI builds, lint and TypeScript checks retained
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
-    - phase_d_incoming_voice_stt_proactive_delivery_and_group_permissions_participant_isolation
+    - phase_d1_real_phone_incoming_voice_codec_and_transcription_acceptance
+    - phase_d2_proactive_delivery_opt_in_and_phase_d3_group_permissions_participant_isolation_implementation
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
