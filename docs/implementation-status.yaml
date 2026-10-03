@@ -2,7 +2,7 @@ schema_version: "1.0"
 updated_at: "2026-10-03"
 current_phase: "13.6"
 qq_napcat:
-  status: model_selected_qq_voice_deployed_phone_acceptance_pending_incoming_voice_text_verified
+  status: model_selected_qq_voice_real_record_to_phone_playback_verified
   adr: "0064"
   image_reply_adr: "0065"
   incoming_voice_adr: "0066"
@@ -10,8 +10,8 @@ qq_napcat:
   original_plan_stages:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
-    C: model_selected_current_reply_voice_implemented_real_model_acceptance_pending_previous_requested_voice_and_text_fallback_verified
-    D: incoming_voice_stt_real_text_reply_verified_proactive_and_group_isolation_not_implemented
+    C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
+    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_and_group_isolation_not_implemented
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -40,9 +40,10 @@ qq_napcat:
     - ADR 0067 removes all voice text gates and mandatory reply-tool choice; each admitted QQ owner turn contextually provides only the trusted voice reply tool, with model auto choice and unchanged live owner/generation/manual/provider/cancellation boundaries
     - Final model-selected-voice source passed 2382 Python checks with 46 platform skips and 514 focused integration checks; isolated ASR worker passed 31, strict Pyright and Ruff passed; scripted models prove both reply media for the same keyword-free input but do not prove live semantic preference or handset playback
     - Source b21fcbc deployed with all 1457 tracked hashes matched; Linux QQ checks passed 439 and isolated worker checks passed 31; live ASR process confirms beam 5 with a generic Chinese prompt, same authenticated QQ remains online, and all six prior ledger facts plus original services/resources were preserved
+    - A fresh owner AUDIO input after the model-choice deployment committed a nonempty final transcript without the placeholder and completed with exactly one successful agent channel.voice run and one delivered AUDIO part at attempt 1 with a provider receipt; admission dedup count was one and the owner confirmed successful phone playback, while the previous misrecognized recording remains a failed sample
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
-    - model_selected_voice_real_qq_semantic_choice_recording_output_and_fault_acceptance
+    - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
     - phase_d2_proactive_delivery_opt_in_and_phase_d3_group_permissions_participant_isolation_implementation
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery

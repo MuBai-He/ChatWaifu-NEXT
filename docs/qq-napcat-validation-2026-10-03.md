@@ -280,8 +280,9 @@ authenticated WAV download, strict in-memory PCM16 validation and the existing
 local STT backend. Durable admission allocates identity before IO, returns
 immediately and deduplicates without repeating download. Only the complete final
 transcript enters Conversation; raw audio, partial text and the internal audio
-placeholder are not retained. Replies use TEXT unless this current transcript
-explicitly requests the existing voice tool.
+placeholder are not retained. This initial source used TEXT unless the current
+transcript explicitly requested the voice tool; ADR 0067 later supersedes that
+reply-medium gate as described below.
 
 Independent review reproduced and then verified fixes for admission/registration
 lifecycle cancellation and owner revocation during Conversation preparation.
@@ -394,9 +395,19 @@ old keyword module was removed. The probe loads settings without instantiating
 or calling a model and makes no QQ sends. Evidence is `QQ-CHINESE-VOICE-DEPLOY.json`,
 `QQ-MODEL-VOICE-CONFIG.json`, `QQ-MODEL-VOICE-ONLINE.json` and the Linux test logs.
 
-These are source and runtime configuration checks. A new owner-initiated recording
-and real model decision/handset playback remain pending; the previous failed
-recording is not retrospectively counted as success or resent.
+At `2026-10-03T12:12:04Z`, a fresh owner AUDIO input on the model-choice deployment
+committed a nonempty final transcript without the placeholder. Its admission
+deduplication count was one. It completed with exactly one successful agent
+`channel.voice` run and one delivered AUDIO part, attempt one, with a provider
+receipt. No TEXT part accompanied it. The owner confirmed successful phone
+playback. This establishes recording transcription, actual model tool selection,
+QQ delivery and handset playback for this sample. Tool arguments and results are
+privacy-summarized, so the audit does not claim a spoken-text comparison. Evidence
+is `QQ-MODEL-VOICE-PHONE-SNAPSHOT.json` and
+`QQ-MODEL-VOICE-PHONE-ACCEPTANCE.json` in the private validation directory; the
+audit uses a read-only committed-WAL transaction. The earlier failed recording
+is not retrospectively counted as success or resent. Additional semantic
+preferences and voice fault acceptance remain separate.
 
 D2 proactive text and D3 group/member isolation remain unimplemented. Their
 concrete scope, dependencies and acceptance package are
