@@ -377,6 +377,9 @@ async def test_application_lifespan_aggregates_body_and_both_cleanup_failures(
 ) -> None:
     from chatwaifu_runtime.mcp_server import RuntimeMcpServer
 
+    original_mcp_stop = RuntimeMcpServer.stop
+    original_container_stop = RuntimeContainer.stop
+
     async def fail_mcp_stop(_server: RuntimeMcpServer) -> None:
         raise RuntimeError("injected MCP cleanup failure")
 
@@ -387,11 +390,17 @@ async def test_application_lifespan_aggregates_body_and_both_cleanup_failures(
     monkeypatch.setattr(RuntimeContainer, "stop", fail_container_stop)
     app = create_app(runtime_settings)
 
-    with pytest.raises(RuntimeLifecycleError) as raised:
-        async with app.router.lifespan_context(app):
-            raise RuntimeError("injected application body failure")
+    try:
+        with pytest.raises(RuntimeLifecycleError) as raised:
+            async with app.router.lifespan_context(app):
+                raise RuntimeError("injected application body failure")
 
-    messages = [str(error) for error in raised.value.exceptions]
-    assert any("application body failure" in message for message in messages)
-    assert any("mcp_server cleanup failed" in message for message in messages)
-    assert any("runtime_container cleanup failed" in message for message in messages)
+        messages = [str(error) for error in raised.value.exceptions]
+        assert any("application body failure" in message for message in messages)
+        assert any("mcp_server cleanup failed" in message for message in messages)
+        assert any("runtime_container cleanup failed" in message for message in messages)
+    finally:
+        # The fault callbacks intentionally skip teardown. Close the real owners
+        # so their SQLite worker and background tasks cannot outlive this test.
+        await original_mcp_stop(app.state.mcp_server)
+        await original_container_stop(app.state.container)
