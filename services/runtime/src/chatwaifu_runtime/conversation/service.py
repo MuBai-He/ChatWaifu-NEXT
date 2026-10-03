@@ -600,10 +600,27 @@ class ConversationService:
         )
 
     async def submit_proactive(
-        self, session_id: UUID, *, reason: str = "idle_check_in"
+        self,
+        session_id: UUID,
+        *,
+        reason: str = "idle_check_in",
+        turn_id: UUID | None = None,
+        generation_id: UUID | None = None,
+        audio_stream_id: UUID | None = None,
+        options: ConversationTurnOptions | None = None,
     ) -> GenerationAccepted:
-        """Start a policy-approved character turn without fabricating a user message."""
+        """Admit a hidden system turn and register its cancellable preparation."""
 
+        options = replace(
+            options or ConversationTurnOptions(), origin="proactive", allow_tools=False
+        )
+        accepted = GenerationAccepted(
+            session_id,
+            turn_id or uuid4(),
+            generation_id or uuid4(),
+            audio_stream_id or uuid4(),
+            GenerationState.RUNNING,
+        )
         async with self._start_lock:
             if self.active_generation_id(session_id) is not None:
                 raise RuntimeError("session already has an active generation")
@@ -612,60 +629,132 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
+            if (
+                options.source_context is not None
+                and options.source_context.principal_scope != session.user_scope
+            ):
+                raise ValueError("input source does not match session scope")
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
             chat_config = self._models.get("chat")
             summary_config = self._models.get("memory_summary")
             chat_provider = self._models.create_chat_provider(chat_config)
-            accepted, events = await self._commit_proactive_turn(
-                session_id, reason, backend_kind=chat_provider.kind
+            # A cancellation during durable admission must also reach this
+            # caller. Context/model preparation never holds the admission lock.
+            self._active[session_id] = _ActiveGeneration(
+                accepted.generation_id,
+                asyncio.current_task(),
+                accepted.turn_id,
+                accepted.audio_stream_id,
             )
+            try:
+                _, events = await self._commit_proactive_turn(
+                    accepted, reason, backend_kind=chat_provider.kind, options=options
+                )
+                current_task = asyncio.current_task()
+                if current_task is not None and current_task.cancelling():
+                    raise asyncio.CancelledError("generation admission cancelled")
+                self._ensure_current(accepted)
+                snapshot = self._capture_generation_snapshot(
+                    character=character,
+                    user_text=_PROACTIVE_PROMPT,
+                    options=options,
+                    trigger="proactive",
+                    chat_config=chat_config,
+                    summary_config=summary_config,
+                    chat_provider=chat_provider,
+                    admitted_at=events[0].occurred_at,
+                )
+                task = asyncio.create_task(
+                    self._prepare_proactive_generation(
+                        accepted, character, chat_config, options, snapshot, events
+                    ),
+                    name=f"proactive-generation-{accepted.generation_id}",
+                )
+                self._active[session_id] = _ActiveGeneration(
+                    accepted.generation_id, task, accepted.turn_id, accepted.audio_stream_id
+                )
+            except asyncio.CancelledError:
+                await self._cancelled(accepted, "generation_admission_cancelled")
+                if self._is_current(accepted):
+                    self._active.pop(session_id, None)
+                raise
+            except Exception as error:
+                await self._failed(accepted, error, error_code="generation_admission_failed")
+                if self._is_current(accepted):
+                    self._active.pop(session_id, None)
+                raise
+        return accepted
+
+    async def _prepare_proactive_generation(
+        self,
+        accepted: GenerationAccepted,
+        character: CharacterProfile,
+        chat_config: ModelRoleConfig,
+        options: ConversationTurnOptions,
+        snapshot: GenerationContextSnapshot,
+        events: tuple[GenericCoreEvent, AssistantGenerationStartedEvent],
+    ) -> None:
+        running = False
+        try:
+            await self._check_generation_guard(accepted, options)
             for event in events:
                 await self._publisher.publish_persisted(event)
             memory_context = await self._memory.retrieve_context(
-                session_id,
+                accepted.session_id,
                 accepted.turn_id,
                 character.character_id,
                 "轻声主动关心用户",
                 **_retrieval_budget_options(chat_config),
             )
+            await self._check_generation_guard(accepted, options)
             history = await self._recent_history(
-                session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+                accepted.session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
             )
             character_context = await self._character_kernel.plan_proactive_turn(
-                session_id=session_id,
+                session_id=accepted.session_id,
                 turn_id=accepted.turn_id,
                 generation_id=accepted.generation_id,
                 character_id=character.character_id,
             )
-            options = ConversationTurnOptions(origin="proactive", allow_tools=False)
-            snapshot = self._capture_generation_snapshot(
-                character=character,
-                user_text=_PROACTIVE_PROMPT,
-                options=options,
+            await self._check_generation_guard(accepted, options)
+            running = True
+            await self._run_generation(
+                accepted,
+                _PROACTIVE_PROMPT,
+                character,
+                character_context,
+                memory_context,
+                history,
                 trigger="proactive",
-                chat_config=chat_config,
-                summary_config=summary_config,
-                chat_provider=chat_provider,
-                admitted_at=events[0].occurred_at,
+                options=options,
+                snapshot=snapshot,
             )
-            task = asyncio.create_task(
-                self._run_generation(
-                    accepted,
-                    _PROACTIVE_PROMPT,
-                    character,
-                    character_context,
-                    memory_context,
-                    history,
-                    trigger="proactive",
-                    options=options,
-                    snapshot=snapshot,
-                ),
-                name=f"proactive-generation-{accepted.generation_id}",
-            )
-            self._active[session_id] = _ActiveGeneration(accepted.generation_id, task)
-            return accepted
+        except asyncio.CancelledError as error:
+            if not running:
+                await self._cancelled(
+                    accepted, str(error.args[0]) if error.args else "proactive_cancelled"
+                )
+            raise
+        except Exception as error:
+            await self._failed(accepted, error, error_code="generation_preparation_failed")
+        finally:
+            if self._is_current(accepted):
+                self._active.pop(accepted.session_id, None)
+
+    async def _check_generation_guard(
+        self, accepted: GenerationAccepted, options: ConversationTurnOptions
+    ) -> None:
+        current = asyncio.current_task()
+        if current is not None and current.cancelling():
+            raise asyncio.CancelledError("generation cancellation requested")
+        self._ensure_current(accepted)
+        if options.before_generation is not None and not await options.before_generation():
+            raise asyncio.CancelledError("generation authorization revoked")
+        self._ensure_current(accepted)
+        if current is not None and current.cancelling():
+            raise asyncio.CancelledError("generation cancellation requested")
 
     async def _submit(
         self,
@@ -798,6 +887,23 @@ class ConversationService:
                 raise
             return accepted
 
+    def request_cancel(
+        self, session_id: UUID, *, expected_generation_id: UUID, reason: str
+    ) -> bool:
+        """Fence owned preparation synchronously before a policy write may yield."""
+        active = self._active.get(session_id)
+        if (
+            active is None
+            or active.generation_id != expected_generation_id
+            or active.completing
+            or active.task is None
+            or active.task.done()
+        ):
+            return False
+        if not active.task.cancelling():
+            active.task.cancel(reason)
+        return True
+
     async def cancel(
         self,
         session_id: UUID,
@@ -818,7 +924,10 @@ class ConversationService:
                 await asyncio.shield(active.task)
             return False
         if active.task is not None:
-            active.task.cancel(reason)
+            # A second cancel can interrupt durable terminal cleanup that the
+            # first cancellation has already started. Join that owned task.
+            if not active.task.cancelling():
+                active.task.cancel(reason)
             try:
                 await active.task
             except asyncio.CancelledError:
@@ -1047,12 +1156,18 @@ class ConversationService:
         )
 
     async def _commit_proactive_turn(
-        self, session_id: UUID, reason: str, *, backend_kind: str
+        self,
+        accepted: GenerationAccepted,
+        reason: str,
+        *,
+        backend_kind: str,
+        options: ConversationTurnOptions,
     ) -> tuple[GenerationAccepted, tuple[GenericCoreEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
-        turn_id = uuid4()
-        generation_id = uuid4()
-        audio_stream_id = uuid4()
+        session_id = accepted.session_id
+        turn_id = accepted.turn_id
+        generation_id = accepted.generation_id
+        audio_stream_id = accepted.audio_stream_id
         proactive_event = GenericCoreEvent.model_validate(
             {
                 "event_id": uuid4(),
@@ -1083,6 +1198,7 @@ class ConversationService:
             audio_stream_id=audio_stream_id,
             prompt=_PROACTIVE_PROMPT,
             backend_kind=backend_kind,
+            source_context=options.source_context,
             occurred_at=now,
             proactive_event=proactive_event,
             generation_event=generation_event,
@@ -1320,6 +1436,7 @@ class ConversationService:
                         sum(receipt.original_result_available for receipt in sources.receipts),
                         sources.truncated,
                     )
+            await self._check_generation_guard(accepted, options)
             async for delta in self._agent.stream(
                 request,
                 session_id=accepted.session_id,

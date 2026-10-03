@@ -611,6 +611,7 @@ class SQLiteConversationRepository(ConversationRepository):
         audio_stream_id: UUID,
         prompt: str,
         backend_kind: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         proactive_event: GenericCoreEvent,
         generation_event: AssistantGenerationStartedEvent,
@@ -625,7 +626,7 @@ class SQLiteConversationRepository(ConversationRepository):
                 role="system",
                 text=prompt,
                 backend_kind=backend_kind,
-                source_context=None,
+                source_context=source_context,
                 occurred_at=occurred_at,
             )
             persisted_proactive = await self._event_store.append_in_transaction(
