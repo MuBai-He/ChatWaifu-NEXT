@@ -14,6 +14,58 @@ export interface RuntimeConnection {
   restartCount?: number;
 }
 
+/** Internal request identity. Credentials stay in memory, never in UI labels. */
+export interface RuntimeRequestContext {
+  revision: number;
+  connection: RuntimeConnection;
+}
+let runtimeContextRevision = 0;
+const runtimeContextListeners = new Set<() => void>();
+let observedNativeContext: string | undefined;
+export function subscribeRuntimeContext(listener: () => void): () => void {
+  runtimeContextListeners.add(listener);
+  return () => runtimeContextListeners.delete(listener);
+}
+export function getRuntimeContextRevision(): number {
+  return runtimeContextRevision;
+}
+function invalidateRuntimeContext() {
+  ++runtimeContextRevision;
+  for (const listener of runtimeContextListeners) listener();
+}
+export async function readRuntimeRequestContext(): Promise<RuntimeRequestContext> {
+  const revision = runtimeContextRevision;
+  const connection = await resolveRuntimeConnection();
+  const context = { revision, connection: { ...connection } };
+  assertRuntimeRequestContext(context, connection);
+  return context;
+}
+export function assertRuntimeRequestContext(
+  context: RuntimeRequestContext,
+  resolved?: RuntimeConnection,
+): void {
+  const current =
+    resolved ??
+    remoteConnection ??
+    cachedConnection ??
+    (!isDesktopHost()
+      ? {
+          baseUrl: browserRuntimeUrl,
+          token: resolveBrowserToken(),
+          restartCount: 0,
+        }
+      : null);
+  if (
+    context.revision !== runtimeContextRevision ||
+    !current ||
+    current.baseUrl !== context.connection.baseUrl ||
+    (current.token ?? null) !== (context.connection.token ?? null) ||
+    (current.restartCount ?? 0) !== (context.connection.restartCount ?? 0)
+  ) {
+    throw new Error("Runtime 上下文已变化，请重新读取后操作。");
+  }
+}
+
 const configuredBrowserRuntimeUrl = (
   import.meta as unknown as { env?: { VITE_RUNTIME_URL?: string } }
 ).env?.VITE_RUNTIME_URL;
@@ -31,10 +83,15 @@ let remoteConnection: RuntimeConnection | null = null;
 export function setRemoteRuntimeConnection(
   connection: RuntimeConnection | null,
 ): void {
+  const changed =
+    remoteConnection?.baseUrl !== connection?.baseUrl ||
+    remoteConnection?.token !== connection?.token ||
+    remoteConnection?.restartCount !== connection?.restartCount;
   remoteConnection = connection;
   cachedConnection = connection;
   pendingConnectionResolution = null;
   ++connectionRevision;
+  if (changed) invalidateRuntimeContext();
 }
 export function isRemoteRuntime(): boolean {
   return remoteConnection !== null;
@@ -219,10 +276,27 @@ export async function observeDesktopRuntime(
   let eventRevision = 0;
   const deliver = (status: DesktopRuntimeStatus) => {
     if (signal.aborted) return;
+    const previous = cachedConnection;
     ++connectionRevision;
     cachedConnection = null;
     pendingConnectionResolution = null;
     cachedConnection = connectionFrom(status);
+    const identity = JSON.stringify([
+      status.state,
+      status.runtime_url,
+      status.token,
+      status.restart_count,
+    ]);
+    if (
+      (observedNativeContext !== undefined &&
+        observedNativeContext !== identity) ||
+      (previous &&
+        (previous.baseUrl !== cachedConnection?.baseUrl ||
+          previous.token !== cachedConnection?.token ||
+          previous.restartCount !== cachedConnection?.restartCount))
+    )
+      invalidateRuntimeContext();
+    observedNativeContext = identity;
     onStatus(status);
   };
   const stop = await listen<DesktopRuntimeStatus>(statusEvent, (event) => {
@@ -250,6 +324,7 @@ export async function restartDesktopRuntime(): Promise<DesktopRuntimeStatus | nu
   ++connectionRevision;
   cachedConnection = null;
   pendingConnectionResolution = null;
+  invalidateRuntimeContext();
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<DesktopRuntimeStatus>("restart_runtime");
 }

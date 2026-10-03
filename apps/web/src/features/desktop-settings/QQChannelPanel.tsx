@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  getRuntimeContextRevision,
+  subscribeRuntimeContext,
+} from "../chat/runtimeEndpoint";
 
 import {
   deleteChannelConnection,
@@ -15,6 +25,7 @@ import {
 } from "../chat/runtime-client/qqClient";
 import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { QQProactivePanel } from "./QQProactivePanel";
+import { QQGroupRoutesPanel } from "./QQGroupRoutesPanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsToggle } from "./SettingsPrimitives";
 import "./qq-channel-panel.css";
@@ -29,10 +40,17 @@ export function QQChannelPanel({
   characterId: string;
   runtimeOnline: boolean;
 }) {
+  const runtimeContext = useSyncExternalStore(
+    subscribeRuntimeContext,
+    getRuntimeContextRevision,
+    getRuntimeContextRevision,
+  );
+  const [lastRuntimeContext, setLastRuntimeContext] = useState(runtimeContext);
   const [connection, setConnection] =
     useState<ChannelConnectionSnapshot | null>(null);
   const [pairing, setPairing] = useState<QQPairingSnapshot | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [groupsOpen, setGroupsOpen] = useState(false);
   const [endpoint, setEndpoint] = useState("ws://127.0.0.1:3001");
   const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,8 +66,12 @@ export function QQChannelPanel({
   const connectionRevisionRef = useRef(0);
   const cancellingRef = useRef<string | null>(null);
 
-  if (lastRuntimeOnline !== runtimeOnline) {
+  if (
+    lastRuntimeOnline !== runtimeOnline ||
+    lastRuntimeContext !== runtimeContext
+  ) {
     setLastRuntimeOnline(runtimeOnline);
+    setLastRuntimeContext(runtimeContext);
     setLoading(true);
     setConnectionVerified(false);
   }
@@ -108,7 +130,7 @@ export function QQChannelPanel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [runtimeOnline, characterId, connectionReadRevision]);
+  }, [runtimeOnline, runtimeContext, characterId, connectionReadRevision]);
 
   const pairingId = pairing?.pairing_id;
   const pairingStatus = pairing?.status;
@@ -381,6 +403,21 @@ export function QQChannelPanel({
             <QQProactivePanel
               key={`${connection.configuration.connection_id}:${connection.revision}`}
               connectionId={connection.configuration.connection_id}
+              runtimeOnline={runtimeOnline}
+              connectionVerified={connectionVerified && !busy}
+            />
+          ) : null}
+          <button
+            type="button"
+            className="qq-channel-secondary-action"
+            aria-expanded={groupsOpen}
+            onClick={() => setGroupsOpen((value) => !value)}
+          >
+            {groupsOpen ? "收起 QQ 群管理" : "管理 QQ 群路由"}
+          </button>
+          {groupsOpen ? (
+            <QQGroupRoutesPanel
+              connection={connection}
               runtimeOnline={runtimeOnline}
               connectionVerified={connectionVerified && !busy}
             />
