@@ -21,6 +21,7 @@ from websockets.protocol import State
 from .groups import (
     GROUP_NOTICE_TYPES,
     NapCatGroupMemberList,
+    NapCatGroupMembershipNotice,
     normalize_group_notice,
     qq_group_identifier,
 )
@@ -148,10 +149,47 @@ class NapCatClient:
         self._account_revision = 0
         self._group_observation_epoch = 0
         self._pending_group_notices = 0
+        self._group_transport_revoked = False
+        self._on_group_notice: Callable[[NapCatGroupMembershipNotice], None] | None = None
+        self._on_group_transport_invalidated: Callable[[], None] | None = None
+
+    def set_group_observers(
+        self,
+        *,
+        membership_notice: Callable[[NapCatGroupMembershipNotice], None],
+        transport_invalidated: Callable[[], None],
+    ) -> None:
+        """Install synchronous fences; callbacks must not perform I/O or await.
+
+        The host commits durable pauses separately. Reader callbacks revoke work
+        even while its ordinary event consumer is occupied by private media.
+        """
+        self._on_group_notice = membership_notice
+        self._on_group_transport_invalidated = transport_invalidated
+
+    def _revoke_group_transport(self) -> None:
+        if self._group_transport_revoked:
+            return
+        self._group_transport_revoked = True
+        self._group_observation_epoch += 1
+        if self._on_group_transport_invalidated is not None:
+            try:
+                self._on_group_transport_invalidated()
+            except Exception:
+                # A broken host observer cannot keep the transport authorized or
+                # prevent socket/reader cleanup. Never log callback content.
+                logging.getLogger(__name__).error("QQ group transport observer failed")
 
     def bind_account(self, account: str) -> None:
+        was_revoked = self._group_transport_revoked
+        if self._account is not None:
+            self._revoke_group_transport()
         self._account = account
         self._account_revision += 1
+        # An explicit rebind invalidates host route authority, while this
+        # property remains an observation of the still-live socket. The host
+        # must pause routes and require a new operator authorization.
+        self._group_transport_revoked = was_revoked
 
     @property
     def bound_account(self) -> str | None:
@@ -174,6 +212,7 @@ class NapCatClient:
             and not self._reader.done()
             and not self._reader.cancelling()
             and self._pending_group_notices == 0
+            and not self._group_transport_revoked
         )
 
     async def open(self) -> None:
@@ -191,6 +230,7 @@ class NapCatClient:
         self._reader = asyncio.create_task(self._read(), name="qq-onebot-reader")
 
     async def close(self) -> None:
+        self._revoke_group_transport()
         if self._reader:
             self._reader.cancel()
         if self._socket:
@@ -271,13 +311,20 @@ class NapCatClient:
                     if notice is None:
                         raise NapCatError("QQ returned an invalid group membership notice")
                     self._group_observation_epoch += 1
-                    self._events.put_nowait(notice.to_event())
                     self._pending_group_notices += 1
+                    try:
+                        if self._on_group_notice is not None:
+                            self._on_group_notice(notice)
+                        self._events.put_nowait(notice.to_event())
+                    except BaseException:
+                        self._pending_group_notices -= 1
+                        raise
         except asyncio.CancelledError:
             raise
         except Exception:
             pass
         finally:
+            self._revoke_group_transport()
             self._fail_pending()
             if not self._events.full():
                 self._events.put_nowait(None)
@@ -348,7 +395,11 @@ class NapCatClient:
         return self._account == account and self._account_revision == revision
 
     def _check_group_observation(self, epoch: int) -> None:
-        if self._pending_group_notices or self._group_observation_epoch != epoch:
+        if (
+            self._group_transport_revoked
+            or self._pending_group_notices
+            or self._group_observation_epoch != epoch
+        ):
             raise NapCatRejected("QQ group membership observation changed or is pending")
 
     async def _account_preflight(self, account: str | None, revision: int) -> None:
@@ -389,6 +440,8 @@ class NapCatClient:
                     ids.add(user_id)
                 if account not in ids or not 2 <= len(ids) - 1 <= 32:
                     raise NapCatError("QQ group requires self and 2 to 32 other members")
+                if not self._account_matches(account, revision):
+                    raise NapCatRejected("QQ account binding changed during observation")
                 self._check_group_observation(epoch)
                 await self._account_preflight(account, revision)
                 self._check_group_observation(epoch)

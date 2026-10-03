@@ -19,7 +19,10 @@ from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import (
     NapCatRejected,
     NapCatUncertain,
 )
-from chatwaifu_runtime.external_channels.adapters.qq_napcat.groups import normalize_group_notice
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.groups import (
+    NapCatGroupMembershipNotice,
+    normalize_group_notice,
+)
 from websockets.asyncio.server import ServerConnection, serve
 
 ACCOUNT = "10001"
@@ -70,6 +73,104 @@ def membership_notice() -> JsonObject:
         "user_id": 10004,
         "operator_id": 0,
     }
+
+
+async def test_reader_fences_membership_without_waiting_for_busy_event_consumer() -> None:
+    release, observed, entered = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    notices: list[NapCatGroupMembershipNotice] = []
+
+    async def peer(socket: ServerConnection) -> None:
+        await release.wait()
+        await socket.send(json.dumps(membership_notice()))
+        await socket.wait_closed()
+
+    async def running_work() -> None:
+        entered.set()
+        await asyncio.Event().wait()
+
+    async with connected(peer) as client:
+        work = asyncio.create_task(running_work())
+        await asyncio.wait_for(entered.wait(), 2)
+
+        def fence(notice: NapCatGroupMembershipNotice) -> None:
+            assert not client.group_dispatch_ready
+            notices.append(notice)
+            work.cancel()
+            observed.set()
+
+        client.set_group_observers(membership_notice=fence, transport_invalidated=lambda: None)
+        try:
+            release.set()
+            await asyncio.wait_for(observed.wait(), 2)
+            with pytest.raises(asyncio.CancelledError):
+                await work
+            # No client.event() has run: the notice is still queued while the
+            # reader has already cancelled the host's registered work.
+            assert client._pending_group_notices == 1
+            assert notices[0].group_id == GROUP and notices[0].account_key == ACCOUNT
+            assert (await client.event())["notice_type"] == "group_increase"
+            assert client.group_dispatch_ready
+        finally:
+            work.cancel()
+            await asyncio.gather(work, return_exceptions=True)
+
+
+@pytest.mark.parametrize(
+    "failure", ["disconnect", "malformed_notice", "overflow", "close", "rebind"]
+)
+async def test_transport_invalidation_fences_once_before_teardown(failure: str) -> None:
+    release, fenced = asyncio.Event(), asyncio.Event()
+    fences: list[bool] = []
+
+    async def peer(socket: ServerConnection) -> None:
+        await release.wait()
+        if failure == "disconnect":
+            await socket.close()
+        elif failure == "malformed_notice":
+            notice = membership_notice()
+            notice["user_id"] = False
+            await socket.send(json.dumps(notice))
+        elif failure == "overflow":
+            for message_id in range(65):
+                await socket.send(json.dumps({"post_type": "message", "message_id": message_id}))
+        await socket.wait_closed()
+
+    async with connected(peer) as client:
+
+        def invalidated() -> None:
+            fences.append(client.group_dispatch_ready)
+            fenced.set()
+
+        client.set_group_observers(
+            membership_notice=lambda notice: None, transport_invalidated=invalidated
+        )
+        release.set()
+        if failure == "close":
+            await client.close()
+        elif failure == "rebind":
+            client.bind_account(ACCOUNT)
+        await asyncio.wait_for(fenced.wait(), 2)
+        assert fences == [False]
+        assert client.group_dispatch_ready is (failure == "rebind")
+        await client.close()
+        assert fences == ([False, False] if failure == "rebind" else [False])
+
+
+async def test_failed_transport_observer_cannot_prevent_socket_cleanup() -> None:
+    async def peer(socket: ServerConnection) -> None:
+        await socket.wait_closed()
+
+    async with connected(peer) as client:
+
+        def broken() -> None:
+            raise RuntimeError("private callback detail must not be logged")
+
+        client.set_group_observers(
+            membership_notice=lambda notice: None, transport_invalidated=broken
+        )
+        await client.close()
+        assert client._reader is not None and client._reader.done()
+        assert client._socket is None and not client.group_dispatch_ready
 
 
 @pytest.mark.parametrize("count", [2, 32])
