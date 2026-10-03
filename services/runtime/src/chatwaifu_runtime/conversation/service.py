@@ -101,6 +101,7 @@ class _ActiveGeneration:
     turn_id: UUID | None = None
     audio_stream_id: UUID | None = None
     completing: bool = False
+    revoked: bool = False
 
 
 class ConversationService:
@@ -1098,7 +1099,9 @@ class ConversationService:
             or active.task.done()
         ):
             return False
-        if not active.task.cancelling():
+        already_revoked = active.revoked
+        active.revoked = True
+        if not already_revoked and not active.task.cancelling():
             active.task.cancel(reason)
         return True
 
@@ -1121,10 +1124,14 @@ class ConversationService:
             if active.task is not None:
                 await asyncio.shield(active.task)
             return False
+        # Keep ownership until terminal cleanup finishes, but make cancellation
+        # irreversible even when a provider catches it and calls uncancel().
+        already_revoked = active.revoked
+        active.revoked = True
         if active.task is not None:
             # A second cancel can interrupt durable terminal cleanup that the
             # first cancellation has already started. Join that owned task.
-            if not active.task.cancelling():
+            if not already_revoked and not active.task.cancelling():
                 active.task.cancel(reason)
             try:
                 await active.task
@@ -1272,8 +1279,11 @@ class ConversationService:
         tasks: list[asyncio.Task[None]] = []
         for session_id, generation in active:
             if not generation.completing:
+                already_revoked = generation.revoked
+                generation.revoked = True
                 if generation.task is not None:
-                    generation.task.cancel("runtime_stopping")
+                    if not already_revoked and not generation.task.cancelling():
+                        generation.task.cancel("runtime_stopping")
                     tasks.append(generation.task)
                 else:
                     await self.terminate_active_generation(
@@ -1994,6 +2004,11 @@ class ConversationService:
     def _ensure_current(self, accepted: GenerationAccepted) -> None:
         if not self._is_current(accepted):
             raise asyncio.CancelledError("generation is no longer active")
+        current = asyncio.current_task()
+        if self._active[accepted.session_id].revoked or (
+            current is not None and current.cancelling()
+        ):
+            raise asyncio.CancelledError("generation cancellation requested")
 
     def _begin_completion(self, accepted: GenerationAccepted) -> None:
         self._ensure_current(accepted)
