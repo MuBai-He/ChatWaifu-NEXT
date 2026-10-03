@@ -18,13 +18,16 @@ from chatwaifu_protocol.channel_proactive import (
     ChannelProactivePreview,
     ChannelProactiveReason,
 )
-from chatwaifu_protocol.channels import ChannelDeliveryStatus
+from chatwaifu_protocol.channels import ChannelConnectionConfiguration, ChannelDeliveryStatus
 from chatwaifu_runtime.api.channel_proactive_routes import router
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware, WebSocketTicketStore
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.external_channels.service import ChannelConflictError
+from chatwaifu_runtime.main import create_app
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from httpx2 import Response
 
 OPERATOR_TOKEN = "test-only-proactive-operator-capability"
@@ -263,3 +266,92 @@ def test_cancel_returns_actual_delivery_fact(runtime_settings: Settings) -> None
     assert snapshot.provider_receipt_present is True
     assert snapshot.cancelable is False
     assert service.calls == ["cancel_intent"]
+
+
+async def test_real_container_policy_api_is_default_off_read_only_and_cas_guarded(
+    runtime_settings: Settings,
+) -> None:
+    app = create_app(runtime_settings)
+    container = cast(RuntimeContainer, app.state.container)
+    await container.start()
+    try:
+        connection_id = uuid4()
+        await container.external_channels.create_connection(
+            ChannelConnectionConfiguration(
+                connection_id=connection_id,
+                provider_id="qq_napcat",
+                name="test-only-qq-connection",
+                character_id="default",
+                principal_scope="local",
+                account_key="10001",
+                allowed_sender_keys=["20002"],
+                enabled=False,
+            )
+        )
+        headers = {"Authorization": f"Bearer {container.capability_token}"}
+        prefix = f"/v1/channel-connections/{connection_id}"
+
+        async def facts() -> tuple[int, ...]:
+            counts: list[int] = []
+            for table in (
+                "channel_proactive_policies",
+                "channel_proactive_episodes",
+                "channel_outbound_intents",
+                "turns",
+                "generations",
+                "channel_deliveries",
+            ):
+                row = await container.database.fetchone(f"SELECT COUNT(*) FROM {table}")
+                assert row is not None
+                counts.append(int(row[0]))
+            return tuple(counts)
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://127.0.0.1", headers=headers
+        ) as http:
+            before = await facts()
+            assert before == (0, 0, 0, 0, 0, 0)
+            for _ in range(2):
+                response = await http.get(prefix + "/proactive-policy")
+                assert response.status_code == 200
+                policy = ChannelProactivePolicySnapshot.model_validate(response.json())
+                assert policy.revision == 0 and not policy.policy.enabled
+                assert policy.binding_id is None
+                preview_response = await http.post(prefix + "/proactive-preview")
+                assert preview_response.status_code == 200
+                preview = ChannelProactivePreview.model_validate(preview_response.json())
+                assert preview.reason is ChannelProactiveReason.DISABLED
+                assert not preview.eligible
+                history = await http.get(prefix + "/outbound-intents")
+                assert history.status_code == 200
+                assert ChannelOutboundIntentPage.model_validate(history.json()).items == []
+            assert await facts() == before
+
+            saved = await http.put(
+                prefix + "/proactive-policy",
+                json={"expected_revision": 0, "policy": {"enabled": False}},
+            )
+            assert saved.status_code == 200
+            snapshot = ChannelProactivePolicySnapshot.model_validate(saved.json())
+            assert snapshot.revision == 1 and not snapshot.policy.enabled
+            assert await facts() == (1, 0, 0, 0, 0, 0)
+            stale = await http.put(
+                prefix + "/proactive-policy",
+                json={"expected_revision": 0, "policy": {"enabled": True}},
+            )
+            assert stale.status_code == 409
+            latest = await http.get(prefix + "/proactive-policy")
+            assert ChannelProactivePolicySnapshot.model_validate(latest.json()) == snapshot
+            assert await facts() == (1, 0, 0, 0, 0, 0)
+
+            absent = f"/v1/channel-connections/{uuid4()}"
+            for method, suffix in (
+                ("GET", "/proactive-policy"),
+                ("POST", "/proactive-preview"),
+                ("GET", "/outbound-intents"),
+            ):
+                missing = await http.request(method, absent + suffix)
+                assert missing.status_code == 404
+            assert await facts() == (1, 0, 0, 0, 0, 0)
+    finally:
+        await container.stop()

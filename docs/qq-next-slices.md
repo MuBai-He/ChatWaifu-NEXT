@@ -1,8 +1,10 @@
 # QQ 下一片：主动文本与群成员隔离
 
-本文是 D2、D3 的待评审实施包，**不是已经实现或通过真实 QQ 验收的功能说明**。
-源码核对基线为 `08967796460f3dc174f5c531a9f671a40e08d584`。D1 由独立工作流收尾；
-实施时须先集成该工作流，再核对 gateway、迁移编号和下面的方法位置。
+本文记录 D2 的实现边界与 D3 的待实施包。D2 已按
+[ADR 0068](adr/0068-owner-opt-in-qq-proactive-text.md) 实现默认关闭的源码、
+迁移 38、管理接口和界面；服务器部署及真实主动文字验收单独记录。
+D1 的入站语音和模型选择回复方式已经集成，并取得单次手机播放确认。
+D3 的群路由、成员身份与受众隔离尚未实现。
 当前完成状态以 [实施状态](implementation-status.yaml)、相关 ADR 和实际验收记录为准。
 本文不改变现有 owner 配对、语音授权或搜索工作流的权限。
 
@@ -35,7 +37,7 @@ QQ 仍是适配器，不增加另一套角色、模型、记忆或定时发送�
 | [Channel ports](../services/runtime/src/chatwaifu_runtime/external_channels/ports.py)、[scheduler](../services/runtime/src/chatwaifu_runtime/external_channels/scheduler.py)、[QQ delivery](../services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/delivery.py) | plan/part、lease、取消、receipt、unknown journal、重启不重发    | 非入站回复的明确来源、持久目标、权限/route revision 和 expiry                 |
 | [Assistant tasks](../services/runtime/src/chatwaifu_runtime/personal_assistant/tasks.py) 与 [其持久化](../services/runtime/src/chatwaifu_runtime/persistence/sqlite_assistant_tasks.py)                                                                                                 | owner 验证、occurrence 去重、过期、撤销与迟到结果的既有模式     | 当前目标是本机 device，不是 QQ；不能直接把 device delivery 表改成外部发送队列 |
 
-基线中存在以下具体连接缺口，打开 capability 并不能解决它们：
+以下群路由与身份缺口仍需 D3 解决；D2 不扩大现有主人私聊权限：
 
 1. `ExternalChannelService._admit_ingress` 创建默认 owner session，并拒绝同一
    `conversation_key` 的第二个 sender。`channel_bindings` 也只有
@@ -49,8 +51,9 @@ QQ 仍是适配器，不增加另一套角色、模型、记忆或定时发送�
    已有 `MemoryRecordDraft.subject_id` 可复用，但第一人称主体须从持久 speaker 派生。
 4. `CharacterKernel` 的关系和情绪按 `character_id + user_scope` 存储；共享 scene 的
    不同成员目前共用关系，不能把群的关系快照说成成员独立关系。
-5. `Ambient.evaluate_once` 遍历所有 ready session；`submit_proactive` 默认输出
-   text/audio/avatar。桌面主动开关不能顺带为 QQ 路由授权，也不能直接调用该默认输出。
+5. D2 已从桌面 Ambient 排除历史或当前 channel session，并为 `submit_proactive`
+   提供固定来源、预分配 lineage 和纯文字选项。桌面主动开关不授权 QQ，群也不能
+   继承这项主人私聊 policy。
 6. `NapCatDelivery` 固定向 owner 私聊，`NapCatClient.send` 调用 `send_private_msg`。
    群发送目标必须来自持久 route，不能从 sender、模型文字或工具参数临时推断。
 
@@ -62,9 +65,10 @@ QQ 仍是适配器，不增加另一套角色、模型、记忆或定时发送�
 和 channel delivery scheduler。暂不接日历、Skill completion、群主动广播或自动语音。
 新增独立、可撤销的目标授权；远程文字、旧 turn、记忆和引用均不能开启该权限。
 
-建议初始设置沿用 idle 45 分钟、cooldown 60 分钟、每日最多 3 次、23:00–08:00 安静时段；
-timezone 显式使用 IANA 名称，TTL 初值 15 分钟且有上限。这些是待实现的建议默认值，
-不是现有 QQ 配置。允许关闭整条 route；不能用全局 companion 开关代替 route opt-in。
+初始设置为 idle 45 分钟、cooldown 60 分钟、每日最多 3 次、23:00–08:00 安静时段；
+timezone 使用 IANA 名称 `Asia/Shanghai`，TTL 为 15 分钟、上限 60 分钟。
+每次保存 policy 都撤销旧 episode；保存后需主人再发一条新消息，才建立新的空闲窗口。
+允许关闭整条 route；不能用全局 companion 开关代替 route opt-in。
 
 新增版本化 `ChannelProactivePolicy` 和 `ChannelOutboundIntent`，由 channel 应用服务持有。
 SQL 留在 persistence adapter，Conversation 不读投递表，NapCat 不运行生成或记忆逻辑。
@@ -73,9 +77,9 @@ SQL 留在 persistence adapter，Conversation 不读投递表，NapCat 不运行
 - intent：唯一 request/source-event key；固定 connection/account/binding/character/scope；
   policy 与 route revision；not-before、expires-at；服务端预分配 session/turn/generation；
   生成文本/hash、delivery 引用、状态和可解释终态原因。
-- 预算在事务内预留，防止并发 scheduler 都通过先读后写的检查。失败是否退还预算须有
-  一致策略；未知发送保留预算，避免另一请求立即重复打扰。
-- 每 binding 最多一个非终态主动请求，建议全局最多 32 个；扫描和保留记录有分页及期限。
+- 预算在事务内预留，防止并发 scheduler 都通过先读后写的检查。失败、取消和未知发送
+  均不退还预算，避免另一请求立即重复打扰。
+- 每 binding 最多一个非终态主动请求，全局最多 32 个；扫描和保留记录有分页及期限。
   使用现有事件唤醒与有限工作任务，不为每次 tick 创建独立生成/发送队列。
 
 ### 持久生成、投递与撤销
@@ -92,8 +96,8 @@ SQL 留在 persistence adapter，Conversation 不读投递表，NapCat 不运行
 6. 沿用现有 durable unknown fence。provider ID 已保存而 scheduler ACK 丢失，只补 receipt；
    unknown 不自动重发。关闭或过期不能抹掉已经发生的 provider 成功事实。
 
-当前 `channel_deliveries` 强制引用 inbound `channel_turns`，不能伪造 QQ 入站 message ID
-来挂主动消息。建议新增明确的 outbound-intent 来源关系，并约束一个 plan 恰好选择一个来源；
+迁移 38 为 `channel_deliveries` 增加明确的 outbound-intent 来源关系，并约束一个 plan
+恰好选择入站 turn 或主动 intent，不能伪造 QQ 入站 message ID 来挂主动消息；
 复用现有 part、lease、ACK 和 journal，不重写发送状态机。scheduler、终态事件及 quote 读取
 必须识别来源：主动消息没有自动继承的入站 reply target。
 
@@ -102,7 +106,7 @@ provider receipt 表示服务端接受；不代表手机已读、语音播放或
 
 ### 管理 API 与界面
 
-建议 operator 管理接口：
+operator 管理接口：
 
 ```text
 GET/PUT /v1/channel-connections/{id}/proactive-policy
@@ -111,10 +115,11 @@ GET     /v1/channel-connections/{id}/outbound-intents
 POST    /v1/channel-connections/{id}/outbound-intents/{request_id}/cancel
 ```
 
-PUT 使用 revision CAS；preview 只生成可查看预览，不发送。API 返回 sanitized intent 和原因，
+PUT 使用 revision CAS；preview 只计算当前资格、时窗和原因，不调用模型、不预留预算、不发送。
+冲突的保存或取消不打断有效生成；客户端刷新后由 operator 重新决定。API 返回 sanitized intent 和原因，
 不返回凭据、原始 OneBot 数据或允许模型选择收件人的工具。能力登记只有在完整实现后才宣称支持。
 
-扩展 [QQChannelPanel](../apps/web/src/features/desktop-settings/QQChannelPanel.tsx) 和
+已扩展 [QQChannelPanel](../apps/web/src/features/desktop-settings/QQChannelPanel.tsx) 和
 [channel client](../apps/web/src/features/chat/runtime-client/channelsClient.ts)：显示固定 owner 目标、
 默认关闭的独立开关、时间/频控、预览和最近结果。关闭开关要持久撤销未发送请求，而非只隐藏 UI。
 设备提醒 [AssistantDelivery](../apps/web/src/features/personal-assistant/AssistantDelivery.tsx) 继续保持
@@ -200,8 +205,8 @@ owner 私聊开关。大群支持需另行调整 ADR 和容量，不在第一片
    启用新群 scope 时不读取这类歧义事实，任何人工重新归属需保留 provenance。
 5. 新来源和新 route 都默认关闭。关闭功能并持久取消未发送 intent/parts 是第一回滚路径；
    保留 receipt、unknown fence、scope 及审计，不能删 journal 来“恢复发送”。
-6. 新 schema 不能直接交给旧二进制。需要代码降级时停机、备份新数据，再恢复兼容数据库备份；
-   不做自动破坏性 down migration，不改写已经发生的 provider 成功事实。
+6. 新 schema 不能直接交给旧二进制。需要代码降级时先停机并备份新数据，选用兼容新 schema
+   的源码；不得用旧数据库覆盖新发生的 admission、发送或 receipt，不做破坏性 down migration。
 
 ## 验收包与完成门槛
 
@@ -217,7 +222,7 @@ owner 私聊开关。大群支持需另行调整 ADR 和容量，不在第一片
 - [QQ 完整 Runtime tests](../services/runtime/tests/test_qq_channels.py) 与
   [adapter tests](../services/runtime/tests/external_channels/adapters/qq_napcat)：真实本地 WS peer、receipt 和发送栅栏。
 
-### D2 必须新增的确定性检查
+### D2 的确定性检查
 
 - 默认关闭和未绑定目标：零模型生成、零 provider send；桌面主动开关不能授权 QQ。
 - 注入 clock 验证跨午夜、timezone/DST、忙时延后、预算事务竞争和 TTL 后不补发。

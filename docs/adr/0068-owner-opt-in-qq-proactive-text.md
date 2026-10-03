@@ -96,6 +96,10 @@ No API accepts a model-selected recipient, raw OneBot payload or credential.
 Absent policy has revision zero and remains disabled; its first PUT uses CAS
 zero. Cancel includes the observed intent revision and returns the latest
 snapshot. A conflict refreshes the view without silently retrying an old action.
+Policy updates and intent cancellation commit the observed-revision CAS before
+fencing and joining generation work. A rejected CAS has no cancellation side
+effects; successful policy changes atomically revoke their old episodes/intents
+with the new revision, then await only the revoked work.
 
 ## Acceptance and rollback
 

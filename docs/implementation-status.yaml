@@ -7,11 +7,14 @@ qq_napcat:
   image_reply_adr: "0065"
   incoming_voice_adr: "0066"
   voice_selection_adr: "0067"
+  proactive_text_adr: "0068"
   original_plan_stages:
     A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
     C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
-    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_and_group_isolation_not_implemented
+    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_text_source_default_off_group_isolation_not_implemented
+    D2: fixed_owner_proactive_text_source_implemented_default_off_linux_upgrade_and_real_opt_in_acceptance_pending
+    D3: group_permissions_participant_and_audience_isolation_not_implemented
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -41,10 +44,13 @@ qq_napcat:
     - Final model-selected-voice source passed 2382 Python checks with 46 platform skips and 514 focused integration checks; isolated ASR worker passed 31, strict Pyright and Ruff passed; scripted models prove both reply media for the same keyword-free input but do not prove live semantic preference or handset playback
     - Source b21fcbc deployed with all 1457 tracked hashes matched; Linux QQ checks passed 439 and isolated worker checks passed 31; live ASR process confirms beam 5 with a generic Chinese prompt, same authenticated QQ remains online, and all six prior ledger facts plus original services/resources were preserved
     - A fresh owner AUDIO input after the model-choice deployment committed a nonempty final transcript without the placeholder and completed with exactly one successful agent channel.voice run and one delivered AUDIO part at attempt 1 with a provider receipt; admission dedup count was one and the owner confirmed successful phone playback, while the previous misrecognized recording remains a failed sample
+    - ADR 0068 fixed-owner proactive text source implements default-off policy, migration 38, durable idle episodes and intent reservations, text-only normal character generation, operator management and shared QQ settings; initial full Python 2464 with 46 platform skips, Web 358, protocol 74, strict typing, lint and both UI builds passed
+    - Cancellation CAS now commits before generation fencing so a stale 409 has no side effects; account-preflight owner revocation and partial known-send terminal callback regressions passed within 118 independently run focused tests, followed by 21 management tests including real container HTTP and SQLite with normal exit
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
     - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
-    - phase_d2_proactive_delivery_opt_in_and_phase_d3_group_permissions_participant_isolation_implementation
+    - phase_d2_final_source_regression_linux_migration_deployment_and_real_opt_in_phone_acceptance
+    - phase_d3_group_permissions_participant_and_audience_isolation_implementation
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance

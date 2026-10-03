@@ -409,6 +409,19 @@ audit uses a read-only committed-WAL transaction. The earlier failed recording
 is not retrospectively counted as success or resent. Additional semantic
 preferences and voice fault acceptance remain separate.
 
-D2 proactive text and D3 group/member isolation remain unimplemented. Their
-concrete scope, dependencies and acceptance package are
-[QQ next slices](qq-next-slices.md).
+D2 proactive text is now implemented in the isolated source branch under
+ADR 0068, disabled by default. It adds migration 38, fixed-owner policy/episode/
+intent persistence, normal text-only character generation, permission rechecks,
+receipt reconciliation and authenticated management/UI. Root's initial full
+source regression completed **2464 passed, 46 platform skips**, with **358 Web**
+and **74 protocol** tests, strict typing, lint and Web/desktop UI builds passing.
+Later cancellation/current-owner fixes independently passed **118 focused tests**
+with normal exit. A real composed-container HTTP/SQLite regression then passed
+with the complete **21-case management suite**, proving default-off and read-only
+GET/preview/history, stale-save 409 without side effects, and unknown-route 404.
+The final source regression and isolated Linux migration rehearsal remain
+separate gates before deployment; the server still runs `b21fcbc`/migration 37.
+The known lifecycle-only Python process-exit hang is retained separately and is
+not counted as a clean command. These checks make no real model/QQ sends and do
+not establish phone receipt or authorize opt-in. D3 group/member isolation remains
+unimplemented. See [QQ next slices](qq-next-slices.md).
