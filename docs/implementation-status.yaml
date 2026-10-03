@@ -15,7 +15,7 @@ qq_napcat:
     C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
     D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_text_deployed_default_off_group_source_integrated_acceptance_pending
     D2: fixed_owner_proactive_text_deployed_default_off_real_opt_in_phone_acceptance_pending
-    D3: group_source_integrated_default_off_full_runtime_group_deployment_and_real_qq_acceptance_pending
+    D3: group_source_and_local_runtime_verified_default_off_deployment_and_real_qq_acceptance_pending
   evidence:
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
@@ -56,13 +56,16 @@ qq_napcat:
     - Source 4d18cad wires group admission, final delivery authorization, synchronous membership and disconnect cancellation, pre-reset revocation and resource/lifecycle ownership through the existing Runtime; independently run application, HTTP, store, migration, private QQ and lifecycle checks passed 219, while full real local group WebSocket integration is a separate pending gate
     - Full Python at the integrated source passed 3005 with 46 platform skips and normal exit; full Web passed 409, TypeScript protocol passed 111, Web and desktop UI builds and Web lint passed, and full Python strict typing passed after two compatibility-only type fixes with 69 focused checks
     - Source b124504 bounds untrusted group epoch metadata at 128 without reusing epochs; overflow pauses the whole connection, clears only captured durable group fences, and rejects late admission, observations and delivery after explicit resume; root independently passed 258 group application, HTTP, store, migration, host-contract and delivery checks with strict typing and lint
+    - Source 10e3889 adds nine actual RuntimeContainer, operator guard, SQLite 40 and loopback OneBot WebSocket scenarios; root independently passed all nine, then 37 group/private QQ checks with NapCat 1.1.0 advertising controlled group text, covering default-off, two-member state isolation, blocked private preparation and uncancelled late output, failed CAS, disable/reset/reconnect, known receipt reconciliation and unknown no-replay; the model and OneBot peer are fixtures, not real QQ phone evidence
+    - Frozen production source 48ef3ae passed the complete Python suite with 3023 passes, 46 platform skips and normal exit in 153.48 seconds; full strict Pyright and Ruff passed, and all 704 Python files passed formatting checks; Web and protocol sources are unchanged from the separately recorded 409 and 111 checks
+    - Root then strengthened the membership-notice test to await the owned generation without invoking another cancellation from the test; the reader fence alone rejects uncancelled late output, and the 37 group/private QQ checks, strict typing, lint and formatting passed again without production source changes
     - Independent real SQLite 39 to 40 probes verified legacy GROUP bindings remain quarantined while a fresh isolated private binding can be created and D2 no longer selects the old polluted owner context; retained facts and reserved-intent denial are covered separately
-    - Read-only Linux observation on 2026-10-04 found the four owned QQ stage services active, schema 38, a ready connection last seen 14 seconds earlier, no proactive policies or intents, and no D3 application source; no D3 rollout, real group messages or proactive opt-in were performed
+    - Read-only Linux observation on 2026-10-04 found the four owned QQ stage services active, schema 38, a ready connection last seen 14 seconds earlier, no proactive policies or intents, and no D3 application source at the verified source root; source provenance still records 467bb7d, but its complete file inventory was not reverified in this observation; no D3 rollout, real group messages or proactive opt-in were performed
   remaining:
     - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
     - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
     - phase_d2_real_opt_in_phone_quiet_hours_disable_new_input_and_restart_acceptance
-    - phase_d3_full_runtime_group_websocket_capacity_and_recovery_acceptance
+    - phase_d3_verified_schema38_to40_preserving_deployment_preflight
     - phase_d3_verified_default_off_deployment_and_operator_selected_two_member_phone_acceptance
     - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery

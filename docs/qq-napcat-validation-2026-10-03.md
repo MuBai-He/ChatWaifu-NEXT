@@ -492,3 +492,54 @@ The separate successful evidence is
 the original failed report remains retained. No old database was restored.
 Real opt-in, phone receipt, quiet hours/disable, new-owner cancellation and restart
 without replay still require separate acceptance. D3 remains unimplemented.
+
+## D3 source and local Runtime acceptance (2026-10-04)
+
+The isolated QQ branch now implements ADR 0069 through trusted participant links,
+immutable group audiences, shared scene memory and per-member session/state,
+fixed text-only group plans, operator management and shared settings. New routes
+remain disabled. Group tools, media, voice, quotes and proactive sends are not
+available. This source has not been merged into the primary checkout or deployed
+to the Linux QQ stage.
+
+Root independently passed **258** application, operator API, store, migration,
+host-contract and group delivery checks after `b124504`. These include migration
+39/40, legacy-group binding quarantine, global admission capacity and bounded
+group epoch metadata. Unknown groups at the 128-entry epoch limit revoke the
+whole connection without reusing epochs. After durable pause, only the captured
+blocks are cleared; newer notices and stale admissions, observations and delivery
+authorizations retain their revocation.
+
+The nine new `10e3889` scenarios exercise the same actual RuntimeContainer,
+operator guard, SQLite 40, Conversation, Memory and Character Kernel used by the
+application, with a loopback OneBot WebSocket peer and a controlled model. Root
+independently passed all nine, then **37** combined group/private QQ checks with
+the NapCat 1.1.0 capability registration. They cover explicit enablement,
+two-member state isolation, private-history exclusion, wire rejections and
+deduplication, synchronous membership revocation while private preparation
+blocks event consumption, late output after a provider swallows cancellation,
+failed CAS, disable/reset/reconnect, pending input cancellation, known receipt
+reconciliation after revocation and unknown no-replay. They establish local
+integration behavior; they do not establish real QQ handset receipt or atomic
+freshness of NapCat's member list.
+
+Frozen production source `48ef3ae` completed the full Python suite with
+**3023 passed, 46 platform skips**, normal exit in 153.48 seconds. Full strict
+Pyright and Ruff passed; all **704** Python files passed formatting. Web and
+protocol sources remain unchanged from the separately recorded **409 Web** and
+**111 TypeScript protocol** checks, Web/desktop UI builds and Web lint. The UI
+build is separate from native desktop packaging, which remains unverified.
+
+Root then strengthened the membership-notice test to await the already-owned
+generation task without issuing another cancellation. The reader's fence must
+reject uncancelled late output on its own. All **37** group/private QQ checks,
+strict typing, lint and test formatting passed again; production source is
+unchanged from the full regression.
+
+A read-only server observation found schema **38**, the four owned QQ services
+active, a ready connection and no proactive policies or intents. Root verified
+the actual source root and absence of the D3 application; source provenance
+records `467bb7d`. This read did not recheck every source hash. Migration on an
+online-backup copy, a verified default-off D3 deployment and a user-selected
+two-member real QQ acceptance remain separate pending steps. No real group send
+or proactive opt-in was performed for these checks.

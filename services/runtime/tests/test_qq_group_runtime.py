@@ -514,6 +514,8 @@ async def test_membership_reader_revokes_during_private_prepare_and_rejects_unca
     await runtime.send(_group_event(40, "held group"))
     request = await asyncio.wait_for(runtime.model.started.get(), 3)
     group_turn = await runtime.turn(route, 40)
+    generation_task = runtime.container.conversation._active[group_turn.turn.session_id].task
+    assert generation_task is not None
     entered, release_private = asyncio.Event(), asyncio.Event()
     retrieve = runtime.container.memory.retrieve_context
 
@@ -547,8 +549,10 @@ async def test_membership_reader_revokes_during_private_prepare_and_rejects_unca
             runtime.connection_id
         ].group_dispatch_ready
         hold.set()
-        await runtime.container.conversation.cancel(
-            group_turn.turn.session_id, expected_generation_id=request.generation_id
+        # Observe completion without adding a second cancellation from the test;
+        # the reader's fence must defeat uncancelled late output on its own.
+        await asyncio.wait_for(
+            asyncio.shield(asyncio.gather(generation_task, return_exceptions=True)), 3
         )
         result = await runtime.container.conversation_repository.generation_result(
             request.generation_id

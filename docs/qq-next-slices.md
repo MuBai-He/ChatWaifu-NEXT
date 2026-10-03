@@ -6,7 +6,8 @@
 D1 的入站语音和模型选择回复方式已经集成，并取得单次手机播放确认。
 D3 按 [ADR 0069](adr/0069-qq-group-member-identity-and-shared-context.md) 集成了
 群路由、成员身份、受众隔离、管理接口和共享设置源码。新群路由默认关闭；完整 Runtime
-与本地 OneBot 的群聊链路、资源上限、服务器部署及两成员手机验收仍是独立的未完成门。
+与本地 OneBot 已通过本地集成检查，资源上限由应用与仓储回归覆盖。服务器部署及两成员
+手机验收仍未完成，本地模型和协议替身不能代替真实 QQ 验收。
 当前完成状态以 [实施状态](implementation-status.yaml)、相关 ADR 和实际验收记录为准。
 本文不改变现有 owner 配对、语音授权或搜索工作流的权限。
 
@@ -57,7 +58,7 @@ QQ 仍是适配器，不增加另一套角色、模型、记忆或定时发送�
    继承这项主人私聊 policy。
 6. 群投递使用持久 route 固定的 typed group target，调用 `send_group_msg` 前重查
    lineage、账号、受众和 revision；没有群目标或授权时不能回退到私聊。完整 Runtime
-   到真实本地 WebSocket 的群投递仍须单独通过验证。
+   到本地 OneBot 协议替身的群投递已通过验证，真实 QQ 投递仍须单独验收。
 
 ## D2：owner 私聊的主动文字
 
