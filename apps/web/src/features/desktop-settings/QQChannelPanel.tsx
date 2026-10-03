@@ -14,6 +14,7 @@ import {
   type QQPairingSnapshot,
 } from "../chat/runtime-client/qqClient";
 import { RuntimeRequestError } from "../chat/runtime-client/http";
+import { QQProactivePanel } from "./QQProactivePanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsToggle } from "./SettingsPrimitives";
 import "./qq-channel-panel.css";
@@ -336,7 +337,7 @@ export function QQChannelPanel({
         <div className="qq-channel-content">
           <h3>{connection.configuration.name || "角色的 QQ"}</h3>
           <p>
-            已绑定当前角色和你的私聊。默认回复文字；你要求语音时，角色才会调用语音工具发送。
+            已绑定当前角色和你的私聊。普通对话优先文字；角色可按本轮语义选择调用语音工具回复。
           </p>
           {connection.last_error ? (
             <p role="status">连接异常：{connection.last_error.message}</p>
@@ -376,6 +377,14 @@ export function QQChannelPanel({
               {operation === "disconnect" ? "正在断开…" : "断开 QQ 连接"}
             </button>
           </div>
+          {connection.capabilities?.supports_proactive_messages === true ? (
+            <QQProactivePanel
+              key={`${connection.configuration.connection_id}:${connection.revision}`}
+              connectionId={connection.configuration.connection_id}
+              runtimeOnline={runtimeOnline}
+              connectionVerified={connectionVerified && !busy}
+            />
+          ) : null}
         </div>
       ) : pending ? (
         <div className="qq-channel-content">
@@ -417,7 +426,7 @@ export function QQChannelPanel({
             <p role="status">{pairingStatusLabel(pairing.status)}</p>
           ) : null}
           <p>
-            与桌宠共享当前角色、关系和记忆。普通对话发文字，按你的要求发送角色语音。
+            与桌宠共享当前角色、关系和记忆。普通对话优先文字，角色可按本轮语义选择角色语音。
           </p>
           {setupOpen ? (
             <form
