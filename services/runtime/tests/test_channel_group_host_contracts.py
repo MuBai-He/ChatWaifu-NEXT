@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import ChannelConnectionConfiguration, ChannelConnectionStatus
 from chatwaifu_protocol.session import GenerationState, SessionSnapshot
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -16,6 +17,7 @@ from chatwaifu_runtime.external_channels.service import (
     ChannelPolicyError,
 )
 
+from services.runtime.tests.test_channel_groups import _group  # type: ignore[reportPrivateUsage]
 from services.runtime.tests.test_conversation_shared_external import (
     bind_provider,
     join,
@@ -144,5 +146,37 @@ async def test_failed_scope_fence_prevents_reset_and_preserves_durable_history(
             "SELECT count(*) AS n FROM events WHERE event_type='session.data_reset'"
         )
         assert row is not None and row["n"] == 0
+    finally:
+        await container.stop()
+
+
+@pytest.mark.parametrize("mode", ["enabled", "disabled", "scene_reset", "deleted"])
+async def test_group_scene_excludes_desktop_proactive_before_any_member_binding(
+    runtime_settings: Settings, mode: str
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        group = await _group(container.database)
+        if mode != "enabled":
+            await container.channel_group_repository.pause_routes(
+                connection_id=group.connection_id,
+                reason={
+                    "disabled": ChannelGroupPauseReason.OPERATOR_DISABLED,
+                    "scene_reset": ChannelGroupPauseReason.SCENE_RESET,
+                    "deleted": ChannelGroupPauseReason.ROUTE_DELETED,
+                }[mode],
+                updated_at=datetime.now(UTC),
+            )
+        row = await container.database.fetchone("SELECT count(*) AS n FROM channel_bindings")
+        assert row is not None and row["n"] == 0
+        for session_id in group.sessions.values():
+            assert not await container._desktop_proactive_session_allowed(session_id)  # type: ignore[reportPrivateUsage]
+        private = await container.sessions.create_session("default")
+        assert await container._desktop_proactive_session_allowed(private.session_id)  # type: ignore[reportPrivateUsage]
+        # Ordinary desktop shared scenes do not inherit a group route's exclusion.
+        alice, bob = await scene_sessions(container)
+        assert await container._desktop_proactive_session_allowed(alice.session_id)  # type: ignore[reportPrivateUsage]
+        assert await container._desktop_proactive_session_allowed(bob.session_id)  # type: ignore[reportPrivateUsage]
     finally:
         await container.stop()

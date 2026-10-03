@@ -50,6 +50,7 @@ from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
+from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
 from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
@@ -185,6 +186,9 @@ class RuntimeContainer:
         )
         self.channel_proactive_repository = SQLiteChannelProactiveRepository(
             self.database, self.event_store, deliveries=self.external_channel_repository
+        )
+        self.channel_group_repository = SQLiteChannelGroupRepository(
+            self.database, self.event_store
         )
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
@@ -505,6 +509,15 @@ class RuntimeContainer:
             self._state = "started"
 
     async def _desktop_proactive_session_allowed(self, session_id: UUID) -> bool:
+        session = await self.sessions.get_session(session_id)
+        if (
+            session is not None
+            and session.scene_id is not None
+            and await self.channel_group_repository.is_group_scene(session.scene_id)
+        ):
+            # A route owns its scene before the first sender binding exists.
+            # Historical and paused scenes retain this exclusion after resets.
+            return False
         return not await self.channel_proactive_repository.is_channel_session(session_id)
 
     def _channel_active_generation(self, session_id: UUID) -> UUID | None:
