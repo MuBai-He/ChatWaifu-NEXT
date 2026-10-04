@@ -150,7 +150,7 @@ class RuntimeCloudRealtimeFactory:
         kernel_snapshot = None
         try:
             kernel_snapshot = await self._character_kernel.snapshot(
-                character_id, user_scope=session.user_scope
+                character_id, user_scope=session.state_scope
             )
         except Exception:
             _LOGGER.debug(
@@ -291,7 +291,11 @@ class RuntimeCloudRealtimeFactory:
             nonlocal last_context
             history = await self._conversation.latest_confirmed_history(session_id, limit=16)
             snapshot = (
-                (await self._character_kernel.snapshot(character_id, user_scope=session.user_scope))
+                (
+                    await self._character_kernel.snapshot(
+                        character_id, user_scope=session.state_scope
+                    )
+                )
                 if character_profile is not None
                 else None
             )

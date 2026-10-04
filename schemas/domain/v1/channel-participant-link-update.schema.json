@@ -1,0 +1,28 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-participant-link-update.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "enabled",
+    "expected_revision"
+  ],
+  "title": "ChannelParticipantLinkUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

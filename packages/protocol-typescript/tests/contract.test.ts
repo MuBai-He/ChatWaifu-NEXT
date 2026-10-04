@@ -234,6 +234,19 @@ describe("cross-language protocol fixtures", () => {
       updated_at: "2026-08-29T00:00:01Z",
     });
     expect(session.state).toBe("ready");
+    expect(session.state_scope).toBe("local");
+    const scoped = { ...session, user_scope: "scene:friends" };
+    const legacy: Record<string, unknown> = { ...scoped };
+    delete legacy.state_scope;
+    expect(parseSessionSnapshot(legacy).state_scope).toBe("scene:friends");
+    expect(
+      parseSessionSnapshot({
+        ...legacy,
+        participant_id: "alice",
+        scene_id: "friends",
+        state_scope: "scene_member:friends:alice",
+      }).state_scope,
+    ).toBe("scene_member:friends:alice");
     expect(() => parseSessionSnapshot({ ...session, revision: -1 })).toThrow();
 
     const capabilities = parseMcpCapabilitySnapshot({

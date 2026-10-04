@@ -1,0 +1,30 @@
+services:
+  napcat:
+    image: ${NAPCAT_IMAGE:?Set a reviewed NapCat image release or digest in .env}
+    restart: unless-stopped
+    environment:
+      ACCOUNT: ${NAPCAT_ACCOUNT:-}
+      NAPCAT_UID: ${NAPCAT_UID:?Set the deployment user UID in .env}
+      NAPCAT_GID: ${NAPCAT_GID:?Set the deployment user GID in .env}
+      WEBUI_TOKEN: ${NAPCAT_WEBUI_TOKEN:?Set a strong private WebUI token in .env}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${NAPCAT_WS_PORT:-13001}:3001"
+      - "127.0.0.1:${NAPCAT_WEBUI_PORT:-16099}:6099"
+    volumes:
+      - type: bind
+        source: ${NAPCAT_DATA_DIR:?Set a persistent NapCat data directory in .env}/config
+        target: /app/napcat/config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NAPCAT_DATA_DIR:?Set a persistent NapCat data directory in .env}/qq
+        target: /app/.config/QQ
+        bind:
+          create_host_path: false
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -453,3 +453,5 @@ contracts, privacy policy, and acceptance gates exist.
 - [ADR 0038: Bounded Photo Semantic Recall](../adr/0038-bounded-photo-semantic-recall.md)
 - [ADR 0039: Bounded Photo Source Metadata and Capture Date Extraction](../adr/0039-bounded-photo-metadata.md)
 - [ADR 0040: Bounded Inbound Multiple Static Images Within One Wire Message](../adr/0040-bounded-inbound-multi-image.md)
+- [ADR 0064: Native QQ and Current-Turn Voice](../adr/0064-qq-napcat-current-turn-voice.md)
+- [ADR 0065: Bounded QQ Images and Permissioned Reply References](../adr/0065-bounded-qq-images-and-reply-references.md)

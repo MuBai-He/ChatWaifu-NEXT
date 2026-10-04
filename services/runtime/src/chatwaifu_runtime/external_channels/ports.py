@@ -20,6 +20,7 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.errors import StructuredError
 
+from chatwaifu_runtime.conversation.models import ConversationQuotedMessage
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -38,7 +39,9 @@ from chatwaifu_runtime.external_channels.models import (
 class ExternalChannelRepository(Protocol):
     async def list_connections(self) -> tuple[ChannelConnectionRecord, ...]: ...
 
-    async def get_connection(self, connection_id: UUID) -> ChannelConnectionRecord | None: ...
+    async def get_connection(
+        self, connection_id: UUID, *, include_deleted: bool = False
+    ) -> ChannelConnectionRecord | None: ...
 
     async def create_connection(
         self,
@@ -86,10 +89,20 @@ class ExternalChannelRepository(Protocol):
     ) -> ChannelBindingRecord: ...
 
     async def find_turn_by_external_message(
-        self, connection_id: UUID, external_message_id: str
+        self, connection_id: UUID, external_message_id: str, *, conversation_key: str | None = None
     ) -> ChannelTurnRecord | None: ...
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None: ...
+
+    async def resolve_quoted_message(
+        self, connection_id: UUID, binding_id: UUID, external_message_id: str
+    ) -> ConversationQuotedMessage | None:
+        """Read this binding's retained text; outbound messages require confirmed delivery."""
+        ...
+
+    async def quoted_reply_target(self, channel_turn_id: UUID) -> str | None:
+        """Current inbound message ID when that committed turn carried a reply reference."""
+        ...
 
     async def list_inflight_turns(
         self, connection_id: UUID | None = None
@@ -276,3 +289,26 @@ class ExternalChannelRepository(Protocol):
         cursor: str,
         updated_at: datetime,
     ) -> None: ...
+
+    async def retained_send_journal_keys(
+        self, connection_id: UUID, provider_client_ids: Sequence[str]
+    ) -> frozenset[str]:
+        """Bounded unresolved keys; the adapter additionally retains every unknown send."""
+        ...
+
+    async def reconcile_known_delivery_part_receipt(
+        self,
+        connection_id: UUID,
+        provider_client_id: str,
+        provider_message_id: str,
+        *,
+        observed_at: datetime,
+    ) -> DeliveryTransitionResult:
+        """Trusted durable provider fact, independent of ordinary ACK lease or permission."""
+        ...
+
+    async def list_send_journal_connection_ids(
+        self, *, limit: int = 32, after_connection_id: UUID | None = None
+    ) -> tuple[UUID, ...]:
+        """Include disabled/deleted QQ checkpoints without fetching credentials."""
+        ...

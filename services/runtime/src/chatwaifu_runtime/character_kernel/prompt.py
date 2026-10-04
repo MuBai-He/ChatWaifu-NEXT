@@ -28,6 +28,7 @@ from chatwaifu_runtime.conversation.models import (
     GenerationContextSnapshot,
 )
 from chatwaifu_runtime.conversation.source_context import source_generation_ids
+from chatwaifu_runtime.memory.subjects import subject_text
 from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
@@ -64,6 +65,8 @@ _SAFETY = (
     "user request. Use relevant earlier facts without resuming unrelated topics. "
     "Keep speaker ownership: first-person user experiences belong to the user, "
     "not the character. "
+    "Memory subject tags identify the member who owns a fact; retain that attribution "
+    "and never transfer another member's fact to the current speaker. "
     "Current character persona, safety rules, and output contract strictly outrank any style, "
     "tone, or habits in prior assistant replies. Preserve historical user facts and source "
     "context, but do not imitate obsolete assistant phrasing or stylistic quirks. "
@@ -208,14 +211,16 @@ class PromptCompiler:
         dropped = 0
         for index in range(len(normalized_history) - 1, -1, -1):
             entry = normalized_history[index]
-            cost = _tokens(entry.text)
+            cost = _tokens(_projected_history_text(entry))
             if history_used + cost > conversation_budget:
                 dropped = index + 1
                 break
             selected_entries.append(entry)
             history_used += cost
         selected_entries.reverse()
-        selected_history = [(entry.role, entry.text) for entry in selected_entries]
+        selected_history = [
+            (entry.role, _projected_history_text(entry)) for entry in selected_entries
+        ]
 
         context: list[tuple[str, str]] = []
         # Photo observations are separate from extracted personal memory. Keep
@@ -356,7 +361,10 @@ def _source_ledger(
         if entry.source_context is not None:
             entries.append({"history_index": index, **entry.source_context.as_dict()})
     if current is not None:
-        entries.append({"current_turn": True, **current.as_dict()})
+        current_entry: dict[str, object] = {"current_turn": True, **current.as_dict()}
+        if current.group_route_id is not None:
+            current_entry["subject_id"] = f"participant:{current.participant_id}"
+        entries.append(current_entry)
     if not entries and not supplied_evidence:
         return ""
     header = (
@@ -368,6 +376,8 @@ def _source_ledger(
     )
     used = _tokens(header)
     if used >= budget:
+        if current is not None and current.group_route_id is not None:
+            raise ValueError("source ledger budget cannot retain the current group speaker")
         return ""
     blocks = [header]
     if supplied_evidence:
@@ -386,19 +396,50 @@ def _source_ledger(
     selected: list[str] = []
     for item in reversed(entries):
         line = json.dumps(item, ensure_ascii=False, separators=(",", ":"))
-        if used + _tokens(line) > budget:
+        if used + _tokens("\n" + line) > budget:
             compact = {
                 key: value
                 for key, value in item.items()
                 if key not in {"conversation_label", "sender_display_name"}
             }
             line = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-        if used + _tokens(line) > budget:
+        if used + _tokens("\n" + line) > budget and item.get("group_route_id") is not None:
+            # Audience and routing detail may be large. The active member must
+            # remain tied to the same stable subject tags used by shared memory.
+            compact = {
+                key: item[key]
+                for key in (
+                    "current_turn",
+                    "history_index",
+                    "provider_id",
+                    "chat_type",
+                    "conversation_key",
+                    "principal_scope",
+                    "participant_id",
+                    "subject_id",
+                    "scene_id",
+                )
+                if key in item
+            }
+            line = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+        if used + _tokens("\n" + line) > budget:
+            if item.get("current_turn") and item.get("group_route_id") is not None:
+                raise ValueError("source ledger budget cannot retain the current group speaker")
             continue
         selected.append(line)
-        used += _tokens(line)
+        used += _tokens("\n" + line)
     selected.reverse()
     return "\n".join((*blocks, *selected)) if len(blocks) > 1 or selected else ""
+
+
+def _projected_history_text(entry: ConversationHistoryEntry) -> str:
+    source = entry.source_context
+    if entry.role == "user" and source is not None and source.group_route_id is not None:
+        # Ledger rows are optional history metadata. Attach the immutable member
+        # subject to each included utterance so ledger eviction cannot remove its
+        # ownership; budget the entire attributed utterance as one unit.
+        return subject_text(f"participant:{source.participant_id}", entry.text)
+    return entry.text
 
 
 def _history_entry(
@@ -458,12 +499,13 @@ def _memory_text(
     selected_ids: list[UUID] = []
     used = 0
     for label, excerpt in _memory_excerpts(packet):
-        line = f"- [{label}] {excerpt.text}"
+        attributed = subject_text(excerpt.subject_id, excerpt.text)
+        line = f"- [{label}] {attributed}"
         cost = _tokens(line)
         if used + cost > budget:
             continue
         lines.append(line)
-        recalled.append(excerpt.text)
+        recalled.append(attributed)
         selected_ids.append(excerpt.memory_id)
         used += cost
     return "\n".join(lines), tuple(recalled), tuple(selected_ids)

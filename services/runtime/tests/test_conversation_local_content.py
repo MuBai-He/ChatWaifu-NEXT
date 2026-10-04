@@ -67,7 +67,7 @@ async def test_local_content_does_not_require_a_gratuitous_operation(
     )
     monkeypatch.setattr(container.model_configurations, "create_chat_provider", create_provider)
     try:
-        assert len(container.runtime_skills.list()) == 12
+        assert len(container.runtime_skills.list()) == 13
         session = await container.sessions.create_session("default")
         accepted = await container.conversation.submit_text(
             session.session_id,

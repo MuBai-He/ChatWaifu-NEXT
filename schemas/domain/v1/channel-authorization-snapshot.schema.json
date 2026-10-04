@@ -214,7 +214,8 @@
       "description": "Message payload kinds understood by this schema major.",
       "enum": [
         "text",
-        "image"
+        "image",
+        "audio"
       ],
       "title": "ChannelMessageKind",
       "type": "string"

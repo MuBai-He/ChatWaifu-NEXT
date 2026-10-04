@@ -8,6 +8,32 @@ from pydantic import BaseModel, TypeAdapter
 
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
+from chatwaifu_protocol.channel_groups import (
+    ChannelGroupAudienceRequest,
+    ChannelGroupAudienceSnapshot,
+    ChannelGroupDeliveryTarget,
+    ChannelGroupRouteCreate,
+    ChannelGroupRouteMemberSnapshot,
+    ChannelGroupRoutePage,
+    ChannelGroupRouteSnapshot,
+    ChannelGroupRouteUpdate,
+    ChannelGroupTurnCancelRequest,
+    ChannelGroupTurnPage,
+    ChannelGroupTurnSnapshot,
+    ChannelParticipantLinkCreate,
+    ChannelParticipantLinkPage,
+    ChannelParticipantLinkSnapshot,
+    ChannelParticipantLinkUpdate,
+)
+from chatwaifu_protocol.channel_proactive import (
+    ChannelOutboundIntentCancelRequest,
+    ChannelOutboundIntentPage,
+    ChannelOutboundIntentSnapshot,
+    ChannelProactivePolicy,
+    ChannelProactivePolicySnapshot,
+    ChannelProactivePolicyUpdate,
+    ChannelProactivePreview,
+)
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationSnapshot,
     ChannelAuthorizationStartRequest,
@@ -24,6 +50,8 @@ from chatwaifu_protocol.channels import (
     ChannelErrorResponse,
     ChannelGatewayStatusSnapshot,
     ChannelInboundTextMessage,
+    ChannelPairingSnapshot,
+    ChannelPairingStartRequest,
     ChannelPresentationPolicy,
     ChannelProviderRegistration,
     ChannelTurnCancelReceipt,
@@ -117,11 +145,35 @@ class ProtocolCatalog(ProtocolModel):
     channel_authorization_start_request: ChannelAuthorizationStartRequest
     channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
     channel_authorization: ChannelAuthorizationSnapshot
+    channel_pairing_start_request: ChannelPairingStartRequest
+    channel_pairing: ChannelPairingSnapshot
     channel_provider: ChannelProviderRegistration
     channel_presentation_policy: ChannelPresentationPolicy
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
     channel_gateway_status: ChannelGatewayStatusSnapshot
+    channel_group_audience_request: ChannelGroupAudienceRequest
+    channel_group_audience_snapshot: ChannelGroupAudienceSnapshot
+    channel_group_turn_snapshot: ChannelGroupTurnSnapshot
+    channel_group_turn_page: ChannelGroupTurnPage
+    channel_group_delivery_target: ChannelGroupDeliveryTarget
+    channel_group_route_create: ChannelGroupRouteCreate
+    channel_group_route_member_snapshot: ChannelGroupRouteMemberSnapshot
+    channel_group_route_page: ChannelGroupRoutePage
+    channel_group_route_snapshot: ChannelGroupRouteSnapshot
+    channel_group_route_update: ChannelGroupRouteUpdate
+    channel_group_turn_cancel_request: ChannelGroupTurnCancelRequest
+    channel_participant_link_create: ChannelParticipantLinkCreate
+    channel_participant_link_page: ChannelParticipantLinkPage
+    channel_participant_link_snapshot: ChannelParticipantLinkSnapshot
+    channel_participant_link_update: ChannelParticipantLinkUpdate
+    channel_proactive_policy: ChannelProactivePolicy
+    channel_proactive_policy_update: ChannelProactivePolicyUpdate
+    channel_proactive_policy_snapshot: ChannelProactivePolicySnapshot
+    channel_proactive_preview: ChannelProactivePreview
+    channel_outbound_intent: ChannelOutboundIntentSnapshot
+    channel_outbound_intent_page: ChannelOutboundIntentPage
+    channel_outbound_intent_cancel_request: ChannelOutboundIntentCancelRequest
     channel_inbound_text: ChannelInboundTextMessage
     channel_turn_receipt: ChannelTurnReceipt
     channel_turn: ChannelTurnSnapshot
@@ -170,11 +222,28 @@ class ProtocolCatalog(ProtocolModel):
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
+    "channel-group-turn-snapshot": ChannelGroupTurnSnapshot,
+    "channel-group-turn-page": ChannelGroupTurnPage,
+    "channel-group-audience-request": ChannelGroupAudienceRequest,
+    "channel-group-audience-snapshot": ChannelGroupAudienceSnapshot,
+    "channel-group-delivery-target": ChannelGroupDeliveryTarget,
+    "channel-group-route-create": ChannelGroupRouteCreate,
+    "channel-group-route-member-snapshot": ChannelGroupRouteMemberSnapshot,
+    "channel-group-route-page": ChannelGroupRoutePage,
+    "channel-group-route-snapshot": ChannelGroupRouteSnapshot,
+    "channel-group-route-update": ChannelGroupRouteUpdate,
+    "channel-group-turn-cancel-request": ChannelGroupTurnCancelRequest,
+    "channel-participant-link-create": ChannelParticipantLinkCreate,
+    "channel-participant-link-page": ChannelParticipantLinkPage,
+    "channel-participant-link-snapshot": ChannelParticipantLinkSnapshot,
+    "channel-participant-link-update": ChannelParticipantLinkUpdate,
     "audio-frame-header": AudioFrameHeader,
     "avatar-capability-manifest": AvatarCapabilityManifest,
     "avatar-cue": AvatarCue,
     "avatar-interaction-event": AvatarInteractionEvent,
     "character-kernel-snapshot": CharacterKernelSnapshot,
+    "channel-pairing-snapshot": ChannelPairingSnapshot,
+    "channel-pairing-start-request": ChannelPairingStartRequest,
     "channel-authorization-snapshot": ChannelAuthorizationSnapshot,
     "channel-authorization-start-request": ChannelAuthorizationStartRequest,
     "channel-authorization-verification-request": ChannelAuthorizationVerificationRequest,
@@ -189,6 +258,13 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "channel-delivery-snapshot": ChannelDeliverySnapshot,
     "channel-error-response": ChannelErrorResponse,
     "channel-gateway-status-snapshot": ChannelGatewayStatusSnapshot,
+    "channel-proactive-policy": ChannelProactivePolicy,
+    "channel-proactive-policy-update": ChannelProactivePolicyUpdate,
+    "channel-proactive-policy-snapshot": ChannelProactivePolicySnapshot,
+    "channel-proactive-preview": ChannelProactivePreview,
+    "channel-outbound-intent-snapshot": ChannelOutboundIntentSnapshot,
+    "channel-outbound-intent-page": ChannelOutboundIntentPage,
+    "channel-outbound-intent-cancel-request": ChannelOutboundIntentCancelRequest,
     "channel-inbound-text-message": ChannelInboundTextMessage,
     "channel-provider-registration": ChannelProviderRegistration,
     "channel-turn-cancel-receipt": ChannelTurnCancelReceipt,

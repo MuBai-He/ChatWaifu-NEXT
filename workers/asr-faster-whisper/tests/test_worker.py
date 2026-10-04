@@ -3,19 +3,25 @@
 
 import asyncio
 import base64
+import sys
 import threading
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
 from chatwaifu_model_worker import SttTranscriptionRequest, SttTranscriptionResult
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from chatwaifu_asr_worker.config import WorkerSettings
 from chatwaifu_asr_worker.main import create_app
 from chatwaifu_asr_worker.service import (
+    FasterWhisperEngine,
+    TranscriptionCapacityError,
     TranscriptionEngine,
     TranscriptionService,
     _prepare_whisper_audio,
@@ -70,6 +76,28 @@ def test_worker_requires_ephemeral_token(client: TestClient) -> None:
     }
 
 
+def test_capacity_rejection_is_authenticated_http_429(tmp_path: Path) -> None:
+    class BusyService(TranscriptionService):
+        async def transcribe(self, request: SttTranscriptionRequest) -> SttTranscriptionResult:
+            del request
+            raise TranscriptionCapacityError("private implementation detail")
+
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+    )
+    service = BusyService(settings, engine_factory=lambda _: FakeEngine())
+    with TestClient(create_app(settings, service)) as client:
+        body = _request().model_dump(mode="json")
+        assert client.post("/v1/transcribe", json=body).status_code == 401
+        response = client.post(
+            "/v1/transcribe", json=body, headers={"Authorization": "Bearer test-token"}
+        )
+        assert response.status_code == 429
+        assert response.json() == {"detail": "STT worker request capacity exceeded"}
+
+
 def test_offline_pack_resolves_the_materialized_model_directory(tmp_path: Path) -> None:
     model_dir = tmp_path / "model"
     model_dir.mkdir()
@@ -98,6 +126,100 @@ def test_offline_pack_rejects_an_incomplete_model_directory(tmp_path: Path) -> N
 
     with pytest.raises(RuntimeError, match=r"config.json, model.bin, tokenizer.json"):
         _resolve_model_source(settings)
+
+
+@pytest.mark.parametrize(
+    ("configured", "language"),
+    [(False, "zh"), (True, "zh"), (True, "en"), (True, "ja"), (True, None)],
+)
+def test_whisper_decode_configuration_is_local_and_chinese_prompt_is_language_scoped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, configured: bool, language: str | None
+) -> None:
+    constructor: dict[str, object] = {}
+    transcription: dict[str, object] = {}
+    consumed: list[str] = []
+
+    @dataclass
+    class Segment:
+        text: str
+
+    @dataclass
+    class Info:
+        language: str | None
+
+    class SpyModel:
+        def __init__(self, model_source: str, **options: object) -> None:
+            constructor.update(model_source=model_source, **options)
+
+        def transcribe(
+            self, audio: np.ndarray, **options: object
+        ) -> tuple[Iterator[Segment], Info]:
+            assert audio.shape == (160,)
+            transcription.update(options)
+
+            def segments() -> Iterator[Segment]:
+                consumed.append("first")
+                yield Segment("  你好, ")
+                consumed.append("second")
+                yield Segment("晚安。 ")
+
+            return segments(), Info(language)
+
+    module = ModuleType("faster_whisper")
+    monkeypatch.setattr(module, "WhisperModel", SpyModel, raising=False)
+    monkeypatch.setitem(sys.modules, "faster_whisper", module)
+    for name in ("config.json", "model.bin", "tokenizer.json"):
+        (tmp_path / name).write_bytes(b"offline fixture")
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        local_files_only=True,
+        device="cpu",
+        compute_type="int8",
+    )
+    if configured:
+        settings = WorkerSettings(
+            token="test-token",  # pyright: ignore[reportArgumentType]
+            model_dir=tmp_path,
+            local_files_only=True,
+            device="cpu",
+            compute_type="int8",
+            beam_size=5,
+            chinese_initial_prompt="以下是简体中文普通话对话。",
+        )
+    engine = FasterWhisperEngine(settings)
+
+    assert engine.transcribe(np.zeros(160, dtype=np.float32), language=language) == (
+        "你好, 晚安。",
+        language,
+    )
+    assert constructor == {
+        "model_source": str(tmp_path.resolve()),
+        "device": "cpu",
+        "compute_type": "int8",
+        "download_root": str(tmp_path),
+        "local_files_only": True,
+    }
+    assert transcription == {
+        "language": language,
+        "beam_size": 5 if configured else 1,
+        "initial_prompt": "以下是简体中文普通话对话。" if configured and language == "zh" else None,
+        "condition_on_previous_text": False,
+        "vad_filter": False,
+    }
+    assert consumed == ["first", "second"]
+
+
+@pytest.mark.parametrize("beam_size", [0, 11])
+def test_whisper_beam_size_is_bounded(beam_size: int) -> None:
+    with pytest.raises(ValidationError):
+        WorkerSettings(token="test-token", beam_size=beam_size)  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize("prompt", ["", "字" * 513])
+def test_whisper_chinese_prompt_is_bounded(prompt: str) -> None:
+    with pytest.raises(ValidationError):
+        WorkerSettings(token="test-token", chinese_initial_prompt=prompt)  # pyright: ignore[reportArgumentType]
 
 
 def test_whisper_audio_resampler_preserves_24khz_duration_and_pitch() -> None:
@@ -274,6 +396,44 @@ def _request(*, generation_id: UUID | None = None) -> SttTranscriptionRequest:
     )
 
 
+class BlockingFactory:
+    """Hold native initialization without loading an actual model."""
+
+    def __init__(self, *, warm_first: bool = False, fail_load: bool = False) -> None:
+        self.started = asyncio.Event()
+        self.release = threading.Event()
+        self.finished = asyncio.Event()
+        self.calls = 0
+        self.concurrent = 0
+        self.max_concurrent = 0
+        self._loop = asyncio.get_running_loop()
+        self._lock = threading.Lock()
+        self._warm_first = warm_first
+        self._fail_load = fail_load
+
+    def __call__(self, settings: WorkerSettings) -> TranscriptionEngine:
+        del settings
+        with self._lock:
+            self.calls += 1
+            call = self.calls
+            self.concurrent += 1
+            self.max_concurrent = max(self.max_concurrent, self.concurrent)
+        try:
+            if self._warm_first and call == 1:
+                return FakeEngine()
+            self._loop.call_soon_threadsafe(self.started.set)
+            if not self.release.wait(timeout=3):
+                raise RuntimeError("bounded fixture initialization was not released")
+            if self._fail_load:
+                self._fail_load = False
+                raise RuntimeError("fixture model initialization failed")
+            return FakeEngine()
+        finally:
+            with self._lock:
+                self.concurrent -= 1
+            self._loop.call_soon_threadsafe(self.finished.set)
+
+
 @pytest.mark.anyio
 async def test_cancelled_native_transcription_never_overlaps_next_generation(
     tmp_path: Path,
@@ -313,4 +473,362 @@ async def test_cancelled_native_transcription_never_overlaps_next_generation(
             *(task for task in (first_task, second_task) if task is not None),
             return_exceptions=True,
         )
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_cancelled_native_job_keeps_capacity_until_cpu_finishes(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+        max_active_jobs=1,
+    )
+    engine = BlockingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    await service.start()
+    first = _request()
+    task = asyncio.create_task(service.transcribe(first))
+    try:
+        assert await asyncio.to_thread(engine.first_started.wait, 1)
+        native = service._native_jobs[first.generation_id]
+        assert service.cancel(first.generation_id)
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        for _ in range(5):
+            with pytest.raises(TranscriptionCapacityError):
+                await service.transcribe(_request())
+        assert service.health().queue_depth == 1
+        assert engine.second_started.is_set() is False
+        engine.release_first.set()
+        await asyncio.wait_for(asyncio.shield(native), timeout=1)
+        result = await service.transcribe(_request())
+        assert result.text == "第二轮"
+        assert service.health().queue_depth == 0
+        assert engine.max_concurrent == 1
+    finally:
+        engine.release_first.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("after_unload", [False, True])
+async def test_cancelled_initialization_retains_capacity_and_loaded_engine(
+    tmp_path: Path,
+    after_unload: bool,
+) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=after_unload,
+        max_active_jobs=1,
+    )
+    factory = BlockingFactory(warm_first=after_unload)
+    service = TranscriptionService(settings, engine_factory=factory)
+    if after_unload:
+        await service.start()
+        assert await service.unload()
+    task = asyncio.create_task(service.transcribe(_request()))
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert service.health().queue_depth == 1
+        assert service.health().status == "busy"
+        assert not await service.unload()
+        load = service._load_future
+        assert load is not None and not load.done()
+        for _ in range(5):
+            with pytest.raises(TranscriptionCapacityError):
+                await service.transcribe(_request())
+        assert factory.calls == (2 if after_unload else 1)
+        assert factory.max_concurrent == 1
+        factory.release.set()
+        await asyncio.wait_for(asyncio.shield(load), timeout=1)
+        assert service.health().queue_depth == 0
+        assert service.health().model_loaded
+        result = await service.transcribe(_request())
+        assert result.text == "你好, 语音回合。"
+        assert factory.calls == (2 if after_unload else 1)
+    finally:
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_initialization_is_shared_by_all_logical_waiters(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+        max_active_jobs=4,
+    )
+    factory = BlockingFactory()
+    service = TranscriptionService(settings, engine_factory=factory)
+    tasks = [asyncio.create_task(service.transcribe(_request())) for _ in range(4)]
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        assert service.health().queue_depth == 4
+        for task in tasks[:3]:
+            task.cancel()
+        cancelled = await asyncio.gather(*tasks[:3], return_exceptions=True)
+        assert all(isinstance(value, asyncio.CancelledError) for value in cancelled)
+        assert service.health().queue_depth == 1
+        factory.release.set()
+        result = await asyncio.wait_for(tasks[3], timeout=1)
+        assert result.text == "你好, 语音回合。"
+        assert factory.calls == 1 and factory.max_concurrent == 1
+        assert service.health().queue_depth == 0
+    finally:
+        factory.release.set()
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_cancelled_preload_still_reserves_one_slot(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+        max_active_jobs=1,
+    )
+    factory = BlockingFactory()
+    service = TranscriptionService(settings, engine_factory=factory)
+    task = asyncio.create_task(service.start())
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert service.health().queue_depth == 1
+        with pytest.raises(TranscriptionCapacityError):
+            await service.transcribe(_request())
+        load = service._load_future
+        assert load is not None
+        factory.release.set()
+        await asyncio.wait_for(asyncio.shield(load), timeout=1)
+        result = await service.transcribe(_request())
+        assert result.text == "你好, 语音回合。"
+        assert factory.calls == 1
+    finally:
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("finish_in_grace", [False, True])
+async def test_close_waits_for_initialization_with_bounded_grace(
+    tmp_path: Path,
+    finish_in_grace: bool,
+) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+        max_active_jobs=1,
+        shutdown_timeout_seconds=1 if finish_in_grace else 0.02,
+    )
+    factory = BlockingFactory()
+    service = TranscriptionService(settings, engine_factory=factory)
+    task = asyncio.create_task(service.transcribe(_request()))
+    closing: asyncio.Task[None] | None = None
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        load = service._load_future
+        assert load is not None
+        closing = asyncio.create_task(service.close())
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        if finish_in_grace:
+            assert not closing.done()
+            factory.release.set()
+        await asyncio.wait_for(closing, timeout=0.5)
+        if not finish_in_grace:
+            assert not load.done()
+            assert service.health().queue_depth == 1
+        with pytest.raises(RuntimeError, match="closed"):
+            await service.transcribe(_request())
+        factory.release.set()
+        await asyncio.wait_for(asyncio.shield(load), timeout=1)
+        assert service.health().queue_depth == 0
+        assert not service.health().model_loaded
+        assert factory.calls == 1
+    finally:
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        if closing is not None:
+            await asyncio.gather(closing, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_close_keeps_native_inference_in_the_same_bounded_grace(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=True,
+        shutdown_timeout_seconds=0.02,
+    )
+    engine = BlockingEngine()
+    service = TranscriptionService(settings, engine_factory=lambda _: engine)
+    await service.start()
+    request = _request()
+    task = asyncio.create_task(service.transcribe(request))
+    try:
+        assert await asyncio.to_thread(engine.first_started.wait, 1)
+        native = service._native_jobs[request.generation_id]
+        await asyncio.wait_for(service.close(), timeout=0.5)
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert not native.done()
+        assert service.health().queue_depth == 1
+        engine.release_first.set()
+        await asyncio.wait_for(asyncio.shield(native), timeout=1)
+        assert service.health().queue_depth == 0
+        assert not service.health().model_loaded
+    finally:
+        engine.release_first.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("abandoned", [False, True])
+async def test_failed_initialization_is_observed_and_can_retry(
+    tmp_path: Path,
+    abandoned: bool,
+) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+        max_active_jobs=1,
+    )
+    factory = BlockingFactory(fail_load=True)
+    service = TranscriptionService(settings, engine_factory=factory)
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    unhandled: list[dict[str, object]] = []
+    loop.set_exception_handler(lambda _, context: unhandled.append(context))
+    task = asyncio.create_task(service.transcribe(_request()))
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        if abandoned:
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        load = service._load_future
+        assert load is not None
+        observed = asyncio.Event()
+        load.add_done_callback(lambda _: observed.set())
+        factory.release.set()
+        await asyncio.wait_for(observed.wait(), timeout=1)
+        if not abandoned:
+            with pytest.raises(RuntimeError, match="fixture model initialization failed"):
+                await task
+        assert service.health().queue_depth == 0
+        assert not service.health().model_loaded
+        assert service._load_future is None
+        del load
+        result = await service.transcribe(_request())
+        assert result.text == "你好, 语音回合。"
+        assert factory.calls == 2 and not unhandled
+    finally:
+        loop.set_exception_handler(previous_handler)
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_late_initialization_error_after_close_is_observed(tmp_path: Path) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+        shutdown_timeout_seconds=0.02,
+    )
+    factory = BlockingFactory(fail_load=True)
+    service = TranscriptionService(settings, engine_factory=factory)
+    loop = asyncio.get_running_loop()
+    previous_handler = loop.get_exception_handler()
+    unhandled: list[dict[str, object]] = []
+    loop.set_exception_handler(lambda _, context: unhandled.append(context))
+    task = asyncio.create_task(service.transcribe(_request()))
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        load = service._load_future
+        assert load is not None
+        observed = asyncio.Event()
+        load.add_done_callback(lambda _: observed.set())
+        await asyncio.wait_for(service.close(), timeout=0.5)
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert not load.done()
+        factory.release.set()
+        await asyncio.wait_for(observed.wait(), timeout=1)
+        assert service._load_future is None
+        assert service.health().queue_depth == 0
+        assert not service.health().model_loaded
+        del load
+        assert factory.calls == 1 and not unhandled
+    finally:
+        loop.set_exception_handler(previous_handler)
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await service.close()
+
+
+@pytest.mark.anyio
+async def test_cancelled_close_still_shuts_down_executor_and_observes_late_load(
+    tmp_path: Path,
+) -> None:
+    settings = WorkerSettings(
+        token="test-token",  # pyright: ignore[reportArgumentType]
+        model_dir=tmp_path,
+        preload=False,
+        shutdown_timeout_seconds=1,
+    )
+    factory = BlockingFactory()
+    service = TranscriptionService(settings, engine_factory=factory)
+    task = asyncio.create_task(service.transcribe(_request()))
+    closing: asyncio.Task[None] | None = None
+    try:
+        await asyncio.wait_for(factory.started.wait(), timeout=1)
+        load = service._load_future
+        assert load is not None
+        closing = asyncio.create_task(service.close())
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        closing.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await closing
+        with pytest.raises(RuntimeError, match="shutdown"):
+            service._executor.submit(lambda: None)
+        factory.release.set()
+        await asyncio.wait_for(asyncio.shield(load), timeout=1)
+        assert service.health().queue_depth == 0
+        assert not service.health().model_loaded
+    finally:
+        factory.release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        if closing is not None:
+            closing.cancel()
+            await asyncio.gather(closing, return_exceptions=True)
         await service.close()

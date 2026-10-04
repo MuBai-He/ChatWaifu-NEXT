@@ -9,10 +9,11 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
     ChannelChatType,
@@ -50,6 +51,7 @@ from chatwaifu_runtime.character_kernel.service import USER_SCOPE
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.conversation.models import (
     EXTERNAL_TEXT_TURN_OPTIONS,
+    ConversationQuotedMessage,
     ConversationSourceContext,
 )
 from chatwaifu_runtime.conversation.repository import ConversationRepository
@@ -62,13 +64,16 @@ from chatwaifu_runtime.external_channels.burst import (
     ImageBurstCoordinator,
     combine_burst_captions,
 )
+from chatwaifu_runtime.external_channels.group_models import qq_id
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
     ChannelDeliveryRecord,
+    ChannelInboundAudioInput,
     ChannelInboundImageInput,
+    ChannelTranscriptionIdentity,
     ChannelTurnRecord,
     CompleteTurnResult,
 )
@@ -86,9 +91,15 @@ from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, selection_hints
 from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
 
+if TYPE_CHECKING:
+    from chatwaifu_runtime.external_channels.groups import ChannelGroupService
+    from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
+
 logger = logging.getLogger(__name__)
 
 BURST_LOAD_TIMEOUT_SECONDS = 20.0
+AUDIO_PREPROCESS_TIMEOUT_SECONDS = 60.0
+MAX_AUDIO_PREPROCESSING_TASKS = 32
 
 WEIXIN_ILINK_PROVIDER = ChannelProviderRegistration(
     provider_id="weixin_ilink",
@@ -160,6 +171,7 @@ class CreatedChannelConnection:
 
 _PROVIDER_FAILURE_RECOVERY_TEXT = "唔，刚才的话好像没能顺利说出来……能再和我说一次吗？"
 _IMAGE_FAILURE_RECOVERY_TEXT = "刚才发来的图片我没看清，能再发一次吗？"
+_AUDIO_FAILURE_RECOVERY_TEXT = "刚才发来的语音我没听清，能再说一次或发文字吗？"
 
 
 def _normalize_and_sanitize_inbound_images(
@@ -186,7 +198,9 @@ def _normalize_and_sanitize_inbound_images(
 
 __all__ = [
     "WEIXIN_ILINK_PROVIDER",
+    "ChannelInboundAudioInput",
     "ChannelInboundImageInput",
+    "ChannelTranscriptionIdentity",
     "CreatedChannelConnection",
     "DeliveryPlanFactory",
     "ExternalChannelError",
@@ -221,6 +235,7 @@ class ExternalChannelService:
         sticker_library: StickerLibraryService | None = None,
         photo_observer: PhotoMemoryObserver | None = None,
         burst_scheduler: BurstScheduler | None = None,
+        tool_policy: Callable[[ChannelConnectionConfiguration, str], frozenset[str]] | None = None,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -230,6 +245,7 @@ class ExternalChannelService:
         self._event_hub = event_hub
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
+        self._tool_policy = tool_policy
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
         self._photo_observer = photo_observer
@@ -238,10 +254,16 @@ class ExternalChannelService:
         )
         self._ingress_lock = asyncio.Lock()
         self._turn_tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._audio_tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._audio_lifecycle_lock = asyncio.Lock()
+        self._audio_task_connections: dict[UUID, UUID] = {}
         self._turn_sync_locks: dict[UUID, asyncio.Lock] = {}
         self._turn_terminal_listeners: list[Callable[[ChannelTurnRecord], Awaitable[None]]] = []
         self._stopping = False
+        self._started = False
         self._on_wake_scheduler: Callable[[UUID], None] | None = None
+        self._proactive: ChannelProactiveService | None = None
+        self._groups: ChannelGroupService | None = None
         self._burst_coordinator = ImageBurstCoordinator(
             repository=repository,
             scheduler=burst_scheduler,
@@ -252,12 +274,48 @@ class ExternalChannelService:
         self.add_turn_terminal_listener(self._burst_coordinator.on_turn_terminal)
 
     @property
+    def active_preprocessing_count(self) -> int:
+        return len(self._audio_tasks)
+
+    @property
     def burst_coordinator(self) -> ImageBurstCoordinator:
         return self._burst_coordinator
 
     def set_scheduler_wake_callback(self, callback: Callable[[UUID], None]) -> None:
         self._on_wake_scheduler = callback
         self._burst_coordinator.set_scheduler_wake_callback(callback)
+
+    def set_proactive_service(self, service: ChannelProactiveService) -> None:
+        self._proactive = service
+
+    def set_group_service(self, service: ChannelGroupService) -> None:
+        self._groups = service
+
+    def wake_delivery_scheduler(self, connection_id: UUID) -> None:
+        if self._on_wake_scheduler is not None:
+            self._on_wake_scheduler(connection_id)
+
+    async def authorize_proactive_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.outbound_intent_id is None:
+            return True
+        return self._proactive is not None and await self._proactive.authorize_delivery(plan)
+
+    async def authorize_channel_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.group_target is not None:
+            return self._groups is not None and await self._groups.authorize_delivery(plan)
+        if plan.channel_turn_id is not None:
+            turn = await self._repository.get_turn(plan.channel_turn_id)
+            if turn is None or turn.chat_type is ChannelChatType.GROUP:
+                return False
+        return await self.authorize_proactive_delivery(plan)
+
+    async def proactive_delivery_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
+        if self._proactive is not None:
+            await self._proactive.on_plan_terminal(plan)
+
+    async def cancel_proactive_connection(self, connection_id: UUID, *, reason: str) -> None:
+        if self._proactive is not None:
+            await self._proactive.cancel_for_connection(connection_id, reason=reason)
 
     @property
     def repository(self) -> ExternalChannelRepository:
@@ -277,6 +335,7 @@ class ExternalChannelService:
 
     async def start(self) -> None:
         self._stopping = False
+        self._started = True
         for turn in await self._repository.list_inflight_turns():
             turn = await self._sync_turn(turn)
             if turn.status in {
@@ -294,6 +353,11 @@ class ExternalChannelService:
 
     async def stop(self) -> None:
         self._stopping = True
+        # Constructor-owned cleanup can run before the database is opened.
+        # Only a started gateway can own durable admissions to fence.
+        if self._started:
+            self._started = False
+            await self._cancel_connection_audio()
         await self._burst_coordinator.stop()
         tasks = list(self._turn_tasks.values())
         for task in tasks:
@@ -368,21 +432,64 @@ class ExternalChannelService:
             )
         self._validate_configuration(configuration)
         token = secrets.token_urlsafe(32) if rotate_access_token else None
+        records: list[ChannelTurnRecord] = []
+        tasks: list[asyncio.Task[None]] = []
+        revoke_audio = (
+            not configuration.enabled
+            or current.configuration.allowed_sender_keys != configuration.allowed_sender_keys
+        )
         try:
-            updated = await self._repository.update_connection(
-                configuration,
-                expected_revision=expected_revision,
-                access_token_hash=_token_hash(token) if token is not None else None,
-                updated_at=datetime.now(UTC),
-            )
+            async with self._audio_lifecycle_lock:
+                if revoke_audio:
+                    # Cancel registered preparation synchronously before the
+                    # first database await, so revocation cannot yield into LLM
+                    # startup. Registering new audio waits for this same lock.
+                    await self._fence_audio_locked(configuration.connection_id, records, tasks)
+                updated = await self._repository.update_connection(
+                    configuration,
+                    expected_revision=expected_revision,
+                    access_token_hash=_token_hash(token) if token is not None else None,
+                    updated_at=datetime.now(UTC),
+                )
+                if self._proactive is not None:
+                    self._proactive.fence_route_revision(
+                        configuration.connection_id, updated.revision
+                    )
+                if self._groups is not None:
+                    # A rejected revision CAS must not cancel valid group work.
+                    # Revoke synchronously after the successful repository write.
+                    self._groups.fence_connection(
+                        configuration.connection_id, reason="configuration_changed"
+                    )
         except KeyError as error:
             raise ChannelNotFoundError(str(error)) from error
         except ValueError as error:
             raise ChannelConflictError(str(error)) from error
+        finally:
+            await self._finish_audio_cancellation(records, tasks)
+        if self._proactive is not None:
+            await self._proactive.connection_updated(
+                configuration.connection_id, revision=updated.revision
+            )
+        if self._groups is not None:
+            await self._groups.pause_connection(
+                configuration.connection_id,
+                reason=ChannelGroupPauseReason.CONFIGURATION_CHANGED
+                if configuration.enabled
+                else ChannelGroupPauseReason.CONNECTION_DISABLED,
+            )
         snapshot = self._connection_snapshot(updated)
         return CreatedChannelConnection(snapshot, token) if token is not None else snapshot
 
     async def delete_connection(self, connection_id: UUID) -> None:
+        await self._required_connection(connection_id)
+        if self._groups is not None:
+            self._groups.fence_connection(connection_id, reason="connection_deleted")
+            await self._groups.pause_connection(
+                connection_id, reason=ChannelGroupPauseReason.CONNECTION_DELETED
+            )
+        await self.cancel_proactive_connection(connection_id, reason="connection_deleted")
+        await self._cancel_connection_audio(connection_id)
         try:
             removed = await self._repository.soft_delete_connection(
                 connection_id, deleted_at=datetime.now(UTC)
@@ -432,20 +539,33 @@ class ExternalChannelService:
         access_token: str,
         supersede_inflight: bool = False,
         image_input: ChannelInboundImageInput | None = None,
+        audio_input: ChannelInboundAudioInput | None = None,
+        image_retention_allowed: bool = True,
         burst_intake: bool = False,
         raw_images: tuple[object, ...] = (),
         context_token: str | None = None,
         pending_contexts_count: int = 0,
     ) -> ChannelTurnReceipt:
+        if audio_input is not None and (image_input is not None or burst_intake or raw_images):
+            raise ChannelPolicyError("Audio ingress cannot be combined with image ingress")
+        if burst_intake and not image_retention_allowed:
+            raise ChannelPolicyError("Ephemeral ingress does not support image burst collection")
         connection, binding, turn, duplicate = await self._admit_ingress(
             message,
             access_token=access_token,
             supersede_inflight=supersede_inflight,
             image_fingerprint=image_input.source_fingerprint if image_input is not None else None,
             burst_intake=burst_intake,
+            audio_fingerprint=audio_input.source_fingerprint if audio_input is not None else None,
         )
         if duplicate:
             return self._turn_receipt(turn, duplicate=True)
+
+        if audio_input is not None:
+            turn = await self._register_audio(
+                message, connection, binding, turn, audio_input, access_token
+            )
+            return self._turn_receipt(turn, duplicate=False)
 
         if burst_intake and image_input is not None:
             receipt = await self._burst_coordinator.admit_image(
@@ -466,6 +586,27 @@ class ExternalChannelService:
             )
             return receipt
 
+        return await self._submit_admitted(
+            message,
+            connection,
+            binding,
+            turn,
+            access_token=access_token,
+            image_input=image_input,
+            image_retention_allowed=image_retention_allowed,
+        )
+
+    async def _submit_admitted(
+        self,
+        message: ChannelInboundTextMessage,
+        connection: ChannelConnectionRecord,
+        binding: ChannelBindingRecord,
+        turn: ChannelTurnRecord,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput | None = None,
+        image_retention_allowed: bool = True,
+    ) -> ChannelTurnReceipt:
         source_context = ConversationSourceContext(
             provider_id=connection.configuration.provider_id,
             connection_id=connection.configuration.connection_id,
@@ -477,6 +618,7 @@ class ExternalChannelService:
             received_at=message.received_at,
             conversation_label=message.conversation_label,
             sender_display_name=message.sender_display_name,
+            reply_to_external_message_id=message.reply_to_external_message_id,
         )
         policy = connection.configuration.presentation_policy
         profile = (
@@ -494,6 +636,7 @@ class ExternalChannelService:
         photos = self._photo_observer
         if (
             image_loader is not None
+            and image_retention_allowed
             and (library is not None or photos is not None)
             and connection.configuration.character_id == "default"
             and message.chat_type is ChannelChatType.DIRECT
@@ -555,12 +698,25 @@ class ExternalChannelService:
                 return _normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
+        allowed_skills: frozenset[str] = (
+            self._tool_policy(connection.configuration, message.text)
+            if self._tool_policy is not None
+            else frozenset()
+        )
         options = replace(
             EXTERNAL_TEXT_TURN_OPTIONS,
+            allow_tools=bool(allowed_skills),
+            allowed_skill_ids=allowed_skills,
+            contextual_skill_ids=allowed_skills,
             source_context=source_context,
             presentation_profile=profile,
             failure_recovery_text=recovery_text,
             image_loader=image_loader,
+            quoted_message_loader=(
+                self._quoted_message_loader(message, binding)
+                if message.reply_to_external_message_id is not None
+                else None
+            ),
         )
         generation_admitted = False
         try:
@@ -574,13 +730,39 @@ class ExternalChannelService:
             if accepted.turn_id != turn.turn_id or accepted.generation_id != turn.generation_id:
                 raise RuntimeError("conversation did not preserve preallocated channel identity")
             generation_admitted = True
+            if (
+                turn.input_kind is ChannelMessageKind.AUDIO
+                and not await self._audio_context_is_active(
+                    message,
+                    binding,
+                    turn,
+                    expected_character_id=connection.configuration.character_id,
+                )
+            ):
+                await self._conversation.cancel(
+                    binding.session_id,
+                    "channel_ingress_cancelled",
+                    expected_generation_id=turn.generation_id,
+                )
+                raise asyncio.CancelledError
             turn = await self._repository.set_turn_processing(
                 turn.channel_turn_id, updated_at=datetime.now(UTC)
             )
+            if turn.status is not ChannelTurnStatus.PROCESSING:
+                await self._conversation.cancel(
+                    binding.session_id,
+                    "channel_ingress_cancelled",
+                    expected_generation_id=turn.generation_id,
+                )
+                raise asyncio.CancelledError
             self._ensure_turn_task(turn, access_token=access_token)
         except asyncio.CancelledError:
             if generation_admitted:
-                await self._conversation.cancel(binding.session_id, "channel_ingress_cancelled")
+                await self._conversation.cancel(
+                    binding.session_id,
+                    "channel_ingress_cancelled",
+                    expected_generation_id=turn.generation_id,
+                )
             await self._set_turn_terminal(
                 turn.channel_turn_id,
                 status=ChannelTurnStatus.CANCELLED,
@@ -593,7 +775,11 @@ class ExternalChannelService:
             raise
         except Exception as error:
             if generation_admitted:
-                await self._conversation.cancel(binding.session_id, "channel_admission_failed")
+                await self._conversation.cancel(
+                    binding.session_id,
+                    "channel_admission_failed",
+                    expected_generation_id=turn.generation_id,
+                )
             await self._set_turn_terminal(
                 turn.channel_turn_id,
                 status=ChannelTurnStatus.FAILED,
@@ -610,6 +796,291 @@ class ExternalChannelService:
             seen_at=datetime.now(UTC),
         )
         return self._turn_receipt(turn, duplicate=False)
+
+    def _audio_is_current(self, turn: ChannelTurnRecord) -> bool:
+        task = asyncio.current_task()
+        return (
+            not self._stopping
+            and task is not None
+            and not task.cancelling()
+            and self._audio_tasks.get(turn.channel_turn_id) is task
+        )
+
+    async def _audio_context_is_active(
+        self,
+        message: ChannelInboundTextMessage,
+        binding: ChannelBindingRecord,
+        turn: ChannelTurnRecord,
+        *,
+        expected_character_id: str,
+        require_current_task: bool = True,
+    ) -> bool:
+        current = await self._repository.get_turn(turn.channel_turn_id)
+        connection = await self._repository.get_connection(turn.connection_id)
+        current_binding = await self._repository.find_binding(
+            turn.connection_id, turn.conversation_key
+        )
+        if (
+            self._stopping
+            or (require_current_task and not self._audio_is_current(turn))
+            or current is None
+            or current.status is not ChannelTurnStatus.ACCEPTED
+            or connection is None
+            or connection.deleted_at is not None
+            or connection.configuration.character_id != expected_character_id
+            or current_binding is None
+            or current_binding.binding_id != binding.binding_id
+            or current_binding.session_id != binding.session_id
+            or current_binding.sender_key != binding.sender_key
+        ):
+            return False
+        try:
+            self._validate_ingress(connection, message, has_audio=True)
+        except ChannelPolicyError:
+            return False
+        return True
+
+    async def _register_audio(
+        self,
+        message: ChannelInboundTextMessage,
+        connection: ChannelConnectionRecord,
+        binding: ChannelBindingRecord,
+        turn: ChannelTurnRecord,
+        audio: ChannelInboundAudioInput,
+        access_token: str,
+    ) -> ChannelTurnRecord:
+        cancelled: ChannelTurnRecord | None = None
+        # A lifecycle operation can fence the committed row while admission is
+        # still returning. Re-read it and register atomically with lifecycle
+        # cancellation; never hold this lock while joining a task or doing IO.
+        async with self._audio_lifecycle_lock:
+            active = await self._audio_context_is_active(
+                message,
+                binding,
+                turn,
+                expected_character_id=connection.configuration.character_id,
+                require_current_task=False,
+            )
+            if active:
+                self._audio_task_connections[turn.channel_turn_id] = turn.connection_id
+                self._audio_tasks[turn.channel_turn_id] = asyncio.create_task(
+                    self._preprocess_audio(message, connection, binding, turn, audio, access_token),
+                    name=f"channel-audio-{turn.channel_turn_id}",
+                )
+                return turn
+            fresh = await self._repository.get_turn(turn.channel_turn_id)
+            if fresh is not None and fresh.status is ChannelTurnStatus.ACCEPTED:
+                cancelled = await self._repository.set_turn_terminal(
+                    turn.channel_turn_id,
+                    status=ChannelTurnStatus.CANCELLED,
+                    error=_error("channel_ingress_cancelled", "Audio ingress was cancelled."),
+                    completed_at=datetime.now(UTC),
+                )
+            else:
+                turn = fresh if fresh is not None else turn
+        if cancelled is not None:
+            await self._notify_turn_terminal(cancelled)
+            return cancelled
+        return turn
+
+    async def _preprocess_audio(
+        self,
+        message: ChannelInboundTextMessage,
+        connection: ChannelConnectionRecord,
+        binding: ChannelBindingRecord,
+        turn: ChannelTurnRecord,
+        audio: ChannelInboundAudioInput,
+        access_token: str,
+    ) -> None:
+        try:
+            # Keep the complete preprocessing phase bounded, including an adapter
+            # that catches the deadline cancellation and returns a late result.
+            async with asyncio.timeout(AUDIO_PREPROCESS_TIMEOUT_SECONDS) as deadline:
+                async with self._audio_lifecycle_lock:
+                    active = await self._audio_context_is_active(
+                        message,
+                        binding,
+                        turn,
+                        expected_character_id=connection.configuration.character_id,
+                    )
+                if not active:
+                    if self._audio_is_current(turn):
+                        await self._set_turn_terminal(
+                            turn.channel_turn_id,
+                            status=ChannelTurnStatus.CANCELLED,
+                            error=_error(
+                                "channel_ingress_cancelled", "Audio ingress was cancelled."
+                            ),
+                            completed_at=datetime.now(UTC),
+                        )
+                    raise asyncio.CancelledError
+                transcript = await audio.load(
+                    ChannelTranscriptionIdentity(
+                        session_id=turn.session_id,
+                        turn_id=turn.turn_id,
+                        generation_id=turn.generation_id,
+                    )
+                )
+                if deadline.expired():
+                    raise TimeoutError
+                if not self._audio_is_current(turn):
+                    raise asyncio.CancelledError
+                if not isinstance(cast(object, transcript), str):
+                    raise ValueError("invalid transcript")
+                transcript = transcript.strip()
+                if not transcript or len(transcript) > 20000:
+                    raise ValueError("invalid transcript")
+                async with self._ingress_lock:
+                    active = await self._audio_context_is_active(
+                        message,
+                        binding,
+                        turn,
+                        expected_character_id=connection.configuration.character_id,
+                    )
+                if not active:
+                    if self._audio_is_current(turn):
+                        await self._set_turn_terminal(
+                            turn.channel_turn_id,
+                            status=ChannelTurnStatus.CANCELLED,
+                            error=_error(
+                                "channel_ingress_cancelled", "Audio ingress was cancelled."
+                            ),
+                            completed_at=datetime.now(UTC),
+                        )
+                    raise asyncio.CancelledError
+            # Never hold admission's lock across asynchronous Conversation
+            # preparation. Supersession cancels and joins this same task.
+            if not self._audio_is_current(turn):
+                raise asyncio.CancelledError
+            await self._submit_admitted(
+                message.model_copy(update={"text": transcript}),
+                connection,
+                binding,
+                turn,
+                access_token=access_token,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            if self._audio_is_current(turn):
+                async with self._ingress_lock:
+                    active = await self._audio_context_is_active(
+                        message,
+                        binding,
+                        turn,
+                        expected_character_id=connection.configuration.character_id,
+                    )
+                if self._audio_is_current(turn):
+                    if active:
+                        await self._fail_audio_turn(turn)
+                    else:
+                        await self._set_turn_terminal(
+                            turn.channel_turn_id,
+                            status=ChannelTurnStatus.CANCELLED,
+                            error=_error(
+                                "channel_ingress_cancelled", "Audio ingress was cancelled."
+                            ),
+                            completed_at=datetime.now(UTC),
+                        )
+        finally:
+            if self._audio_tasks.get(turn.channel_turn_id) is asyncio.current_task():
+                self._audio_tasks.pop(turn.channel_turn_id, None)
+                self._audio_task_connections.pop(turn.channel_turn_id, None)
+
+    async def _fail_audio_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
+        result = await self._repository.fail_turn_with_notice(
+            turn.channel_turn_id,
+            error=_error("audio_transcription_failed", "Inbound audio could not be transcribed."),
+            notice_text=_AUDIO_FAILURE_RECOVERY_TEXT,
+            delivery_id=uuid4(),
+            completed_at=datetime.now(UTC),
+        )
+        for event in result.persisted_events:
+            await self._publisher.publish_persisted(event)
+        if result.turn.status is ChannelTurnStatus.FAILED:
+            if self._on_wake_scheduler is not None:
+                self._on_wake_scheduler(turn.connection_id)
+            await self._notify_turn_terminal(result.turn)
+        return result.turn
+
+    async def _cancel_audio_task(self, channel_turn_id: UUID) -> None:
+        task = self._audio_tasks.pop(channel_turn_id, None)
+        self._audio_task_connections.pop(channel_turn_id, None)
+        if task is not None and task is not asyncio.current_task():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    async def _fence_audio_locked(
+        self,
+        connection_id: UUID | None,
+        records: list[ChannelTurnRecord],
+        tasks: list[asyncio.Task[None]],
+    ) -> None:
+        # This first pass contains no await. In particular, permission revocation
+        # must cancel Conversation preparation before database scheduling yields.
+        for channel_turn_id, task in tuple(self._audio_tasks.items()):
+            if (
+                connection_id is not None
+                and self._audio_task_connections.get(channel_turn_id) != connection_id
+            ):
+                continue
+            self._audio_tasks.pop(channel_turn_id, None)
+            self._audio_task_connections.pop(channel_turn_id, None)
+            if task is not asyncio.current_task():
+                task.cancel()
+                tasks.append(task)
+        for turn in await self._repository.list_inflight_turns(connection_id):
+            if turn.input_kind is not ChannelMessageKind.AUDIO:
+                continue
+            # Include durable admissions that have not registered a task.
+            record = await self._repository.set_turn_terminal(
+                turn.channel_turn_id,
+                status=ChannelTurnStatus.CANCELLED,
+                error=_error("channel_ingress_cancelled", "Audio ingress was cancelled."),
+                completed_at=datetime.now(UTC),
+            )
+            records.append(record)
+
+    async def _finish_audio_cancellation(
+        self,
+        records: list[ChannelTurnRecord],
+        tasks: list[asyncio.Task[None]],
+    ) -> None:
+        # Joining and callbacks run outside the lifecycle lock: cancellation can
+        # itself finish a terminal callback or try to check the final fence.
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        for turn in records:
+            await self._conversation.cancel(
+                turn.session_id,
+                "channel_ingress_cancelled",
+                expected_generation_id=turn.generation_id,
+            )
+            await self._notify_turn_terminal(turn)
+
+    async def _cancel_connection_audio(self, connection_id: UUID | None = None) -> None:
+        records: list[ChannelTurnRecord] = []
+        tasks: list[asyncio.Task[None]] = []
+        try:
+            async with self._audio_lifecycle_lock:
+                await self._fence_audio_locked(connection_id, records, tasks)
+        finally:
+            await self._finish_audio_cancellation(records, tasks)
+
+    def _quoted_message_loader(
+        self, message: ChannelInboundTextMessage, binding: ChannelBindingRecord
+    ) -> Callable[[], Awaitable[ConversationQuotedMessage | None]]:
+        async def load() -> ConversationQuotedMessage | None:
+            reference = message.reply_to_external_message_id
+            if reference is None or reference == message.external_message_id:
+                return None
+            # This port reads only admitted or confirmed messages from this exact route.
+            # It deliberately cannot fetch arbitrary provider history or other peers.
+            return await self._repository.resolve_quoted_message(
+                message.connection_id, binding.binding_id, reference
+            )
+
+        return load
 
     async def _dispatch_burst(self, batch: BurstBatch) -> None:
         connection = await self._repository.get_connection(batch.connection_id)
@@ -838,6 +1309,7 @@ class ExternalChannelService:
             error=error,
             completed_at=completed_at,
         )
+        await self._cancel_audio_task(channel_turn_id)
         await self._notify_turn_terminal(record)
         members = await self._repository.list_burst_members(channel_turn_id)
         for member in members:
@@ -855,6 +1327,7 @@ class ExternalChannelService:
         supersede_inflight: bool = False,
         image_fingerprint: str | None = None,
         burst_intake: bool = False,
+        audio_fingerprint: str | None = None,
     ) -> tuple[ChannelConnectionRecord, ChannelBindingRecord, ChannelTurnRecord, bool]:
         """Persist a unique channel turn without serializing model preparation.
 
@@ -866,10 +1339,21 @@ class ExternalChannelService:
 
         async with self._ingress_lock:
             connection = await self._authenticate(message.connection_id, access_token)
-            self._validate_ingress(connection, message, has_image=image_fingerprint is not None)
-            digest = _message_digest(message, image_fingerprint=image_fingerprint)
+            self._validate_ingress(
+                connection,
+                message,
+                has_image=image_fingerprint is not None,
+                has_audio=audio_fingerprint is not None,
+            )
+            if self._stopping:
+                raise ChannelBusyError("channel ingress is stopping")
+            digest = _message_digest(
+                message, image_fingerprint=image_fingerprint, audio_fingerprint=audio_fingerprint
+            )
             duplicate = await self._repository.find_turn_by_external_message(
-                message.connection_id, message.external_message_id
+                message.connection_id,
+                message.external_message_id,
+                conversation_key=message.conversation_key,
             )
             if duplicate is not None:
                 if duplicate.content_sha256 != digest:
@@ -885,6 +1369,11 @@ class ExternalChannelService:
                     )
                 return connection, binding, duplicate, True
 
+            if (
+                audio_fingerprint is not None
+                and len(self._audio_tasks) >= MAX_AUDIO_PREPROCESSING_TASKS
+            ):
+                raise ChannelBusyError("audio preprocessing capacity is exhausted")
             binding = await self._repository.find_binding(
                 message.connection_id, message.conversation_key
             )
@@ -902,6 +1391,10 @@ class ExternalChannelService:
                 raise ChannelPolicyError(
                     "conversation_key is already bound to a different sender identity"
                 )
+
+            if self._proactive is not None:
+                self._proactive.fence_binding(binding.binding_id, "owner_input")
+                await self._proactive.cancel_for_binding(binding.binding_id, reason="owner_input")
 
             if supersede_inflight:
                 await self._burst_coordinator.cancel_pending_burst(
@@ -1019,6 +1512,13 @@ class ExternalChannelService:
                 created_at=now,
                 updated_at=now,
                 completed_at=None,
+                input_kind=(
+                    ChannelMessageKind.AUDIO
+                    if audio_fingerprint is not None
+                    else ChannelMessageKind.IMAGE
+                    if image_fingerprint is not None
+                    else ChannelMessageKind.TEXT
+                ),
             )
             turn = await self._repository.create_turn(turn)
             return connection, binding, turn, False
@@ -1147,6 +1647,7 @@ class ExternalChannelService:
                 revision=turn.revision,
                 acknowledged_at=datetime.now(UTC),
             )
+        await self._cancel_audio_task(turn.channel_turn_id)
         task = self._turn_tasks.pop(turn.channel_turn_id, None)
         if task is not None and task is not asyncio.current_task():
             task.cancel()
@@ -1320,6 +1821,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.claim_next_delivery_part(
@@ -1351,6 +1854,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.acknowledge_delivery_part(
@@ -1389,6 +1894,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.cancel_remaining_delivery_parts(
@@ -1646,6 +2153,21 @@ class ExternalChannelService:
             )
 
     async def _sync_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
+        if turn.chat_type is ChannelChatType.GROUP:
+            if turn.status not in {
+                ChannelTurnStatus.ACCEPTED,
+                ChannelTurnStatus.PROCESSING,
+                ChannelTurnStatus.CANCELLING,
+            }:
+                return turn
+            if self._groups is None or turn.group_lineage_version != 1:
+                return await self._set_turn_terminal(
+                    turn.channel_turn_id,
+                    status=ChannelTurnStatus.FAILED,
+                    error=_error("group_runtime_unavailable", "The group runtime is unavailable."),
+                    completed_at=datetime.now(UTC),
+                )
+            return await self._groups.sync_turn(turn)
         lock = self._turn_sync_locks.setdefault(turn.channel_turn_id, asyncio.Lock())
         async with lock:
             fresh_turn = await self._repository.get_turn(turn.channel_turn_id)
@@ -1668,6 +2190,12 @@ class ExternalChannelService:
                     error=_error("generation_cancelled", "The channel turn was cancelled."),
                     completed_at=datetime.now(UTC),
                 )
+            if (
+                turn.status is ChannelTurnStatus.ACCEPTED
+                and turn.input_kind is ChannelMessageKind.AUDIO
+                and turn.channel_turn_id in self._audio_tasks
+            ):
+                return turn
             member_rec = await self._repository.find_burst_leader(turn.channel_turn_id)
             if member_rec is not None and member_rec.leader_channel_turn_id != turn.channel_turn_id:
                 leader_turn = await self._repository.get_turn(member_rec.leader_channel_turn_id)
@@ -1678,6 +2206,10 @@ class ExternalChannelService:
             generation = await self._conversation_repository.generation_result(turn.generation_id)
             now = datetime.now(UTC)
             if generation is None:
+                if turn.input_kind is ChannelMessageKind.AUDIO:
+                    if turn.channel_turn_id in self._audio_tasks:
+                        return turn
+                    return await self._fail_audio_turn(turn)
                 if self._burst_coordinator.is_live_burst_turn(turn.channel_turn_id):
                     return turn
                 members = await self._repository.list_burst_members(turn.channel_turn_id)
@@ -1943,6 +2475,26 @@ class ExternalChannelService:
             raise ChannelAuthenticationError("invalid channel connection access token")
         return connection
 
+    async def authenticate_group_transport(
+        self, connection_id: UUID, access_token: str
+    ) -> ChannelConnectionRecord:
+        """Authenticate the QQ transport; only the group domain grants speakers."""
+        connection = await self._authenticate(connection_id, access_token)
+        configuration = connection.configuration
+        if (
+            configuration.provider_id != "qq_napcat"
+            or not configuration.enabled
+            or connection.deleted_at is not None
+            or connection.status is not ChannelConnectionStatus.READY
+            or configuration.account_key is None
+        ):
+            raise ChannelPolicyError("group transport must be enabled and ready")
+        try:
+            qq_id(configuration.account_key)
+        except ValueError as error:
+            raise ChannelPolicyError("group transport requires a canonical QQ account") from error
+        return connection
+
     async def _required_connection(self, connection_id: UUID) -> ChannelConnectionRecord:
         connection = await self._repository.get_connection(connection_id)
         if connection is None:
@@ -1979,11 +2531,14 @@ class ExternalChannelService:
         message: ChannelInboundTextMessage,
         *,
         has_image: bool = False,
+        has_audio: bool = False,
     ) -> None:
         configuration = connection.configuration
         provider = self._providers[configuration.provider_id]
         if not configuration.enabled:
             raise ChannelPolicyError("channel connection is disabled")
+        if message.chat_type is not ChannelChatType.DIRECT:
+            raise ChannelPolicyError("group messages require a registered group route")
         if message.chat_type not in provider.capabilities.chat_types:
             raise ChannelPolicyError(
                 f"provider does not allow {message.chat_type.value} conversations"
@@ -1995,6 +2550,11 @@ class ExternalChannelService:
             and ChannelMessageKind.IMAGE not in provider.capabilities.inbound_message_kinds
         ):
             raise ChannelPolicyError("provider does not allow image messages")
+        if (
+            has_audio
+            and ChannelMessageKind.AUDIO not in provider.capabilities.inbound_message_kinds
+        ):
+            raise ChannelPolicyError("provider does not allow audio messages")
         if message.principal_scope != configuration.principal_scope:
             raise ChannelPolicyError("message principal_scope does not match connection policy")
         if (
@@ -2126,9 +2686,12 @@ def _delivery_part_snapshot(record: ChannelDeliveryPartRecord) -> ChannelDeliver
 
 def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliveryPlanSnapshot:
     return ChannelDeliveryPlanSnapshot(
+        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        outbound_intent_id=record.outbound_intent_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,
+        group_target=record.group_target,
         status=record.status,
         plan_version=record.plan_version,
         part_count=record.part_count,
@@ -2144,6 +2707,8 @@ def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliver
 
 def _delivery_snapshot(record: ChannelDeliveryRecord) -> ChannelDeliverySnapshot:
     return ChannelDeliverySnapshot(
+        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        outbound_intent_id=record.outbound_intent_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,
@@ -2170,6 +2735,7 @@ def _token_hash(token: str) -> str:
 def _message_digest(
     message: ChannelInboundTextMessage,
     image_fingerprint: str | None = None,
+    audio_fingerprint: str | None = None,
 ) -> str:
     parts = [
         message.account_key or "",
@@ -2184,6 +2750,8 @@ def _message_digest(
     ]
     if image_fingerprint is not None:
         parts.append(f"image:{image_fingerprint}")
+    if audio_fingerprint is not None:
+        parts.append(f"audio:{audio_fingerprint}")
     return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()
 
 

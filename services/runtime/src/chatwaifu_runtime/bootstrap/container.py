@@ -25,14 +25,25 @@ from chatwaifu_runtime.config.settings import OpenAIRealtimeConfig, Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import NapCatManagement
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.registration import (
+    NAPCAT_PROVIDER,
+    channel_tool_policy,
+)
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkClient
 from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
 from chatwaifu_runtime.external_channels.encrypted_credentials import (
     EncryptedFileChannelCredentialStore,
 )
+from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
-from chatwaifu_runtime.external_channels.service import ExternalChannelService
+from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
+from chatwaifu_runtime.external_channels.service import (
+    WEIXIN_ILINK_PROVIDER,
+    ExternalChannelService,
+)
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+from chatwaifu_runtime.external_channels.voice import ChannelVoiceSkill
 from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
@@ -40,6 +51,8 @@ from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
+from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
+from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
@@ -172,6 +185,12 @@ class RuntimeContainer:
         self.external_channel_repository = SQLiteExternalChannelRepository(
             self.database, self.event_store
         )
+        self.channel_proactive_repository = SQLiteChannelProactiveRepository(
+            self.database, self.event_store, deliveries=self.external_channel_repository
+        )
+        self.channel_group_repository = SQLiteChannelGroupRepository(
+            self.database, self.event_store
+        )
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
         )
@@ -184,6 +203,20 @@ class RuntimeContainer:
                 ).resolve(),
             )
         )
+        self.channel_voice = ChannelVoiceSkill(
+            self.external_channel_repository,
+            self.conversation_repository,
+            self.characters,
+            self.providers.tts,
+            self.event_publisher,
+            settings.data_dir / "channel-audio",
+            self._channel_active_generation,
+            lambda provider_id: any(
+                item.provider_id == provider_id
+                and "audio" in item.capabilities.outbound_message_kinds
+                for item in self.external_channels.providers()
+            ),
+        )
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
             settings.data_dir,
@@ -195,6 +228,7 @@ class RuntimeContainer:
             sandbox_launcher=sandbox_launcher,
             mcp_private_origins=settings.security.mcp_private_origins,
             public_web_config=settings.public_web,
+            authorized_generation_handlers={"channel_voice": self.channel_voice},
             session_builtin_handlers={
                 "calendar_read": CalendarReadSkill(self.personal_assistant),
                 "agenda_manage": AgendaManageSkill(self.personal_assistant),
@@ -287,27 +321,65 @@ class RuntimeContainer:
             self.characters,
             self.event_hub,
             self.event_publisher,
+            providers=(WEIXIN_ILINK_PROVIDER, NAPCAT_PROVIDER),
+            tool_policy=channel_tool_policy,
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
             photo_observer=self.photo_observer,
         )
+        self.channel_proactive = ChannelProactiveService(
+            self.channel_proactive_repository,
+            self.conversation,
+            self.conversation_repository,
+            self.external_channels,
+            self.event_publisher,
+        )
+        self.external_channels.set_proactive_service(self.channel_proactive)
+        self.channel_groups = ChannelGroupService(
+            self.channel_group_repository,
+            self.external_channel_repository,
+            self.conversation,
+            self.sessions,
+            self.event_publisher,
+            conversation_repository=self.conversation_repository,
+        )
+        self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
+        self.external_channels.set_group_service(self.channel_groups)
+        self.conversation.set_before_scope_reset_hook(self.channel_groups.before_scope_reset)
+        self.channel_credentials = (
+            EncryptedFileChannelCredentialStore(
+                settings.data_dir / "channel-vault",
+                settings.config_dir / "channel-vault-key",
+            )
+            if settings.channel_credential_backend == "encrypted_file"
+            else KeyringChannelCredentialStore()
+        )
         self.channel_management = ChannelManagementService(
             self.external_channels,
             self.external_channel_repository,
-            (
-                EncryptedFileChannelCredentialStore(
-                    settings.data_dir / "channel-vault",
-                    settings.config_dir / "channel-vault-key",
-                )
-                if settings.channel_credential_backend == "encrypted_file"
-                else KeyringChannelCredentialStore()
-            ),
+            self.channel_credentials,
             WeixinILinkClient(),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
             photo_observer=self.photo_observer,
             event_hub=self.event_hub,
             event_publisher=self.event_publisher,
+        )
+        self.qq_channels = NapCatManagement(
+            self.external_channels,
+            self.external_channel_repository,
+            self.channel_credentials,
+            self.characters,
+            self.event_publisher,
+            self.event_hub,
+            self.channel_voice.audio_root,
+            self.channel_voice.on_plan_terminal,
+            sticker_catalog=self.sticker_catalog,
+            sticker_library=self.sticker_library,
+            stt_backend=self.stt,
+            proactive_authorization=self.external_channels.authorize_proactive_delivery,
+            proactive_on_terminal=self.external_channels.proactive_delivery_terminal,
+            groups=self.channel_groups,
         )
         self.resources = ResourceLifecycleService(
             self.companion_settings,
@@ -316,7 +388,12 @@ class RuntimeContainer:
             self.stt,
         )
         self.resources.set_busy_probe(
-            lambda: self.conversation.active_count > 0 or self.providers.tts.active_jobs > 0
+            lambda: (
+                self.conversation.active_count > 0
+                or self.providers.tts.active_jobs > 0
+                or self.external_channels.active_preprocessing_count > 0
+                or self.channel_groups.active_count > 0
+            )
         )
         self.ambient = AmbientCompanionService(
             self.database,
@@ -327,6 +404,7 @@ class RuntimeContainer:
             self.event_publisher,
             self.resources.status,
             on_trigger=self.resources.touch,
+            session_allowed=self._desktop_proactive_session_allowed,
         )
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
         self.cloud_realtime_backend: CloudRealtimeBackend | None = None
@@ -427,8 +505,12 @@ class RuntimeContainer:
                 self.photo_annotations.start()
                 self.photo_observer.start()
                 await self.spoken_memory_observer.start()
+                await self.channel_groups.start()
                 await self.external_channels.start()
+                await self.channel_voice.cleanup()
                 await self.channel_management.start()
+                await self.qq_channels.start()
+                await self.channel_proactive.start()
                 await self.resources.start()
                 await self.ambient.start()
             except BaseException as error:
@@ -442,6 +524,21 @@ class RuntimeContainer:
                 raise
 
             self._state = "started"
+
+    async def _desktop_proactive_session_allowed(self, session_id: UUID) -> bool:
+        session = await self.sessions.get_session(session_id)
+        if (
+            session is not None
+            and session.scene_id is not None
+            and await self.channel_group_repository.is_group_scene(session.scene_id)
+        ):
+            # A route owns its scene before the first sender binding exists.
+            # Historical and paused scenes retain this exclusion after resets.
+            return False
+        return not await self.channel_proactive_repository.is_channel_session(session_id)
+
+    def _channel_active_generation(self, session_id: UUID) -> UUID | None:
+        return self.conversation.active_generation_id(session_id)
 
     async def _drain_pending_outbox(self, page_size: int = 100) -> None:
         """Republish every durable event left by an interrupted Runtime.
@@ -477,6 +574,7 @@ class RuntimeContainer:
         steps = [
             _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
+            _CleanupStep("channel_proactive", lambda: self.channel_proactive.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),
         ]
@@ -485,6 +583,8 @@ class RuntimeContainer:
             steps.append(_CleanupStep("cloud_realtime_backend", lambda: backend.close()))
         steps.extend(
             [
+                _CleanupStep("qq_channels", lambda: self.qq_channels.stop()),
+                _CleanupStep("channel_groups", lambda: self.channel_groups.stop()),
                 _CleanupStep("channel_management", lambda: self.channel_management.stop()),
                 _CleanupStep("sticker_library", lambda: self.sticker_library.stop()),
                 _CleanupStep("spoken_memory_observer", lambda: self.spoken_memory_observer.stop()),

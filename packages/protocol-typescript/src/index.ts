@@ -7,6 +7,8 @@ export {
   parseAvatarCapabilityManifest,
   parseAvatarCue,
   parseAvatarInteractionEvent,
+  parseChannelPairingSnapshot,
+  parseChannelPairingStartRequest,
   parseChannelAuthorizationSnapshot,
   parseChannelAuthorizationStartRequest,
   parseChannelAuthorizationVerificationRequest,
@@ -55,3 +57,31 @@ export {
   parsePhotoMemoryDeleteResult,
 } from "./parsers/protocol";
 export * from "./version";
+
+export {
+  parseChannelProactivePolicy,
+  parseChannelProactivePolicyUpdate,
+  parseChannelProactivePolicySnapshot,
+  parseChannelProactivePreview,
+  parseChannelOutboundIntentSnapshot,
+  parseChannelOutboundIntentPage,
+  parseChannelOutboundIntentCancelRequest,
+} from "./parsers/channelProactive";
+
+export {
+  parseChannelGroupAudienceRequest,
+  parseChannelGroupAudienceSnapshot,
+  parseChannelGroupDeliveryTarget,
+  parseChannelParticipantLinkCreate,
+  parseChannelParticipantLinkUpdate,
+  parseChannelParticipantLinkSnapshot,
+  parseChannelParticipantLinkPage,
+  parseChannelGroupRouteCreate,
+  parseChannelGroupRouteUpdate,
+  parseChannelGroupRouteMemberSnapshot,
+  parseChannelGroupRouteSnapshot,
+  parseChannelGroupRoutePage,
+  parseChannelGroupTurnCancelRequest,
+  parseChannelGroupTurnSnapshot,
+  parseChannelGroupTurnPage,
+} from "./parsers/channelGroups";

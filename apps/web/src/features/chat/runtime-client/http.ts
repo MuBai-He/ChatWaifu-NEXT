@@ -2,7 +2,9 @@ import { z } from "zod";
 
 import {
   resolveRuntimeConnection,
+  assertRuntimeRequestContext,
   type RuntimeConnection,
+  type RuntimeRequestContext,
 } from "../runtimeEndpoint";
 
 export type RuntimeResponseParser<Result> = {
@@ -27,6 +29,7 @@ export const mutationReceiptSchema = z.object({}).passthrough();
 
 export interface RuntimeRequestInit extends RequestInit {
   timeoutMs?: number;
+  expectedContext?: RuntimeRequestContext;
 }
 
 export class RuntimeRequestError extends Error {
@@ -47,9 +50,11 @@ export async function requestRuntime<Result>(
   const {
     timeoutMs = 8_000,
     signal: callerSignal,
+    expectedContext,
     ...requestInit
   } = init ?? {};
   const connection = await waitForRuntimeConnection(callerSignal);
+  if (expectedContext) assertRuntimeRequestContext(expectedContext, connection);
   const controller = new AbortController();
   let timedOut = false;
   const aborted = new Promise<never>((_resolve, reject) => {
@@ -76,6 +81,7 @@ export async function requestRuntime<Result>(
         parser,
         requestInit,
         controller.signal,
+        expectedContext,
       ),
       aborted,
     ]);
@@ -114,8 +120,10 @@ async function performRuntimeRequest<Result>(
   parser: RuntimeResponseParser<Result>,
   init: RequestInit,
   signal: AbortSignal,
+  expectedContext?: RuntimeRequestContext,
 ): Promise<Result> {
   if (signal.aborted) throw abortReason(signal);
+  if (expectedContext) assertRuntimeRequestContext(expectedContext, connection);
   const headers = new Headers(init.headers);
   if (!headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
@@ -128,6 +136,7 @@ async function performRuntimeRequest<Result>(
     headers,
   });
   const payload = await readJson(response);
+  if (expectedContext) assertRuntimeRequestContext(expectedContext);
   if (!response.ok) {
     const detail = runtimeErrorSchema.safeParse(payload);
     const value = detail.success ? detail.data.detail : undefined;

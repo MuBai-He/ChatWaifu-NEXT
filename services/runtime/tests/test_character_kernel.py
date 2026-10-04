@@ -557,6 +557,59 @@ async def test_character_kernel_service_negation_handling(runtime_settings: Sett
     assert not neg_hostile2.hostile
 
 
+@pytest.mark.parametrize(
+    "text,valence,intent,expression",
+    [
+        ("今天我遇到了好事，特别开心，用文字陪我庆祝一下吧！", 0.15, "celebrate", "happy"),
+        ("今天很高兴，想分享给你。", 0.15, "celebrate", "happy"),
+        ("I'm happy today!", 0.15, "celebrate", "happy"),
+        ("今天不开心。", 0.15, "answer", "neutral"),
+        ("今天特别不开心。", 0.15, "answer", "neutral"),
+        ("别特别开心。", 0.15, "answer", "neutral"),
+        ("今天开心，也很难过。", 0.15, "comfort", "sad"),
+        ("今天很开心，但你是笨蛋。", 0.15, "reassure", "angry"),
+        ("为什么今天这么开心？", 0.15, "curious", "curious"),
+        ("停一下", 0.65, "answer", "happy"),
+    ],
+)
+def test_current_positive_signal_plans_celebration_without_using_background_mood(
+    text: str, valence: float, intent: str, expression: str
+) -> None:
+    from chatwaifu_runtime.character_kernel.service import _classify, _plan_response
+
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime(2026, 10, 4, tzinfo=UTC)
+    snapshot = CharacterKernelSnapshot(
+        character_id="default",
+        user_scope="local",
+        revision=1,
+        affect=AffectState(valence=valence, updated_at=now),
+        relationship=RelationshipState(updated_at=now),
+    )
+    plan = _plan_response(text, _classify(text), snapshot, character)
+    assert (plan.intent, plan.expression) == (intent, expression)
+
+
+@pytest.mark.parametrize(
+    "text,positive",
+    [
+        ("今天特别开心", True),
+        ("今天特别高兴", True),
+        ("今天特别喜欢这个", True),
+        ("今天特别不开心", False),
+        ("别特别开心", False),
+        ("今天不特别开心", False),
+    ],
+)
+def test_positive_intensifier_is_not_a_negation(text: str, positive: bool) -> None:
+    from chatwaifu_runtime.character_kernel.service import _classify
+
+    assert _classify(text).positive is positive
+
+
 @pytest.mark.asyncio
 async def test_character_kernel_service_revision_cas(runtime_settings: Settings) -> None:
     from chatwaifu_runtime.bootstrap.container import RuntimeContainer

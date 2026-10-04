@@ -123,6 +123,7 @@ class ProjectedSkillTool:
     input_schema: JsonObject
     side_effect: SideEffect
     confirmation_required: bool
+    completes_channel_reply: bool = False
 
     def to_invocation(self, arguments: JsonObject) -> SkillInvocation:
         """Map provider arguments back to the permissioned Runtime Skill gateway."""
@@ -142,6 +143,7 @@ class _Candidate:
     input_schema: JsonObject
     schema_bytes: int
     score: int
+    contextual: bool = False
 
     @property
     def identity(self) -> tuple[str, str]:
@@ -160,6 +162,7 @@ class RuntimeSkillRouter:
         *,
         limit: int = DEFAULT_AGENT_TOOL_LIMIT,
         schema_budget_bytes: int = DEFAULT_AGENT_SCHEMA_BUDGET_BYTES,
+        contextual_skill_ids: frozenset[str] = frozenset(),
     ) -> tuple[ProjectedSkillTool, ...]:
         if not query.strip() or limit <= 0 or schema_budget_bytes <= 0:
             return ()
@@ -171,7 +174,12 @@ class RuntimeSkillRouter:
             if not skill.enabled:
                 continue
             for capability in skill.capabilities:
-                candidate = _project_candidate(skill, capability, query=query)
+                candidate = _project_candidate(
+                    skill,
+                    capability,
+                    query=query,
+                    contextual=skill.source == "builtin" and skill.skill_id in contextual_skill_ids,
+                )
                 if candidate is not None:
                     candidates.append(candidate)
 
@@ -236,6 +244,8 @@ class RuntimeSkillRouter:
                 input_schema=deepcopy(candidate.input_schema),
                 side_effect=candidate.capability.side_effect,
                 confirmation_required=candidate.capability.confirmation_required,
+                completes_channel_reply=candidate.skill.source == "builtin"
+                and candidate.skill.skill_id == "channel.voice",
             )
             for candidate, name in zip(selected, names, strict=True)
         )
@@ -247,6 +257,7 @@ def _project_candidate(
     *,
     query: str,
     require_relevance: bool = True,
+    contextual: bool = False,
 ) -> _Candidate | None:
     if capability.adapter_operation != "invoke":
         return None
@@ -278,7 +289,7 @@ def _project_candidate(
         return None
 
     score = _relevance_score(query, skill, capability)
-    if require_relevance and score <= 0:
+    if require_relevance and score <= 0 and not contextual:
         return None
     description = _model_description(skill, capability)
     return _Candidate(
@@ -288,6 +299,7 @@ def _project_candidate(
         input_schema=schema,
         schema_bytes=len(encoded_schema),
         score=score,
+        contextual=contextual,
     )
 
 
@@ -477,6 +489,11 @@ def _model_description(skill: SkillDefinition, capability: SkillCapability) -> s
         if capability.confirmation_required
         else ""
     )
+    if skill.source == "builtin" and skill.skill_id == "channel.voice":
+        confirmation = (
+            " Runtime rechecks the active owner private reply and generation."
+            " This current reply needs no separate desktop confirmation."
+        )
     value = (
         f"{_clean_text(skill.name)}: {_clean_text(capability.description)} "
         f"Source: {source}.{confirmation}"
@@ -491,7 +508,7 @@ def _clean_text(value: str) -> str:
     return " ".join(_CONTROL.sub(" ", value).split())
 
 
-def _candidate_sort_key(candidate: _Candidate) -> tuple[int, int, int, str, str]:
+def _candidate_sort_key(candidate: _Candidate) -> tuple[bool, int, int, int, str, str]:
     source_rank = {"builtin": 0, "plugin": 1, "mcp_connection": 2}[candidate.skill.source]
     side_effect_rank = {
         SideEffect.READ: 0,
@@ -501,6 +518,7 @@ def _candidate_sort_key(candidate: _Candidate) -> tuple[int, int, int, str, str]
         SideEffect.DEVICE_CONTROL: 3,
     }[candidate.capability.side_effect]
     return (
+        not candidate.contextual,
         -candidate.score,
         side_effect_rank,
         source_rank,

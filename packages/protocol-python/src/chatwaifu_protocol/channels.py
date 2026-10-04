@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, ConfigDict, Field, SecretStr, model_validator
 
 from chatwaifu_protocol.base import ProtocolModel
 from chatwaifu_protocol.errors import StructuredError
@@ -36,6 +36,7 @@ class ChannelMessageKind(StrEnum):
 
     TEXT = "text"
     IMAGE = "image"
+    AUDIO = "audio"
 
 
 class ChannelConnectionStatus(StrEnum):
@@ -522,9 +523,11 @@ class ChannelDeliveryAcknowledgement(ChannelVersionedModel):
         return self
 
 
-class ChannelDeliverySnapshot(ChannelVersionedModel):
+class ChannelDeliverySnapshot(ProtocolModel):
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     delivery_id: UUID
-    channel_turn_id: UUID
+    channel_turn_id: UUID | None = None
+    outbound_intent_id: UUID | None = None
     connection_id: UUID
     status: ChannelDeliveryStatus
     attempt: int = Field(default=1, ge=1)
@@ -548,10 +551,22 @@ class ChannelDeliverySnapshot(ChannelVersionedModel):
             raise ValueError("sending delivery snapshots require an active lease")
         return self
 
+    @model_validator(mode="after")
+    def validate_delivery_source(self) -> ChannelDeliverySnapshot:
+        inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
+        outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
+        if not (
+            (self.schema_version == "1.0" and inbound)
+            or (self.schema_version == "1.1" and outbound)
+        ):
+            raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
+        return self
+
 
 class ChannelDeliveryPartKind(StrEnum):
     TEXT = "text"
     IMAGE = "image"
+    AUDIO = "audio"
 
 
 class ChannelDeliveryPartStatus(StrEnum):
@@ -590,10 +605,53 @@ class ChannelImageDeliveryPartPayload(ChannelVersionedModel):
     )
 
 
+class ChannelAudioDeliveryPartPayload(ChannelVersionedModel):
+    kind: Literal[ChannelDeliveryPartKind.AUDIO] = ChannelDeliveryPartKind.AUDIO
+    asset_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    mime_type: Literal["audio/wav", "audio/mpeg"] = "audio/wav"
+    duration_ms: int = Field(ge=1, le=120_000)
+    text: str = Field(min_length=1, max_length=2000)
+
+
 ChannelDeliveryPartPayload = Annotated[
-    ChannelTextDeliveryPartPayload | ChannelImageDeliveryPartPayload,
+    ChannelTextDeliveryPartPayload
+    | ChannelImageDeliveryPartPayload
+    | ChannelAudioDeliveryPartPayload,
     Field(discriminator="kind"),
 ]
+
+
+class ChannelPairingStartRequest(ChannelVersionedModel):
+    provider_id: Literal["qq_napcat"] = "qq_napcat"
+    endpoint: str = Field(min_length=1, max_length=2048)
+    access_token: SecretStr = Field(min_length=16, max_length=4096, repr=False)
+    character_id: str = Field(default="default", min_length=1, max_length=256)
+
+
+class ChannelPairingSnapshot(ChannelVersionedModel):
+    pairing_id: UUID
+    provider_id: Literal["qq_napcat"] = "qq_napcat"
+    status: Literal["pending", "confirmed", "cancelled", "expired", "failed"]
+    pairing_code: str | None = None
+    account_label: str | None = None
+    expires_at: AwareDatetime
+    connection: ChannelConnectionSnapshot | None = None
+    error: StructuredError | None = None
+
+    @model_validator(mode="after")
+    def validate_pairing(self) -> ChannelPairingSnapshot:
+        if self.status == "pending" and not self.pairing_code:
+            raise ValueError("pending pairing requires a code")
+        if self.status != "pending" and self.pairing_code is not None:
+            raise ValueError("terminal pairing cannot include a code")
+        if self.status == "confirmed" and self.connection is None:
+            raise ValueError("confirmed pairing requires a connection")
+        if self.status != "confirmed" and self.connection is not None:
+            raise ValueError("only confirmed pairing includes a connection")
+        if (self.status == "failed") != (self.error is not None):
+            raise ValueError("only failed pairing requires an error")
+        return self
 
 
 class ChannelDeliveryPartSnapshot(ChannelVersionedModel):
@@ -642,10 +700,29 @@ class ChannelDeliveryPartDraft(ChannelVersionedModel):
         return self
 
 
-class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
-    delivery_id: UUID
-    channel_turn_id: UUID
+class ChannelGroupDeliveryTarget(ChannelVersionedModel):
+    """Fixed admitted group target; field values cannot grant sending authority."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["group"] = "group"
     connection_id: UUID
+    account_key: str = Field(min_length=1, max_length=20, pattern=r"^[1-9][0-9]{0,19}$")
+    group_id: str = Field(min_length=1, max_length=20, pattern=r"^[1-9][0-9]{0,19}$")
+    route_id: UUID
+    route_revision: int = Field(strict=True, ge=1)
+    channel_turn_id: UUID
+    scene_id: str = Field(min_length=1, max_length=128)
+    audience_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ChannelDeliveryPlanSnapshot(ProtocolModel):
+    schema_version: Literal["1.0", "1.1"] = "1.0"
+    delivery_id: UUID
+    channel_turn_id: UUID | None = None
+    outbound_intent_id: UUID | None = None
+    connection_id: UUID
+    group_target: ChannelGroupDeliveryTarget | None = None
     status: ChannelDeliveryStatus
     plan_version: int = Field(default=1, ge=1)
     part_count: int = Field(ge=1)
@@ -658,6 +735,29 @@ class ChannelDeliveryPlanSnapshot(ChannelVersionedModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     delivered_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_delivery_source(self) -> ChannelDeliveryPlanSnapshot:
+        inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
+        outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
+        if not (
+            (self.schema_version == "1.0" and inbound)
+            or (self.schema_version == "1.1" and outbound)
+        ):
+            raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
+        if self.group_target is not None and (
+            not inbound
+            or self.group_target.connection_id != self.connection_id
+            or self.group_target.channel_turn_id != self.channel_turn_id
+            or self.part_count != 1
+            or len(self.parts) != 1
+            or self.parts[0].kind != ChannelDeliveryPartKind.TEXT
+            or self.parts[0].delivery_id != self.delivery_id
+            or self.parts[0].ordinal != 0
+            or not self.parts[0].required
+        ):
+            raise ValueError("group delivery requires one text part and its fixed inbound target")
+        return self
 
 
 class ChannelDeliveryPartClaimRequest(ChannelVersionedModel):

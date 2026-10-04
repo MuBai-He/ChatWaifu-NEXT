@@ -100,7 +100,12 @@ class _Router:
         self.queries: list[str] = []
 
     def select(
-        self, query: str, *, limit: int = 8, schema_budget_bytes: int = 24_576
+        self,
+        query: str,
+        *,
+        limit: int = 8,
+        schema_budget_bytes: int = 24_576,
+        contextual_skill_ids: frozenset[str] = frozenset(),
     ) -> tuple[ProjectedAgentTool, ...]:
         self.queries.append(query)
         return self.projections[:limit]
@@ -108,7 +113,12 @@ class _Router:
 
 class _TopicRouter(_Router):
     def select(
-        self, query: str, *, limit: int = 8, schema_budget_bytes: int = 24_576
+        self,
+        query: str,
+        *,
+        limit: int = 8,
+        schema_budget_bytes: int = 24_576,
+        contextual_skill_ids: frozenset[str] = frozenset(),
     ) -> tuple[ProjectedAgentTool, ...]:
         self.queries.append(query)
         return self.projections[:limit] if "日程" in query else ()

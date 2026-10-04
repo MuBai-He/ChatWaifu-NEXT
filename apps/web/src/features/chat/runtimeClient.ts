@@ -15,3 +15,4 @@ export * from "./runtime-client/photoMemoryClient";
 export * from "./runtime-client/indexRebuildClient";
 export * from "./runtime-client/realtimeClient";
 export * from "./runtime-client/diagnosticsClient";
+export * from "./runtime-client/channelProactiveClient";

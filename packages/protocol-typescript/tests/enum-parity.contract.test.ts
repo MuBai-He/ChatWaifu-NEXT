@@ -11,7 +11,9 @@ import type {
   SkillCapability,
 } from "../src/index";
 import * as publicProtocol from "../src/index";
-import * as parserModule from "../src/parsers/protocol";
+import * as coreParsers from "../src/parsers/protocol";
+import * as groupParsers from "../src/parsers/channelGroups";
+import * as proactiveParsers from "../src/parsers/channelProactive";
 import {
   channelDeliveryAcknowledgementSchema,
   channelDeliveryPartAcknowledgementSchema,
@@ -27,6 +29,8 @@ import {
   standaloneEnumSchemas,
   type JsonSchemaDef,
 } from "../src/internal/testing/index";
+
+const parserModule = { ...coreParsers, ...proactiveParsers, ...groupParsers };
 
 // Compile-time type-level equivalence assertions
 type Equal<A, B> =

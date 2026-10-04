@@ -1419,6 +1419,8 @@ class ChannelManagementService:
         connection_id: UUID,
         plan: ChannelDeliveryPlanRecord,
     ) -> None:
+        if plan.delivery.channel_turn_id is None:
+            return
         turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
         if turn is None:
             return
@@ -1549,7 +1551,7 @@ class ChannelManagementService:
         if turn is None and delivery_id_str:
             try:
                 plan = await self._repository.get_delivery_plan(UUID(str(delivery_id_str)))
-                if plan is not None:
+                if plan is not None and plan.delivery.channel_turn_id is not None:
                     turn = await self._repository.get_turn(plan.delivery.channel_turn_id)
             except Exception:
                 pass
@@ -1716,6 +1718,15 @@ class ChannelManagementService:
         plan: ChannelDeliveryPlanRecord,
         part: ChannelDeliveryPartRecord,
     ) -> DeliveryPartExecutionResult:
+        if plan.delivery.channel_turn_id is None or plan.outbound_intent_id is not None:
+            return DeliveryPartExecutionResult(
+                outcome=DeliveryPartOutcome.FATAL_ERROR,
+                error=_structured_error(
+                    "channel_proactive_unsupported",
+                    "This adapter does not support outbound proactive intents.",
+                    retryable=False,
+                ),
+            )
         if part.kind not in (ChannelDeliveryPartKind.TEXT, ChannelDeliveryPartKind.IMAGE):
             return DeliveryPartExecutionResult(
                 outcome=DeliveryPartOutcome.FATAL_ERROR,

@@ -17,6 +17,7 @@ from chatwaifu_runtime.providers.model_config import ModelRoleConfig
 
 if TYPE_CHECKING:
     from chatwaifu_runtime.agent.tool_calling import ProjectedAgentTool
+    from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
@@ -45,9 +46,61 @@ class ConversationSourceContext:
     conversation_label: str | None = None
     sender_display_name: str | None = None
     audience_ids: tuple[str, ...] = ()
+    reply_to_external_message_id: str | None = None
+    outbound_intent_id: UUID | None = None
+    source_event_key: str | None = None
+    policy_revision: int | None = None
+    route_revision: int | None = None
+    group_route_id: UUID | None = None
+    participant_id: str | None = None
+    scene_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.group_route_id is not None:
+            if (
+                not isinstance(cast(object, self.group_route_id), UUID)
+                or self.chat_type != "group"
+                or not isinstance(self.participant_id, str)
+                or not self.participant_id
+                or not isinstance(self.scene_id, str)
+                or not self.scene_id
+                or self.principal_scope != f"scene:{self.scene_id}"
+                or self.participant_id not in self.audience_ids
+                or type(self.route_revision) is not int
+                or self.route_revision < 0
+                or self.outbound_intent_id is not None
+                or self.source_event_key is not None
+                or self.policy_revision is not None
+                or self.reply_to_external_message_id is not None
+            ):
+                raise ValueError("group source requires complete trusted identity and route")
+            return
+        if self.participant_id is not None or self.scene_id is not None:
+            raise ValueError("member identity requires a fixed group route")
+        metadata = (
+            self.outbound_intent_id,
+            self.source_event_key,
+            self.policy_revision,
+            self.route_revision,
+        )
+        if all(value is None for value in metadata):
+            return
+        if (
+            not isinstance(self.outbound_intent_id, UUID)
+            or not isinstance(self.source_event_key, str)
+            or not 1 <= len(self.source_event_key) <= 256
+            or any(ord(char) < 32 for char in self.source_event_key)
+            or type(self.policy_revision) is not int
+            or self.policy_revision < 0
+            or type(self.route_revision) is not int
+            or self.route_revision < 0
+            or self.received_at is not None
+            or self.reply_to_external_message_id is not None
+        ):
+            raise ValueError("outbound source requires complete trusted lineage metadata")
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        result: dict[str, object] = {
             "provider_id": self.provider_id,
             "connection_id": str(self.connection_id),
             "account_key": self.account_key,
@@ -59,7 +112,23 @@ class ConversationSourceContext:
             "conversation_label": self.conversation_label,
             "sender_display_name": self.sender_display_name,
             "audience_ids": list(self.audience_ids),
+            "reply_to_external_message_id": self.reply_to_external_message_id,
         }
+        if self.outbound_intent_id is not None:
+            result.update(
+                outbound_intent_id=str(self.outbound_intent_id),
+                source_event_key=self.source_event_key,
+                policy_revision=self.policy_revision,
+                route_revision=self.route_revision,
+            )
+        if self.group_route_id is not None:
+            result.update(
+                group_route_id=str(self.group_route_id),
+                route_revision=self.route_revision,
+                participant_id=self.participant_id,
+                scene_id=self.scene_id,
+            )
+        return result
 
     def to_json(self) -> str:
         return json.dumps(self.as_dict(), ensure_ascii=False, separators=(",", ":"))
@@ -74,6 +143,30 @@ class ConversationSourceContext:
         if chat_type not in {"direct", "group"}:
             raise ValueError("unsupported conversation chat type")
         return cls(
+            group_route_id=(
+                UUID(str(payload["group_route_id"]))
+                if payload.get("group_route_id") is not None
+                else None
+            ),
+            participant_id=cast(str | None, payload.get("participant_id")),
+            scene_id=cast(str | None, payload.get("scene_id")),
+            outbound_intent_id=(
+                UUID(str(payload["outbound_intent_id"]))
+                if payload.get("outbound_intent_id") is not None
+                else None
+            ),
+            source_event_key=(
+                str(payload["source_event_key"])
+                if payload.get("source_event_key") is not None
+                else None
+            ),
+            policy_revision=cast(int | None, payload.get("policy_revision")),
+            route_revision=cast(int | None, payload.get("route_revision")),
+            reply_to_external_message_id=(
+                str(payload["reply_to_external_message_id"])
+                if payload.get("reply_to_external_message_id") is not None
+                else None
+            ),
             audience_ids=tuple(
                 str(item) for item in cast(list[object], payload.get("audience_ids", []))
             ),
@@ -141,6 +234,19 @@ class ConfirmedConversationTurn:
 
 
 @dataclass(frozen=True, slots=True)
+class ConversationQuotedMessage:
+    """Permissioned historical text, never a fresh instruction or tool authorization."""
+
+    role: Literal["user", "assistant"]
+    text: str
+    source_generation_id: UUID
+
+    def __post_init__(self) -> None:
+        if self.role not in {"user", "assistant"} or not 1 <= len(self.text) <= 2000:
+            raise ValueError("quoted message requires a supported role and bounded text")
+
+
+@dataclass(frozen=True, slots=True)
 class ConversationTurnOptions:
     """Surface-neutral controls for one submitted conversation turn.
 
@@ -152,10 +258,19 @@ class ConversationTurnOptions:
     origin: ConversationOrigin = "local_text"
     output_modes: frozenset[ConversationOutputMode] = frozenset({"text", "audio", "avatar"})
     allow_tools: bool = True
+    allowed_skill_ids: frozenset[str] | None = None
+    contextual_skill_ids: frozenset[str] = frozenset()
     source_context: ConversationSourceContext | None = None
+    trusted_identity: TrustedConversationIdentity | None = None
     presentation_profile: str | None = None
     failure_recovery_text: str | None = None
     image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(
+        default=None, repr=False, compare=False
+    )
+    quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
+        default=None, repr=False, compare=False
+    )
+    before_generation: Callable[[], Awaitable[bool]] | None = field(
         default=None, repr=False, compare=False
     )
 

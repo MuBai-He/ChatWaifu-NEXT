@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { channelGroupDeliveryTargetSchema } from "./channelGroupTarget";
 import type {
   AudioFrameHeader,
   AvatarCapabilityManifest,
   AvatarCue,
   AvatarInteractionEvent,
+  ChannelPairingSnapshot,
+  ChannelPairingStartRequest,
   ChannelAuthorizationSnapshot,
   ChannelAuthorizationStartRequest,
   ChannelAuthorizationVerificationRequest,
@@ -396,6 +399,10 @@ const genericCoreEventTypes = [
   "companion.proactive_triggered",
   "companion.proactive_deferred",
   "channel.delivery_acknowledged",
+  "channel.proactive_policy_updated",
+  "channel.outbound_intent_reserved",
+  "channel.outbound_intent_generating",
+  "channel.outbound_intent_settled",
   "channel.delivery_plan_created",
   "channel.delivery_part_claimed",
   "channel.delivery_part_acknowledged",
@@ -509,6 +516,7 @@ const sessionSnapshotSchema = z
     scene_kind: z.enum(["private", "shared"]).default("private"),
     audience_ids: z.array(z.string()).min(1).default(["local"]),
     user_scope: z.string().min(1).default("local"),
+    state_scope: z.string().min(1).optional(),
     state: z.enum([
       "created",
       "connecting",
@@ -702,7 +710,7 @@ const channelDeliveryStatusSchema = z.enum([
   "failed",
   "cancelled",
 ]);
-const channelMessageKindSchema = z.enum(["text", "image"]);
+const channelMessageKindSchema = z.enum(["text", "image", "audio"]);
 
 const channelProviderCapabilitiesSchema = z
   .object({
@@ -901,6 +909,67 @@ const channelAuthorizationSnapshotSchema = z
     }
   });
 
+const channelPairingStartRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    provider_id: z.literal("qq_napcat").default("qq_napcat"),
+    endpoint: z.string().min(1).max(2048),
+    access_token: z.string().min(16).max(4096),
+    character_id: z.string().min(1).max(256).default("default"),
+  })
+  .strict();
+
+const channelPairingSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    pairing_id: uuid,
+    provider_id: z.literal("qq_napcat").default("qq_napcat"),
+    status: z.enum(["pending", "confirmed", "cancelled", "expired", "failed"]),
+    pairing_code: z.string().nullish(),
+    account_label: z.string().nullish(),
+    expires_at: awareDateTime,
+    connection: channelConnectionSnapshotSchema.nullish(),
+    error: structuredErrorSchema.nullish(),
+  })
+  .passthrough()
+  .superRefine((snapshot, context) => {
+    if (snapshot.status !== "pending" && snapshot.pairing_code != null) {
+      context.addIssue({
+        code: "custom",
+        message: "Terminal pairing cannot include a code",
+        path: ["pairing_code"],
+      });
+    }
+    if (snapshot.status !== "confirmed" && snapshot.connection != null) {
+      context.addIssue({
+        code: "custom",
+        message: "Only confirmed pairing includes a connection",
+        path: ["connection"],
+      });
+    }
+    if ((snapshot.status === "failed") !== (snapshot.error != null)) {
+      context.addIssue({
+        code: "custom",
+        message: "Only failed pairing requires an error",
+        path: ["error"],
+      });
+    }
+    if (snapshot.status === "confirmed" && !snapshot.connection) {
+      context.addIssue({
+        code: "custom",
+        message: "Confirmed pairing requires a connection",
+        path: ["connection"],
+      });
+    }
+    if (snapshot.status === "pending" && !snapshot.pairing_code) {
+      context.addIssue({
+        code: "custom",
+        message: "Pending pairing requires a code",
+        path: ["pairing_code"],
+      });
+    }
+  });
+
 const channelGatewayStatusSnapshotSchema = z
   .object({
     schema_version: channelSchemaVersion.default("1.0"),
@@ -1023,9 +1092,10 @@ const channelDeliveryClaimRequestSchema = z
 
 const channelDeliverySnapshotSchema = z
   .object({
-    schema_version: channelSchemaVersion.default("1.0"),
+    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
     delivery_id: uuid,
-    channel_turn_id: uuid,
+    channel_turn_id: uuid.nullable(),
+    outbound_intent_id: uuid.nullish(),
     connection_id: uuid,
     status: channelDeliveryStatusSchema,
     attempt: z.number().int().min(1).default(1),
@@ -1043,6 +1113,7 @@ const channelDeliverySnapshotSchema = z
   })
   .passthrough()
   .superRefine((snapshot, context) => {
+    validateDeliverySource(snapshot, context);
     if (
       snapshot.status === "sending" &&
       (!snapshot.lease_id || !snapshot.lease_expires_at)
@@ -1055,7 +1126,7 @@ const channelDeliverySnapshotSchema = z
     }
   });
 
-const channelDeliveryPartKindSchema = z.enum(["text", "image"]);
+const channelDeliveryPartKindSchema = z.enum(["text", "image", "audio"]);
 
 const channelDeliveryPartStatusSchema = z.enum([
   "pending",
@@ -1084,9 +1155,22 @@ const channelImageDeliveryPartPayloadSchema = z
   })
   .passthrough();
 
+const channelAudioDeliveryPartPayloadSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    kind: z.literal("audio"),
+    asset_id: uuid,
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    mime_type: z.enum(["audio/wav", "audio/mpeg"]).default("audio/wav"),
+    duration_ms: z.number().int().min(1).max(120000),
+    text: z.string().min(1).max(2000),
+  })
+  .passthrough();
+
 const channelDeliveryPartPayloadSchema = z.discriminatedUnion("kind", [
   channelTextDeliveryPartPayloadSchema,
   channelImageDeliveryPartPayloadSchema,
+  channelAudioDeliveryPartPayloadSchema,
 ]);
 
 const channelDeliveryPartSnapshotSchema = z
@@ -1173,10 +1257,12 @@ const channelDeliveryPartAcknowledgementSchema = z
 
 const channelDeliveryPlanSnapshotSchema = z
   .object({
-    schema_version: channelSchemaVersion.default("1.0"),
+    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
     delivery_id: uuid,
-    channel_turn_id: uuid,
+    channel_turn_id: uuid.nullable(),
+    outbound_intent_id: uuid.nullish(),
     connection_id: uuid,
+    group_target: channelGroupDeliveryTargetSchema.nullish(),
     status: channelDeliveryStatusSchema,
     plan_version: z.number().int().min(1).default(1),
     part_count: z.number().int().min(1),
@@ -1188,7 +1274,51 @@ const channelDeliveryPlanSnapshotSchema = z
     updated_at: awareDateTime,
     delivered_at: awareDateTime.nullish(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine(validateDeliverySource)
+  .superRefine((plan, context) => {
+    if (plan.group_target == null) return;
+    const part = plan.parts[0];
+    if (
+      plan.schema_version !== "1.0" ||
+      plan.outbound_intent_id != null ||
+      plan.group_target.connection_id !== plan.connection_id ||
+      plan.group_target.channel_turn_id !== plan.channel_turn_id ||
+      plan.part_count !== 1 ||
+      plan.parts.length !== 1 ||
+      part?.kind !== "text" ||
+      part.delivery_id !== plan.delivery_id ||
+      part.ordinal !== 0 ||
+      !part.required
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["group_target"],
+        message:
+          "group delivery requires one text part and its fixed inbound target",
+      });
+    }
+  });
+
+function validateDeliverySource(
+  source: {
+    schema_version: string;
+    channel_turn_id: string | null;
+    outbound_intent_id?: string | null;
+  },
+  context: z.RefinementCtx,
+) {
+  const valid =
+    source.schema_version === "1.0"
+      ? source.channel_turn_id !== null && !source.outbound_intent_id
+      : source.channel_turn_id === null && Boolean(source.outbound_intent_id);
+  if (!valid)
+    context.addIssue({
+      code: "custom",
+      message: "delivery source must match its schema version",
+      path: ["channel_turn_id"],
+    });
+}
 
 const channelTurnCancelRequestSchema = z
   .object({
@@ -1655,13 +1785,30 @@ export function parseAvatarInteractionEvent(
 }
 
 export function parseSessionSnapshot(input: unknown): SessionSnapshot {
-  return sessionSnapshotSchema.parse(input) as SessionSnapshot;
+  const session = sessionSnapshotSchema.parse(input);
+  return {
+    ...session,
+    state_scope: session.state_scope ?? session.user_scope,
+  } as SessionSnapshot;
 }
 
 export function parseCharacterKernelSnapshot(
   input: unknown,
 ): CharacterKernelSnapshot {
   return characterKernelSnapshotSchema.parse(input) as CharacterKernelSnapshot;
+}
+
+export function parseChannelPairingSnapshot(
+  input: unknown,
+): ChannelPairingSnapshot {
+  return channelPairingSnapshotSchema.parse(input) as ChannelPairingSnapshot;
+}
+export function parseChannelPairingStartRequest(
+  input: unknown,
+): ChannelPairingStartRequest {
+  return channelPairingStartRequestSchema.parse(
+    input,
+  ) as ChannelPairingStartRequest;
 }
 
 export function parseChannelProviderRegistration(
@@ -1926,6 +2073,8 @@ export {
   avatarCapabilityManifestSchema,
   avatarCueSchema,
   avatarInteractionEventSchema,
+  channelPairingSnapshotSchema,
+  channelPairingStartRequestSchema,
   channelAuthorizationSnapshotSchema,
   channelAuthorizationStartRequestSchema,
   channelAuthorizationVerificationRequestSchema,
@@ -1945,6 +2094,7 @@ export {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelImageDeliveryPartPayloadSchema,
+  channelAudioDeliveryPartPayloadSchema,
   channelInboundTextMessageSchema,
   channelMessageKindSchema,
   channelPresentationPolicySchema,

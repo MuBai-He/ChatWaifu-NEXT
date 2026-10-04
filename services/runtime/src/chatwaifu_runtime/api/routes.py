@@ -424,7 +424,10 @@ async def update_channel_connection(
     except ExternalChannelError as error:
         _raise_channel_error(error)
     snapshot = updated.snapshot if isinstance(updated, CreatedChannelConnection) else updated
-    await _container(request).channel_management.connection_configuration_changed(snapshot)
+    if snapshot.configuration.provider_id == "qq_napcat":
+        await _container(request).qq_channels.configuration_changed(snapshot)
+    else:
+        await _container(request).channel_management.connection_configuration_changed(snapshot)
     return {
         "schema_version": "1.0",
         "connection": snapshot.model_dump(mode="json"),
@@ -434,7 +437,12 @@ async def update_channel_connection(
 @router.delete("/channel-connections/{connection_id}")
 async def delete_channel_connection(request: Request, connection_id: UUID) -> dict[str, object]:
     try:
-        await _container(request).channel_management.remove_connection(connection_id)
+        container = _container(request)
+        snapshot = await container.external_channels.get_connection(connection_id)
+        if snapshot.configuration.provider_id == "qq_napcat":
+            await container.qq_channels.remove(connection_id)
+        else:
+            await container.channel_management.remove_connection(connection_id)
     except ExternalChannelError as error:
         _raise_channel_error(error)
     return {"connection_id": str(connection_id), "removed": True}
@@ -443,7 +451,12 @@ async def delete_channel_connection(request: Request, connection_id: UUID) -> di
 @router.post("/channel-connections/{connection_id}/test")
 async def test_channel_connection(request: Request, connection_id: UUID) -> dict[str, object]:
     try:
-        snapshot = await _container(request).external_channels.test_connection(connection_id)
+        container = _container(request)
+        snapshot = await container.external_channels.get_connection(connection_id)
+        if snapshot.configuration.provider_id == "qq_napcat":
+            snapshot = await container.qq_channels.test_connection(connection_id)
+        else:
+            snapshot = await container.external_channels.test_connection(connection_id)
     except ExternalChannelError as error:
         _raise_channel_error(error)
     return snapshot.model_dump(mode="json")
@@ -793,7 +806,7 @@ async def read_character_state(request: Request, session_id: UUID) -> dict[str, 
     if session is None:
         raise HTTPException(status_code=404, detail="session not found")
     snapshot = await container.character_kernel.snapshot(
-        session.character_id, user_scope=session.user_scope
+        session.character_id, user_scope=session.state_scope
     )
     return snapshot.model_dump(mode="json")
 

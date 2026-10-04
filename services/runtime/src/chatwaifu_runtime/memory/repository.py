@@ -13,6 +13,8 @@ from chatwaifu_protocol.memory import (
     MemorySource,
 )
 
+from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
+
 
 class MemorySearchHit:
     __slots__ = ("lexical_score", "record")
@@ -27,8 +29,10 @@ class MemoryEventEvidence:
         "channel_attribution",
         "event_id",
         "event_type",
+        "identity",
         "occurred_at",
         "session_id",
+        "source_text",
         "turn_id",
     )
 
@@ -40,6 +44,8 @@ class MemoryEventEvidence:
         occurred_at: datetime,
         event_type: str = "user.turn_committed",
         channel_attribution: MemoryChannelAttribution | None = None,
+        identity: TrustedConversationIdentity | None = None,
+        source_text: str | None = None,
     ) -> None:
         self.event_id = event_id
         self.session_id = session_id
@@ -47,6 +53,8 @@ class MemoryEventEvidence:
         self.occurred_at = occurred_at
         self.event_type = event_type
         self.channel_attribution = channel_attribution
+        self.identity = identity
+        self.source_text = source_text
 
 
 type PresentedAssistantEventType = Literal[
@@ -77,9 +85,13 @@ class MemoryRepository(Protocol):
         self, user_turn_event_id: UUID
     ) -> PrecedingAssistantEvidence | None: ...
 
-    async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None: ...
+    async def find_exact(
+        self, namespace: str, normalized_text: str, *, subject_id: str | None = "user"
+    ) -> MemoryRecord | None: ...
 
-    async def find_tombstone(self, namespace: str, normalized_text: str) -> MemoryRecord | None: ...
+    async def find_tombstone(
+        self, namespace: str, normalized_text: str, *, subject_id: str | None = "user"
+    ) -> MemoryRecord | None: ...
 
     async def find_identity(
         self, namespace: str, subject_id: str, predicate: str
@@ -160,7 +172,7 @@ class MemoryRepository(Protocol):
     ) -> dict[UUID, list[MemorySource]]: ...
 
     async def search_fts(
-        self, query: str, namespaces: Sequence[str], limit: int
+        self, query: str, namespaces: Sequence[str], limit: int, *, subject_id: str | None = None
     ) -> list[MemorySearchHit]: ...
 
     async def list_pinned(self, namespaces: Sequence[str], limit: int) -> list[MemoryRecord]: ...

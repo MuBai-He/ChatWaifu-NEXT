@@ -1,3 +1,22 @@
+import {
+  channelGroupAudienceRequestSchema,
+  channelGroupAudienceSnapshotSchema,
+  channelGroupDeliveryTargetSchema,
+  channelParticipantLinkCreateSchema,
+  channelParticipantLinkUpdateSchema,
+  channelParticipantLinkSnapshotSchema,
+  channelParticipantLinkPageSchema,
+  channelGroupRouteCreateSchema,
+  channelGroupRouteUpdateSchema,
+  channelGroupRouteMemberSnapshotSchema,
+  channelGroupRouteSnapshotSchema,
+  channelGroupRoutePageSchema,
+  channelGroupTurnCancelRequestSchema,
+  channelGroupTurnSnapshotSchema,
+  channelGroupTurnPageSchema,
+  channelGroupPauseReasonSchema,
+} from "../../parsers/channelGroups";
+
 /**
  * Internal testing registry and recursive enum path collectors for contract parity testing.
  * Not exported from the root `@chatwaifu/protocol` package.
@@ -8,6 +27,8 @@ import {
   avatarCapabilityManifestSchema,
   avatarCueSchema,
   avatarInteractionEventSchema,
+  channelPairingSnapshotSchema,
+  channelPairingStartRequestSchema,
   channelAuthorizationSnapshotSchema,
   channelAuthorizationStartRequestSchema,
   channelAuthorizationVerificationRequestSchema,
@@ -75,11 +96,25 @@ import {
   structuredErrorSchema,
 } from "../../parsers/protocol";
 
+import {
+  channelProactivePolicySchema,
+  channelProactivePolicyUpdateSchema,
+  channelProactivePolicySnapshotSchema,
+  channelProactivePreviewSchema,
+  channelProactiveReasonSchema,
+  channelOutboundIntentSnapshotSchema,
+  channelOutboundIntentPageSchema,
+  channelOutboundIntentCancelRequestSchema,
+  channelOutboundIntentStatusSchema,
+} from "../../parsers/channelProactive";
+
 export {
   audioFrameHeaderSchema,
   avatarCapabilityManifestSchema,
   avatarCueSchema,
   avatarInteractionEventSchema,
+  channelPairingSnapshotSchema,
+  channelPairingStartRequestSchema,
   channelAuthorizationSnapshotSchema,
   channelAuthorizationStartRequestSchema,
   channelAuthorizationVerificationRequestSchema,
@@ -151,6 +186,29 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  ChannelGroupAudienceRequest: channelGroupAudienceRequestSchema,
+  ChannelGroupAudienceSnapshot: channelGroupAudienceSnapshotSchema,
+  ChannelGroupDeliveryTarget: channelGroupDeliveryTargetSchema,
+  ChannelParticipantLinkCreate: channelParticipantLinkCreateSchema,
+  ChannelParticipantLinkUpdate: channelParticipantLinkUpdateSchema,
+  ChannelParticipantLinkSnapshot: channelParticipantLinkSnapshotSchema,
+  ChannelParticipantLinkPage: channelParticipantLinkPageSchema,
+  ChannelGroupRouteCreate: channelGroupRouteCreateSchema,
+  ChannelGroupRouteUpdate: channelGroupRouteUpdateSchema,
+  ChannelGroupRouteMemberSnapshot: channelGroupRouteMemberSnapshotSchema,
+  ChannelGroupRouteSnapshot: channelGroupRouteSnapshotSchema,
+  ChannelGroupRoutePage: channelGroupRoutePageSchema,
+  ChannelGroupTurnCancelRequest: channelGroupTurnCancelRequestSchema,
+  ChannelGroupTurnSnapshot: channelGroupTurnSnapshotSchema,
+  ChannelGroupTurnPage: channelGroupTurnPageSchema,
+
+  ChannelProactivePolicy: channelProactivePolicySchema,
+  ChannelProactivePolicyUpdate: channelProactivePolicyUpdateSchema,
+  ChannelProactivePolicySnapshot: channelProactivePolicySnapshotSchema,
+  ChannelProactivePreview: channelProactivePreviewSchema,
+  ChannelOutboundIntentSnapshot: channelOutboundIntentSnapshotSchema,
+  ChannelOutboundIntentPage: channelOutboundIntentPageSchema,
+  ChannelOutboundIntentCancelRequest: channelOutboundIntentCancelRequestSchema,
   AudioFrameHeader: audioFrameHeaderSchema,
   AvatarCue: avatarCueSchema,
   AvatarCapabilityManifest: avatarCapabilityManifestSchema,
@@ -162,6 +220,8 @@ export const protocolModelSchemas = {
   ChannelAuthorizationStartRequest: channelAuthorizationStartRequestSchema,
   ChannelAuthorizationVerificationRequest:
     channelAuthorizationVerificationRequestSchema,
+  ChannelPairingSnapshot: channelPairingSnapshotSchema,
+  ChannelPairingStartRequest: channelPairingStartRequestSchema,
   ChannelAuthorizationSnapshot: channelAuthorizationSnapshotSchema,
   ChannelConnectionConfiguration: channelConnectionConfigurationSchema,
   ChannelConnectionSnapshot: channelConnectionSnapshotSchema,
@@ -208,6 +268,9 @@ export const protocolModelSchemas = {
  * Registry of standalone protocol enum schemas.
  */
 export const protocolEnumSchemas = {
+  ChannelGroupPauseReason: channelGroupPauseReasonSchema,
+  ChannelProactiveReason: channelProactiveReasonSchema,
+  ChannelOutboundIntentStatus: channelOutboundIntentStatusSchema,
   ChannelPresentationProfile: channelPresentationProfileSchema,
   ChannelTurnStatus: channelTurnStatusSchema,
   ChannelDeliveryStatus: channelDeliveryStatusSchema,
@@ -225,6 +288,28 @@ export const parserRootRegistry: Record<
   string,
   keyof typeof protocolModelSchemas
 > = {
+  parseChannelGroupAudienceRequest: "ChannelGroupAudienceRequest",
+  parseChannelGroupAudienceSnapshot: "ChannelGroupAudienceSnapshot",
+  parseChannelGroupDeliveryTarget: "ChannelGroupDeliveryTarget",
+  parseChannelParticipantLinkCreate: "ChannelParticipantLinkCreate",
+  parseChannelParticipantLinkUpdate: "ChannelParticipantLinkUpdate",
+  parseChannelParticipantLinkSnapshot: "ChannelParticipantLinkSnapshot",
+  parseChannelParticipantLinkPage: "ChannelParticipantLinkPage",
+  parseChannelGroupRouteCreate: "ChannelGroupRouteCreate",
+  parseChannelGroupRouteUpdate: "ChannelGroupRouteUpdate",
+  parseChannelGroupRouteMemberSnapshot: "ChannelGroupRouteMemberSnapshot",
+  parseChannelGroupRouteSnapshot: "ChannelGroupRouteSnapshot",
+  parseChannelGroupRoutePage: "ChannelGroupRoutePage",
+  parseChannelGroupTurnCancelRequest: "ChannelGroupTurnCancelRequest",
+  parseChannelGroupTurnSnapshot: "ChannelGroupTurnSnapshot",
+  parseChannelGroupTurnPage: "ChannelGroupTurnPage",
+  parseChannelProactivePolicy: "ChannelProactivePolicy",
+  parseChannelProactivePolicyUpdate: "ChannelProactivePolicyUpdate",
+  parseChannelProactivePolicySnapshot: "ChannelProactivePolicySnapshot",
+  parseChannelProactivePreview: "ChannelProactivePreview",
+  parseChannelOutboundIntentSnapshot: "ChannelOutboundIntentSnapshot",
+  parseChannelOutboundIntentPage: "ChannelOutboundIntentPage",
+  parseChannelOutboundIntentCancelRequest: "ChannelOutboundIntentCancelRequest",
   parseAudioFrameHeader: "AudioFrameHeader",
   parseAvatarCue: "AvatarCue",
   parseAvatarCapabilityManifest: "AvatarCapabilityManifest",
@@ -236,6 +321,8 @@ export const parserRootRegistry: Record<
   parseChannelAuthorizationStartRequest: "ChannelAuthorizationStartRequest",
   parseChannelAuthorizationVerificationRequest:
     "ChannelAuthorizationVerificationRequest",
+  parseChannelPairingSnapshot: "ChannelPairingSnapshot",
+  parseChannelPairingStartRequest: "ChannelPairingStartRequest",
   parseChannelAuthorizationSnapshot: "ChannelAuthorizationSnapshot",
   parseChannelConnectionConfiguration: "ChannelConnectionConfiguration",
   parseChannelConnectionSnapshot: "ChannelConnectionSnapshot",

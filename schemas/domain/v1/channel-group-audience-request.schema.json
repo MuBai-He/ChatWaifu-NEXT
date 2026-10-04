@@ -1,0 +1,25 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-audience-request.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "group_id": {
+      "maxLength": 20,
+      "minLength": 1,
+      "pattern": "^[1-9][0-9]{0,19}$",
+      "title": "Group Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "group_id"
+  ],
+  "title": "ChannelGroupAudienceRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}
